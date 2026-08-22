@@ -225,7 +225,7 @@ def store_csm(dstore, csm, sitecol, cmakers):
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * mb_per_gsim, extra['weight'], extra['codes'], cm.trt)
          for cm, tgets, blocks, extra in quartets],
-        [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
+        [('grp_id', U32), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
     req_gb = get_req_gb(data, N, oq)
 
@@ -298,22 +298,16 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
-        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        if oq.sequential_source_models:
+            grp_ids_by_batch = [
+                numpy.array(
+                    [sg.sources[0].grp_id for sg in sgs_batch], U32)
+                for _, _, sgs_batch, _ in csm.iter_source_model_batches()]
+            self.datastore.hdf5.save_vlen('grp_ids_by_batch', grp_ids_by_batch)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
-
-        L = oq.imtls.size
-        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
-        Gt = sum(len(cm.gsims) for cm in self.cmakers)
-        extra = f'<{Gfull}' if Gt < Gfull else ''
-        if sites is not None:
-            nbytes = 4 * len(self.sitecol) * L * Gt
-            # Gt is known before starting the preclassical
-            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
-                            general.humansize(nbytes), extra)
-
         if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites
             lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
@@ -324,30 +318,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             sf = SourceFilter(sites, oq.maximum_distance)
         else:
             sf = SourceFilter(None)
-        atomic_sources = []
-        normal_sources = []
         reqv = 'reqv' in oq.inputs
         if reqv:
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
-        multifaults = []
-        cmakers = self.cmakers.to_array()
-        for sg in csm.src_groups:
-            for src in sg:
-                if src.code == b'F':
-                    multifaults.append(src)
-                if reqv and sg.trt in oq.inputs['reqv']:
-                    if src.source_id not in oq.reqv_ignore_sources:
-                        collapse_nphc(src)
-            grp_id = sg.sources[0].grp_id
-            # do nothing for atomic sources except counting the ruptures
-            if sg.atomic:
-                # compute weight sequentially
-                cmakers[grp_id].set_weight(sg, sf)
-                atomic_sources.extend(sg)
-            else:
-                normal_sources.extend(sg)
+        multifaults = [src for sg in csm.src_groups for src in sg
+                       if src.code == b'F']
         if multifaults:
             with hdf5.File(multifaults[0].hdf5path, 'r') as h5:
                 secparams = h5['secparams'][:]
@@ -356,11 +333,84 @@ class PreClassicalCalculator(base.HazardCalculator):
                 len(multifaults), general.humansize(secparams.nbytes))
         else:
             secparams = ()
-        self._process(atomic_sources, normal_sources, sf, secparams)
+        if oq.sequential_source_models:
+            # Bound preclassical memory by iterating one source model
+            # at a time and rebuild cmakers at end
+            self._run_batched(sf, secparams, reqv)
+            self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
+        else:
+            self._run_regular(trt_smrs, sf, secparams, reqv)
+        L = oq.imtls.size
+        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
+        Gt = sum(len(cm.gsims) for cm in self.cmakers)
+        extra = f'<{Gfull}' if Gt < Gfull else ''
+        if sites is not None:
+            nbytes = 4 * len(self.sitecol) * L * Gt
+            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
+                            general.humansize(nbytes), extra)
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
 
-    def _process(self, atomic_sources, normal_sources, sf, secparams):
+    def _run_batched(self, sf, secparams, reqv):
+        """
+        Run preclassical per source-model batch when the flag of
+        sequential_source_models is True.
+        """
+        oq = self.oqparam
+        csm = self.csm
+        for batch_id, sm_id, sgs_batch, trt_smrs_batch in (
+                csm.iter_source_model_batches()):
+            logging.info(
+                'Preclassical batch %d (source model %r): %d src_groups',
+                batch_id, sm_id, len(sgs_batch))
+            cmakers_batch = get_cmakers(trt_smrs_batch, csm.full_lt, oq)
+            cmaker_by_grp = {
+                sg.sources[0].grp_id: cm
+                for sg, cm in zip(sgs_batch, cmakers_batch.to_array())}
+            atomic_batch = []
+            normal_batch = []
+            for sg in sgs_batch:
+                for src in sg:
+                    if reqv and sg.trt in oq.inputs['reqv']:
+                        if src.source_id not in oq.reqv_ignore_sources:
+                            collapse_nphc(src)
+                grp_id = sg.sources[0].grp_id
+                if sg.atomic:
+                    cmaker_by_grp[grp_id].set_weight(sg, sf)
+                    atomic_batch.extend(sg)
+                else:
+                    normal_batch.extend(sg)
+            self._process(atomic_batch, normal_batch, sf, secparams,
+                          cmaker_by_grp=cmaker_by_grp)
+
+    def _run_regular(self, trt_smrs, sf, secparams, reqv):
+        """
+        Run preclassical in a single pass over all src_groups when
+        sequential_source_models is False.
+        """
+        oq = self.oqparam
+        csm = self.csm
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
+        atomic_sources = []
+        normal_sources = []
+        cmakers = self.cmakers.to_array()
+        for sg in csm.src_groups:
+            for src in sg:
+                if reqv and sg.trt in oq.inputs['reqv']:
+                    if src.source_id not in oq.reqv_ignore_sources:
+                        collapse_nphc(src)
+            grp_id = sg.sources[0].grp_id
+            if sg.atomic:
+                cmakers[grp_id].set_weight(sg, sf)
+                atomic_sources.extend(sg)
+            else:
+                normal_sources.extend(sg)
+        self._process(atomic_sources, normal_sources, sf, secparams)
+
+    def _process(self, atomic_sources, normal_sources, sf, secparams,
+                 cmaker_by_grp=None):
+        if cmaker_by_grp is None:
+            cmaker_by_grp = dict(enumerate(self.cmakers.to_array()))
         # run preclassical in parallel for non-atomic sources
         if normal_sources:
             sources_by_key = groupby(
@@ -371,10 +421,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                 # avoid a segfault in macOS
                 self.datastore.swmr_on()
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-            cmakers = self.cmakers.to_array()
             num_tasks = len(sources_by_key)
             for grp_id, srcs in sources_by_key.items():
-                cmaker = cmakers[grp_id]
+                cmaker = cmaker_by_grp[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
