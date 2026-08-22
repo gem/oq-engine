@@ -124,6 +124,11 @@ def authenticated_page(
         "url": live_server.url,
     }])
     page.goto(f"{live_server.url}/engine/")
+    # Disable animations/transitions to prevent Bootstrap modal backdrop
+    # timeouts
+    page.add_style_tag(
+        content="* {transition: none !important; animation: none !important;}"
+    )
     return page
 
 
@@ -138,4 +143,9 @@ def ui_logged_in_page(
     page.get_by_role("button", name="Log in").click()
 
     page.wait_for_url(f"{live_server.url}/engine/")
+    # Disable animations/transitions to prevent Bootstrap modal backdrop
+    # timeouts
+    page.add_style_tag(
+        content="* {transition: none !important; animation: none !important;}"
+    )
     return page
