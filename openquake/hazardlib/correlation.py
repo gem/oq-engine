@@ -19,17 +19,17 @@
 # -----------
 # New code should import spatial models from
 # ``openquake.hazardlib.correlation_models.spatial``. This module remains
-# available during the correlation-framework migration so existing imports,
-# job files, and downstream libraries keep working without changed results.
+# available during the correlation-framework migration so existing class
+# imports, job files, and downstream libraries keep working.
 # Remove only after the documented deprecation window and migration of all
 # internal callers.
 
 from openquake.hazardlib.correlation_models.base import (
     SpatialCorrelationModel as BaseCorrelationModel)
 from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 import (
-    HeresiMiranda2019, _correlation_matrix as hmcorrelation)
+    HeresiMiranda2019)
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
-    JayaramBaker2009, _correlation_matrix as jbcorrelation)
+    JayaramBaker2009)
 
 
 JB2009CorrelationModel = JayaramBaker2009
@@ -37,4 +37,4 @@ HM2018CorrelationModel = HeresiMiranda2019
 
 __all__ = [
     'BaseCorrelationModel', 'HM2018CorrelationModel',
-    'JB2009CorrelationModel', 'hmcorrelation', 'jbcorrelation']
+    'JB2009CorrelationModel']
