@@ -397,6 +397,12 @@ def build_station_conditioning(inp, mean_stds_D, DD):
         dtype=numpy.float64)
     covariance_DD = within_DD + A_D @ between_correlation @ A_D.T
     covariance_DD_inv = numpy.linalg.pinv(covariance_DD, hermitian=True)
+    projected_residual = covariance_DD @ covariance_DD_inv @ residual_D
+    if not numpy.allclose(
+            projected_residual, residual_D, rtol=1E-9, atol=1E-12):
+        raise ValueError(
+            'Station observations are incompatible with their singular '
+            'covariance matrix')
     return StationConditioning(
         residual_D, imts_D, latent_imts, valid, observed_imt_indices,
         full_phi, phi_D, tau_D, A_D, between_correlation, covariance_DD,
@@ -498,6 +504,13 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
         covariance_YY = numpy.asarray(within_YY, dtype=numpy.float64)
         covariance_YY += A_Y @ between @ A_Y.T
     covariance_YD = within_YD + A_Y @ between @ station.A_D.T
+    projected_YD = (covariance_YD @ station.covariance_DD_inv @
+                    station.covariance_DD)
+    if not numpy.allclose(
+            projected_YD, covariance_YD, rtol=1E-9, atol=1E-12):
+        raise ValueError(
+            'Target-station covariance is incompatible with the singular '
+            'station covariance matrix')
     return JointConditioning(
         mean_Y, covariance_YY, covariance_YD, station)
 

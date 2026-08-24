@@ -443,6 +443,34 @@ def test_joint_sampler_accepts_a_singular_station_system():
     aac(samples, numpy.full((1, 3), 0.5), atol=1E-12)
 
 
+def test_singular_station_system_rejects_incompatible_observations():
+    stations = pandas.DataFrame({
+        'PGA_mean': [1.0, numpy.e],
+        'PGA_std': [0.0, 0.0]})
+    inp = Input(
+        range(1), range(2), [PGA()], [PGA()], stations,
+        DuNing2021(), NoCrossCorrelation(), None)
+    mean_stds_D = numpy.zeros((4, 1, 1, 2))
+    mean_stds_D[2, 0] = 0.6
+    mean_stds_D[3, 0] = 0.8
+
+    with numpy.testing.assert_raises_regex(
+            ValueError, 'incompatible with their singular covariance'):
+        build_station_conditioning(
+            inp, mean_stds_D, numpy.zeros((2, 2)))
+
+    inp.stations['PGA_mean'] = 1.0
+    station = build_station_conditioning(
+        inp, mean_stds_D, numpy.zeros((2, 2)))
+    mean_stds_Y = numpy.zeros((4, 1, 1, 1))
+    mean_stds_Y[2, 0] = 0.6
+    mean_stds_Y[3, 0] = 0.8
+    joint = build_joint_conditioning(
+        inp, mean_stds_Y, station,
+        numpy.zeros((1, 1)), numpy.zeros((1, 2)))
+    aac(joint.posterior_mean(), 0.0, atol=1E-12)
+
+
 def test_joint_posterior_mean_is_invariant_to_site_chunks():
     imts = [PGA(), SA(0.3)]
     target_sites = test_data.CASE01_TARGET_SITECOL.filtered(
