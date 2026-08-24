@@ -111,6 +111,72 @@ approximation,
 This is a modelling assumption, not a general identity. A direct joint model
 is preferable when one has been calibrated for the application.
 
+Principal-component joint models
+--------------------------------
+
+Some direct joint models use principal component analysis (PCA) to represent
+the residual vector through latent spatial fields, often using fewer fields
+than IMTs. Let
+:math:`\boldsymbol{z}(s)` contain the residuals for the IMTs at site :math:`s`,
+:math:`A` be a loading matrix, and :math:`\boldsymbol{u}(s)` contain the
+principal-component fields. The representation is
+
+.. math::
+
+   \boldsymbol{z}(s) \simeq A\boldsymbol{u}(s).
+
+The scaling of :math:`A` and :math:`\boldsymbol{u}` depends on the convention
+used by the model: eigenvalue scaling may be carried by the loadings, the
+component covariances, or both. When the retained components are mutually
+uncorrelated and component :math:`k` has spatial covariance
+:math:`C_k(s,t)`, the reconstructed IM covariance is
+
+.. math::
+
+   C_{ij}(s,t) = \sum_{k=1}^{K} A_{ik} A_{jk} C_k(s,t).
+
+More generally, a model may specify a non-diagonal latent covariance and use
+:math:`A C_u(s,t) A^{\mathsf{T}}`. The component covariance functions need not
+have identical forms or spatial ranges. Their definitions and the loading
+normalization must be taken from the publication or its reference
+implementation rather than transferred between models.
+
+If each retained component defines a valid spatial covariance, the joint
+matrix assembled from the sum above is positive semidefinite. It is converted
+to correlation by its reconstructed marginal variances,
+
+.. math::
+
+   \rho_{ij}(s,t) =
+   \frac{C_{ij}(s,t)}
+        {\sqrt{C_{ii}(s,s) C_{jj}(t,t)}}.
+
+This positive diagonal rescaling preserves positive semidefiniteness and
+produces a unit diagonal when all marginal variances are positive.
+
+Retaining every component avoids the rank loss caused by truncation and can
+reproduce the covariance represented by the full PCA basis when its component
+scaling is retained. A truncation to :math:`K` components instead gives a
+low-rank approximation in the IMT dimension: at one site its rank is at most
+:math:`K`. It can capture the dominant dependence with fewer fitted spatial
+models, but discards the omitted components and generally changes the
+reconstructed covariance. Across multiple sites the rank also depends on the
+spatial rank of each component covariance. Whether to use a full or truncated
+basis, and whether that choice is configurable, is model-specific. Du and
+Ning (2021), for example, publish a recommended truncated construction.
+
+When a model exposes interpolation between calibrated IMT coordinates, it is
+preferable to interpolate a covariance-generating representation and then
+reconstruct and normalize the matrix. For example, interpolating loading
+vectors while retaining valid component covariances preserves the
+positive-semidefinite construction for the new coordinates. Interpolating
+component covariance parameters can serve the same purpose only when the
+result remains in a valid covariance family. By contrast, interpolating each
+pairwise correlation independently does not in general preserve joint
+consistency, positive semidefiniteness, or even a unit diagonal. The
+interpolation coordinate and its allowed domain still require scientific
+support; the PCA construction alone does not justify extrapolation.
+
 Covariance and sampling
 -----------------------
 
@@ -178,35 +244,6 @@ The implementation uses the coefficient tables corrected by the 2020 erratum
 and follows the authors' 2022 Matlab refinements. These preserve the diagonal
 ridge during interpolation and use a revised, higher-precision nugget matrix
 to retain positive definiteness.
-
-Du and Ning (2021) directly models normalized within-event residuals for PGA,
-PGV, IA, CAV, the 5--75% and 5--95% significant durations, and 5%-damped SA.
-Its recommended approximation retains seven principal components and combines
-their nested spatial covariance models before normalizing the reconstructed
-IM covariance. The implemented SA scope is limited to the 17 periods published
-from 0.01 to 10 seconds. Author-supplied Matlab functions establish the stored
-coefficient ordering and covariance reconstruction, but their interpolation
-of final correlations at unlisted SA periods is an unpublished extension that
-can give a non-unit diagonal. The strict ``DuNing2021`` model consequently
-rejects off-grid periods.
-
-``DuNing2021Interpolated`` exposes that extension explicitly. It linearly
-interpolates the normalized principal-component loading vectors in ordinary
-period, matching the author function's period coordinate, and then normalizes
-the reconstructed covariance by its two zero-distance marginal variances.
-This is equivalent to normalizing the author-interpolated value. It retains
-the published values at all 17 nodes while producing symmetric,
-unit-diagonal, positive-semidefinite matrices at intermediate periods. The
-variant neither extrapolates outside 0.01--10 seconds nor implies that the
-interpolation was calibrated or specified in the publication.
-
-The calibrated vector does not have one common horizontal-component
-definition. PGA, PGV, and SA use the RotD50 residuals of Campbell and Bozorgnia
-(2014); IA and CAV use the geometric mean of the two as-recorded horizontal
-components in Campbell and Bozorgnia (2019); and both durations use that
-geometric-mean definition in Du and Wang (2017). The model therefore leaves
-its model-wide intensity-measure-component metadata unset rather than
-mislabeling part of the vector.
 
 Conditional spectra require an explicitly configured total-residual model;
 omitting it does not request an independent calculation.
