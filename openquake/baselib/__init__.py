@@ -192,6 +192,7 @@ class Capability(Enum):
     VISIBLE_SERVER_NAME = auto()
     PLOT_ASSETS_POST_RISK = auto()
     GLOSSARY = auto()  # FIXME: check logic
+    DATASTORE_DOWNLOADING = auto()
 
     def __repr__(self) -> str:
         return self.name
@@ -215,6 +216,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
         | frozenset({
             Capability.VISIBLE_SERVER_NAME,
             Capability.GLOSSARY,
+            Capability.DATASTORE_DOWNLOADING,
         })
     ),
     Mode.RESTRICTED: (
@@ -223,6 +225,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
             Capability.AUTHENTICATION,
             Capability.VISIBLE_SERVER_NAME,
             Capability.GLOSSARY,
+            Capability.DATASTORE_DOWNLOADING,
         })
     ),
     Mode.IMPACT: (
@@ -245,6 +248,7 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
             Capability.AELO_JOB_LAUNCHING,
             Capability.MOSAIC_DIR_REQUIRED,
             Capability.GLOSSARY,
+            Capability.DATASTORE_DOWNLOADING,  # FIXME: check this
         })
     ),
     Mode.READ_ONLY: frozenset(

@@ -41,7 +41,6 @@ from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
-from openquake.engine import APPLICATION
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
@@ -216,12 +215,9 @@ def save_version_checksum(oq, dstore):
     """
     attrs = dstore['/'].attrs
     attrs['engine_version'] = general.engine_version()
-
-    # FIXME
-    # attrs.extend(APPLICATION.get_additional_attrs())
-    # if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
-    #     attrs['aelo_version'] = get_aelo_version()
-
+    # FIXME: get it from config?
+    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+        attrs['aelo_version'] = get_aelo_version()
     attrs['date'] = datetime.now().isoformat()[:19]
     if 'checksum32' in attrs:
         # if save_params has been already called, don't recompute
@@ -1493,8 +1489,8 @@ def import_ruptures_hdf5(h5, fnames):
             events['rup_id'] += offset
             if fileno == 0:  # first time
                 h5.create_dataset(
-                    'events', (0,), events.dtype, maxshape=(None,), chunks=True,
-                    compression='gzip')
+                    'events', (0,), events.dtype, maxshape=(None,),
+                    chunks=True, compression='gzip')
             hdf5.extend(h5['events'], events)
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
@@ -1619,7 +1615,6 @@ def _store_events(E, n, dstore):
         dstore['weights'] = numpy.ones(1)
     return events['id']
 
-    
 
 def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
                     N=None, E=None, R=None):

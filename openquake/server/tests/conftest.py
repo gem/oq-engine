@@ -23,6 +23,7 @@ import shutil
 import pathlib
 import subprocess
 from django.contrib.auth import get_user_model
+from openquake.baselib import config
 
 # pytest-playwright starts an asyncio event loop at session startup.
 # Django 4+ forbids synchronous ORM/database operations when an event loop
@@ -66,15 +67,15 @@ def migrate_before_tests():
 @pytest.fixture
 def application_mode(settings, request):
     mode = request.param
-    settings.APPLICATION_MODE = mode
+    config.webapi.application_mode = mode
     return mode
 
 
 @pytest.fixture
 def default_usgs_id(settings, request):
-    mode = request.param
-    settings.IMPACT_DEFAULT_USGS_ID = mode
-    return mode
+    usgs_id = request.param
+    settings.IMPACT_DEFAULT_USGS_ID = usgs_id
+    return usgs_id
 
 
 @pytest.fixture

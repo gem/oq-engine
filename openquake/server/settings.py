@@ -143,7 +143,8 @@ MIDDLEWARE = (
 # Forbid users to see other users outputs by default
 ACL_ON = True
 
-ALLOW_DATASTORE_DOWNLOAD = True
+if APPLICATION.has_datastore_downloading_enabled():
+    ALLOW_DATASTORE_DOWNLOAD = True
 
 # Add additional paths (as regular expressions) that don't require
 # authentication.
@@ -340,18 +341,15 @@ if APPLICATION.has_autentication_enabled():
 
     # FIXME: import application-specific settings (that could be in a
     # project-specific folder containing settings, templates, etc.)
-    # if APPLICATION_MODE == 'IMPACT':
-    #     ALLOW_DATASTORE_DOWNLOAD = False
-    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
-    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
-    # elif APPLICATION_MODE == 'AELO':
-    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
-    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
-    # else:
-    #     EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
-    #     EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
-    EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
-    EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
+    if APPLICATION.mode == 'IMPACT':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
+    elif APPLICATION.mode == 'AELO':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
+    else:
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
 
     # NOTE: the following variables are needed to send pasword reset emails
     #       using the createnormaluser Django command.

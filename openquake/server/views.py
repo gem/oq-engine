@@ -1973,8 +1973,9 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     user_level = get_user_level(request)
-    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
-        err_msg = f'{user_level=}, {settings.ALLOW_DATASTORE_DOWNLOAD=}'
+    app_download_dstore_on = APPLICATION.has_datastore_downloading_enabled()
+    if user_level < 2 and not app_download_dstore_on:
+        err_msg = f'{user_level=}, {app_download_dstore_on=}'
         return HttpResponseForbidden(err_msg)
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
