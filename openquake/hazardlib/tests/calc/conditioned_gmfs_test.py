@@ -446,7 +446,8 @@ def test_joint_sampler_accepts_a_singular_station_system():
 def test_joint_posterior_mean_is_invariant_to_site_chunks():
     imts = [PGA(), SA(0.3)]
     target_sites = test_data.CASE01_TARGET_SITECOL.filtered(
-        test_data.CASE01_TARGET_SITECOL.sids[:5])
+        numpy.array([0, 2, 4, 6, 8]))
+    numpy.testing.assert_array_equal(target_sites.sids, [0, 2, 4, 6, 8])
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
     station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])

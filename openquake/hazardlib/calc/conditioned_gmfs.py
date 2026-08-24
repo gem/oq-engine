@@ -514,8 +514,8 @@ def conditioned_mean_in_chunks(
     mean = numpy.empty((M, N), dtype=numpy.float64)
     for start in range(0, N, chunk_size):
         stop = min(start + chunk_size, N)
-        site_ids = inp.sites_Y.sids[start:stop]
-        sites_Y = inp.sites_Y.filtered(site_ids)
+        positions = numpy.arange(start, stop)
+        sites_Y = inp.sites_Y.filtered(positions)
         chunk_inp = replace(inp, sites_Y=sites_Y)
         chunk_stats = mean_stds_Y[:, :, :, start:stop]
         distances = compute_distance_matrix(sites_Y, inp.sites_D)
