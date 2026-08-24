@@ -32,7 +32,7 @@ from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, compute_distance_matrix, conditionable_imts,
+    build_precomputed, compute_distance_matrix, conditionable_imts, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -111,6 +111,32 @@ def test_target_gsim_statistics_are_computed_for_each_imt():
         mean, _, _, _ = conditioner.get_mu_tau_phi(
             m, target_imt, monitor, compute_covs=False)
         aac(mean[:, 0], target_imt.period)
+
+
+def test_station_observation_errors_are_added_to_matching_diagonal():
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.25, 1.5]
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [],
+        maximum_distance=test_data.MAX_DIST)
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        [PGA()], [PGA()], station_data,
+        test_data.DummySpatialCorrelationModel(),
+        test_data.DummyCrossCorrelationBetween(),
+        test_data.DummyCrossCorrelationWithin())
+    pre = build_precomputed(test_data.RUP, cmaker, inp, compute_covs=False)
+
+    result = createD(
+        0, 0, PGA(), inp, pre.conditioners[0].mean_stds_D, pre.DD)
+    phi = numpy.full(2, 0.8)
+    expected = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, pre.DD,
+        [PGA()], [PGA()], phi, phi)
+    numpy.fill_diagonal(
+        expected, numpy.diag(expected) + numpy.array([0.25, 1.5]) ** 2)
+    aac(result.cov_WD_WD_inv, numpy.linalg.pinv(expected))
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,

@@ -414,7 +414,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     # cross-correlation functions
     var_addon_D = sdata[
         [c_imt.string + "_std" for c_imt in t.conditioning_imts]
-    ].values.reshape((-1, 1), order="F") ** 2
+    ].values.reshape(-1, order="F") ** 2
 
     # Predicted mean at the observation points, from GSIM(s)
     mu_yD = sdata[
