@@ -20,25 +20,7 @@ supplement published by the authors. It contains aggregate total-residual
 correlations computed with Equation 2 of the paper. The 2025 corrigendum
 corrected erroneous Z1.0 and earthquake-region inputs used in the original
 analysis. The authors' corrected analysis is maintained at
-https://github.com/bakerjw/NGAW2_correlations. Its ``makePosDef.m`` script
-applies ``nearestCorrelationMatrix`` to the complete 109-IMT empirical matrix
-before exporting ``rhoDataPD.csv``; this implementation likewise loads that
-complete repaired matrix before selecting its supported IMTs.
-
-The publication does not prescribe interpolation between the 105 tabulated
-SA periods. A later author-maintained calculator, ``bb_2017_corr.m`` at
-https://github.com/bakerjw/GMMs, optionally interpolates the positive-definite
-SA table bilinearly in log period. This implementation deliberately remains
-strict: it returns only tabulated values and does not extrapolate, interpolate,
-or substitute one IMT for another. The calculator's 105 by 105 SA matrix was
-independently checked and is identical to the corresponding block of the
-corrected ``rhoDataPD.csv`` matrix.
-
-The duration residuals were evaluated with Afshari and Stewart (2016), but
-the corrected author pipeline uses Boore et al. (2009) between- and
-within-event standard deviations when applying Equation 2. This apparent
-source inconsistency is already incorporated in the published duration rows;
-this implementation returns those author values without reinterpretation.
+https://github.com/bakerjw/NGAW2_correlations.
 
 References
 ----------
@@ -47,7 +29,9 @@ observed in the NGA-West2 database, and dependence of correlations on rupture
 and site parameters. Earthquake Spectra, 33(1), 145-156.
 https://doi.org/10.1193/060716EQS095M
 
-Baker, J. W., and Bradley, B. A. (2025). Corrigendum. Earthquake Spectra,
+Baker, J. W., and Bradley, B. A. (2025). Corrigendum to "Intensity measure 
+correlations observed in the NGA-West2 database, and dependence of 
+correlations on rupture and site parameters". Earthquake Spectra,
 41(2), 1825-1827. https://doi.org/10.1177/87552930241245554
 """
 
@@ -118,11 +102,8 @@ class BakerBradley2017(CrossIMTCorrelationModel):
     """Corrected total-residual amplitude and duration correlation.
 
     The paper reports active-shallow-crustal NGA-West2 records with magnitude
-    greater than 5 and Joyner-Boore distance below 100 km. The author code
-    implements inclusive limits of magnitude 5 and 100 km. The publication
-    found no practically significant dependence on magnitude, distance, or
-    Vs30. PGA and PGV are directly calibrated IMTs. SA is supported at the
-    105 published, 5%-damped periods from 0.01 to 10 s. RSD575 and RSD595
+    greater than 5 and Joyner-Boore distance below 100 km. SA is supported at
+    the 105 published, 5%-damped periods from 0.01 to 10 s. RSD575 and RSD595
     are also directly calibrated. The amplitude IMTs use RotD50, whereas the
     duration GMM uses the geometric mean; model-wide component metadata is
     therefore intentionally unset.
