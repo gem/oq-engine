@@ -16,8 +16,8 @@
 """Tests against the corrected Baker-Bradley electronic supplement.
 
 The reference values were extracted directly from the authors' corrected
-``rhoData.csv`` electronic supplement, SHA-256
-``27687e9ae0e4f0f4b9ad1eede3b9d560cd997581a7826975ad9615f50332f77b``.
+``rhoDataPD.csv`` electronic supplement, SHA-256
+``2ae08d612e6b35ccbe047c7a16428dec25d2f06285d35e7d3eb883c2c9b6821a``.
 IM names and row indexes came from the accompanying ``README.csv``. Neither
 the OpenQuake implementation nor its production data loader was used to
 compute the reference values.
@@ -59,7 +59,7 @@ def test_corrected_author_reference_values():
         actual, reference['correlation'], rtol=0, atol=0)
 
 
-def test_complete_supported_matrix_is_raw_float64():
+def test_complete_supported_matrix_is_positive_definite_float64():
     imts = [SA(period) for period in _SA_PERIODS]
     imts.extend([PGA(), PGV()])
     matrix = BakerBradley2017().correlation_matrix(imts)
@@ -67,24 +67,20 @@ def test_complete_supported_matrix_is_raw_float64():
     numpy.testing.assert_array_equal(matrix, matrix.T)
     numpy.testing.assert_array_equal(numpy.diag(matrix), 1)
     assert numpy.linalg.eigvalsh(matrix).min() == pytest.approx(
-        -0.0035574748332952884, abs=1E-14)
+        1.125427263064056E-5, abs=1E-14)
 
 
-def test_common_factorization_repairs_indefinite_subset():
+def test_common_factorization_preserves_author_matrix():
     imts = [
         SA(0.042), SA(9.5), SA(0.067), SA(0.42), SA(6.5),
         SA(1.9), SA(9.0), SA(0.08), SA(0.1), SA(1.3), SA(8.0),
         SA(10.0), SA(1.8), SA(0.46), SA(0.025), PGV(),
     ]
     model = BakerBradley2017()
-    raw = model.correlation_matrix(imts)
-    assert numpy.linalg.eigvalsh(raw).min() < 0
-    with pytest.raises(numpy.linalg.LinAlgError):
-        model.factor(range(1), imts, ensure_psd=False)
-    factor = model.factor(range(1), imts)
-    repaired = factor.lower_triangle @ factor.lower_triangle.T
-    assert numpy.linalg.eigvalsh(repaired).min() > 0
-    numpy.testing.assert_allclose(numpy.diag(repaired), 1)
+    expected = model.correlation_matrix(imts)
+    factor = model.factor(range(1), imts, ensure_psd=False)
+    actual = factor.lower_triangle @ factor.lower_triangle.T
+    numpy.testing.assert_allclose(actual, expected, rtol=0, atol=1E-14)
 
 
 def test_metadata_and_residual_component():
@@ -93,7 +89,7 @@ def test_metadata_and_residual_component():
     assert model.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is const.IMC.RotD50
     assert model.DEFINED_FOR_INTENSITY_MEASURE_TYPES == {PGA, PGV, SA}
     assert model.rho(
-        PGA(), PGV(), ResidualComponent.TOTAL) == pytest.approx(0.67073)
+        PGA(), PGV(), ResidualComponent.TOTAL) == pytest.approx(0.67070)
     with pytest.raises(ValueError, match='provides total correlation'):
         model.rho(PGA(), PGV(), ResidualComponent.BETWEEN_EVENT)
 

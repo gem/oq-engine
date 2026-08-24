@@ -129,13 +129,15 @@ also found that RotD50 and RotD100 SA correlations are essentially identical,
 but the aggregate table and the implementation metadata retain RotD50 as the
 calibrated component.
 
-No interpolation rule was published, so ``BakerBradley2017`` accepts only the
-tabulated SA periods and does not extrapolate or substitute IMTs. The raw
-empirical table is slightly indefinite when many IMTs are
-assembled. The model returns those published values unchanged; the common
-factorization machinery performs positive-semidefinite repair only when it is
-needed for sampling. Although the authors computed separate residual
-components during their analysis, the supplement does not publish a
+No interpolation rule was published. A later author-maintained Matlab
+calculator supports bilinear interpolation in log period over the
+positive-definite SA table, but ``BakerBradley2017`` deliberately accepts only
+the 105 tabulated periods and does not extrapolate or substitute IMTs. The
+authors' analysis pipeline applies ``nearestCorrelationMatrix`` to the complete
+109-IMT empirical matrix and exports both raw and positive-definite tables.
+The model loads the corrected positive-definite export before extracting its
+supported PGA, PGV and SA subset. Although the authors computed separate
+residual components during their analysis, the supplement does not publish a
 between-event matrix. The implemented total-residual table must therefore not
 be used or labelled as a between-event model.
 

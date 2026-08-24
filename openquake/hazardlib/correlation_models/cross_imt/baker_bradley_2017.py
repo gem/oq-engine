@@ -15,19 +15,24 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Baker and Bradley (2017) cross-IMT correlation model.
 
-The coefficient matrix is the corrected ``rhoData.csv`` electronic
+The coefficient matrix is the corrected ``rhoDataPD.csv`` electronic
 supplement published by the authors. It contains aggregate total-residual
 correlations computed with Equation 2 of the paper. The 2025 corrigendum
 corrected erroneous Z1.0 and earthquake-region inputs used in the original
 analysis. The authors' corrected analysis is maintained at
-https://github.com/bakerjw/NGAW2_correlations.
+https://github.com/bakerjw/NGAW2_correlations. Its ``makePosDef.m`` script
+applies ``nearestCorrelationMatrix`` to the complete 109-IMT empirical matrix
+before exporting ``rhoDataPD.csv``; this implementation likewise loads that
+complete repaired matrix before selecting its supported IMTs.
 
 The publication does not prescribe interpolation between the 105 tabulated
-SA periods. This implementation therefore returns table values only and does
-not extrapolate, interpolate, or substitute one IMT for another. The raw
-published matrix is not positive semidefinite as a complete 109-IMT matrix;
-it is returned without silent repair. Common factorization code performs a
-repair only when one is required for sampling.
+SA periods. A later author-maintained calculator, ``bb_2017_corr.m`` at
+https://github.com/bakerjw/GMMs, optionally interpolates the positive-definite
+SA table bilinearly in log period. This implementation deliberately remains
+strict: it returns only tabulated values and does not extrapolate, interpolate,
+or substitute one IMT for another. The calculator's 105 by 105 SA matrix was
+independently checked and is identical to the corresponding block of the
+corrected ``rhoDataPD.csv`` matrix.
 
 References
 ----------
