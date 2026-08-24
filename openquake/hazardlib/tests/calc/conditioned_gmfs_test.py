@@ -26,6 +26,7 @@ from unittest import mock
 from types import SimpleNamespace
 
 import numpy
+import pandas
 
 from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
@@ -180,6 +181,131 @@ def test_joint_station_covariance_combines_all_residual_components():
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
 
 
+def test_joint_station_system_masks_missing_observations_consistently():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    station_data.loc[1, 'PGA_mean'] = numpy.nan
+    station_data.loc[0, 'SA(0.3)_std'] = numpy.nan
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    distances = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+
+    system = build_station_conditioning(inp, mean_stds_D, distances)
+    numpy.testing.assert_array_equal(
+        system.observation_mask, [True, False, False, True])
+    numpy.testing.assert_array_equal(system.observed_imt_indices, [0, 1])
+    aac(system.residual_D, [0.0, -0.2])
+    assert system.covariance_DD.shape == (2, 2)
+
+
+def test_du_ning_conditions_pgv_observations():
+    imts = [PGA(), PGV()]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['PGV_mean'] = numpy.exp([0.4, -0.2])
+    station_data['PGV_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    mean = conditioned_mean_in_chunks(inp, mean_stds_Y, station)
+    aac(station.residual_D, [0.0, 0.0, 0.4, -0.2])
+    assert mean.shape == (2, 1)
+    assert numpy.all(numpy.isfinite(mean))
+    assert mean[1, 0] != 0
+
+
+def test_joint_posterior_matches_independently_assembled_matrices():
+    imts = [PGA(), SA(0.3)]
+    spatial = numpy.array([
+        [1.0, 0.4, 0.2],
+        [0.4, 1.0, 0.3],
+        [0.2, 0.3, 1.0]])
+    cross_imt = numpy.array([[1.0, 0.5], [0.5, 1.0]])
+    complete = numpy.kron(cross_imt, spatial)
+    target_indices = [0, 3]
+    station_indices = [1, 2, 4, 5]
+    blocks = {
+        (1, 1): complete[numpy.ix_(target_indices, target_indices)],
+        (1, 2): complete[numpy.ix_(target_indices, station_indices)],
+        (2, 2): complete[numpy.ix_(station_indices, station_indices)]}
+
+    class MatrixModel(SpatialCrossIMTCorrelationModel):
+        DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+
+        def correlation_block(self, distances, imts1, imts2=None,
+                              component=None, context=None):
+            return blocks[distances.shape]
+
+    residual_D = numpy.array([[0.4, -0.3], [0.2, 0.1]])
+    predicted_D = numpy.array([[0.1, -0.1], [0.2, -0.2]])
+    stations = {
+        'PGA_mean': numpy.exp(predicted_D[0] + residual_D[0]),
+        'PGA_std': [0.1, 0.2],
+        'SA(0.3)_mean': numpy.exp(predicted_D[1] + residual_D[1]),
+        'SA(0.3)_std': [0.15, 0.25]}
+    between = numpy.array([[1.0, 0.35], [0.35, 1.0]])
+    inp = Input(
+        range(1), range(2), imts, imts, pandas.DataFrame(stations),
+        MatrixModel(),
+        SimpleNamespace(correlation_matrix=lambda _: between), None)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[0, 0] = predicted_D
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[0, 0, :, 0] = [1.0, 2.0]
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(
+        inp, mean_stds_D, numpy.zeros((2, 2)))
+    joint = build_joint_conditioning(
+        inp, mean_stds_Y, station,
+        numpy.zeros((1, 1)), numpy.zeros((1, 2)))
+
+    phi_D = numpy.array([0.6, 0.7, 0.8, 0.9])
+    phi_Y = numpy.array([0.65, 0.85])
+    tau_D = numpy.array([
+        [0.2, 0.0], [0.3, 0.0], [0.0, 0.4], [0.0, 0.5]])
+    tau_Y = numpy.array([[0.25, 0.0], [0.0, 0.45]])
+    covariance_DD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
+                     numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2 +
+                     tau_D @ between @ tau_D.T)
+    covariance_YD = (blocks[(1, 2)] * phi_Y[:, None] * phi_D +
+                     tau_Y @ between @ tau_D.T)
+    covariance_YY = (blocks[(1, 1)] * phi_Y[:, None] * phi_Y +
+                     tau_Y @ between @ tau_Y.T)
+    inverse_DD = numpy.linalg.pinv(covariance_DD, hermitian=True)
+    expected_mean = numpy.array([1.0, 2.0]) + (
+        covariance_YD @ inverse_DD @ residual_D.reshape(-1))
+    expected_covariance = covariance_YY - (
+        covariance_YD @ inverse_DD @ covariance_YD.T)
+
+    mean, covariance = joint.mean_covariance()
+    aac(mean, expected_mean, rtol=1E-7, atol=1E-7)
+    aac(covariance, expected_covariance, rtol=1E-7, atol=1E-7)
+
+
 def test_matheron_transform_matches_dense_schur_complement():
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
@@ -295,6 +421,11 @@ def test_joint_mean_with_zero_truncation_uses_no_legacy_matrices():
         inp, conditioner.mean_stds_Y, station)
     aac(result[:, :, :2], numpy.repeat(expected[:, :, None], 2, axis=2))
     aac(result[:, :, 2], expected)
+
+    computer.tlw = computer.tlb = 3
+    with numpy.testing.assert_raises_regex(
+            ValueError, 'Finite truncated multivariate-normal'):
+        conditioned(computer, conditioner, monitor)
 
 
 def test_joint_sampler_accepts_a_singular_station_system():
