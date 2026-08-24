@@ -28,21 +28,25 @@ from pathlib import Path
 import numpy
 import pytest
 
-from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017 import (
     BakerBradley2017, _SA_PERIODS)
-from openquake.hazardlib.imt import IA, PGA, PGV, SA
+from openquake.hazardlib.imt import (
+    IA, PGA, PGV, RSD2080, RSD575, RSD595, SA)
 
 
 DATA = Path(__file__).with_name('data') / 'BAKER_BRADLEY_2017'
 
 
 def _imt(name, period):
-    if name == 'PGA':
-        return PGA()
-    if name == 'PGV':
-        return PGV()
+    non_sa = {
+        'PGA': PGA,
+        'PGV': PGV,
+        'RSD575': RSD575,
+        'RSD595': RSD595,
+    }
+    if name in non_sa:
+        return non_sa[name]()
     return SA(period)
 
 
@@ -61,20 +65,21 @@ def test_corrected_author_reference_values():
 
 def test_complete_supported_matrix_is_positive_definite_float64():
     imts = [SA(period) for period in _SA_PERIODS]
-    imts.extend([PGA(), PGV()])
+    imts.extend([RSD575(), RSD595(), PGA(), PGV()])
     matrix = BakerBradley2017().correlation_matrix(imts)
     assert matrix.dtype == numpy.float64
     numpy.testing.assert_array_equal(matrix, matrix.T)
     numpy.testing.assert_array_equal(numpy.diag(matrix), 1)
     assert numpy.linalg.eigvalsh(matrix).min() == pytest.approx(
-        1.125427263064056E-5, abs=1E-14)
+        9.264374914248198E-6, abs=1E-14)
 
 
 def test_common_factorization_preserves_author_matrix():
     imts = [
         SA(0.042), SA(9.5), SA(0.067), SA(0.42), SA(6.5),
         SA(1.9), SA(9.0), SA(0.08), SA(0.1), SA(1.3), SA(8.0),
-        SA(10.0), SA(1.8), SA(0.46), SA(0.025), PGV(),
+        SA(10.0), SA(1.8), SA(0.46), SA(0.025), RSD575(),
+        RSD595(), PGV(),
     ]
     model = BakerBradley2017()
     expected = model.correlation_matrix(imts)
@@ -86,8 +91,9 @@ def test_common_factorization_preserves_author_matrix():
 def test_metadata_and_residual_component():
     model = BakerBradley2017()
     assert model.DEFINED_FOR_RESIDUAL_COMPONENT is ResidualComponent.TOTAL
-    assert model.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is const.IMC.RotD50
-    assert model.DEFINED_FOR_INTENSITY_MEASURE_TYPES == {PGA, PGV, SA}
+    assert model.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is None
+    assert model.DEFINED_FOR_INTENSITY_MEASURE_TYPES == {
+        PGA, PGV, RSD575, RSD595, SA}
     assert model.rho(
         PGA(), PGV(), ResidualComponent.TOTAL) == pytest.approx(0.67070)
     with pytest.raises(ValueError, match='provides total correlation'):
@@ -96,6 +102,7 @@ def test_metadata_and_residual_component():
 
 @pytest.mark.parametrize(('imt', 'message'), [
     (IA(), 'does not support IA'),
+    (RSD2080(), 'does not support RSD2080'),
     (SA(0.009), 'periods from 0.01 to 10 s'),
     (SA(10.1), 'periods from 0.01 to 10 s'),
     (SA(0.015), 'does not publish a correlation value'),
@@ -111,3 +118,4 @@ def test_accepts_period_boundaries_and_preserves_symmetry():
     assert model.rho(SA(0.01), SA(0.01)) == 1
     assert model.rho(SA(10.0), SA(10.0)) == 1
     assert model.rho(PGA(), SA(10.0)) == model.rho(SA(10.0), PGA())
+    assert model.rho(RSD575(), PGV()) == model.rho(PGV(), RSD575())

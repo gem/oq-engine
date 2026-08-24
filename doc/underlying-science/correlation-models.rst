@@ -117,9 +117,12 @@ Baker and Bradley (2017) total residuals
 Baker and Bradley (2017) estimated within- and between-event correlations
 from NGA-West2 residuals, then combined them into total-residual correlation
 using the :math:`\tau`, :math:`\phi` and :math:`\sigma` weighting shown above.
-The corrected electronic supplement provides aggregate RotD50 correlations
-for PGA, PGV and 5%-damped SA at 105 periods from 0.01 to 10 seconds. PGA and
-PGV are direct empirical IMTs rather than spectral-period proxies.
+The corrected electronic supplement provides aggregate correlations for PGA,
+PGV, 5--75% and 5--95% significant duration, and 5%-damped SA at 105 periods
+from 0.01 to 10 seconds. PGA and PGV are direct empirical IMTs rather than
+spectral-period proxies. The amplitude IMTs use RotD50, while the Afshari and
+Stewart (2016) duration GMM uses the geometric mean. The model therefore
+leaves its model-wide intensity-measure-component metadata unset.
 
 The paper reports using active-shallow-crustal records with :math:`M>5` and
 :math:`R<100` km. The corrected author code implements inclusive limits of
@@ -127,7 +130,14 @@ The paper reports using active-shallow-crustal records with :math:`M>5` and
 significant dependence on magnitude, distance or :math:`V_{S30}`. The paper
 also found that RotD50 and RotD100 SA correlations are essentially identical,
 but the aggregate table and the implementation metadata retain RotD50 as the
-calibrated component.
+calibrated amplitude component.
+
+The author pipeline evaluates the two duration residuals with Afshari and
+Stewart (2016), as stated by the paper, but uses Boore et al. (2009)
+between- and within-event standard deviations when applying Equation 2 to the
+aggregate matrix. This apparent source inconsistency is documented here; the
+implementation returns the corrected published duration values without
+reinterpretation.
 
 No interpolation rule was published. A later author-maintained Matlab
 calculator supports bilinear interpolation in log period over the
@@ -135,11 +145,11 @@ positive-definite SA table, but ``BakerBradley2017`` deliberately accepts only
 the 105 tabulated periods and does not extrapolate or substitute IMTs. The
 authors' analysis pipeline applies ``nearestCorrelationMatrix`` to the complete
 109-IMT empirical matrix and exports both raw and positive-definite tables.
-The model loads the corrected positive-definite export before extracting its
-supported PGA, PGV and SA subset. Although the authors computed separate
-residual components during their analysis, the supplement does not publish a
-between-event matrix. The implemented total-residual table must therefore not
-be used or labelled as a between-event model.
+The model loads the corrected positive-definite export and exposes all 109
+IMTs in the matrix. Although the authors computed separate residual components
+during their analysis, the supplement does not publish a between-event matrix.
+The implemented total-residual table must therefore not be used or labelled as
+a between-event model.
 
 Covariance and sampling
 -----------------------

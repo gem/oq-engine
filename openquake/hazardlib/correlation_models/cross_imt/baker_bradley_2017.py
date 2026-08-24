@@ -34,6 +34,12 @@ or substitute one IMT for another. The calculator's 105 by 105 SA matrix was
 independently checked and is identical to the corresponding block of the
 corrected ``rhoDataPD.csv`` matrix.
 
+The duration residuals were evaluated with Afshari and Stewart (2016), but
+the corrected author pipeline uses Boore et al. (2009) between- and
+within-event standard deviations when applying Equation 2. This apparent
+source inconsistency is already incorporated in the published duration rows;
+this implementation returns those author values without reinterpretation.
+
 References
 ----------
 Baker, J. W., and Bradley, B. A. (2017). Intensity measure correlations
@@ -49,11 +55,10 @@ from pathlib import Path
 
 import numpy
 
-from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, PGV, RSD575, RSD595, SA
 
 
 _SA_PERIODS = numpy.array([
@@ -81,8 +86,12 @@ if _CORRELATION.shape != (109, 109):
         f'{_CORRELATION.shape}')
 _CORRELATION.setflags(write=False)
 
-_PGA_INDEX = 107
-_PGV_INDEX = 108
+_OTHER_IMT_INDEX = {
+    'RSD575': 105,
+    'RSD595': 106,
+    'PGA': 107,
+    'PGV': 108,
+}
 
 
 def _sa_index(period):
@@ -97,29 +106,31 @@ def _sa_index(period):
 
 
 def _imt_index(imt):
-    if imt.name == 'PGA':
-        return _PGA_INDEX
-    if imt.name == 'PGV':
-        return _PGV_INDEX
+    if imt.name in _OTHER_IMT_INDEX:
+        return _OTHER_IMT_INDEX[imt.name]
     return _sa_index(imt.period)
 
 
 @register_model(
-    description='Baker and Bradley (2017) total-residual correlation')
+    description=('Baker and Bradley (2017) total-residual amplitude and '
+                 'duration correlation'))
 class BakerBradley2017(CrossIMTCorrelationModel):
-    """Corrected total-residual correlation for RotD50 ground motion.
+    """Corrected total-residual amplitude and duration correlation.
 
     The paper reports active-shallow-crustal NGA-West2 records with magnitude
     greater than 5 and Joyner-Boore distance below 100 km. The author code
     implements inclusive limits of magnitude 5 and 100 km. The publication
     found no practically significant dependence on magnitude, distance, or
     Vs30. PGA and PGV are directly calibrated IMTs. SA is supported at the
-    105 published, 5%-damped periods from 0.01 to 10 s.
+    105 published, 5%-damped periods from 0.01 to 10 s. RSD575 and RSD595
+    are also directly calibrated. The amplitude IMTs use RotD50, whereas the
+    duration GMM uses the geometric mean; model-wide component metadata is
+    therefore intentionally unset.
     """
 
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
+        PGA, PGV, RSD575, RSD595, SA}
     DEFINED_FOR_SA_DAMPING = 5.0
     DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
