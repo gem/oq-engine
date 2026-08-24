@@ -72,6 +72,43 @@ def test_joint_within_event_covariance_block():
     assert ctx is context
 
 
+def test_target_gsim_statistics_are_computed_for_each_imt():
+    class IMTDependentGMM(test_data.ZeroMeanGMM):
+        def compute(self, ctx: numpy.recarray, imts,
+                    mean, sig, tau, phi):
+            periods = numpy.array([imt.period for imt in imts])[:, None]
+            mean[:] = periods
+            tau[:] = periods + 0.1
+            phi[:] = periods + 0.2
+            sig[:] = numpy.hypot(tau, phi)
+
+    target_imts = [SA(0.1), SA(1.0)]
+    cmaker = simple_cmaker(
+        [IMTDependentGMM()], [], maximum_distance=test_data.MAX_DIST,
+        truncation_level=0)
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE07_STATION_SITECOL,
+        target_imts, [SA(1.0)], test_data.CASE07_STATION_DATA,
+        test_data.DummySpatialCorrelationModel(),
+        test_data.DummyCrossCorrelationBetween(),
+        test_data.DummyCrossCorrelationWithin())
+
+    pre = build_precomputed(test_data.RUP, cmaker, inp, compute_covs=False)
+    conditioner = pre.conditioners[0]
+    stats = conditioner.mean_stds_Y[:, 0, :, 0]
+    aac(stats[0], [0.1, 1.0])
+    aac(stats[2], [0.2, 1.1])
+    aac(stats[3], [0.3, 1.2])
+
+    monitor = performance.Monitor()
+    monitor.set_shared(YD=pre.YD, DD=pre.DD)
+    for m, target_imt in enumerate(target_imts):
+        mean, _, _, _ = conditioner.get_mu_tau_phi(
+            m, target_imt, monitor, compute_covs=False)
+        aac(mean[:, 0], target_imt.period)
+
+
 def mc(rupture, cmaker, station_sitecol, station_data,
        observed_imt_strs, target_sitecol, target_imts,
        spatial_correl, cross_correl_between, cross_correl_within):

@@ -610,11 +610,11 @@ class Conditioner:
                    t.imt, nominal_bias_mean, nominal_bias_stddev))
 
         # Predicted mean at the target sites, from GSIM
-        mu_Y = mean_stds[0, 0, 0, :, numpy.newaxis]
+        mu_Y = mean_stds[0, 0, m, :, numpy.newaxis]
 
         # Predicted uncertainty components at the target sites, from GSIM
-        tau_Y = mean_stds[2, 0, 0, :, numpy.newaxis]
-        phi_Y = mean_stds[3, 0, 0]
+        tau_Y = mean_stds[2, 0, m, :, numpy.newaxis]
+        phi_Y = mean_stds[3, 0, m]
 
         # Compute the within-event covariance matrices for the
         # target sites and observation sites; the shapes are
@@ -696,7 +696,8 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
         cm_D = cmaker.copy(imtls={im.string: [0] for im in inp.imts_D},
                            gsims=gdict)
         mean_stds_D = cm_D.get_mean_stds([pre.ctx_D])
-        cm_Y = cmaker.copy(imtls={inp.imts_Y[0].string: [0]}, gsims=gdict)
+        cm_Y = cmaker.copy(
+            imtls={imt.string: [0] for imt in inp.imts_Y}, gsims=gdict)
         mean_stds_Y = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         pre.conditioners.append(Conditioner(
             g, gsim, inp, mean_stds_Y, mean_stds_D))
