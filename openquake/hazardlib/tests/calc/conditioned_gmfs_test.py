@@ -30,9 +30,14 @@ from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
+    import NoCrossCorrelation
+from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
+    import DuNing2021
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, compute_distance_matrix, conditionable_imts, createD,
+    build_precomputed, build_station_conditioning, compute_distance_matrix,
+    conditionable_imts, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -137,6 +142,39 @@ def test_station_observation_errors_are_added_to_matching_diagonal():
     numpy.fill_diagonal(
         expected, numpy.diag(expected) + numpy.array([0.25, 1.5]) ** 2)
     aac(result.cov_WD_WD_inv, numpy.linalg.pinv(expected))
+
+
+def test_joint_station_covariance_combines_all_residual_components():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    distances = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+
+    system = build_station_conditioning(inp, mean_stds_D, distances)
+    phi = mean_stds_D[3, 0].reshape(-1)
+    expected = compute_within_event_covariance_matrix(
+        inp.within_event_model, None, distances,
+        imts, imts, phi, phi)
+    expected = expected.astype(numpy.float64)
+    numpy.fill_diagonal(
+        expected, numpy.diag(expected) +
+        numpy.array([0.1, 0.2, 0.3, 0.4]) ** 2)
+    expected += system.A_D @ system.between_correlation @ system.A_D.T
+
+    aac(system.residual_D, [0.0, 0.0, 0.3, -0.2])
+    aac(system.covariance_DD, expected)
+    identity = numpy.eye(len(expected))
+    aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,

@@ -324,6 +324,77 @@ class Input:
 
 
 @dataclass
+class StationConditioning:
+    """All-IMT station system used by joint Gaussian conditioning."""
+    residual_D: numpy.ndarray
+    observed_imts: tuple
+    latent_imts: tuple
+    observed_imt_indices: numpy.ndarray
+    phi_D: numpy.ndarray
+    tau_D: numpy.ndarray
+    A_D: numpy.ndarray
+    between_correlation: numpy.ndarray
+    covariance_DD: numpy.ndarray
+    covariance_DD_inv: numpy.ndarray
+
+    def solve(self, right_hand_side):
+        """Apply the precomputed station covariance pseudoinverse."""
+        return self.covariance_DD_inv @ right_hand_side
+
+
+def build_station_conditioning(inp, mean_stds_D, DD):
+    """Build the small joint covariance system at observation sites."""
+    imts_D = tuple(inp.imts_D)
+    num_stations = len(inp.sites_D)
+    observed = numpy.array([
+        numpy.log(inp.stations[imt.string + '_mean'].to_numpy(float))
+        for imt in imts_D])
+    observation_stddev = numpy.array([
+        inp.stations[imt.string + '_std'].to_numpy(float)
+        for imt in imts_D])
+    valid = numpy.isfinite(observed) & numpy.isfinite(observation_stddev)
+    valid = valid.reshape(-1)
+    if not valid.any():
+        raise ValueError('The station data contains no usable observations')
+
+    predicted = numpy.asarray(mean_stds_D[0, 0], dtype=numpy.float64)
+    tau = numpy.asarray(mean_stds_D[2, 0], dtype=numpy.float64)
+    phi = numpy.asarray(mean_stds_D[3, 0], dtype=numpy.float64)
+    residual_D = (observed - predicted).reshape(-1)[valid]
+    tau_D = tau.reshape(-1)[valid]
+    phi_D = phi.reshape(-1)[valid]
+
+    latent_imts = tuple(dict.fromkeys([*inp.imts_Y, *imts_D]))
+    latent_index = {imt: i for i, imt in enumerate(latent_imts)}
+    observed_imt_indices = numpy.repeat(
+        [latent_index[imt] for imt in imts_D], num_stations)[valid]
+    A_D = numpy.zeros(
+        (len(residual_D), len(latent_imts)), dtype=numpy.float64)
+    A_D[numpy.arange(len(residual_D)), observed_imt_indices] = tau_D
+
+    full_phi = phi.reshape(-1)
+    within_DD = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, DD,
+        imts_D, imts_D, full_phi, full_phi,
+        inp.correlation_context)
+    within_DD = numpy.asarray(within_DD, dtype=numpy.float64)
+    within_DD = within_DD[numpy.ix_(valid, valid)]
+    observation_variance = observation_stddev.reshape(-1)[valid] ** 2
+    numpy.fill_diagonal(
+        within_DD, numpy.diag(within_DD) + observation_variance)
+
+    between_correlation = numpy.asarray(
+        inp.between_event_model.correlation_matrix(latent_imts),
+        dtype=numpy.float64)
+    covariance_DD = within_DD + A_D @ between_correlation @ A_D.T
+    covariance_DD_inv = numpy.linalg.pinv(covariance_DD, hermitian=True)
+    return StationConditioning(
+        residual_D, imts_D, latent_imts, observed_imt_indices,
+        phi_D, tau_D, A_D, between_correlation, covariance_DD,
+        covariance_DD_inv)
+
+
+@dataclass
 class DResult:
     """
     Temporary data structure used inside get_mean_covs
