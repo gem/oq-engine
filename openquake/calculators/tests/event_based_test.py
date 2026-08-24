@@ -19,6 +19,7 @@
 import io
 import os
 import math
+from types import SimpleNamespace
 from unittest.mock import patch
 import numpy
 import pandas
@@ -48,6 +49,33 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
+
+
+def test_joint_conditioning_memory_estimates_dense_and_chunked_arrays():
+    computer = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(4), imts_D=range(3)),
+        E=500)
+    G = 1
+    N = 10_000
+    D = 100
+    T = 4 * N
+    Q = 3 * D
+
+    dense_size, _, dense_name = event_based._conditioned_memory(
+        computer, D, G, N, compute_covs=True)
+    expected_dense = (
+        4 * T * T * 8 + 2 * T * Q * 8 + T * 500 * 20 + T * 4)
+    assert dense_size == expected_dense
+    assert dense_name == 'dense joint conditioning workspace'
+
+    chunked_size, _, chunked_name = event_based._conditioned_memory(
+        computer, D, G, N, compute_covs=False)
+    block = event_based.MAX_CONDITIONING_BLOCK_ELEMENTS
+    expected_chunked = 3 * block * 8 + T * 501 * 4
+    assert chunked_size == expected_chunked
+    assert chunked_name == 'chunked joint conditioning workspace'
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,

@@ -158,13 +158,14 @@ def get_precomputed(rupture, cmaker, inp, compute_covs=True):
     inp.sites_D = inp.sites_D.filter(mask_D)
     inp.stations = inp.stations[mask_D].copy()
 
-    if compute_covs:
-        YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
-        DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
-    else:
-        YY = DY = None
     joint_model = not isinstance(
         inp.within_event_model, SpatialCorrelationModel)
+    if compute_covs:
+        YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+        DY = None if joint_model else compute_distance_matrix(
+            inp.sites_D, inp.sites_Y)
+    else:
+        YY = DY = None
     if compute_covs or not joint_model:
         YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
     else:
@@ -519,7 +520,7 @@ def conditioned_mean_in_chunks(
         distances = compute_distance_matrix(sites_Y, inp.sites_D)
         joint = build_joint_conditioning(
             chunk_inp, chunk_stats, station, None, distances)
-        chunk_mean, _ = joint.mean_covariance()
+        chunk_mean = joint.posterior_mean()
         mean[:, start:stop] = chunk_mean.reshape(M, stop - start)
     return mean
 

@@ -42,7 +42,8 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, use_joint_conditioning)
+    conditioned, use_joint_conditioning, use_joint_gaussian_sampling,
+    MAX_CONDITIONING_BLOCK_ELEMENTS)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -397,10 +398,44 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     return cmaker_rups
 
 
+def _conditioned_memory(computer, num_stations, G, N, compute_covs):
+    """Estimate peak arrays used by conditioned-GMF worker tasks."""
+    joint = use_joint_conditioning(computer)
+    if compute_covs and joint:
+        M = len(computer.inp.imts_Y)
+        Q = len(computer.inp.imts_D) * num_stations
+        T = M * N
+        E = computer.E // G
+        dense = 4 * T * T * 8
+        cross = 2 * T * Q * 8
+        samples = T * E * 20 + T * 4
+        size = G * (dense + cross + samples)
+        detail = (f'{G=} * ({humansize(dense)} dense + '
+                  f'{humansize(cross)} cross + '
+                  f'{humansize(samples)} samples)')
+        return size, detail, 'dense joint conditioning workspace'
+    if compute_covs:
+        size = 2 * G * N * N * 8  # tau, phi
+        return size, f'{G=} * {humansize(N*N*8)} * 2', 'tau, phi'
+    if joint:
+        M = len(computer.inp.imts_Y)
+        Q = len(computer.inp.imts_D) * num_stations
+        T = M * N
+        E = computer.E // G
+        block = min(T * Q, MAX_CONDITIONING_BLOCK_ELEMENTS)
+        chunks = 3 * block * 8
+        results = T * (E + 1) * 4
+        size = G * (chunks + results)
+        detail = (f'{G=} * ({humansize(chunks)} chunks + '
+                  f'{humansize(results)} results)')
+        return size, detail, 'chunked joint conditioning workspace'
+    size = 2 * G * N * num_stations * 8
+    detail = f'{G=} * {humansize(N*num_stations*8)} * 2'
+    return size, detail, 'target-station matrices'
+
+
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
-    """
-    Run a conditioned scenario calculation amd store the GMFs
-    """
+    """Run a conditioned scenario calculation and store the GMFs."""
     dstore = calc.datastore
     considered = station_sites if station_sites else []
     dstore['stations_considered'] = considered
@@ -421,23 +456,17 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         N = len(computer.ctx)
         compute_covs = max(computer.tlw, computer.tlb) > \
             TRUNCATION_THRESHOLD
-        if compute_covs and use_joint_conditioning(computer):
-            Q = len(computer.inp.imts_D) * len(station_sites)
-            dimension = len(computer.inp.imts_Y) * N + Q
-            size = 2 * G * dimension * dimension * 8
-            msg = f'{G=} * {humansize(dimension*dimension*8)} * 2'
-            matrices = 'joint covariance and factor matrices'
-        elif compute_covs:
-            size = 2 * G * N * N * 8  # tau, phi
-            msg = f'{G=} * {humansize(N*N*8)} * 2'
-            matrices = 'tau, phi'
-        else:
-            D = len(station_sites)
-            size = 2 * G * N * D * 8  # target-station matrices
-            msg = f'{G=} * {humansize(N*D*8)} * 2'
-            matrices = 'target-station matrices'
+        joint = use_joint_conditioning(computer)
+        if compute_covs and joint and not use_joint_gaussian_sampling(
+                computer):
+            raise ValueError(
+                'Finite truncated multivariate-normal sampling is not yet '
+                'supported by joint within-event correlation models')
+        size, detail, matrices = _conditioned_memory(
+            computer, len(station_sites), G, N, compute_covs)
         logging.info(
-            'Requiring %s for %s [%s]', humansize(size), matrices, msg)
+            'Requiring %s for %s [%s]',
+            humansize(size), matrices, detail)
         if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
             raise ValueError(
                 f'The calculation is too large: {G=}, {N=}. '
@@ -453,8 +482,10 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     shared = dict(DD=pre.DD)
     if pre.YD is not None:
         shared['YD'] = pre.YD
-    if compute_covs:
-        shared.update(YY=pre.YY, DY=pre.DY)
+    if pre.YY is not None:
+        shared['YY'] = pre.YY
+    if pre.DY is not None:
+        shared['DY'] = pre.DY
     smap.share(**shared)
     computer.init_eid_rlz_sig_eps()
     for conditioner in pre.conditioners:

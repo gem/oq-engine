@@ -238,6 +238,7 @@ def test_conditioned_uses_one_joint_gaussian_sample():
     cmaker.oq.truncated_mvn = False
     cmaker.oq.correlation_cutoff = 2E-4
     pre = build_precomputed(test_data.RUP, cmaker, inp)
+    assert pre.DY is None
     conditioner = pre.conditioners[0]
     conditioner.get_mu_tau_phi = mock.Mock(
         side_effect=AssertionError('legacy per-IMT path used'))
