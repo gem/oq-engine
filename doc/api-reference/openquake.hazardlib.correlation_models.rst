@@ -82,6 +82,12 @@ Joint spatial and cross-IMT models
 Cross-IMT models
 ----------------
 
+.. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017
+
+.. autoclass:: BakerBradley2017
+    :members:
+    :show-inheritance:
+
 .. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006
 
 .. autoclass:: BakerCornell2006
