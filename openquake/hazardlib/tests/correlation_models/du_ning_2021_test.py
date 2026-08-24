@@ -208,7 +208,7 @@ def test_zero_and_infinite_distance_limits():
     numpy.testing.assert_allclose(distant, 0.0, atol=1E-15)
 
 
-def test_pga_and_sa_001_are_distinct_but_perfectly_correlated():
+def test_seven_pc_model_makes_pga_and_sa_001_perfectly_correlated():
     distances = numpy.array([[0.0, 5.0], [20.0, 100.0]])
     model = DuNing2021()
     pga = model.correlation_block(distances, [PGA()], [CAV()])

@@ -183,7 +183,9 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
     The 0.9 scale factor in equations 22-24 is common to every
     principal-component covariance and therefore cancels during the
     normalization in equation 12. PGA and SA(0.01) are separate calibrated
-    IMTs whose published coefficient rows happen to be identical.
+    IMTs. Their first seven published coefficients, which are the only ones
+    retained by this simplified model, are identical; their complete 23-PC
+    rows in Table 3 are not.
     """
 
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
