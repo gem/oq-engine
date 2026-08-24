@@ -329,7 +329,9 @@ class StationConditioning:
     residual_D: numpy.ndarray
     observed_imts: tuple
     latent_imts: tuple
+    observation_mask: numpy.ndarray
     observed_imt_indices: numpy.ndarray
+    full_phi_D: numpy.ndarray
     phi_D: numpy.ndarray
     tau_D: numpy.ndarray
     A_D: numpy.ndarray
@@ -389,9 +391,70 @@ def build_station_conditioning(inp, mean_stds_D, DD):
     covariance_DD = within_DD + A_D @ between_correlation @ A_D.T
     covariance_DD_inv = numpy.linalg.pinv(covariance_DD, hermitian=True)
     return StationConditioning(
-        residual_D, imts_D, latent_imts, observed_imt_indices,
-        phi_D, tau_D, A_D, between_correlation, covariance_DD,
+        residual_D, imts_D, latent_imts, valid, observed_imt_indices,
+        full_phi, phi_D, tau_D, A_D, between_correlation, covariance_DD,
         covariance_DD_inv)
+
+
+@dataclass
+class JointConditioning:
+    """Dense reference representation of an all-IMT target posterior."""
+    mean_Y: numpy.ndarray
+    covariance_YY: numpy.ndarray
+    covariance_YD: numpy.ndarray
+    station: StationConditioning
+
+    def mean_covariance(self):
+        solved_DY = self.station.solve(self.covariance_YD.T)
+        mean = self.mean_Y + self.covariance_YD @ self.station.solve(
+            self.station.residual_D)
+        covariance = self.covariance_YY - self.covariance_YD @ solved_DY
+        covariance = (covariance + covariance.T) / 2
+        return mean, covariance
+
+    def condition(self, unconditional_Y, unconditional_D):
+        """Apply Matheron substitution to unconditional prior samples."""
+        correction = self.station.solve(
+            self.station.residual_D[:, None] - unconditional_D)
+        return (self.mean_Y[:, None] + unconditional_Y +
+                self.covariance_YD @ correction)
+
+
+def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
+    """Build a dense all-IMT target prior and target-station block."""
+    imts_Y = tuple(inp.imts_Y)
+    num_targets = len(inp.sites_Y)
+    mean_Y = numpy.asarray(
+        mean_stds_Y[0, 0], dtype=numpy.float64).reshape(-1)
+    tau_Y = numpy.asarray(
+        mean_stds_Y[2, 0], dtype=numpy.float64).reshape(-1)
+    phi_Y = numpy.asarray(
+        mean_stds_Y[3, 0], dtype=numpy.float64).reshape(-1)
+
+    latent_index = {imt: i for i, imt in enumerate(station.latent_imts)}
+    target_imt_indices = numpy.repeat(
+        [latent_index[imt] for imt in imts_Y], num_targets)
+    A_Y = numpy.zeros(
+        (len(mean_Y), len(station.latent_imts)), dtype=numpy.float64)
+    A_Y[numpy.arange(len(mean_Y)), target_imt_indices] = tau_Y
+
+    within_YY = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, YY,
+        imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context)
+    within_YD = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, YD,
+        imts_Y, station.observed_imts, phi_Y,
+        station.full_phi_D,
+        inp.correlation_context)
+    within_YD = numpy.asarray(within_YD, dtype=numpy.float64)
+    within_YD = within_YD[:, station.observation_mask]
+
+    between = station.between_correlation
+    covariance_YY = numpy.asarray(within_YY, dtype=numpy.float64)
+    covariance_YY += A_Y @ between @ A_Y.T
+    covariance_YD = within_YD + A_Y @ between @ station.A_D.T
+    return JointConditioning(
+        mean_Y, covariance_YY, covariance_YD, station)
 
 
 @dataclass

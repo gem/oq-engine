@@ -36,8 +36,8 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, build_station_conditioning, compute_distance_matrix,
-    conditionable_imts, createD,
+    build_joint_conditioning, build_precomputed, build_station_conditioning,
+    compute_distance_matrix, conditionable_imts, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -175,6 +175,47 @@ def test_joint_station_covariance_combines_all_residual_components():
     aac(system.covariance_DD, expected)
     identity = numpy.eye(len(expected))
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
+
+
+def test_matheron_transform_matches_dense_schur_complement():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = 1.0
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[0, 0, :, 0] = [0.1, 0.2]
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    joint = build_joint_conditioning(inp, mean_stds_Y, station, YY, YD)
+    mean, covariance = joint.mean_covariance()
+    expected = joint.covariance_YY - (
+        joint.covariance_YD @ station.solve(joint.covariance_YD.T))
+    aac(mean, joint.mean_Y)
+    aac(covariance, expected)
+
+    prior = numpy.block([
+        [joint.covariance_YY, joint.covariance_YD],
+        [joint.covariance_YD.T, station.covariance_DD]])
+    factor = numpy.linalg.cholesky(prior)
+    num_targets = len(joint.mean_Y)
+    transformed = joint.condition(
+        factor[:num_targets], factor[num_targets:])
+    centered = transformed - mean[:, None]
+    aac(centered @ centered.T, covariance, atol=1E-12)
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,
