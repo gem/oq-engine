@@ -168,7 +168,7 @@ def test_joint_station_covariance_combines_all_residual_components():
     phi = mean_stds_D[3, 0].reshape(-1)
     expected = compute_within_event_covariance_matrix(
         inp.within_event_model, None, distances,
-        imts, imts, phi, phi)
+        imts, imts, phi, phi, dtype=numpy.float64)
     expected = expected.astype(numpy.float64)
     numpy.fill_diagonal(
         expected, numpy.diag(expected) +

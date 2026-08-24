@@ -385,7 +385,7 @@ def build_station_conditioning(inp, mean_stds_D, DD):
     within_DD = compute_within_event_covariance_matrix(
         inp.within_event_model, inp.separable_cross_imt_model, DD,
         imts_D, imts_D, full_phi, full_phi,
-        inp.correlation_context)
+        inp.correlation_context, dtype=numpy.float64)
     within_DD = numpy.asarray(within_DD, dtype=numpy.float64)
     within_DD = within_DD[numpy.ix_(valid, valid)]
     observation_variance = observation_stddev.reshape(-1)[valid] ** 2
@@ -481,12 +481,13 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
     else:
         within_YY = compute_within_event_covariance_matrix(
             inp.within_event_model, inp.separable_cross_imt_model, YY,
-            imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context)
+            imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context,
+            dtype=numpy.float64)
     within_YD = compute_within_event_covariance_matrix(
         inp.within_event_model, inp.separable_cross_imt_model, YD,
         imts_Y, station.observed_imts, phi_Y,
         station.full_phi_D,
-        inp.correlation_context)
+        inp.correlation_context, dtype=numpy.float64)
     within_YD = numpy.asarray(within_YD, dtype=numpy.float64)
     within_YD = within_YD[:, station.observation_mask]
 
@@ -723,7 +724,7 @@ def _get_separable_correlation_matrix(
 
 def compute_within_event_covariance_matrix(
         within_event_model, separable_cross_imt_model, distance_matrix,
-        imts1, imts2, stddev1, stddev2, context=None):
+        imts1, imts2, stddev1, stddev2, context=None, dtype=F32):
     """Return a scaled within-event covariance block.
 
     Spatial-only models retain the historical separable approximation.
@@ -744,9 +745,9 @@ def compute_within_event_covariance_matrix(
         raise ValueError(
             f'Expected within-event correlation shape {expected}, got '
             f'{covariance.shape}')
-    covariance = numpy.array(covariance, dtype=F32, copy=True)
-    covariance *= stddev1.astype(F32)[:, numpy.newaxis]
-    covariance *= stddev2.astype(F32)[numpy.newaxis, :]
+    covariance = numpy.array(covariance, dtype=dtype, copy=True)
+    covariance *= stddev1.astype(dtype)[:, numpy.newaxis]
+    covariance *= stddev2.astype(dtype)[numpy.newaxis, :]
     return covariance
 
 
