@@ -197,6 +197,23 @@ class Capability(Enum):
         return self.name
 
 
+# NOTE: to share subsets of capabilities across modes, we can create them like:
+# COMMON_JOB_MANAGEMENT = frozenset({
+#     Capability.JOB_ABORTING,
+#     Capability.JOB_REMOVING,
+# })
+# Then, in MODE_CAPABILITIES, we can use it like:
+#     Mode.AELO: (
+#         COMMON_JOB_MANAGEMENT
+#         | frozenset({
+#             Capability.AUTHENTICATION,
+#             Capability.AELO_JOB_LAUNCHING,
+#             Capability.MOSAIC_DIR_REQUIRED,
+#             Capability.GLOSSARY,
+#         })
+#     ),
+
+
 # Mapping modes to active capabilities
 MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
     Mode.PUBLIC: frozenset(
