@@ -23,6 +23,7 @@ https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
 import unittest
 from unittest import mock
+from types import SimpleNamespace
 
 import numpy
 
@@ -37,7 +38,7 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
     build_joint_conditioning, build_precomputed, build_station_conditioning,
-    compute_distance_matrix, conditionable_imts, createD,
+    compute_distance_matrix, conditionable_imts, conditioned, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -216,6 +217,45 @@ def test_matheron_transform_matches_dense_schur_complement():
         factor[:num_targets], factor[num_targets:])
     centered = transformed - mean[:, None]
     aac(centered @ centered.T, covariance, atol=1E-12)
+
+
+def test_conditioned_uses_one_joint_gaussian_sample():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = 1.0
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=99)
+    cmaker.oq.truncated_mvn = False
+    cmaker.oq.correlation_cutoff = 2E-4
+    pre = build_precomputed(test_data.RUP, cmaker, inp)
+    conditioner = pre.conditioners[0]
+    conditioner.get_mu_tau_phi = mock.Mock(
+        side_effect=AssertionError('legacy per-IMT path used'))
+    computer = SimpleNamespace(
+        E=2, M=2, N=1, seed=7, inp=inp, cmaker=cmaker,
+        tlw=cmaker.truncation_level_within,
+        tlb=cmaker.truncation_level_between)
+    monitor = performance.Monitor()
+    monitor.set_shared(YY=pre.YY, YD=pre.YD, DD=pre.DD)
+
+    result = conditioned(computer, conditioner, monitor)[0]
+    station = build_station_conditioning(
+        inp, conditioner.mean_stds_D, pre.DD)
+    joint = build_joint_conditioning(
+        inp, conditioner.mean_stds_Y, station, pre.YY, pre.YD)
+    expected = joint.sample(
+        numpy.random.default_rng(7), 2, cmaker.oq.correlation_cutoff)
+    mean, _ = joint.mean_covariance()
+    aac(result[:, :, :2], expected.reshape(2, 1, 2))
+    aac(result[:, :, 2], mean.reshape(2, 1))
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,

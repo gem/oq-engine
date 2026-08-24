@@ -42,7 +42,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned)
+    conditioned, use_joint_conditioning)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -421,7 +421,13 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         N = len(computer.ctx)
         compute_covs = max(computer.tlw, computer.tlb) > \
             TRUNCATION_THRESHOLD
-        if compute_covs:
+        if compute_covs and use_joint_conditioning(computer):
+            Q = len(computer.inp.imts_D) * len(station_sites)
+            dimension = len(computer.inp.imts_Y) * N + Q
+            size = 2 * G * dimension * dimension * 8
+            msg = f'{G=} * {humansize(dimension*dimension*8)} * 2'
+            matrices = 'joint covariance and factor matrices'
+        elif compute_covs:
             size = 2 * G * N * N * 8  # tau, phi
             msg = f'{G=} * {humansize(N*N*8)} * 2'
             matrices = 'tau, phi'

@@ -405,9 +405,11 @@ class JointConditioning:
     station: StationConditioning
 
     def mean_covariance(self):
-        solved_DY = self.station.solve(self.covariance_YD.T)
         mean = self.mean_Y + self.covariance_YD @ self.station.solve(
             self.station.residual_D)
+        if self.covariance_YY is None:
+            return mean, None
+        solved_DY = self.station.solve(self.covariance_YD.T)
         covariance = self.covariance_YY - self.covariance_YD @ solved_DY
         covariance = (covariance + covariance.T) / 2
         return mean, covariance
@@ -418,6 +420,22 @@ class JointConditioning:
             self.station.residual_D[:, None] - unconditional_D)
         return (self.mean_Y[:, None] + unconditional_Y +
                 self.covariance_YD @ correction)
+
+    def sample(self, rng, num_events, cutoff=0):
+        """Draw an exact dense Gaussian posterior reference sample."""
+        covariance_YY = self.covariance_YY.copy()
+        numpy.fill_diagonal(
+            covariance_YY, numpy.diag(covariance_YY) + cutoff)
+        prior = numpy.block([
+            [covariance_YY, self.covariance_YD],
+            [self.covariance_YD.T, self.station.covariance_DD]])
+        prior = (prior + prior.T) / 2
+        factor = numpy.linalg.cholesky(prior)
+        samples = factor @ rng.standard_normal(
+            (len(prior), num_events))
+        num_targets = len(self.mean_Y)
+        return self.condition(
+            samples[:num_targets], samples[num_targets:])
 
 
 def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
@@ -438,9 +456,12 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
         (len(mean_Y), len(station.latent_imts)), dtype=numpy.float64)
     A_Y[numpy.arange(len(mean_Y)), target_imt_indices] = tau_Y
 
-    within_YY = compute_within_event_covariance_matrix(
-        inp.within_event_model, inp.separable_cross_imt_model, YY,
-        imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context)
+    if YY is None:
+        within_YY = None
+    else:
+        within_YY = compute_within_event_covariance_matrix(
+            inp.within_event_model, inp.separable_cross_imt_model, YY,
+            imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context)
     within_YD = compute_within_event_covariance_matrix(
         inp.within_event_model, inp.separable_cross_imt_model, YD,
         imts_Y, station.observed_imts, phi_Y,
@@ -450,8 +471,11 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
     within_YD = within_YD[:, station.observation_mask]
 
     between = station.between_correlation
-    covariance_YY = numpy.asarray(within_YY, dtype=numpy.float64)
-    covariance_YY += A_Y @ between @ A_Y.T
+    if within_YY is None:
+        covariance_YY = None
+    else:
+        covariance_YY = numpy.asarray(within_YY, dtype=numpy.float64)
+        covariance_YY += A_Y @ between @ A_Y.T
     covariance_YD = within_YD + A_Y @ between @ station.A_D.T
     return JointConditioning(
         mean_Y, covariance_YY, covariance_YD, station)
@@ -841,6 +865,49 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
     return pre
 
 
+def use_joint_conditioning(computer):
+    """Return whether the exact joint Gaussian path is applicable."""
+    joint_model = not isinstance(
+        computer.inp.within_event_model, SpatialCorrelationModel)
+    gaussian = (computer.cmaker.oq.truncated_mvn is False or
+                (computer.tlw == 99 and computer.tlb == 99))
+    return joint_model and gaussian
+
+
+def conditioned_joint(computer, conditioner, monitor, compute_covs):
+    """Return jointly conditioned Gaussian fields for every target IMT."""
+    with monitor.shared['DD'] as DD:
+        station = build_station_conditioning(
+            conditioner.inp, conditioner.mean_stds_D, DD)
+    with monitor.shared['YD'] as YD:
+        if compute_covs:
+            with monitor.shared['YY'] as YY:
+                joint = build_joint_conditioning(
+                    conditioner.inp, conditioner.mean_stds_Y,
+                    station, YY, YD)
+        else:
+            joint = build_joint_conditioning(
+                conditioner.inp, conditioner.mean_stds_Y,
+                station, None, YD)
+
+    E = computer.E // len(computer.cmaker.gsims)
+    M = len(conditioner.inp.imts_Y)
+    N = len(conditioner.inp.sites_Y)
+    if M != computer.M:
+        raise ValueError('MMI cannot be combined with conditioned GMFs')
+    mean, _covariance = joint.mean_covariance()
+    MNE = numpy.zeros((M, N, E + 1), F32)
+    if compute_covs:
+        rng = numpy.random.default_rng(computer.seed)
+        samples = joint.sample(
+            rng, E, computer.cmaker.oq.correlation_cutoff)
+        MNE[:, :, :E] = samples.reshape(M, N, E)
+    else:
+        MNE[:, :, :E] = mean.reshape(M, N, 1)
+    MNE[:, :, E] = mean.reshape(M, N)
+    return {conditioner.g: MNE}
+
+
 def conditioned(computer, conditioner, monitor):
     """
     Run the conditioner object and returns meaMNE
@@ -849,6 +916,9 @@ def conditioned(computer, conditioner, monitor):
     MNE = numpy.zeros((computer.M, computer.N, E + 1), F32)
     g = conditioner.g
     compute_covs = max(computer.tlw, computer.tlb) > TRUNCATION_THRESHOLD
+    if use_joint_conditioning(computer):
+        return conditioned_joint(
+            computer, conditioner, monitor, compute_covs)
     for m, imt in enumerate(conditioner.inp.imts_Y):
         mu, ta, ph, _msg = conditioner.get_mu_tau_phi(
             m, imt, monitor, compute_covs)
