@@ -40,7 +40,8 @@ from openquake.hazardlib.calc.conditioned_gmfs import (
     build_joint_conditioning, build_precomputed, build_station_conditioning,
     compute_distance_matrix, conditionable_imts, conditioned,
     conditioned_mean_in_chunks, createD,
-    compute_within_event_covariance_matrix, get_mean_covs, Input)
+    compute_within_event_covariance_matrix, get_mean_covs, Input,
+    JointConditioning, StationConditioning)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
@@ -257,6 +258,57 @@ def test_conditioned_uses_one_joint_gaussian_sample():
     mean, _ = joint.mean_covariance()
     aac(result[:, :, :2], expected.reshape(2, 1, 2))
     aac(result[:, :, 2], mean.reshape(2, 1))
+
+
+def test_joint_mean_with_zero_truncation_uses_no_legacy_matrices():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=0)
+    cmaker.oq.truncated_mvn = True
+    pre = build_precomputed(
+        test_data.RUP, cmaker, inp, compute_covs=False)
+    conditioner = pre.conditioners[0]
+    conditioner.get_mu_tau_phi = mock.Mock(
+        side_effect=AssertionError('legacy per-IMT path used'))
+    computer = SimpleNamespace(
+        E=2, M=2, N=1, seed=7, inp=inp, cmaker=cmaker,
+        tlw=cmaker.truncation_level_within,
+        tlb=cmaker.truncation_level_between)
+    monitor = performance.Monitor()
+    monitor.set_shared(DD=pre.DD)
+
+    result = conditioned(computer, conditioner, monitor)[0]
+    station = build_station_conditioning(
+        inp, conditioner.mean_stds_D, pre.DD)
+    expected = conditioned_mean_in_chunks(
+        inp, conditioner.mean_stds_Y, station)
+    aac(result[:, :, :2], numpy.repeat(expected[:, :, None], 2, axis=2))
+    aac(result[:, :, 2], expected)
+
+
+def test_joint_sampler_accepts_a_singular_station_system():
+    covariance_DD = numpy.ones((2, 2))
+    station = StationConditioning(
+        numpy.zeros(2), (), (), numpy.ones(2, dtype=bool),
+        numpy.zeros(2, dtype=int), numpy.ones(2), numpy.ones(2),
+        numpy.ones(2), numpy.ones((2, 1)), numpy.ones((1, 1)),
+        covariance_DD, numpy.linalg.pinv(covariance_DD, hermitian=True))
+    joint = JointConditioning(
+        numpy.array([0.5]), numpy.ones((1, 1)),
+        numpy.ones((1, 2)), station)
+
+    samples = joint.sample(numpy.random.default_rng(7), 3)
+    aac(samples, numpy.full((1, 3), 0.5), atol=1E-12)
 
 
 def test_joint_posterior_mean_is_invariant_to_site_chunks():

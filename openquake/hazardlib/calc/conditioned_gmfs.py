@@ -410,15 +410,26 @@ class JointConditioning:
     covariance_YD: numpy.ndarray
     station: StationConditioning
 
-    def mean_covariance(self):
-        mean = self.mean_Y + self.covariance_YD @ self.station.solve(
+    def posterior_mean(self):
+        """Return the all-IMT posterior mean at the target sites."""
+        return self.mean_Y + self.covariance_YD @ self.station.solve(
             self.station.residual_D)
+
+    def posterior_covariance(self, cutoff=0):
+        """Return the all-IMT posterior covariance at the target sites."""
         if self.covariance_YY is None:
-            return mean, None
+            return None
         solved_DY = self.station.solve(self.covariance_YD.T)
-        covariance = self.covariance_YY - self.covariance_YD @ solved_DY
+        covariance = self.covariance_YY.copy()
+        covariance -= self.covariance_YD @ solved_DY
         covariance = (covariance + covariance.T) / 2
-        return mean, covariance
+        numpy.fill_diagonal(
+            covariance, numpy.diag(covariance) + cutoff)
+        return covariance
+
+    def mean_covariance(self):
+        """Return the all-IMT posterior mean and covariance."""
+        return self.posterior_mean(), self.posterior_covariance()
 
     def condition(self, unconditional_Y, unconditional_D):
         """Apply Matheron substitution to unconditional prior samples."""
@@ -429,19 +440,21 @@ class JointConditioning:
 
     def sample(self, rng, num_events, cutoff=0):
         """Draw an exact dense Gaussian posterior reference sample."""
-        covariance_YY = self.covariance_YY.copy()
-        numpy.fill_diagonal(
-            covariance_YY, numpy.diag(covariance_YY) + cutoff)
-        prior = numpy.block([
-            [covariance_YY, self.covariance_YD],
-            [self.covariance_YD.T, self.station.covariance_DD]])
-        prior = (prior + prior.T) / 2
-        factor = numpy.linalg.cholesky(prior)
+        covariance = self.posterior_covariance(cutoff)
+        try:
+            factor = numpy.linalg.cholesky(covariance)
+        except numpy.linalg.LinAlgError:
+            eigenvalues, eigenvectors = numpy.linalg.eigh(covariance)
+            scale = max(numpy.abs(eigenvalues).max(), 1.0)
+            tolerance = len(covariance) * numpy.finfo(float).eps * scale
+            if eigenvalues.min() < -tolerance:
+                raise ValueError(
+                    'The conditioned covariance is not positive '
+                    'semidefinite')
+            factor = eigenvectors * numpy.sqrt(eigenvalues.clip(min=0))
         samples = factor @ rng.standard_normal(
-            (len(prior), num_events))
-        num_targets = len(self.mean_Y)
-        return self.condition(
-            samples[:num_targets], samples[num_targets:])
+            (len(covariance), num_events))
+        return self.posterior_mean()[:, None] + samples
 
 
 def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
@@ -896,16 +909,23 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
 
 
 def use_joint_conditioning(computer):
-    """Return whether the exact joint Gaussian path is applicable."""
-    joint_model = not isinstance(
+    """Return whether the within-event model requires joint conditioning."""
+    return not isinstance(
         computer.inp.within_event_model, SpatialCorrelationModel)
-    gaussian = (computer.cmaker.oq.truncated_mvn is False or
-                (computer.tlw == 99 and computer.tlb == 99))
-    return joint_model and gaussian
+
+
+def use_joint_gaussian_sampling(computer):
+    """Return whether untruncated joint Gaussian sampling is requested."""
+    return (computer.cmaker.oq.truncated_mvn is False or
+            (computer.tlw == 99 and computer.tlb == 99))
 
 
 def conditioned_joint(computer, conditioner, monitor, compute_covs):
     """Return jointly conditioned Gaussian fields for every target IMT."""
+    if compute_covs and not use_joint_gaussian_sampling(computer):
+        raise ValueError(
+            'Finite truncated multivariate-normal sampling is not yet '
+            'supported by joint within-event correlation models')
     with monitor.shared['DD'] as DD:
         station = build_station_conditioning(
             conditioner.inp, conditioner.mean_stds_D, DD)
@@ -923,7 +943,7 @@ def conditioned_joint(computer, conditioner, monitor, compute_covs):
         raise ValueError('MMI cannot be combined with conditioned GMFs')
     MNE = numpy.zeros((M, N, E + 1), F32)
     if compute_covs:
-        mean, _covariance = joint.mean_covariance()
+        mean = joint.posterior_mean()
         rng = numpy.random.default_rng(computer.seed)
         samples = joint.sample(
             rng, E, computer.cmaker.oq.correlation_cutoff)
