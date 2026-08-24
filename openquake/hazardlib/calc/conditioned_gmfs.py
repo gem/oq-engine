@@ -107,7 +107,7 @@ cov_Y_Y_yD:
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from collections import namedtuple
 
 import psutil
@@ -131,6 +131,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD conditioners')
+MAX_CONDITIONING_BLOCK_ELEMENTS = 8_000_000
 
 
 def conditionable_imts(imts):
@@ -162,7 +163,12 @@ def get_precomputed(rupture, cmaker, inp, compute_covs=True):
         DY = compute_distance_matrix(inp.sites_D, inp.sites_Y)
     else:
         YY = DY = None
-    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    joint_model = not isinstance(
+        inp.within_event_model, SpatialCorrelationModel)
+    if compute_covs or not joint_model:
+        YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    else:
+        YD = None
     DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
     return Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, [])
 
@@ -479,6 +485,30 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
     covariance_YD = within_YD + A_Y @ between @ station.A_D.T
     return JointConditioning(
         mean_Y, covariance_YY, covariance_YD, station)
+
+
+def conditioned_mean_in_chunks(
+        inp, mean_stds_Y, station,
+        max_block_elements=MAX_CONDITIONING_BLOCK_ELEMENTS):
+    """Compute the exact all-IMT posterior mean in target-site chunks."""
+    M = len(inp.imts_Y)
+    N = len(inp.sites_Y)
+    D = len(inp.sites_D)
+    J = len(inp.imts_D)
+    chunk_size = max(1, max_block_elements // (M * J * D))
+    mean = numpy.empty((M, N), dtype=numpy.float64)
+    for start in range(0, N, chunk_size):
+        stop = min(start + chunk_size, N)
+        site_ids = inp.sites_Y.sids[start:stop]
+        sites_Y = inp.sites_Y.filtered(site_ids)
+        chunk_inp = replace(inp, sites_Y=sites_Y)
+        chunk_stats = mean_stds_Y[:, :, :, start:stop]
+        distances = compute_distance_matrix(sites_Y, inp.sites_D)
+        joint = build_joint_conditioning(
+            chunk_inp, chunk_stats, station, None, distances)
+        chunk_mean, _ = joint.mean_covariance()
+        mean[:, start:stop] = chunk_mean.reshape(M, stop - start)
+    return mean
 
 
 @dataclass
@@ -879,31 +909,29 @@ def conditioned_joint(computer, conditioner, monitor, compute_covs):
     with monitor.shared['DD'] as DD:
         station = build_station_conditioning(
             conditioner.inp, conditioner.mean_stds_D, DD)
-    with monitor.shared['YD'] as YD:
-        if compute_covs:
+    if compute_covs:
+        with monitor.shared['YD'] as YD:
             with monitor.shared['YY'] as YY:
                 joint = build_joint_conditioning(
                     conditioner.inp, conditioner.mean_stds_Y,
                     station, YY, YD)
-        else:
-            joint = build_joint_conditioning(
-                conditioner.inp, conditioner.mean_stds_Y,
-                station, None, YD)
 
     E = computer.E // len(computer.cmaker.gsims)
     M = len(conditioner.inp.imts_Y)
     N = len(conditioner.inp.sites_Y)
     if M != computer.M:
         raise ValueError('MMI cannot be combined with conditioned GMFs')
-    mean, _covariance = joint.mean_covariance()
     MNE = numpy.zeros((M, N, E + 1), F32)
     if compute_covs:
+        mean, _covariance = joint.mean_covariance()
         rng = numpy.random.default_rng(computer.seed)
         samples = joint.sample(
             rng, E, computer.cmaker.oq.correlation_cutoff)
         MNE[:, :, :E] = samples.reshape(M, N, E)
     else:
-        MNE[:, :, :E] = mean.reshape(M, N, 1)
+        mean = conditioned_mean_in_chunks(
+            conditioner.inp, conditioner.mean_stds_Y, station)
+        MNE[:, :, :E] = mean[:, :, None]
     MNE[:, :, E] = mean.reshape(M, N)
     return {conditioner.g: MNE}
 

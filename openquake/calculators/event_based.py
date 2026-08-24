@@ -450,7 +450,9 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     smap = parallel.Starmap(conditioned, h5=dstore)
     pre = build_precomputed(
         ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
-    shared = dict(YD=pre.YD, DD=pre.DD)
+    shared = dict(DD=pre.DD)
+    if pre.YD is not None:
+        shared['YD'] = pre.YD
     if compute_covs:
         shared.update(YY=pre.YY, DY=pre.DY)
     smap.share(**shared)

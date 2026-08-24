@@ -38,7 +38,8 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
     build_joint_conditioning, build_precomputed, build_station_conditioning,
-    compute_distance_matrix, conditionable_imts, conditioned, createD,
+    compute_distance_matrix, conditionable_imts, conditioned,
+    conditioned_mean_in_chunks, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
@@ -256,6 +257,39 @@ def test_conditioned_uses_one_joint_gaussian_sample():
     mean, _ = joint.mean_covariance()
     aac(result[:, :, :2], expected.reshape(2, 1, 2))
     aac(result[:, :, 2], mean.reshape(2, 1))
+
+
+def test_joint_posterior_mean_is_invariant_to_site_chunks():
+    imts = [PGA(), SA(0.3)]
+    target_sites = test_data.CASE01_TARGET_SITECOL.filtered(
+        test_data.CASE01_TARGET_SITECOL.sids[:5])
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        target_sites, test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 5))
+    mean_stds_Y[0, 0, 0] = numpy.arange(5) / 10
+    mean_stds_Y[0, 0, 1] = numpy.arange(5) / 5
+    mean_stds_Y[2, 0] = 0.4
+    mean_stds_Y[3, 0] = 0.8
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    full = build_joint_conditioning(
+        inp, mean_stds_Y, station, None, YD)
+    expected, _ = full.mean_covariance()
+    block_for_two_sites = 2 * len(imts) * len(imts) * len(inp.sites_D)
+    chunked = conditioned_mean_in_chunks(
+        inp, mean_stds_Y, station, block_for_two_sites)
+    aac(chunked, expected.reshape(2, 5))
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,
