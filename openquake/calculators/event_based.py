@@ -41,7 +41,8 @@ from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    ConditionedGmfComputer, build_precomputed, conditioned)
+    ConditionedGmfComputer, build_precomputed, conditionable_imts,
+    conditioned)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -183,9 +184,8 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
         stations = numpy.isin(sites.sids, station_sids)
         if stations.any():
             station_sids = sites.sids[stations]
-            observed_imts = sorted(
-                imt.from_string(imt_str) for imt_str in oq.observed_imts
-                if imt_str not in ["MMI", "PGV"])
+            observed_imts = sorted(conditionable_imts(
+                imt.from_string(imt_str) for imt_str in oq.observed_imts))
             return ConditionedGmfComputer(
                 ebr, sites, sites.complete.filtered(station_sids),
                 station_data.loc[station_sids],

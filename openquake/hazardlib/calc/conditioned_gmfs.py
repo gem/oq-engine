@@ -133,6 +133,11 @@ F32 = numpy.float32
 Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD conditioners')
 
 
+def conditionable_imts(imts):
+    """Return the IMTs supported by ground-motion conditioning."""
+    return [imt for imt in imts if imt.string != 'MMI']
+
+
 def get_precomputed(rupture, cmaker, inp, compute_covs=True):
     """
     :param compute_covs: build matrices required only for random fields
@@ -254,9 +259,7 @@ class ConditionedGmfComputer(GmfComputer):
             "vs30_clustering", True)
         self.rupture = rupture
 
-        # Target IMT must be PGA or SA
-        target_imts = [imt for imt in self.imts
-                       if imt.period or imt.string == "PGA"]
+        target_imts = conditionable_imts(self.imts)
 
         self.inp = Input(
             sitecol, station_sitecol,

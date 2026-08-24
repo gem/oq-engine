@@ -30,14 +30,18 @@ from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
-from openquake.hazardlib.imt import from_string, PGA, SA
+from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, compute_distance_matrix,
+    build_precomputed, compute_distance_matrix, conditionable_imts,
     compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+
+def test_conditionable_imts_include_pgv():
+    assert conditionable_imts([PGA(), PGV(), MMI()]) == [PGA(), PGV()]
 
 
 def test_joint_within_event_covariance_block():
