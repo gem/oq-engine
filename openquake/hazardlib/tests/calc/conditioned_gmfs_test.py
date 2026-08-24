@@ -28,13 +28,49 @@ import numpy
 
 from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.correlation_models.base import (
+    ResidualComponent, SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.imt import from_string, PGA, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, compute_distance_matrix, get_mean_covs, Input)
+    build_precomputed, compute_distance_matrix,
+    compute_within_event_covariance_matrix, get_mean_covs, Input)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+
+def test_joint_within_event_covariance_block():
+    correlation = numpy.array([[1.0], [0.5], [0.25], [0.125]])
+
+    class JointModel(SpatialCrossIMTCorrelationModel):
+        DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+
+        def correlation_block(
+                self, distances, imts1, imts2=None,
+                component=None, context=None):
+            self.call = distances, imts1, imts2, component, context
+            return correlation
+
+    model = JointModel()
+    distances = numpy.array([[0.0], [10.0]])
+    imts1 = [PGA(), SA(1.0)]
+    imts2 = [PGA()]
+    stddev1 = numpy.array([2.0, 3.0, 4.0, 5.0])
+    stddev2 = numpy.array([6.0])
+    context = object()
+    covariance = compute_within_event_covariance_matrix(
+        model, None, distances, imts1, imts2,
+        stddev1, stddev2, context)
+
+    aac(covariance, correlation * stddev1[:, None] * stddev2)
+    actual_distances, actual_imts1, actual_imts2, component, ctx = model.call
+    assert actual_distances is distances
+    assert actual_imts1 is imts1
+    assert actual_imts2 is imts2
+    assert component == ResidualComponent.WITHIN_EVENT
+    assert ctx is context
+
 
 def mc(rupture, cmaker, station_sitecol, station_data,
        observed_imt_strs, target_sitecol, target_imts,
