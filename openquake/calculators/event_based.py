@@ -408,10 +408,12 @@ def _conditioned_memory(computer, num_stations, G, N, compute_covs):
         E = computer.E // G
         dense = 4 * T * T * 8
         cross = 2 * T * Q * 8
+        station = 4 * Q * Q * 8
         samples = T * E * 20 + T * 4
-        size = G * (dense + cross + samples)
+        size = G * (dense + cross + station + samples)
         detail = (f'{G=} * ({humansize(dense)} dense + '
                   f'{humansize(cross)} cross + '
+                  f'{humansize(station)} stations + '
                   f'{humansize(samples)} samples)')
         return size, detail, 'dense joint conditioning workspace'
     if compute_covs:
@@ -424,9 +426,11 @@ def _conditioned_memory(computer, num_stations, G, N, compute_covs):
         E = computer.E // G
         block = min(T * Q, MAX_CONDITIONING_BLOCK_ELEMENTS)
         chunks = 3 * block * 8
+        station = 4 * Q * Q * 8
         results = T * (E + 1) * 4
-        size = G * (chunks + results)
+        size = G * (chunks + station + results)
         detail = (f'{G=} * ({humansize(chunks)} chunks + '
+                  f'{humansize(station)} stations + '
                   f'{humansize(results)} results)')
         return size, detail, 'chunked joint conditioning workspace'
     size = 2 * G * N * num_stations * 8
