@@ -19,9 +19,12 @@ The equations, principal-component loadings, and nested-covariance
 parameters follow the publication's recommended seven-component model.
 Matlab functions supplied by Wenqi Du to GEM on 25 May 2022 clarify the
 coefficient ordering and the covariance reconstruction. The Matlab code
-also interpolates correlations for unlisted SA periods, but that extension
-is not described in the paper and can produce a non-unit diagonal. This
-implementation therefore supports only the 17 published SA periods.
+also linearly interpolates correlations in ordinary period for unlisted SA
+periods, but that extension is not described in the paper and can produce a
+non-unit diagonal. ``DuNing2021`` therefore supports only the 17 published
+SA periods. ``DuNing2021Interpolated`` exposes a clearly named extension
+that follows the Matlab period convention while normalizing the interpolated
+covariance to retain a unit diagonal and positive semidefiniteness.
 
 The deterministic verification table was generated independently with GNU
 Octave 8.4.0 from those unchanged author-supplied Matlab functions.
@@ -121,6 +124,9 @@ _LONG_RANGE = numpy.array(
     [200.0, 150.0, 200.0, 150.0, 150.0, 250.0, 250.0],
     dtype=numpy.float64)
 _SILLS = _NUGGET + _SHORT_SILL + _LONG_SILL
+_PCA_VARIANCES = (_PCA_COEFFICIENTS ** 2) @ _SILLS
+_UNIT_PCA_COEFFICIENTS = _PCA_COEFFICIENTS / numpy.sqrt(
+    _PCA_VARIANCES[:, numpy.newaxis])
 
 
 def _principal_component_covariances(distances):
@@ -145,11 +151,27 @@ def _imt_indices(imts):
         for imt in imts]
 
 
-def _normalized_coefficients(imts):
-    """Return loadings normalized to unit marginal variance."""
-    coefficients = _PCA_COEFFICIENTS[_imt_indices(imts)]
-    variances = (coefficients ** 2) @ _SILLS
-    return coefficients / numpy.sqrt(variances[:, numpy.newaxis])
+def _published_coefficients(imts):
+    """Return the normalized loadings at published IMT nodes."""
+    return _UNIT_PCA_COEFFICIENTS[_imt_indices(imts)]
+
+
+def _interpolated_coefficients(imts):
+    """Linearly interpolate normalized loadings in ordinary period."""
+    coefficients = []
+    sa_coefficients = _UNIT_PCA_COEFFICIENTS[:len(_PERIODS)]
+    for imt in imts:
+        if imt.name != 'SA' or imt.period in _PERIOD_INDEX:
+            coefficients.append(
+                _UNIT_PCA_COEFFICIENTS[_imt_indices([imt])[0]])
+            continue
+        coefficient = numpy.array([
+            numpy.interp(imt.period, _PERIODS, component)
+            for component in sa_coefficients.T
+        ], dtype=numpy.float64)
+        variance = (coefficient ** 2) @ _SILLS
+        coefficients.append(coefficient / numpy.sqrt(variance))
+    return numpy.asarray(coefficients, dtype=numpy.float64)
 
 
 @register_model(
@@ -170,6 +192,9 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
     DEFINED_FOR_SA_DAMPING = 5.0
     DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
 
+    def _coefficients(self, imts):
+        return _published_coefficients(imts)
+
     def _validate_imt_combination(self, imts):
         unsupported = sorted({
             imt.period for imt in imts
@@ -183,8 +208,8 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        coefficients1 = _normalized_coefficients(imts1)
-        coefficients2 = _normalized_coefficients(imts2)
+        coefficients1 = self._coefficients(imts1)
+        coefficients2 = self._coefficients(imts2)
         pc_covariances = _principal_component_covariances(distances)
         correlation = numpy.einsum(
             'ik,kab,jk->iajb', coefficients1, pc_covariances,
@@ -192,3 +217,25 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
         return correlation.reshape(
             len(imts1) * distances.shape[0],
             len(imts2) * distances.shape[1])
+
+
+@register_model(
+    description=('Du and Ning (2021) normalized ordinary-period '
+                 'interpolation extension'))
+class DuNing2021Interpolated(DuNing2021):
+    """Within-event joint model with explicit off-grid SA interpolation.
+
+    The author-supplied Matlab function bilinearly interpolates final
+    correlations in ordinary period. Here the equivalent normalized loading
+    vectors are interpolated first and then renormalized using the
+    zero-distance principal-component covariance. Thus the result equals the
+    Matlab value divided by the square root of its two interpolated marginal
+    variances. It is exact at every published node, symmetric, unit-diagonal,
+    and positive semidefinite for arbitrary periods within 0.01--10 seconds.
+    """
+
+    def _validate_imt_combination(self, imts):
+        """Accept intermediate SA periods within the calibrated range."""
+
+    def _coefficients(self, imts):
+        return _interpolated_coefficients(imts)
