@@ -452,6 +452,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         computer = get_computer(
             cmaker, ebr, sites, calc.sec_perils,
             station_data, station_sites.sids)
+        computer.init_eid_rlz_sig_eps()
         G = len(cmaker.gsims)
         N = len(computer.ctx)
         compute_covs = max(computer.tlw, computer.tlb) > \
@@ -487,7 +488,6 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     if pre.DY is not None:
         shared['DY'] = pre.DY
     smap.share(**shared)
-    computer.init_eid_rlz_sig_eps()
     for conditioner in pre.conditioners:
         smap.submit((computer, conditioner))
     MNEdic = smap.reduce()  # g -> MNE
