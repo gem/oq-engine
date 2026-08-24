@@ -197,85 +197,69 @@ class Capability(Enum):
         return self.name
 
 
-# NOTE: to share subsets of capabilities across modes, we can create them like:
-# COMMON_JOB_MANAGEMENT = frozenset({
-#     Capability.JOB_ABORTING,
-#     Capability.JOB_REMOVING,
-# })
-# Then, in MODE_CAPABILITIES, we can use it like:
-#     Mode.AELO: (
-#         COMMON_JOB_MANAGEMENT
-#         | frozenset({
-#             Capability.AUTHENTICATION,
-#             Capability.AELO_JOB_LAUNCHING,
-#             Capability.MOSAIC_DIR_REQUIRED,
-#             Capability.GLOSSARY,
-#         })
-#     ),
+STANDARD_JOB_MANAGEMENT = frozenset({
+    Capability.STANDARD_JOB_LAUNCHING,
+    Capability.JOB_CONTINUING,
+    Capability.JOB_ABORTING,
+    Capability.JOB_REMOVING,
+    Capability.JOB_SHARING,
+    Capability.JOB_TAGGING,
+})
 
 
 # Mapping modes to active capabilities
 MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
-    Mode.PUBLIC: frozenset(
-        {
-         Capability.STANDARD_JOB_LAUNCHING,
-         Capability.JOB_CONTINUING,
-         Capability.JOB_ABORTING,
-         Capability.JOB_REMOVING,
-         Capability.VISIBLE_SERVER_NAME,
-         Capability.GLOSSARY,
-         }
+    Mode.PUBLIC: (
+        (STANDARD_JOB_MANAGEMENT - {Capability.JOB_TAGGING,
+                                    Capability.JOB_SHARING})
+        | frozenset({
+            Capability.VISIBLE_SERVER_NAME,
+            Capability.GLOSSARY,
+        })
     ),
-    Mode.RESTRICTED: frozenset(
-        {
-         Capability.AUTHENTICATION,
-         Capability.STANDARD_JOB_LAUNCHING,
-         Capability.JOB_CONTINUING,
-         Capability.JOB_ABORTING,
-         Capability.JOB_REMOVING,
-         Capability.JOB_SHARING,
-         Capability.JOB_TAGGING,
-         Capability.VISIBLE_SERVER_NAME,
-         Capability.GLOSSARY,
-         }
+    Mode.RESTRICTED: (
+        STANDARD_JOB_MANAGEMENT
+        | frozenset({
+            Capability.AUTHENTICATION,
+            Capability.VISIBLE_SERVER_NAME,
+            Capability.GLOSSARY,
+        })
     ),
-    Mode.IMPACT: frozenset(
-        {
-         Capability.AUTHENTICATION,
-         Capability.IMPACT_JOB_LAUNCHING,
-         Capability.JOB_ABORTING,
-         Capability.JOB_REMOVING,
-         Capability.JOB_SHARING,
-         Capability.JOB_TAGGING,
-         Capability.MOSAIC_DIR_REQUIRED,
-         Capability.VISIBLE_SERVER_NAME,
-         Capability.PLOT_ASSETS_POST_RISK,
-         Capability.GLOSSARY,
-         }
+    Mode.IMPACT: (
+        (STANDARD_JOB_MANAGEMENT - {Capability.STANDARD_JOB_LAUNCHING,
+                                    Capability.JOB_CONTINUING})
+        | frozenset({
+            Capability.AUTHENTICATION,
+            Capability.IMPACT_JOB_LAUNCHING,
+            Capability.MOSAIC_DIR_REQUIRED,
+            Capability.PLOT_ASSETS_POST_RISK,
+            Capability.VISIBLE_SERVER_NAME,
+            Capability.GLOSSARY,
+         })
     ),
-    Mode.AELO: frozenset(
-        {
-         Capability.AUTHENTICATION,
-         Capability.AELO_JOB_LAUNCHING,
-         Capability.JOB_ABORTING,
-         Capability.JOB_REMOVING,
-         Capability.MOSAIC_DIR_REQUIRED,
-         Capability.GLOSSARY,
-         }
+    Mode.AELO: (
+        (STANDARD_JOB_MANAGEMENT - {Capability.STANDARD_JOB_LAUNCHING,
+                                    Capability.JOB_CONTINUING})
+        | frozenset({
+            Capability.AUTHENTICATION,
+            Capability.AELO_JOB_LAUNCHING,
+            Capability.MOSAIC_DIR_REQUIRED,
+            Capability.GLOSSARY,
+        })
     ),
     Mode.READ_ONLY: frozenset(
         {
-         Capability.AUTHENTICATION,
-         Capability.VISIBLE_SERVER_NAME,
-         }
+            Capability.AUTHENTICATION,
+            Capability.VISIBLE_SERVER_NAME,
+        }
     ),
     Mode.TOOLS_ONLY: frozenset(
         {
-         Capability.AUTHENTICATION,
-         Capability.STANDALONE_TOOLS,
-         Capability.VISIBLE_SERVER_NAME,
-         Capability.GLOSSARY,
-         }
+            Capability.AUTHENTICATION,
+            Capability.STANDALONE_TOOLS,
+            Capability.VISIBLE_SERVER_NAME,
+            Capability.GLOSSARY,
+        }
     ),
 }
 
