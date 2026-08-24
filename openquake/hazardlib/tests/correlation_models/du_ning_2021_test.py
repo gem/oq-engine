@@ -23,6 +23,10 @@ The online Octave runner could not upload binary ``.mat`` files, so their
 exact arrays were recreated and checked by element count, sum, sum of
 squares, and weighted sum. A separate Python translation of the publication
 equations matched the Octave values within 6.1e-16 and did not import OQ.
+The interpolation CSV records the author function's ordinary-period output
+and its two off-grid zero-distance marginal values. Its expected correlation
+is their independently normalized ratio; this is the documented difference
+between the interpolated OpenQuake variant and the Matlab function.
 """
 
 import csv
@@ -34,7 +38,7 @@ import pytest
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.registry import get_model_specs
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
-    du_ning_2021 import DuNing2021
+    du_ning_2021 import DuNing2021, DuNing2021Interpolated
 from openquake.hazardlib.imt import (
     CAV, IA, PGA, PGD, PGV, RSD575, RSD595, SA, from_string)
 
@@ -78,6 +82,25 @@ def test_author_octave_reference_values():
         actual, expected, rtol=1E-13, atol=1E-15)
 
 
+def test_interpolated_author_octave_reference_values():
+    actual = []
+    expected = []
+    with (DATA / 'interpolated_reference.csv').open(
+            newline='', encoding='utf8') as reference_file:
+        for row in csv.DictReader(reference_file):
+            block = DuNing2021Interpolated().correlation_block(
+                numpy.array([[float(row['distance'])]]),
+                [from_string(row['imt1'])], [from_string(row['imt2'])])
+            normalized = float(row['matlab_rho']) / numpy.sqrt(
+                float(row['variance1']) * float(row['variance2']))
+            actual.append(block[0, 0])
+            expected.append(float(row['rho']))
+            numpy.testing.assert_allclose(
+                normalized, float(row['rho']), rtol=1E-13, atol=1E-15)
+    numpy.testing.assert_allclose(
+        actual, expected, rtol=1E-13, atol=1E-15)
+
+
 def test_registry_and_calibration_metadata():
     spec = get_model_specs('spatial_cross_imt')['DuNing2021']
     assert spec.cls is DuNing2021
@@ -89,6 +112,16 @@ def test_registry_and_calibration_metadata():
     assert spec.sa_damping == 5.0
     assert spec.sa_period_range == (0.01, 10.0)
     assert spec.region is None
+    interpolated = get_model_specs(
+        'spatial_cross_imt')['DuNing2021Interpolated']
+    assert interpolated.cls is DuNing2021Interpolated
+    assert interpolated.residual_component is ResidualComponent.WITHIN_EVENT
+    assert interpolated.supported_imts == spec.supported_imts
+    assert interpolated.calibrated_imts == spec.calibrated_imts
+    assert interpolated.imc is None
+    assert interpolated.sa_damping == 5.0
+    assert interpolated.sa_period_range == (0.01, 10.0)
+    assert interpolated.region is None
 
 
 def test_rectangular_block_uses_imt_major_ordering():
@@ -137,6 +170,24 @@ def test_complete_same_site_matrix_is_positive_semidefinite():
     assert numpy.count_nonzero(eigenvalues > 1E-12) == 7
 
 
+def test_interpolated_covariance_is_unit_diagonal_and_positive_definite():
+    positions = numpy.array([0.0, 3.0, 17.0, 51.0])
+    distances = abs(positions[:, None] - positions)
+    sites = Sites(distances)
+    imts = [SA(0.06), SA(0.15), SA(0.6), SA(1.3), SA(8.0), PGV(),
+            CAV()]
+    model = DuNing2021Interpolated()
+    covariance = model.covariance(sites, imts)
+    assert covariance.dtype == numpy.float64
+    numpy.testing.assert_allclose(covariance, covariance.T, atol=1E-15)
+    numpy.testing.assert_allclose(numpy.diag(covariance), 1.0)
+    assert numpy.linalg.eigvalsh(covariance).min() > 0
+    factor = model.factor(sites, imts, ensure_psd=False)
+    numpy.testing.assert_allclose(
+        factor.lower_triangle @ factor.lower_triangle.T,
+        covariance, rtol=1E-13, atol=1E-14)
+
+
 def test_pair_symmetry():
     distances = numpy.array([[0.0, 10.0], [20.0, 5.0], [50.0, 25.0]])
     model = DuNing2021()
@@ -172,6 +223,15 @@ def test_all_published_sa_periods_are_supported():
     DuNing2021().validate_imts([SA(period) for period in PERIODS])
 
 
+def test_interpolated_model_is_exact_at_published_nodes():
+    distances = numpy.array([[0.0, 10.0], [25.0, 5.0]])
+    imts = _all_imts()
+    strict = DuNing2021().correlation_block(distances, imts)
+    interpolated = DuNing2021Interpolated().correlation_block(
+        distances, imts)
+    numpy.testing.assert_array_equal(interpolated, strict)
+
+
 @pytest.mark.parametrize(('period', 'author_diagonal'), [
     (0.06, 0.982301617604019),
     (0.15, 0.937672330225600),
@@ -183,6 +243,33 @@ def test_rejects_unpublished_matlab_interpolation(period, author_diagonal):
     assert not numpy.isclose(author_diagonal, 1.0)
     with pytest.raises(ValueError, match='only published SA periods'):
         DuNing2021().validate_imts([SA(period)])
+
+
+@pytest.mark.parametrize(('period', 'author_diagonal'), [
+    (0.06, 0.982301617604019),
+    (0.15, 0.937672330225600),
+    (0.6, 0.961149270076905),
+    (1.3, 0.974462658605417),
+    (8.0, 0.997240559356593),
+])
+def test_interpolated_model_normalizes_author_diagonal(
+        period, author_diagonal):
+    assert not numpy.isclose(author_diagonal, 1.0)
+    correlation = DuNing2021Interpolated().correlation_block(
+        numpy.zeros((1, 1)), [SA(period)])
+    numpy.testing.assert_allclose(correlation, 1.0)
+
+
+@pytest.mark.parametrize(('imt', 'message'), [
+    (PGD(), 'does not support PGD'),
+    (SA(0.009), 'periods from 0.01 to 10 s'),
+    (SA(10.1), 'periods from 0.01 to 10 s'),
+    (SA(1.3, damping=10.0), 'only 5%-damped SA'),
+])
+def test_interpolated_model_rejects_imts_outside_calibrated_domain(
+        imt, message):
+    with pytest.raises(ValueError, match=message):
+        DuNing2021Interpolated().validate_imts([imt])
 
 
 @pytest.mark.parametrize(('imt', 'message'), [
