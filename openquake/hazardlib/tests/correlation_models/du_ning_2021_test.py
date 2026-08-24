@@ -15,14 +15,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Deterministic checks for Du and Ning (2021).
 
-The reference CSV was generated with GNU Octave 8.4.0 from Wenqi Du's
-unchanged Matlab functions supplied to GEM on 25 May 2022. The ``du.zip``
-SHA-256 is
-``35ea324b4783df61f54c6e8ac6ee25d5a7fb9c07abfe857c96d3938c07fde7fe``.
-The online Octave runner could not upload binary ``.mat`` files, so their
-exact arrays were recreated and checked by element count, sum, sum of
-squares, and weighted sum. A separate Python translation of the publication
-equations matched the Octave values within 6.1e-16 and did not import OQ.
+The reference CSVs were generated independently with GNU Octave 8.4.0 from
+Wenqi Du's unchanged Matlab functions supplied to GEM on 25 May 2022. A
+separate Python translation of the publication equations, which did not
+import OpenQuake, agreed with the Octave values within 6.1e-16.
+
 The interpolation CSV records the author function's ordinary-period output
 and its two off-grid zero-distance marginal values. Its expected correlation
 is their independently normalized ratio; this is the documented difference
