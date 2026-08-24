@@ -2142,7 +2142,7 @@ class OqParam(valid.ParamSet):
             raise TypeError(
                 f'{name} is not a {expected_type} correlation model')
 
-        calibrated = cls.calibrated_component
+        calibrated = cls.DEFINED_FOR_RESIDUAL_COMPONENT
         if calibrated is not None and calibrated != component:
             legacy_role = getattr(
                 self, '_legacy_cross_correlation_role', None)
@@ -2449,14 +2449,16 @@ class OqParam(valid.ParamSet):
             if not name:
                 continue
             cls = get_model_class(name)
-            if cls.supported_imts is None:
+            supported = cls.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            if supported is None:
                 continue
+            supported_names = {imt_type.__name__ for imt_type in supported}
             for imt_str in self.imtls:
                 imt_name = from_string(imt_str).name
                 if (imt_name == 'MMI' and
                         ('shakemap' in self.inputs or self.shakemap_id)):
                     continue
-                if imt_name not in cls.supported_imts:
+                if imt_name not in supported_names:
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             name, imt_str))
