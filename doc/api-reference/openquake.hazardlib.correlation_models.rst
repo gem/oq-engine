@@ -85,6 +85,10 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. autoclass:: DuNing2021Interpolated
+    :members:
+    :show-inheritance:
+
 Cross-IMT models
 ----------------
 

@@ -187,7 +187,18 @@ IM covariance. The implemented SA scope is limited to the 17 periods published
 from 0.01 to 10 seconds. Author-supplied Matlab functions establish the stored
 coefficient ordering and covariance reconstruction, but their interpolation
 of final correlations at unlisted SA periods is an unpublished extension that
-can give a non-unit diagonal. OpenQuake consequently rejects off-grid periods.
+can give a non-unit diagonal. The strict ``DuNing2021`` model consequently
+rejects off-grid periods.
+
+``DuNing2021Interpolated`` exposes that extension explicitly. It linearly
+interpolates the normalized principal-component loading vectors in ordinary
+period, matching the author function's period coordinate, and then normalizes
+the reconstructed covariance by its two zero-distance marginal variances.
+This is equivalent to normalizing the author-interpolated value. It retains
+the published values at all 17 nodes while producing symmetric,
+unit-diagonal, positive-semidefinite matrices at intermediate periods. The
+variant neither extrapolates outside 0.01--10 seconds nor implies that the
+interpolation was calibrated or specified in the publication.
 
 The calibrated vector does not have one common horizontal-component
 definition. PGA, PGV, and SA use the RotD50 residuals of Campbell and Bozorgnia
