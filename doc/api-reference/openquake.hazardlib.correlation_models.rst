@@ -79,6 +79,16 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021
+
+.. autoclass:: DuNing2021
+    :members:
+    :show-inheritance:
+
+.. autoclass:: DuNing2021Interpolated
+    :members:
+    :show-inheritance:
+
 Cross-IMT models
 ----------------
 
