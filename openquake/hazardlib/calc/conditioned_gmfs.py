@@ -14,96 +14,215 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""
-This module implements the process for conditioning ground motion
-fields upon recorded strong motion station data or macroseismic
-intensity observations described in Engler et al. (2022)
-Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022).
-Partitioning Ground Motion Uncertainty When Conditioned on Station Data.
-Bulletin of the Seismological Society of America, 112(2), 1060–1079.
-https://doi.org/10.1785/0120210177
+"""Condition ground-motion fields on seismic station observations.
 
-The USGS ShakeMap implementation of Engler et al. (2022) is described
-in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
-and the bulk of the implementation code resides in the ShakeMap Model module:
-https://code.usgs.gov/ghsc/esi/shakemap-modules/-/blob/main/src/shakemap_modules/coremods/model.py?
+The implementation follows Engler et al. (2022):
 
-This implementation is intended for generating conditional random
-ground motion fields for downstream use with the OpenQuake scenario
-damage and loss calculators, such that users can provide a station
-data file containing both seismic and macroseismic stations, where
-and specify a list of target IMTs and list of sites for which the
-OpenQuake engine will calculate the conditioned mean and covariance
-of the ground shaking following Engler et al. (2022), and then
-simulate the requested number of ground motion fields
+Engler, D. T., Worden, C. B., Thompson, E. M., and Jaiswal, K. S.
+(2022). Partitioning Ground Motion Uncertainty When Conditioned on
+Station Data. Bulletin of the Seismological Society of America, 112(2),
+1060–1079. https://doi.org/10.1785/0120210177
 
-Notation:
+The corresponding USGS ShakeMap processing is described at
+https://usgs.github.io/shakemap/manual4_0/tg_processing.html. Its main
+implementation is in ``shakemap_modules/coremods/model.py`` at
+https://code.usgs.gov/ghsc/esi/shakemap-modules.
 
-_D:
-  subscript refers to the "Data" or observations
-_Y:
-  subscript refers to the target sites
-yD:
-  recorded values at the stations
-var_addon_D:
-  additional sigma for the observations that are uncertain,
-  which might arise if the values for this particular IMT were not directly
-  recorded, but obtained by conversion equations or cross-correlation functions
-mu_yD:
-  predicted mean intensity at the observation points, from the specified GMM(s)
-phi_D:
-  predicted within-event uncertainty at the observation points, from the
-  specified GMM(s)
-tau_D:
-  predicted between-event uncertainty at the observation points, from the
-  specified GMM(s)
-zeta_D:
-  raw residuals at the observation points
-cov_WD_WD:
-  station data within-event covariance matrix, with the additional
-  variance of the residuals for the cases where the station data is uncertain
-cov_WD_WD_inv:
-  (pseudo)-inverse of the station data within-event covariance matrix
-corr_HD_HD:
-  cross-intensity measure correlations for the observed intensity measures
-mu_HD_yD:
-  posterior mean of the (normalized) between-event residual
-cov_HD_HD_yD:
-  posterior covariance of the (normalized) between-event residual
-mu_BD_yD:
-  posterior mean of the between-event residual
-cov_BD_BD_yD:
-  posterior covariance of the conditional between-event residual
-nominal_bias_mean:
-  mean of mu_BD_yD, useful as a single value measure of the event bias,
-  particularly in the heteroscedastic case
-nominal_bias_stddev:
-  sqrt of the mean of cov_BD_BD_yD
-mu_Y:
-  predicted mean of the intensity at the target sites
-phi_Y:
-  predicted within-event standard deviation at the target sites
-tau_Y:
-  predicted between-event standard deviation at the target
-  sites
-mu_BY_yD:
-  mean of the conditional between-event residual for the target sites
-cov_WY_WD and cov_WD_WY:
-   within-event covariance matrices for the target sites and observation sites
-cov_WY_WY:
-  apriori within-event covariance matrix for the target sites
-RC:
-  regression coefficient matrix ("RC" = cov_WY_WD × cov_WD_WD_inv)
-C:
-  scaling matrix for the conditioned between-event covariance matrix
-cov_WY_WY_wD:
-  conditioned within-event covariance matrix for the target sites
-cov_BY_BY_yD:
-  "conditioned between-event" covariance matrix for the target sites
-mu_Y_yD:
-  conditioned mean of the ground motion at the target sites
-cov_Y_Y_yD:
-  conditional covariance of the ground motion at the target sites
+Basic model
+===========
+
+Following Appendix B, ground motion is represented in natural-log units as
+
+``Y = mu_Y + W_Y + T_Y H_D`` and
+``Y_D = mu_YD + W_D + T_D H_D``.
+
+``Y`` contains the targets and ``Y_D = y_D`` contains the observations.
+``mu`` is the GSIM median in log space, ``W`` is the within-event residual,
+and ``H_D`` contains unit-variance normalized between-event residuals for
+the contributing IMTs. The capital-tau matrices ``T_Y`` and ``T_D`` map
+``H_D`` to targets and observations using the GSIM ``tau`` values. Thus,
+the scaled between-event residual is ``B = T H``. The GSIM within-event
+standard deviation is ``phi``. Station values are converted to log space
+before conditioning.
+
+The module has two calculation paths:
+
+* A spatial-only model uses the historical Engler implementation. It
+  conditions each target IMT separately and uses a separable approximation
+  when relating different observed and target IMTs. It does not construct
+  one jointly correlated target field across IMTs. This path supports the
+  existing finite truncated-normal sampler.
+* A spatial-cross-IMT model forms one joint vector containing every target
+  IMT and site. It conditions that vector in a single Gaussian operation,
+  preserving the model's spatial and cross-IMT covariance. Dense sampling
+  is the correctness reference; deterministic posterior means are computed
+  in site chunks. Finite truncated sampling is not yet supported here.
+
+The joint path stacks all requested target IMTs rather than applying
+Appendix B to one target IMT at a time. Its prior covariance blocks are
+
+``Sigma_YD_YD = Sigma_WD_WD + T_D Sigma_HD_HD T_D.T``,
+``Sigma_YY = Sigma_WY_WY + T_Y Sigma_HD_HD T_Y.T``, and
+``Sigma_Y_YD = Sigma_WY_WD + T_Y Sigma_HD_HD T_D.T``.
+
+``Sigma_HD_HD`` is the covariance (and correlation) of ``H_D``. Following
+the ShakeMap implementation, observation-error variance is added to the
+diagonal of ``Sigma_WD_WD``. With ``^+`` denoting a pseudoinverse and
+``Sigma_YD_Y = Sigma_Y_YD.T``, the conditional MVN equations give
+
+``mu_Y_yD = mu_Y + Sigma_Y_YD Sigma_YD_YD^+ (y_D - mu_YD)`` and
+``Sigma_YY_yD = Sigma_YY - Sigma_Y_YD Sigma_YD_YD^+ Sigma_YD_Y``.
+
+These are the joint form of the mean and covariance in equations (B16) and
+(B17). For one target IMT, ``T_Y`` corresponds to the paper's ``T_Y0``.
+
+Basic flow
+==========
+
+1. ``ConditionedGmfComputer`` collects the conditionable target and
+   observed IMTs, configures the correlation models, and creates the
+   calculation input. MMI is excluded from residual conditioning.
+2. ``get_precomputed`` builds rupture contexts, filters distant sites, and
+   creates the required target/station distance matrices.
+3. ``build_precomputed`` evaluates ``mu``, total sigma, ``tau``, and ``phi``
+   at every target and station for each GSIM.
+4. ``conditioned`` selects the spatial-only or joint path. The former builds
+   one Engler posterior per target IMT; the latter first builds one joint
+   station system and then the joint target blocks.
+5. With zero truncation, posterior means are repeated for all requested
+   fields. Otherwise, covariance is constructed and residual fields are
+   sampled. The final mean is retained with the fields in ``MNE``.
+
+Notation and dimensions
+=======================
+
+Subscripts and indices
+----------------------
+
+``D``
+  Data: observed IMT values at station sites.
+``Y``
+  Prediction targets: requested IMT values at target sites.
+``W``, ``B``, ``H``
+  Within-event, between-event, and normalized between-event residuals.
+  Combined labels identify both the component and location; for example,
+  ``W_D`` is a within-event residual at an observation site.
+``_yD``, ``_wD``
+  A suffix ``_yD`` denotes a quantity conditioned on the observed values
+  ``Y_D = y_D``. The legacy ``_wD`` suffix denotes conditioning only on
+  the station within-event residuals.
+``K``, ``L``
+  Numbers of target grid points and stations in Appendix B. OpenQuake's
+  established array convention calls these dimensions ``N`` and ``N_D``;
+  the chunked-mean implementation locally calls ``N_D`` by ``D`` and
+  ``M_D`` by ``J``.
+``M``, ``M_D``
+  Numbers of target and observed IMTs in OpenQuake. In Appendix B, ``M + 1``
+  instead counts the native target IMT and the nonnative observed IMTs.
+  Joint vectors are flattened in IMT-major order.
+``E``, ``G``, ``g``, ``m``
+  ``E`` is the number of fields and ``G`` is the number of GSIMs. ``g`` and
+  ``m`` index GSIMs and target IMTs.
+
+Input values and GSIM statistics
+--------------------------------
+
+``y_D``
+  Logged station observations.
+``mu_YD``
+  GSIM mean at observation sites. ``mu_Y`` is the GSIM mean at target sites.
+``zeta_D``
+  Raw station residual ``y_D - mu_YD``.
+``phi_D``, ``phi_Y``
+  GSIM within-event standard deviations at observations and targets.
+``tau_D``, ``tau_Y``
+  GSIM between-event standard deviations at observations and targets.
+``observation_variance``
+  Squared station ``*_std`` values added to the station covariance diagonal.
+  This is ``sigma_D_epsilon^2`` in the ShakeMap documentation and is folded
+  into ``Sigma_WD_WD`` before conditioning.
+``observation_mask``
+  Boolean IMT-major mask that removes missing station observations from the
+  joint station system. ``full_phi_D`` retains the corresponding unmasked
+  within-event standard deviations for constructing covariance blocks.
+``mean_stds_D``, ``mean_stds_Y``
+  GSIM arrays whose first dimension contains ``mu``, total sigma, ``tau``,
+  and ``phi``. The remaining dimensions are GSIM, IMT, and site.
+
+Distances and covariance blocks
+-------------------------------
+
+Names such as ``cov_WY_WD`` denote ``Cov(W_Y, W_D)``. Joint-path names
+omit the residual component because they contain both within- and
+between-event covariance.
+
+``DD``, ``YY``, ``YD``, ``DY``
+  Distance matrices for station–station, target–target, target–station,
+  and station–target site pairs. They contain site distances only; the
+  covariance builders expand them across IMTs.
+``cov_WD_WD``, ``cov_WY_WD``, ``cov_WD_WY``, ``cov_WY_WY``
+  Within-event covariance blocks corresponding to the paper's
+  ``Sigma_WD_WD``, ``Sigma_WY_WD``, ``Sigma_WD_WY``, and
+  ``Sigma_WY_WY``. ``cov_WD_WD`` also contains observation-error variance.
+``cov_YD_YD``, ``cov_Y_YD``, ``cov_YY``
+  Joint-path total prior covariance blocks ``Sigma_YD_YD``,
+  ``Sigma_Y_YD``, and ``Sigma_YY``.
+``cov_WD_WD_inv``, ``cov_YD_YD_inv``
+  Pseudoinverses of the legacy within-event and joint total station systems.
+``Sigma_YY_yD``
+  Total posterior covariance returned by ``posterior_covariance``.
+
+Between-event and regression terms
+----------------------------------
+
+``cov_HD_HD``
+  Prior ``Sigma_HD_HD`` of normalized between-event residuals for the
+  contributing IMTs.
+``T_D``
+  Appendix B's capital-tau mapping from normalized between-event residuals
+  to station values; its nonzero entries are the corresponding ``tau_D``
+  values. The joint path generalizes the same matrix to all target IMTs.
+``T_Y``
+  Joint target mapping corresponding to ``T_Y0`` in Appendix B.
+``mu_HD_yD``, ``cov_HD_HD_yD``
+  Legacy posterior mean and covariance of the normalized between-event
+  residual given the observations.
+``mu_BD_yD``, ``cov_BD_BD_yD``
+  Legacy posterior mean and covariance after mapping ``H_D`` to ``B_D``.
+``nominal_bias_mean``, ``nominal_bias_stddev``
+  Scalar summaries of the conditional between-event residual mean and
+  standard deviation.
+``RC``
+  Legacy within-event regression matrix
+  ``cov_WY_WD @ cov_WD_WD_inv``.
+``C``
+  Legacy target scaling matrix for conditional between-event covariance.
+``cov_WY_WY_wD``, ``cov_BY_BY_yD``
+  Legacy conditional within-event and between-event target covariances.
+
+Sampling and output
+-------------------
+
+``mu_Y_yD``
+  Conditional target mean.
+``unconditional_D``, ``unconditional_Y``
+  Paired station and target draws from the joint prior. The
+  ``JointConditioning.condition`` helper transforms them into posterior
+  draws by Matheron substitution.
+``cutoff``
+  Small diagonal covariance increment used to handle numerical roundoff
+  during sampling.
+``tlw``, ``tlb``
+  Truncation levels for within- and between-event residuals.
+``lb_w``, ``ub_w``, ``lb_b``, ``ub_b``
+  Lower and upper truncation bounds for legacy within- and between-event
+  residual sampling.
+``z_w_truncated``, ``z_b_truncated``
+  Sampled legacy within- and between-event residual fields.
+``MNE``
+  Output array with shape ``(M, N, E + 1)``. The first ``E`` slices contain
+  log-space conditioned fields and the final slice contains their posterior
+  mean. ``compute_all`` subsequently converts applicable IMTs from log space.
 """
 
 import logging
@@ -333,7 +452,7 @@ class Input:
 @dataclass
 class StationConditioning:
     """All-IMT station system used by joint Gaussian conditioning."""
-    residual_D: numpy.ndarray
+    zeta_D: numpy.ndarray
     observed_imts: tuple
     latent_imts: tuple
     observation_mask: numpy.ndarray
@@ -341,35 +460,35 @@ class StationConditioning:
     full_phi_D: numpy.ndarray
     phi_D: numpy.ndarray
     tau_D: numpy.ndarray
-    A_D: numpy.ndarray
-    between_correlation: numpy.ndarray
-    covariance_DD: numpy.ndarray
-    covariance_DD_inv: numpy.ndarray
+    T_D: numpy.ndarray
+    cov_HD_HD: numpy.ndarray
+    cov_YD_YD: numpy.ndarray
+    cov_YD_YD_inv: numpy.ndarray
 
     def solve(self, right_hand_side):
         """Apply the precomputed station covariance pseudoinverse."""
-        return self.covariance_DD_inv @ right_hand_side
+        return self.cov_YD_YD_inv @ right_hand_side
 
 
 def build_station_conditioning(inp, mean_stds_D, DD):
     """Build the small joint covariance system at observation sites."""
     imts_D = tuple(inp.imts_D)
     num_stations = len(inp.sites_D)
-    observed = numpy.array([
+    y_D = numpy.array([
         numpy.log(inp.stations[imt.string + '_mean'].to_numpy(float))
         for imt in imts_D])
     observation_stddev = numpy.array([
         inp.stations[imt.string + '_std'].to_numpy(float)
         for imt in imts_D])
-    valid = numpy.isfinite(observed) & numpy.isfinite(observation_stddev)
+    valid = numpy.isfinite(y_D) & numpy.isfinite(observation_stddev)
     valid = valid.reshape(-1)
     if not valid.any():
         raise ValueError('The station data contains no usable observations')
 
-    predicted = numpy.asarray(mean_stds_D[0, 0], dtype=numpy.float64)
+    mu_YD = numpy.asarray(mean_stds_D[0, 0], dtype=numpy.float64)
     tau = numpy.asarray(mean_stds_D[2, 0], dtype=numpy.float64)
     phi = numpy.asarray(mean_stds_D[3, 0], dtype=numpy.float64)
-    residual_D = (observed - predicted).reshape(-1)[valid]
+    zeta_D = (y_D - mu_YD).reshape(-1)[valid]
     tau_D = tau.reshape(-1)[valid]
     phi_D = phi.reshape(-1)[valid]
 
@@ -377,58 +496,58 @@ def build_station_conditioning(inp, mean_stds_D, DD):
     latent_index = {imt: i for i, imt in enumerate(latent_imts)}
     observed_imt_indices = numpy.repeat(
         [latent_index[imt] for imt in imts_D], num_stations)[valid]
-    A_D = numpy.zeros(
-        (len(residual_D), len(latent_imts)), dtype=numpy.float64)
-    A_D[numpy.arange(len(residual_D)), observed_imt_indices] = tau_D
+    T_D = numpy.zeros(
+        (len(zeta_D), len(latent_imts)), dtype=numpy.float64)
+    T_D[numpy.arange(len(zeta_D)), observed_imt_indices] = tau_D
 
-    full_phi = phi.reshape(-1)
-    within_DD = compute_within_event_covariance_matrix(
+    full_phi_D = phi.reshape(-1)
+    cov_WD_WD = compute_within_event_covariance_matrix(
         inp.within_event_model, inp.separable_cross_imt_model, DD,
-        imts_D, imts_D, full_phi, full_phi,
+        imts_D, imts_D, full_phi_D, full_phi_D,
         inp.correlation_context, dtype=numpy.float64)
-    within_DD = numpy.asarray(within_DD, dtype=numpy.float64)
-    within_DD = within_DD[numpy.ix_(valid, valid)]
+    cov_WD_WD = numpy.asarray(cov_WD_WD, dtype=numpy.float64)
+    cov_WD_WD = cov_WD_WD[numpy.ix_(valid, valid)]
     observation_variance = observation_stddev.reshape(-1)[valid] ** 2
     numpy.fill_diagonal(
-        within_DD, numpy.diag(within_DD) + observation_variance)
+        cov_WD_WD, numpy.diag(cov_WD_WD) + observation_variance)
 
-    between_correlation = numpy.asarray(
+    cov_HD_HD = numpy.asarray(
         inp.between_event_model.correlation_matrix(latent_imts),
         dtype=numpy.float64)
-    covariance_DD = within_DD + A_D @ between_correlation @ A_D.T
-    covariance_DD_inv = numpy.linalg.pinv(covariance_DD, hermitian=True)
-    projected_residual = covariance_DD @ covariance_DD_inv @ residual_D
+    cov_YD_YD = cov_WD_WD + T_D @ cov_HD_HD @ T_D.T
+    cov_YD_YD_inv = numpy.linalg.pinv(cov_YD_YD, hermitian=True)
+    projected_residual = cov_YD_YD @ cov_YD_YD_inv @ zeta_D
     if not numpy.allclose(
-            projected_residual, residual_D, rtol=1E-9, atol=1E-12):
+            projected_residual, zeta_D, rtol=1E-9, atol=1E-12):
         raise ValueError(
             'Station observations are incompatible with their singular '
             'covariance matrix')
     return StationConditioning(
-        residual_D, imts_D, latent_imts, valid, observed_imt_indices,
-        full_phi, phi_D, tau_D, A_D, between_correlation, covariance_DD,
-        covariance_DD_inv)
+        zeta_D, imts_D, latent_imts, valid, observed_imt_indices,
+        full_phi_D, phi_D, tau_D, T_D, cov_HD_HD, cov_YD_YD,
+        cov_YD_YD_inv)
 
 
 @dataclass
 class JointConditioning:
     """Dense reference representation of an all-IMT target posterior."""
-    mean_Y: numpy.ndarray
-    covariance_YY: numpy.ndarray
-    covariance_YD: numpy.ndarray
+    mu_Y: numpy.ndarray
+    cov_YY: numpy.ndarray
+    cov_Y_YD: numpy.ndarray
     station: StationConditioning
 
     def posterior_mean(self):
         """Return the all-IMT posterior mean at the target sites."""
-        return self.mean_Y + self.covariance_YD @ self.station.solve(
-            self.station.residual_D)
+        return self.mu_Y + self.cov_Y_YD @ self.station.solve(
+            self.station.zeta_D)
 
     def posterior_covariance(self, cutoff=0):
         """Return the all-IMT posterior covariance at the target sites."""
-        if self.covariance_YY is None:
+        if self.cov_YY is None:
             return None
-        solved_DY = self.station.solve(self.covariance_YD.T)
-        covariance = self.covariance_YY.copy()
-        covariance -= self.covariance_YD @ solved_DY
+        solved_DY = self.station.solve(self.cov_Y_YD.T)
+        covariance = self.cov_YY.copy()
+        covariance -= self.cov_Y_YD @ solved_DY
         covariance = (covariance + covariance.T) / 2
         numpy.fill_diagonal(
             covariance, numpy.diag(covariance) + cutoff)
@@ -441,9 +560,9 @@ class JointConditioning:
     def condition(self, unconditional_Y, unconditional_D):
         """Apply Matheron substitution to unconditional prior samples."""
         correction = self.station.solve(
-            self.station.residual_D[:, None] - unconditional_D)
-        return (self.mean_Y[:, None] + unconditional_Y +
-                self.covariance_YD @ correction)
+            self.station.zeta_D[:, None] - unconditional_D)
+        return (self.mu_Y[:, None] + unconditional_Y +
+                self.cov_Y_YD @ correction)
 
     def sample(self, rng, num_events, cutoff=0):
         """Draw an exact dense Gaussian posterior reference sample."""
@@ -468,7 +587,7 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
     """Build a dense all-IMT target prior and target-station block."""
     imts_Y = tuple(inp.imts_Y)
     num_targets = len(inp.sites_Y)
-    mean_Y = numpy.asarray(
+    mu_Y = numpy.asarray(
         mean_stds_Y[0, 0], dtype=numpy.float64).reshape(-1)
     tau_Y = numpy.asarray(
         mean_stds_Y[2, 0], dtype=numpy.float64).reshape(-1)
@@ -478,41 +597,40 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
     latent_index = {imt: i for i, imt in enumerate(station.latent_imts)}
     target_imt_indices = numpy.repeat(
         [latent_index[imt] for imt in imts_Y], num_targets)
-    A_Y = numpy.zeros(
-        (len(mean_Y), len(station.latent_imts)), dtype=numpy.float64)
-    A_Y[numpy.arange(len(mean_Y)), target_imt_indices] = tau_Y
+    T_Y = numpy.zeros(
+        (len(mu_Y), len(station.latent_imts)), dtype=numpy.float64)
+    T_Y[numpy.arange(len(mu_Y)), target_imt_indices] = tau_Y
 
     if YY is None:
-        within_YY = None
+        cov_WY_WY = None
     else:
-        within_YY = compute_within_event_covariance_matrix(
+        cov_WY_WY = compute_within_event_covariance_matrix(
             inp.within_event_model, inp.separable_cross_imt_model, YY,
             imts_Y, imts_Y, phi_Y, phi_Y, inp.correlation_context,
             dtype=numpy.float64)
-    within_YD = compute_within_event_covariance_matrix(
+    cov_WY_WD = compute_within_event_covariance_matrix(
         inp.within_event_model, inp.separable_cross_imt_model, YD,
         imts_Y, station.observed_imts, phi_Y,
         station.full_phi_D,
         inp.correlation_context, dtype=numpy.float64)
-    within_YD = numpy.asarray(within_YD, dtype=numpy.float64)
-    within_YD = within_YD[:, station.observation_mask]
+    cov_WY_WD = numpy.asarray(cov_WY_WD, dtype=numpy.float64)
+    cov_WY_WD = cov_WY_WD[:, station.observation_mask]
 
-    between = station.between_correlation
-    if within_YY is None:
-        covariance_YY = None
+    if cov_WY_WY is None:
+        cov_YY = None
     else:
-        covariance_YY = numpy.asarray(within_YY, dtype=numpy.float64)
-        covariance_YY += A_Y @ between @ A_Y.T
-    covariance_YD = within_YD + A_Y @ between @ station.A_D.T
-    projected_YD = (covariance_YD @ station.covariance_DD_inv @
-                    station.covariance_DD)
+        cov_YY = numpy.asarray(cov_WY_WY, dtype=numpy.float64)
+        cov_YY += T_Y @ station.cov_HD_HD @ T_Y.T
+    cov_Y_YD = (cov_WY_WD +
+                T_Y @ station.cov_HD_HD @ station.T_D.T)
+    projected_YD = (cov_Y_YD @ station.cov_YD_YD_inv @
+                    station.cov_YD_YD)
     if not numpy.allclose(
-            projected_YD, covariance_YD, rtol=1E-9, atol=1E-12):
+            projected_YD, cov_Y_YD, rtol=1E-9, atol=1E-12):
         raise ValueError(
             'Target-station covariance is incompatible with the singular '
             'station covariance matrix')
-    return JointConditioning(
-        mean_Y, covariance_YY, covariance_YD, station)
+    return JointConditioning(mu_Y, cov_YY, cov_Y_YD, station)
 
 
 def conditioned_mean_in_chunks(
@@ -550,7 +668,7 @@ class DResult:
     bracketed_imts: list
     conditioning_imts: list
     native_data_available: bool
-    corr_HD_HD: numpy.ndarray = 0
+    cov_HD_HD: numpy.ndarray = 0
     cov_WD_WD_inv: numpy.ndarray = 0
     phi_D: numpy.ndarray = 0
     T_D: numpy.ndarray = 0
@@ -620,7 +738,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     t = _createD(g, m, target_imt, inp.imts_D, sdata)
 
     # Observations (recorded values at the stations)
-    yD = numpy.log(
+    y_D = numpy.log(
         sdata[[c_imt.string + "_mean" for c_imt in t.conditioning_imts]]
     ).values.reshape((-1, 1), order="F")
 
@@ -628,12 +746,12 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     # These arise if the values for this particular IMT were not
     # directly recorded, but obtained by conversion equations or
     # cross-correlation functions
-    var_addon_D = sdata[
+    observation_variance = sdata[
         [c_imt.string + "_std" for c_imt in t.conditioning_imts]
     ].values.reshape(-1, order="F") ** 2
 
     # Predicted mean at the observation points, from GSIM(s)
-    mu_yD = sdata[
+    mu_YD = sdata[
         [c_imt.string + "_median" for c_imt in t.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
     # Predicted uncertainty components at the observation points
@@ -656,7 +774,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
                 i * nss: (i + 1) * nss, 0]
 
     # The raw residuals
-    t.zeta_D = yD - mu_yD
+    t.zeta_D = y_D - mu_YD
     t.phi_D = phi_D.flatten()
 
     cov_WD_WD = compute_within_event_covariance_matrix(
@@ -666,7 +784,8 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
-    numpy.fill_diagonal(cov_WD_WD, numpy.diag(cov_WD_WD) + var_addon_D)
+    numpy.fill_diagonal(
+        cov_WD_WD, numpy.diag(cov_WD_WD) + observation_variance)
 
     # Get the (pseudo)-inverse of the station data within-event covariance
     # matrix
@@ -684,7 +803,7 @@ def createD(g, m, target_imt, inp, mean_stds_D, DD):
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
     # H is the normalized between-event residual
-    t.corr_HD_HD = inp.between_event_model.correlation_matrix(
+    t.cov_HD_HD = inp.between_event_model.correlation_matrix(
         t.bracketed_imts)
     return t
 
@@ -796,7 +915,7 @@ class Conditioner:
         return self.args[4]
 
     # Using Bayes rule, compute the posterior distribution of the
-    # normalized between-event residual H|YD=yD, employing
+    # normalized between-event residual H_D | Y_D=y_D, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance
     def get_mu_tau_phi(self, m, target_imt, monitor, compute_covs=True):
@@ -809,9 +928,10 @@ class Conditioner:
 
         cov_HD_HD_yD = numpy.linalg.pinv(
             t.T_D.T @ t.cov_WD_WD_inv @ t.T_D +
-            numpy.linalg.pinv(t.corr_HD_HD))
+            numpy.linalg.pinv(t.cov_HD_HD))
 
-        mu_HD_yD = cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @ t.zeta_D
+        mu_HD_yD = (cov_HD_HD_yD @ t.T_D.T @ t.cov_WD_WD_inv @
+                    t.zeta_D)
 
         # Compute the distribution of the conditional between-event
         # residual B|Y2=y2

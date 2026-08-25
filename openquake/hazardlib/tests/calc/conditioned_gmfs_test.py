@@ -173,10 +173,10 @@ def test_joint_station_covariance_combines_all_residual_components():
     numpy.fill_diagonal(
         expected, numpy.diag(expected) +
         numpy.array([0.1, 0.2, 0.3, 0.4]) ** 2)
-    expected += system.A_D @ system.between_correlation @ system.A_D.T
+    expected += system.T_D @ system.cov_HD_HD @ system.T_D.T
 
-    aac(system.residual_D, [0.0, 0.0, 0.3, -0.2])
-    aac(system.covariance_DD, expected)
+    aac(system.zeta_D, [0.0, 0.0, 0.3, -0.2])
+    aac(system.cov_YD_YD, expected)
     identity = numpy.eye(len(expected))
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
 
@@ -203,8 +203,8 @@ def test_joint_station_system_masks_missing_observations_consistently():
     numpy.testing.assert_array_equal(
         system.observation_mask, [True, False, False, True])
     numpy.testing.assert_array_equal(system.observed_imt_indices, [0, 1])
-    aac(system.residual_D, [0.0, -0.2])
-    assert system.covariance_DD.shape == (2, 2)
+    aac(system.zeta_D, [0.0, -0.2])
+    assert system.cov_YD_YD.shape == (2, 2)
 
 
 def test_du_ning_conditions_pgv_observations():
@@ -228,7 +228,7 @@ def test_du_ning_conditions_pgv_observations():
 
     station = build_station_conditioning(inp, mean_stds_D, DD)
     mean = conditioned_mean_in_chunks(inp, mean_stds_Y, station)
-    aac(station.residual_D, [0.0, 0.0, 0.4, -0.2])
+    aac(station.zeta_D, [0.0, 0.0, 0.4, -0.2])
     assert mean.shape == (2, 1)
     assert numpy.all(numpy.isfinite(mean))
     assert mean[1, 0] != 0
@@ -256,12 +256,12 @@ def test_joint_posterior_matches_independently_assembled_matrices():
                               component=None, context=None):
             return blocks[distances.shape]
 
-    residual_D = numpy.array([[0.4, -0.3], [0.2, 0.1]])
+    zeta_D = numpy.array([[0.4, -0.3], [0.2, 0.1]])
     predicted_D = numpy.array([[0.1, -0.1], [0.2, -0.2]])
     stations = {
-        'PGA_mean': numpy.exp(predicted_D[0] + residual_D[0]),
+        'PGA_mean': numpy.exp(predicted_D[0] + zeta_D[0]),
         'PGA_std': [0.1, 0.2],
-        'SA(0.3)_mean': numpy.exp(predicted_D[1] + residual_D[1]),
+        'SA(0.3)_mean': numpy.exp(predicted_D[1] + zeta_D[1]),
         'SA(0.3)_std': [0.15, 0.25]}
     between = numpy.array([[1.0, 0.35], [0.35, 1.0]])
     inp = Input(
@@ -288,18 +288,18 @@ def test_joint_posterior_matches_independently_assembled_matrices():
     tau_D = numpy.array([
         [0.2, 0.0], [0.3, 0.0], [0.0, 0.4], [0.0, 0.5]])
     tau_Y = numpy.array([[0.25, 0.0], [0.0, 0.45]])
-    covariance_DD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
-                     numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2 +
-                     tau_D @ between @ tau_D.T)
-    covariance_YD = (blocks[(1, 2)] * phi_Y[:, None] * phi_D +
-                     tau_Y @ between @ tau_D.T)
-    covariance_YY = (blocks[(1, 1)] * phi_Y[:, None] * phi_Y +
-                     tau_Y @ between @ tau_Y.T)
-    inverse_DD = numpy.linalg.pinv(covariance_DD, hermitian=True)
+    cov_YD_YD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
+                 numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2 +
+                 tau_D @ between @ tau_D.T)
+    cov_Y_YD = (blocks[(1, 2)] * phi_Y[:, None] * phi_D +
+                tau_Y @ between @ tau_D.T)
+    cov_YY = (blocks[(1, 1)] * phi_Y[:, None] * phi_Y +
+              tau_Y @ between @ tau_Y.T)
+    inverse_DD = numpy.linalg.pinv(cov_YD_YD, hermitian=True)
     expected_mean = numpy.array([1.0, 2.0]) + (
-        covariance_YD @ inverse_DD @ residual_D.reshape(-1))
-    expected_covariance = covariance_YY - (
-        covariance_YD @ inverse_DD @ covariance_YD.T)
+        cov_Y_YD @ inverse_DD @ zeta_D.reshape(-1))
+    expected_covariance = cov_YY - (
+        cov_Y_YD @ inverse_DD @ cov_Y_YD.T)
 
     mean, covariance = joint.mean_covariance()
     aac(mean, expected_mean, rtol=1E-7, atol=1E-7)
@@ -331,16 +331,16 @@ def test_matheron_transform_matches_dense_schur_complement():
     station = build_station_conditioning(inp, mean_stds_D, DD)
     joint = build_joint_conditioning(inp, mean_stds_Y, station, YY, YD)
     mean, covariance = joint.mean_covariance()
-    expected = joint.covariance_YY - (
-        joint.covariance_YD @ station.solve(joint.covariance_YD.T))
-    aac(mean, joint.mean_Y)
+    expected = joint.cov_YY - (
+        joint.cov_Y_YD @ station.solve(joint.cov_Y_YD.T))
+    aac(mean, joint.mu_Y)
     aac(covariance, expected)
 
     prior = numpy.block([
-        [joint.covariance_YY, joint.covariance_YD],
-        [joint.covariance_YD.T, station.covariance_DD]])
+        [joint.cov_YY, joint.cov_Y_YD],
+        [joint.cov_Y_YD.T, station.cov_YD_YD]])
     factor = numpy.linalg.cholesky(prior)
-    num_targets = len(joint.mean_Y)
+    num_targets = len(joint.mu_Y)
     transformed = joint.condition(
         factor[:num_targets], factor[num_targets:])
     centered = transformed - mean[:, None]
@@ -429,12 +429,12 @@ def test_joint_mean_with_zero_truncation_uses_no_legacy_matrices():
 
 
 def test_joint_sampler_accepts_a_singular_station_system():
-    covariance_DD = numpy.ones((2, 2))
+    cov_YD_YD = numpy.ones((2, 2))
     station = StationConditioning(
         numpy.zeros(2), (), (), numpy.ones(2, dtype=bool),
         numpy.zeros(2, dtype=int), numpy.ones(2), numpy.ones(2),
         numpy.ones(2), numpy.ones((2, 1)), numpy.ones((1, 1)),
-        covariance_DD, numpy.linalg.pinv(covariance_DD, hermitian=True))
+        cov_YD_YD, numpy.linalg.pinv(cov_YD_YD, hermitian=True))
     joint = JointConditioning(
         numpy.array([0.5]), numpy.ones((1, 1)),
         numpy.ones((1, 2)), station)
