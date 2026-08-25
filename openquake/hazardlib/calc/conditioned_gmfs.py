@@ -16,7 +16,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Condition ground-motion fields on seismic station observations.
 
-The implementation follows Engler et al. (2022):
+The conditioning algebra follows Engler et al. (2022):
 
 Engler, D. T., Worden, C. B., Thompson, E. M., and Jaiswal, K. S.
 (2022). Partitioning Ground Motion Uncertainty When Conditioned on
@@ -76,6 +76,36 @@ diagonal of ``Sigma_WD_WD``. With ``^+`` denoting a pseudoinverse and
 These are the joint form of the mean and covariance in equations (B16) and
 (B17). For one target IMT, ``T_Y`` corresponds to the paper's ``T_Y0``.
 
+Relationship to the Engler algorithm
+====================================
+
+The historical path retains the paper's partitioned calculation. ``createD``
+constructs the terms needed by equations (B8) and (B9),
+``Conditioner.get_mu_tau_phi`` evaluates (B8) and the mean in (B16), and
+``_compute_target_covs`` evaluates the two covariance terms in (B17).
+
+The joint path is an algebraic generalization rather than a literal sequence
+of the Appendix B equations. It first integrates the normalized
+between-event residual ``H_D`` into the three total prior covariance blocks,
+then applies the standard conditional-MVN equations. Expanding that Schur
+complement gives equations (B16) and (B17). It therefore produces the same
+untruncated total Gaussian posterior while also allowing one within-event
+model to correlate every target IMT and site jointly. It does not retain
+separate within- and between-event posterior fields.
+
+OpenQuake also makes the following implementation choices:
+
+* Station-error variance is added to ``Sigma_WD_WD`` following ShakeMap.
+  It is not shown explicitly in Appendix B.
+* Pseudoinverses replace the paper's inverses so that singular covariance
+  systems can be handled when they are mathematically compatible.
+* The historical path constructs cross-IMT spatial covariance using a
+  separable approximation. A joint spatial-cross-IMT model supplies this
+  covariance directly in the joint path.
+* The historical path retains elementwise clipping of negative posterior
+  covariance entries and its finite truncated-normal sampler. Neither step
+  is part of the Engler derivation. The joint Gaussian path performs neither.
+
 Basic flow
 ==========
 
@@ -103,26 +133,45 @@ Subscripts and indices
   Data: observed IMT values at station sites.
 ``Y``
   Prediction targets: requested IMT values at target sites.
-``W``, ``B``, ``H``
-  Within-event, between-event, and normalized between-event residuals.
-  Combined labels identify both the component and location; for example,
-  ``W_D`` is a within-event residual at an observation site.
-``_yD``, ``_wD``
-  A suffix ``_yD`` denotes a quantity conditioned on the observed values
-  ``Y_D = y_D``. The legacy ``_wD`` suffix denotes conditioning only on
-  the station within-event residuals.
-``K``, ``L``
-  Numbers of target grid points and stations in Appendix B. OpenQuake's
-  established array convention calls these dimensions ``N`` and ``N_D``;
-  the chunked-mean implementation locally calls ``N_D`` by ``D`` and
-  ``M_D`` by ``J``.
-``M``, ``M_D``
-  Numbers of target and observed IMTs in OpenQuake. In Appendix B, ``M + 1``
-  instead counts the native target IMT and the nonnative observed IMTs.
-  Joint vectors are flattened in IMT-major order.
-``E``, ``G``, ``g``, ``m``
-  ``E`` is the number of fields and ``G`` is the number of GSIMs. ``g`` and
-  ``m`` index GSIMs and target IMTs.
+``W``
+  Within-event residual.
+``B``
+  Between-event residual after scaling by ``tau``.
+``H``
+  Unit-variance normalized between-event residual.
+``W_D``
+  Within-event residual at the observation sites.
+``_yD``
+  Suffix denoting conditioning on the observed values ``Y_D = y_D``.
+``_wD``
+  Legacy suffix denoting conditioning on station within-event residuals.
+``K``
+  Number of target grid points in Appendix B.
+``L``
+  Number of stations in Appendix B.
+``N``
+  Number of target sites in OpenQuake arrays; equivalent to Appendix B's
+  ``K``.
+``N_D``
+  Number of station sites in OpenQuake arrays; equivalent to Appendix B's
+  ``L``.
+``D``
+  Local name for ``N_D`` in the chunked-mean implementation.
+``M``
+  Number of target IMTs in OpenQuake. In Appendix B, ``M + 1`` instead
+  counts one native target IMT and the nonnative observed IMTs.
+``M_D``
+  Number of observed IMTs in OpenQuake.
+``J``
+  Local name for ``M_D`` in the chunked-mean implementation.
+``E``
+  Number of ground-motion fields.
+``G``
+  Number of GSIMs.
+``g``
+  GSIM index.
+``m``
+  Target-IMT index. Joint vectors are flattened in IMT-major order.
 
 Input values and GSIM statistics
 --------------------------------
@@ -130,24 +179,36 @@ Input values and GSIM statistics
 ``y_D``
   Logged station observations.
 ``mu_YD``
-  GSIM mean at observation sites. ``mu_Y`` is the GSIM mean at target sites.
+  GSIM mean at observation sites.
+``mu_Y``
+  GSIM mean at target sites.
 ``zeta_D``
-  Raw station residual ``y_D - mu_YD``.
-``phi_D``, ``phi_Y``
-  GSIM within-event standard deviations at observations and targets.
-``tau_D``, ``tau_Y``
-  GSIM between-event standard deviations at observations and targets.
+  OpenQuake shorthand for the raw station residual ``y_D - mu_YD``. The
+  Appendix B equations write this difference explicitly.
+``phi_D``
+  GSIM within-event standard deviations at observation sites.
+``phi_Y``
+  GSIM within-event standard deviations at target sites.
+``tau_D``
+  GSIM between-event standard deviations at observation sites.
+``tau_Y``
+  GSIM between-event standard deviations at target sites.
 ``observation_variance``
   Squared station ``*_std`` values added to the station covariance diagonal.
-  This is ``sigma_D_epsilon^2`` in the ShakeMap documentation and is folded
-  into ``Sigma_WD_WD`` before conditioning.
+``sigma_D_epsilon^2``
+  ShakeMap notation for ``observation_variance``. It is folded into
+  ``Sigma_WD_WD`` before conditioning.
 ``observation_mask``
-  Boolean IMT-major mask that removes missing station observations from the
-  joint station system. ``full_phi_D`` retains the corresponding unmasked
-  within-event standard deviations for constructing covariance blocks.
-``mean_stds_D``, ``mean_stds_Y``
-  GSIM arrays whose first dimension contains ``mu``, total sigma, ``tau``,
-  and ``phi``. The remaining dimensions are GSIM, IMT, and site.
+  Boolean IMT-major mask removing missing values from the joint station
+  system.
+``full_phi_D``
+  Unmasked station within-event standard deviations used to construct
+  covariance blocks before applying ``observation_mask``.
+``mean_stds_D``
+  Station GSIM array whose first dimension contains ``mu``, total sigma,
+  ``tau``, and ``phi``. The remaining dimensions are GSIM, IMT, and site.
+``mean_stds_Y``
+  Target GSIM array with the same axes as ``mean_stds_D``.
 
 Distances and covariance blocks
 -------------------------------
@@ -156,19 +217,34 @@ Names such as ``cov_WY_WD`` denote ``Cov(W_Y, W_D)``. Joint-path names
 omit the residual component because they contain both within- and
 between-event covariance.
 
-``DD``, ``YY``, ``YD``, ``DY``
-  Distance matrices for station–station, target–target, target–station,
-  and station–target site pairs. They contain site distances only; the
-  covariance builders expand them across IMTs.
-``cov_WD_WD``, ``cov_WY_WD``, ``cov_WD_WY``, ``cov_WY_WY``
-  Within-event covariance blocks corresponding to the paper's
-  ``Sigma_WD_WD``, ``Sigma_WY_WD``, ``Sigma_WD_WY``, and
-  ``Sigma_WY_WY``. ``cov_WD_WD`` also contains observation-error variance.
-``cov_YD_YD``, ``cov_Y_YD``, ``cov_YY``
-  Joint-path total prior covariance blocks ``Sigma_YD_YD``,
-  ``Sigma_Y_YD``, and ``Sigma_YY``.
-``cov_WD_WD_inv``, ``cov_YD_YD_inv``
-  Pseudoinverses of the legacy within-event and joint total station systems.
+``DD``
+  Station-to-station distance matrix.
+``YY``
+  Target-to-target distance matrix.
+``YD``
+  Target-to-station distance matrix.
+``DY``
+  Station-to-target distance matrix. Distance matrices contain site
+  distances only; covariance builders expand them across IMTs.
+``cov_WD_WD``
+  Within-event station covariance ``Sigma_WD_WD``, including station-error
+  variance.
+``cov_WY_WD``
+  Within-event target-to-station covariance ``Sigma_WY_WD``.
+``cov_WD_WY``
+  Within-event station-to-target covariance ``Sigma_WD_WY``.
+``cov_WY_WY``
+  Within-event target covariance ``Sigma_WY_WY``.
+``cov_YD_YD``
+  Joint-path total station prior covariance ``Sigma_YD_YD``.
+``cov_Y_YD``
+  Joint-path total target-to-station prior covariance ``Sigma_Y_YD``.
+``cov_YY``
+  Joint-path total target prior covariance ``Sigma_YY``.
+``cov_WD_WD_inv``
+  Pseudoinverse of the historical within-event station covariance.
+``cov_YD_YD_inv``
+  Pseudoinverse of the joint total station covariance.
 ``Sigma_YY_yD``
   Total posterior covariance returned by ``posterior_covariance``.
 
@@ -184,41 +260,57 @@ Between-event and regression terms
   values. The joint path generalizes the same matrix to all target IMTs.
 ``T_Y``
   Joint target mapping corresponding to ``T_Y0`` in Appendix B.
-``mu_HD_yD``, ``cov_HD_HD_yD``
-  Legacy posterior mean and covariance of the normalized between-event
-  residual given the observations.
-``mu_BD_yD``, ``cov_BD_BD_yD``
-  Legacy posterior mean and covariance after mapping ``H_D`` to ``B_D``.
-``nominal_bias_mean``, ``nominal_bias_stddev``
-  Scalar summaries of the conditional between-event residual mean and
-  standard deviation.
+``mu_HD_yD``
+  Historical-path posterior mean of the normalized between-event residual.
+``cov_HD_HD_yD``
+  Historical-path posterior covariance of that normalized residual.
+``mu_BD_yD``
+  Historical-path posterior mean after mapping ``H_D`` to ``B_D``.
+``cov_BD_BD_yD``
+  Historical-path posterior covariance after that mapping.
+``nominal_bias_mean``
+  Scalar summary of the conditional between-event residual mean.
+``nominal_bias_stddev``
+  Scalar summary of the conditional between-event residual standard
+  deviation.
 ``RC``
   Legacy within-event regression matrix
   ``cov_WY_WD @ cov_WD_WD_inv``.
 ``C``
   Legacy target scaling matrix for conditional between-event covariance.
-``cov_WY_WY_wD``, ``cov_BY_BY_yD``
-  Legacy conditional within-event and between-event target covariances.
+``cov_WY_WY_wD``
+  Historical-path conditional within-event target covariance.
+``cov_BY_BY_yD``
+  Historical-path conditional between-event target covariance.
 
 Sampling and output
 -------------------
 
 ``mu_Y_yD``
   Conditional target mean.
-``unconditional_D``, ``unconditional_Y``
-  Paired station and target draws from the joint prior. The
-  ``JointConditioning.condition`` helper transforms them into posterior
-  draws by Matheron substitution.
+``unconditional_D``
+  Zero-mean station draw from the joint prior for Matheron substitution.
+``unconditional_Y``
+  Paired zero-mean target draw from that same joint prior.
 ``cutoff``
   Small diagonal covariance increment used to handle numerical roundoff
   during sampling.
-``tlw``, ``tlb``
-  Truncation levels for within- and between-event residuals.
-``lb_w``, ``ub_w``, ``lb_b``, ``ub_b``
-  Lower and upper truncation bounds for legacy within- and between-event
-  residual sampling.
-``z_w_truncated``, ``z_b_truncated``
-  Sampled legacy within- and between-event residual fields.
+``tlw``
+  Truncation level for within-event residuals.
+``tlb``
+  Truncation level for between-event residuals.
+``lb_w``
+  Lower bound for historical within-event residual sampling.
+``ub_w``
+  Upper bound for historical within-event residual sampling.
+``lb_b``
+  Lower bound for historical between-event residual sampling.
+``ub_b``
+  Upper bound for historical between-event residual sampling.
+``z_w_truncated``
+  Sampled historical within-event residual fields.
+``z_b_truncated``
+  Sampled historical between-event residual fields.
 ``MNE``
   Output array with shape ``(M, N, E + 1)``. The first ``E`` slices contain
   log-space conditioned fields and the final slice contains their posterior
@@ -997,7 +1089,8 @@ def _compute_target_covs(
             [t.imt], [t.imt], phi_Y, phi_Y,
             inp.correlation_context)
 
-        # Conditioned within-event covariance, clipped to zero.
+        # Historical elementwise clipping is retained for compatibility.
+        # It is not part of Engler et al. (2022), equation B17.
         cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(
             min=0).astype(F32)
 
@@ -1009,7 +1102,7 @@ def _compute_target_covs(
             zeros = numpy.zeros((N, len(t.conditioning_imts)), F32)
             C = (numpy.block([tau_Y, zeros]) - RC @ t.T_D).astype(F32)
 
-        # Conditioned between-event covariance, clipped to zero.
+        # Apply the same historical clipping to the second B17 term.
         cov_BY_BY_yD = (C @ cov_HD_HD_yD.astype(F32) @ C.T).clip(min=0)
     return cov_WY_WY_wD, cov_BY_BY_yD
 

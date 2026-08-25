@@ -234,7 +234,24 @@ def test_du_ning_conditions_pgv_observations():
     assert mean[1, 0] != 0
 
 
-def test_joint_posterior_matches_independently_assembled_matrices():
+def _engler_posterior(mu_Y, zeta_D, cov_WD_WD, cov_WY_WD,
+                       cov_WY_WY, T_D, T_Y, cov_HD_HD):
+    """Evaluate Engler et al. (2022), equations B8-B9 and B16-B17."""
+    inverse_WD = numpy.linalg.pinv(cov_WD_WD, hermitian=True)
+    cov_HD_HD_yD = numpy.linalg.pinv(
+        T_D.T @ inverse_WD @ T_D + numpy.linalg.pinv(cov_HD_HD),
+        hermitian=True)
+    mu_HD_yD = cov_HD_HD_yD @ T_D.T @ inverse_WD @ zeta_D
+    RC = cov_WY_WD @ inverse_WD
+    C = T_Y - RC @ T_D
+    mu_Y_yD = mu_Y + T_Y @ mu_HD_yD + RC @ (
+        zeta_D - T_D @ mu_HD_yD)
+    cov_YY_yD = (cov_WY_WY - RC @ cov_WY_WD.T +
+                  C @ cov_HD_HD_yD @ C.T)
+    return mu_Y_yD, cov_YY_yD
+
+
+def test_joint_matches_engler_partition():
     imts = [PGA(), SA(0.3)]
     spatial = numpy.array([
         [1.0, 0.4, 0.2],
@@ -288,18 +305,17 @@ def test_joint_posterior_matches_independently_assembled_matrices():
     tau_D = numpy.array([
         [0.2, 0.0], [0.3, 0.0], [0.0, 0.4], [0.0, 0.5]])
     tau_Y = numpy.array([[0.25, 0.0], [0.0, 0.45]])
-    cov_YD_YD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
-                 numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2 +
-                 tau_D @ between @ tau_D.T)
-    cov_Y_YD = (blocks[(1, 2)] * phi_Y[:, None] * phi_D +
-                tau_Y @ between @ tau_D.T)
-    cov_YY = (blocks[(1, 1)] * phi_Y[:, None] * phi_Y +
-              tau_Y @ between @ tau_Y.T)
-    inverse_DD = numpy.linalg.pinv(cov_YD_YD, hermitian=True)
-    expected_mean = numpy.array([1.0, 2.0]) + (
-        cov_Y_YD @ inverse_DD @ zeta_D.reshape(-1))
-    expected_covariance = cov_YY - (
-        cov_Y_YD @ inverse_DD @ cov_Y_YD.T)
+    cov_WD_WD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
+                 numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2)
+    cov_WY_WD = blocks[(1, 2)] * phi_Y[:, None] * phi_D
+    cov_WY_WY = blocks[(1, 1)] * phi_Y[:, None] * phi_Y
+    aac(station.cov_YD_YD, cov_WD_WD + tau_D @ between @ tau_D.T)
+    aac(joint.cov_Y_YD, cov_WY_WD + tau_Y @ between @ tau_D.T)
+    aac(joint.cov_YY, cov_WY_WY + tau_Y @ between @ tau_Y.T)
+    expected_mean, expected_covariance = _engler_posterior(
+        numpy.array([1.0, 2.0]), zeta_D.reshape(-1),
+        cov_WD_WD, cov_WY_WD, cov_WY_WY,
+        tau_D, tau_Y, between)
 
     mean, covariance = joint.mean_covariance()
     aac(mean, expected_mean, rtol=1E-7, atol=1E-7)
