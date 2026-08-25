@@ -342,7 +342,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD conditioners')
-MAX_CONDITIONING_BLOCK_ELEMENTS = 8_000_000
 
 
 def conditionable_imts(imts):
@@ -726,8 +725,7 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
 
 
 def conditioned_mean_in_chunks(
-        inp, mean_stds_Y, station,
-        max_block_elements=MAX_CONDITIONING_BLOCK_ELEMENTS):
+        inp, mean_stds_Y, station, max_block_elements):
     """Compute the exact all-IMT posterior mean in target-site chunks."""
     M = len(inp.imts_Y)
     N = len(inp.sites_Y)
@@ -1178,7 +1176,8 @@ def conditioned_joint(computer, conditioner, monitor, compute_covs):
         MNE[:, :, :E] = samples.reshape(M, N, E)
     else:
         mean = conditioned_mean_in_chunks(
-            conditioner.inp, conditioner.mean_stds_Y, station)
+            conditioner.inp, conditioner.mean_stds_Y, station,
+            computer.conditioning_block_elements)
         MNE[:, :, :E] = mean[:, :, None]
     MNE[:, :, E] = mean.reshape(M, N)
     return {conditioner.g: MNE}

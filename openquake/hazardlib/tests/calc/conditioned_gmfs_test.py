@@ -227,7 +227,8 @@ def test_du_ning_pgv_observations():
     mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
 
     station = build_station_conditioning(inp, mean_stds_D, DD)
-    mean = conditioned_mean_in_chunks(inp, mean_stds_Y, station)
+    mean = conditioned_mean_in_chunks(
+        inp, mean_stds_Y, station, max_block_elements=8)
     aac(station.zeta_D, [0.0, 0.0, 0.4, -0.2])
     assert mean.shape == (2, 1)
     assert numpy.all(numpy.isfinite(mean))
@@ -429,7 +430,8 @@ def test_joint_mean_path():
     computer = SimpleNamespace(
         E=2, M=2, N=1, seed=7, inp=inp, cmaker=cmaker,
         tlw=cmaker.truncation_level_within,
-        tlb=cmaker.truncation_level_between)
+        tlb=cmaker.truncation_level_between,
+        conditioning_block_elements=8)
     monitor = performance.Monitor()
     monitor.set_shared(DD=pre.DD)
 
@@ -437,7 +439,8 @@ def test_joint_mean_path():
     station = build_station_conditioning(
         inp, conditioner.mean_stds_D, pre.DD)
     expected = conditioned_mean_in_chunks(
-        inp, conditioner.mean_stds_Y, station)
+        inp, conditioner.mean_stds_Y, station,
+        computer.conditioning_block_elements)
     aac(result[:, :, :2], numpy.repeat(expected[:, :, None], 2, axis=2))
     aac(result[:, :, 2], expected)
 

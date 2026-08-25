@@ -42,8 +42,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, use_joint_conditioning, use_joint_gaussian_sampling,
-    MAX_CONDITIONING_BLOCK_ELEMENTS)
+    conditioned, use_joint_conditioning, use_joint_gaussian_sampling)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -398,7 +397,8 @@ def read_cmaker_rups(oq, rup_acc, dstore):
     return cmaker_rups
 
 
-def _conditioned_memory(computer, num_stations, G, N, compute_covs):
+def _conditioned_memory(
+        computer, num_stations, G, N, compute_covs, memory_limit):
     """Estimate peak arrays used by conditioned-GMF worker tasks."""
     joint = use_joint_conditioning(computer)
     if compute_covs and joint:
@@ -415,27 +415,38 @@ def _conditioned_memory(computer, num_stations, G, N, compute_covs):
                   f'{humansize(cross)} cross + '
                   f'{humansize(station)} stations + '
                   f'{humansize(samples)} samples)')
-        return size, detail, 'dense joint conditioning workspace'
+        return size, detail, 'dense joint conditioning workspace', None
     if compute_covs:
         size = 2 * G * N * N * 8  # tau, phi
-        return size, f'{G=} * {humansize(N*N*8)} * 2', 'tau, phi'
+        detail = f'{G=} * {humansize(N*N*8)} * 2'
+        return size, detail, 'tau, phi', None
     if joint:
         M = len(computer.inp.imts_Y)
         Q = len(computer.inp.imts_D) * num_stations
         T = M * N
         E = computer.E // G
-        block = min(T * Q, MAX_CONDITIONING_BLOCK_ELEMENTS)
-        chunks = 3 * block * 8
         station = 4 * Q * Q * 8
         results = T * (E + 1) * 4
+        elements_per_site = M * Q
+        if not elements_per_site:
+            raise ValueError(
+                'Joint conditioning requires target and observed IMTs')
+        available = max(0, memory_limit // G - station - results)
+        block = available // (3 * 8)
+        block = block // elements_per_site * elements_per_site
+        block = min(T * Q, max(elements_per_site, block))
+        chunks = 3 * block * 8
+        sites_per_chunk = block // elements_per_site
         size = G * (chunks + station + results)
-        detail = (f'{G=} * ({humansize(chunks)} chunks + '
+        detail = (f'{G=} * ({humansize(chunks)} chunks for '
+                  f'{sites_per_chunk:_d} sites + '
                   f'{humansize(station)} stations + '
                   f'{humansize(results)} results)')
-        return size, detail, 'chunked joint conditioning workspace'
+        return (size, detail, 'chunked joint conditioning workspace',
+                block)
     size = 2 * G * N * num_stations * 8
     detail = f'{G=} * {humansize(N*num_stations*8)} * 2'
-    return size, detail, 'target-station matrices'
+    return size, detail, 'target-station matrices', None
 
 
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
@@ -467,15 +478,21 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
             raise ValueError(
                 'Finite truncated multivariate-normal sampling is not yet '
                 'supported by joint within-event correlation models')
-        size, detail, matrices = _conditioned_memory(
-            computer, len(station_sites), G, N, compute_covs)
+        memory_limit = int(
+            float(config.memory.conditioned_gmf_gb) * 1024**3)
+        size, detail, matrices, block = _conditioned_memory(
+            computer, len(station_sites), G, N, compute_covs,
+            memory_limit)
         logging.info(
             'Requiring %s for %s [%s]',
             humansize(size), matrices, detail)
-        if size > float(config.memory.conditioned_gmf_gb) * 1024**3:
+        if size > memory_limit:
             raise ValueError(
-                f'The calculation is too large: {G=}, {N=}. '
-                'You must reduce the number of sites i.e. maximum_distance')
+                f'Conditioned GMFs require {humansize(size)}, exceeding '
+                f'the {humansize(memory_limit)} configured budget. Reduce '
+                'the target or station sites, or increase '
+                'memory.conditioned_gmf_gb')
+        computer.conditioning_block_elements = block
     else:
         computer = get_computer(cmaker, ebr, sites, calc.sec_perils)
     del proxy.geom  # to reduce data transfer
