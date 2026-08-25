@@ -143,5 +143,9 @@ table#impact-losses th td {
 
 .grid-table th,
 .grid-table td {
-  padding: 10px 14px;
+  padding: 3px 14px;
+}
+
+.impact-inputs-container {
+    margin-top: 10px;
 }
