@@ -2416,6 +2416,18 @@ def format_oqparam(oqparam):
         ret_dict[IMPACT_FORM_LABELS['rake']] = rupdic['rake']
         ret_dict[IMPACT_FORM_LABELS['dip']] = rupdic['dip']
         ret_dict[IMPACT_FORM_LABELS['strike']] = rupdic['strike']
+
+    # NOTE: when the rupture file is uploaded by the user, it is copied
+    # into a temporary file that might be unavailable when the job outputs
+    # page is requested. Furthermore, the name of the file is random (not
+    # the same name as the original uploaded file). So, with the current
+    # implementation, it does not make sense to show to the user the
+    # internal name of the volatile rupture file. If we need to offer that
+    # possibility, we must store the rupture file persistently into the
+    # datastore.
+    # if approach == 'provide_rup':
+    #     ret_dict[IMPACT_FORM_LABELS['rupture_file']] = rupdic['rupture_file']
+
     return ret_dict
 
 
