@@ -39,6 +39,7 @@
     display: block;
     overflow-x: scroll;
     position: relative;
+    margin-top: 10px;
 }
 
 table#impact-losses {
