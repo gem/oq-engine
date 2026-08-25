@@ -49,11 +49,11 @@ from openquake.hazardlib.tests.calc import \
 aac = numpy.testing.assert_allclose
 
 
-def test_conditionable_imts_include_pgv():
+def test_pgv_is_conditionable():
     assert conditionable_imts([PGA(), PGV(), MMI()]) == [PGA(), PGV()]
 
 
-def test_joint_within_event_covariance_block():
+def test_joint_within_covariance():
     correlation = numpy.array([[1.0], [0.5], [0.25], [0.125]])
 
     class JointModel(SpatialCrossIMTCorrelationModel):
@@ -85,7 +85,7 @@ def test_joint_within_event_covariance_block():
     assert ctx is context
 
 
-def test_target_gsim_statistics_are_computed_for_each_imt():
+def test_target_statistics_by_imt():
     class IMTDependentGMM(test_data.ZeroMeanGMM):
         def compute(self, ctx: numpy.recarray, imts,
                     mean, sig, tau, phi):
@@ -122,7 +122,7 @@ def test_target_gsim_statistics_are_computed_for_each_imt():
         aac(mean[:, 0], target_imt.period)
 
 
-def test_station_observation_errors_are_added_to_matching_diagonal():
+def test_station_error_diagonal():
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.25, 1.5]
     cmaker = simple_cmaker(
@@ -148,7 +148,7 @@ def test_station_observation_errors_are_added_to_matching_diagonal():
     aac(result.cov_WD_WD_inv, numpy.linalg.pinv(expected))
 
 
-def test_joint_station_covariance_combines_all_residual_components():
+def test_total_station_covariance():
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -181,7 +181,7 @@ def test_joint_station_covariance_combines_all_residual_components():
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
 
 
-def test_joint_station_system_masks_missing_observations_consistently():
+def test_missing_station_observations():
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -207,7 +207,7 @@ def test_joint_station_system_masks_missing_observations_consistently():
     assert system.cov_YD_YD.shape == (2, 2)
 
 
-def test_du_ning_conditions_pgv_observations():
+def test_du_ning_pgv_observations():
     imts = [PGA(), PGV()]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -251,7 +251,7 @@ def _engler_posterior(mu_Y, zeta_D, cov_WD_WD, cov_WY_WD,
     return mu_Y_yD, cov_YY_yD
 
 
-def test_joint_matches_engler_partition():
+def test_engler_equivalence():
     imts = [PGA(), SA(0.3)]
     spatial = numpy.array([
         [1.0, 0.4, 0.2],
@@ -322,7 +322,8 @@ def test_joint_matches_engler_partition():
     aac(covariance, expected_covariance, rtol=1E-7, atol=1E-7)
 
 
-def test_matheron_transform_matches_dense_schur_complement():
+def test_matheron_transform():
+    # Paired prior draws must reproduce the Schur-complement posterior.
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -363,7 +364,8 @@ def test_matheron_transform_matches_dense_schur_complement():
     aac(centered @ centered.T, covariance, atol=1E-12)
 
 
-def test_conditioned_uses_one_joint_gaussian_sample():
+def test_joint_sampling_path():
+    # A joint model must bypass the historical per-IMT calculation.
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -403,7 +405,8 @@ def test_conditioned_uses_one_joint_gaussian_sample():
     aac(result[:, :, 2], mean.reshape(2, 1))
 
 
-def test_joint_mean_with_zero_truncation_uses_no_legacy_matrices():
+def test_joint_mean_path():
+    # A deterministic joint calculation must not build target covariances.
     imts = [PGA(), SA(0.3)]
     station_data = test_data.CASE01_STATION_DATA.copy()
     station_data['PGA_std'] = [0.1, 0.2]
@@ -444,7 +447,7 @@ def test_joint_mean_with_zero_truncation_uses_no_legacy_matrices():
         conditioned(computer, conditioner, monitor)
 
 
-def test_joint_sampler_accepts_a_singular_station_system():
+def test_singular_station_sampling():
     cov_YD_YD = numpy.ones((2, 2))
     station = StationConditioning(
         numpy.zeros(2), (), (), numpy.ones(2, dtype=bool),
@@ -459,7 +462,7 @@ def test_joint_sampler_accepts_a_singular_station_system():
     aac(samples, numpy.full((1, 3), 0.5), atol=1E-12)
 
 
-def test_singular_station_system_rejects_incompatible_observations():
+def test_incompatible_station_system():
     stations = pandas.DataFrame({
         'PGA_mean': [1.0, numpy.e],
         'PGA_std': [0.0, 0.0]})
@@ -487,7 +490,7 @@ def test_singular_station_system_rejects_incompatible_observations():
     aac(joint.posterior_mean(), 0.0, atol=1E-12)
 
 
-def test_joint_posterior_mean_is_invariant_to_site_chunks():
+def test_chunked_joint_mean():
     imts = [PGA(), SA(0.3)]
     target_sites = test_data.CASE01_TARGET_SITECOL.filtered(
         numpy.array([0, 2, 4, 6, 8]))
