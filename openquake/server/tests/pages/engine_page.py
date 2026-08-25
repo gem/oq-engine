@@ -34,6 +34,8 @@ class EnginePage:
             job_row.get_by_role("link", name="Abort"))
         self.page.get_by_role("button", name="Yes, abort").click(
             timeout=20_000)
+        expect(self.page.get_by_text("has been aborted")).to_be_visible(
+            timeout=20_000)
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
         expect(job_row.get_by_text("failed")).to_be_visible(timeout=20_000)
 
@@ -42,6 +44,8 @@ class EnginePage:
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Remove"))
         self.page.get_by_role("button", name="Yes, remove").click(
+            timeout=30_000)
+        expect(self.page.get_by_text("has been removed")).to_be_visible(
             timeout=30_000)
         self.page.get_by_role("button", name="Close").click(timeout=30_000)
 
