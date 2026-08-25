@@ -119,3 +119,28 @@ table#impact-losses th td {
 .hidden {
     display: none;
 }
+
+.grid-table {
+  border-collapse: collapse;
+  width: 55%;
+}
+
+/* Horizontal separators for rows */
+.grid-table tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.grid-table thead tr {
+  border-bottom: 2px solid #222; /* Stronger line under header */
+}
+
+/* Vertical separators for columns */
+.grid-table th:not(:last-child),
+.grid-table td:not(:last-child) {
+  border-right: 1px solid #e0e0e0;
+}
+
+.grid-table th,
+.grid-table td {
+  padding: 10px 14px;
+}

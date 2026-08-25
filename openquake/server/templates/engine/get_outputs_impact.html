@@ -145,6 +145,19 @@
     </div>
     {% endif %}
     <hr/>
+    <h3>Inputs</h3>
+    <table class="grid-table">
+      <tbody>
+        {% for key, value in input_params.items %}
+          <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <hr/>
+    <h3>Outputs</h3>
     <table id="output_table" class="table table-hover">
       <thead>
         <tr>

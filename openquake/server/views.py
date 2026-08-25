@@ -2374,6 +2374,51 @@ def get_impact_warnings(ds):
     return warnings
 
 
+def format_oqparam(oqparam):
+    ret_dict = {}
+    rupdic = oqparam.rupture_dict
+    approach = rupdic['approach']
+    ret_dict['Approach'] = IMPACT_APPROACHES[approach]
+    if 'from_usgs' in approach:
+        ret_dict[IMPACT_FORM_LABELS['usgs_id']] = rupdic['usgs_id']
+        ret_dict[IMPACT_FORM_LABELS['shakemap_desc']] = rupdic['shakemap_desc']
+        ret_dict[IMPACT_FORM_LABELS['time_event']] = oqparam.time_event
+
+    # e.g. from {'default': [[2.5, 150.0], [10.2, 150.0]]} to 150
+    ret_dict[IMPACT_FORM_LABELS['maximum_distance']] = \
+        oqparam.maximum_distance['default'][0][1]
+
+    # e.g. from 0.000000001 to 0
+    ret_dict[IMPACT_FORM_LABELS['truncation_level']] = \
+        oqparam.truncation_level if oqparam.truncation_level > 1e-6 else 0
+
+    ret_dict[IMPACT_FORM_LABELS['number_of_ground_motion_fields']] = \
+        oqparam.number_of_ground_motion_fields
+
+    # NOTE: e.g. from {'default': 14.0} to 14.0
+    ret_dict[IMPACT_FORM_LABELS['asset_hazard_distance']] = \
+        oqparam.asset_hazard_distance['default']
+
+    ret_dict[IMPACT_FORM_LABELS['ses_seed']] = oqparam.ses_seed
+    if approach != 'use_shakemap_from_usgs':
+        ret_dict[IMPACT_FORM_LABELS['mosaic_model']] = oqparam.mosaic_model
+        ret_dict[IMPACT_FORM_LABELS['trt']] = oqparam.tectonic_region_type
+        ret_dict['Station data'] = (
+            'yes' if 'station_data' in oqparam.inputs else 'no')
+    if approach in ['build_rup_from_usgs',
+                    'provide_rup_params']:
+        ret_dict[IMPACT_FORM_LABELS['lon']] = rupdic['lon']
+        ret_dict[IMPACT_FORM_LABELS['lat']] = rupdic['lat']
+        ret_dict[IMPACT_FORM_LABELS['dep']] = rupdic['dep']
+        ret_dict[IMPACT_FORM_LABELS['mag']] = rupdic['mag']
+        ret_dict[IMPACT_FORM_LABELS['msr']] = rupdic['msr']
+        ret_dict[IMPACT_FORM_LABELS['aspect_ratio']] = rupdic['aspect_ratio']
+        ret_dict[IMPACT_FORM_LABELS['rake']] = rupdic['rake']
+        ret_dict[IMPACT_FORM_LABELS['dip']] = rupdic['dip']
+        ret_dict[IMPACT_FORM_LABELS['strike']] = rupdic['strike']
+    return ret_dict
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2409,6 +2454,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                                if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
+        input_params = format_oqparam(oqparam)
         usgs_id = None
         if hasattr(oqparam.rupture_dict, 'usgs_id'):
             usgs_id = oqparam.rupture_dict['usgs_id']
@@ -2453,7 +2499,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        aggrisk_tags=aggrisk_tags,
                        exposure_by_liq_lse=exposure_by_liq_lse,
                        exposure_by_land_lse=exposure_by_land_lse,
-                       usgs_id=usgs_id)
+                       usgs_id=usgs_id, input_params=input_params)
                   )
 
 

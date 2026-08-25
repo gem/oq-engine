@@ -134,6 +134,7 @@ IMPACT_FORM_LABELS = {
     'rupture_file': 'Rupture model XML',
     'use_shakemap': 'Use the ShakeMap',
     'shakemap_version': 'ShakeMap version',
+    'shakemap_desc': 'ShakeMap description',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
