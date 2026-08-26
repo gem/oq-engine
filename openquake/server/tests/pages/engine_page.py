@@ -19,7 +19,8 @@ class EnginePage:
     def get_job_id_from_new_job(self):
         executing_status = self.page.get_by_text("executing")
         expect(executing_status).to_be_visible(timeout=50_000)
-        target_row = self.page.locator("tr").filter(has_text="executing").first
+        target_row = self.page.locator("tr").filter(
+            has_text="executing").first
         job_id = target_row.locator("td").first.inner_text()
         return job_id.strip()
 
@@ -29,7 +30,8 @@ class EnginePage:
 
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
-        expect(job_row.get_by_text("executing")).to_be_visible(timeout=80_000)
+        expect(job_row.get_by_text("executing")).to_be_visible(
+            timeout=80_000)
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Abort"))
         self.page.get_by_role("button", name="Yes, abort").click(
