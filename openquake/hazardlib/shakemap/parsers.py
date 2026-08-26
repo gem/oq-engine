@@ -936,7 +936,7 @@ def download_mmi(usgs_id, shakemap_contents, user):
     return mmi_file
 
 
-def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_properties,
+def convert_rup_data(rup_data, usgs_id, rup_path, utc_time_ms,
                      shakemap_array=None):
     """
     Convert JSON data coming from the USGS into a rupdic
@@ -946,7 +946,6 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_properties,
     lat = md['lat']
     # NOTE: retrieving the local timestamp from rup_data['metadata'] is not
     # reliable
-    utc_time_ms = shakemap_properties['time']
     utc_time = datetime.fromtimestamp(utc_time_ms / 1000.0, tz=timezone.utc)
     local_time = utc_to_local_time(utc_time, lon, lat)
     time_event = local_time_to_time_event(local_time)
@@ -1353,13 +1352,20 @@ def _finalize_rupdic(rupdic, rup_data, usgs_id, rupture_file, shakemap,
     # shakemap array, title, shakemap description).
     # Returns a new dict
     new_rupdic = dict(rupdic)
+    utc_time_ms = properties['time']
     if rup_data:
         converted_rup_data = convert_rup_data(
-            rup_data, usgs_id, rupture_file, properties, shakemap)
+            rup_data, usgs_id, rupture_file, utc_time_ms, shakemap)
         if 'rupture_file' in new_rupdic:  # already converted: do not overwrite
             converted_rup_data.pop('rupture_file')
         new_rupdic.update(converted_rup_data)
-
+    if 'local_timestamp' not in new_rupdic:
+        utc_time = datetime.fromtimestamp(utc_time_ms / 1000.0,
+                                          tz=timezone.utc)
+        local_time = utc_to_local_time(
+            utc_time, new_rupdic['lon'], new_rupdic['lat'])
+        new_rupdic['local_timestamp'] = str(local_time)
+        new_rupdic['time_event'] = local_time_to_time_event(local_time)
     for key in inputdic:
         if inputdic[key] is not None and key not in new_rupdic:
             new_rupdic[key] = inputdic[key]
