@@ -14,7 +14,9 @@ class EnginePage:
         locator.click(timeout=timeout)
 
     def get_job_row(self, job_id):
-        return self.page.locator("tr").filter(has_text=job_id)
+        return self.page.locator("tr").filter(
+            has=self.page.locator("td:first-child").get_by_text(
+                str(job_id), exact=True))
 
     def get_job_id_from_new_job(self):
         executing_status = self.page.get_by_text("executing")
