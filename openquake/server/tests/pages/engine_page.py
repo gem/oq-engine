@@ -52,12 +52,14 @@ class EnginePage:
     def to_outputs(self, job_id):
         job_row = self.get_job_row(job_id)
         job_row.get_by_role("link", name="Outputs").click(timeout=10_000)
+        self.page.wait_for_load_state("networkidle")
 
     def to_report(self):
         self.page.get_by_text("Show impact report").click(timeout=10_000)
 
     def to_calculations(self):
         self.page.get_by_text("Back to Calculations").click(timeout=10_000)
+        self.page.wait_for_load_state("networkidle")
 
     def download_job(self):
         with self.page.expect_download() as download_info:
