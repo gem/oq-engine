@@ -268,16 +268,18 @@ class ImpactModeTestCase(django.test.TestCase):
                 {item: exposure_by_lse[item] for item in exposure_by_lse})
 
         job = logs.dbcmd('get_job', job_id)
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            impact_iso3_list = list(ds['impact'])
-            self.assertGreater(len(impact_iso3_list), 0)
-            for iso3 in impact_iso3_list:
-                ret = self.c.get(
-                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
-                self.assertEqual(ret.status_code, 200)
-                ret = self.c.get(
-                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}&format=png')
-                self.assertEqual(ret.status_code, 200)
+        if 'make_impact_reports' in data:
+            with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                impact_iso3_list = list(ds['impact'])
+                self.assertGreater(len(impact_iso3_list), 0)
+                for iso3 in impact_iso3_list:
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                    self.assertEqual(ret.status_code, 200)
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                        f'&format=png')
+                    self.assertEqual(ret.status_code, 200)
 
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission
@@ -394,7 +396,7 @@ class ImpactModeTestCase(django.test.TestCase):
         expected_error = "The imts {'SA(0.6)'} are required"
         self.impact_run_then_remove('impact_run', data, expected_error)
 
-    def test_run_by_usgs_id_then_remove_calc_success(self):
+    def test_run_by_usgs_id_then_remove_calc_discard_sites(self):
         self.set_user_level_and_remove_groups(1)
         # NOTE: this case tests the extractor for losses_by_site in the
         # case discarding sites that do not correspond to any assets,
@@ -405,6 +407,30 @@ class ImpactModeTestCase(django.test.TestCase):
         #     "number": "5",
         #     "utc_date_time": "2025-01-13 18:20:35"
         # },
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '5']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '1']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_make_impact_report_then_remove_calc(self):
+        self.set_user_level_and_remove_groups(1)
         usgs_id = 'us6000t7zp'
         resp = self.post('impact_get_shakemap_versions',
                          prefix='/v1/', data={'usgs_id': usgs_id})

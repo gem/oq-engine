@@ -1406,6 +1406,9 @@ def impact_run_with_shakemap(request):
             err, status=400 if 'invalid_inputs' in err else 500)
     post.update({key: str(val) for key, val in rupdic.items()
                  if key != 'shakemap_array'})
+    rupture_path = post.get('rupture_file', '')
+    if rupture_path == 'None':
+        rupture_path = ''  # For consistency with impact_run
     if 'time_event' in request.POST:
         post['time_event'] = request.POST['time_event']
     maxdist = request.POST.get('maximum_distance')
@@ -1416,8 +1419,7 @@ def impact_run_with_shakemap(request):
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    return _run_impact_job(
-        request, post, rupture_path=post.get('rupture_file'))
+    return _run_impact_job(request, post, rupture_path=rupture_path)
 
 
 def extract_report_from_datastore(dstore, iso3, file_format):
