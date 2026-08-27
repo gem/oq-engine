@@ -102,8 +102,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
-    'affectedpop': ('Number of people living in buildings '
-                    'with moderate or higher damage'),
+    'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Exposed value',
     'loss_type': 'Loss type',
