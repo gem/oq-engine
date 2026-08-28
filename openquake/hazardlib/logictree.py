@@ -369,7 +369,7 @@ def reduce_full(full_lt, rlz_clusters):
     # Amp LT reduces when every rlz in the rlz_cluster uses the same branch
     p3 = []
     if amp_lt is not None:
-        before *= amp_lt.Rampl
+        before *= amp_lt.R_amp
         if len(ampl_shorts) == 1:
             short_to_name = {v: k for k, v in amp_lt.shortener.items()}
             surviving = short_to_name[ampl_shorts.pop()]
@@ -1075,7 +1075,7 @@ class FullLogicTree(object):
             # of realizations in case of sampling
             self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
         else:  # full enumeration
-            samples = self.gsim_lt.get_num_paths() * self.Rampl
+            samples = self.gsim_lt.get_num_paths() * self.R_amp
             self.sm_rlzs = []
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
@@ -1245,11 +1245,11 @@ class FullLogicTree(object):
         return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
 
     @property
-    def Rampl(self):
+    def R_amp(self):
         """
         :returns: number of amplification realizations (1 if no amp LT)
         """
-        return self.amp_lt.Rampl if self.amp_lt is not None else 1
+        return self.amp_lt.R_amp if self.amp_lt is not None else 1
 
     def get_num_paths(self):
         """
@@ -1257,7 +1257,7 @@ class FullLogicTree(object):
         """
         if self.num_samples:
             return self.num_samples
-        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * self.Rampl
+        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * self.R_amp
 
     def get_realizations(self):
         """

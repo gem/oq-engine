@@ -1158,7 +1158,7 @@ class HazardCalculator(BaseCalculator):
             amep = readinput.get_ampl_functions_epistemic(oq)
             if amep is not None:
                 logging.info('Reading %d amplification branches from %s',
-                             amep.Rampl, amep.filename)
+                             amep.R_amp, amep.filename)
                 # Each branch is validated on its own: ampcode coverage
                 # of the sitecol, then IMT coverage via Amplifier init
                 for df in amep.dframes:
