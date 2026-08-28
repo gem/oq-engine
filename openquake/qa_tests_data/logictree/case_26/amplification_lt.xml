@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt_ampl">
+    <logicTreeBranchSet uncertaintyType="amplificationModel"
+                        branchSetID="bs_ampl">
+      <logicTreeBranch branchID="low">
+        <uncertaintyModel>amp_low.csv</uncertaintyModel>
+        <uncertaintyWeight>0.3</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="med">
+        <uncertaintyModel>amp_med.csv</uncertaintyModel>
+        <uncertaintyWeight>0.4</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="high">
+        <uncertaintyModel>amp_high.csv</uncertaintyModel>
+        <uncertaintyWeight>0.3</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

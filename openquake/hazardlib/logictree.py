@@ -48,6 +48,7 @@ from openquake.hazardlib.gsim_lt import (
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     LogicTreeError, parse_uncertainty, attach_branches)
+from openquake.hazardlib.amp_lt import AmpFunctionsEpistemic, amp_lt_dt
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -350,18 +351,33 @@ def reduce_full(full_lt, rlz_clusters):
     :param rlz_clusters: list of paths for a realization cluster
     :returns: a dictionary with what can be reduced
     """
+    amp_lt = full_lt.amp_lt
     smrlz_clusters = []
     gsrlz_clusters = []
+    ampl_shorts = set()
     for path in rlz_clusters:
-        smr, gsr = decode(path).split('~')
-        smrlz_clusters.append(smr)
-        gsrlz_clusters.append(gsr)
+        parts = decode(path).split('~')
+        smrlz_clusters.append(parts[0])
+        gsrlz_clusters.append(parts[1])
+        if amp_lt is not None:
+            ampl_shorts.add(parts[2])
     f1, *p1 = reducible(full_lt.source_model_lt, smrlz_clusters)
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / prod(len(p[1]) for p in p1 + p2)
-    return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
+    result = {f1: dict(p1), f2: dict(p2)}
+    # Amp LT reduces when every rlz in the rlz_cluster uses the same branch
+    p3 = []
+    if amp_lt is not None:
+        before *= amp_lt.Rampl
+        if len(ampl_shorts) == 1:
+            short_to_name = {v: k for k, v in amp_lt.shortener.items()}
+            surviving = short_to_name[ampl_shorts.pop()]
+            p3.append((amp_lt.branchset_id, [surviving]))
+            result[amp_lt.filename] = dict(p3)
+    after = before / prod(len(p[1]) for p in p1 + p2 + p3)
+    result['size_before_after'] = (before, after)
+    return result
 
 
 class SourceModelLogicTree(object):
@@ -957,17 +973,18 @@ def get_field(data, field, default):
 class LtRealization(object):
     """
     Composite realization build on top of a source model realization and
-    a GSIM realization.
+    a GSIM realization; optionally carries an amplification realization
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
     # saves little memory, from 95.3 GB down to 81.0 GB
-    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight', 'ampl_rlz']
 
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, ampl_rlz=None):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
+        self.ampl_rlz = ampl_rlz  # Realization of the amp LT, or None
 
     def __repr__(self):
         return '<%d,w=%s>' % (self.ordinal, self.weight)
@@ -1034,19 +1051,23 @@ class FullLogicTree(object):
         self.source_model_lt = SourceModelLogicTree.fake()
         self.gsim_lt = gsim_lt
         self.sm_rlzs = [fakeSM]
+        self.amp_lt = None
         return self
 
-    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate'):
+    def __init__(self, source_model_lt, gsim_lt, oversampling='tolerate',
+                 amp_lt=None):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
         self.oversampling = oversampling
+        self.amp_lt = amp_lt
         self.init()  # set .sm_rlzs and .trts
 
     def __getstate__(self):
         # .sd will not be available in the workers
         return {'source_model_lt': self.source_model_lt,
                 'gsim_lt': self.gsim_lt,
-                'oversampling': self.oversampling}
+                'oversampling': self.oversampling,
+                'amp_lt': self.amp_lt}
 
     def init(self):
         if self.source_model_lt.num_samples:
@@ -1054,7 +1075,7 @@ class FullLogicTree(object):
             # of realizations in case of sampling
             self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
         else:  # full enumeration
-            samples = self.gsim_lt.get_num_paths()
+            samples = self.gsim_lt.get_num_paths() * self.Rampl
             self.sm_rlzs = []
             for sm_rlz in self.source_model_lt:
                 sm_rlz.samples = samples
@@ -1223,13 +1244,20 @@ class FullLogicTree(object):
         """
         return dict(zip(self.gsim_lt.values, rlz.gsim_rlz.value))
 
+    @property
+    def Rampl(self):
+        """
+        :returns: number of amplification realizations (1 if no amp LT)
+        """
+        return self.amp_lt.Rampl if self.amp_lt is not None else 1
+
     def get_num_paths(self):
         """
         :returns: number of the paths in the full logic tree
         """
         if self.num_samples:
             return self.num_samples
-        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths()
+        return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * self.Rampl
 
     def get_realizations(self):
         """
@@ -1237,6 +1265,7 @@ class FullLogicTree(object):
         """
         num_samples = self.source_model_lt.num_samples
         self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
+        amp_lt = self.amp_lt
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
@@ -1244,22 +1273,34 @@ class FullLogicTree(object):
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
-            for i, gsim_rlz in enumerate(gsim_rlzs):
-                rlzs[i] = LtRealization(i, sm_rlzs[i].lt_path, gsim_rlz,
-                                        sm_rlzs[i].weight * gsim_rlz.weight)
+            ampl_rlzs = (amp_lt.sample(
+                num_samples, self.seed + 2, self.sampling_method
+                ) if amp_lt is not None else [None] * num_samples)
+            for k, (gsim_rlz, ampl_rlz) in enumerate(zip(gsim_rlzs, ampl_rlzs)):
+                w = sm_rlzs[k].weight * gsim_rlz.weight
+                if ampl_rlz is not None:
+                    w = w * ampl_rlz.weight
+                rlzs[k] = LtRealization(
+                    k, sm_rlzs[k].lt_path, gsim_rlz, w, ampl_rlz)
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
+            ampl_rlzs = amp_lt.get_realizations() if amp_lt is not None else [None]
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
-            rlzs = numpy.empty(len(ws) * len(self.sm_rlzs), object)
-            i = 0
+            rlzs = numpy.empty(
+                len(ws) * len(self.sm_rlzs) * len(ampl_rlzs), object)
+            k = 0
             for sm_rlz in self.sm_rlzs:
                 smpath = sm_rlz.lt_path
                 for gsim_rlz, weight in zip(gsim_rlzs, sm_rlz.weight * ws):
-                    rlzs[i] = LtRealization(i, smpath, gsim_rlz, weight)
-                    i += 1
+                    for ampl_rlz in ampl_rlzs:
+                        w = (weight if ampl_rlz is None
+                             else weight * ampl_rlz.weight)
+                        rlzs[k] = LtRealization(
+                            k, smpath, gsim_rlz, w, ampl_rlz)
+                        k += 1
         # rescale the weights if not one, see case_52
         # and logictree/case_30 for IMT-dependent weights
         tot_weight = sum(rlz.weight for rlz in rlzs)
@@ -1318,20 +1359,28 @@ class FullLogicTree(object):
         for sm in self.sm_rlzs:
             sm_data.append((str(sm.value), sm.weight,
                             '~'.join(sm.lt_path), sm.samples))
-        return (dict(
+        dic = dict(
             source_model_lt=self.source_model_lt,
             gsim_lt=self.gsim_lt,
             source_data=self.source_model_lt.source_data,
-            sm_data=numpy.array(sm_data, source_model_dt)),
-                dict(seed=self.seed, num_samples=self.num_samples,
+            sm_data=numpy.array(sm_data, source_model_dt))
+        attrs = dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values),
-                     oversampling=self.oversampling))
+                     oversampling=self.oversampling)
+        alt = self.amp_lt
+        if alt is not None:
+            dic['amp_lt'] = numpy.array(
+                list(zip(alt.names, alt.weights, alt.filenames)), amp_lt_dt)
+            attrs['ampl_tree_filename'] = alt.filename
+            attrs['ampl_branchset_id'] = alt.branchset_id
+        return dic, attrs
 
     # FullLogicTree
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
         sd = dic.pop('source_data', numpy.zeros(0))  # empty for engine <= 3.16
+        amp_lt_arr = dic.pop('amp_lt', None)
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
         self.source_model_lt.source_data = sd[:]
@@ -1342,6 +1391,17 @@ class FullLogicTree(object):
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
+        self.amp_lt = None
+        if amp_lt_arr is not None and len(amp_lt_arr):
+            names = [decode(r['name']) for r in amp_lt_arr]
+            filenames = [decode(r['filename']) for r in amp_lt_arr]
+            # site amp dframes not needed post-restore because readinput reloads
+            # them from per-branch CSVs on demand in get_amp_functions_epistemic
+            self.amp_lt = AmpFunctionsEpistemic(
+                names, [r['weight'] for r in amp_lt_arr],
+                [None] * len(names), filenames,
+                tree_filename=attrs.get('ampl_tree_filename', ''),
+                branchset_id=attrs.get('ampl_branchset_id', 'bs_ampl'))
 
     def get_num_potential_paths(self):
         """
@@ -1356,10 +1416,17 @@ class FullLogicTree(object):
         """
         sh1 = self.source_model_lt.shortener
         sh2 = self.gsim_lt.shortener
+        sh3 = self.amp_lt.shortener if self.amp_lt is not None else None
         tups = []
         for r in self.get_realizations():
-            path = '%s~%s' % (shorten(r.sm_lt_path, sh1, 'smlt'),
-                              shorten(r.gsim_rlz.lt_path, sh2, 'gslt'))
+            sm_p = shorten(r.sm_lt_path, sh1, 'smlt')
+            gs_p = shorten(r.gsim_rlz.lt_path, sh2, 'gslt')
+            if sh3 is not None and r.ampl_rlz is not None:
+                # Site amp LT present
+                al_p = sh3[r.ampl_rlz.value]
+                path = '%s~%s~%s' % (sm_p, gs_p, al_p)
+            else:
+                path = '%s~%s' % (sm_p, gs_p)
             tups.append((r.ordinal, path, r.weight[-1]))
         return numpy.array(tups, rlz_dt)
 

@@ -255,12 +255,15 @@ def fast_mean(pgetter, monitor=parallel.Monitor()):
     return pmap_by_kind
 
 
-def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
+def postclassical(pgetter, hstats, individual_rlzs, amplifier,
+                  amplifier_lt, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param amplifier: instance of Amplifier or None
+    :param amplifier: instance of Amplifier or None (single-branch case)
+    :param amplifier_lt: (list_of_Amplifier, rlz_ampl_ord array) or None;
+        when set, each rlz column is amplified with its branch's Amplifier
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -270,6 +273,8 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     with monitor('reading rates', measuremem=True):
         pgetter.init()
 
+    # amplifier is set to amps[0] when the LT is active (base._read_risk4),
+    # so it always carries the amplevels needed for the soil imtls
     if amplifier:
         # amplification is meant for few sites, i.e. no tiling
         with hdf5.File(pgetter.filenames[0], 'r') as f:
@@ -296,7 +301,18 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         for sid in sids:
             idx = sidx[sid]
             pc = pgetter.get_hcurve(sid)  # shape (L, R)
-            if amplifier:
+            if amplifier_lt is not None:
+                # per-rlz amplification: rock rates are shared across
+                # branches so each column of pc gets its branch's AF
+                amps, rlz_ampl_ord = amplifier_lt
+                pc_out = numpy.zeros((L, R))
+                for r in range(R):
+                    amp = amps[rlz_ampl_ord[r]]
+                    pc_r = amp.amplify(ampcode[sid], pc[:, r:r+1])
+                    pc_out[:, r] = pc_r[:, 0]
+                pc = pc_out
+                # NOTE: The hcurve have soil levels != IMT levels
+            elif amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
                 # NB: the hcurve have soil levels != IMT levels
             if pc.sum() == 0:  # no data
@@ -810,7 +826,8 @@ class ClassicalCalculator(base.HazardCalculator):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
-        allargs = [(getter, hstats, oq.individual_rlzs, self.amplifier)
+        allargs = [(getter, hstats, oq.individual_rlzs,
+                    self.amplifier, self.amplifier_lt)
                    for getter in getters.map_getters(dstore, self.full_lt, oq)]
         if not allargs:  # case_60
             logging.warning('No rates were generated')

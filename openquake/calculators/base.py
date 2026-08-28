@@ -512,6 +512,7 @@ class HazardCalculator(BaseCalculator):
     """
     af = None
     amplifier = None
+    amplifier_lt = None  # (list_of_Amplifier, rlz_ampl_ord) for amp LT
 
     def src_filter(self):
         """
@@ -744,8 +745,8 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
-                'max_weight amplifier policy_df treaty_df full_lt exported '
-                'trt_rlzs gids'
+                'max_weight amplifier amplifier_lt policy_df treaty_df '
+                'full_lt exported trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -1154,16 +1155,39 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         # store amplification functions if any
         if 'amplification' in oq.inputs:
-            logging.info('Reading %s', oq.inputs['amplification'])
-            df = AmplFunction.read_df(oq.inputs['amplification'])
-            check_amplification(df, self.sitecol)
-            if oq.amplification_method == 'kernel':
-                # TODO: need to add additional checks on the main calculation
-                # methodology since the kernel method is currently tested only
-                # for classical PSHA
-                self.af = AmplFunction.from_dframe(df)
+            amep = readinput.get_ampl_functions_epistemic(oq)
+            if amep is not None:
+                logging.info('Reading %d amplification branches from %s',
+                             amep.Rampl, amep.filename)
+                # Each branch is validated on its own: ampcode coverage
+                # of the sitecol, then IMT coverage via Amplifier init
+                for df in amep.dframes:
+                    check_amplification(df, self.sitecol)
+                amps = [Amplifier(oq.imtls, df, oq.soil_intensities)
+                        for df in amep.dframes]
+                # self.amplifier holds the first branch's Amplifier so
+                # code paths that only need .amplevels still work;
+                # per-rlz application uses self.amplifier_lt
+                self.amplifier = amps[0]
+                # self.full_lt is set after _read_risk4, so refetch here
+                full_lt = getattr(self, 'full_lt', None) or (
+                    readinput.get_full_lt(oq))
+                rlz_ampl_ord = numpy.array(
+                    [r.ampl_rlz.ordinal
+                     for r in full_lt.get_realizations()], numpy.uint32)
+                self.amplifier_lt = (amps, rlz_ampl_ord)
             else:
-                self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
+                logging.info('Reading %s', oq.inputs['amplification'])
+                df = AmplFunction.read_df(oq.inputs['amplification'])
+                check_amplification(df, self.sitecol)
+                if oq.amplification_method == 'kernel':
+                    # TODO: need to add additional checks on the main
+                    # calculation methodology since the kernel method is
+                    # currently tested only for classical PSHA
+                    self.af = AmplFunction.from_dframe(df)
+                else: # convolution
+                    self.amplifier = Amplifier(
+                        oq.imtls, df, oq.soil_intensities)
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}

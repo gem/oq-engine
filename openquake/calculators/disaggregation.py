@@ -225,13 +225,26 @@ class DisaggregationCalculator(base.HazardCalculator):
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
-        mean_curves = self.datastore.sel('hcurves-stats', stat='mean')[:, 0]
         s = self.shapedic
         if oq.iml_disagg:
             iml3 = numpy.zeros((s['N'], s['M'], 1))
             for m, imt in enumerate(oq.imtls):
                 iml3[:, m] = oq.iml_disagg[imt]
         else:
+            # when an amplifier is active, rebuild the mean from rock
+            # rates so its shape matches oq.imtls used just below
+            if self.amplifier or self.amplifier_lt:
+                L1 = oq.imtls.size // self.M
+                mean_curves = numpy.zeros((self.N, self.M, L1))
+                for sid in range(self.N):
+                    hcurve = self.mgetters[sid].get_hcurve(sid)  # (L, R)
+                    sc = getters.build_stat_curve(
+                        hcurve, oq.imtls, stats.mean_curve,
+                        full_lt.gsim_lt.wget)
+                    mean_curves[sid] = sc.reshape(self.M, L1)
+            else:
+                mean_curves = self.datastore.sel(
+                    'hcurves-stats', stat='mean')[:, 0]
             iml3 = map_array.compute_hmaps(
                 mean_curves, oq.imtls, oq.poes)
         if iml3.sum() == 0:

@@ -62,7 +62,8 @@ from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt)
+    pmf, logictree, gsim_lt, get_smlt, amp_lt)
+from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -976,6 +977,50 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
+# TODO: Add support for event-based (regular amp models work in eb as well)
+_amp_lt_SUPPORTED_MODES = ('classical', 'disaggregation')
+
+
+def _expand_amp_lt(oqparam):
+    """
+    If oqparam.inputs['amplification'] points at an amp-LT XML, parse it,
+    cache the tree on oqparam._amp_lt, and rewrite the inputs entry to
+    the list of per-branch CSV file paths. Otherwise return None.
+    """
+    if getattr(oqparam, '_amp_lt', None) is not None:
+        # Guard for if already parsed on a previous call
+        return oqparam._amp_lt
+    fname = oqparam.inputs.get('amplification')
+    if not fname:
+        return None  # No amplification input
+    if not amp_lt.AmpLogicTree.is_amp_lt(fname):
+        return None  # Regular amplification model (no logic tree)
+    if oqparam.calculation_mode not in _amp_lt_SUPPORTED_MODES:
+        raise InvalidFile(
+            '%s: amplification logic tree is only supported for %s'
+            ' calculations, got calculation_mode=%r'
+            % (fname, ' and '.join(
+                _amp_lt_SUPPORTED_MODES), oqparam.calculation_mode))
+    tree = amp_lt.AmpLogicTree(fname)
+    oqparam._amp_lt = tree
+    oqparam.inputs['amplification'] = tree.filenames
+    return tree
+
+
+def get_ampl_functions_epistemic(oqparam):
+    """
+    :returns: an :class:`openquake.hazardlib.amp_lt.AmpFunctionsEpistemic`
+        or None if oqparam.inputs['amplification'] is not an amp-LT XML
+    """
+    tree = _expand_amp_lt(oqparam)
+    if tree is None:
+        return None
+    dframes = [AmplFunction.read_df(f) for f in tree.filenames]
+    return amp_lt.AmpFunctionsEpistemic(
+        tree.branch_ids, tree.weights, dframes, filenames=tree.filenames,
+        tree_filename=tree.filename, branchset_id=tree.branchset_id)
+
+
 def get_full_lt(oqparam):
     """
     :param oqparam:
@@ -995,7 +1040,9 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
+    amep = get_ampl_functions_epistemic(oqparam)
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, amp_lt=amep)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
     if oqparam.number_of_logic_tree_samples:

@@ -33,9 +33,9 @@ from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
-    case_28, case_29, case_30, case_31, case_32, case_33, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_80, case_83, case_84)
+    case_26, case_28, case_29, case_30, case_31, case_32, case_33, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -508,6 +508,36 @@ hazard_uhs-std.csv
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
+
+    def test_case_26(self):
+        # 3-branch amp LT, classical, full enumeration and sampling
+        for ini, prefix, nrlz in [('job.ini', '', 3),
+                                  ('job_sampling.ini', 'sampling_', 4)]:
+            self.run_calc(case_26.__file__, ini)
+            self.assertEqual(len(self.calc.full_lt.rlzs), nrlz)
+            got = export(('hcurves', 'csv'), self.calc.datastore)
+            expected = [
+                '%shazard_curve-mean-PGA.csv' % prefix,
+                '%shazard_curve-mean-SA(0.2).csv' % prefix,
+            ] + ['%shazard_curve-rlz-%03d-%s.csv' % (prefix, r, imt)
+                 for r in range(nrlz) for imt in ('PGA', 'SA(0.2)')]
+            self.assertEqual(len(expected), len(got), str(got))
+            for fname, actual in zip(expected, got):
+                self.assertEqualFiles('expected/%s' % fname, actual)
+
+    def test_case_26_disagg(self):
+        # 3-branch amp LT, disaggregation, full enumeration and sampling
+        for ini, prefix, nrlz in [('job_disagg.ini', 'disagg_', 3),
+                                  ('job_disagg_sampling.ini',
+                                   'disagg_sampling_', 4)]:
+            self.run_calc(case_26.__file__, ini)
+            best = self.calc.datastore['best_rlzs'][:]
+            self.assertEqual(best.shape, (1, nrlz))
+            got = {strip_calc_id(f): f for f in export(
+                ('disagg-stats', 'csv'), self.calc.datastore)}
+            for stem in ('Mag-mean-0.csv', 'Mag_Dist_Eps-mean-0.csv'):
+                self.assertEqualFiles(
+                    'expected/%s%s' % (prefix, stem), got[stem])
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
