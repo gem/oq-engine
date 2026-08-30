@@ -51,6 +51,9 @@ def _pair(value, name, cast):
 
 def _embedding_shape(grid_shape, multiplier):
     """Return FFT-efficient dimensions for a periodic embedding."""
+    # Twice the target extent prevents periodic wrap-around from changing
+    # any covariance within the original grid. A nearby fast length makes
+    # the transforms cheaper without changing that guarantee.
     return tuple(next_fast_len(max(1, 2 * multiplier * (size - 1)))
                  for size in grid_shape)
 
@@ -58,6 +61,8 @@ def _embedding_shape(grid_shape, multiplier):
 def _lag_distances(shape, spacing):
     """Return distances from the origin on the periodic grid."""
     ny, nx = shape
+    # Each coordinate uses its shortest displacement around the torus. This
+    # produces the first block row of the block-circulant covariance.
     y = numpy.minimum(numpy.arange(ny), ny - numpy.arange(ny))
     x = numpy.minimum(numpy.arange(nx), nx - numpy.arange(nx))
     return numpy.hypot(
@@ -69,6 +74,9 @@ def _covariance_lags(model, imts, shape, spacing, component, context):
     """Return cross-IMT covariance blocks for all periodic lags."""
     distances = _lag_distances(shape, spacing)
     num_imts = len(imts)
+    # correlation_block returns IMT-major rows for every lag against one
+    # origin site. Move the lag dimension first to obtain one M x M block at
+    # every embedded grid cell.
     blocks = model.correlation_block(
         distances.reshape(-1, 1), imts, imts, component, context)
     return blocks.reshape(num_imts, -1, num_imts).transpose(
@@ -77,10 +85,14 @@ def _covariance_lags(model, imts, shape, spacing, component, context):
 
 def _spectral_root(covariance_lags):
     """Return the Hermitian square root at every Fourier mode."""
+    # A block-circulant covariance is diagonal in space after the FFT. What
+    # remains at each frequency is only a small cross-IMT covariance matrix.
     spectrum = numpy.fft.rfft2(covariance_lags, axes=(0, 1))
     transpose = spectrum.swapaxes(-1, -2).conj()
     scale = max(1.0, float(numpy.abs(spectrum).max()))
     tolerance = 100 * numpy.finfo(float).eps * scale
+    # Check before averaging so a genuinely asymmetric model is not silently
+    # hidden as numerical roundoff.
     if not numpy.allclose(spectrum, transpose, rtol=1E-12,
                           atol=tolerance):
         raise ValueError(
@@ -88,10 +100,15 @@ def _spectral_root(covariance_lags):
     spectrum = (spectrum + transpose) / 2
     eigenvalues, eigenvectors = numpy.linalg.eigh(spectrum)
     minimum = float(eigenvalues.min())
+    # FFT roundoff accumulates with the number of embedded cells. Only values
+    # within that scale-aware tolerance may be clipped; a material negative
+    # value requires a larger embedding.
     tolerance *= numpy.prod(covariance_lags.shape[:2])
     if minimum < -tolerance:
         return minimum, None
     eigenvalues = numpy.maximum(eigenvalues, 0)
+    # Form V sqrt(Lambda) V* once so every realization needs only one small
+    # matrix-vector multiplication at each frequency.
     scaled_vectors = (
         eigenvectors * numpy.sqrt(eigenvalues)[..., numpy.newaxis, :])
     root = scaled_vectors @ eigenvectors.swapaxes(-1, -2).conj()
@@ -128,6 +145,8 @@ class CirculantEmbeddingFactor:
         indices = cls._validate_indices(site_indices, grid_shape)
         minimum = numpy.nan
         for multiplier in range(1, max_multiplier + 1):
+            # Extending the periodic domain reduces artificial interaction
+            # across its boundary while preserving the requested covariance.
             embedded_shape = _embedding_shape(grid_shape, multiplier)
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
@@ -176,15 +195,20 @@ class CirculantEmbeddingFactor:
                 f'Expected samples with shape ({self.input_size}, E), got '
                 f'{samples.shape}')
         num_events = samples.shape[1]
+        # Convert IMT-major columns to (event, y, x, IMT), leaving the last
+        # axis ready for the small spectral matrix multiplication below.
         white = samples.reshape(
             self.num_imts, *self.embedded_shape, num_events)
         white = white.transpose(3, 1, 2, 0)
         transformed = numpy.fft.rfft2(white, axes=(1, 2))
+        # Correlate the IMTs independently at every spatial frequency.
         correlated = numpy.einsum(
             'yxij,eyxj->eyxi', self.spectral_root, transformed)
         fields = numpy.fft.irfft2(
             correlated, s=self.embedded_shape, axes=(1, 2))
         ny, nx = self.grid_shape
+        # Discard the periodic padding, apply the optional spatial mask, and
+        # restore the IMT-major ordering expected by the GMF calculators.
         fields = fields[:, :ny, :nx].reshape(
             num_events, ny * nx, self.num_imts)
         fields = fields[:, self.site_indices]
