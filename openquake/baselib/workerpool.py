@@ -279,7 +279,7 @@ class WorkerPool(object):
             self.num_workers = num_workers
         self.calc_dir = parallel.calc_dir(job_id)
         self.pid = os.getpid()
-        self.futures = []
+        self.futures = set()
 
     def start(self):
         """
@@ -310,14 +310,13 @@ class WorkerPool(object):
                     self.stop()
                     self.pool = ProcessPoolExecutor(
                         self.num_workers, general.mp, init_workers)
-                    self.futures = []
+                    self.futures.clear()
                     ctrlsock.send('restarted')
                 elif cmd == 'getpid':
                     ctrlsock.send(self.pid)
                 elif cmd == 'get_num_workers':
                     ctrlsock.send(self.num_workers)
                 elif cmd == 'get_executing':
-                    self.futures = [f for f in self.futures if not f.done()]
                     ctrlsock.send(
                         ' '.join(sorted(f.task_id for f in self.futures)))
                 elif cmd == 'run_jobs':
@@ -330,12 +329,12 @@ class WorkerPool(object):
                         self.pool._processes))
                 elif isinstance(cmd, tuple):
                     _func, _args, taskno, mon = cmd
-                    self.futures = [f for f in self.futures if not f.done()]
                     fut = self.pool.submit(parallel.safely_call, *cmd)
                     fut.task_id = f'{mon.calc_id}-{taskno}'
+                    self.futures.add(fut)
+                    fut.add_done_callback(self.futures.discard)
                     fut.add_done_callback(
                         functools.partial(on_done, mon.calc_id, taskno))
-                    self.futures.append(fut)
                     ctrlsock.send('submitted')
                 else:
                     ctrlsock.send('unknown command')
@@ -348,7 +347,7 @@ class WorkerPool(object):
             for proc in self.pool._processes.values():
                 proc.terminate()
         self.pool.shutdown()
-        self.futures = []
+        self.futures.clear()
         return 'WorkerPool on %s stopped' % self.hostname
 
 
