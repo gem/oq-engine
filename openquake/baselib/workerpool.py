@@ -25,6 +25,7 @@ import tempfile
 import functools
 import subprocess
 from datetime import datetime, timezone
+from concurrent.futures import ProcessPoolExecutor
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -256,8 +257,11 @@ def call(func, args, taskno, mon, executing):
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
-    parallel.safely_call(func, args, taskno, mon)
-    os.remove(fname)
+    try:
+        parallel.safely_call(func, args, taskno, mon)
+    finally:
+        if os.path.exists(fname):
+            os.remove(fname)
 
 
 def errback(job_id, task_no, exc):
@@ -267,6 +271,11 @@ def errback(job_id, task_no, exc):
           '%s/%s' % (job_id, task_no), str(exc))
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)
+
+
+def on_done(calc_id, task_no, fut):
+    if (exc := fut.exception()) is not None:
+        errback(calc_id, task_no, exc)
 
 
 class WorkerPool(object):
@@ -287,7 +296,8 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.calc_dir = parallel.calc_dir(job_id)
-        self.executing = tempfile.mkdtemp(dir=self.calc_dir if job_id else None)
+        self.executing = tempfile.mkdtemp(
+            dir=self.calc_dir if job_id else None)
         try:
             os.mkdir(self.executing)
         except FileExistsError:  # already created by another WorkerPool
@@ -310,8 +320,8 @@ class WorkerPool(object):
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
-        self.pool = general.mp.Pool(self.num_workers, init_workers)
-        pids = [proc.pid for proc in self.pool._pool]
+        self.pool = ProcessPoolExecutor(
+            self.num_workers, general.mp, init_workers)
         # start control loop accepting the commands stop
         try:
             ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
@@ -322,10 +332,11 @@ class WorkerPool(object):
                         break
                     elif cmd == 'restart':
                         self.stop()
-                        self.pool = general.mp.Pool(self.num_workers)
+                        self.pool = ProcessPoolExecutor(
+                            self.num_workers, general.mp, init_workers)
                         ctrlsock.send('restarted')
                     elif cmd == 'getpid':
-                        ctrlsock.send(self.proc.pid)
+                        ctrlsock.send(self.pid)
                     elif cmd == 'get_num_workers':
                         ctrlsock.send(self.num_workers)
                     elif cmd == 'get_executing':
@@ -337,13 +348,13 @@ class WorkerPool(object):
                         subprocess.Popen(lst)
                         ctrlsock.send("started %d" % self.job_id)
                     elif cmd == 'memory_gb':
-                        ctrlsock.send(performance.memory_gb(pids))
+                        ctrlsock.send(performance.memory_gb(
+                            self.pool._processes))
                     elif isinstance(cmd, tuple):
                         _func, _args, taskno, mon = cmd
-                        self.pool.apply_async(
-                            call, cmd + (self.executing,),
-                            error_callback=functools.partial(
-                                errback, mon.calc_id, taskno))
+                        fut = self.pool.submit(call, *cmd, self.executing)
+                        fut.add_done_callback(
+                            functools.partial(on_done, mon.calc_id, taskno))
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')
@@ -354,9 +365,10 @@ class WorkerPool(object):
         """
         Terminate the pool
         """
-        self.pool.close()
-        self.pool.terminate()
-        self.pool.join()
+        if hasattr(self.pool, '_processes') and self.pool._processes:
+            for proc in self.pool._processes.values():
+                proc.terminate()
+        self.pool.shutdown()
         return 'WorkerPool on %s stopped' % self.hostname
 
 
