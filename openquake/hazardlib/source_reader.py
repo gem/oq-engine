@@ -308,10 +308,15 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
     return build_csm(oq, full_lt, smdict, apply_unc, dstore)
 
 
+# calls _build_csm
 def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     """
-    Builds the source groups and returns a CompositeSourceModel instance
-    if apply_unc is True, else returns source groups only.
+    :param oq: OqParam instance
+    :param full_lt: FullLogicTree instance
+    :param smdict: dictionary source_model_path -> SourceModel instance
+    :param apply_unc: flag
+    :param dstore: DataStore instance
+    :returns: a CompositeSourceModel instance
     """
     mon = performance.Monitor('_build_groups', measuremem=True)
     with mon:
