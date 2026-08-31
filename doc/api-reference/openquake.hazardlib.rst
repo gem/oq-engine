@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     openquake.hazardlib.calc
+    openquake.hazardlib.correlation_models
     openquake.hazardlib.geo
     openquake.hazardlib.gsim
     openquake.hazardlib.mfd

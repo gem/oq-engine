@@ -652,12 +652,11 @@ Source Loss Table'''.splitlines())
 
     def test_shakemap2gmfs(self):
         # test shakemap2gmfs with sitemodel with a filtered sitecol
-        exp = 0.213411
+        exp = 0.2554999887943268
         with chdir(os.path.dirname(case_25.__file__)):
             with redirect_stdout(io.StringIO()) as out:
                 sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
-                            'site_model_uniform_grid_rock.csv -n 1 -t 0 '
-                            '--spatialcorr no -c no')
+                            'site_model_uniform_grid_rock.csv -n 1 -t 0')
             got = out.getvalue()
             assert f'gmv={exp}' in got
 

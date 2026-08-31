@@ -322,7 +322,8 @@ In order to perform a conditional spectrum calculation you need to specify, in a
 classical calculation:
 
 1. a reference intensity measure type (i.e. imt_ref = SA(0.2))
-2. a cross correlation model (i.e. cross_correlation = BakerJayaram2008)
+2. a total-residual correlation model (i.e.
+   total_residual_correlation_model = BakerJayaram2008)
 3. a set of poes (i.e. poes = 0.01 0.1)
 
 The engine will compute a mean conditional spectrum for each ``poe`` and site, as well as the usual mean uniform hazard 

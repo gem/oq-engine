@@ -2,6 +2,10 @@ import os.path
 import unittest
 import numpy
 from openquake.hazardlib import geo, imt
+from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
+    BakerCornell2006)
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
 from openquake.hazardlib.shakemap.maps import \
     get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import (
@@ -17,9 +21,11 @@ shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
                            ('std', imt_dt), ('vs30', float)])
 CDIR = os.path.dirname(__file__)
 
+spatial_model = JayaramBaker2009(vs30_clustering=True)
+cross_imt_model = BakerCornell2006()
 gmf_dict = {'kind': 'Silva&Horspool',
-            'spatialcorr': 'yes',
-            'crosscorr': 'yes',
+            'spatial_model': spatial_model,
+            'cross_imt_model': cross_imt_model,
             'cholesky_limit': 10000}
 
 
@@ -29,7 +35,8 @@ def aae(x, y):
 
 def mean_std(shakemap, vs30):
     gmf_dict.update({'kind': 'Silva&Horspool',
-                     'spatialcorr': 'yes', 'crosscorr': 'yes'})
+                     'spatial_model': spatial_model,
+                     'cross_imt_model': cross_imt_model})
     _, gmfs = to_gmfs(
         shakemap, gmf_dict, vs30, truncation_level=3,
         num_gmfs=1000, seed=42, imts=['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)'])
@@ -47,10 +54,10 @@ class ShakemapTestCase(unittest.TestCase):
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, shakemap['vs30'])
-        aae(gmf_by_imt, [[0.005391, 0.0223217, 0.0399937, 0.0183143],
-                         [0.0061, 0.025619, 0.0487997, 0.0225788],
-                         [0.0060717, 0.0253156, 0.0478506, 0.0219296],
-                         [0.007087, 0.0298716, 0.0622145, 0.0290721]])
+        aae(gmf_by_imt, [[0.006204, 0.0262588, 0.0497097, 0.023906],
+                         [0.0069831, 0.0298023, 0.0602146, 0.0294691],
+                         [0.0069507, 0.0296108, 0.0594237, 0.0286251],
+                         [0.0080306, 0.034196, 0.0762079, 0.037936]])
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
@@ -68,7 +75,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(dmatrix.sum(), 18539.605)
 
         # spatial correlation
-        sca = spatial_correlation_array(dmatrix, imts, 'yes')
+        sca = spatial_correlation_array(dmatrix, imts, spatial_model)
         aae(sca.sum(), 36.000370229)
 
         # spatial covariance
@@ -77,7 +84,7 @@ class ShakemapTestCase(unittest.TestCase):
         aae(scov.sum(), 13.166200147)
 
         # cross correlation
-        ccor = cross_correlation_matrix(imts, 'yes')
+        ccor = cross_correlation_matrix(imts, cross_imt_model)
         aae(ccor.sum(), 10.49124788)
 
         # cholesky decomposition
@@ -96,52 +103,98 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['val'] = val
         shakemap['std'] = std
         gmf_dict.update({'kind': 'Silva&Horspool',
-                         'spatialcorr': 'yes', 'crosscorr': 'no'})
+                         'spatial_model': spatial_model,
+                         'cross_imt_model': None})
         self._check(shakemap, gmf_dict)
+
+    def test_identity_matrices_without_models(self):
+        distances = numpy.zeros((2, 2))
+        numpy.testing.assert_array_equal(
+            spatial_correlation_array(distances, imts, None),
+            numpy.repeat(numpy.eye(2)[None], len(imts), axis=0))
+        numpy.testing.assert_array_equal(
+            cross_correlation_matrix(imts, None), numpy.eye(len(imts)))
+
+    def test_no_uncertainty_preserves_shakemap(self):
+        value_dt = numpy.dtype([('PGA', float), ('PGV', float)])
+        dtype = numpy.dtype([
+            ('lon', float), ('lat', float), ('val', value_dt),
+            ('std', value_dt), ('vs30', float),
+        ])
+        shakemap = numpy.zeros(2, dtype)
+        shakemap['val'] = [
+            (10., 20.),
+            (15., 25.),
+        ]
+        shakemap['std'] = [
+            (.6, .7),
+            (.6, .7),
+        ]
+
+        expected = numpy.array([
+            [.10, 20.],
+            [.15, 25.],
+        ])
+        methods = [
+            {'kind': 'basic'},
+            {'kind': 'Silva&Horspool', 'spatial_model': None,
+             'cross_imt_model': None, 'cholesky_limit': 10000},
+        ]
+        for method in methods:
+            for truncation_level in (0, 1E-9):
+                _, gmfs = to_gmfs(
+                    shakemap, method.copy(), vs30=None,
+                    truncation_level=truncation_level,
+                    num_gmfs=1, seed=42)
+                numpy.testing.assert_array_equal(gmfs[:, 0], expected)
 
     def _check(self, shakemap, gmf_dict):
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, vs30=None, truncation_level=3,
             num_gmfs=2, seed=42)
         # shape (N, E, M)
-        aae(gmfs[..., 0].sum(axis=0), [0.3708301, 0.5671011])  # PGA
+        aae(gmfs[..., 0].sum(axis=0), [0.4202056, 0.6426098])  # PGA
 
         gmf_dict.update({'kind': 'Silva&Horspool',
-                         'spatialcorr': 'yes', 'crosscorr': 'yes'})
+                         'spatial_model': spatial_model,
+                         'cross_imt_model': cross_imt_model})
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, vs30=shakemap['vs30'], truncation_level=3,
             num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=0), [0.5127146, 0.7800232])  # PGA
-        aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
+        aae(gmfs[..., 0].sum(axis=0), [0.5809818, 0.8790579])  # PGA
+        aae(gmfs[..., 2].sum(axis=0), [0.605358, 0.8245417])  # SA(1.0)
 
         # disable spatial correlation
         gmf_dict.update({'kind': 'Silva&Horspool',
-                         'spatialcorr': 'no', 'crosscorr': 'no'})
+                         'spatial_model': None,
+                         'cross_imt_model': None})
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, vs30=None,
             truncation_level=3, num_gmfs=2, seed=42)
         # shape (N, E, M)
-        aae(gmfs[..., 0].sum(axis=0), [0.370832, 0.5670994])  # PGA
+        aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
 
         _, gmfs = to_gmfs(
             shakemap, {'kind': 'basic'}, vs30=None,
             truncation_level=3, num_gmfs=2, seed=42)
         # shape (N, E, M)
-        aae(gmfs[..., 0].sum(axis=0), [0.370832, 0.5670994])  # PGA
+        aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
 
         gmf_dict.update({'kind': 'Silva&Horspool',
-                         'spatialcorr': 'no', 'crosscorr': 'yes'})
+                         'spatial_model': None,
+                         'cross_imt_model': cross_imt_model})
         _, gmfs = to_gmfs(
             shakemap, gmf_dict, vs30=shakemap['vs30'],
             truncation_level=3, num_gmfs=2, seed=42)
-        aae(gmfs[..., 0].sum(axis=0), [0.5127171, 0.7800206])  # PGA
-        aae(gmfs[..., 2].sum(axis=0), [0.4932519, 0.6731384])  # SA(1.0)
+        aae(gmfs[..., 0].sum(axis=0), [0.5809846, 0.8790549])  # PGA
+        aae(gmfs[..., 2].sum(axis=0), [0.605358, 0.8245417])  # SA(1.0)
 
         # set stddev to zero
         shakemap['std'] = 0
         with self.assertRaises(ValueError) as ctx:
             gmf_dict.update({'kind': 'Silva&Horspool',
-                             'spatialcorr': 'no', 'crosscorr': 'yes'})
+                             'spatial_model': None,
+                             'cross_imt_model': cross_imt_model})
             to_gmfs(shakemap, gmf_dict, vs30=shakemap['vs30'],
                     truncation_level=3, num_gmfs=2, seed=42)
         self.assertIn('stddev==0 for IMT=PGA', str(ctx.exception))
@@ -157,14 +210,14 @@ class ShakemapTestCase(unittest.TestCase):
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, vs30=None)
         #                PGA,    SA(0.3), SA(1.0), SA(3.0)
-        aae(gmf_by_imt, [[0.0976, 0.2442, 0.0287, 0.6358],
-                         [0.2024, 0.5014, 0.0297, 0.6544],
-                         [0.3011, 0.5986, 0.0306, 0.6575],
-                         [0.3868, 0.9331, 0.0297, 0.6394]])
-        aae(std_by_imt ,[[0.5922, 0.6724, 0.6325, 0.6446],
+        aae(gmf_by_imt, [[0.1168, 0.3057, 0.0356, 0.7958],
+                         [0.2423, 0.6275, 0.037, 0.8191],
+                         [0.3605, 0.7492, 0.038, 0.823],
+                         [0.4631, 1.1679, 0.0369, 0.8003]])
+        aae(std_by_imt, [[0.5922, 0.6724, 0.6325, 0.6446],
                          [0.6077, 0.6662, 0.6296, 0.6686],
                          [0.6146, 0.6749, 0.6714, 0.6614],
-                         [0.5815, 0.646 , 0.6491, 0.6603]])
+                         [0.5815, 0.646, 0.6491, 0.6603]])
         # NB: the spatial correlation matrix is highly degenerate
         # with 3 of 4 eigenvalues equal to zero, the numbers above are
         # not trustworthy

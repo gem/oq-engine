@@ -20,7 +20,8 @@ import logging
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.mrd import calc_mean_rate_dist
-from openquake.hazardlib import contexts, cross_correlation as cc
+from openquake.hazardlib import contexts
+from openquake.hazardlib.correlation_models.registry import get_model
 
 
 class Input(object):
@@ -70,7 +71,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
 
     NB: this is meant to work only for parametric ruptures!
     """
-    crosscorr = getattr(cc, cross_correlation)()
+    crosscorr = get_model(cross_correlation, 'cross_imt')
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     L1 = oq.imtls.size // len(oq.imtls) - 1

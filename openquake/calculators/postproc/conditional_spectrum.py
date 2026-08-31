@@ -175,9 +175,11 @@ def main(dstore):
     logging.warning('Conditional spectrum calculations are still '
                     'experimental')
     oq = dstore['oqparam']
-    if not oq.cross_correl:
-        raise InvalidFile("%(job_ini)s: you must specify cross_correlation"
-                          % oq.inputs)
+    if not oq.get_total_residual_correlation_model():
+        raise InvalidFile(
+            "%(job_ini)s: you must specify "
+            "total_residual_correlation_model"
+            % oq.inputs)
     if not oq.imt_ref:
         raise InvalidFile("%(job_ini)s: you must specify imt_ref" % oq.inputs)
     if not oq.poes:

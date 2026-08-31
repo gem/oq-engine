@@ -162,7 +162,7 @@ def get_ebr(rec, geom, trt):
     elif surface_cls is geo.GriddedSurface:
         # fault surface, strike and dip will be computed
         surface.strike = surface.dip = None
-        surface.mesh = Mesh(*mesh)
+        surface.mesh = Mesh(F32(mesh[0]), F32(mesh[1]), F32(mesh[2]))
     else:
         # fault surface, strike and dip will be computed
         surface.strike = surface.dip = None
