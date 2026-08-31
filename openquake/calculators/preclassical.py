@@ -225,7 +225,7 @@ def store_csm(dstore, csm, sitecol, cmakers):
         [(_grp_id(blocks[0]), len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * mb_per_gsim, extra['weight'], extra['codes'], cm.trt)
          for cm, tgets, blocks, extra in quartets],
-        [('grp_id', U32), ('gsims', U16), ('tiles', U16), ('blocks', U16),
+        [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
     req_gb = get_req_gb(data, N, oq)
 
