@@ -1061,7 +1061,7 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-def get_composite_source_model(oqparam, dstore=None):
+def get_composite_source_model(oqparam, dstore=None, apply_unc=True):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -1069,13 +1069,15 @@ def get_composite_source_model(oqparam, dstore=None):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param dstore:
          an open datastore where to save the source info
+    :param apply_unc:
+         apply the uncertainties
     """
     if 'source_model_logic_tree' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
-    full_lt = get_full_lt(oqparam)  # builds the weights
-    csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    full_lt = get_full_lt(oqparam)
+    csm = source_reader.get_csm(oqparam, full_lt, dstore, apply_unc)
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
