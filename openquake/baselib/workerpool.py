@@ -291,48 +291,51 @@ class WorkerPool(object):
             self.num_workers, general.mp, init_workers)
         # start control loop accepting the commands stop
         ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
-        with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
-            for cmd in ctrlsock:
-                if cmd == 'stop':
-                    ctrlsock.send(self.stop())
-                    break
-                elif cmd == 'restart':
-                    self.stop()
-                    self.pool = ProcessPoolExecutor(
-                        self.num_workers, general.mp, init_workers)
-                    self.futures.clear()
-                    ctrlsock.send('restarted')
-                elif cmd == 'getpid':
-                    ctrlsock.send(self.pid)
-                elif cmd == 'get_num_workers':
-                    ctrlsock.send(self.num_workers)
-                elif cmd == 'get_executing':
-                    ctrlsock.send(
-                        ' '.join(sorted(f.task_id for f in self.futures)))
-                elif cmd == 'run_jobs':
-                    pik = os.path.join(self.calc_dir, 'jobs.pik')
-                    lst = ['python', '-m', 'openquake.engine.engine', pik]
-                    subprocess.Popen(lst)
-                    ctrlsock.send("started %d" % self.job_id)
-                elif cmd == 'memory_gb':
-                    ctrlsock.send(performance.memory_gb(self.pool._processes))
-                elif isinstance(cmd, tuple):
-                    _func, _args, taskno, mon = cmd
-                    fut = self.pool.submit(parallel.safely_call, *cmd)
-                    fut.task_id = f'{mon.calc_id}-{taskno}'
-                    self.futures.add(fut)
-                    fut.add_done_callback(self.futures.discard)
-                    fut.add_done_callback(
-                        functools.partial(self.on_done, mon.calc_id, taskno))
-                    ctrlsock.send('submitted')
-                else:
-                    ctrlsock.send('unknown command')
+        try:
+            with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+                for cmd in ctrlsock:
+                    if cmd == 'stop':
+                        ctrlsock.send(self.stop())
+                        break
+                    elif cmd == 'restart':
+                        self.stop()
+                        self.pool = ProcessPoolExecutor(
+                            self.num_workers, general.mp, init_workers)
+                        self.futures.clear()
+                        ctrlsock.send('restarted')
+                    elif cmd == 'getpid':
+                        ctrlsock.send(self.pid)
+                    elif cmd == 'get_num_workers':
+                        ctrlsock.send(self.num_workers)
+                    elif cmd == 'get_executing':
+                        ctrlsock.send(
+                            ' '.join(sorted(f.task_id for f in self.futures)))
+                    elif cmd == 'run_jobs':
+                        pik = os.path.join(self.calc_dir, 'jobs.pik')
+                        lst = ['python', '-m', 'openquake.engine.engine', pik]
+                        subprocess.Popen(lst)
+                        ctrlsock.send("started %d" % self.job_id)
+                    elif cmd == 'memory_gb':
+                        ctrlsock.send(performance.memory_gb(
+                            self.pool._processes))
+                    elif isinstance(cmd, tuple):
+                        _func, _args, taskno, mon = cmd
+                        fut = self.pool.submit(parallel.safely_call, *cmd)
+                        fut.task_id = f'{mon.calc_id}-{taskno}'
+                        self.futures.add(fut)
+                        fut.add_done_callback(self.futures.discard)
+                        fut.add_done_callback(
+                            functools.partial(self.on_done, mon.calc_id, taskno))
+                        ctrlsock.send('submitted')
+                    else:
+                        ctrlsock.send('unknown command')
+        finally:
+            self.stop()
 
     def on_done(self, job_id, task_no, fut):
+        self.futures.discard(fut)
         if exc := fut.exception():
             print(f'{exc} {job_id=}, {task_no=}')
-            if self.futures:
-                self.stop()
 
     def stop(self):
         """
