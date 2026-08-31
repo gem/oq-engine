@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, performance
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -45,7 +45,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
+PERILTYPE = numpy.array(
+    ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -259,10 +260,6 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         # NB: we use fill_value="extrapolate" for compatibility with numpy 1
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
-                                             fill_value="extrapolate")
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
-                                              fill_value="extrapolate")
         self.sampler = Sampler(self.distribution_name)
 
     def interpolate(self, gmf_df, col):
@@ -281,7 +278,8 @@ class VulnerabilityFunction(object):
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['mean'][ok] = numpy.interp(
+            curve_ok, self.imls, self.mean_loss_ratios)
         dic['cov'][ok] = self._cov_for(curve_ok)
         return pandas.DataFrame(dic, gmf_df.sid)
 
@@ -397,11 +395,11 @@ class VulnerabilityFunction(object):
         [0.0049, 0.006, 0.027], the clipped imls are
         [0.005,  0.006, 0.0269].
         """
-        return self._covs_i1d(
-            numpy.piecewise(
-                imls,
-                [imls > self.imls[-1], imls < self.imls[0]],
-                [self.imls[-1], self.imls[0], lambda x: x]))
+        imls = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1], imls < self.imls[0]],
+            [self.imls[-1], self.imls[0], lambda x: x])
+        return numpy.interp(imls, self.imls, self.covs)
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
@@ -490,7 +488,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self._dtype = numpy.dtype(ls)
 
     def init(self):
-        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
+        self._probs_i1d = interpolate.interp1d(self.imls, self.probs)  # 2D
         lratios = F64(self.loss_ratios)
         cols = list(range(len(self.probs)))
         self.sampler = Sampler(self.distribution_name, lratios, cols)
@@ -634,7 +632,6 @@ class FragilityFunctionDiscrete(object):
         if len(imls) != len(poes):
             raise ValueError('%s: %d levels but %d poes' % (
                 limit_state, len(imls), len(poes)))
-        self._interp = None
         self.no_damage_limit = no_damage_limit
 
     def __call__(self, imls):
@@ -655,7 +652,7 @@ class FragilityFunctionDiscrete(object):
     # so that the curve is pickeable
     def __getstate__(self):
         return dict(limit_state=self.limit_state,
-                    poes=self.poes, imls=self.imls, _interp=None,
+                    poes=self.poes, imls=self.imls,
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
@@ -830,7 +827,7 @@ class MultiEventRNG(object):
     >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
-    array([0.4372343 , 0.57308132, 0.56392573])
+    array([0.43723431, 0.57308131, 0.56392574])
     >>> fractions = numpy.array([[[.8, .1, .1]]])
     >>> rng.discrete_dmg_dist([0], fractions, [10])
     array([[[8, 2, 0]]], dtype=uint32)
@@ -889,9 +886,16 @@ class MultiEventRNG(object):
         # of steps with cov == 0 and cov != 0
         res = numpy.array(means)
         ok = (means != 0) & (covs != 0)  # nonsingular values
+        if not ok.any():
+            return res
+
         alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
-        res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
-                   for i, eid in enumerate(eids[ok])]
+        # to speedup the calculation we group together alphas and betas
+        out = numpy.empty(len(alpha), F32)
+        for eid, start, stop in performance.idx_start_stop(eids[ok]):
+            out[start:stop] = self.rng[eid].beta(
+                alpha[start:stop], beta[start:stop])
+        res[ok] = out
         return res
 
     def discrete_dmg_dist(self, eids, fractions, numbers):
@@ -1071,7 +1075,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
     imls[imls > max_val] = max_val
 
     # interpolate the hazard curve
-    poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    poes = numpy.interp(imls, hazard_imls, hazard_poes)
     if abs((1-poes).mean()) < 1E-4:  # flat curve
         raise ValueError('The hazard curve is flat (all ones) probably due to '
                          'a (hazard) investigation time too large')

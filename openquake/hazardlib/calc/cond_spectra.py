@@ -118,8 +118,9 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     # This is the output dictionary as explained above
     out = outdict(M, N, P, cmaker.gid.min(), cmaker.gid.max() + 1)
     imt_ref = cmaker.imts[imti]
-    rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
-                       for imt in cmaker.imts])
+    rho = numpy.array([
+        cmaker.total_residual_correlation_model.rho(imt_ref, imt)
+        for imt in cmaker.imts])
     for sid, imls in enumerate(imlsNP):
         ctx = ctxt[ctxt.sids == sid]
         mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, U)

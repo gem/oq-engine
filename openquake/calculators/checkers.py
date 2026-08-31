@@ -130,6 +130,8 @@ def check_ini(path, hc):
     with open(tmp_ini, 'w') as f:
         f.write(ini)
     dic2 = readinput.get_params(tmp_ini)
-    missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
+    names = {oq.ALIASES.get(name, name) for name in dic}
+    missing = names - set(dic2) - {
+        'intensity_measure_types', 'export_dir'}
     if missing:
         raise RuntimeError(missing)

@@ -367,7 +367,7 @@ def view_params(token, dstore):
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
               'pointsource_distance',
-              'ground_motion_correlation_model', 'minimum_intensity',
+              'within_event_correlation_model', 'minimum_intensity',
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')

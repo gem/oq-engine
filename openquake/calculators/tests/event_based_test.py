@@ -19,7 +19,9 @@
 import io
 import os
 import math
+from types import SimpleNamespace
 from unittest.mock import patch
+import numpy
 import pandas
 import numpy.testing
 
@@ -33,7 +35,7 @@ from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
+from openquake.calculators import event_based
 from openquake.calculators.postproc import debug_rupture
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.event_based import (
@@ -47,6 +49,53 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
+
+
+def test_joint_memory_estimates():
+    """Cover dense, chunked, and station-dominated memory estimates."""
+    computer = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(4), imts_D=range(3)),
+        E=500)
+    G = 1  # number of GSIMs
+    N = 10_000  # number of target sites
+    D = 100  # number of station sites
+    T = 4 * N  # target variables: target IMTs times target sites
+    Q = 3 * D  # observations: observed IMTs times station sites
+
+    budget = (
+        3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4)
+    dense_size, _, dense_name, dense_block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=True, memory_limit=budget))
+    # Conservative peak: target matrices, target-station blocks, station
+    # matrices, random samples, and the float32 result array.
+    expected_dense = (
+        4 * T * T * 8 + 2 * T * Q * 8 + 4 * Q * Q * 8 +
+        T * 500 * 20 + T * 4)
+    assert dense_size == expected_dense
+    assert dense_name == 'dense joint conditioning workspace'
+    assert dense_block is None
+
+    chunked_size, _, chunked_name, block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=False, memory_limit=budget))
+    expected_chunked = 3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4
+    assert chunked_size == expected_chunked
+    assert chunked_name == 'chunked joint conditioning workspace'
+    assert block == 6_000_000
+
+    station_rich = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(1), imts_D=range(4)),
+        E=1)
+    station_size, _, _, block = event_based._conditioned_memory(
+        station_rich, 10_000, G=1, N=1, compute_covs=False,
+        memory_limit=budget)
+    assert station_size >= 4 * (4 * 10_000) ** 2 * 8
+    assert block == 4 * 10_000
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
@@ -92,7 +141,8 @@ class EventBasedTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('gmf_data', 'sid')
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
-        [(_sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
+        [(_sid, avgstd)] = event_based.compute_avg_gmf(
+            df, weights[rlzs], min_iml).items()
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
         aac(avg_gmf[:, 0], avgstd)
 
@@ -107,7 +157,8 @@ class EventBasedTestCase(CalculatorTestCase):
         gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
                                   numpy.zeros(E, int)[ok])
         weights = numpy.ones(E)
-        [(_sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
+        [(_sid, avgstd)] = event_based.compute_avg_gmf(
+            gmf_df, weights, min_iml).items()
         aac(avgstd, [[0.134056], [1.620217]], atol=1E-6)
 
     def test_spatial_correlation(self):
@@ -329,10 +380,12 @@ class EventBasedTestCase(CalculatorTestCase):
                          dic)
 
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curve(self.calc.datastore, 'PGA', slice(None))
+        mean_eb = event_based.get_mean_curve(
+            self.calc.datastore, 'PGA', slice(None))
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curve(self.calc.cl.datastore, 'PGA', slice(None))
+        mean_cl = event_based.get_mean_curve(
+            self.calc.cl.datastore, 'PGA', slice(None))
         reldiff, _index = max_rel_diff_index(mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.06)
 
@@ -618,7 +671,8 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
         [fname] = out['event_based_mfd', 'csv']
-        self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/event_based_mfd.csv', fname,
+                              delta=1E-6)
 
     def test_30(self):
         # build the ruptures, then the GMFs
@@ -636,7 +690,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
 
     def test_31(self):
-        # HM2018CorrelationModel with filtered site collection
+        # HeresiMiranda2019 with filtered site collection
         self.run_calc(case_31.__file__, 'job.ini',
                       hazard_calculation_id='job_rup.ini',  exports='csv')
 

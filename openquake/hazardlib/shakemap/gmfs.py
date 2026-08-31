@@ -16,14 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
 import logging
 import numpy
 from scipy.stats import truncnorm
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, imt, correlation
+from openquake.hazardlib import geo, imt
 
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
@@ -31,25 +30,21 @@ MAX_GMV = 5.  # 5 g
 MAX_PGV_GMV = 500.  # cm/s
 
 
-def spatial_correlation_array(dmatrix, imts, correl='yes',
-                              vs30clustered=True):
+def spatial_correlation_array(dmatrix, imts, model):
     """
     :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
-    :param correl: 'yes', 'no' or 'full'
-    :param vs30clustered: flag, True by default
+    :param model: spatial correlation model
     :returns: array of shape (M, N, N)
     """
-    assert correl in 'yes no full', correl
     n = len(dmatrix)
+    if model is None:
+        return numpy.repeat(
+            numpy.eye(n)[numpy.newaxis], len(imts), axis=0)
+    model.validate_imts(imts)
     corr = numpy.zeros((len(imts), n, n))
-    for imti, im in enumerate(imts):
-        if correl == 'no':
-            corr[imti] = numpy.eye(n)
-        if correl == 'full':
-            corr[imti] = numpy.ones((n, n))
-        elif correl == 'yes':
-            corr[imti] = correlation.jbcorrelation(dmatrix, im, vs30clustered)
+    for imti, imt_ in enumerate(imts):
+        corr[imti] = model.correlation_matrix(dmatrix, imt_)
     return corr
 
 
@@ -69,34 +64,16 @@ def spatial_covariance_array(stddev, corrmatrices):
     return numpy.array(matrices)
 
 
-def cross_correlation_matrix(imts, corr='yes'):
+def cross_correlation_matrix(imts, model):
     """
     :param imts: M intensity measure types
-    :param corr: 'yes', 'no' or 'full'
+    :param model: cross-IMT correlation model
     :returns: an array of shape (M, M)
     """
-    assert corr in 'yes no full', corr
-    # if there is only PGA this is a 1x1 identity matrix
-    M = len(imts)
-    cross_matrix = numpy.eye(M)
-    if corr == 'full':
-        cross_matrix = numpy.full((M, M), 0.99999)
-        numpy.fill_diagonal(cross_matrix, 1)
-    elif corr == 'yes':
-        for i, im in enumerate(imts):
-            T1 = im.period or 0.05
-
-            for j in range(M):
-                if i == j:
-                    continue
-                T2 = imts[j].period or 0.05
-                Tmax = max(T1, T2)
-                Tmin = min(T1, T2)
-                II = 1 if Tmin < 0.189 else 0
-                cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
-                    0.359 + 0.163 * II * math.log(Tmin / 0.189)
-                ) * math.log(Tmax / Tmin))
-    return cross_matrix
+    if model is None:
+        return numpy.eye(len(imts))
+    model.validate_imts(imts)
+    return model.correlation_matrix(imts)
 
 
 # not used since the ShakeMap does it already
@@ -188,16 +165,16 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
 
 
 @calculate_gmfs.add('Silva&Horspool')
-def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
-                      crosscorr, cholesky_limit):
+def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
+                      cross_imt_model, cholesky_limit):
     """
     Implementation of paper by Silva and Horspool 2019
     https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
 
-    :param shakemap: site coordinates with shakemap values
+    :param shakemap: site coordinates with median ShakeMap values
     :param imts: list of required imts
-    :param spatialcorr: 'no', 'yes' or 'full'
-    :param crosscorr: 'no', 'yes' or 'full'
+    :param spatial_model: spatial correlation model
+    :param cross_imt_model: cross-IMT correlation model
     :returns: F(Z, mu) to calculate gmfs
     """
     # make sure all imts used have a period, needed for correlation
@@ -210,11 +187,12 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
             f'{M=} x {N=}', cholesky_limit))
 
     # Cross Correlation
-    cross_corr = cross_correlation_matrix(imts, crosscorr)
+    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
 
     # Spatial Correlation and Covariance
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts, spatialcorr)
+    spatial_corr = spatial_correlation_array(
+        dmatrix, imts, spatial_model)
 
     eig, _ = numpy.linalg.eigh(spatial_corr[0])
     small_eig = (eig < 1E-6).sum()
@@ -233,12 +211,10 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    sig = numpy.array(stddev).reshape(-1, 1)  # (M,N) -> (M*N, 1)
-
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
-    # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / scale
+    # mu contains the ShakeMap medians; L @ Z contains ln-unit residuals
+    return mu * numpy.exp(L @ Z) / scale
 
 
 @calculate_gmfs.add('basic')
@@ -246,7 +222,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     Basic calculation method to sample data from shakemap values
 
-    :param shakemap: site coordinates with shakemap values
+    :param shakemap: site coordinates with median ShakeMap values
     :param imts: list of required imts
     :returns: F(Z, mu) to calculate gmfs
     """
@@ -255,9 +231,8 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
 
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
 
-    # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
-    # multiply Z and sig column-wise, add mean and apply the correct IMT scale
-    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / scale
+    # mu contains the ShakeMap medians; Z * sig contains ln-unit residuals
+    return mu * numpy.exp(Z * sig) / scale
 
 
 @ calculate_gmfs.add('mmi')
@@ -304,11 +279,17 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
 
-    # generate standard normal random variables of shape (M*N, E)
-    Z = truncnorm.rvs(-truncation_level, truncation_level, loc=0, scale=1,
-                      size=(M * N, num_gmfs), random_state=seed)
+    # A zero truncation_level in the job file is converted to 1E-9 by OqParam.
+    # Treat as exact zero so that a no-uncertainty GMF reproduces the ShakeMap
+    # grid.xml field.
+    if truncation_level <= 1E-9:
+        Z = numpy.zeros((M * N, num_gmfs))
+    else:
+        Z = truncnorm.rvs(
+            -truncation_level, truncation_level, loc=0, scale=1,
+            size=(M * N, num_gmfs), random_state=seed)
 
-    # build array of mean values of shape (M*N, E)
+    # build array of median values of shape (M*N, E)
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
