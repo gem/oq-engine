@@ -20,7 +20,6 @@ import sys
 import time
 import socket
 import getpass
-import functools
 import subprocess
 from datetime import timezone
 from concurrent.futures import ProcessPoolExecutor
@@ -324,24 +323,16 @@ class WorkerPool(object):
                         fut.task_id = f'{mon.calc_id}-{taskno}'
                         self.futures.add(fut)
                         fut.add_done_callback(self.futures.discard)
-                        fut.add_done_callback(
-                            functools.partial(self.on_done, mon.calc_id, taskno))
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')
         finally:
             self.stop()
 
-    def on_done(self, job_id, task_no, fut):
-        self.futures.discard(fut)
-        if exc := fut.exception():
-            print(f'{exc} {job_id=}, {task_no=}')
-
     def stop(self):
         """
         Terminate the pool
         """
-        print('Shutting down the pool')
         if hasattr(self.pool, '_processes') and self.pool._processes:
             for proc in self.pool._processes.values():
                 proc.terminate()
