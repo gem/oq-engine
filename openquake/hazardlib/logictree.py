@@ -1071,6 +1071,25 @@ class FullLogicTree(object):
         self.gsim_lt.wget.weights = ws
         return self
 
+    def sources_by_trt_smrs(self):
+        """
+        :returns: trt_smrs -> source IDs
+        """
+        data = self.source_model_lt.source_data
+        bset_values = self.source_model_lt.root_branchset.get_bset_values
+        acc = AccumDict(accum=set())
+        for rlz in self.sm_rlzs:
+            for bset, values in bset_values(rlz.lt_path)[1:]:
+                ats = bset.filters.get('applyToSources')
+                for source_id, trt in zip(data['source'], data['trt']):
+                    if ats is None or source_id in ats:
+                        trt_smr = self.trti[trt] * TWO24 + rlz.ordinal
+                        acc[source_id].add(trt_smr)
+        out = AccumDict(accum=[])
+        for src in acc:
+            out[tuple(sorted(acc[src]))].append(src)
+        return out
+
     def gfull(self, unique_trt_smrs):
         """
         :returns: the total Gt = Σ_i G_i
