@@ -23,24 +23,37 @@ https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 """
 import unittest
 from unittest import mock
+from types import SimpleNamespace
 
 import numpy
+import pandas
 
 from openquake.baselib import performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
-from openquake.hazardlib.imt import from_string, PGA, SA
+from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
+    import NoCrossCorrelation
+from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
+    import DuNing2021
+from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.calc.conditioned_gmfs import (
-    build_precomputed, compute_distance_matrix,
-    compute_within_event_covariance_matrix, get_mean_covs, Input)
+    build_joint_conditioning, build_precomputed, build_station_conditioning,
+    compute_distance_matrix, conditionable_imts, conditioned,
+    conditioned_mean_in_chunks, createD,
+    compute_within_event_covariance_matrix, get_mean_covs, Input,
+    JointConditioning, StationConditioning)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
 
 
-def test_joint_within_event_covariance_block():
+def test_pgv_is_conditionable():
+    assert conditionable_imts([PGA(), PGV(), MMI()]) == [PGA(), PGV()]
+
+
+def test_joint_within_covariance():
     correlation = numpy.array([[1.0], [0.5], [0.25], [0.125]])
 
     class JointModel(SpatialCrossIMTCorrelationModel):
@@ -70,6 +83,448 @@ def test_joint_within_event_covariance_block():
     assert actual_imts2 is imts2
     assert component == ResidualComponent.WITHIN_EVENT
     assert ctx is context
+
+
+def test_target_statistics_by_imt():
+    class IMTDependentGMM(test_data.ZeroMeanGMM):
+        def compute(self, ctx: numpy.recarray, imts,
+                    mean, sig, tau, phi):
+            periods = numpy.array([imt.period for imt in imts])[:, None]
+            mean[:] = periods
+            tau[:] = periods + 0.1
+            phi[:] = periods + 0.2
+            sig[:] = numpy.hypot(tau, phi)
+
+    target_imts = [SA(0.1), SA(1.0)]
+    cmaker = simple_cmaker(
+        [IMTDependentGMM()], [], maximum_distance=test_data.MAX_DIST,
+        truncation_level=0)
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE07_STATION_SITECOL,
+        target_imts, [SA(1.0)], test_data.CASE07_STATION_DATA,
+        test_data.DummySpatialCorrelationModel(),
+        test_data.DummyCrossCorrelationBetween(),
+        test_data.DummyCrossCorrelationWithin())
+
+    pre = build_precomputed(test_data.RUP, cmaker, inp, compute_covs=False)
+    conditioner = pre.conditioners[0]
+    stats = conditioner.mean_stds_Y[:, 0, :, 0]
+    aac(stats[0], [0.1, 1.0])
+    aac(stats[2], [0.2, 1.1])
+    aac(stats[3], [0.3, 1.2])
+
+    monitor = performance.Monitor()
+    monitor.set_shared(YD=pre.YD, DD=pre.DD)
+    for m, target_imt in enumerate(target_imts):
+        mean, _, _, _ = conditioner.get_mu_tau_phi(
+            m, target_imt, monitor, compute_covs=False)
+        aac(mean[:, 0], target_imt.period)
+
+
+def test_station_error_diagonal():
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.25, 1.5]
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [],
+        maximum_distance=test_data.MAX_DIST)
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        [PGA()], [PGA()], station_data,
+        test_data.DummySpatialCorrelationModel(),
+        test_data.DummyCrossCorrelationBetween(),
+        test_data.DummyCrossCorrelationWithin())
+    pre = build_precomputed(test_data.RUP, cmaker, inp, compute_covs=False)
+
+    result = createD(
+        0, 0, PGA(), inp, pre.conditioners[0].mean_stds_D, pre.DD)
+    phi = numpy.full(2, 0.8)
+    expected = compute_within_event_covariance_matrix(
+        inp.within_event_model, inp.separable_cross_imt_model, pre.DD,
+        [PGA()], [PGA()], phi, phi)
+    numpy.fill_diagonal(
+        expected, numpy.diag(expected) + numpy.array([0.25, 1.5]) ** 2)
+    aac(result.cov_WD_WD_inv, numpy.linalg.pinv(expected))
+
+
+def test_total_station_covariance():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    distances = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+
+    system = build_station_conditioning(inp, mean_stds_D, distances)
+    phi = mean_stds_D[3, 0].reshape(-1)
+    expected = compute_within_event_covariance_matrix(
+        inp.within_event_model, None, distances,
+        imts, imts, phi, phi, dtype=numpy.float64)
+    expected = expected.astype(numpy.float64)
+    numpy.fill_diagonal(
+        expected, numpy.diag(expected) +
+        numpy.array([0.1, 0.2, 0.3, 0.4]) ** 2)
+    expected += system.T_D @ system.cov_HD_HD @ system.T_D.T
+
+    aac(system.zeta_D, [0.0, 0.0, 0.3, -0.2])
+    aac(system.cov_YD_YD, expected)
+    identity = numpy.eye(len(expected))
+    aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
+
+
+def test_missing_station_observations():
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    station_data.loc[1, 'PGA_mean'] = numpy.nan
+    station_data.loc[0, 'SA(0.3)_std'] = numpy.nan
+    inp = Input(
+        test_data.CASE01_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    distances = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+
+    system = build_station_conditioning(inp, mean_stds_D, distances)
+    numpy.testing.assert_array_equal(
+        system.observation_mask, [True, False, False, True])
+    numpy.testing.assert_array_equal(system.observed_imt_indices, [0, 1])
+    aac(system.zeta_D, [0.0, -0.2])
+    assert system.cov_YD_YD.shape == (2, 2)
+
+
+def test_du_ning_pgv_observations():
+    imts = [PGA(), PGV()]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['PGV_mean'] = numpy.exp([0.4, -0.2])
+    station_data['PGV_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    mean = conditioned_mean_in_chunks(
+        inp, mean_stds_Y, station, max_block_elements=8)
+    aac(station.zeta_D, [0.0, 0.0, 0.4, -0.2])
+    assert mean.shape == (2, 1)
+    assert numpy.all(numpy.isfinite(mean))
+    assert mean[1, 0] != 0
+
+
+def _engler_posterior(mu_Y, zeta_D, cov_WD_WD, cov_WY_WD,
+                       cov_WY_WY, T_D, T_Y, cov_HD_HD):
+    """Evaluate Engler et al. (2022), equations B8-B9 and B16-B17."""
+    inverse_WD = numpy.linalg.pinv(cov_WD_WD, hermitian=True)
+    cov_HD_HD_yD = numpy.linalg.pinv(
+        T_D.T @ inverse_WD @ T_D + numpy.linalg.pinv(cov_HD_HD),
+        hermitian=True)
+    mu_HD_yD = cov_HD_HD_yD @ T_D.T @ inverse_WD @ zeta_D
+    RC = cov_WY_WD @ inverse_WD
+    C = T_Y - RC @ T_D
+    mu_Y_yD = mu_Y + T_Y @ mu_HD_yD + RC @ (
+        zeta_D - T_D @ mu_HD_yD)
+    cov_YY_yD = (cov_WY_WY - RC @ cov_WY_WD.T +
+                  C @ cov_HD_HD_yD @ C.T)
+    return mu_Y_yD, cov_YY_yD
+
+
+def test_engler_equivalence():
+    imts = [PGA(), SA(0.3)]
+    spatial = numpy.array([
+        [1.0, 0.4, 0.2],
+        [0.4, 1.0, 0.3],
+        [0.2, 0.3, 1.0]])
+    cross_imt = numpy.array([[1.0, 0.5], [0.5, 1.0]])
+    complete = numpy.kron(cross_imt, spatial)
+    target_indices = [0, 3]
+    station_indices = [1, 2, 4, 5]
+    blocks = {
+        (1, 1): complete[numpy.ix_(target_indices, target_indices)],
+        (1, 2): complete[numpy.ix_(target_indices, station_indices)],
+        (2, 2): complete[numpy.ix_(station_indices, station_indices)]}
+
+    class MatrixModel(SpatialCrossIMTCorrelationModel):
+        DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+
+        def correlation_block(self, distances, imts1, imts2=None,
+                              component=None, context=None):
+            return blocks[distances.shape]
+
+    zeta_D = numpy.array([[0.4, -0.3], [0.2, 0.1]])
+    predicted_D = numpy.array([[0.1, -0.1], [0.2, -0.2]])
+    stations = {
+        'PGA_mean': numpy.exp(predicted_D[0] + zeta_D[0]),
+        'PGA_std': [0.1, 0.2],
+        'SA(0.3)_mean': numpy.exp(predicted_D[1] + zeta_D[1]),
+        'SA(0.3)_std': [0.15, 0.25]}
+    between = numpy.array([[1.0, 0.35], [0.35, 1.0]])
+    inp = Input(
+        range(1), range(2), imts, imts, pandas.DataFrame(stations),
+        MatrixModel(),
+        SimpleNamespace(correlation_matrix=lambda _: between), None)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[0, 0] = predicted_D
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[0, 0, :, 0] = [1.0, 2.0]
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(
+        inp, mean_stds_D, numpy.zeros((2, 2)))
+    joint = build_joint_conditioning(
+        inp, mean_stds_Y, station,
+        numpy.zeros((1, 1)), numpy.zeros((1, 2)))
+
+    phi_D = numpy.array([0.6, 0.7, 0.8, 0.9])
+    phi_Y = numpy.array([0.65, 0.85])
+    tau_D = numpy.array([
+        [0.2, 0.0], [0.3, 0.0], [0.0, 0.4], [0.0, 0.5]])
+    tau_Y = numpy.array([[0.25, 0.0], [0.0, 0.45]])
+    cov_WD_WD = (blocks[(2, 2)] * phi_D[:, None] * phi_D +
+                 numpy.diag([0.1, 0.2, 0.15, 0.25]) ** 2)
+    cov_WY_WD = blocks[(1, 2)] * phi_Y[:, None] * phi_D
+    cov_WY_WY = blocks[(1, 1)] * phi_Y[:, None] * phi_Y
+    aac(station.cov_YD_YD, cov_WD_WD + tau_D @ between @ tau_D.T)
+    aac(joint.cov_Y_YD, cov_WY_WD + tau_Y @ between @ tau_D.T)
+    aac(joint.cov_YY, cov_WY_WY + tau_Y @ between @ tau_Y.T)
+    expected_mean, expected_covariance = _engler_posterior(
+        numpy.array([1.0, 2.0]), zeta_D.reshape(-1),
+        cov_WD_WD, cov_WY_WD, cov_WY_WY,
+        tau_D, tau_Y, between)
+
+    mean, covariance = joint.mean_covariance()
+    aac(mean, expected_mean, rtol=1E-7, atol=1E-7)
+    aac(covariance, expected_covariance, rtol=1E-7, atol=1E-7)
+
+
+def test_matheron_transform():
+    # Paired prior draws must reproduce the Schur-complement posterior.
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = 1.0
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    YY = compute_distance_matrix(inp.sites_Y, inp.sites_Y)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 1))
+    mean_stds_Y[0, 0, :, 0] = [0.1, 0.2]
+    mean_stds_Y[2, 0, :, 0] = [0.25, 0.45]
+    mean_stds_Y[3, 0, :, 0] = [0.65, 0.85]
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    joint = build_joint_conditioning(inp, mean_stds_Y, station, YY, YD)
+    mean, covariance = joint.mean_covariance()
+    expected = joint.cov_YY - (
+        joint.cov_Y_YD @ station.solve(joint.cov_Y_YD.T))
+    aac(mean, joint.mu_Y)
+    aac(covariance, expected)
+
+    prior = numpy.block([
+        [joint.cov_YY, joint.cov_Y_YD],
+        [joint.cov_Y_YD.T, station.cov_YD_YD]])
+    factor = numpy.linalg.cholesky(prior)
+    num_targets = len(joint.mu_Y)
+    transformed = joint.condition(
+        factor[:num_targets], factor[num_targets:])
+    centered = transformed - mean[:, None]
+    aac(centered @ centered.T, covariance, atol=1E-12)
+
+
+def test_joint_sampling_path():
+    # A joint model must bypass the historical per-IMT calculation.
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = 1.0
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=99)
+    cmaker.oq.truncated_mvn = False
+    cmaker.oq.correlation_cutoff = 2E-4
+    pre = build_precomputed(test_data.RUP, cmaker, inp)
+    assert pre.DY is None
+    conditioner = pre.conditioners[0]
+    conditioner.get_mu_tau_phi = mock.Mock(
+        side_effect=AssertionError('legacy per-IMT path used'))
+    computer = SimpleNamespace(
+        E=2, M=2, N=1, seed=7, inp=inp, cmaker=cmaker,
+        tlw=cmaker.truncation_level_within,
+        tlb=cmaker.truncation_level_between)
+    monitor = performance.Monitor()
+    monitor.set_shared(YY=pre.YY, YD=pre.YD, DD=pre.DD)
+
+    result = conditioned(computer, conditioner, monitor)[0]
+    station = build_station_conditioning(
+        inp, conditioner.mean_stds_D, pre.DD)
+    joint = build_joint_conditioning(
+        inp, conditioner.mean_stds_Y, station, pre.YY, pre.YD)
+    expected = joint.sample(
+        numpy.random.default_rng(7), 2, cmaker.oq.correlation_cutoff)
+    mean, _ = joint.mean_covariance()
+    aac(result[:, :, :2], expected.reshape(2, 1, 2))
+    aac(result[:, :, 2], mean.reshape(2, 1))
+
+
+def test_joint_mean_path():
+    # A deterministic joint calculation must not build target covariances.
+    imts = [PGA(), SA(0.3)]
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=0)
+    cmaker.oq.truncated_mvn = True
+    pre = build_precomputed(
+        test_data.RUP, cmaker, inp, compute_covs=False)
+    conditioner = pre.conditioners[0]
+    conditioner.get_mu_tau_phi = mock.Mock(
+        side_effect=AssertionError('legacy per-IMT path used'))
+    computer = SimpleNamespace(
+        E=2, M=2, N=1, seed=7, inp=inp, cmaker=cmaker,
+        tlw=cmaker.truncation_level_within,
+        tlb=cmaker.truncation_level_between,
+        conditioning_block_elements=8)
+    monitor = performance.Monitor()
+    monitor.set_shared(DD=pre.DD)
+
+    result = conditioned(computer, conditioner, monitor)[0]
+    station = build_station_conditioning(
+        inp, conditioner.mean_stds_D, pre.DD)
+    expected = conditioned_mean_in_chunks(
+        inp, conditioner.mean_stds_Y, station,
+        computer.conditioning_block_elements)
+    aac(result[:, :, :2], numpy.repeat(expected[:, :, None], 2, axis=2))
+    aac(result[:, :, 2], expected)
+
+    computer.tlw = computer.tlb = 3
+    with numpy.testing.assert_raises_regex(
+            ValueError, 'Finite truncated multivariate-normal'):
+        conditioned(computer, conditioner, monitor)
+
+
+def test_singular_station_sampling():
+    cov_YD_YD = numpy.ones((2, 2))
+    station = StationConditioning(
+        numpy.zeros(2), (), (), numpy.ones(2, dtype=bool),
+        numpy.zeros(2, dtype=int), numpy.ones(2), numpy.ones(2),
+        numpy.ones(2), numpy.ones((2, 1)), numpy.ones((1, 1)),
+        cov_YD_YD, numpy.linalg.pinv(cov_YD_YD, hermitian=True))
+    joint = JointConditioning(
+        numpy.array([0.5]), numpy.ones((1, 1)),
+        numpy.ones((1, 2)), station)
+
+    samples = joint.sample(numpy.random.default_rng(7), 3)
+    aac(samples, numpy.full((1, 3), 0.5), atol=1E-12)
+
+
+def test_incompatible_station_system():
+    stations = pandas.DataFrame({
+        'PGA_mean': [1.0, numpy.e],
+        'PGA_std': [0.0, 0.0]})
+    inp = Input(
+        range(1), range(2), [PGA()], [PGA()], stations,
+        DuNing2021(), NoCrossCorrelation(), None)
+    mean_stds_D = numpy.zeros((4, 1, 1, 2))
+    mean_stds_D[2, 0] = 0.6
+    mean_stds_D[3, 0] = 0.8
+
+    with numpy.testing.assert_raises_regex(
+            ValueError, 'incompatible with their singular covariance'):
+        build_station_conditioning(
+            inp, mean_stds_D, numpy.zeros((2, 2)))
+
+    inp.stations['PGA_mean'] = 1.0
+    station = build_station_conditioning(
+        inp, mean_stds_D, numpy.zeros((2, 2)))
+    mean_stds_Y = numpy.zeros((4, 1, 1, 1))
+    mean_stds_Y[2, 0] = 0.6
+    mean_stds_Y[3, 0] = 0.8
+    joint = build_joint_conditioning(
+        inp, mean_stds_Y, station,
+        numpy.zeros((1, 1)), numpy.zeros((1, 2)))
+    aac(joint.posterior_mean(), 0.0, atol=1E-12)
+
+
+def test_chunked_joint_mean():
+    imts = [PGA(), SA(0.3)]
+    target_sites = test_data.CASE01_TARGET_SITECOL.filtered(
+        numpy.array([0, 2, 4, 6, 8]))
+    numpy.testing.assert_array_equal(target_sites.sids, [0, 2, 4, 6, 8])
+    station_data = test_data.CASE01_STATION_DATA.copy()
+    station_data['PGA_std'] = [0.1, 0.2]
+    station_data['SA(0.3)_mean'] = numpy.exp([0.3, -0.2])
+    station_data['SA(0.3)_std'] = [0.3, 0.4]
+    inp = Input(
+        target_sites, test_data.CASE01_STATION_SITECOL,
+        imts, imts, station_data, DuNing2021(),
+        NoCrossCorrelation(), None)
+    DD = compute_distance_matrix(inp.sites_D, inp.sites_D)
+    YD = compute_distance_matrix(inp.sites_Y, inp.sites_D)
+    mean_stds_D = numpy.zeros((4, 1, 2, 2))
+    mean_stds_D[2, 0] = [[0.2, 0.3], [0.4, 0.5]]
+    mean_stds_D[3, 0] = [[0.6, 0.7], [0.8, 0.9]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, 5))
+    mean_stds_Y[0, 0, 0] = numpy.arange(5) / 10
+    mean_stds_Y[0, 0, 1] = numpy.arange(5) / 5
+    mean_stds_Y[2, 0] = 0.4
+    mean_stds_Y[3, 0] = 0.8
+
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    full = build_joint_conditioning(
+        inp, mean_stds_Y, station, None, YD)
+    expected, _ = full.mean_covariance()
+    block_for_two_sites = 2 * len(imts) * len(imts) * len(inp.sites_D)
+    chunked = conditioned_mean_in_chunks(
+        inp, mean_stds_Y, station, block_for_two_sites)
+    aac(chunked, expected.reshape(2, 5))
 
 
 def mc(rupture, cmaker, station_sitecol, station_data,
