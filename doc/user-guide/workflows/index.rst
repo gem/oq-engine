@@ -71,6 +71,11 @@ quantities such as losses, fatalities, or loss of functionality.
      - Vulnerability
      - ``event_based_risk``
      - :ref:`event-based-risk-intro`
+   * - What damage could ground shaking and triggered ground failure cause?
+     - Scenario ground motions and secondary-peril fields
+     - One fragility model per peril
+     - ``scenario_damage``
+     - :ref:`multi-peril-risk-intro`
    * - Is a retrofit economically beneficial?
      - Classical hazard curves
      - Original and retrofitted vulnerability
@@ -103,6 +108,9 @@ types of analysis are currently supported:
   of insurance and reinsured aggregate loss curves with different schemes
   (proportional and nonproportional treaties).
 - :ref:`infrastructure-risk-intro`: *Infrastructure Risk Analysis*, for the calculation of infrastructure risk connectivity (functionality/operationality) at global and nodal level.
+- :ref:`multi-peril-risk-intro`: *Multi-peril Scenario Damage*, for the
+  calculation of damage and consequences from ground shaking, liquefaction,
+  and landslides in a single scenario.
 
 
 Each calculation workflow has a modular structure, so that intermediate results can be saved and analyzed. Moreover, 
@@ -119,6 +127,7 @@ the following sections.
    scenario-risk
    classical-risk
    event-based-risk
+   multi-peril-risk
    refrofit-benefit-cost
    reinsurance
    infrastructure-risk
