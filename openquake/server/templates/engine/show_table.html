@@ -53,7 +53,7 @@
               <h4>Definitions</h4>
               <ul>
                 {% for item in field_explanations %}
-                <li><strong>{{ item.description }}:</strong> {{ item.explanation }}</li>
+                <li><strong>{{ item.description }}:</strong> {{ item.explanation|safe }}</li>
                 {% endfor %}
               </ul>
               {% else %}

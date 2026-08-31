@@ -48,6 +48,7 @@ from django.core.mail.backends.filebased import (
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
+from django.utils.html import urlize
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
@@ -2663,7 +2664,7 @@ def extract_html_table(request, calc_id, name):
         field_explanations = [
             {
                 'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
-                'explanation': explanation,
+                'explanation': urlize(explanation),
             }
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
         ]
