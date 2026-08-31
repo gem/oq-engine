@@ -316,8 +316,9 @@ file like the following::
 	number_of_ground_motion_fields = 10
 	truncation_level = 3
 	shakemap_id = usp000fjta
-	spatial_correlation = yes
-	cross_correlation = yes
+	within_event_correlation_model = JayaramBaker2009
+	within_event_correlation_params = {"vs30_clustering": True}
+	total_residual_correlation_model = BakerCornell2006
 
 This example refers to the 2007 Mw8.0 Pisco earthquake in Peru 
 (see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap). 
@@ -385,27 +386,17 @@ Irrespective of the input, the engine will perform the following operations:
 Correlation
 ***********
 
-By default the engine tries to compute both the spatial correlation and the cross 
-correlation between different intensity measure types. Please note that if you 
-are using MMI as intensity measure type in your vulnerability model, it is not 
-possible to apply correlations since those are based on physical measures.
+ShakeMap and regular calculations use the same named correlation models. Set
+``within_event_correlation_model`` and/or
+``total_residual_correlation_model`` to a registered model name. Omitting a
+parameter disables that kind of correlation. The example above preserves the
+historical ShakeMap defaults: Jayaram and Baker (2009) spatial correlation with
+clustered Vs30, and Baker and Cornell (2006) total-residual cross-IMT
+correlation.
 
-For each kind of correlation you have three choices, that you can set in the 
-*job.ini*, for a total of nine combinations::
-
-	- spatial_correlation = yes, cross_correlation = yes  # the default
-	- spatial_correlation = no, cross_correlation = no   # disable everything
-	- spatial_correlation = yes, cross_correlation = no
-	- spatial_correlation = no, cross_correlation = yes
-	- spatial_correlation = full, cross_correlation = full
-	- spatial_correlation = yes, cross_correlation = full
-	- spatial_correlation = no, cross_correlation = full
-	- spatial_correlation = full, cross_correlation = no
-	- spatial_correlation = full, cross_correlation = yes
-
-yes means using the correlation matrix of the `Silva-Horspool <https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154>`__
-paper; *no* mean using no correlation; *full* means using an all-ones correlation 
-matrix.
+MMI is not a physical ground-motion measure, so correlation models configured
+for MMI-only ShakeMaps are ignored. Other IMTs are checked against each
+model's declared scope before the calculation starts.
 
 Apart from performance considerations, disabling either the spatial correlation 
 or the cross correlation (or both) might be useful to see how significant the 
@@ -438,8 +429,9 @@ is feasible, so the risk computation can be performed.
 
 Clearly in situations in which the number of hazard sites is too large, 
 approximations will have to be made such as using a larger *region_grid_spacing*. 
-Disabling spatial AND cross correlation makes it possible run much larger 
-calculations. The performance can be further increased by not using a ``truncation_level``.
+Omitting both correlation model parameters makes it possible to run much larger
+calculations. The performance can be further increased by not using a
+``truncation_level``.
 
 When applying correlation, a soft cap on the size of the calculations is defined. 
 This is done and modifiable through the parameter ``cholesky_limit`` which refers to 

@@ -1,3 +1,36 @@
+  [Anirudh Rao]
+  * Add the Du and Ning (2021) within-event joint spatial and cross-IMT
+    correlation model for PGA, SAs at 17 periods, PGV, Ia, CAV, and 
+    significant durations
+  * Add the Baker and Bradley (2017) empirical cross-IMT correlation model 
+    as measured from the NGA-West2 database for PGA, SA, PGV, IA, and 
+    Significant Duration (for 5–75% and 5–95% definitions)
+  * Harmonize correlation module metadata with GSIM conventions, abstract
+    out common validation functions to the correlation base class
+  * Add independent verification for pre-existing correlation models, and 
+    remove unsupported IMT combinations
+  * Add the Wang and Du (2013) joint spatial and cross-IMT within-event
+    correlation models for PGA-IA-PGV and SAs considering regional site-
+    conditions
+  * Add the Markhvida et al. (2018) joint spatial and cross-IMT within-event
+    correlation model 
+
+  [Vitor Azevedo Monteiro, Anirudh Rao]
+  * Add the Schiappapietra et al. and Aldea et al. (2022) within-event
+    spatial correlation models
+
+  [Anirudh Rao]
+  * Speed up `truncation_level = 0` case for the conditioned gmfs calculator
+  * Treat ShakeMap grid.xml values as medians and not as arithmetic means
+  * Refactor spatial and cross-IMT correlation models into a common registry,
+    with one module per model and backward-compatible legacy imports
+  * Standardize correlation settings across regular and ShakeMap calculations
+  * Correct the Heresi and Miranda model publication year and document the
+    references for the implemented correlation models
+  * Introduce residual-specific correlation configuration parameters
+  * Add the Loth and Baker (2013) joint spatial and cross-IMT within-event
+    correlation model
+
   [Michele Simionato]
   * Vectorized MultiEventRNG.beta and doubled the speed of the Global Risk Model
   * Improved the task distribution for ebrisk calculations and saved memory

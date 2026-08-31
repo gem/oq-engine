@@ -26,7 +26,10 @@ from openquake.calculators.base import calculators, store_gmfs
 
 # see qa_tests_data/scenario/case_21
 def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
-         trunclevel: float = 3, spatialcorr='yes', crosscorr='yes',
+         trunclevel: float = 3, within_event_correlation_model='',
+         within_event_correlation_params='',
+         total_residual_correlation_model='',
+         total_residual_correlation_params='',
          cholesky_limit: int = 10_000, imt_mode='warn'):
     """
     Given a shakemap ID and a path to a site_model.csv file build a
@@ -46,6 +49,16 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
                  calculation_mode='scenario',
                  random_seed=str(random_seed),
                  inputs={'job_ini': '<memory>'})
+    if within_event_correlation_model:
+        param['within_event_correlation_model'] = (
+            within_event_correlation_model)
+        param['within_event_correlation_params'] = (
+            within_event_correlation_params)
+    if total_residual_correlation_model:
+        param['total_residual_correlation_model'] = (
+            total_residual_correlation_model)
+        param['total_residual_correlation_params'] = (
+            total_residual_correlation_params)
     if site_model:
         param['inputs']['site_model'] = [os.path.abspath(site_model)]
     else:
@@ -68,8 +81,10 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
         calc.datastore['sitecol'] = sitecol
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         gmfdic = {'kind': 'Silva&Horspool',
-                  'spatialcorr': spatialcorr,
-                  'crosscorr': crosscorr,
+                  'spatial_model':
+                  oq.get_within_event_correlation_model(),
+                  'cross_imt_model':
+                  oq.get_total_residual_correlation_model(),
                   'cholesky_limit': cholesky_limit}
         store_gmfs(calc, sitecol, shakemap, gmfdic)
     gmv = float(calc.datastore.read_df('gmf_data')[imts[0]].max())
@@ -82,7 +97,9 @@ main.site_model = 'Path to site model file'
 main.num_gmfs = 'Number of GMFs to generate'
 main.random_seed = 'Random seed to use'
 main.trunclevel = 'Truncation level'
-main.spatialcorr = 'Spatial correlation'
-main.crosscorr = 'Cross correlation among IMTs'
+main.within_event_correlation_model = 'Within-event correlation model name'
+main.within_event_correlation_params = 'Within-event model parameters'
+main.total_residual_correlation_model = 'Total-residual model name'
+main.total_residual_correlation_params = 'Total-residual model parameters'
 main.cholesky_limit = 'Cholesky Limit'
 main.imt_mode = 'if "strict", raise an error in case expected imts are missing'

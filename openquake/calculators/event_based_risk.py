@@ -333,6 +333,7 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
+    # NB: there is one dataframe per filtered rupture
     dfs = (dic['gmfdata'] for dic in event_based.event_based(
         allrups, cmakers, sids, secperils, dstore, monitor)
            if len(dic['gmfdata']))
@@ -341,9 +342,10 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
             dfs, AE_MAX, lambda gmf_df: num_assets[gmf_df.sid].sum()):
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around AE_MAX) and hence a good performance
-        na = int(sum(num_assets[df.sid].sum() for df in blk))
-        if na > AE_MAX:  # big task
-            print(f'{monitor.calc_id=}, {monitor.task_no=}, {na=:_d}')
+        ae = int(sum(num_assets[df.sid].sum() for df in blk))
+        if ae > AE_MAX:  # big task
+            calc_id, task_no = monitor.calc_id, monitor.task_no
+            print(f'{calc_id=}, {task_no=}, {ae=:_d}')
             yield event_based_risk, pandas.concat(blk)
         else:
             yield event_based_risk(pandas.concat(blk), monitor)

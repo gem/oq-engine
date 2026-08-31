@@ -197,7 +197,7 @@ class Oq(object):
     """
     af = None
     impact = False
-    cross_correl = None
+    total_residual_correlation_model = None
     mea_tau_phi = False
     split_sources = True
     keep_rupdata = True
@@ -529,6 +529,15 @@ class ContextMaker(object):
     source_mb = 0  # set in build_dparam
     dt = 0
 
+    @property
+    def cross_correl(self):
+        """Compatibility alias for the total-residual correlation model."""
+        return self.total_residual_correlation_model
+
+    @cross_correl.setter
+    def cross_correl(self, model):
+        self.total_residual_correlation_model = model
+
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
         if isinstance(oq, dict):
@@ -536,12 +545,23 @@ class ContextMaker(object):
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
-            self.cross_correl = param.get('cross_correl')  # cond_spectra_test
+            self.total_residual_correlation_model = param.get(
+                'total_residual_correlation_model',
+                param.get('cross_correl'))
         else:  # OqParam
             param = vars(oq)
             param['reqv'] = oq.get_reqv()
             param['af'] = getattr(oq, 'af', None)
-            self.cross_correl = oq.cross_correl
+            try:
+                resolver = oq.get_total_residual_correlation_model
+            except AttributeError:
+                self.total_residual_correlation_model = getattr(
+                    oq, 'total_residual_correlation_model', None)
+                if self.total_residual_correlation_model is None:
+                    self.total_residual_correlation_model = getattr(
+                        oq, 'cross_correl', None)
+            else:
+                self.total_residual_correlation_model = resolver()
             self.imtls = oq.imtls
             try:
                 self.mags = oq.mags_by_trt[trt]

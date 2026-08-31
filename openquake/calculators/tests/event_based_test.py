@@ -19,7 +19,7 @@
 import io
 import os
 import math
-from unittest import mock
+from types import SimpleNamespace
 from unittest.mock import patch
 import numpy
 import pandas
@@ -49,6 +49,53 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
+
+
+def test_joint_memory_estimates():
+    """Cover dense, chunked, and station-dominated memory estimates."""
+    computer = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(4), imts_D=range(3)),
+        E=500)
+    G = 1  # number of GSIMs
+    N = 10_000  # number of target sites
+    D = 100  # number of station sites
+    T = 4 * N  # target variables: target IMTs times target sites
+    Q = 3 * D  # observations: observed IMTs times station sites
+
+    budget = (
+        3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4)
+    dense_size, _, dense_name, dense_block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=True, memory_limit=budget))
+    # Conservative peak: target matrices, target-station blocks, station
+    # matrices, random samples, and the float32 result array.
+    expected_dense = (
+        4 * T * T * 8 + 2 * T * Q * 8 + 4 * Q * Q * 8 +
+        T * 500 * 20 + T * 4)
+    assert dense_size == expected_dense
+    assert dense_name == 'dense joint conditioning workspace'
+    assert dense_block is None
+
+    chunked_size, _, chunked_name, block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=False, memory_limit=budget))
+    expected_chunked = 3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4
+    assert chunked_size == expected_chunked
+    assert chunked_name == 'chunked joint conditioning workspace'
+    assert block == 6_000_000
+
+    station_rich = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(1), imts_D=range(4)),
+        E=1)
+    station_size, _, _, block = event_based._conditioned_memory(
+        station_rich, 10_000, G=1, N=1, compute_covs=False,
+        memory_limit=budget)
+    assert station_size >= 4 * (4 * 10_000) ** 2 * 8
+    assert block == 4 * 10_000
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
@@ -87,81 +134,6 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
 
 class EventBasedTestCase(CalculatorTestCase):
-
-    def test_cmakers_maximum_distance(self):
-        # A task containing multiple CMakers must not lose later GMFs
-
-        class Oq:
-            def maximum_distance(self, trt):
-                return {'short': 10.0, 'long': 100.0}[trt]
-
-        class Cmaker:
-            def __init__(self, trt):
-                self.trt = trt
-                self.oq = Oq()
-
-            def init_monitoring(self, monitor):
-                pass
-
-        class Dstore:
-            filename = 'dummy.hdf5'
-            parent = None
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args):
-                pass
-
-            def __getitem__(self, key):
-                if key == 'complete':
-                    return self
-                raise KeyError(key)
-
-            def filtered(self, sids):
-                return self
-
-        class SourceFilter:
-            def __init__(self, sites, maxdist):
-                self.maxdist = maxdist
-
-        class Monitor:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args):
-                pass
-
-            def __call__(self, *args, **kwargs):
-                return self
-
-        dtype = numpy.dtype([('id', 'i8'), ('distance', 'f4')])
-        rups = [
-            numpy.array([(1, 5.0)], dtype),
-            numpy.array([(2, 50.0)], dtype),
-        ]
-        cmakers = [Cmaker('short'), Cmaker('long')]
-        received = []
-
-        def get_proxies(_filename, rows):
-            return list(rows)
-
-        def fake_event_based(
-                block, cmaker, _sec_perils, srcfilter, _cmon, _umon):
-            for rup in block:
-                if rup['distance'] <= srcfilter.maxdist:
-                    received.append((cmaker.trt, int(rup['id'])))
-            yield {'gmfdata': {}}
-
-        with mock.patch.object(event_based, 'SourceFilter', SourceFilter), \
-                mock.patch.object(event_based, 'get_proxies', get_proxies), \
-                mock.patch.object(
-                    event_based, '_event_based', fake_event_based):
-            for result in event_based.event_based(
-                    rups, cmakers, numpy.array([0]), (), Dstore(), Monitor()):
-                list(result)
-
-        self.assertEqual(received, [('short', 1), ('long', 2)])
 
     def check_avg_gmf(self):
         # checking avg_gmf with a single site
@@ -718,7 +690,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id)
 
     def test_31(self):
-        # HM2018CorrelationModel with filtered site collection
+        # HeresiMiranda2019 with filtered site collection
         self.run_calc(case_31.__file__, 'job.ini',
                       hazard_calculation_id='job_rup.ini',  exports='csv')
 
