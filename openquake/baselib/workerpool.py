@@ -22,7 +22,7 @@ import socket
 import getpass
 import functools
 import subprocess
-from datetime import datetime, timezone
+from datetime import timezone
 from concurrent.futures import ProcessPoolExecutor
 import psutil
 from openquake.baselib import (
@@ -250,16 +250,6 @@ def debug_task(msg, mon):
     return mon.task_no
 
 
-def on_done(job_id, task_no, fut):
-    if (exc := fut.exception()) is not None:
-        # NB: job_id can be None if the Starmap was invoked without h5
-        from openquake.commonlib.logs import dbcmd
-        dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
-              '%s/%s' % (job_id, task_no), str(exc))
-        e = exc.__class__('in job %d, task %d' % (job_id, task_no))
-        raise e.with_traceback(exc.__traceback__)
-
-
 class WorkerPool(object):
     """
     A pool of workers accepting various commands.
@@ -325,8 +315,7 @@ class WorkerPool(object):
                     subprocess.Popen(lst)
                     ctrlsock.send("started %d" % self.job_id)
                 elif cmd == 'memory_gb':
-                    ctrlsock.send(performance.memory_gb(
-                        self.pool._processes))
+                    ctrlsock.send(performance.memory_gb(self.pool._processes))
                 elif isinstance(cmd, tuple):
                     _func, _args, taskno, mon = cmd
                     fut = self.pool.submit(parallel.safely_call, *cmd)
@@ -334,15 +323,22 @@ class WorkerPool(object):
                     self.futures.add(fut)
                     fut.add_done_callback(self.futures.discard)
                     fut.add_done_callback(
-                        functools.partial(on_done, mon.calc_id, taskno))
+                        functools.partial(self.on_done, mon.calc_id, taskno))
                     ctrlsock.send('submitted')
                 else:
                     ctrlsock.send('unknown command')
+
+    def on_done(self, job_id, task_no, fut):
+        if exc := fut.exception():
+            print(f'{exc} {job_id=}, {task_no=}')
+            if self.futures:
+                self.stop()
 
     def stop(self):
         """
         Terminate the pool
         """
+        print('Shutting down the pool')
         if hasattr(self.pool, '_processes') and self.pool._processes:
             for proc in self.pool._processes.values():
                 proc.terminate()
