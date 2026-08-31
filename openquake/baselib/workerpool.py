@@ -257,25 +257,18 @@ def call(func, args, taskno, mon, executing):
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
-    try:
-        parallel.safely_call(func, args, taskno, mon)
-    finally:
-        if os.path.exists(fname):
-            os.remove(fname)
+    parallel.safely_call(func, args, taskno, mon)
+    os.remove(fname)  # NB: there is no try..finally on purpose
 
 
-def errback(job_id, task_no, exc):
-    # NB: job_id can be None if the Starmap was invoked without h5
-    from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
-          '%s/%s' % (job_id, task_no), str(exc))
-    e = exc.__class__('in job %d, task %d' % (job_id, task_no))
-    raise e.with_traceback(exc.__traceback__)
-
-
-def on_done(calc_id, task_no, fut):
+def on_done(job_id, task_no, fut):
     if (exc := fut.exception()) is not None:
-        errback(calc_id, task_no, exc)
+        # NB: job_id can be None if the Starmap was invoked without h5
+        from openquake.commonlib.logs import dbcmd
+        dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
+              '%s/%s' % (job_id, task_no), str(exc))
+        e = exc.__class__('in job %d, task %d' % (job_id, task_no))
+        raise e.with_traceback(exc.__traceback__)
 
 
 class WorkerPool(object):
