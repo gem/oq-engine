@@ -49,6 +49,13 @@
             <div id="summary-btn">
               {% if is_summary %}
               <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=0" class="btn btn-sm">Show full table</a>
+              <hr/>
+              <h4>Definitions</h4>
+              <ul>
+                {% for item in field_explanations %}
+                <li><strong>{{ item.description }}:</strong> {{ item.explanation }}</li>
+                {% endfor %}
+              </ul>
               {% else %}
               <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">Show summary</a>
               {% endif %}

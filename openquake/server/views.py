@@ -63,8 +63,8 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
-    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION,
-    DISPLAY_NAME)
+    export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
+    EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -2638,6 +2638,7 @@ def extract_html_table(request, calc_id, name):
     }
 
     table_contents = table.to_numpy()
+    field_explanations = {}
     if summarize and name == 'aggrisk_tags':  # the impact table
         # keep only rows with '*total*' and discard first and last 2 columns
         # (ID_0, ID and NAME)
@@ -2659,6 +2660,13 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+        field_explanations = [
+            {
+                'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
+                'explanation': explanation,
+            }
+            for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+        ]
 
     # Decode byte strings to plain str
     table_rows = [
@@ -2673,7 +2681,8 @@ def extract_html_table(request, calc_id, name):
                    'table_name': table_name,
                    'table_header': table_header,
                    'table_rows': table_rows,
-                   'string_columns': string_columns})
+                   'string_columns': string_columns,
+                   'field_explanations': field_explanations})
 
 
 @csrf_exempt
