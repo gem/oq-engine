@@ -18,10 +18,8 @@
 import os
 import sys
 import time
-import shutil
 import socket
 import getpass
-import tempfile
 import functools
 import subprocess
 from datetime import datetime, timezone
@@ -252,15 +250,6 @@ def debug_task(msg, mon):
     return mon.task_no
 
 
-def call(func, args, taskno, mon, executing):
-    fname = os.path.join(executing, f'{mon.calc_id}-{taskno}')
-    # NB: very hackish way of keeping track of the running tasks,
-    # used in get_executing, could litter the file system
-    open(fname, 'w').close()
-    parallel.safely_call(func, args, taskno, mon)
-    os.remove(fname)  # NB: there is no try..finally on purpose
-
-
 def on_done(job_id, task_no, fut):
     if (exc := fut.exception()) is not None:
         # NB: job_id can be None if the Starmap was invoked without h5
@@ -289,13 +278,8 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.calc_dir = parallel.calc_dir(job_id)
-        self.executing = tempfile.mkdtemp(
-            dir=self.calc_dir if job_id else None)
-        try:
-            os.mkdir(self.executing)
-        except FileExistsError:  # already created by another WorkerPool
-            pass
         self.pid = os.getpid()
+        self.futures = []
 
     def start(self):
         """
@@ -316,43 +300,45 @@ class WorkerPool(object):
         self.pool = ProcessPoolExecutor(
             self.num_workers, general.mp, init_workers)
         # start control loop accepting the commands stop
-        try:
-            ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
-            with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
-                for cmd in ctrlsock:
-                    if cmd == 'stop':
-                        ctrlsock.send(self.stop())
-                        break
-                    elif cmd == 'restart':
-                        self.stop()
-                        self.pool = ProcessPoolExecutor(
-                            self.num_workers, general.mp, init_workers)
-                        ctrlsock.send('restarted')
-                    elif cmd == 'getpid':
-                        ctrlsock.send(self.pid)
-                    elif cmd == 'get_num_workers':
-                        ctrlsock.send(self.num_workers)
-                    elif cmd == 'get_executing':
-                        executing = sorted(os.listdir(self.executing))
-                        ctrlsock.send(' '.join(executing))
-                    elif cmd == 'run_jobs':
-                        pik = os.path.join(self.calc_dir, 'jobs.pik')
-                        lst = ['python', '-m', 'openquake.engine.engine', pik]
-                        subprocess.Popen(lst)
-                        ctrlsock.send("started %d" % self.job_id)
-                    elif cmd == 'memory_gb':
-                        ctrlsock.send(performance.memory_gb(
-                            self.pool._processes))
-                    elif isinstance(cmd, tuple):
-                        _func, _args, taskno, mon = cmd
-                        fut = self.pool.submit(call, *cmd, self.executing)
-                        fut.add_done_callback(
-                            functools.partial(on_done, mon.calc_id, taskno))
-                        ctrlsock.send('submitted')
-                    else:
-                        ctrlsock.send('unknown command')
-        finally:
-            shutil.rmtree(self.executing)
+        ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
+        with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+            for cmd in ctrlsock:
+                if cmd == 'stop':
+                    ctrlsock.send(self.stop())
+                    break
+                elif cmd == 'restart':
+                    self.stop()
+                    self.pool = ProcessPoolExecutor(
+                        self.num_workers, general.mp, init_workers)
+                    self.futures = []
+                    ctrlsock.send('restarted')
+                elif cmd == 'getpid':
+                    ctrlsock.send(self.pid)
+                elif cmd == 'get_num_workers':
+                    ctrlsock.send(self.num_workers)
+                elif cmd == 'get_executing':
+                    self.futures = [f for f in self.futures if not f.done()]
+                    ctrlsock.send(
+                        ' '.join(sorted(f.task_id for f in self.futures)))
+                elif cmd == 'run_jobs':
+                    pik = os.path.join(self.calc_dir, 'jobs.pik')
+                    lst = ['python', '-m', 'openquake.engine.engine', pik]
+                    subprocess.Popen(lst)
+                    ctrlsock.send("started %d" % self.job_id)
+                elif cmd == 'memory_gb':
+                    ctrlsock.send(performance.memory_gb(
+                        self.pool._processes))
+                elif isinstance(cmd, tuple):
+                    _func, _args, taskno, mon = cmd
+                    self.futures = [f for f in self.futures if not f.done()]
+                    fut = self.pool.submit(parallel.safely_call, *cmd)
+                    fut.task_id = f'{mon.calc_id}-{taskno}'
+                    fut.add_done_callback(
+                        functools.partial(on_done, mon.calc_id, taskno))
+                    self.futures.append(fut)
+                    ctrlsock.send('submitted')
+                else:
+                    ctrlsock.send('unknown command')
 
     def stop(self):
         """
@@ -362,6 +348,7 @@ class WorkerPool(object):
             for proc in self.pool._processes.values():
                 proc.terminate()
         self.pool.shutdown()
+        self.futures = []
         return 'WorkerPool on %s stopped' % self.hostname
 
 
