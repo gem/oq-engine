@@ -469,8 +469,10 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_no_uncertainties(self):
         oq = readinput.get_oqparam('job.ini', case_25)
+        csm = readinput.get_composite_source_model(oq)
+        self.assertEqual(len(csm.src_groups), 27)  # many groups :-(
         csm = readinput.get_composite_source_model(oq, apply_unc=False)
-        self.assertEqual(len(csm.src_groups), 6)
+        self.assertEqual(len(csm.src_groups), 6)  # less groups :-)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
