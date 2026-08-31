@@ -42,7 +42,7 @@ from openquake.hazardlib.calc.conditioned_gmfs import (
     compute_distance_matrix, conditionable_imts, conditioned,
     conditioned_mean_in_chunks, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input,
-    JointConditioning, StationConditioning)
+    JointConditioning, select_observed_imts, StationConditioning)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
@@ -51,6 +51,41 @@ aac = numpy.testing.assert_allclose
 
 def test_pgv_is_conditionable():
     assert conditionable_imts([PGA(), PGV(), MMI()]) == [PGA(), PGV()]
+
+
+def test_observed_imt_support():
+    target = [PGA(), SA(0.3)]
+    observed = [PGA(), PGV(), SA(0.3), MMI()]
+    all_imts = SimpleNamespace(
+        DEFINED_FOR_INTENSITY_MEASURE_TYPES={PGA, PGV, SA})
+    spectral_only = SimpleNamespace(
+        DEFINED_FOR_INTENSITY_MEASURE_TYPES={PGA, SA})
+    models = [DuNing2021(), NoCrossCorrelation()]
+
+    assert select_observed_imts(
+        target, observed, all_imts, models) == observed[:3]
+    assert select_observed_imts(
+        target, observed, spectral_only, models) == [
+            PGA(), SA(0.3)]
+
+
+def test_branch_observed_imts():
+    class PGVGMM(test_data.ZeroMeanGMM):
+        DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+
+    cmaker = simple_cmaker(
+        [PGVGMM(), test_data.ZeroMeanGMM()], [],
+        maximum_distance=test_data.MAX_DIST, truncation_level=0)
+    observed = [PGA(), PGV()]
+    inp = Input(
+        test_data.CASE07_TARGET_SITECOL,
+        test_data.CASE07_STATION_SITECOL,
+        [PGA()], observed, test_data.CASE07_STATION_DATA,
+        DuNing2021(), NoCrossCorrelation(), None)
+
+    pre = build_precomputed(test_data.RUP, cmaker, inp, compute_covs=False)
+    assert pre.conditioners[0].inp.imts_D == observed
+    assert pre.conditioners[1].inp.imts_D == [PGA()]
 
 
 def test_joint_within_covariance():

@@ -349,6 +349,31 @@ def conditionable_imts(imts):
     return [imt for imt in imts if imt.string != 'MMI']
 
 
+def _gsim_supports_imt(gsim, imt):
+    supported = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+    return (supported is None or
+            imt.name in {imt_type.__name__ for imt_type in supported})
+
+
+def select_observed_imts(target_imts, observed_imts, gsim, models):
+    """Return station IMTs supported by a GSIM and correlation models."""
+    for model in models:
+        model.validate_imts(target_imts)
+
+    selected = []
+    for candidate in conditionable_imts(observed_imts):
+        if not _gsim_supports_imt(gsim, candidate):
+            continue
+        trial = list(dict.fromkeys([*target_imts, *selected, candidate]))
+        try:
+            for model in models:
+                model.validate_imts(trial)
+        except ValueError:
+            continue
+        selected.append(candidate)
+    return selected
+
+
 def get_precomputed(rupture, cmaker, inp, compute_covs=True):
     """
     :param compute_covs: build matrices required only for random fields
@@ -477,13 +502,15 @@ class ConditionedGmfComputer(GmfComputer):
         self.rupture = rupture
 
         target_imts = conditionable_imts(self.imts)
+        within_event_model = within_event_model or JayaramBaker2009(clust)
+        between_event_model = between_event_model or GodaAtkinson2009()
+        separable_cross_imt_model = BakerJayaram2008()
 
         self.inp = Input(
             sitecol, station_sitecol,
             target_imts, observed_imts, station_data,
-            within_event_model or JayaramBaker2009(clust),
-            between_event_model or GodaAtkinson2009(),
-            BakerJayaram2008(), self.correlation_context)
+            within_event_model, between_event_model,
+            separable_cross_imt_model, self.correlation_context)
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
@@ -1114,6 +1141,9 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
     :return: Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, mtp_args) tuple
     """
     pre = get_precomputed(rupture, cmaker, inp, compute_covs)
+    models = [inp.within_event_model, inp.between_event_model]
+    if isinstance(inp.within_event_model, SpatialCorrelationModel):
+        models.append(inp.separable_cross_imt_model)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -1122,15 +1152,29 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
 
         # NB: there are relatively few stations, so cm.get_mean_stds([ctx_D])
         # is fast and done sequentially, while ctx_Y is done in parallel
+        imts_D = select_observed_imts(
+            inp.imts_Y, inp.imts_D, gsim, models)
+        skipped = [imt.string for imt in conditionable_imts(inp.imts_D)
+                   if imt not in imts_D]
+        if skipped:
+            logging.info(
+                'Skipping station IMTs unsupported by %s and its '
+                'correlation models: %s', gsim.__class__.__name__,
+                ', '.join(skipped))
+        if not imts_D:
+            raise ValueError(
+                'The station data contains no IMTs supported by '
+                f'{gsim.__class__.__name__} and its correlation models')
+        branch_inp = replace(inp, imts_D=imts_D)
         gdict = {gsim: cmaker.gsims[gsim]}
-        cm_D = cmaker.copy(imtls={im.string: [0] for im in inp.imts_D},
+        cm_D = cmaker.copy(imtls={im.string: [0] for im in imts_D},
                            gsims=gdict)
         mean_stds_D = cm_D.get_mean_stds([pre.ctx_D])
         cm_Y = cmaker.copy(
             imtls={imt.string: [0] for imt in inp.imts_Y}, gsims=gdict)
         mean_stds_Y = cm_Y.get_mean_stds([pre.ctx_Y])  # fast enough
         pre.conditioners.append(Conditioner(
-            g, gsim, inp, mean_stds_Y, mean_stds_D))
+            g, gsim, branch_inp, mean_stds_Y, mean_stds_D))
     return pre
 
 
