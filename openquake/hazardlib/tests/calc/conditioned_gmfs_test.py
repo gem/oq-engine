@@ -60,12 +60,12 @@ def test_observed_imt_support():
         DEFINED_FOR_INTENSITY_MEASURE_TYPES={PGA, PGV, SA})
     spectral_only = SimpleNamespace(
         DEFINED_FOR_INTENSITY_MEASURE_TYPES={PGA, SA})
-    models = [DuNing2021(), NoCrossCorrelation()]
+    correlation_models = [DuNing2021(), NoCrossCorrelation()]
 
     assert select_observed_imts(
-        target, observed, all_imts, models) == observed[:3]
+        target, observed, all_imts, correlation_models) == observed[:3]
     assert select_observed_imts(
-        target, observed, spectral_only, models) == [
+        target, observed, spectral_only, correlation_models) == [
             PGA(), SA(0.3)]
 
 

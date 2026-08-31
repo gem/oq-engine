@@ -355,9 +355,10 @@ def _gsim_supports_imt(gsim, imt):
             imt.name in {imt_type.__name__ for imt_type in supported})
 
 
-def select_observed_imts(target_imts, observed_imts, gsim, models):
-    """Return station IMTs supported by a GSIM and correlation models."""
-    for model in models:
+def select_observed_imts(
+        target_imts, observed_imts, gsim, correlation_models):
+    """Return station IMTs supported by the GSIM and correlation models."""
+    for model in correlation_models:
         model.validate_imts(target_imts)
 
     selected = []
@@ -366,7 +367,7 @@ def select_observed_imts(target_imts, observed_imts, gsim, models):
             continue
         trial = list(dict.fromkeys([*target_imts, *selected, candidate]))
         try:
-            for model in models:
+            for model in correlation_models:
                 model.validate_imts(trial)
         except ValueError:
             continue
@@ -1141,9 +1142,10 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
     :return: Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, mtp_args) tuple
     """
     pre = get_precomputed(rupture, cmaker, inp, compute_covs)
-    models = [inp.within_event_model, inp.between_event_model]
+    correlation_models = [
+        inp.within_event_model, inp.between_event_model]
     if isinstance(inp.within_event_model, SpatialCorrelationModel):
-        models.append(inp.separable_cross_imt_model)
+        correlation_models.append(inp.separable_cross_imt_model)
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -1153,7 +1155,7 @@ def build_precomputed(rupture, cmaker, inp, compute_covs=True):
         # NB: there are relatively few stations, so cm.get_mean_stds([ctx_D])
         # is fast and done sequentially, while ctx_Y is done in parallel
         imts_D = select_observed_imts(
-            inp.imts_Y, inp.imts_D, gsim, models)
+            inp.imts_Y, inp.imts_D, gsim, correlation_models)
         skipped = [imt.string for imt in conditionable_imts(inp.imts_D)
                    if imt not in imts_D]
         if skipped:
