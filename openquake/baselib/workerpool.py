@@ -19,6 +19,7 @@ import os
 import sys
 import time
 import socket
+import signal
 import getpass
 import subprocess
 from datetime import timezone
@@ -345,12 +346,14 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     """
     Start a workerpool with the given number of workers.
     """
+    # The workerpool is controlled through ZMQ. It must not react to the
+    # SIGINT sent to the foreground process group with the engine.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
     # NB: unexpected errors will appear in the DbServer log
     wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
-    try:
-        wpool.start()
-    finally:
-        wpool.stop()
+    wpool.start()
 
 workerpool.num_workers = dict(help='number of cores to use')
 workerpool.job_id = dict(help='associated job, if any')
