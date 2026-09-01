@@ -557,10 +557,11 @@ Demos for the Risk Module
 -------------------------
 
 The following sections describe demos for the OpenQuake engine risk
-calculators. Download the
+calculators. The demos are included with the engine installation. If the
+installed ``demos`` directory cannot be located, download the
 `current demo archive
-<https://artifacts.openquake.org/travis/demos-master.zip>`_ to run them, or
-browse the files in the
+<https://artifacts.openquake.org/travis/demos-master.zip>`_. The files can
+also be browsed in the
 `oq-engine repository
 <https://github.com/gem/oq-engine/tree/master/demos/risk>`_.
 

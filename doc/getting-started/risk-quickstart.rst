@@ -19,18 +19,22 @@ If this command fails, follow the :doc:`installation instructions
 1. Get the demonstration files
 ------------------------------
 
-Download and extract the
-`current demo archive
-<https://artifacts.openquake.org/travis/demos-master.zip>`_. The extracted
-``demos`` directory contains small hazard and risk examples maintained with
-the engine source code.
+The OpenQuake engine installation includes a ``demos`` directory containing
+small hazard and risk examples. Its location depends on how the engine was
+installed. For example, Linux packages place it in
+``/usr/share/openquake/engine/demos``, while the universal installer places it
+in the engine's virtual environment. A source checkout contains it at
+``oq-engine/demos``.
 
-Open a terminal in the extracted directory and move to the scenario risk
-example:
+If the installed directory cannot be located, download and extract the
+`current demo archive
+<https://artifacts.openquake.org/travis/demos-master.zip>`_ instead.
+
+Open a terminal and move to the scenario risk example:
 
 .. code-block:: console
 
-   cd demos/risk/ScenarioRisk
+   cd <path-to-demos>/risk/ScenarioRisk
 
 The directory contains:
 
