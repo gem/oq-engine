@@ -1,4 +1,7 @@
   [Anirudh Rao]
+  * Refresh the risk doc pages in the user manual
+  * For conditioned gmf calculations, for each GSIM branch, keep only 
+    the IMTs supported by that GSIM and drop the rest
   * Add the Du and Ning (2021) within-event joint spatial and cross-IMT
     correlation model for PGA, SAs at 17 periods, PGV, Ia, CAV, and 
     significant durations
