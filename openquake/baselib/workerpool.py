@@ -295,7 +295,9 @@ class WorkerPool(object):
             with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
                 for cmd in ctrlsock:
                     if cmd == 'stop':
-                        ctrlsock.send(self.stop())
+                        # ZMQ expects a reply, we have to send a dummy
+                        # message to avoid zombies
+                        ctrlsock.send(f'stopping pid={self.pid}')
                         break
                     elif cmd == 'restart':
                         self.stop()
