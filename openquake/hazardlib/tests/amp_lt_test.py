@@ -111,8 +111,9 @@ def _write(text):
 class AmpLogicTreeTest(unittest.TestCase):
 
     def _assert_rejects(self, xml, error_tail):
-        # Write xml to a temp file, expect AmpLogicTree to raise
-        # InvalidFile with message '<temp_path>: <error_tail>'
+        # Helper that writes xml to a temp file with AmpLogicTree
+        # expected to raise InvalidFile with a message of
+        # '<temp_path>: <error_tail>'
         path = _write(xml)
         with self.assertRaises(InvalidFile) as ctx:
             AmpLogicTree(path)
