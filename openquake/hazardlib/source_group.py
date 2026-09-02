@@ -359,6 +359,47 @@ class CompositeSourceModel:
             srcs.extend(grp)
         return srcs
 
+    def grp_ids_by_source_model(self):
+        """
+        :returns:
+            Dict grouping src_groups by the branch_id of the top-level
+            sourceModel branch they trace back to (via trt_smrs).
+            
+            NOTE: When the logic tree uses extendModel, groups whose
+            trt_smrs span more than one sourceModel branch form a "shared"
+            cross-source-model batch. Without extendModel such sharing is
+            treated as an error.
+            
+            NOTE: If there is heavy usage of extendModel within a logic
+            tree, this large batch could be have a memory profile close
+            to (if not equal to) the "regular" (i.e., none sequential)
+            approach.
+        """
+        has_extend = any(
+            bset.uncertainty_type == 'extendModel'
+            for bset in self.full_lt.source_model_lt.branchsets)
+
+        # Build an smr -> top-level sourceModel branch_id map
+        smr_smb = {smr: rlz.lt_path[0]
+                   for smr, rlz in enumerate(self.full_lt.sm_rlzs)}
+        out = collections.defaultdict(list)
+        for grp_id, sg in enumerate(self.src_groups):
+            smbs = {smr_smb[trt_smr % TWO24]
+                    for trt_smr in sg.sources[0].trt_smrs}
+            if len(smbs) > 1:
+                if not has_extend:
+                    raise ValueError(
+                        'src_group %d (%s) spans multiple source '
+                        'models %s; sequential_source_models=true '
+                        'does not support sources shared across '
+                        'source models outside of extendModel'
+                        % (grp_id, sg.trt, sorted(smbs)))
+                key = None
+            else:
+                key = smbs.pop()
+            out[key].append(grp_id)
+        return out
+
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
@@ -366,6 +407,35 @@ class CompositeSourceModel:
         keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
+
+    def iter_source_model_batches(self):
+        """
+        Iterate "src_groups" in batches, one per sourceModel branch.
+
+        NOTE: A final "shared batch" (if any) is run which carries the
+        src_groups whose trt_smrs span multiple sourceModel branches
+        (i.e., when extendModel has been used - else shared src_groups
+        are forbidden in the sequential approach).
+        """
+        # Map sourceModel branch id -> list of global grp_ids
+        grp_ids_by_sm = self.grp_ids_by_source_model()
+
+        # Per-SM batches sorted for reproducible batch_id, shared last
+        per_sm_keys = sorted(k for k in grp_ids_by_sm if k is not None)
+        ordered_keys = per_sm_keys + (
+            [None] if None in grp_ids_by_sm else [])
+
+        for batch_id, sm_branch_id in enumerate(ordered_keys):
+            grp_ids = grp_ids_by_sm[sm_branch_id]
+
+            # Pick this batch's src_groups by their global grp_ids
+            src_groups_batch = [self.src_groups[gid] for gid in grp_ids]
+
+            # Per-batch trt_smrs arrays
+            trt_smrs_batch = [
+                numpy.array(sg.sources[0].trt_smrs, numpy.uint32)
+                for sg in src_groups_batch]
+            yield batch_id, sm_branch_id, src_groups_batch, trt_smrs_batch
 
     def get_cmakers(self):
         """

@@ -793,6 +793,14 @@ ses_seed:
   Example: *ses_seed = 123*.
   Default: 42
 
+sequential_source_models:
+  Flag used in classical and disaggregation calculations to dispatch
+  tasks one top-level sourceModel branch at a time (one Starmap per
+  source model, run sequentially). Not compatible with source models
+  that share sources across top-level branches.
+  Example: *sequential_source_models = true*.
+  Default: false
+
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
   Example: *shakemap_id = usp000fjta*.
@@ -1261,6 +1269,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
+    sequential_source_models = valid.Param(valid.boolean, False)
     shakemap_id = valid.Param(valid.nice_string, None)
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
@@ -2314,6 +2323,15 @@ class OqParam(valid.ParamSet):
         """
         if self.disagg_by_src:
             return self.ps_grid_spacing == 0
+        return True
+
+    def is_valid_sequential_source_models(self):
+        """
+        sequential_source_models is only useable in classical and
+        disaggregation calculations
+        """
+        if self.sequential_source_models:
+            return self.calculation_mode in ('classical', 'disaggregation')
         return True
 
     def is_valid_concurrent_tasks(self):

@@ -27,6 +27,7 @@
 | case\_22           | Test sigma_model_alatik2015                                                |
 | case\_23           | Arctic region and IDL (no bounding box)                                    |
 | case\_23\_bis      | Correlated uncertainties                                                   |
+| case\_24           | Tests sequential_source_models parity vs regular for full-enum + sampling  |
 | case\_28           | Test collapse\_gsim\_logic\_tree                                           |
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_25           | BC Hydro NVA SSC LT source model LT                                        |
@@ -51,6 +52,6 @@
 | case\_73           | Tests some epistemic uncertainties in a source-specific LT                 |
 | case\_79           | Tests disagg\_by\_src with semicolon sources                               |
 | case\_80           | Tests areaSourceGeometryAbsolute                                           |
-| case\_83           | Tests extendModel and reqv                                                 |
+| case\_83           | Tests extendModel and reqv  + sequential source models with extendModel  |
 | case\_83\_eb       | Double extendModel with event based sampling                               |
 | case\_84           | Tests maxMagGRRelativeNoMoBalance uncertainty                              |
