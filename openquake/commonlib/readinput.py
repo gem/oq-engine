@@ -977,8 +977,8 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-# TODO: Add support for event-based (regular amp models work in eb as well)
-_amp_lt_SUPPORTED_MODES = ('classical', 'disaggregation')
+# TODO: Add support for event-based
+AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
 
 
 def _expand_amp_lt(oqparam):
@@ -995,12 +995,12 @@ def _expand_amp_lt(oqparam):
         return None  # No amplification input
     if not amp_lt.AmpLogicTree.is_amp_lt(fname):
         return None  # Regular amplification model (no logic tree)
-    if oqparam.calculation_mode not in _amp_lt_SUPPORTED_MODES:
+    if oqparam.calculation_mode not in AMP_LT_SUPPORTED_MODES:
         raise InvalidFile(
             '%s: amplification logic tree is only supported for %s'
             ' calculations, got calculation_mode=%r'
             % (fname, ' and '.join(
-                _amp_lt_SUPPORTED_MODES), oqparam.calculation_mode))
+                AMP_LT_SUPPORTED_MODES), oqparam.calculation_mode))
     tree = amp_lt.AmpLogicTree(fname)
     oqparam._amp_lt = tree
     oqparam.inputs['amplification'] = tree.filenames

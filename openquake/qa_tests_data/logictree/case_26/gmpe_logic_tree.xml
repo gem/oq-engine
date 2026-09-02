@@ -2,14 +2,12 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID='lt1'>
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                    applyToTectonicRegionType="Active Shallow Crust">
-                <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="gmm_bs1"
+                applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="gmm_b1">
+                <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
     </logicTree>
 </nrml>
