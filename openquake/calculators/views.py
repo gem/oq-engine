@@ -1531,8 +1531,7 @@ def view_branchsets(token, dstore):
     rows = list(enumerate(map(repr, clt.branchsets)))
     if flt.amp_lt is not None:
         rows.append((len(rows),
-                     '<BranchSet(amplificationModel, %d branches)>'
-                     % flt.amp_lt.R_amp))
+                     '<amplificationModel(%d)>' % flt.amp_lt.R_amp))
     return text_table(rows, header=['bsno', 'bset'], ext='org')
 
 @view.add('sm_rlzs')

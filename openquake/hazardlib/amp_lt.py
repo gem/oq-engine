@@ -167,10 +167,10 @@ class AmpFunctionsEpistemic(object):
     @property
     def shortener(self):
         """
-        :returns: dict of branchID -> single BASE183 character (consistent
-            with the SSC and GSIM shorteners)
+        :returns: dict of branchID -> two-char abbreviation of the form
+            <letter><bsno>, matching the SSC and GSIM shorteners
         """
-        return {name: BASE183[i] for i, name in enumerate(self.names)}
+        return {name: BASE183[i] + '0' for i, name in enumerate(self.names)}
 
     def __repr__(self):
         return '<AmpFunctionsEpistemic R_amp=%d weights=%s>' % (
