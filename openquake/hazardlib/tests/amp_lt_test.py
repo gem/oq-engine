@@ -44,25 +44,6 @@ FLAT_XML = '''<?xml version="1.0" encoding="UTF-8"?>
   </logicTree>
 </nrml>'''
 
-# Same tree wrapped in <logicTreeBranchingLevel> (older NRML nesting)
-WRAPPED_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <logicTree logicTreeID="lt_ampl">
-    <logicTreeBranchingLevel branchingLevelID="bl1">
-      <logicTreeBranchSet uncertaintyType="amplificationModel" branchSetID="bs">
-        <logicTreeBranch branchID="low">
-          <uncertaintyModel>af_low.csv</uncertaintyModel>
-          <uncertaintyWeight>0.4</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="high">
-          <uncertaintyModel>af_high.csv</uncertaintyModel>
-          <uncertaintyWeight>0.6</uncertaintyWeight>
-        </logicTreeBranch>
-      </logicTreeBranchSet>
-    </logicTreeBranchingLevel>
-  </logicTree>
-</nrml>'''
-
 # Branch weights sum to 1.1 instead of 1.0, should be rejected by the parser
 BAD_WEIGHT_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -137,12 +118,11 @@ class AmpLogicTreeTest(unittest.TestCase):
             AmpLogicTree(path)
         self.assertEqual(str(ctx.exception), '%s: %s' % (path, error_tail))
 
-    def test_parses_both_flat_and_branchinglevel_layouts(self):
-        # Two accepted NRML nestings should yield identical branches
+    def test_parses_flat_layout(self):
+        # Two branches with weights summing to 1.0
         flat = AmpLogicTree(_write(FLAT_XML))
-        wrap = AmpLogicTree(_write(WRAPPED_XML))
-        self.assertEqual(flat.branch_ids, wrap.branch_ids)
-        numpy.testing.assert_allclose(flat.weights, wrap.weights)
+        self.assertEqual(flat.branch_ids, ['low', 'high'])
+        numpy.testing.assert_allclose(flat.weights, [0.4, 0.6])
 
     def test_rejects_wrong_uncertainty_type(self):
         self._assert_rejects(

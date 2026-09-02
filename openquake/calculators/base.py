@@ -45,8 +45,8 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
-from openquake.hazardlib.site_amplification import Amplifier
-from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.site_amplification import (
+    Amplifier, AmplFunction, AmplifierCollection)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -511,8 +511,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     af = None
-    amplifier = None
-    amplifier_lt = None  # (list_of_Amplifier, rlz_ampl_ord) for amp LT
+    amplifier = None  # None or AmplifierCollection (single or LT branches)
 
     def src_filter(self):
         """
@@ -745,7 +744,7 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
-                'max_weight amplifier amplifier_lt policy_df treaty_df '
+                'max_weight amplifier policy_df treaty_df '
                 'full_lt exported trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
@@ -1165,17 +1164,13 @@ class HazardCalculator(BaseCalculator):
                     check_amplification(df, self.sitecol)
                 amps = [Amplifier(oq.imtls, df, oq.soil_intensities)
                         for df in amep.dframes]
-                # self.amplifier holds the first branch's Amplifier so
-                # code paths that only need .amplevels still work;
-                # per-rlz application uses self.amplifier_lt
-                self.amplifier = amps[0]
                 # self.full_lt is set after _read_risk4, so refetch here
                 full_lt = getattr(self, 'full_lt', None) or (
                     readinput.get_full_lt(oq))
                 rlz_ampl_ord = numpy.array(
                     [r.ampl_rlz.ordinal
                      for r in full_lt.get_realizations()], numpy.uint32)
-                self.amplifier_lt = (amps, rlz_ampl_ord)
+                self.amplifier = AmplifierCollection(amps, rlz_ampl_ord)
             else:
                 logging.info('Reading %s', oq.inputs['amplification'])
                 df = AmplFunction.read_df(oq.inputs['amplification'])
@@ -1186,14 +1181,14 @@ class HazardCalculator(BaseCalculator):
                     # currently tested only for classical PSHA
                     self.af = AmplFunction.from_dframe(df)
                 else: # convolution
-                    self.amplifier = Amplifier(
-                        oq.imtls, df, oq.soil_intensities)
+                    self.amplifier = AmplifierCollection([Amplifier(
+                        oq.imtls, df, oq.soil_intensities)])
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        oq._amplifier = self.amplifier
+        oq._amplifier = self.amplifier.amplifiers[0] if self.amplifier else None
         self.add_sec_perils(oq)
 
         # compute exposure stats

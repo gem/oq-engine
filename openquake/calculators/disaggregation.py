@@ -233,7 +233,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             # when an amplifier is active, rebuild the mean from rock
             # rates so its shape matches oq.imtls used just below
-            if self.amplifier or self.amplifier_lt:
+            if self.amplifier:
                 L1 = oq.imtls.size // self.M
                 mean_curves = numpy.zeros((self.N, self.M, L1))
                 for sid in range(self.N):

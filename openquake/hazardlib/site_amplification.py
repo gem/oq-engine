@@ -400,6 +400,44 @@ class Amplifier(object):
             gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
 
 
+class AmplifierCollection(object):
+    """
+    One or more amplification branches.
+
+    For a non-epistemic amplification, ``amplifiers`` contains one item
+    and ``rlz_ampl_ord`` is None. For an epistemic amplification,
+    ``rlz_ampl_ord[r]`` selects the branch used by realization r.
+    """
+    def __init__(self, amplifiers, rlz_ampl_ord=None):
+        assert amplifiers, 'At least one amplifier is required'
+        self.amplifiers = tuple(amplifiers)
+        self.rlz_ampl_ord = rlz_ampl_ord
+
+    def __bool__(self):
+        return True
+
+    @property
+    def amplevels(self):
+        return self.amplifiers[0].amplevels
+
+    def check(self, vs30, vs30_tolerance, gsims_by_trt):
+        self.amplifiers[0].check(vs30, vs30_tolerance, gsims_by_trt)
+
+    def amplify(self, ampl_code, hcurve):
+        """
+        :param ampl_code: 2-letter code for the amplification function
+        :param hcurve: an array of shape (L*M, R) on rock levels
+        :returns: amplified array of shape (A*M, R) on soil levels
+        """
+        if self.rlz_ampl_ord is None:
+            return self.amplifiers[0].amplify(ampl_code, hcurve)
+        _, R = hcurve.shape
+        return numpy.hstack([
+            self.amplifiers[self.rlz_ampl_ord[r]].amplify(
+                ampl_code, hcurve[:, r:r+1])
+            for r in range(R)])
+
+
 def get_poes_site(mean_std, cmaker, ctx):
     """
     NOTE: this works for a single site

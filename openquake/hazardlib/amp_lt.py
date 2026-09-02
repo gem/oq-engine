@@ -33,17 +33,6 @@ from openquake.hazardlib.lt import Realization
 F32 = numpy.float32
 
 
-def _iter_branchsets(lt_node):
-    # Tolerate both flat and older <logicTreeBranchingLevel>-wrapped layouts
-    for child in lt_node:
-        if child.tag.endswith('logicTreeBranchSet'):
-            yield child
-        elif child.tag.endswith('logicTreeBranchingLevel'):
-            for bset in child:
-                if bset.tag.endswith('logicTreeBranchSet'):
-                    yield bset
-
-
 class AmpLogicTree(object):
     """
     Parser for an amplification-function logic tree NRML XML
@@ -60,8 +49,9 @@ class AmpLogicTree(object):
         root = nrml.read(filename)
         if not hasattr(root, 'logicTree'):
             return False
-        for bset in _iter_branchsets(root.logicTree):
-            if bset.attrib.get('uncertaintyType') == 'amplificationModel':
+        for child in root.logicTree:
+            if (child.tag.endswith('logicTreeBranchSet') and
+                    child.attrib.get('uncertaintyType') == 'amplificationModel'):
                 return True
         return False
 
@@ -78,7 +68,7 @@ class AmpLogicTree(object):
             raise InvalidFile(
                 '%s: missing <logicTree> element' % self.filename)
         ltree = root.logicTree
-        bsets = list(_iter_branchsets(ltree))
+        bsets = [c for c in ltree if c.tag.endswith('logicTreeBranchSet')]
         if not bsets:
             raise InvalidFile(
                 '%s: no amplificationModel branchset found' % self.filename)
