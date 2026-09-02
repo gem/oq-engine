@@ -1,7 +1,7 @@
   [Christopher Brooks]
   * Optimise the spatial lookups in the KothaEtAl2020regional GSIM by
     performing them once per call of the `compute` method instead of
-    per IMT (the events and sites don't vary with IMT).
+    per IMT (the events and sites don't vary with IMT in `ctx` recarray).
 
   [Anirudh Rao]
   * Add the Du and Ning (2021) within-event joint spatial and cross-IMT
