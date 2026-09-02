@@ -13,7 +13,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU Affero General Public License
+# You should have received a copy of the GNU Affero General Public Licensegit push --force-with-lease origin k20_opt
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
@@ -236,10 +236,11 @@ def get_distance_coefficients_3(att_props, site_feat_idx, delta_c3_epsilon,
                                 C, imt_key):
     """
     Return site-specific coefficient 'C3'. The function retrieves the
-    value of delta_c3 and the standard error of delta_c3 from the 'att'
-    geojson file depending on the location of site. This delta_c3 is
-    added to the generic coefficient 'c3' from the GMPE. A delta_c3_epsilon
-    value of +/- 1.6 gives the 95% confidence interval for delta_c3.
+    value of delta_c3 and the standard error of delta_c3 from the
+    pre-parsed 'att' properties depending on the location of site. This
+    delta_c3 is added to the generic coefficient 'c3' from the GMPE. A
+    delta_c3_epsilon value of +/- 1.6 gives the 95% confidence interval
+    for delta_c3.
     """
     delta_c3 = _lookup_property(site_feat_idx, att_props, imt_key)
     delta_c3_se = _lookup_property(site_feat_idx, att_props, imt_key + '_se')
@@ -274,7 +275,7 @@ def get_dl2l(tec_props, tec_feat_idx, imt_key, delta_l2l_epsilon):
     """
     Returns rupture source specific delta_l2l values. The method
     retrieves the delta_l2l and standard error of delta_l2l values.
-    if delta_l2l_epsilon is provided, standard error of delta_c3
+    if delta_l2l_epsilon is provided, standard error of delta_l2l
     will be included. A delta_l2l_epsilon value of +/- 1.6 gives
     the 95% confidence interval for delta_l2l.
     """
