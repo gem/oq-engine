@@ -137,7 +137,7 @@ def ensure_on():
     Start the DbServer if it is off
     """
     if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-        and getpass.getuser() != 'openquake'):
+        and p.oq_distribute() != 'zmq'):
         print('Using local database')
         actions.upgrade_db(db)
         return
