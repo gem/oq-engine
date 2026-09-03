@@ -27,7 +27,7 @@ from openquake.baselib.general import BASE183
 from openquake.hazardlib import InvalidFile, nrml
 
 
-class AmpLogicTree(object):
+class AmplificationLogicTree(object):
     """
     Parser for an amplification-function logic tree NRML XML
     """
@@ -117,7 +117,7 @@ class AmpLogicTree(object):
         return len(self.branches)
 
     def __repr__(self):
-        return '<AmpLogicTree %s, %d branches>' % (
+        return '<AmplificationLogicTree %s, %d branches>' % (
             os.path.basename(self.filename), len(self.branches))
 
 

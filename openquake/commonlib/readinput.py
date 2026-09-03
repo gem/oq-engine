@@ -994,7 +994,7 @@ def _expand_amp_lt(oqparam):
     fname = oqparam.inputs.get('amplification')
     if not fname:
         return None  # No amplification input
-    if not amp_lt.AmpLogicTree.is_amp_lt(fname):
+    if not amp_lt.AmplificationLogicTree.is_amp_lt(fname):
         return None  # Regular amplification model (no logic tree)
     if oqparam.calculation_mode not in AMP_LT_SUPPORTED_MODES:
         raise InvalidFile(
@@ -1002,7 +1002,7 @@ def _expand_amp_lt(oqparam):
             ' calculations, got calculation_mode=%r'
             % (fname, ' and '.join(
                 AMP_LT_SUPPORTED_MODES), oqparam.calculation_mode))
-    tree = amp_lt.AmpLogicTree(fname)
+    tree = amp_lt.AmplificationLogicTree(fname)
     oqparam._amp_lt = tree
     oqparam.inputs['amplification'] = tree.filenames
     return tree

@@ -22,7 +22,7 @@ import numpy
 import pandas as pd
 
 from openquake.baselib import InvalidFile, hdf5
-from openquake.hazardlib.amp_lt import AmpLogicTree
+from openquake.hazardlib.amp_lt import AmplificationLogicTree
 from openquake.hazardlib.site_amplification import AmplificationModel
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.logictree import SourceModelLogicTree, FullLogicTree
@@ -109,20 +109,20 @@ def _write(text):
     return path
 
 
-class AmpLogicTreeTest(unittest.TestCase):
+class AmplificationLogicTreeTest(unittest.TestCase):
 
     def _assert_rejects(self, xml, error_tail):
-        # Helper that writes xml to a temp file with AmpLogicTree
+        # Helper that writes xml to a temp file with AmplificationLogicTree
         # expected to raise InvalidFile with a message of
         # '<temp_path>: <error_tail>'
         path = _write(xml)
         with self.assertRaises(InvalidFile) as ctx:
-            AmpLogicTree(path)
+            AmplificationLogicTree(path)
         self.assertEqual(str(ctx.exception), '%s: %s' % (path, error_tail))
 
     def test_parses_flat_layout(self):
         # Two branches with weights summing to 1.0
-        flat = AmpLogicTree(_write(FLAT_XML))
+        flat = AmplificationLogicTree(_write(FLAT_XML))
         self.assertEqual(flat.branch_ids, ['low', 'high'])
         numpy.testing.assert_allclose(flat.weights, [0.4, 0.6])
 
@@ -149,11 +149,11 @@ class AmpLogicTreeTest(unittest.TestCase):
 
     def test_is_amp_lt_true(self):
         # Should load fine as valid amp LT
-        self.assertTrue(AmpLogicTree.is_amp_lt(_write(FLAT_XML)))
+        self.assertTrue(AmplificationLogicTree.is_amp_lt(_write(FLAT_XML)))
 
     def test_is_amp_lt_false(self):
         # Should be rejected as valid amp LT
-        self.assertFalse(AmpLogicTree.is_amp_lt(_write(WRONG_UTYPE_XML)))     
+        self.assertFalse(AmplificationLogicTree.is_amp_lt(_write(WRONG_UTYPE_XML)))     
 
 
 class AmplificationModelTest(unittest.TestCase):
