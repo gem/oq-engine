@@ -544,7 +544,12 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
         args += (mon,)
     sentbytes = 0
     if isgenfunc:
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        # Keep a worker from queuing many large generator results faster
+        # than the master can persist them. The synchronous ``no`` mode
+        # cannot use backpressure because it sends before reading begins.
+        hwm = 1 if getattr(mon, 'distribute', 'no') != 'no' else None
+        with Socket(
+                mon.backurl, zmq.PUSH, 'connect', hwm=hwm) as zsocket:
             it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
@@ -864,6 +869,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
+        self.monitor.distribute = dist
         if dist not in ('no', 'threadpool'):
             pickled = isinstance(args[0], Pickled)
             if not pickled:
