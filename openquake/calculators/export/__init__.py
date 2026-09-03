@@ -114,16 +114,16 @@ AGGRISK_FIELD_DESCRIPTION = {
 
 
 AGGRISK_FIELD_EXPLANATION = {
-    'affectedpop': ('Population living in buildings that sustain at least'
+    'affectedpop': ('Population living in buildings that sustained at least'
                     ' moderate damage'),
-    'area': ('Total floor area (in m²) of buildings that sustain at least'
-             ' extensive damage'),
+    'area': ('Total floor area (in m²) of buildings that sustained complete'
+             ' damage'),
     'injured': ('Seriously or critically injured people according to the'
                 ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
-    'number': ('Number of buildings that sustain a level of damage beyond'
+    'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
-    'residents': ('Population living in buildings that sustain at least'
+    'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),
 }
