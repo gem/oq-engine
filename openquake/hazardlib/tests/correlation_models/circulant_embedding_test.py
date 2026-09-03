@@ -136,6 +136,17 @@ def test_input_shape():
         factor.apply(numpy.ones((factor.input_size - 1, 2)))
 
 
+def test_batch_size():
+    factor = CirculantEmbeddingFactor.build(
+        DuNing2021(), IMTS, (2, 3), 1.0)
+    fixed = factor.spectral_root.nbytes
+    per_realization = factor.workspace_bytes_per_realization
+
+    assert factor.batch_size(fixed + 3 * per_realization) == 3
+    with pytest.raises(ValueError, match='requires at least'):
+        factor.batch_size(fixed + per_realization - 1)
+
+
 @pytest.mark.parametrize('kwargs, message', [
     ({'grid_shape': (2, 0)}, 'grid_shape values must be positive'),
     ({'spacing': (1, 0)}, 'spacing values must be positive'),

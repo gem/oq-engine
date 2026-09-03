@@ -281,12 +281,28 @@ class CirculantEmbeddingFactor:
     @property
     def input_size(self):
         """Number of independent values required for each realization."""
-        return self.num_imts * numpy.prod(self.embedded_shape)
+        return int(self.num_imts * numpy.prod(self.embedded_shape))
 
     @property
     def output_size(self):
         """Number of correlated values returned for each realization."""
         return self.num_imts * len(self.site_indices)
+
+    @property
+    def workspace_bytes_per_realization(self):
+        """Conservative FFT workspace estimate for one realization."""
+        return 32 * self.input_size + 8 * self.output_size
+
+    def batch_size(self, memory_budget):
+        """Return how many realizations fit in the workspace budget."""
+        memory_budget = int(memory_budget)
+        available = memory_budget - self.spectral_root.nbytes
+        required = self.workspace_bytes_per_realization
+        if available < required:
+            raise ValueError(
+                'The circulant embedding requires at least '
+                f'{self.spectral_root.nbytes + required} workspace bytes')
+        return max(1, available // required)
 
     def apply(self, samples):
         """Apply the embedding to columns of independent normal values."""
@@ -305,13 +321,14 @@ class CirculantEmbeddingFactor:
         # Correlate the IMTs independently at every spatial frequency.
         correlated = numpy.einsum(
             'yxij,eyxj->eyxi', self.spectral_root, transformed)
+        del transformed
         fields = numpy.fft.irfft2(
             correlated, s=self.embedded_shape, axes=(1, 2))
-        ny, nx = self.grid_shape
+        del correlated
+        nx = self.grid_shape[1]
         # Discard the periodic padding, apply the optional spatial mask, and
         # restore the IMT-major ordering expected by the GMF calculators.
-        fields = fields[:, :ny, :nx].reshape(
-            num_events, ny * nx, self.num_imts)
-        fields = fields[:, self.site_indices]
+        rows, columns = numpy.divmod(self.site_indices, nx)
+        fields = fields[:, rows, columns, :]
         return fields.transpose(2, 1, 0).reshape(
             self.output_size, num_events)
