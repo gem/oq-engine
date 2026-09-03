@@ -1008,7 +1008,7 @@ def _expand_amp_lt(oqparam):
     return tree
 
 
-def get_ampl_functions_epistemic(oqparam):
+def get_amp_functions(oqparam):
     """
     :returns: an :class:`AmplificationModel` with Amplifier instances
         built from the amp-LT branch CSVs, or None if the amplification
@@ -1045,7 +1045,7 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    amep = get_ampl_functions_epistemic(oqparam)
+    amep = get_amp_functions(oqparam)
     full_lt = logictree.FullLogicTree(
         source_model_lt, gsim_lt, oversampling, amp_lt=amep)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
