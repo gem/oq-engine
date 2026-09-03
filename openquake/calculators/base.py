@@ -614,7 +614,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
-        self._read_risk4()
+        self._set_amplifier()
 
         if (oq.calculation_mode == 'event_based' and
                 oq.within_event_correlation_model and
@@ -1150,7 +1150,11 @@ class HazardCalculator(BaseCalculator):
                 # fix: the sitecol is not complete
                 self.sitecol.complete = self.datastore.parent['complete']
 
-    def _read_risk4(self):
+    def _set_amplifier(self):
+        """
+        Set self.amplifier from a plain amplification CSV
+        or an amp-LT XML.
+        """
         oq = self.oqparam
         # store amplification functions if any
         if 'amplification' in oq.inputs:
@@ -1162,7 +1166,7 @@ class HazardCalculator(BaseCalculator):
                 # of the sitecol, then IMT coverage via Amplifier init
                 for df in amep.dframes:
                     check_amplification(df, self.sitecol)
-                # self.full_lt is set after _read_risk4, so refetch here
+                # self.full_lt is set after _set_amplifier, so refetch here
                 full_lt = getattr(self, 'full_lt', None) or (
                     readinput.get_full_lt(oq))
                 amep.rlz_ampl_ord = numpy.array(
