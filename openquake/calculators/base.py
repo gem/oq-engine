@@ -1156,7 +1156,7 @@ class HazardCalculator(BaseCalculator):
         or an amp-LT XML.
         """
         oq = self.oqparam
-        # store amplification functions if any
+        # Store amplification functions if any
         if 'amplification' in oq.inputs:
             amep = readinput.get_amp_functions(oq)
             if amep is not None:
@@ -1177,12 +1177,12 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reading %s', oq.inputs['amplification'])
                 df = AmplificationFunction.read_df(oq.inputs['amplification'])
                 check_amplification(df, self.sitecol)
-                if oq.amplification_method == 'kernel':
+                if oq.amplification_method == 'kernel': # Single branch, no LT
                     # TODO: need to add additional checks on the main
                     # calculation methodology since the kernel method is
                     # currently tested only for classical PSHA
                     self.af = AmplificationFunction.from_dframe(df)
-                else:  # convolution: single branch, no LT
+                else:  # Convolution: single branch, no LT
                     self.amplifier = AmplificationModel(
                         names=['ampl'], weights=[1.0], dframes=[df],
                         amplifiers=[Amplifier(

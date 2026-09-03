@@ -1002,6 +1002,11 @@ def _expand_amp_lt(oqparam):
             ' calculations, got calculation_mode=%r'
             % (fname, ' and '.join(
                 AMP_LT_SUPPORTED_MODES), oqparam.calculation_mode))
+    if oqparam.amplification_method != 'convolution':
+        raise InvalidFile(
+            '%s: amplification logic tree is only supported with'
+            ' amplification_method="convolution", got %r'
+            % (fname, oqparam.amplification_method))
     tree = amp_lt.AmplificationLogicTree(fname)
     oqparam._amp_lt = tree
     oqparam.inputs['amplification'] = tree.filenames
