@@ -99,19 +99,35 @@ AGGRISK_FIELD_DESCRIPTION = {
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m²)',
-    'number': 'Buildings beyond repair',
+    'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
-    'affectedpop': ('Number of people living in buildings '
-                    'with moderate or higher damage'),
+    'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
-    'value': 'Value',
+    'value': 'Exposed value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
     'q50': 'Median',
     'q05': '5th percentile',
     'q95': '95th percentile',
 }
+
+
+AGGRISK_FIELD_EXPLANATION = {
+    'affectedpop': ('Population living in buildings that sustained at least'
+                    ' moderate damage'),
+    'area': ('Total floor area (in m²) of buildings that sustained complete'
+             ' damage'),
+    'injured': ('Seriously or critically injured people according to the'
+                ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
+    'number': ('Number of buildings that sustained a level of damage beyond'
+               ' repair (extensive damage or higher)'),
+    'occupants': 'Number of fatalities',
+    'residents': ('Population living in buildings that sustained at least'
+                  ' extensive damage'),
+    'economic': ('Sum of structural and contents economic loss (in USD)'),
+}
+
 
 EXPOSURE_FIELD_DESCRIPTION = {
     'number': 'Buildings',

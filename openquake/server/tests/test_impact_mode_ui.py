@@ -41,11 +41,12 @@ def test_impact_ui_level_0(
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_1(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
-    page.set_rupture_identifier('us6000phrk')
+    page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
-        value='urn:usgs-product:us:shakemap:us6000phrk:1738891320927')
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
     expect(page.intensity_map()).to_be_visible(timeout=50_000)
     expect(page.pga_map()).to_be_visible(timeout=30_000)
@@ -54,21 +55,36 @@ def test_impact_ui_level_1(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.wait_for_job_completion(job_id)
+    page.to_outputs(job_id)
+    with page.page.context.expect_page() as report_page_info:
+        page.to_report()
+    report_tab = report_page_info.value
+    # networkidle is needed to avoid breaking in headless mode
+    report_tab.wait_for_load_state('networkidle')
+    report_tab.wait_for_timeout(500)  # let any trailing response writes complete
+    # report_tab.close()
+    page.page.bring_to_front()
+    page.to_calculations()
+    if should_remove_job:
+        page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_use_shakemap(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Use ShakeMap from the USGS')
     expect(page.rupture_identifier()).to_be_visible()
-    page.set_rupture_identifier('us6000phrk')
+    page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
-        value='urn:usgs-product:us:shakemap:us6000phrk:1738891320927')
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
+    page.confirm_relocated_hypocenter_warning()
     expect(page.intensity_map()).to_be_visible(timeout=50_000)
     expect(page.pga_map()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
@@ -76,14 +92,21 @@ def test_impact_ui_level_2_use_shakemap(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.wait_for_job_completion(job_id)
+    page.to_outputs(job_id)
+    page.download_datastore()
+    page.to_calculations()
+    if should_remove_job:
+        page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_use_point_rupture(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Use point rupture from the USGS')
     expect(page.rupture_identifier()).to_be_visible()
@@ -98,14 +121,20 @@ def test_impact_ui_level_2_use_point_rupture(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_build_rupture(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
     expect(page.rupture_identifier()).to_be_visible()
@@ -120,16 +149,21 @@ def test_impact_ui_level_2_build_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_use_shakemap_fault_rupture(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Use ShakeMap fault rupture from the USGS')
     expect(page.rupture_identifier()).to_be_visible()
@@ -143,16 +177,21 @@ def test_impact_ui_level_2_use_shakemap_fault_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_use_finite_fault(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Use finite fault model from the USGS')
     expect(page.rupture_identifier()).to_be_visible()
@@ -167,14 +206,20 @@ def test_impact_ui_level_2_use_finite_fault(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_provide_rupture_nrml(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
     page.choose_rupture_model()
@@ -184,14 +229,20 @@ def test_impact_ui_level_2_provide_rupture_nrml(
     # expect(page.local_timestamp()).not_to_be_visible(timeout=30_000)
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
 
 
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_provide_rupture_params(
-        application_mode, authenticated_page, user, default_usgs_id):
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Provide earthquake rupture parameters')
     page.set_longitude(37.6)
@@ -207,4 +258,9 @@ def test_impact_ui_level_2_provide_rupture_params(
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
     page.run_impact_calc()
-    page.abort_latest_job()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
