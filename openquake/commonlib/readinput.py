@@ -63,7 +63,8 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt, amp_lt)
-from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.site_amplification import (
+    AmplFunction, Amplifier, AmplificationModel)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -977,8 +978,9 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-# TODO: Add support for event-based
-AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
+# disaggregation is excluded because Disaggregator is not amp-aware
+# (see amp_lt_disagg_deferred.md); event-based support is TODO
+AMP_LT_SUPPORTED_MODES = ('classical',)
 
 
 def _expand_amp_lt(oqparam):
@@ -1009,16 +1011,20 @@ def _expand_amp_lt(oqparam):
 
 def get_ampl_functions_epistemic(oqparam):
     """
-    :returns: an :class:`openquake.hazardlib.amp_lt.AmpFunctionsEpistemic`
-        or None if oqparam.inputs['amplification'] is not an amp-LT XML
+    :returns: an :class:`AmplificationModel` with Amplifier instances
+        built from the amp-LT branch CSVs, or None if the amplification
+        input is not an amp-LT XML
     """
     tree = _expand_amp_lt(oqparam)
     if tree is None:
         return None
     dframes = [AmplFunction.read_df(f) for f in tree.filenames]
-    return amp_lt.AmpFunctionsEpistemic(
-        tree.branch_ids, tree.weights, dframes, filenames=tree.filenames,
-        tree_filename=tree.filename, branchset_id=tree.branchset_id)
+    amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
+                  for df in dframes]
+    return AmplificationModel(
+        tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
+        filenames=tree.filenames, tree_filename=tree.filename,
+        branchset_id=tree.branchset_id)
 
 
 def get_full_lt(oqparam):

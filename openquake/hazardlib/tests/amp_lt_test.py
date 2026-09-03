@@ -22,7 +22,8 @@ import numpy
 import pandas as pd
 
 from openquake.baselib import InvalidFile, hdf5
-from openquake.hazardlib.amp_lt import AmpLogicTree, AmpFunctionsEpistemic
+from openquake.hazardlib.amp_lt import AmpLogicTree
+from openquake.hazardlib.site_amplification import AmplificationModel
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.logictree import SourceModelLogicTree, FullLogicTree
 
@@ -155,7 +156,7 @@ class AmpLogicTreeTest(unittest.TestCase):
         self.assertFalse(AmpLogicTree.is_amp_lt(_write(WRONG_UTYPE_XML)))     
 
 
-class AmpFunctionsEpistemicTest(unittest.TestCase):
+class AmplificationModelTest(unittest.TestCase):
 
     def _build_amp_df(self, ampcodes, levels, pga_vals, sigma_vals):
         # Build an amp DataFrame indexed by ampcode,
@@ -176,7 +177,7 @@ class AmpFunctionsEpistemicTest(unittest.TestCase):
         df = self._build_amp_df(['A'], [0.01, 0.1], [2.0, 1.5], [0.1, 0.2])
         names = ['b%d' % i for i in range(30)] # 30 branch names
         weights = numpy.full(30, 1.0 / 30)
-        amep = AmpFunctionsEpistemic(names, weights, [df] * 30)
+        amep = AmplificationModel(names, weights, [df] * 30)
         chars = list(amep.shortener.values())
         self.assertEqual(len(chars), len(set(chars))) # Unique per branch
 
@@ -192,7 +193,7 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
              )
         full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
         full_lt.source_model_lt = SourceModelLogicTree.fake()
-        full_lt.amp_lt = AmpFunctionsEpistemic(
+        full_lt.amp_lt = AmplificationModel(
             ['low', 'high'], [0.4, 0.6], [df, df],
             filenames=['amp_low.csv', 'amp_high.csv'],
             tree_filename='amp_lt.xml', branchset_id='bs_ampl'
@@ -233,7 +234,7 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt.source_model_lt = SourceModelLogicTree.fake()
         full_lt.source_model_lt.num_samples = num_samples
         full_lt.source_model_lt.sampling_method = sampling_method
-        full_lt.amp_lt = AmpFunctionsEpistemic(
+        full_lt.amp_lt = AmplificationModel(
             ['low', 'high'], [0.4, 0.6], [df, df])
         full_lt.init()
         return full_lt

@@ -23,14 +23,8 @@ per-branch amplification CSV files with weights summing to 1
 import os
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import BASE183
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.hazardlib import lt
-from openquake.hazardlib.lt import Realization
-
-
-F32 = numpy.float32
 
 
 class AmpLogicTree(object):
@@ -127,58 +121,3 @@ class AmpLogicTree(object):
             os.path.basename(self.filename), len(self.branches))
 
 
-class AmpFunctionsEpistemic(object):
-    """
-    Container holding one amplification-function DataFrame per branch,
-    with the branches being validated per-CSV by the calculator.
-    """
-    def __init__(self, names, weights, dframes, filenames=None,
-                 tree_filename='', branchset_id='bs_ampl'):
-        self.names = list(names)
-        self.weights = numpy.asarray(weights, F32)
-        self.dframes = list(dframes)
-        self.filenames = list(filenames) if filenames else list(names)
-        self.filename = tree_filename
-        self.branchset_id = branchset_id
-
-    @property
-    def R_amp(self):
-        """
-        :returns: number of amplification realizations
-        """
-        return len(self.names)
-
-    def get_realizations(self):
-        """
-        :returns: a list of :class:`Realization` objects, one per branch
-        """
-        return [Realization(value=name, weight=float(w), ordinal=i,
-                            lt_path=(name,), samples=1)
-                for i, (name, w) in enumerate(zip(self.names, self.weights))]
-
-    def sample(self, n, seed, sampling_method='early_weights'):
-        """
-        Monte-Carlo sample n amplification branches with prob = branch weight;
-        returns :class:`Realization` objects (branches may repeat or be absent)
-        """
-        probs = lt.random(n, seed, sampling_method)
-        return lt.sample(self.get_realizations(), probs, sampling_method)
-
-    @property
-    def shortener(self):
-        """
-        :returns: dict of branchID -> two-char abbreviation of the form
-            <letter><bsno>, matching the SSC and GSIM shorteners
-        """
-        return {name: BASE183[i] + '0' for i, name in enumerate(self.names)}
-
-    def __repr__(self):
-        return '<AmpFunctionsEpistemic R_amp=%d weights=%s>' % (
-            self.R_amp, self.weights.tolist())
-
-
-amp_lt_dt = numpy.dtype([
-    ('name', hdf5.vstr),
-    ('weight', F32),
-    ('filename', hdf5.vstr),
-])

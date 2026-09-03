@@ -48,7 +48,8 @@ from openquake.hazardlib.gsim_lt import (
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     LogicTreeError, parse_uncertainty, attach_branches)
-from openquake.hazardlib.amp_lt import AmpFunctionsEpistemic, amp_lt_dt
+# AmplificationModel + amp_lt_dt imported lazily inside __toh5__/__fromh5__
+# to avoid circular imports through openquake.commonlib.oqvalidation
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1388,6 +1389,7 @@ class FullLogicTree(object):
                      oversampling=self.oversampling)
         alt = self.amp_lt
         if alt is not None:
+            from openquake.hazardlib.site_amplification import amp_lt_dt
             dic['amp_lt'] = numpy.array(
                 list(zip(alt.names, alt.weights, alt.filenames)), amp_lt_dt)
             attrs['ampl_tree_filename'] = alt.filename
@@ -1412,13 +1414,14 @@ class FullLogicTree(object):
             self.sm_rlzs.append(sm)
         self.amp_lt = None
         if amp_lt_arr is not None and len(amp_lt_arr):
-            names = [decode(r['name']) for r in amp_lt_arr]
-            filenames = [decode(r['filename']) for r in amp_lt_arr]
-            # site amp dframes not needed post-restore because readinput reloads
-            # them from per-branch CSVs on demand in get_amp_functions_epistemic
-            self.amp_lt = AmpFunctionsEpistemic(
-                names, [r['weight'] for r in amp_lt_arr],
-                [None] * len(names), filenames,
+            from openquake.hazardlib.site_amplification import AmplificationModel
+            # dframes + amplifiers are None post-restore because readinput
+            # reloads them from per-branch CSVs on demand in
+            # get_ampl_functions_epistemic
+            self.amp_lt = AmplificationModel(
+                names=[decode(r['name']) for r in amp_lt_arr],
+                weights=[r['weight'] for r in amp_lt_arr],
+                filenames=[decode(r['filename']) for r in amp_lt_arr],
                 tree_filename=attrs.get('ampl_tree_filename', ''),
                 branchset_id=attrs.get('ampl_branchset_id', 'bs_ampl'))
 

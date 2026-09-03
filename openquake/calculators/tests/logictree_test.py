@@ -525,20 +525,6 @@ hazard_uhs-std.csv
             for fname, actual in zip(expected, got):
                 self.assertEqualFiles('expected/%s' % fname, actual)
 
-    def test_case_26_disagg(self):
-        # 3-branch amp LT, disaggregation, full enumeration and sampling
-        for ini, prefix, nrlz in [('job_disagg.ini', 'disagg_', 3),
-                                  ('job_disagg_sampling.ini',
-                                   'disagg_sampling_', 4)]:
-            self.run_calc(case_26.__file__, ini)
-            best = self.calc.datastore['best_rlzs'][:]
-            self.assertEqual(best.shape, (1, nrlz))
-            got = {strip_calc_id(f): f for f in export(
-                ('disagg-stats', 'csv'), self.calc.datastore)}
-            for stem in ('Mag-mean-0.csv', 'Mag_Dist_Eps-mean-0.csv'):
-                self.assertEqualFiles(
-                    'expected/%s%s' % (prefix, stem), got[stem])
-
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')

@@ -21,10 +21,22 @@ from scipy.stats import norm
 import pandas as pd
 
 from openquake.baselib import hdf5
+from openquake.baselib.general import BASE183, decode
 from openquake.hazardlib.stats import norm_cdf, truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.lt import Realization, random, sample
 from openquake.commonlib.oqvalidation import check_same_levels
+
+
+F32 = numpy.float32
+
+# amp-LT branch record: name, weight, per-branch CSV filename
+amp_lt_dt = numpy.dtype([
+    ('name', hdf5.vstr),
+    ('weight', F32),
+    ('filename', hdf5.vstr),
+])
 
 
 class AmplFunction():
@@ -400,21 +412,36 @@ class Amplifier(object):
             gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
 
 
-class AmplifierCollection(object):
+class AmplificationModel(object):
     """
-    One or more amplification branches.
-
-    For a non-epistemic amplification, ``amplifiers`` contains one item
-    and ``rlz_ampl_ord`` is None. For an epistemic amplification,
-    ``rlz_ampl_ord[r]`` selects the branch used by realization r.
+    Site amplification for one or more branches (single CSV or amp-LT)
     """
-    def __init__(self, amplifiers, rlz_ampl_ord=None):
-        assert amplifiers, 'At least one amplifier is required'
-        self.amplifiers = tuple(amplifiers)
+    def __init__(self, names, weights, dframes=None, amplifiers=None,
+                 filenames=None, tree_filename='', branchset_id='bs_ampl',
+                 rlz_ampl_ord=None):
+        assert names, 'At least one branch is required'
+        self.names = list(names)
+        self.weights = numpy.asarray(weights, F32)
+        # dframes and amplifiers are None after a HDF5 restore; readinput
+        # rebuilds them from the per-branch CSVs on demand
+        self.dframes = list(dframes) if dframes is not None else None
+        self.amplifiers = tuple(amplifiers) if amplifiers is not None else None
+        self.filenames = list(filenames) if filenames else list(self.names)
+        self.filename = tree_filename
+        self.branchset_id = branchset_id
+        # rlz_ampl_ord[r] gives the branch index used by realization r;
+        # None for the single-branch case
         self.rlz_ampl_ord = rlz_ampl_ord
 
     def __bool__(self):
         return True
+
+    @property
+    def R_amp(self):
+        """
+        :returns: number of amplification branches
+        """
+        return len(self.names)
 
     @property
     def amplevels(self):
@@ -436,6 +463,50 @@ class AmplifierCollection(object):
             self.amplifiers[self.rlz_ampl_ord[r]].amplify(
                 ampl_code, hcurve[:, r:r+1])
             for r in range(R)])
+
+    def get_realizations(self):
+        """
+        :returns: a list of :class:`Realization` objects, one per branch
+        """
+        return [Realization(value=name, weight=float(w), ordinal=i,
+                            lt_path=(name,), samples=1)
+                for i, (name, w) in enumerate(zip(self.names, self.weights))]
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        Monte-Carlo sample n branches with probability = branch weight;
+        returns :class:`Realization` objects (branches may repeat or be absent)
+        """
+        probs = random(n, seed, sampling_method)
+        return sample(self.get_realizations(), probs, sampling_method)
+
+    @property
+    def shortener(self):
+        """
+        :returns: dict of branchID -> two-char abbreviation, matching the SSC
+            and GSIM shortener format
+        """
+        return {name: BASE183[i] + '0' for i, name in enumerate(self.names)}
+
+    def __toh5__(self):
+        arr = numpy.array(
+            list(zip(self.names, self.weights, self.filenames)), amp_lt_dt)
+        return arr, dict(tree_filename=self.filename,
+                         branchset_id=self.branchset_id)
+
+    def __fromh5__(self, array, attrs):
+        self.names = [decode(r['name']) for r in array]
+        self.weights = numpy.array([r['weight'] for r in array], F32)
+        self.filenames = [decode(r['filename']) for r in array]
+        self.dframes = None
+        self.amplifiers = None
+        self.rlz_ampl_ord = None
+        self.filename = attrs.get('tree_filename', '')
+        self.branchset_id = attrs.get('branchset_id', 'bs_ampl')
+
+    def __repr__(self):
+        return '<AmplificationModel R_amp=%d weights=%s>' % (
+            self.R_amp, self.weights.tolist())
 
 
 def get_poes_site(mean_std, cmaker, ctx):
