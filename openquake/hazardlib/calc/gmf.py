@@ -24,6 +24,7 @@ import logging
 
 import numpy as np
 import pandas
+from scipy import special
 
 from openquake.baselib import config
 from openquake.baselib.general import AccumDict, humansize
@@ -74,6 +75,16 @@ def _site_positions(complete, selected):
             np.any(sorted_sids[positions] != selected_sids)):
         raise ValueError('Affected sites are absent from the complete grid')
     return order[positions]
+
+
+def _truncated_normals(shape, level, rng):
+    """Draw truncated standard normals with one in-place work array."""
+    samples = rng.random(shape)
+    lower = special.ndtr(-level)
+    samples *= special.ndtr(level) - lower
+    samples += lower
+    special.ndtri(samples, out=samples)
+    return samples
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -638,8 +649,8 @@ class GmfComputer(object):
             (factor.output_size, num_events), dtype=F32)
         for start in range(0, num_events, batch_size):
             stop = min(start + batch_size, num_events)
-            samples = self.within_dist.rvs(
-                (stop - start, factor.input_size), rng)
+            samples = _truncated_normals(
+                (stop - start, factor.input_size), self.tlw, rng)
             correlated[:, start:stop] = factor.apply(samples.T)
         return correlated.reshape(self.M, self.N, num_events)
 

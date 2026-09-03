@@ -24,7 +24,8 @@ from pyproj import Transformer
 from scipy import stats
 
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.gmf import F32, GmfComputer
+from openquake.hazardlib.calc.gmf import (
+    F32, GmfComputer, _truncated_normals)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.correlation_models.circulant_embedding import (
@@ -132,6 +133,15 @@ def test_ce_batches():
     numpy.testing.assert_allclose(batches, single, atol=1E-6)
     assert batches.shape == (len(IMTS), len(sites), 5)
     assert batches.dtype == F32
+
+
+def test_truncated_normals():
+    # The low-memory inverse-CDF draw is equivalent to SciPy's sampler.
+    expected = stats.truncnorm(-3, 3).rvs(
+        (3, 4), numpy.random.default_rng(9))
+    actual = _truncated_normals(
+        (3, 4), 3, numpy.random.default_rng(9))
+    numpy.testing.assert_allclose(actual, expected, atol=1E-15)
 
 
 def test_gmf_batches():
