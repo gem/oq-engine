@@ -23,6 +23,8 @@ from pyproj import Transformer
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import PGA, SA
@@ -67,6 +69,21 @@ def test_exact_covariance(shape):
     # deterministically, without a Monte Carlo tolerance. The second grid
     # also exercises an odd FFT-efficient embedding dimension.
     model = DuNing2021()
+    spacing = (2.0, 3.0)
+    factor = CirculantEmbeddingFactor.build(
+        model, IMTS, shape, spacing,
+        ResidualComponent.WITHIN_EVENT)
+    applied = factor.apply(numpy.eye(factor.input_size))
+    actual = applied @ applied.T
+    expected = dense_covariance(model, IMTS, shape, spacing)
+    numpy.testing.assert_allclose(actual, expected, atol=2E-14)
+
+
+def test_spatial_covariance():
+    # A traditional spatial model becomes a block-diagonal multivariate
+    # field, retaining independence between its different IMTs.
+    model = JayaramBaker2009(False)
+    shape = (2, 3)
     spacing = (2.0, 3.0)
     factor = CirculantEmbeddingFactor.build(
         model, IMTS, shape, spacing,

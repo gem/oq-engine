@@ -20,10 +20,13 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import logging
+
 import numpy as np
 import pandas
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib import config
+from openquake.baselib.general import AccumDict, humansize
 from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
@@ -31,6 +34,8 @@ from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
     import NoCrossCorrelation
 from openquake.hazardlib.correlation_models.base import (
     CorrelationContext, ResidualComponent, SpatialCorrelationModel)
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    CirculantEmbeddingFactor, RegularGridLayout)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -40,6 +45,35 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
+CE_MIN_SITES = 1_000
+
+
+def _correlation_budget():
+    """Return the configured per-worker correlation workspace budget."""
+    return int(float(config.memory.correlated_gmf_gb) * 1024 ** 3)
+
+
+def _dense_correlation_bytes(model, sites, num_imts):
+    """Estimate peak bytes required by the existing dense factorization."""
+    if isinstance(model, SpatialCorrelationModel):
+        num_sites = len(sites.complete)
+        matrices = num_imts + 2
+        return matrices * num_sites ** 2 * 8
+    dimension = num_imts * len(sites)
+    return 3 * dimension ** 2 * 8
+
+
+def _site_positions(complete, selected):
+    """Return positions of selected site IDs in the complete collection."""
+    complete_sids = np.asarray(complete.sids)
+    selected_sids = np.asarray(selected.sids)
+    order = np.argsort(complete_sids)
+    sorted_sids = complete_sids[order]
+    positions = np.searchsorted(sorted_sids, selected_sids)
+    if (np.any(positions == len(sorted_sids)) or
+            np.any(sorted_sids[positions] != selected_sids)):
+        raise ValueError('Affected sites are absent from the complete grid')
+    return order[positions]
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -256,6 +290,8 @@ class GmfComputer(object):
             mag=rupture.mag, rake=getattr(rupture, 'rake', None),
             trt=cmaker.trt)
         self._within_event_factor = None
+        self._ce_factor = None
+        self._ce_checked = False
         self.within_dist = NoCrossCorrelation(
             cmaker.truncation_level_within).distribution
         self.mea_tau_phi = []
@@ -440,13 +476,83 @@ class GmfComputer(object):
         with umon:
             return self.strip_zeros(data)
 
+    def _get_ce_factor(self):
+        """Return a cached CE factor when the large-grid path is eligible."""
+        if self._ce_checked:
+            return self._ce_factor
+        self._ce_checked = True
+        model = self.within_event_model
+        dense_bytes = _dense_correlation_bytes(model, self.sites, self.M)
+        dense_sites = (len(self.sites.complete)
+                       if isinstance(model, SpatialCorrelationModel)
+                       else len(self.sites))
+        compatible = model.SUPPORTS_CIRCULANT_EMBEDDING
+        if dense_sites < CE_MIN_SITES or not compatible:
+            if dense_bytes > _correlation_budget():
+                qualifier = ('too small for automatic circulant embedding'
+                             if compatible else
+                             'not enabled for circulant embedding')
+                raise ValueError(
+                    f'{model.__class__.__name__} is {qualifier}; its dense '
+                    f'factorization requires about '
+                    f'{humansize(dense_bytes)}')
+            return None
+
+        try:
+            complete = self.sites.complete
+            layout = RegularGridLayout.from_sites(complete)
+            positions = _site_positions(complete, self.sites)
+            site_indices = layout.site_indices[positions]
+            self._ce_factor = CirculantEmbeddingFactor.build(
+                model, self.imts, layout.grid_shape, layout.spacing,
+                ResidualComponent.WITHIN_EVENT,
+                self.correlation_context, site_indices)
+        except ValueError as exc:
+            if dense_bytes > _correlation_budget():
+                raise ValueError(
+                    f'Cannot sample {model.__class__.__name__} within the '
+                    f'correlation memory budget: {exc}') from exc
+            logging.warning(
+                'Falling back to dense %s correlation: %s',
+                model.__class__.__name__, exc)
+            return None
+
+        factor = self._ce_factor
+        logging.info(
+            'Using circulant embedding for %s: grid=%sx%s, '
+            'occupancy=%.1f%%, embedding=%sx%s, factor=%s',
+            model.__class__.__name__, *layout.grid_shape,
+            100 * layout.occupancy, *factor.embedded_shape,
+            humansize(factor.spectral_root.nbytes))
+        return factor
+
+    def _draw_ce_eps(self, factor, num_events):
+        """Draw correlated residual fields in bounded FFT batches."""
+        batch_size = min(
+            num_events, factor.batch_size(_correlation_budget()))
+        logging.info(
+            'Sampling %d correlated fields in batches of %d',
+            num_events, batch_size)
+        correlated = np.empty(
+            (factor.output_size, num_events), dtype=F32)
+        for start in range(0, num_events, batch_size):
+            stop = min(start + batch_size, num_events)
+            samples = self.within_dist.rvs(
+                (stop - start, factor.input_size), self.rng)
+            correlated[:, start:stop] = factor.apply(samples.T)
+        return correlated.reshape(self.M, self.N, num_events)
+
     def _draw_within_eps(self, num_events, correlate=True):
         if self.tlw <= TRUNCATION_THRESHOLD:
             return np.zeros((self.M, self.N, num_events), F32)
+        model = self.within_event_model
+        if correlate and model is not None:
+            factor = self._get_ce_factor()
+            if factor is not None:
+                return self._draw_ce_eps(factor, num_events)
         samples = np.asarray([
             self.within_dist.rvs((self.N, num_events), self.rng).astype(F32)
             for _ in range(self.M)])
-        model = self.within_event_model
         if (not correlate or model is None or
                 isinstance(model, SpatialCorrelationModel)):
             return samples
@@ -511,7 +617,9 @@ class GmfComputer(object):
             # a[:, newaxis] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
-            if isinstance(self.within_event_model, SpatialCorrelationModel):
+            if (isinstance(
+                    self.within_event_model, SpatialCorrelationModel) and
+                    self._ce_factor is None):
                 within_res = self.within_event_model.apply_correlation(
                     self.sites, imt, within_res, phi).astype(F32)
             between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]
