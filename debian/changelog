@@ -1,4 +1,15 @@
   [Anirudh Rao]
+  * Add a cicrculant embedding module for efficient simulation of 
+    spatially-cross-correlated ground motion fields
+  * Refresh the risk doc pages in the user manual
+  * For conditioned gmf calculations, for each GSIM branch, keep only 
+    the IMTs supported by that GSIM and drop the rest
+  * Add the Du and Ning (2021) within-event joint spatial and cross-IMT
+    correlation model for PGA, SAs at 17 periods, PGV, Ia, CAV, and 
+    significant durations
+  * Add the Baker and Bradley (2017) empirical cross-IMT correlation model 
+    as measured from the NGA-West2 database for PGA, SA, PGV, IA, and 
+    Significant Duration (for 5–75% and 5–95% definitions)
   * Harmonize correlation module metadata with GSIM conventions, abstract
     out common validation functions to the correlation base class
   * Add independent verification for pre-existing correlation models, and 

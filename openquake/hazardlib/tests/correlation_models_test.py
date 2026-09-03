@@ -21,6 +21,8 @@ from openquake.hazardlib import const, correlation, cross_correlation
 from openquake.hazardlib import correlation_models
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017 import (
+    BakerBradley2017)
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
@@ -42,7 +44,7 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.\
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     wang_du_2013 import (
         WangDu2013PGAIAPGV, WangDu2013SpectralAcceleration)
-from openquake.hazardlib.imt import IA, PGA, PGV, SA
+from openquake.hazardlib.imt import IA, PGA, PGV, RSD575, RSD595, SA
 
 
 def test_registry_aliases_and_metadata():
@@ -71,6 +73,14 @@ def test_registry_aliases_and_metadata():
     cross_imt = get_model_specs('cross_imt')
     assert cross_imt['BakerCornell2006'].supported_imts == {
         PGA, PGV, SA}
+    assert cross_imt['BakerBradley2017'].cls is BakerBradley2017
+    assert cross_imt['BakerBradley2017'].residual_component == (
+        ResidualComponent.TOTAL)
+    assert cross_imt['BakerBradley2017'].supported_imts == {
+        PGA, PGV, RSD575, RSD595, SA}
+    assert cross_imt['BakerBradley2017'].imc is None
+    assert cross_imt['BakerBradley2017'].sa_period_range == (0.01, 10.0)
+    assert cross_imt['BakerBradley2017'].sa_damping == 5.0
     assert cross_imt['BakerCornell2006'].calibrated_imts == {SA}
     assert cross_imt[
         'BakerCornell2006'

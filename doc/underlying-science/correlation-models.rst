@@ -111,6 +111,72 @@ approximation,
 This is a modelling assumption, not a general identity. A direct joint model
 is preferable when one has been calibrated for the application.
 
+Principal-component joint models
+--------------------------------
+
+Some direct joint models use principal component analysis (PCA) to represent
+the residual vector through latent spatial fields, often using fewer fields
+than IMTs. Let
+:math:`\boldsymbol{z}(s)` contain the residuals for the IMTs at site :math:`s`,
+:math:`A` be a loading matrix, and :math:`\boldsymbol{u}(s)` contain the
+principal-component fields. The representation is
+
+.. math::
+
+   \boldsymbol{z}(s) \simeq A\boldsymbol{u}(s).
+
+The scaling of :math:`A` and :math:`\boldsymbol{u}` depends on the convention
+used by the model: eigenvalue scaling may be carried by the loadings, the
+component covariances, or both. When the retained components are mutually
+uncorrelated and component :math:`k` has spatial covariance
+:math:`C_k(s,t)`, the reconstructed IM covariance is
+
+.. math::
+
+   C_{ij}(s,t) = \sum_{k=1}^{K} A_{ik} A_{jk} C_k(s,t).
+
+More generally, a model may specify a non-diagonal latent covariance and use
+:math:`A C_u(s,t) A^{\mathsf{T}}`. The component covariance functions need not
+have identical forms or spatial ranges. Their definitions and the loading
+normalization must be taken from the publication or its reference
+implementation rather than transferred between models.
+
+If each retained component defines a valid spatial covariance, the joint
+matrix assembled from the sum above is positive semidefinite. It is converted
+to correlation by its reconstructed marginal variances,
+
+.. math::
+
+   \rho_{ij}(s,t) =
+   \frac{C_{ij}(s,t)}
+        {\sqrt{C_{ii}(s,s) C_{jj}(t,t)}}.
+
+This positive diagonal rescaling preserves positive semidefiniteness and
+produces a unit diagonal when all marginal variances are positive.
+
+Retaining every component avoids the rank loss caused by truncation and can
+reproduce the covariance represented by the full PCA basis when its component
+scaling is retained. A truncation to :math:`K` components instead gives a
+low-rank approximation in the IMT dimension: at one site its rank is at most
+:math:`K`. It can capture the dominant dependence with fewer fitted spatial
+models, but discards the omitted components and generally changes the
+reconstructed covariance. Across multiple sites the rank also depends on the
+spatial rank of each component covariance. Whether to use a full or truncated
+basis, and whether that choice is configurable, is model-specific. Du and
+Ning (2021), for example, publish a recommended truncated construction.
+
+When a model exposes interpolation between calibrated IMT coordinates, it is
+preferable to interpolate a covariance-generating representation and then
+reconstruct and normalize the matrix. For example, interpolating loading
+vectors while retaining valid component covariances preserves the
+positive-semidefinite construction for the new coordinates. Interpolating
+component covariance parameters can serve the same purpose only when the
+result remains in a valid covariance family. By contrast, interpolating each
+pairwise correlation independently does not in general preserve joint
+consistency, positive semidefiniteness, or even a unit diagonal. The
+interpolation coordinate and its allowed domain still require scientific
+support; the PCA construction alone does not justify extrapolation.
+
 Covariance and sampling
 -----------------------
 
@@ -210,6 +276,11 @@ References
 * Bradley, B. A. (2012). Empirical correlations between peak ground velocity
   and spectrum-based intensity measures. *Earthquake Spectra*, 28(1), 17-35.
   https://doi.org/10.1193/1.3675582
+* Du, W., and Ning, C.-L. (2021). Modeling spatial cross-correlation of
+  multiple ground motion intensity measures (SAs, PGA, PGV, Ia, CAV, and
+  significant durations) based on principal component and geostatistical
+  analyses. *Earthquake Spectra*, 37(1), 486-504.
+  https://doi.org/10.1177/8755293020952442
 * Goda, K., and Atkinson, G. M. (2009). Probabilistic characterization of
   spatially correlated response spectra for earthquakes in Japan. *Bulletin
   of the Seismological Society of America*, 99(5), 3003-3020.

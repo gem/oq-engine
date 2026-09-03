@@ -13,5 +13,6 @@ guided tutorials and exercises to help you learn how to use the software.
 
    installation-instructions/index
    running-calculations/index
+   risk-quickstart
    demos-tutorials/index
    training-website
