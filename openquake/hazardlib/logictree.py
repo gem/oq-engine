@@ -48,8 +48,7 @@ from openquake.hazardlib.gsim_lt import (
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
     LogicTreeError, parse_uncertainty, attach_branches)
-# AmplificationModel + amp_lt_dt imported lazily inside __toh5__/__fromh5__
-# to avoid circular imports through openquake.commonlib.oqvalidation
+
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1416,8 +1415,7 @@ class FullLogicTree(object):
         if amp_lt_arr is not None and len(amp_lt_arr):
             from openquake.hazardlib.site_amplification import AmplificationModel
             # dframes + amplifiers are None post-restore because readinput
-            # reloads them from per-branch CSVs on demand in
-            # get_amp_functions
+            # reloads them from per-branch CSVs on demand in get_amp_functions
             self.amp_lt = AmplificationModel(
                 names=[decode(r['name']) for r in amp_lt_arr],
                 weights=[r['weight'] for r in amp_lt_arr],
