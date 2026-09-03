@@ -161,6 +161,39 @@ def test_gmf_batches():
         chunked.eid, numpy.repeat(numpy.arange(5), 6))
 
 
+def test_empty_gsim():
+    # An event-based rupture can have no events assigned to one GSIM.
+    class OtherGMM(data.ZeroMeanGMM):
+        pass
+
+    gsims = {
+        data.ZeroMeanGMM(): numpy.array([0]),
+        OtherGMM(): numpy.array([1])}
+    cmaker = simple_cmaker(gsims, ['PGA', 'SA(0.3)'])
+    cmaker.oq.calculation_mode = 'event_based'
+    cmaker.gmf_mon = Monitor()
+    cmaker.gid = numpy.array([0, 1])
+    ebr = EBRupture(
+        data.RUP, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0)
+    ebr.seed = 7
+    computer = GmfComputer(
+        ebr, regular_sites((2, 3)), cmaker, DuNing2021())
+    get_eps = computer.between_event_model.get_inter_eps
+
+    def reject_empty(imts, num_events, rng):
+        assert num_events
+        return get_eps(imts, num_events, rng)
+
+    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1), \
+            mock.patch.object(
+                computer.between_event_model, 'get_inter_eps',
+                side_effect=reject_empty):
+        batches = list(computer.compute_all_batches())
+
+    assert len(batches) == 1
+    assert len(batches[0][0]) == 6
+
+
 def test_ce_scaled_once():
     # CE returns normalized correlated residuals, so the target-site phi is
     # applied afterward and the legacy spatial factor must not run again.
