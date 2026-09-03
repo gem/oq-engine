@@ -511,9 +511,10 @@ hazard_uhs-std.csv
 
     def test_case_26(self):
         # 3-branch amp LT, classical, full enumeration and sampling
-        for ini, prefix, nrlz in [('job.ini', '', 3),
-                                  ('job_sampling.ini', 'sampling_', 4)]:
-            self.run_calc(case_26.__file__, ini)
+        for kwargs, prefix, nrlz in [
+                ({}, '', 3),
+                ({'number_of_logic_tree_samples': '2'}, 'sampling_', 2)]:
+            self.run_calc(case_26.__file__, 'job.ini', **kwargs)
             self.assertEqual(len(self.calc.full_lt.rlzs), nrlz)
             got = export(('hcurves', 'csv'), self.calc.datastore)
             expected = [

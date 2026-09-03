@@ -978,9 +978,8 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-# disaggregation is excluded because Disaggregator is not amp-aware
-# (see amp_lt_disagg_deferred.md); event-based support is TODO
-AMP_LT_SUPPORTED_MODES = ('classical',)
+#TODO: add support for disagg
+AMP_LT_SUPPORTED_MODES = ('classical')
 
 
 def _expand_amp_lt(oqparam):
