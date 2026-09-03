@@ -160,7 +160,7 @@ class AmplificationModelTest(unittest.TestCase):
 
     def _build_amp_df(self, ampcodes, levels, pga_vals, sigma_vals):
         # Build an amp DataFrame indexed by ampcode,
-        # as produced by AmplFunction.read_df
+        # as produced by AmplificationFunction.read_df
         rows = []
         for code in ampcodes:
             for lvl, pga, sig in zip(levels, pga_vals, sigma_vals):

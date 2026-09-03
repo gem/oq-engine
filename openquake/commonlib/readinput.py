@@ -64,7 +64,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt, amp_lt)
 from openquake.hazardlib.site_amplification import (
-    AmplFunction, Amplifier, AmplificationModel)
+    AmplificationFunction, Amplifier, AmplificationModel)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -1017,7 +1017,7 @@ def get_amp_functions(oqparam):
     tree = _expand_amp_lt(oqparam)
     if tree is None:
         return None
-    dframes = [AmplFunction.read_df(f) for f in tree.filenames]
+    dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
     amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
                   for df in dframes]
     return AmplificationModel(

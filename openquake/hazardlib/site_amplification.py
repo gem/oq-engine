@@ -39,7 +39,7 @@ amp_lt_dt = numpy.dtype([
 ])
 
 
-class AmplFunction():
+class AmplificationFunction():
     """
     Class for managing an amplification function DataFrame.
 
@@ -66,7 +66,7 @@ class AmplFunction():
         :param soil:
             A string
         :returns:
-            A :class:`openquake.hazardlib.site_amplification.AmplFunction`
+            A :class:`openquake.hazardlib.site_amplification.AmplificationFunction`
             instance
         """
         # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
@@ -84,7 +84,7 @@ class AmplFunction():
                   'from_rrup': float, 'level': float, 'imt': str,
                   'median': float, 'std': float}
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
-        return AmplFunction(df, soil)  # requires reset_index
+        return AmplificationFunction(df, soil)  # requires reset_index
 
     @classmethod
     def read_df(cls, csvfname):

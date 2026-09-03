@@ -46,7 +46,7 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import (
-    Amplifier, AmplFunction, AmplificationModel)
+    Amplifier, AmplificationFunction, AmplificationModel)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -1171,13 +1171,13 @@ class HazardCalculator(BaseCalculator):
                 self.amplifier = amep
             else:
                 logging.info('Reading %s', oq.inputs['amplification'])
-                df = AmplFunction.read_df(oq.inputs['amplification'])
+                df = AmplificationFunction.read_df(oq.inputs['amplification'])
                 check_amplification(df, self.sitecol)
                 if oq.amplification_method == 'kernel':
                     # TODO: need to add additional checks on the main
                     # calculation methodology since the kernel method is
                     # currently tested only for classical PSHA
-                    self.af = AmplFunction.from_dframe(df)
+                    self.af = AmplificationFunction.from_dframe(df)
                 else:  # convolution: single branch, no LT
                     self.amplifier = AmplificationModel(
                         names=['ampl'], weights=[1.0], dframes=[df],
