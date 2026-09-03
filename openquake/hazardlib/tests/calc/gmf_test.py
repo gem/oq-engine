@@ -18,10 +18,12 @@ from types import SimpleNamespace
 from unittest import mock
 
 import numpy
+import pandas
 import pytest
 from pyproj import Transformer
 from scipy import stats
 
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.gmf import F32, GmfComputer
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import CorrelationContext
@@ -35,6 +37,9 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.source.rupture import EBRupture
+from openquake.hazardlib.tests.calc import _conditioned_gmfs_test_data as data
 
 
 IMTS = [PGA(), SA(0.3)]
@@ -64,6 +69,30 @@ def regular_sites(shape):
         500_000 + x.ravel() * 1_000,
         4_200_000 + y.ravel() * 1_000)
     return SiteCollection.from_points(lons, lats)
+
+
+def build_full_computer(num_events=5):
+    """Return a small, fully operational CE GMF computer."""
+    cmaker = simple_cmaker(
+        [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'])
+    cmaker.oq.calculation_mode = 'scenario'
+    cmaker.gmf_mon = Monitor()
+    cmaker.gid = numpy.array([0])
+    ebr = EBRupture(
+        data.RUP, source_id=0, trt_smr=0, n_occ=num_events,
+        id=0, e0=0)
+    ebr.seed = 7
+    return GmfComputer(
+        ebr, regular_sites((2, 3)), cmaker, DuNing2021())
+
+
+def collect_batches(batch_size):
+    computer = build_full_computer()
+    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1), \
+            mock.patch.object(
+                GmfComputer, '_ce_batch_size', return_value=batch_size):
+        batches = list(computer.compute_all_batches())
+    return pandas.concat([batch[0] for batch in batches]), batches
 
 
 def test_ce_selection():
@@ -103,6 +132,23 @@ def test_ce_batches():
     numpy.testing.assert_allclose(batches, single, atol=1E-6)
     assert batches.shape == (len(IMTS), len(sites), 5)
     assert batches.dtype == F32
+
+
+def test_gmf_batches():
+    # Changing the output batch size must not change seeded realizations.
+    single, one_batch = collect_batches(5)
+    chunked, three_batches = collect_batches(2)
+
+    assert [len(batch[0]) for batch in three_batches] == [12, 12, 6]
+    assert [batch[2] for batch in three_batches] == [False, False, True]
+    assert one_batch[0][2]
+    numpy.testing.assert_array_equal(single.eid, chunked.eid)
+    numpy.testing.assert_array_equal(single.sid, chunked.sid)
+    numpy.testing.assert_array_equal(single.rlz, chunked.rlz)
+    numpy.testing.assert_allclose(
+        single[['PGA', 'SA(0.3)']], chunked[['PGA', 'SA(0.3)']])
+    numpy.testing.assert_array_equal(
+        chunked.eid, numpy.repeat(numpy.arange(5), 6))
 
 
 def test_ce_scaled_once():
