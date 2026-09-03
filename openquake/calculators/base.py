@@ -1154,7 +1154,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         # store amplification functions if any
         if 'amplification' in oq.inputs:
-            amep = readinput.get_ampl_functions_epistemic(oq)
+            amep = readinput.get_amp_functions(oq)
             if amep is not None:
                 logging.info('Reading %d amplification branches from %s',
                              amep.R_amp, amep.filename)

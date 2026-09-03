@@ -1417,7 +1417,7 @@ class FullLogicTree(object):
             from openquake.hazardlib.site_amplification import AmplificationModel
             # dframes + amplifiers are None post-restore because readinput
             # reloads them from per-branch CSVs on demand in
-            # get_ampl_functions_epistemic
+            # get_amp_functions
             self.amp_lt = AmplificationModel(
                 names=[decode(r['name']) for r in amp_lt_arr],
                 weights=[r['weight'] for r in amp_lt_arr],
