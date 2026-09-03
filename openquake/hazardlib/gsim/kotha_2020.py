@@ -37,8 +37,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA, from_string
 from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile, ITPL,
                                                TAU_EXECUTION, TAU_SETUP)
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'Kotha_2020')
 
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'Kotha_2020')
 
 CONSTANTS = {"Mref": 4.5, "Rref": 30., "Mh": 5.7,
              "h_D10": 4.0, "h_10D20": 8.0, "h_D20": 12.0}
