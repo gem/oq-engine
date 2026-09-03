@@ -532,6 +532,8 @@ class GmfComputer(object):
         batches = []
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             idxs, = np.where(np.isin(self.rlz, rlzs))
+            if not len(idxs):
+                continue
             if self.tlb > TRUNCATION_THRESHOLD:
                 self.between_eps[idxs] = \
                     self.between_event_model.get_inter_eps(
