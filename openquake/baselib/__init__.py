@@ -242,7 +242,9 @@ MODE_CAPABILITIES: dict[Mode, FrozenSet[Capability]] = {
     ),
     Mode.AELO: (
         (STANDARD_JOB_MANAGEMENT - {Capability.STANDARD_JOB_LAUNCHING,
-                                    Capability.JOB_CONTINUING})
+                                    Capability.JOB_CONTINUING,
+                                    Capability.JOB_TAGGING,
+                                    Capability.JOB_SHARING})
         | frozenset({
             Capability.AUTHENTICATION,
             Capability.AELO_JOB_LAUNCHING,
