@@ -113,8 +113,7 @@ class AmplificationLogicTreeTest(unittest.TestCase):
 
     def _assert_rejects(self, xml, error_tail):
         # Helper that writes xml to a temp file with AmplificationLogicTree
-        # expected to raise InvalidFile with a message of
-        # '<temp_path>: <error_tail>'
+        # expected to raise InvalidFile with msg of "<temp_path>: <error_tail>"
         path = _write(xml)
         with self.assertRaises(InvalidFile) as ctx:
             AmplificationLogicTree(path)
