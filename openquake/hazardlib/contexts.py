@@ -942,6 +942,8 @@ class ContextMaker(object):
                     value = rup.surface.mesh.depths.max()
                 else:
                     value = rup.hypocenter.depth
+            elif param == 'is_aftershock':
+                value = getattr(rup, 'is_aftershock', False)
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
