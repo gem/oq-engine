@@ -61,7 +61,7 @@ def _grid_points(layout, indices):
         (rows * layout.spacing[0], columns * layout.spacing[1]))
 
 
-def _covariance_root(covariance):
+def covariance_root(covariance):
     """Return a real square root of a positive-semidefinite covariance."""
     covariance = (covariance + covariance.T) / 2
     eigenvalues, eigenvectors = numpy.linalg.eigh(covariance)
@@ -116,7 +116,7 @@ def _build_group(model, imts, layout, station_points, station_indices,
     inverse = numpy.linalg.pinv(grid_covariance, hermitian=True)
     weights = cross_covariance @ inverse
     conditional = station_covariance - weights @ cross_covariance.T
-    root = _covariance_root(conditional)
+    root = covariance_root(conditional)
     error_stop = error_start + len(conditional)
     return LocalKrigingGroup(
         station_indices, grid_indices, weights, root,
