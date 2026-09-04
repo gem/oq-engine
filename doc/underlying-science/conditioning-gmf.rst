@@ -89,8 +89,41 @@ correlation, this is a legacy approximation rather than a direct model of the
 required covariance. A direct joint model bypasses that approximation.
 
 The model library currently has a limited selection for station-conditioned,
-multi-IMT calculations. Loth and Baker (2013), further direct joint models and
-scalable covariance factorizations are priorities for future development.
+multi-IMT calculations. Direct spatial-cross-IMT models should be used when
+available because they provide the complete target-to-observation covariance
+without the separable legacy approximation.
+
+Scalable conditional simulation
+--------------------------------
+
+Direct sampling from the conditional covariance in Step 7 requires a dense
+matrix whose dimensions are the number of targets multiplied by the number of
+IMTs. This is retained as a reference for small calculations but is infeasible
+for realistic regional grids.
+
+For sufficiently large regular grids and compatible joint models, the engine
+therefore uses circulant embedding to generate an unconditional target field
+and Matheron substitution to condition it. Paired unconditional values are
+generated at the target grid and station locations; the difference between
+the observed and simulated station values is then propagated to the target
+field with the same covariance weights used for the conditional mean. This
+applies the conditional-Gaussian transform without forming its dense target
+covariance.
+
+Stations that coincide with grid cells share their simulated values exactly.
+Off-grid stations use the fourth-order local-kriging approximation proposed by
+Bailey et al. (2022). Stations occupying the same grid box are simulated
+jointly across all IMTs, while conditional errors belonging to different grid
+boxes are treated as independent. Regression weights and GMFs are processed
+in batches governed by ``memory.conditioned_gmf_gb``.
+
+``DuNing2021`` is currently enabled for this scalable joint path. Other joint
+models retain dense sampling until their structured embeddings have been
+validated.
+
+The scalable joint path currently supports untruncated Gaussian conditioning.
+Finite truncated multivariate-normal sampling is not available for joint
+spatial-cross-IMT conditioning.
 
 
 References
@@ -103,3 +136,5 @@ References
 - Silva, V., & Horspool, N. (2019). Combining USGS ShakeMaps and the OpenQuake-engine for damage and loss assessment. Earthquake Engineering and Structural Dynamics, 48(6), 634–652. DOI: https://doi.org/10.1002/eqe.3154.
 
 - Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022). Partitioning Ground Motion Uncertainty When Conditioned on Station Data. Bulletin of the Seismological Society of America, 112(2), 1060–1079. DOI: https://doi.org/10.1785/0120210177.
+
+- Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., & Worden, C. B. (2022). Adapting conditional simulation using circulant embedding for irregularly spaced spatial data. Stat, 11(1), e446. DOI: https://doi.org/10.1002/sta4.446.
