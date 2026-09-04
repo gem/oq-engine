@@ -330,10 +330,14 @@ from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    CirculantEmbeddingFactor, GRID_TOLERANCE, RegularGridLayout)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
     import BakerJayaram2008
 from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 \
     import GodaAtkinson2009
+from openquake.hazardlib.correlation_models.local_kriging import (
+    covariance_root, LocalKrigingFactor)
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 \
     import JayaramBaker2009
 from openquake.hazardlib.geo.geodetic import geodetic_distance
@@ -579,6 +583,7 @@ class StationConditioning:
     full_phi_D: numpy.ndarray
     phi_D: numpy.ndarray
     tau_D: numpy.ndarray
+    observation_stddev: numpy.ndarray
     T_D: numpy.ndarray
     cov_HD_HD: numpy.ndarray
     cov_YD_YD: numpy.ndarray
@@ -643,8 +648,196 @@ def build_station_conditioning(inp, mean_stds_D, DD):
             'covariance matrix')
     return StationConditioning(
         zeta_D, imts_D, latent_imts, valid, observed_imt_indices,
-        full_phi_D, phi_D, tau_D, T_D, cov_HD_HD, cov_YD_YD,
+        full_phi_D, phi_D, tau_D, observation_stddev.reshape(-1)[valid],
+        T_D, cov_HD_HD, cov_YD_YD,
         cov_YD_YD_inv)
+
+
+def _target_grid(inp):
+    """Return the regular target sites after excluding station locations."""
+    is_station = numpy.isin(inp.sites_Y.sids, inp.sites_D.sids)
+    grid_sites = inp.sites_Y.filter(~is_station)
+    if grid_sites is None or len(grid_sites) < 4:
+        raise ValueError(
+            'Circulant conditioning requires at least four non-station '
+            'target grid sites')
+    return grid_sites
+
+
+def _target_locations(inp, layout):
+    """Map target sites to grid cells or matching off-grid stations."""
+    rows, columns = layout.grid_coordinates(inp.sites_Y)
+    rounded_rows = numpy.rint(rows)
+    rounded_columns = numpy.rint(columns)
+    on_grid = (
+        (numpy.abs(rows - rounded_rows) <= GRID_TOLERANCE) &
+        (numpy.abs(columns - rounded_columns) <= GRID_TOLERANCE))
+    on_grid_targets = numpy.flatnonzero(on_grid)
+    grid_cells = (
+        rounded_rows[on_grid].astype(int) * layout.grid_shape[1] +
+        rounded_columns[on_grid].astype(int))
+    if (numpy.any(grid_cells < 0) or
+            numpy.any(grid_cells >= numpy.prod(layout.grid_shape))):
+        raise ValueError('An on-grid target lies outside the CE grid')
+
+    off_grid_targets = numpy.flatnonzero(~on_grid)
+    station_by_sid = {
+        sid: index for index, sid in enumerate(inp.sites_D.sids)}
+    try:
+        station_indices = numpy.array([
+            station_by_sid[inp.sites_Y.sids[index]]
+            for index in off_grid_targets], dtype=numpy.int64)
+    except KeyError as exc:
+        raise ValueError(
+            'An off-grid target does not correspond to a station') from exc
+    return (on_grid_targets, grid_cells, off_grid_targets,
+            station_indices)
+
+
+@dataclass(frozen=True)
+class CirculantConditioningSampler:
+    """Generate paired target and station draws from one joint prior."""
+
+    grid_factor: CirculantEmbeddingFactor
+    station_factor: LocalKrigingFactor
+    target_imt_indices: numpy.ndarray
+    on_grid_targets: numpy.ndarray
+    target_grid_cells: numpy.ndarray
+    off_grid_targets: numpy.ndarray
+    target_station_indices: numpy.ndarray
+    observation_field_indices: numpy.ndarray
+    between_root: numpy.ndarray
+
+    @classmethod
+    def build(cls, inp, station, order=4):
+        """Build the CE and local-kriging factors for one station system."""
+        model = inp.within_event_model
+        if not model.SUPPORTS_CIRCULANT_EMBEDDING:
+            raise ValueError(
+                f'{model.__class__.__name__} is not enabled for '
+                'circulant embedding')
+        layout = RegularGridLayout.from_sites(_target_grid(inp))
+        layout = layout.expanded(inp.sites_D, order)
+        grid_factor = CirculantEmbeddingFactor.build(
+            model, station.latent_imts, layout.grid_shape,
+            layout.spacing, ResidualComponent.WITHIN_EVENT,
+            inp.correlation_context)
+        station_factor = LocalKrigingFactor.build(
+            model, station.latent_imts, layout, inp.sites_D, order,
+            ResidualComponent.WITHIN_EVENT, inp.correlation_context)
+        locations = _target_locations(inp, layout)
+
+        latent_index = {
+            imt: index for index, imt in enumerate(station.latent_imts)}
+        target_imt_indices = numpy.array([
+            latent_index[imt] for imt in inp.imts_Y], dtype=numpy.int64)
+        num_stations = len(inp.sites_D)
+        observation_sites = numpy.tile(
+            numpy.arange(num_stations), len(station.observed_imts))
+        observation_sites = observation_sites[station.observation_mask]
+        observation_fields = (
+            station.observed_imt_indices * num_stations +
+            observation_sites)
+        return cls(
+            grid_factor, station_factor, target_imt_indices,
+            *locations, observation_fields,
+            covariance_root(station.cov_HD_HD))
+
+    def draw_prior(self, rng, mean_stds_Y, station, num_events, cutoff=0):
+        """Draw paired zero-mean target and noisy station prior fields."""
+        white = rng.standard_normal(
+            (self.grid_factor.input_size, num_events))
+        grid_fields = self.grid_factor.apply(white).reshape(
+            self.station_factor.num_imts, -1, num_events)
+        local_errors = rng.standard_normal(
+            (self.station_factor.error_size, num_events))
+        station_fields = self.station_factor.apply(
+            grid_fields, local_errors)
+
+        M = len(self.target_imt_indices)
+        N = mean_stds_Y.shape[-1]
+        within_Y = numpy.empty((M, N, num_events))
+        for m, latent_index in enumerate(self.target_imt_indices):
+            within_Y[m, self.on_grid_targets] = grid_fields[
+                latent_index, self.target_grid_cells]
+            within_Y[m, self.off_grid_targets] = station_fields[
+                latent_index, self.target_station_indices]
+        phi_Y = numpy.asarray(mean_stds_Y[3, 0], dtype=numpy.float64)
+        tau_Y = numpy.asarray(mean_stds_Y[2, 0], dtype=numpy.float64)
+        unconditional_Y = phi_Y[:, :, None] * within_Y
+
+        flat_stations = station_fields.reshape(
+            self.station_factor.num_imts *
+            self.station_factor.num_stations, num_events)
+        unconditional_D = (
+            station.phi_D[:, None] *
+            flat_stations[self.observation_field_indices])
+        H = self.between_root @ rng.standard_normal(
+            (len(self.between_root), num_events))
+        unconditional_Y += (
+            tau_Y[:, :, None] *
+            H[self.target_imt_indices, None, :])
+        unconditional_D += station.T_D @ H
+        unconditional_D += (
+            station.observation_stddev[:, None] *
+            rng.standard_normal(unconditional_D.shape))
+        unconditional_Y = unconditional_Y.reshape(M * N, num_events)
+        if cutoff:
+            unconditional_Y += numpy.sqrt(cutoff) * rng.standard_normal(
+                unconditional_Y.shape)
+        return unconditional_Y, unconditional_D
+
+
+def _layout_distances(layout, first, second):
+    """Return projected distances in kilometres on a CE grid's CRS."""
+    first_rows, first_columns = layout.grid_coordinates(first)
+    second_rows, second_columns = layout.grid_coordinates(second)
+    spacing_y, spacing_x = layout.spacing
+    first_points = numpy.column_stack(
+        (first_rows * spacing_y, first_columns * spacing_x))
+    second_points = numpy.column_stack(
+        (second_rows * spacing_y, second_columns * spacing_x))
+    differences = first_points[:, None] - second_points[numpy.newaxis, :]
+    return numpy.linalg.norm(differences, axis=-1)
+
+
+def condition_ce_prior(inp, mean_stds_Y, station, sampler,
+                       unconditional_Y, unconditional_D,
+                       max_block_elements):
+    """Apply Matheron substitution in bounded target-site chunks."""
+    M = len(inp.imts_Y)
+    N = len(inp.sites_Y)
+    Q = len(station.zeta_D)
+    if unconditional_Y.shape[0] != M * N:
+        raise ValueError('The target prior has an unexpected shape')
+    if unconditional_D.shape[0] != Q:
+        raise ValueError('The station prior has an unexpected shape')
+    num_events = unconditional_Y.shape[1]
+    if unconditional_D.shape[1] != num_events:
+        raise ValueError('Target and station priors must have equal samples')
+
+    chunk_size = max(1, max_block_elements // (M * Q))
+    result = numpy.empty((M, N, num_events), dtype=numpy.float64)
+    prior = unconditional_Y.reshape(M, N, num_events)
+    correction = station.solve(
+        station.zeta_D[:, None] - unconditional_D)
+    layout = sampler.station_factor.layout
+    for start in range(0, N, chunk_size):
+        stop = min(start + chunk_size, N)
+        positions = numpy.arange(start, stop)
+        sites_Y = inp.sites_Y.filtered(positions)
+        chunk_inp = replace(inp, sites_Y=sites_Y)
+        chunk_stats = mean_stds_Y[:, :, :, start:stop]
+        distances = _layout_distances(layout, sites_Y, inp.sites_D)
+        joint = build_joint_conditioning(
+            chunk_inp, chunk_stats, station, None, distances)
+        conditioned = (
+            joint.mu_Y[:, None] +
+            prior[:, start:stop].reshape(-1, num_events) +
+            joint.cov_Y_YD @ correction)
+        result[:, start:stop] = conditioned.reshape(
+            M, stop - start, num_events)
+    return result
 
 
 @dataclass
