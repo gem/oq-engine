@@ -72,6 +72,14 @@ lt
     :undoc-members:
     :show-inheritance:
 
+amp_lt
+------------------------------
+
+.. automodule:: openquake.hazardlib.amp_lt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 near_fault
 -------------------------------------
 

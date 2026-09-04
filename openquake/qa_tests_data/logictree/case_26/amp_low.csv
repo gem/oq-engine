@@ -1,0 +1,4 @@
+#,,,,,,,,vs30_ref=760
+ampcode,from_mag,from_rrup,level,PGA,SA(0.2),sigma_PGA,sigma_SA(0.2)
+A,4.0,0.0,0.01,1.0,1.2,0.1,0.15
+A,4.0,0.0,0.5,0.9,1.0,0.1,0.15

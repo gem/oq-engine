@@ -45,8 +45,8 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
-from openquake.hazardlib.site_amplification import Amplifier
-from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.site_amplification import (
+    Amplifier, AmplificationFunction, AmplificationModel)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -511,7 +511,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     af = None
-    amplifier = None
+    amplifier = None  # None or AmplificationModel (single or LT branches)
 
     def src_filter(self):
         """
@@ -614,7 +614,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
-        self._read_risk4()
+        self._set_amplifier()
 
         if (oq.calculation_mode == 'event_based' and
                 oq.within_event_correlation_model and
@@ -744,8 +744,8 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
-                'max_weight amplifier policy_df treaty_df full_lt exported '
-                'trt_rlzs gids'
+                'max_weight amplifier policy_df treaty_df '
+                'full_lt exported trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -1150,26 +1150,49 @@ class HazardCalculator(BaseCalculator):
                 # fix: the sitecol is not complete
                 self.sitecol.complete = self.datastore.parent['complete']
 
-    def _read_risk4(self):
+    def _set_amplifier(self):
+        """
+        Set self.amplifier from a plain amplification CSV
+        or an amp-LT XML.
+        """
         oq = self.oqparam
-        # store amplification functions if any
+        # Store amplification functions if any
         if 'amplification' in oq.inputs:
-            logging.info('Reading %s', oq.inputs['amplification'])
-            df = AmplFunction.read_df(oq.inputs['amplification'])
-            check_amplification(df, self.sitecol)
-            if oq.amplification_method == 'kernel':
-                # TODO: need to add additional checks on the main calculation
-                # methodology since the kernel method is currently tested only
-                # for classical PSHA
-                self.af = AmplFunction.from_dframe(df)
+            amep = readinput.get_amp_functions(oq)
+            if amep is not None:
+                logging.info('Reading %d amplification branches from %s',
+                             amep.R_amp, amep.filename)
+                # Each branch is validated on its own: ampcode coverage
+                # of the sitecol, then IMT coverage via Amplifier init
+                for df in amep.dframes:
+                    check_amplification(df, self.sitecol)
+                # self.full_lt is set after _set_amplifier, so refetch here
+                full_lt = getattr(self, 'full_lt', None) or (
+                    readinput.get_full_lt(oq))
+                amep.rlz_ampl_ord = numpy.array(
+                    [r.ampl_rlz.ordinal
+                     for r in full_lt.get_realizations()], numpy.uint32)
+                self.amplifier = amep
             else:
-                self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
+                logging.info('Reading %s', oq.inputs['amplification'])
+                df = AmplificationFunction.read_df(oq.inputs['amplification'])
+                check_amplification(df, self.sitecol)
+                if oq.amplification_method == 'kernel': # Single branch, no LT
+                    # TODO: need to add additional checks on the main
+                    # calculation methodology since the kernel method is
+                    # currently tested only for classical PSHA
+                    self.af = AmplificationFunction.from_dframe(df)
+                else:  # Convolution: single branch, no LT
+                    self.amplifier = AmplificationModel(
+                        names=['ampl'], weights=[1.0], dframes=[df],
+                        amplifiers=[Amplifier(
+                            oq.imtls, df, oq.soil_intensities)])
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        oq._amplifier = self.amplifier
+        oq._amplifier = self.amplifier.amplifiers[0] if self.amplifier else None
         self.add_sec_perils(oq)
 
         # compute exposure stats

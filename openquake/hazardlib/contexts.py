@@ -1964,13 +1964,13 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    from openquake.hazardlib.site_amplification import AmplFunction
+    from openquake.hazardlib.site_amplification import AmplificationFunction
     if not hasattr(full_lt, 'weights'):
         full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
+        df = AmplificationFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplificationFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)
