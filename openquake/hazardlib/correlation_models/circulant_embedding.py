@@ -85,6 +85,7 @@ class RegularGridLayout:
     spacing: tuple
     site_indices: numpy.ndarray
     crs: int
+    projected_origin: tuple
     maximum_error: float
 
     @classmethod
@@ -124,8 +125,10 @@ class RegularGridLayout:
                 'Sites do not form an axis-aligned regular UTM grid; '
                 f'maximum coordinate error is {errors.max():g} m')
 
-        ix -= ix.min()
-        iy -= iy.min()
+        minimum_x = ix.min()
+        minimum_y = iy.min()
+        ix -= minimum_x
+        iy -= minimum_y
         nx = int(ix.max()) + 1
         ny = int(iy.max()) + 1
         if nx < 2 or ny < 2:
@@ -142,7 +145,58 @@ class RegularGridLayout:
         return cls(
             (ny, nx),
             (float(spacing_y / 1000), float(spacing_x / 1000)),
-            indices, crs, float(errors.max()))
+            indices, crs,
+            (float(y0 + minimum_y * spacing_y),
+             float(x0 + minimum_x * spacing_x)),
+            float(errors.max()))
+
+    def grid_coordinates(self, sites):
+        """Return fractional row and column coordinates for ``sites``."""
+        transformer = Transformer.from_crs(
+            4326, self.crs, always_xy=True)
+        x, y = transformer.transform(sites.lons, sites.lats)
+        origin_y, origin_x = self.projected_origin
+        spacing_y, spacing_x = self.spacing
+        rows = (numpy.asarray(y) - origin_y) / (spacing_y * 1000)
+        columns = (numpy.asarray(x) - origin_x) / (spacing_x * 1000)
+        return rows, columns
+
+    def expanded(self, sites, margin):
+        """Return a grid enlarged around ``sites`` by ``margin`` cells."""
+        if not isinstance(margin, (int, numpy.integer)) or margin < 0:
+            raise ValueError('margin must be a non-negative integer')
+        rows, columns = self.grid_coordinates(sites)
+        rounded_rows = numpy.rint(rows)
+        rounded_columns = numpy.rint(columns)
+        rows = numpy.where(
+            numpy.abs(rows - rounded_rows) <= GRID_TOLERANCE,
+            rounded_rows, rows)
+        columns = numpy.where(
+            numpy.abs(columns - rounded_columns) <= GRID_TOLERANCE,
+            rounded_columns, columns)
+        if not len(rows):
+            return self
+
+        ny, nx = self.grid_shape
+        lower_y = min(0, int(numpy.floor(rows.min())) - margin)
+        lower_x = min(0, int(numpy.floor(columns.min())) - margin)
+        upper_y = max(ny - 1, int(numpy.ceil(rows.max())) + margin)
+        upper_x = max(nx - 1, int(numpy.ceil(columns.max())) + margin)
+        if (lower_y, lower_x, upper_y, upper_x) == (
+                0, 0, ny - 1, nx - 1):
+            return self
+
+        old_rows, old_columns = numpy.divmod(self.site_indices, nx)
+        new_nx = upper_x - lower_x + 1
+        indices = ((old_rows - lower_y) * new_nx +
+                   old_columns - lower_x)
+        spacing_y, spacing_x = self.spacing
+        origin_y, origin_x = self.projected_origin
+        origin = (origin_y + lower_y * spacing_y * 1000,
+                  origin_x + lower_x * spacing_x * 1000)
+        return type(self)(
+            (upper_y - lower_y + 1, new_nx), self.spacing,
+            indices, self.crs, origin, self.maximum_error)
 
     @property
     def occupancy(self):
