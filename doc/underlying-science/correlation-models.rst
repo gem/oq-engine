@@ -198,8 +198,47 @@ The default sampler forms a dense correlation matrix and uses a Cholesky
 factorization. Its memory requirement grows quadratically and its factorization
 cost grows cubically with :math:`MN`. Consequently, a calculation that is
 tractable for one IMT or a small site collection can become infeasible for a
-large multi-IMT field. Structured methods and alternative factorizations are
-needed for substantially larger calculations.
+large multi-IMT field.
+
+Scalable sampling on regular grids
+----------------------------------
+
+For a stationary model evaluated on a regular two-dimensional grid, the
+spatial covariance has repeated block-Toeplitz structure. Circulant embedding
+places that covariance inside a larger periodic block-circulant matrix, whose
+spatial modes can be diagonalized with fast Fourier transforms (FFTs). Only a
+small IMT-by-IMT spectral covariance must then be factorized at each Fourier
+mode. This replaces the dense cubic factorization with operations that scale
+approximately as :math:`MN\log N`.
+
+The engine uses this path automatically for sufficiently large compatible
+models and regular grids. Grid cells may be unoccupied, provided the enclosing
+rectangle is not excessively larger than the requested site collection. The
+periodic embedding is enlarged until its spectrum is positive semidefinite;
+the calculation stops with an explanatory error when that cannot be achieved
+within the supported enlargement.
+
+For station-conditioned fields, OpenQuake combines circulant embedding with
+Matheron substitution. If :math:`U_T` and :math:`U_O` are paired unconditional
+draws at the targets and observations, respectively, a conditional draw is
+
+.. math::
+
+   Y_{T|O} = \mu_T + U_T +
+   \Sigma_{TO}\Sigma_{OO}^{+}(y_O - \mu_O - U_O).
+
+This avoids constructing or factorizing the dense target posterior covariance.
+The target-to-station regression weights are built once in memory-bounded site
+chunks and reused for every realization batch.
+
+Circulant embedding samples directly only on the grid. Observations that
+coincide with grid cells use the same simulated values exactly. Off-grid
+stations follow the local-kriging approximation of Bailey et al. (2022): each
+is sampled conditionally on a fourth-order grid neighborhood, and stations in
+the same grid box are sampled jointly across all IMTs. Conditional errors from
+different grid boxes are assumed independent. The regular-grid field itself
+is exact for the embedded covariance; this conditional-independence assumption
+is the approximation introduced for irregular station locations.
 
 Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,
@@ -266,6 +305,10 @@ cross-IMT reconstruction used during posterior sampling.
 References
 ----------
 
+* Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., and
+  Worden, C. B. (2022). Adapting conditional simulation using circulant
+  embedding for irregularly spaced spatial data. *Stat*, 11(1), e446.
+  https://doi.org/10.1002/sta4.446
 * Baker, J. W., and Cornell, C. A. (2006). Correlation of response spectral
   values for multicomponent ground motions. *Bulletin of the Seismological
   Society of America*, 96(1), 215-227.
@@ -276,6 +319,12 @@ References
 * Bradley, B. A. (2012). Empirical correlations between peak ground velocity
   and spectrum-based intensity measures. *Earthquake Spectra*, 28(1), 17-35.
   https://doi.org/10.1193/1.3675582
+* Chan, G., and Wood, A. T. A. (1999). Simulation of stationary Gaussian
+  vector fields. *Statistics and Computing*, 9, 265-268.
+  https://doi.org/10.1023/A:1008903804954
+* Dietrich, C. R., and Newsam, G. N. (1993). A fast and exact method for
+  multidimensional Gaussian stochastic simulations. *Water Resources
+  Research*, 29(8), 2861-2869. https://doi.org/10.1029/93WR01070
 * Du, W., and Ning, C.-L. (2021). Modeling spatial cross-correlation of
   multiple ground motion intensity measures (SAs, PGA, PGV, Ia, CAV, and
   significant durations) based on principal component and geostatistical
