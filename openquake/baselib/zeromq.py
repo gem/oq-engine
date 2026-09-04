@@ -46,14 +46,12 @@ class TimeoutError(RuntimeError):
     pass
 
 
-def bind(end_point, socket_type, hwm=None):
+def bind(end_point, socket_type):
     """
     Bind to a zmq URL; raise a proper error if the URL is invalid; return
     a zmq socket.
     """
     sock = context.socket(socket_type)
-    if hwm is not None:
-        sock.set_hwm(hwm)
     try:
         sock.bind(end_point)
     except zmq.error.ZMQError as exc:
@@ -62,14 +60,12 @@ def bind(end_point, socket_type, hwm=None):
     return sock
 
 
-def connect(end_point, socket_type, hwm=None):
+def connect(end_point, socket_type):
     """
     Connect to a zmq URL; raise a proper error if the URL is invalid; return
     a zmq socket.
     """
     sock = context.socket(socket_type)
-    if hwm is not None:
-        sock.set_hwm(hwm)
     try:
         sock.connect(end_point)
     except zmq.error.ZMQError as exc:
@@ -98,12 +94,11 @@ class Socket(object):
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 30s, used when polling the underlying socket
     :param starmap: associated Starmap (the regular case) or None
-    :param hwm: optional high-water mark for queued messages
     """
     # NB: the timeout has to be large since starting a workerpool can be
     # slow due to numba compiling everything, so you have to wait
     def __init__(self, end_point, socket_type, mode, timeout=30,
-                 starmap=None, hwm=None):
+                 starmap=None):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
@@ -113,7 +108,6 @@ class Socket(object):
         self.mode = mode
         self.timeout = timeout * 1000  # milliseconds
         self.starmap = starmap
-        self.hwm = hwm
         self.running = False
 
     def __enter__(self):
@@ -125,8 +119,6 @@ class Socket(object):
             p1, p2 = map(int, port_range.groups())
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
-            if self.hwm is not None:
-                self.zsocket.set_hwm(self.hwm)
             while True:
                 try:
                     # NB: will raise a ZMQBindError if no port is available
@@ -138,11 +130,9 @@ class Socket(object):
                     break
             self.port = port
         elif self.mode == 'bind':
-            self.zsocket = bind(
-                self.end_point, self.socket_type, self.hwm)
+            self.zsocket = bind(self.end_point, self.socket_type)
         else:  # connect
-            self.zsocket = connect(
-                self.end_point, self.socket_type, self.hwm)
+            self.zsocket = connect(self.end_point, self.socket_type)
         port = re.search(r':(\d+)$', self.end_point)
         if port:
             self.port = int(port.group(1))
