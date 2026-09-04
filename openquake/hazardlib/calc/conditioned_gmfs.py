@@ -54,9 +54,10 @@ The module has two calculation paths:
   existing finite truncated-normal sampler.
 * A spatial-cross-IMT model forms one joint vector containing every target
   IMT and site. It conditions that vector in a single Gaussian operation,
-  preserving the model's spatial and cross-IMT covariance. Dense sampling
-  is the correctness reference; deterministic posterior means are computed
-  in site chunks. Finite truncated sampling is not yet supported here.
+  preserving the model's spatial and cross-IMT covariance. Dense sampling is
+  retained for small calculations and as the correctness reference. Eligible
+  regular grids use the scalable conditional simulation described below.
+  Finite truncated sampling is not yet supported here.
 
 The joint path stacks all requested target IMTs rather than applying
 Appendix B to one target IMT at a time. Its prior covariance blocks are
@@ -75,6 +76,29 @@ diagonal of ``Sigma_WD_WD``. With ``^+`` denoting a pseudoinverse and
 
 These are the joint form of the mean and covariance in equations (B16) and
 (B17). For one target IMT, ``T_Y`` corresponds to the paper's ``T_Y0``.
+
+Scalable conditional simulation
+================================
+
+Factoring ``Sigma_YY_yD`` is infeasible for a realistic target grid. The
+scalable path instead uses Matheron substitution. It draws paired zero-mean
+values ``U_Y`` and ``U_D`` from the same target-and-station prior and forms
+
+``Y_yD = mu_Y + U_Y + Sigma_Y_YD Sigma_YD_YD^+ (zeta_D - U_D)``.
+
+The large regular target field is generated with circulant embedding. A
+station coinciding with a grid point takes that same simulated value. An
+off-grid station is sampled conditionally on a fourth-order local grid
+neighborhood following Bailey et al. (2022), Stat, 11(1), e446,
+https://doi.org/10.1002/sta4.446. Stations within one grid box are sampled
+jointly across all IMTs. Conditional errors from different boxes are treated
+as independent; this is the documented local-kriging approximation.
+
+The target-to-station regression weights are constructed once in site
+chunks and retained in float64. Realizations are then generated, conditioned,
+converted to GMFs, and returned in memory-bounded batches. This removes the
+dense target covariance and posterior factorization while preserving the
+small station covariance system.
 
 Relationship to the Engler algorithm
 ====================================
@@ -120,8 +144,9 @@ Basic flow
    one Engler posterior per target IMT; the latter first builds one joint
    station system and then the joint target blocks.
 5. With zero truncation, posterior means are repeated for all requested
-   fields. Otherwise, covariance is constructed and residual fields are
-   sampled. The final mean is retained with the fields in ``MNE``.
+   fields. Small random calculations construct and sample the dense
+   covariance. Eligible regular grids instead use paired CE prior fields and
+   Matheron substitution, streaming the resulting GMFs in bounded batches.
 
 Notation and dimensions
 =======================
@@ -324,9 +349,11 @@ from collections import namedtuple
 import psutil
 import numpy
 import pandas
-from openquake.baselib import performance
+from openquake.baselib import config, performance
+from openquake.baselib.general import humansize
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
-from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
+from openquake.hazardlib.calc.gmf import (
+    CE_MIN_SITES, GmfComputer, TRUNCATION_THRESHOLD)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
@@ -664,6 +691,12 @@ def _target_grid(inp):
     return grid_sites
 
 
+def _conditioning_layout(inp, order):
+    """Fit the target lattice and pad it around the station sites."""
+    layout = RegularGridLayout.from_sites(_target_grid(inp))
+    return layout.expanded(inp.sites_D, order)
+
+
 def _target_locations(inp, layout):
     """Map target sites to grid cells or matching off-grid stations."""
     rows, columns = layout.grid_coordinates(inp.sites_Y)
@@ -673,12 +706,15 @@ def _target_locations(inp, layout):
         (numpy.abs(rows - rounded_rows) <= GRID_TOLERANCE) &
         (numpy.abs(columns - rounded_columns) <= GRID_TOLERANCE))
     on_grid_targets = numpy.flatnonzero(on_grid)
-    grid_cells = (
-        rounded_rows[on_grid].astype(int) * layout.grid_shape[1] +
-        rounded_columns[on_grid].astype(int))
-    if (numpy.any(grid_cells < 0) or
-            numpy.any(grid_cells >= numpy.prod(layout.grid_shape))):
+    on_grid_rows = rounded_rows[on_grid].astype(int)
+    on_grid_columns = rounded_columns[on_grid].astype(int)
+    if (numpy.any(on_grid_rows < 0) or
+            numpy.any(on_grid_rows >= layout.grid_shape[0]) or
+            numpy.any(on_grid_columns < 0) or
+            numpy.any(on_grid_columns >= layout.grid_shape[1])):
         raise ValueError('An on-grid target lies outside the CE grid')
+    grid_cells = (
+        on_grid_rows * layout.grid_shape[1] + on_grid_columns)
 
     off_grid_targets = numpy.flatnonzero(~on_grid)
     station_by_sid = {
@@ -708,16 +744,32 @@ class CirculantConditioningSampler:
     observation_field_indices: numpy.ndarray
     between_root: numpy.ndarray
 
+    @property
+    def nbytes(self):
+        """Return bytes retained by the CE and station factors."""
+        arrays = (
+            self.grid_factor.spectral_root,
+            self.grid_factor.site_indices,
+            self.target_imt_indices,
+            self.on_grid_targets,
+            self.target_grid_cells,
+            self.off_grid_targets,
+            self.target_station_indices,
+            self.observation_field_indices,
+            self.between_root)
+        return (sum(array.nbytes for array in arrays) +
+                self.station_factor.nbytes)
+
     @classmethod
-    def build(cls, inp, station, order=4):
+    def build(cls, inp, station, order=4, layout=None):
         """Build the CE and local-kriging factors for one station system."""
         model = inp.within_event_model
         if not model.SUPPORTS_CIRCULANT_EMBEDDING:
             raise ValueError(
                 f'{model.__class__.__name__} is not enabled for '
                 'circulant embedding')
-        layout = RegularGridLayout.from_sites(_target_grid(inp))
-        layout = layout.expanded(inp.sites_D, order)
+        if layout is None:
+            layout = _conditioning_layout(inp, order)
         grid_factor = CirculantEmbeddingFactor.build(
             model, station.latent_imts, layout.grid_shape,
             layout.spacing, ResidualComponent.WITHIN_EVENT,
@@ -801,26 +853,45 @@ def _layout_distances(layout, first, second):
     return numpy.linalg.norm(differences, axis=-1)
 
 
-def condition_ce_prior(inp, mean_stds_Y, station, sampler,
-                       unconditional_Y, unconditional_D,
-                       max_block_elements):
-    """Apply Matheron substitution in bounded target-site chunks."""
+@dataclass(frozen=True)
+class ConditioningWeights:
+    """Reusable target regression weights for Matheron substitution."""
+
+    mu_Y: numpy.ndarray
+    regression: numpy.ndarray
+    station: StationConditioning
+
+    @property
+    def nbytes(self):
+        station_arrays = (
+            value for value in vars(self.station).values()
+            if isinstance(value, numpy.ndarray))
+        return (self.mu_Y.nbytes + self.regression.nbytes +
+                sum(array.nbytes for array in station_arrays))
+
+    def posterior_mean(self):
+        """Return the conditional mean at all target IMTs and sites."""
+        return self.mu_Y + self.regression @ self.station.zeta_D
+
+    def condition(self, unconditional_Y, unconditional_D):
+        """Apply Matheron substitution to one batch of paired priors."""
+        correction = self.station.zeta_D[:, None] - unconditional_D
+        return (self.mu_Y[:, None] + unconditional_Y +
+                self.regression @ correction)
+
+
+def build_ce_weights(inp, mean_stds_Y, station, sampler,
+                     max_block_elements):
+    """Build target regression weights once in bounded site chunks."""
     M = len(inp.imts_Y)
     N = len(inp.sites_Y)
     Q = len(station.zeta_D)
-    if unconditional_Y.shape[0] != M * N:
-        raise ValueError('The target prior has an unexpected shape')
-    if unconditional_D.shape[0] != Q:
-        raise ValueError('The station prior has an unexpected shape')
-    num_events = unconditional_Y.shape[1]
-    if unconditional_D.shape[1] != num_events:
-        raise ValueError('Target and station priors must have equal samples')
-
-    chunk_size = max(1, max_block_elements // (M * Q))
-    result = numpy.empty((M, N, num_events), dtype=numpy.float64)
-    prior = unconditional_Y.reshape(M, N, num_events)
-    correction = station.solve(
-        station.zeta_D[:, None] - unconditional_D)
+    full_station_values = len(inp.imts_D) * len(inp.sites_D)
+    chunk_size = max(
+        1, max_block_elements // (M * full_station_values))
+    regression = numpy.empty((M, N, Q), dtype=numpy.float64)
+    mu_Y = numpy.asarray(
+        mean_stds_Y[0, 0], dtype=numpy.float64).reshape(-1)
     layout = sampler.station_factor.layout
     for start in range(0, N, chunk_size):
         stop = min(start + chunk_size, N)
@@ -830,14 +901,13 @@ def condition_ce_prior(inp, mean_stds_Y, station, sampler,
         chunk_stats = mean_stds_Y[:, :, :, start:stop]
         distances = _layout_distances(layout, sites_Y, inp.sites_D)
         joint = build_joint_conditioning(
-            chunk_inp, chunk_stats, station, None, distances)
-        conditioned = (
-            joint.mu_Y[:, None] +
-            prior[:, start:stop].reshape(-1, num_events) +
-            joint.cov_Y_YD @ correction)
-        result[:, start:stop] = conditioned.reshape(
-            M, stop - start, num_events)
-    return result
+            chunk_inp, chunk_stats, station, None, distances,
+            check_compatibility=start == 0)
+        regression[:, start:stop] = (
+            joint.cov_Y_YD @ station.cov_YD_YD_inv).reshape(
+                M, stop - start, Q)
+    return ConditioningWeights(
+        mu_Y, regression.reshape(M * N, Q), station)
 
 
 @dataclass
@@ -895,7 +965,9 @@ class JointConditioning:
         return self.posterior_mean()[:, None] + samples
 
 
-def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
+def build_joint_conditioning(
+        inp, mean_stds_Y, station, YY, YD,
+        check_compatibility=True):
     """Build a dense all-IMT target prior and target-station block."""
     imts_Y = tuple(inp.imts_Y)
     num_targets = len(inp.sites_Y)
@@ -935,13 +1007,14 @@ def build_joint_conditioning(inp, mean_stds_Y, station, YY, YD):
         cov_YY += T_Y @ station.cov_HD_HD @ T_Y.T
     cov_Y_YD = (cov_WY_WD +
                 T_Y @ station.cov_HD_HD @ station.T_D.T)
-    projected_YD = (cov_Y_YD @ station.cov_YD_YD_inv @
-                    station.cov_YD_YD)
-    if not numpy.allclose(
-            projected_YD, cov_Y_YD, rtol=1E-9, atol=1E-12):
-        raise ValueError(
-            'Target-station covariance is incompatible with the singular '
-            'station covariance matrix')
+    if check_compatibility:
+        projected_YD = (cov_Y_YD @ station.cov_YD_YD_inv @
+                        station.cov_YD_YD)
+        if not numpy.allclose(
+                projected_YD, cov_Y_YD, rtol=1E-9, atol=1E-12):
+            raise ValueError(
+                'Target-station covariance is incompatible with the '
+                'singular station covariance matrix')
     return JointConditioning(mu_Y, cov_YY, cov_Y_YD, station)
 
 
@@ -1383,6 +1456,81 @@ def use_joint_gaussian_sampling(computer):
     """Return whether untruncated joint Gaussian sampling is requested."""
     return (computer.cmaker.oq.truncated_mvn is False or
             (computer.tlw == 99 and computer.tlb == 99))
+
+
+def use_circulant_conditioning(computer):
+    """Return whether the scalable joint conditioning path is eligible."""
+    model = computer.inp.within_event_model
+    return (use_joint_conditioning(computer) and
+            getattr(model, 'SUPPORTS_CIRCULANT_EMBEDDING', False) and
+            getattr(computer, 'N', 0) >= CE_MIN_SITES)
+
+
+def _conditioning_batch_size(computer, sampler, weights, memory_budget):
+    """Bound one conditioned batch by workspace memory and output rows."""
+    fixed = sampler.nbytes + weights.nbytes
+    T = computer.M * computer.N
+    Q = len(weights.station.zeta_D)
+    per_event = (
+        sampler.grid_factor.workspace_bytes_per_realization +
+        32 * T + 24 * Q)
+    available = memory_budget - fixed
+    if available < per_event:
+        required = fixed + per_event
+        raise ValueError(
+            'Circulant conditioning requires at least '
+            f'{humansize(required)} of workspace')
+    memory_events = max(1, available // per_event)
+    output_events = max(
+        1, int(config.memory.max_gmvs_chunk) // computer.N)
+    return min(memory_events, output_events)
+
+
+def conditioned_ce(computer, conditioner, memory_budget, monitor):
+    """Yield scalable station-conditioned GMF tables in bounded batches."""
+    order = 4
+    layout = _conditioning_layout(conditioner.inp, order)
+    DD = _layout_distances(
+        layout, conditioner.inp.sites_D, conditioner.inp.sites_D)
+    station = build_station_conditioning(
+        conditioner.inp, conditioner.mean_stds_D, DD)
+    sampler = CirculantConditioningSampler.build(
+        conditioner.inp, station, order, layout)
+    weights = build_ce_weights(
+        conditioner.inp, conditioner.mean_stds_Y, station, sampler,
+        computer.conditioning_block_elements)
+
+    g = conditioner.g
+    _gsim, rlzs = list(computer.cmaker.gsims.items())[g]
+    indices, = numpy.where(numpy.isin(computer.rlz, rlzs))
+    batch_size = _conditioning_batch_size(
+        computer, sampler, weights, memory_budget)
+    logging.info(
+        'Streaming %d conditioned fields in batches of at most %d; '
+        'CE factor=%s, regression weights=%s',
+        len(indices), batch_size, humansize(sampler.nbytes),
+        humansize(weights.nbytes))
+
+    streams = numpy.random.SeedSequence(
+        [computer.seed, g]).spawn(2)
+    prior_rng = numpy.random.default_rng(streams[0])
+    amplifier_rng = numpy.random.default_rng(streams[1])
+    mean = weights.posterior_mean().reshape(computer.M, computer.N)
+    cutoff = computer.cmaker.oq.correlation_cutoff
+    cmon = monitor('conditioning gmfs', measuremem=True)
+    umon = monitor('tabulating gmfs', measuremem=True)
+    for start in range(0, len(indices), batch_size):
+        batch_indices = indices[start:start + batch_size]
+        with cmon:
+            unconditional_Y, unconditional_D = sampler.draw_prior(
+                prior_rng, conditioner.mean_stds_Y, station,
+                len(batch_indices), cutoff)
+            fields = weights.condition(
+                unconditional_Y, unconditional_D).reshape(
+                    computer.M, computer.N, len(batch_indices))
+        with umon:
+            yield computer.tabulate_conditioned(
+                fields, mean, g, batch_indices, amplifier_rng)
 
 
 def conditioned_joint(computer, conditioner, monitor, compute_covs):

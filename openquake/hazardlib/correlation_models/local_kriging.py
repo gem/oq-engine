@@ -99,22 +99,18 @@ class LocalKrigingGroup:
 
 
 def _build_group(model, imts, layout, station_points, station_indices,
-                 box, order, component, context, error_start):
+                 box, order, grid_inverse, component, context, error_start):
     """Build one same-grid-box multivariate conditional distribution."""
     grid_indices = _neighborhood(box, order, layout.grid_shape)
     grid_points = _grid_points(layout, grid_indices)
     selected_stations = station_points[station_indices]
-    grid_covariance = model.correlation_block(
-        _distances(grid_points, grid_points), imts,
-        component=component, context=context)
     cross_covariance = model.correlation_block(
         _distances(selected_stations, grid_points), imts, imts,
         component, context)
     station_covariance = model.correlation_block(
         _distances(selected_stations, selected_stations), imts,
         component=component, context=context)
-    inverse = numpy.linalg.pinv(grid_covariance, hermitian=True)
-    weights = cross_covariance @ inverse
+    weights = cross_covariance @ grid_inverse
     conditional = station_covariance - weights @ cross_covariance.T
     root = covariance_root(conditional)
     error_stop = error_start + len(conditional)
@@ -134,6 +130,17 @@ class LocalKrigingFactor:
     on_grid_cells: numpy.ndarray
     groups: tuple
     error_size: int
+
+    @property
+    def nbytes(self):
+        """Return bytes retained by the station mapping and factors."""
+        size = self.on_grid_stations.nbytes + self.on_grid_cells.nbytes
+        for group in self.groups:
+            size += group.station_indices.nbytes
+            size += group.grid_indices.nbytes
+            size += group.weights.nbytes
+            size += group.conditional_root.nbytes
+        return size
 
     @classmethod
     def build(cls, model, imts, layout, stations, order=4,
@@ -173,11 +180,21 @@ class LocalKrigingFactor:
 
         groups = []
         error_start = 0
-        for box, indices in sorted(boxes.items()):
+        sorted_boxes = sorted(boxes.items())
+        if sorted_boxes:
+            first_cells = _neighborhood(
+                sorted_boxes[0][0], order, layout.grid_shape)
+            grid_points = _grid_points(layout, first_cells)
+            grid_covariance = model.correlation_block(
+                _distances(grid_points, grid_points), imts,
+                component=component, context=context)
+            grid_inverse = numpy.linalg.pinv(
+                grid_covariance, hermitian=True)
+        for box, indices in sorted_boxes:
             station_indices = numpy.asarray(indices, dtype=numpy.int64)
             group = _build_group(
                 model, imts, layout, station_points, station_indices,
-                box, order, component, context, error_start)
+                box, order, grid_inverse, component, context, error_start)
             groups.append(group)
             error_start = group.error_slice.stop
         return cls(

@@ -29,7 +29,7 @@ import numpy
 import pandas
 from pyproj import Transformer
 
-from openquake.baselib import performance
+from openquake.baselib import config, performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
@@ -39,10 +39,12 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.calc.conditioned_gmfs import (
     build_joint_conditioning, build_precomputed, build_station_conditioning,
-    CirculantConditioningSampler, condition_ce_prior,
+    build_ce_weights, CirculantConditioningSampler,
     compute_distance_matrix, conditionable_imts, conditioned,
+    conditioned_ce, ConditionedGmfComputer,
     conditioned_mean_in_chunks, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input,
     JointConditioning, select_observed_imts, StationConditioning)
@@ -50,6 +52,22 @@ from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+
+class TwoIMTCorrelation(SpatialCrossIMTCorrelationModel):
+    """Stationary joint model used only by the CE conditioning tests."""
+
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+    SUPPORTS_CIRCULANT_EMBEDDING = True
+
+    def _correlation_block(
+            self, distances, imts1, imts2, context=None):
+        cross = numpy.array([[1.0, 0.4], [0.4, 1.0]])
+        indices1 = [0 if imt.name == 'PGA' else 1 for imt in imts1]
+        indices2 = [0 if imt.name == 'PGA' else 1 for imt in imts2]
+        return numpy.kron(
+            cross[numpy.ix_(indices1, indices2)],
+            numpy.exp(-distances / 10))
 
 
 def test_pgv_is_conditionable():
@@ -440,19 +458,6 @@ def _projected_distances(first, second):
 def test_ce_prior_covariance():
     # An identity basis recovers the covariance of every random term. This
     # checks that paired target/station draws share the same local field.
-    class JointModel(SpatialCrossIMTCorrelationModel):
-        DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
-        SUPPORTS_CIRCULANT_EMBEDDING = True
-
-        def _correlation_block(
-                self, distances, imts1, imts2, context=None):
-            cross = numpy.array([[1.0, 0.4], [0.4, 1.0]])
-            indices1 = [0 if imt.name == 'PGA' else 1 for imt in imts1]
-            indices2 = [0 if imt.name == 'PGA' else 1 for imt in imts2]
-            return numpy.kron(
-                cross[numpy.ix_(indices1, indices2)],
-                numpy.exp(-distances / 10))
-
     rows, columns = numpy.indices((4, 4))
     targets = _utm_sitecol(
         500_000 + columns.ravel() * 1_000,
@@ -476,7 +481,7 @@ def test_ce_prior_covariance():
         'SA(0.3)_mean': numpy.ones(D),
         'SA(0.3)_std': [0.20, 0.25, 0.30]}, index=sites_D.sids)
     inp = Input(
-        targets, sites_D, imts, imts, data, JointModel(),
+        targets, sites_D, imts, imts, data, TwoIMTCorrelation(),
         NoCrossCorrelation(), None)
     mean_stds_D = numpy.zeros((4, 1, 2, D))
     mean_stds_D[2, 0] = [[0.2, 0.3, 0.4], [0.5, 0.6, 0.7]]
@@ -514,15 +519,61 @@ def test_ce_prior_covariance():
     expected += T_Y @ station.cov_HD_HD @ station.T_D.T
     aac(actual, expected, atol=2E-12)
 
-    conditioned = condition_ce_prior(
+    weights = build_ce_weights(
         inp, mean_stds_Y, station, sampler,
-        unconditional_Y, unconditional_D,
         max_block_elements=len(imts) * len(station.zeta_D) * 3)
+    conditioned = weights.condition(unconditional_Y, unconditional_D)
     YD = _projected_distances(targets, sites_D)
     full = build_joint_conditioning(
         inp, mean_stds_Y, station, None, YD)
     expected = full.condition(unconditional_Y, unconditional_D)
-    aac(conditioned.reshape(len(imts) * N, total), expected)
+    aac(conditioned, expected)
+    aac(weights.posterior_mean(), full.posterior_mean())
+
+
+def test_ce_conditioned_batches(monkeypatch):
+    # Exercise the production generator above the automatic CE threshold.
+    rows, columns = numpy.indices((32, 32))
+    targets = _utm_sitecol(
+        500_000 + columns.ravel() * 1_000,
+        4_200_000 + rows.ravel() * 1_000)
+    station_points = _utm_sitecol(
+        [510_300, 510_700], [4_210_200, 4_210_800])
+    targets.extend(station_points.lons, station_points.lats)
+    sites_D = targets.filtered([1024, 1025])
+    imts = [PGA(), SA(0.3)]
+    data = pandas.DataFrame({
+        'PGA_mean': [1.0, 1.1], 'PGA_std': [0.1, 0.1],
+        'SA(0.3)_mean': [0.9, 1.0], 'SA(0.3)_std': [0.1, 0.1]},
+        index=sites_D.sids)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=99)
+    cmaker.oq.truncated_mvn = False
+    cmaker.oq.correlation_cutoff = 0
+    cmaker.oq.calculation_mode = 'scenario'
+    ebr = EBRupture(
+        test_data.RUP, source_id=0, trt_smr=0, n_occ=2,
+        id=0, e0=0)
+    ebr.seed = 7
+    computer = ConditionedGmfComputer(
+        ebr, targets, sites_D, data, imts, cmaker,
+        TwoIMTCorrelation(), NoCrossCorrelation())
+    computer.init_eid_rlz_sig_eps()
+    computer.conditioning_block_elements = 10_000
+    pre = build_precomputed(
+        test_data.RUP, cmaker, computer.inp, compute_covs=False)
+    monkeypatch.setattr(
+        config.memory, 'max_gmvs_chunk', str(len(targets)))
+
+    tables = list(conditioned_ce(
+        computer, pre.conditioners[0], 256 * 1024 ** 2,
+        performance.Monitor()))
+    assert len(tables) == 2
+    assert all(len(table) == len(targets) for table in tables)
+    assert {int(table.eid.iloc[0]) for table in tables} == {0, 1}
+    for table in tables:
+        assert numpy.isfinite(table[['PGA', 'SA(0.3)']]).all().all()
 
 
 def test_joint_sampling_path():
