@@ -154,7 +154,13 @@ class RegularGridLayout:
         """Return fractional row and column coordinates for ``sites``."""
         transformer = Transformer.from_crs(
             4326, self.crs, always_xy=True)
-        x, y = transformer.transform(sites.lons, sites.lats)
+        if len(sites.lons) == 1:
+            x, y = transformer.transform(
+                float(sites.lons[0]), float(sites.lats[0]))
+            x = numpy.array([x])
+            y = numpy.array([y])
+        else:
+            x, y = transformer.transform(sites.lons, sites.lats)
         origin_y, origin_x = self.projected_origin
         spacing_y, spacing_x = self.spacing
         rows = (numpy.asarray(y) - origin_y) / (spacing_y * 1000)
