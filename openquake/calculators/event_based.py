@@ -214,23 +214,27 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             continue
-        dic = dict(gmfdata={}, sig_eps=())
         try:
             ebr = proxy.to_ebr(cmaker.trt)
             computer = get_computer(cmaker, ebr, sites, sec_perils)
         except FarAwayRupture:
             continue
-        else:  # regular GMFs
-            df = computer.compute_all(None, cmon, umon)
+        mtp_start = 0
+        for df, indices, last in computer.compute_all_batches(cmon, umon):
+            dic = dict(
+                gmfdata=df,
+                sig_eps=computer.build_sig_eps(se_dt, indices))
             if oq.mea_tau_phi:
-                mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
+                records = computer.mea_tau_phi[mtp_start:]
+                mtp_start = len(computer.mea_tau_phi)
+                mtp = numpy.array(records, GmfComputer.mtp_dt)
                 dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
-        dic['sig_eps'] = computer.build_sig_eps(se_dt)
-        dic['gmfdata'] = df
-        dt = time.time() - t0
-        dic['times'] = numpy.array([(proxy['id'], computer.ctx.rrup.min(), dt,
-                                     rup_weight(proxy), cmon.task_no)], rup_dt)
-        yield dic
+            if last:
+                dt = time.time() - t0
+                dic['times'] = numpy.array([
+                    (proxy['id'], computer.ctx.rrup.min(), dt,
+                     rup_weight(proxy), cmon.task_no)], rup_dt)
+            yield dic
 
 
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
@@ -896,8 +900,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(gmfdata):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
-                times = result.pop('times')
-                hdf5.extend(self.datastore['ruptimes'], times)
+                times = result.pop('times', ())
+                if len(times):
+                    hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)

@@ -188,6 +188,7 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
     rows in Table 3 are not.
     """
 
+    SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
         SA, PGA, PGV, IA, CAV, RSD575, RSD595}

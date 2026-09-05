@@ -14,18 +14,41 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from types import SimpleNamespace
+
 import numpy
 import pytest
+from pyproj import Transformer
 
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    CirculantEmbeddingFactor)
+    CirculantEmbeddingFactor, RegularGridLayout)
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import PGA, SA
 
 
 IMTS = [PGA(), SA(0.3)]
+
+
+def geographic_grid(shape, missing=(), perturb=None):
+    """Return rounded geographic coordinates for a UTM grid."""
+    y, x = numpy.indices(shape)
+    keep = numpy.ones(shape, dtype=bool)
+    for row, column in missing:
+        keep[row, column] = False
+    x = 500_000 + x[keep] * 1_000
+    y = 4_200_000 + y[keep] * 1_000
+    transformer = Transformer.from_crs(32610, 4326, always_xy=True)
+    lons, lats = transformer.transform(x, y)
+    lons = numpy.round(lons, 5)
+    lats = numpy.round(lats, 5)
+    if perturb is not None:
+        lons[0] += perturb
+    order = numpy.arange(len(lons))[::-1]
+    return SimpleNamespace(lons=lons[order], lats=lats[order]), order
 
 
 def dense_covariance(model, imts, shape, spacing):
@@ -56,6 +79,21 @@ def test_exact_covariance(shape):
     numpy.testing.assert_allclose(actual, expected, atol=2E-14)
 
 
+def test_spatial_covariance():
+    # A traditional spatial model becomes a block-diagonal multivariate
+    # field, retaining independence between its different IMTs.
+    model = JayaramBaker2009(False)
+    shape = (2, 3)
+    spacing = (2.0, 3.0)
+    factor = CirculantEmbeddingFactor.build(
+        model, IMTS, shape, spacing,
+        ResidualComponent.WITHIN_EVENT)
+    applied = factor.apply(numpy.eye(factor.input_size))
+    actual = applied @ applied.T
+    expected = dense_covariance(model, IMTS, shape, spacing)
+    numpy.testing.assert_allclose(actual, expected, atol=2E-14)
+
+
 def test_mask():
     # A filtered grid retains both the requested cell order and IMT-major
     # output ordering.
@@ -69,6 +107,26 @@ def test_mask():
     expected = full.apply(samples).reshape(len(IMTS), -1, 2)
     expected = expected[:, [4, 0, 2]].reshape(masked.output_size, 2)
     numpy.testing.assert_allclose(masked.apply(samples), expected)
+
+
+def test_layout():
+    # Rounded and unordered geographic coordinates recover their projected
+    # grid cells; an unoccupied interior cell remains part of the envelope.
+    sites, order = geographic_grid((3, 4), missing=[(1, 2)])
+    layout = RegularGridLayout.from_sites(sites)
+    expected = numpy.delete(numpy.arange(12), 6)[order]
+
+    assert layout.grid_shape == (3, 4)
+    numpy.testing.assert_allclose(layout.spacing, (1, 1), rtol=1E-3)
+    numpy.testing.assert_array_equal(layout.site_indices, expected)
+    assert layout.maximum_error < 1
+    assert layout.occupancy == 11 / 12
+
+
+def test_irregular_layout():
+    sites, _ = geographic_grid((3, 4), perturb=0.002)
+    with pytest.raises(ValueError, match='regular UTM grid'):
+        RegularGridLayout.from_sites(sites)
 
 
 def test_padding():
@@ -93,6 +151,17 @@ def test_input_shape():
         DuNing2021(), IMTS, (2, 3), 1.0)
     with pytest.raises(ValueError, match='Expected samples with shape'):
         factor.apply(numpy.ones((factor.input_size - 1, 2)))
+
+
+def test_batch_size():
+    factor = CirculantEmbeddingFactor.build(
+        DuNing2021(), IMTS, (2, 3), 1.0)
+    fixed = factor.spectral_root.nbytes
+    per_realization = factor.workspace_bytes_per_realization
+
+    assert factor.batch_size(fixed + 3 * per_realization) == 3
+    with pytest.raises(ValueError, match='requires at least'):
+        factor.batch_size(fixed + per_realization - 1)
 
 
 @pytest.mark.parametrize('kwargs, message', [
