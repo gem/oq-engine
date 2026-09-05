@@ -93,6 +93,55 @@ multi-IMT calculations. Direct spatial-cross-IMT models should be used when
 available because they provide the complete target-to-observation covariance
 without the separable legacy approximation.
 
+Nominal bias in the joint formulation
+-------------------------------------
+
+The partitioned formulation of Engler et al. (2022) first computes the
+posterior distribution of the normalized between-event residual. Let
+:math:`H` denote that residual, let :math:`T_D` and :math:`T_Y` scale it by
+the appropriate GSIM :math:`\tau` values at the observations and targets,
+and let :math:`\zeta_D = y_D - \mu_D`. The posterior mean is
+
+.. math::
+
+   \widehat H = \Sigma_{HH} T_D^{\mathsf T} \Sigma_D^{+} \zeta_D,
+
+where
+
+.. math::
+
+   \Sigma_D = \Sigma_{W_DW_D} +
+              T_D \Sigma_{HH} T_D^{\mathsf T}.
+
+Observation-error variance, when present, is included in
+:math:`\Sigma_{W_DW_D}`. The target-specific shift
+:math:`T_Y\widehat H` is the analogue of the *nominal bias*. The scalar
+``nominal_bias_mean`` reported by the historical implementation is only a
+summary obtained by averaging the corresponding station shifts; the actual
+mean calculation uses the full target term.
+
+The partitioned conditional mean is
+
+.. math::
+
+   \mu_{Y|D} = \mu_Y + T_Y\widehat H +
+   \Sigma_{W_YW_D}\Sigma_{W_DW_D}^{+}
+   (\zeta_D - T_D\widehat H).
+
+OpenQuake's joint path absorbs the same between-event shift and the
+within-event kriging adjustment into one regression:
+
+.. math::
+
+   \mu_{Y|D} = \mu_Y +
+   (\Sigma_{W_YW_D} + T_Y\Sigma_{HH}T_D^{\mathsf T})
+   \Sigma_D^{+}\zeta_D.
+
+For nonsingular, or compatible singular, covariance systems these expressions
+are algebraically equivalent. The nominal-bias effect is therefore retained,
+although the joint path does not expose a separately labelled posterior
+between-event field or scalar bias statistic.
+
 Scalable conditional simulation
 --------------------------------
 
@@ -109,6 +158,13 @@ the observed and simulated station values is then propagated to the target
 field with the same covariance weights used for the conditional mean. This
 applies the conditional-Gaussian transform without forming its dense target
 covariance.
+
+This follows the same broad strategy used by Engler et al. (2025) for
+post-earthquake impact modelling: generate an unconditional within-event
+field with circulant embedding and condition it on the observations through
+kriging. OpenQuake expresses the complete between- and within-event update as
+the joint Matheron substitution above, rather than realizing the conditional
+components in separate stages.
 
 Stations that coincide with grid cells share their simulated values exactly.
 Off-grid stations use the fourth-order local-kriging approximation proposed by
@@ -136,5 +192,7 @@ References
 - Silva, V., & Horspool, N. (2019). Combining USGS ShakeMaps and the OpenQuake-engine for damage and loss assessment. Earthquake Engineering and Structural Dynamics, 48(6), 634–652. DOI: https://doi.org/10.1002/eqe.3154.
 
 - Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022). Partitioning Ground Motion Uncertainty When Conditioned on Station Data. Bulletin of the Seismological Society of America, 112(2), 1060–1079. DOI: https://doi.org/10.1785/0120210177.
+
+- Engler, D. T., Jaiswal, K. S., & Ganesh, M. (2025). Evaluating the impact of uncertainty in ground motion forecasts for post-earthquake impact modeling applications. Earthquake Spectra, 41(1), 524–546. DOI: https://doi.org/10.1177/87552930241283201.
 
 - Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., & Worden, C. B. (2022). Adapting conditional simulation using circulant embedding for irregularly spaced spatial data. Stat, 11(1), e446. DOI: https://doi.org/10.1002/sta4.446.
