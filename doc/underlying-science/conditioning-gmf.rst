@@ -139,8 +139,12 @@ within-event kriging adjustment into one regression:
 
 For nonsingular, or compatible singular, covariance systems these expressions
 are algebraically equivalent. The nominal-bias effect is therefore retained,
-although the joint path does not expose a separately labelled posterior
-between-event field or scalar bias statistic.
+and the small station system also recovers the complete posterior mean and
+covariance of :math:`H`. For each target IMT, the joint path reports the
+posterior normalized between-event mean and standard deviation and the
+target-averaged nominal-bias mean and standard deviation. These values are
+diagnostics: the sampled GMFs still use the complete joint posterior and do
+not retain separate within- and between-event realizations.
 
 Scalable conditional simulation
 --------------------------------

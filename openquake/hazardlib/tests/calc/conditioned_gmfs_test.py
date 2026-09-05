@@ -47,7 +47,8 @@ from openquake.hazardlib.calc.conditioned_gmfs import (
     conditioned_ce, ConditionedGmfComputer,
     conditioned_mean_in_chunks, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input,
-    JointConditioning, select_observed_imts, StationConditioning)
+    JointConditioning, log_event_posterior, select_observed_imts,
+    StationConditioning)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
@@ -235,6 +236,36 @@ def test_total_station_covariance():
     aac(system.cov_YD_YD, expected)
     identity = numpy.eye(len(expected))
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
+
+
+def test_event_posterior():
+    # H has unit prior variance. The observation has tau=2, phi=3,
+    # error stddev=4, and residual=5, hence Var(Y_D)=2**2+3**2+4**2=29.
+    imt = PGA()
+    station = StationConditioning(
+        numpy.array([5.0]), (imt,), (imt,), numpy.array([True]),
+        numpy.array([0]), numpy.array([3.0]), numpy.array([3.0]),
+        numpy.array([2.0]), numpy.array([4.0]), numpy.array([[2.0]]),
+        numpy.array([[1.0]]), numpy.array([[29.0]]),
+        numpy.array([[1 / 29]]))
+
+    mean, covariance = station.event_posterior()
+    aac(mean, [10 / 29])
+    aac(covariance, [[25 / 29]])
+
+    mean_stds_Y = numpy.zeros((4, 1, 1, 2))
+    mean_stds_Y[2, 0, 0] = [0.5, 1.5]
+    conditioner = SimpleNamespace(
+        gsim='ExampleGMM', inp=SimpleNamespace(imts_Y=[imt]),
+        mean_stds_Y=mean_stds_Y)
+    with mock.patch(
+            'openquake.hazardlib.calc.conditioned_gmfs.logging.info') as info:
+        log_event_posterior(conditioner, station)
+
+    values = info.call_args.args[3:]
+    expected_bias_stddev = numpy.sqrt(1.25 * 25 / 29)
+    aac(values, [10 / 29, numpy.sqrt(25 / 29),
+                 10 / 29, expected_bias_stddev])
 
 
 def test_missing_station_observations():
