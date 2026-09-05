@@ -338,9 +338,9 @@ cross-IMT reconstruction used during posterior sampling.
 References
 ----------
 
-* Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., and
-  Worden, C. B. (2022). Adapting conditional simulation using circulant
-  embedding for irregularly spaced spatial data. *Stat*, 11(1), e446.
+* Bailey, M. D., Bandyopadhyay, S., and Nychka, D. (2022). Adapting
+  conditional simulation using circulant embedding for irregularly spaced
+  spatial data. *Stat*, 11(1), e446.
   https://doi.org/10.1002/sta4.446
 * Baker, J. W., and Cornell, C. A. (2006). Correlation of response spectral
   values for multicomponent ground motions. *Bulletin of the Seismological

@@ -195,4 +195,4 @@ References
 
 - Engler, D. T., Jaiswal, K. S., & Ganesh, M. (2025). Evaluating the impact of uncertainty in ground motion forecasts for post-earthquake impact modeling applications. Earthquake Spectra, 41(1), 524–546. DOI: https://doi.org/10.1177/87552930241283201.
 
-- Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., & Worden, C. B. (2022). Adapting conditional simulation using circulant embedding for irregularly spaced spatial data. Stat, 11(1), e446. DOI: https://doi.org/10.1002/sta4.446.
+- Bailey, M. D., Bandyopadhyay, S., & Nychka, D. (2022). Adapting conditional simulation using circulant embedding for irregularly spaced spatial data. Stat, 11(1), e446. DOI: https://doi.org/10.1002/sta4.446.
