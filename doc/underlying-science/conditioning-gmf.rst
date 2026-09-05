@@ -1,9 +1,9 @@
 Conditioning Ground Shaking
 ===========================
 
-Given an earthquake rupture model, a site model, and a set of ground shaking intensity models (GSIMs), the OpenQuake scenario calculator simulates a set of ground motion fields (GMFs) at the target sites for the requested set of intensity measure types (IMTs). This set of GMFs can then be used in the :ref:`scenario-damage-intro` and :ref:`scenario-risk-intro` calculators to estimate the distribution of potential damage, economic losses, fatalities, and other consequences. The scenario calculators are useful for simulating both historical and hypothetical earthquakes.
+Given an earthquake rupture model, a site model, and a set of ground shaking intensity models (GSIMs), the OpenQuake engine scenario calculator simulates a set of ground motion fields (GMFs) at the target sites for the requested set of intensity measure types (IMTs). This set of GMFs can then be used in the :ref:`scenario-damage-intro` and :ref:`scenario-risk-intro` calculators to estimate the distribution of potential damage, economic losses, fatalities, and other consequences. The scenario calculators are useful for simulating both historical and hypothetical earthquakes.
 
-For historical events, ground motion recordings and macroseismic intensity data ("ground truth") can provide additional constraints on the ground shaking estimates in the region affected by the earthquake. The U.S. Geological Survey ShakeMap system (Worden et al. 2020; Wald et al. 2022) provides near-real-time estimates of ground shaking for earthquakes conditioned on station and macroseismic data where available. Support to read USGS ShakeMaps and simulate GMFs based on the mean and standard deviation values estimated by the ShakeMap — for peak ground acceleration (PGA) and spectral acceleration (SA) at 0.3s, 1.0s, and 3.0s — was added to the OpenQuake-engine in 2018, and a link to the `scenario_damage` and `scenario_risk` calculators was added based on the methodology described by Silva & Horspool (2019). Further support for reading ShakeMaps from sources other than the USGS, support for MMI, and performance improvements were introduced to the engine in 2021.
+For historical events, ground motion recordings and macroseismic intensity data ("ground truth") can provide additional constraints on the ground shaking estimates in the region affected by the earthquake. The U.S. Geological Survey ShakeMap system (Worden et al. 2020; Wald et al. 2022) provides near-real-time estimates of ground shaking for earthquakes conditioned on station and macroseismic data where available. Support to read USGS ShakeMaps and simulate GMFs based on the mean and standard deviation values estimated by the ShakeMap — for peak ground acceleration (PGA) and spectral acceleration (SA) at 0.3s, 1.0s, and 3.0s — was added to the OpenQuake engine in 2018, and a link to the `scenario_damage` and `scenario_risk` calculators was added based on the methodology described by Silva & Horspool (2019). Further support for reading ShakeMaps from sources other than the USGS, support for MMI, and performance improvements were introduced to the engine in 2021.
 
 Therefore, starting from OpenQuake engine v3.16, it is possible to condition the ground shaking to observations, such as ground motion recordings and macroseismic intensity observations. The implementation is tightly coupled with the existing scenario calculator.
 
@@ -25,14 +25,14 @@ Where `IM` stands for an intensity measure such as peak ground acceleration (PGA
 
 Where `B` stands for the between-event residual (i.e., representing the variability in the ground shaking amongst events with the same characteristics) and `W` refers to the within-event residual (i.e., representing the variability within the same event for sites at the same distance and soil conditions). These residuals typically follow a normal distribution and for the assessment of earthquake damage or losses they can be randomly sampled or numerically integrated using the respective standard deviations associated with each ground motion model.
 
-OpenQuake implementation
-------------------------
+OpenQuake engine implementation
+-------------------------------
 
-The implementation of the conditioning of ground motion fields in the OpenQuake-engine was performed following closely the procedure proposed by Engler et al. (2022). For additional details, readers are referred to the Appendix A and B of Engler et al. (2022). The module in the OpenQuake-engine is similar to the well-established scenario damage or risk calculator in which users have to provide an earthquake rupture, a site model, the list of locations where ground shaking will be calculated, and a single GSIM or a GSIM logic tree. However, for the constraining of the ground shaking, it is necessary to provide additional input files and adjustments to the configuration file as presented in the OpenQuake input files section.
+The implementation of the conditioning of ground motion fields in the OpenQuake engine was performed following closely the procedure proposed by Engler et al. (2022). For additional details, readers are referred to the Appendix A and B of Engler et al. (2022). The module in the OpenQuake engine is similar to the well-established scenario damage or risk calculator in which users have to provide an earthquake rupture, a site model, the list of locations where ground shaking will be calculated, and a single GSIM or a GSIM logic tree. However, for the constraining of the ground shaking, it is necessary to provide additional input files and adjustments to the configuration file as presented in the OpenQuake engine input files section.
 
 The generation of the conditioned cross-spatially correlated ground motion fields was performed in the following steps described below. All variables associated with the target sites (i.e., locations where the ground shaking will be computed) are identified with the subscript “T” while all variables related to the observations at the seismic station are identified with subscript “O”. 
 
-1. The median ground shaking is calculated at the location of the seismic stations considering the set of GMMs selected by the user (and using the library of GMMs of the OpenQuake-engine).
+1. The median ground shaking is calculated at the location of the seismic stations considering the set of GMMs selected by the user (and using the GMM library of the OpenQuake engine).
 
 2. The residuals (:math:`\zeta_{IMO}`) at every station location are computed through the difference between the recorded IM and the median IM from the GMMs.
 
@@ -70,7 +70,7 @@ The generation of the conditioned cross-spatially correlated ground motion field
 
 We can assume that the ground shaking for the various IMs are multivariate random variables, and these two parameters can be used to randomly sample cross-spatially correlated ground motion fields conditioned on the observations.
 
-In addition to the generation of cross-spatially correlated ground motion fields conditioned on data from seismic stations, it is also possible to constrain the resulting ground shaking based on observational data usually characterized using macroseismic intensity. This option can be advantageous for regions with poor seismic networks or when considering older events for which strong motion data might also be limited. This process requires the conversion of macroseismic intensity into ground motion, which will inevitably introduce additional uncertainty. As a result, the ground shaking converted from macroseismic intensity will be represented not only by a single value (as done when a seismic station is used) but by a mean and standard deviation. This variability can be taken from the chosen conversion equation. The incorporation of macroseismic intensity in this procedure has also been implemented within the OpenQuake-engine. Additional details about the mathematical formulation of this procedure can be found in Worden et al. (2018).
+In addition to the generation of cross-spatially correlated ground motion fields conditioned on data from seismic stations, it is also possible to constrain the resulting ground shaking based on observational data usually characterized using macroseismic intensity. This option can be advantageous for regions with poor seismic networks or when considering older events for which strong motion data might also be limited. This process requires the conversion of macroseismic intensity into ground motion, which will inevitably introduce additional uncertainty. As a result, the ground shaking converted from macroseismic intensity will be represented not only by a single value (as done when a seismic station is used) but by a mean and standard deviation. This variability can be taken from the chosen conversion equation. The incorporation of macroseismic intensity in this procedure has also been implemented within the OpenQuake engine. Additional details about the mathematical formulation of this procedure can be found in Worden et al. (2018).
 
 Correlation models
 ------------------
@@ -128,7 +128,7 @@ The partitioned conditional mean is
    \Sigma_{W_YW_D}\Sigma_{W_DW_D}^{+}
    (\zeta_D - T_D\widehat H).
 
-OpenQuake's joint path absorbs the same between-event shift and the
+The OpenQuake engine's joint path absorbs the same between-event shift and the
 within-event kriging adjustment into one regression:
 
 .. math::
@@ -162,9 +162,9 @@ covariance.
 This follows the same broad strategy used by Engler et al. (2025) for
 post-earthquake impact modelling: generate an unconditional within-event
 field with circulant embedding and condition it on the observations through
-kriging. OpenQuake expresses the complete between- and within-event update as
-the joint Matheron substitution above, rather than realizing the conditional
-components in separate stages.
+kriging. The OpenQuake engine expresses the complete between- and within-event
+update as the joint Matheron substitution above, rather than realizing the
+conditional components in separate stages.
 
 Stations that coincide with grid cells share their simulated values exactly.
 Off-grid stations use the fourth-order local-kriging approximation proposed by

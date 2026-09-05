@@ -56,7 +56,7 @@ between-event and within-event correlations.
 Dimensions of correlation
 -------------------------
 
-The OpenQuake hazard library distinguishes three geometric capabilities.
+Hazardlib in the OpenQuake engine distinguishes three geometric capabilities.
 
 Spatial correlation
 *******************
@@ -95,10 +95,10 @@ A direct joint model gives the dependence between any two site-and-IMT pairs:
    \rho_W((s,i),(t,j)) =
    \operatorname{Corr}(\epsilon_{e,s,i}, \epsilon_{e,t,j}).
 
-For :math:`M` IMTs and :math:`N` sites, OpenQuake orders the joint vector by
-IMT, so the correlation matrix has shape :math:`MN \times MN`. Direct joint
-models can also return rectangular blocks between target and observation
-locations. Those blocks are required for station conditioning.
+For :math:`M` IMTs and :math:`N` sites, the OpenQuake engine orders the joint
+vector by IMT, so the correlation matrix has shape :math:`MN \times MN`.
+Direct joint models can also return rectangular blocks between target and
+observation locations. Those blocks are required for station conditioning.
 
 Separate spatial and cross-IMT models are sometimes combined using a separable
 approximation,
@@ -189,10 +189,10 @@ through the site- and IMT-dependent standard deviations:
    \phi_{s,i}\phi_{t,j}\rho_W((s,i),(t,j)).
 
 The equivalent expression for between-event residuals uses :math:`\tau`, while
-total-residual covariance uses :math:`\sigma`. The OpenQuake correlation-model
-interfaces operate primarily on standardized correlations; calculators apply
-the corresponding standard deviations when constructing covariance or
-residual ground motions.
+total-residual covariance uses :math:`\sigma`. The OpenQuake engine
+correlation-model interfaces operate primarily on standardized correlations;
+calculators apply the corresponding standard deviations when constructing
+covariance or residual ground motions.
 
 The default sampler forms a dense correlation matrix and uses a Cholesky
 factorization. Its memory requirement grows quadratically and its factorization
@@ -227,20 +227,21 @@ grid.
 An FFT changes the spatial representation from grid cells to sinusoidal
 spatial frequencies. In this representation, the large BCCB matrix separates
 into one small :math:`M \times M` spectral covariance matrix for every
-frequency, where :math:`M` is the number of IMTs. OpenQuake computes a square
-root of each of these matrices. To draw a field, it transforms independent
-Gaussian noise to the frequency domain, applies the corresponding spectral
-root, transforms the result back, and retains the original grid. This can be
-viewed as efficiently combining random spatial waves whose amplitudes and
-cross-IMT dependence are prescribed by the correlation model.
+frequency, where :math:`M` is the number of IMTs. The OpenQuake engine computes
+a square root of each of these matrices. To draw a field, it transforms
+independent Gaussian noise to the frequency domain, applies the corresponding
+spectral root, transforms the result back, and retains the original grid. This
+can be viewed as efficiently combining random spatial waves whose amplitudes
+and cross-IMT dependence are prescribed by the correlation model.
 
 The periodic extension must itself be a valid covariance, which means that
 all of its spectral covariance matrices must be positive semidefinite. A valid
 stationary model on the requested grid does not guarantee this for the first
-periodic extension. OpenQuake therefore increases the size of the embedding
-until the condition is met. Once it is met, cropping the simulated periodic
-field recovers the covariance specified by the model on the original grid;
-the embedding does not replace the model with a periodic approximation there.
+periodic extension. The OpenQuake engine therefore increases the size of the
+embedding until the condition is met. Once it is met, cropping the simulated
+periodic field recovers the covariance specified by the model on the original
+grid; the embedding does not replace the model with a periodic approximation
+there.
 
 The engine uses this path automatically for sufficiently large compatible
 models and regular grids. Grid cells may be unoccupied, provided the enclosing
@@ -249,9 +250,10 @@ periodic embedding is enlarged until its spectrum is positive semidefinite;
 the calculation stops with an explanatory error when that cannot be achieved
 within the supported enlargement.
 
-For station-conditioned fields, OpenQuake combines circulant embedding with
-Matheron substitution. If :math:`U_T` and :math:`U_O` are paired unconditional
-draws at the targets and observations, respectively, a conditional draw is
+For station-conditioned fields, the OpenQuake engine combines circulant
+embedding with Matheron substitution. If :math:`U_T` and :math:`U_O` are
+paired unconditional draws at the targets and observations, respectively, a
+conditional draw is
 
 .. math::
 
@@ -322,11 +324,11 @@ ShakeMap limitation
 -------------------
 
 The legacy ShakeMap XML workflow supplies median ground motions and marginal
-total standard deviations. For reproducibility, OpenQuake currently retains a
-workflow that applies configured spatial and total-residual cross-IMT models to
-those quantities. Applying a total-residual correlation model in this way does
-not reconstruct the station-conditioned posterior covariance and should not be
-interpreted as exact ShakeMap-consistent sampling.
+total standard deviations. For reproducibility, the OpenQuake engine currently
+retains a workflow that applies configured spatial and total-residual cross-IMT
+models to those quantities. Applying a total-residual correlation model in
+this way does not reconstruct the station-conditioned posterior covariance and
+should not be interpreted as exact ShakeMap-consistent sampling.
 
 `Issue #11706 <https://github.com/gem/oq-engine/issues/11706>`_ tracks a future
 workflow based on richer ShakeMap products. That workflow will need to
