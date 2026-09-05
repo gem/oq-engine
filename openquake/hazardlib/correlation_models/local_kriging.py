@@ -16,19 +16,28 @@
 """Local-kriging extension of grid simulation to off-grid stations.
 
 The implementation follows the local-kriging method recommended by Bailey
-et al. (2022). A station value is sampled conditionally on a small regular
-grid neighborhood. Stations in the same grid box are sampled jointly;
-conditional errors belonging to different boxes are treated as independent.
-The latter is the approximation that makes the operation scalable.
+et al. (2022). It extends a simulated regular-grid field to station locations
+in the following steps:
 
-For a spatial-cross-IMT model, the local conditional distribution includes
-every IMT. This preserves cross-IMT covariance within each station and among
-stations occupying the same grid box.
+1. Map the stations to fractional grid coordinates. A station that coincides
+   with a grid cell takes that cell's simulated value exactly.
+2. Group the remaining stations by the grid box containing them and select a
+   ``(2 * order)`` square neighborhood around each box.
+3. For every group, construct the grid covariance ``C_GG``, station-to-grid
+   covariance ``C_SG``, and station covariance ``C_SS``. The conditional
+   distribution has mean ``C_SG C_GG^+ G`` and covariance
+   ``C_SS - C_SG C_GG^+ C_GS``.
+4. Apply the conditional mean to each simulated grid field and add an
+   independent Gaussian draw from the conditional covariance.
 
-Bailey, M. D., Bandyopadhyay, S., Nychka, D. W., Thompson, E. M., and
-Worden, C. B. (2022). Adapting conditional simulation using circulant
-embedding for irregularly spaced spatial data. Stat, 11(1), e446.
-https://doi.org/10.1002/sta4.446
+For a spatial-cross-IMT model, these matrices include every IMT. Stations in
+the same grid box are therefore sampled jointly across sites and IMTs.
+Conditional errors belonging to different boxes are treated as independent;
+this is the approximation that makes the operation scalable.
+
+Bailey, M. D., Bandyopadhyay, S., and Nychka, D. (2022). Adapting conditional
+simulation using circulant embedding for irregularly spaced spatial data.
+Stat, 11(1), e446. https://doi.org/10.1002/sta4.446
 """
 
 from dataclasses import dataclass
