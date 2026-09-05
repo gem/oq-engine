@@ -11,3 +11,4 @@ when possible.
 The openquake/calculators tests are meant to be run with OQ_DISTRIBUTE=no and
 pytest -n auto, having activated the ~/openquake venv if necessary.
 After a refactoring run `ruff check` and make sure it does not fail.
+Install ruff in the ~/openquake venv if necessary.
