@@ -508,6 +508,33 @@ class GmfComputer(object):
         with umon:
             return self.strip_zeros(data)
 
+    def tabulate_conditioned(self, fields, mean, g, indices, rng=None):
+        """Convert one batch of conditioned log fields to a GMF table."""
+        if rng is None:
+            rng = self.rng
+        gsim, rlzs = list(self.cmaker.gsims.items())[g]
+        gsim.gid = self.cmaker.gid[g]
+        num_events = len(indices)
+        expected = (self.M, self.N, num_events)
+        if fields.shape != expected:
+            raise ValueError(
+                f'Expected conditioned fields with shape {expected}, got '
+                f'{fields.shape}')
+
+        result = np.empty(expected, dtype=F32)
+        for m, imt in enumerate(self.imts):
+            result[m] = (np.exp(fields[m]) if imt.string != 'MMI'
+                         else fields[m])
+            if self.amplifier:
+                self.amplifier.amplify_gmfs(
+                    self.ctx.ampcode, result, m, imt, rng)
+        data = AccumDict(accum=[])
+        self.update(
+            data, result.transpose(1, 0, 2), rlzs,
+            np.asarray(mean, dtype=F32),
+            self.cmaker.oq.get_max_iml(), indices)
+        return self.strip_zeros(data, indices)
+
     def compute_all_batches(self, cmon=Monitor(), umon=Monitor()):
         """Yield bounded GMF tables and their global event indices."""
         self.init_eid_rlz_sig_eps()

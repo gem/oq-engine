@@ -42,7 +42,8 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, use_joint_conditioning, use_joint_gaussian_sampling)
+    conditioned, conditioned_ce, use_circulant_conditioning,
+    use_joint_conditioning, use_joint_gaussian_sampling)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -405,6 +406,27 @@ def _conditioned_memory(
         computer, num_stations, G, N, compute_covs, memory_limit):
     """Estimate peak arrays used by conditioned-GMF worker tasks."""
     joint = use_joint_conditioning(computer)
+    if compute_covs and use_circulant_conditioning(computer):
+        M = len(computer.inp.imts_Y)
+        Q = len(computer.inp.imts_D) * num_stations
+        T = M * N
+        weights = T * Q * 8
+        station = 4 * Q * Q * 8
+        one_field = 64 * T
+        per_worker = memory_limit // G
+        available = max(
+            0, per_worker - weights - station - one_field)
+        elements_per_site = M * Q
+        block = available // (6 * 8)
+        block = block // elements_per_site * elements_per_site
+        block = min(T * Q, max(elements_per_site, block))
+        chunks = 6 * block * 8
+        size = G * (weights + station + one_field + chunks)
+        detail = (f'{G=} * ({humansize(weights)} regression weights + '
+                  f'{humansize(station)} stations + '
+                  f'{humansize(one_field)} minimum field workspace + '
+                  f'{humansize(chunks)} chunks)')
+        return (size, detail, 'circulant conditioning workspace', block)
     if compute_covs and joint:
         M = len(computer.inp.imts_Y)
         Q = len(computer.inp.imts_D) * num_stations
@@ -453,6 +475,18 @@ def _conditioned_memory(
     return size, detail, 'target-station matrices', None
 
 
+def _store_conditioned(calc, gmf_df):
+    """Append one conditioned GMF table to the datastore."""
+    dstore = calc.datastore
+    if calc.N >= SLICE_BY_EVENT_NSITES:
+        offset = len(dstore['gmf_data/sid'])
+        sbe = build_slice_by_event(gmf_df.eid.to_numpy(), offset)
+        hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)
+    del gmf_df['rlz']
+    for col in gmf_df.columns:
+        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+
+
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     """Run a conditioned scenario calculation and store the GMFs."""
     dstore = calc.datastore
@@ -464,6 +498,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     maxdist = oq.maximum_distance(cmaker.trt)
     srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
     sites = srcfilter.get_close_sites(proxy, cmaker.trt)
+    scalable = False
     if sites is None:  # filtered away
         raise FarAwayRupture
     ebr = proxy.to_ebr(cmaker.trt)
@@ -477,6 +512,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         compute_covs = max(computer.tlw, computer.tlb) > \
             TRUNCATION_THRESHOLD
         joint = use_joint_conditioning(computer)
+        scalable = compute_covs and use_circulant_conditioning(computer)
         if compute_covs and joint and not use_joint_gaussian_sampling(
                 computer):
             raise ValueError(
@@ -502,9 +538,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
-    smap = parallel.Starmap(conditioned, h5=dstore)
+    task = conditioned_ce if scalable else conditioned
+    smap = parallel.Starmap(task, h5=dstore)
     pre = build_precomputed(
-        ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
+        ebr.rupture, cmaker, computer.inp,
+        compute_covs=compute_covs and not scalable)
+    if scalable:
+        worker_budget = memory_limit // G
+        for conditioner in pre.conditioners:
+            smap.submit((computer, conditioner, worker_budget))
+        for gmf_df in smap:
+            _store_conditioned(calc, gmf_df)
+        return
+
     shared = dict(DD=pre.DD)
     if pre.YD is not None:
         shared['YD'] = pre.YD
@@ -517,12 +563,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         smap.submit((computer, conditioner))
     MNEdic = smap.reduce()  # g -> MNE
     gmf_df = computer.compute_all(MNEdic, calc._monitor, calc._monitor)
-    if calc.N >= SLICE_BY_EVENT_NSITES:
-        sbe = build_slice_by_event(gmf_df.eid.to_numpy())
-        hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)
-    del gmf_df['rlz']
-    for col in gmf_df.columns:
-        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+    _store_conditioned(calc, gmf_df)
 
 
 def ntasks_by_model(cmaker_rups, concurrent_tasks):

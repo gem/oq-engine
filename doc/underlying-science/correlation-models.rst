@@ -56,7 +56,7 @@ between-event and within-event correlations.
 Dimensions of correlation
 -------------------------
 
-The OpenQuake hazard library distinguishes three geometric capabilities.
+Hazardlib in the OpenQuake engine distinguishes three geometric capabilities.
 
 Spatial correlation
 *******************
@@ -95,10 +95,10 @@ A direct joint model gives the dependence between any two site-and-IMT pairs:
    \rho_W((s,i),(t,j)) =
    \operatorname{Corr}(\epsilon_{e,s,i}, \epsilon_{e,t,j}).
 
-For :math:`M` IMTs and :math:`N` sites, OpenQuake orders the joint vector by
-IMT, so the correlation matrix has shape :math:`MN \times MN`. Direct joint
-models can also return rectangular blocks between target and observation
-locations. Those blocks are required for station conditioning.
+For :math:`M` IMTs and :math:`N` sites, the OpenQuake engine orders the joint
+vector by IMT, so the correlation matrix has shape :math:`MN \times MN`.
+Direct joint models can also return rectangular blocks between target and
+observation locations. Those blocks are required for station conditioning.
 
 Separate spatial and cross-IMT models are sometimes combined using a separable
 approximation,
@@ -189,17 +189,89 @@ through the site- and IMT-dependent standard deviations:
    \phi_{s,i}\phi_{t,j}\rho_W((s,i),(t,j)).
 
 The equivalent expression for between-event residuals uses :math:`\tau`, while
-total-residual covariance uses :math:`\sigma`. The OpenQuake correlation-model
-interfaces operate primarily on standardized correlations; calculators apply
-the corresponding standard deviations when constructing covariance or
-residual ground motions.
+total-residual covariance uses :math:`\sigma`. The OpenQuake engine
+correlation-model interfaces operate primarily on standardized correlations;
+calculators apply the corresponding standard deviations when constructing
+covariance or residual ground motions.
 
 The default sampler forms a dense correlation matrix and uses a Cholesky
 factorization. Its memory requirement grows quadratically and its factorization
 cost grows cubically with :math:`MN`. Consequently, a calculation that is
 tractable for one IMT or a small site collection can become infeasible for a
-large multi-IMT field. Structured methods and alternative factorizations are
-needed for substantially larger calculations.
+large multi-IMT field.
+
+Scalable sampling on regular grids
+----------------------------------
+
+For a stationary model evaluated on a regular two-dimensional grid, the
+spatial covariance has repeated block-Toeplitz structure. Circulant embedding
+places that covariance inside a larger periodic block-circulant matrix, whose
+spatial modes can be diagonalized with fast Fourier transforms (FFTs). Only a
+small IMT-by-IMT spectral covariance must then be factorized at each Fourier
+mode. If :math:`P` is the number of cells in the embedded grid, constructing
+the factor requires :math:`P` small :math:`M \times M` factorizations and each
+field requires FFTs and small matrix products at those frequencies. For the
+small, fixed number of IMTs typical of a calculation, the work therefore grows
+approximately as :math:`P\log P`, rather than cubically with :math:`MN`, and
+does not require storing a dense :math:`MN \times MN` matrix.
+
+The repeated structure follows from stationarity: covariance depends on the
+separation between two grid cells, rather than on their absolute coordinates.
+Consequently, every row of the spatial covariance is a shifted version of the
+same set of covariance lags. A finite rectangular grid has a block-Toeplitz
+with Toeplitz blocks (BTTB) covariance. Extending and reflecting those lags on
+a larger periodic grid produces a block-circulant with circulant blocks (BCCB)
+covariance while preserving all covariances between cells in the original
+grid.
+
+An FFT changes the spatial representation from grid cells to sinusoidal
+spatial frequencies. In this representation, the large BCCB matrix separates
+into one small :math:`M \times M` spectral covariance matrix for every
+frequency, where :math:`M` is the number of IMTs. The OpenQuake engine computes
+a square root of each of these matrices. To draw a field, it transforms
+independent Gaussian noise to the frequency domain, applies the corresponding
+spectral root, transforms the result back, and retains the original grid. This
+can be viewed as efficiently combining random spatial waves whose amplitudes
+and cross-IMT dependence are prescribed by the correlation model.
+
+The periodic extension must itself be a valid covariance, which means that
+all of its spectral covariance matrices must be positive semidefinite. A valid
+stationary model on the requested grid does not guarantee this for the first
+periodic extension. The OpenQuake engine therefore increases the size of the
+embedding until the condition is met. Once it is met, cropping the simulated
+periodic field recovers the covariance specified by the model on the original
+grid; the embedding does not replace the model with a periodic approximation
+there.
+
+The engine uses this path automatically for sufficiently large compatible
+models and regular grids. Grid cells may be unoccupied, provided the enclosing
+rectangle is not excessively larger than the requested site collection. The
+periodic embedding is enlarged until its spectrum is positive semidefinite;
+the calculation stops with an explanatory error when that cannot be achieved
+within the supported enlargement.
+
+For station-conditioned fields, the OpenQuake engine combines circulant
+embedding with Matheron substitution. If :math:`U_T` and :math:`U_O` are
+paired unconditional draws at the targets and observations, respectively, a
+conditional draw is
+
+.. math::
+
+   Y_{T|O} = \mu_T + U_T +
+   \Sigma_{TO}\Sigma_{OO}^{+}(y_O - \mu_O - U_O).
+
+This avoids constructing or factorizing the dense target posterior covariance.
+The target-to-station regression weights are built once in memory-bounded site
+chunks and reused for every realization batch.
+
+Circulant embedding samples directly only on the grid. Observations that
+coincide with grid cells use the same simulated values exactly. Off-grid
+stations follow the local-kriging approximation of Bailey et al. (2022): each
+is sampled conditionally on a fourth-order grid neighborhood, and stations in
+the same grid box are sampled jointly across all IMTs. Conditional errors from
+different grid boxes are assumed independent. The regular-grid field itself
+is exact for the embedded covariance; this conditional-independence assumption
+is the approximation introduced for irregular station locations.
 
 Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,
@@ -252,11 +324,11 @@ ShakeMap limitation
 -------------------
 
 The legacy ShakeMap XML workflow supplies median ground motions and marginal
-total standard deviations. For reproducibility, OpenQuake currently retains a
-workflow that applies configured spatial and total-residual cross-IMT models to
-those quantities. Applying a total-residual correlation model in this way does
-not reconstruct the station-conditioned posterior covariance and should not be
-interpreted as exact ShakeMap-consistent sampling.
+total standard deviations. For reproducibility, the OpenQuake engine currently
+retains a workflow that applies configured spatial and total-residual cross-IMT
+models to those quantities. Applying a total-residual correlation model in
+this way does not reconstruct the station-conditioned posterior covariance and
+should not be interpreted as exact ShakeMap-consistent sampling.
 
 `Issue #11706 <https://github.com/gem/oq-engine/issues/11706>`_ tracks a future
 workflow based on richer ShakeMap products. That workflow will need to
@@ -266,6 +338,10 @@ cross-IMT reconstruction used during posterior sampling.
 References
 ----------
 
+* Bailey, M. D., Bandyopadhyay, S., and Nychka, D. (2022). Adapting
+  conditional simulation using circulant embedding for irregularly spaced
+  spatial data. *Stat*, 11(1), e446.
+  https://doi.org/10.1002/sta4.446
 * Baker, J. W., and Cornell, C. A. (2006). Correlation of response spectral
   values for multicomponent ground motions. *Bulletin of the Seismological
   Society of America*, 96(1), 215-227.
@@ -276,6 +352,12 @@ References
 * Bradley, B. A. (2012). Empirical correlations between peak ground velocity
   and spectrum-based intensity measures. *Earthquake Spectra*, 28(1), 17-35.
   https://doi.org/10.1193/1.3675582
+* Chan, G., and Wood, A. T. A. (1999). Simulation of stationary Gaussian
+  vector fields. *Statistics and Computing*, 9, 265-268.
+  https://doi.org/10.1023/A:1008903804954
+* Dietrich, C. R., and Newsam, G. N. (1993). A fast and exact method for
+  multidimensional Gaussian stochastic simulations. *Water Resources
+  Research*, 29(8), 2861-2869. https://doi.org/10.1029/93WR01070
 * Du, W., and Ning, C.-L. (2021). Modeling spatial cross-correlation of
   multiple ground motion intensity measures (SAs, PGA, PGV, Ia, CAV, and
   significant durations) based on principal component and geostatistical

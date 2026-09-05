@@ -19,6 +19,22 @@ Registry
     :undoc-members:
     :show-inheritance:
 
+Scalable sampling
+-----------------
+
+.. currentmodule:: openquake.hazardlib.correlation_models.circulant_embedding
+
+.. autoclass:: RegularGridLayout
+    :members:
+
+.. autoclass:: CirculantEmbeddingFactor
+    :members:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.local_kriging
+
+.. autoclass:: LocalKrigingFactor
+    :members:
+
 Spatial models
 --------------
 

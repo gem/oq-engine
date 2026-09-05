@@ -27,8 +27,9 @@ from types import SimpleNamespace
 
 import numpy
 import pandas
+from pyproj import Transformer
 
-from openquake.baselib import performance
+from openquake.baselib import config, performance
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
@@ -37,16 +38,37 @@ from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.imt import from_string, MMI, PGA, PGV, SA
+from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.calc.conditioned_gmfs import (
     build_joint_conditioning, build_precomputed, build_station_conditioning,
+    build_ce_weights, CirculantConditioningSampler,
     compute_distance_matrix, conditionable_imts, conditioned,
+    conditioned_ce, ConditionedGmfComputer,
     conditioned_mean_in_chunks, createD,
     compute_within_event_covariance_matrix, get_mean_covs, Input,
-    JointConditioning, select_observed_imts, StationConditioning)
+    JointConditioning, log_event_posterior, select_observed_imts,
+    StationConditioning)
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+
+class TwoIMTCorrelation(SpatialCrossIMTCorrelationModel):
+    """Stationary joint model used only by the CE conditioning tests."""
+
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+    SUPPORTS_CIRCULANT_EMBEDDING = True
+
+    def _correlation_block(
+            self, distances, imts1, imts2, context=None):
+        cross = numpy.array([[1.0, 0.4], [0.4, 1.0]])
+        indices1 = [0 if imt.name == 'PGA' else 1 for imt in imts1]
+        indices2 = [0 if imt.name == 'PGA' else 1 for imt in imts2]
+        return numpy.kron(
+            cross[numpy.ix_(indices1, indices2)],
+            numpy.exp(-distances / 10))
 
 
 def test_pgv_is_conditionable():
@@ -214,6 +236,36 @@ def test_total_station_covariance():
     aac(system.cov_YD_YD, expected)
     identity = numpy.eye(len(expected))
     aac(system.solve(identity), numpy.linalg.pinv(expected, hermitian=True))
+
+
+def test_event_posterior():
+    # H has unit prior variance. The observation has tau=2, phi=3,
+    # error stddev=4, and residual=5, hence Var(Y_D)=2**2+3**2+4**2=29.
+    imt = PGA()
+    station = StationConditioning(
+        numpy.array([5.0]), (imt,), (imt,), numpy.array([True]),
+        numpy.array([0]), numpy.array([3.0]), numpy.array([3.0]),
+        numpy.array([2.0]), numpy.array([4.0]), numpy.array([[2.0]]),
+        numpy.array([[1.0]]), numpy.array([[29.0]]),
+        numpy.array([[1 / 29]]))
+
+    mean, covariance = station.event_posterior()
+    aac(mean, [10 / 29])
+    aac(covariance, [[25 / 29]])
+
+    mean_stds_Y = numpy.zeros((4, 1, 1, 2))
+    mean_stds_Y[2, 0, 0] = [0.5, 1.5]
+    conditioner = SimpleNamespace(
+        gsim='ExampleGMM', inp=SimpleNamespace(imts_Y=[imt]),
+        mean_stds_Y=mean_stds_Y)
+    with mock.patch(
+            'openquake.hazardlib.calc.conditioned_gmfs.logging.info') as info:
+        log_event_posterior(conditioner, station)
+
+    values = info.call_args.args[3:]
+    expected_bias_stddev = numpy.sqrt(1.25 * 25 / 29)
+    aac(values, [10 / 29, numpy.sqrt(25 / 29),
+                 10 / 29, expected_bias_stddev])
 
 
 def test_missing_station_observations():
@@ -400,6 +452,161 @@ def test_matheron_transform():
     aac(centered @ centered.T, covariance, atol=1E-12)
 
 
+class BasisRNG:
+    """Return consecutive rows of an identity basis as random values."""
+
+    def __init__(self, size):
+        self.basis = numpy.eye(size)
+        self.offset = 0
+
+    def standard_normal(self, shape):
+        rows, columns = shape
+        assert columns == len(self.basis)
+        result = self.basis[self.offset:self.offset + rows]
+        self.offset += rows
+        return result
+
+
+def _utm_sitecol(x, y):
+    """Build a site collection from UTM zone 10 coordinates."""
+    transformer = Transformer.from_crs(32610, 4326, always_xy=True)
+    lon, lat = transformer.transform(
+        numpy.asarray(x, dtype=float), numpy.asarray(y, dtype=float))
+    return SiteCollection.from_points(lon, lat)
+
+
+def _projected_distances(first, second):
+    transformer = Transformer.from_crs(4326, 32610, always_xy=True)
+    x1, y1 = transformer.transform(first.lons, first.lats)
+    x2, y2 = transformer.transform(second.lons, second.lats)
+    first_points = numpy.column_stack((x1, y1)) / 1_000
+    second_points = numpy.column_stack((x2, y2)) / 1_000
+    differences = (first_points[:, None] -
+                   second_points[numpy.newaxis, :])
+    return numpy.linalg.norm(differences, axis=-1)
+
+
+def test_ce_prior_covariance():
+    # An identity basis recovers the covariance of every random term. This
+    # checks that paired target/station draws share the same local field.
+    rows, columns = numpy.indices((4, 4))
+    targets = _utm_sitecol(
+        500_000 + columns.ravel() * 1_000,
+        4_200_000 + rows.ravel() * 1_000)
+    station_points = _utm_sitecol(
+        [501_000, 501_300, 501_700],
+        [4_201_000, 4_201_200, 4_201_800])
+    targets.extend(station_points.lons, station_points.lats)
+    station_sids = []
+    for lon, lat in zip(station_points.lons, station_points.lats):
+        distance = numpy.hypot(targets.lons - lon, targets.lats - lat)
+        station_sids.append(targets.sids[distance.argmin()])
+    sites_D = targets.filtered(station_sids)
+
+    imts = [PGA(), SA(0.3)]
+    D = len(sites_D)
+    N = len(targets)
+    data = pandas.DataFrame({
+        'PGA_mean': numpy.ones(D),
+        'PGA_std': [0.05, 0.10, 0.15],
+        'SA(0.3)_mean': numpy.ones(D),
+        'SA(0.3)_std': [0.20, 0.25, 0.30]}, index=sites_D.sids)
+    inp = Input(
+        targets, sites_D, imts, imts, data, TwoIMTCorrelation(),
+        NoCrossCorrelation(), None)
+    mean_stds_D = numpy.zeros((4, 1, 2, D))
+    mean_stds_D[2, 0] = [[0.2, 0.3, 0.4], [0.5, 0.6, 0.7]]
+    mean_stds_D[3, 0] = [[0.8, 0.7, 0.6], [0.5, 0.4, 0.3]]
+    mean_stds_Y = numpy.zeros((4, 1, 2, N))
+    mean_stds_Y[2, 0] = [[0.25], [0.55]]
+    mean_stds_Y[3, 0] = [[0.75], [0.45]]
+
+    DD = _projected_distances(sites_D, sites_D)
+    station = build_station_conditioning(inp, mean_stds_D, DD)
+    sampler = CirculantConditioningSampler.build(inp, station, order=2)
+    total = (sampler.grid_factor.input_size +
+             sampler.station_factor.error_size +
+             len(sampler.between_root) + len(station.zeta_D))
+    unconditional_Y, unconditional_D = sampler.draw_prior(
+        BasisRNG(total), mean_stds_Y, station, total)
+
+    aac(unconditional_D @ unconditional_D.T,
+        station.cov_YD_YD, atol=2E-12)
+    target_positions = numpy.flatnonzero(
+        numpy.isin(targets.sids, sites_D.sids))
+    target_rows = numpy.concatenate([
+        m * N + target_positions for m in range(len(imts))])
+    actual = unconditional_Y[target_rows] @ unconditional_D.T
+    YD = _projected_distances(
+        targets.filtered(target_positions), sites_D)
+    phi_Y = mean_stds_Y[3, 0][:, target_positions].reshape(-1)
+    tau_Y = mean_stds_Y[2, 0][:, target_positions].reshape(-1)
+    expected = compute_within_event_covariance_matrix(
+        inp.within_event_model, None, YD, imts, imts,
+        phi_Y, station.full_phi_D, dtype=numpy.float64)
+    T_Y = numpy.zeros((len(target_rows), len(imts)))
+    T_Y[numpy.arange(len(target_rows)),
+        numpy.repeat(numpy.arange(len(imts)), D)] = tau_Y
+    expected += T_Y @ station.cov_HD_HD @ station.T_D.T
+    aac(actual, expected, atol=2E-12)
+
+    weights = build_ce_weights(
+        inp, mean_stds_Y, station, sampler,
+        max_block_elements=len(imts) * len(station.zeta_D) * 3)
+    conditioned = weights.condition(unconditional_Y, unconditional_D)
+    YD = _projected_distances(targets, sites_D)
+    full = build_joint_conditioning(
+        inp, mean_stds_Y, station, None, YD)
+    expected = full.condition(unconditional_Y, unconditional_D)
+    aac(conditioned, expected)
+    aac(weights.posterior_mean(), full.posterior_mean())
+
+
+def test_ce_conditioned_batches(monkeypatch):
+    # Exercise the production generator above the automatic CE threshold.
+    rows, columns = numpy.indices((32, 32))
+    targets = _utm_sitecol(
+        500_000 + columns.ravel() * 1_000,
+        4_200_000 + rows.ravel() * 1_000)
+    station_points = _utm_sitecol(
+        [510_300, 510_700], [4_210_200, 4_210_800])
+    targets.extend(station_points.lons, station_points.lats)
+    sites_D = targets.filtered([1024, 1025])
+    imts = [PGA(), SA(0.3)]
+    data = pandas.DataFrame({
+        'PGA_mean': [1.0, 1.1], 'PGA_std': [0.1, 0.1],
+        'SA(0.3)_mean': [0.9, 1.0], 'SA(0.3)_std': [0.1, 0.1]},
+        index=sites_D.sids)
+    cmaker = simple_cmaker(
+        [test_data.ZeroMeanGMM()], [str(imt) for imt in imts],
+        maximum_distance=test_data.MAX_DIST, truncation_level=99)
+    cmaker.oq.truncated_mvn = False
+    cmaker.oq.correlation_cutoff = 0
+    cmaker.oq.calculation_mode = 'scenario'
+    ebr = EBRupture(
+        test_data.RUP, source_id=0, trt_smr=0, n_occ=2,
+        id=0, e0=0)
+    ebr.seed = 7
+    computer = ConditionedGmfComputer(
+        ebr, targets, sites_D, data, imts, cmaker,
+        TwoIMTCorrelation(), NoCrossCorrelation())
+    computer.init_eid_rlz_sig_eps()
+    computer.conditioning_block_elements = 10_000
+    pre = build_precomputed(
+        test_data.RUP, cmaker, computer.inp, compute_covs=False)
+    monkeypatch.setattr(
+        config.memory, 'max_gmvs_chunk', str(len(targets)))
+
+    tables = list(conditioned_ce(
+        computer, pre.conditioners[0], 256 * 1024 ** 2,
+        performance.Monitor()))
+    assert len(tables) == 2
+    assert all(len(table) == len(targets) for table in tables)
+    assert {int(table.eid.iloc[0]) for table in tables} == {0, 1}
+    for table in tables:
+        assert numpy.isfinite(table[['PGA', 'SA(0.3)']]).all().all()
+
+
 def test_joint_sampling_path():
     # A joint model must bypass the historical per-IMT calculation.
     imts = [PGA(), SA(0.3)]
@@ -490,7 +697,8 @@ def test_singular_station_sampling():
     station = StationConditioning(
         numpy.zeros(2), (), (), numpy.ones(2, dtype=bool),
         numpy.zeros(2, dtype=int), numpy.ones(2), numpy.ones(2),
-        numpy.ones(2), numpy.ones((2, 1)), numpy.ones((1, 1)),
+        numpy.ones(2), numpy.zeros(2), numpy.ones((2, 1)),
+        numpy.ones((1, 1)),
         cov_YD_YD, numpy.linalg.pinv(cov_YD_YD, hermitian=True))
     joint = JointConditioning(
         numpy.array([0.5]), numpy.ones((1, 1)),
