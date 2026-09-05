@@ -28,6 +28,10 @@ https://usgs.github.io/shakemap/manual4_0/tg_processing.html. Its main
 implementation is in ``shakemap_modules/coremods/model.py`` at
 https://code.usgs.gov/ghsc/esi/shakemap-modules.
 
+The scalable approach also follows the CE-and-kriging strategy used by
+Engler, Jaiswal, and Ganesh (2025), *Earthquake Spectra*, 41(1), 524-546,
+https://doi.org/10.1177/87552930241283201.
+
 Basic model
 ===========
 
@@ -107,6 +111,19 @@ The historical path retains the paper's partitioned calculation. ``createD``
 constructs the terms needed by equations (B8) and (B9),
 ``Conditioner.get_mu_tau_phi`` evaluates (B8) and the mean in (B16), and
 ``_compute_target_covs`` evaluates the two covariance terms in (B17).
+
+The *nominal bias* is not omitted from the joint path. In the partitioned
+formulation it is the target between-event shift ``T_Y @ E[H_D | y_D]``.
+The historical ``nominal_bias_mean`` is only a scalar summary of the related
+station shifts; the full target shift is used in the conditional mean. In the
+joint formulation this shift and the within-event kriging correction are
+absorbed into
+
+``Sigma_Y_YD @ Sigma_YD_YD^+ @ zeta_D``.
+
+Expanding that regression recovers the partitioned nominal-bias and
+within-event terms. Adding a separate nominal bias to the joint posterior
+mean would therefore count the between-event adjustment twice.
 
 The joint path is an algebraic generalization rather than a literal sequence
 of the Appendix B equations. It first integrates the normalized
