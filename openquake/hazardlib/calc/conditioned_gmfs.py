@@ -134,7 +134,7 @@ untruncated total Gaussian posterior while also allowing one within-event
 model to correlate every target IMT and site jointly. It does not retain
 separate within- and between-event posterior fields.
 
-OpenQuake also makes the following implementation choices:
+The OpenQuake engine also makes the following implementation choices:
 
 * Station-error variance is added to ``Sigma_WD_WD`` following ShakeMap.
   It is not shown explicitly in Appendix B.
@@ -192,18 +192,18 @@ Subscripts and indices
 ``L``
   Number of stations in Appendix B.
 ``N``
-  Number of target sites in OpenQuake arrays; equivalent to Appendix B's
+  Number of target sites in OpenQuake engine arrays; equivalent to Appendix B's
   ``K``.
 ``N_D``
-  Number of station sites in OpenQuake arrays; equivalent to Appendix B's
-  ``L``.
+  Number of station sites in OpenQuake engine arrays; equivalent to Appendix
+  B's ``L``.
 ``D``
   Local name for ``N_D`` in the chunked-mean implementation.
 ``M``
-  Number of target IMTs in OpenQuake. In Appendix B, ``M + 1`` instead
-  counts one native target IMT and the nonnative observed IMTs.
+  Number of target IMTs in the OpenQuake engine. In Appendix B, ``M + 1``
+  instead counts one native target IMT and the nonnative observed IMTs.
 ``M_D``
-  Number of observed IMTs in OpenQuake.
+  Number of observed IMTs in the OpenQuake engine.
 ``J``
   Local name for ``M_D`` in the chunked-mean implementation.
 ``E``
@@ -225,7 +225,7 @@ Input values and GSIM statistics
 ``mu_Y``
   GSIM mean at target sites.
 ``zeta_D``
-  OpenQuake shorthand for the raw station residual ``y_D - mu_YD``. The
+  OpenQuake engine shorthand for the raw station residual ``y_D - mu_YD``. The
   Appendix B equations write this difference explicitly.
 ``phi_D``
   GSIM within-event standard deviations at observation sites.
