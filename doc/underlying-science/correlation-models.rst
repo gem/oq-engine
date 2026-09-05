@@ -208,8 +208,39 @@ spatial covariance has repeated block-Toeplitz structure. Circulant embedding
 places that covariance inside a larger periodic block-circulant matrix, whose
 spatial modes can be diagonalized with fast Fourier transforms (FFTs). Only a
 small IMT-by-IMT spectral covariance must then be factorized at each Fourier
-mode. This replaces the dense cubic factorization with operations that scale
-approximately as :math:`MN\log N`.
+mode. If :math:`P` is the number of cells in the embedded grid, constructing
+the factor requires :math:`P` small :math:`M \times M` factorizations and each
+field requires FFTs and small matrix products at those frequencies. For the
+small, fixed number of IMTs typical of a calculation, the work therefore grows
+approximately as :math:`P\log P`, rather than cubically with :math:`MN`, and
+does not require storing a dense :math:`MN \times MN` matrix.
+
+The repeated structure follows from stationarity: covariance depends on the
+separation between two grid cells, rather than on their absolute coordinates.
+Consequently, every row of the spatial covariance is a shifted version of the
+same set of covariance lags. A finite rectangular grid has a block-Toeplitz
+with Toeplitz blocks (BTTB) covariance. Extending and reflecting those lags on
+a larger periodic grid produces a block-circulant with circulant blocks (BCCB)
+covariance while preserving all covariances between cells in the original
+grid.
+
+An FFT changes the spatial representation from grid cells to sinusoidal
+spatial frequencies. In this representation, the large BCCB matrix separates
+into one small :math:`M \times M` spectral covariance matrix for every
+frequency, where :math:`M` is the number of IMTs. OpenQuake computes a square
+root of each of these matrices. To draw a field, it transforms independent
+Gaussian noise to the frequency domain, applies the corresponding spectral
+root, transforms the result back, and retains the original grid. This can be
+viewed as efficiently combining random spatial waves whose amplitudes and
+cross-IMT dependence are prescribed by the correlation model.
+
+The periodic extension must itself be a valid covariance, which means that
+all of its spectral covariance matrices must be positive semidefinite. A valid
+stationary model on the requested grid does not guarantee this for the first
+periodic extension. OpenQuake therefore increases the size of the embedding
+until the condition is met. Once it is met, cropping the simulated periodic
+field recovers the covariance specified by the model on the original grid;
+the embedding does not replace the model with a periodic approximation there.
 
 The engine uses this path automatically for sufficiently large compatible
 models and regular grids. Grid cells may be unoccupied, provided the enclosing
