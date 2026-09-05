@@ -132,7 +132,10 @@ then applies the standard conditional-MVN equations. Expanding that Schur
 complement gives equations (B16) and (B17). It therefore produces the same
 untruncated total Gaussian posterior while also allowing one within-event
 model to correlate every target IMT and site jointly. It does not retain
-separate within- and between-event posterior fields.
+separate within- and between-event posterior realizations. The small station
+system nevertheless recovers the posterior mean and covariance of ``H_D``.
+The joint path logs its mean and standard deviation, together with the
+target-averaged nominal-bias mean and standard deviation, for each target IMT.
 
 The OpenQuake engine also makes the following implementation choices:
 
@@ -636,6 +639,36 @@ class StationConditioning:
     def solve(self, right_hand_side):
         """Apply the precomputed station covariance pseudoinverse."""
         return self.cov_YD_YD_inv @ right_hand_side
+
+    def event_posterior(self):
+        """Return the posterior mean and covariance of normalized ``H``."""
+        cross_covariance = self.cov_HD_HD @ self.T_D.T
+        gain = cross_covariance @ self.cov_YD_YD_inv
+        mean = gain @ self.zeta_D
+        covariance = self.cov_HD_HD - gain @ cross_covariance.T
+        covariance = (covariance + covariance.T) / 2
+        return mean, covariance
+
+
+def log_event_posterior(conditioner, station):
+    """Log between-event and nominal-bias diagnostics by target IMT."""
+    mean, covariance = station.event_posterior()
+    stddev = numpy.sqrt(numpy.diag(covariance).clip(min=0))
+    latent_index = {imt: i for i, imt in enumerate(station.latent_imts)}
+    gsim = (conditioner.gsim.gmpe
+            if hasattr(conditioner.gsim, 'gmpe') else conditioner.gsim)
+    for m, imt in enumerate(conditioner.inp.imts_Y):
+        index = latent_index[imt]
+        tau = numpy.asarray(
+            conditioner.mean_stds_Y[2, 0, m], dtype=numpy.float64)
+        bias_mean = numpy.mean(tau * mean[index])
+        bias_stddev = numpy.sqrt(
+            numpy.mean(tau ** 2 * covariance[index, index]))
+        logging.info(
+            'GSIM: %s, IMT: %s, normalized between-event residual '
+            'mean: %.3f, stddev: %.3f, target-averaged nominal bias '
+            'mean: %.3f, stddev: %.3f', gsim, imt, mean[index],
+            stddev[index], bias_mean, bias_stddev)
 
 
 def build_station_conditioning(inp, mean_stds_D, DD):
@@ -1511,6 +1544,7 @@ def conditioned_ce(computer, conditioner, memory_budget, monitor):
         layout, conditioner.inp.sites_D, conditioner.inp.sites_D)
     station = build_station_conditioning(
         conditioner.inp, conditioner.mean_stds_D, DD)
+    log_event_posterior(conditioner, station)
     sampler = CirculantConditioningSampler.build(
         conditioner.inp, station, order, layout)
     weights = build_ce_weights(
@@ -1559,6 +1593,7 @@ def conditioned_joint(computer, conditioner, monitor, compute_covs):
     with monitor.shared['DD'] as DD:
         station = build_station_conditioning(
             conditioner.inp, conditioner.mean_stds_D, DD)
+    log_event_posterior(conditioner, station)
     if compute_covs:
         with monitor.shared['YD'] as YD:
             with monitor.shared['YY'] as YY:
