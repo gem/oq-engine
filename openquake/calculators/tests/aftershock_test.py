@@ -19,7 +19,7 @@
 import numpy
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.aftershock import case_1, case_2
+from openquake.qa_tests_data.aftershock import case_1
 
 
 ae = numpy.testing.assert_equal
@@ -29,19 +29,12 @@ aac = numpy.testing.assert_allclose
 class AftershockTestCase(CalculatorTestCase):
 
     def test_case_1(self):
-        # run aftershock
+        # Run aftershock: ruptures listed in delta_rates.csv have their
+        # occurrence_rate shifted and, for GMMs that require it (e.g.
+        # CY08, Bradley2013), are flagged as aftershocks so any aftershock
+        # ground motion adjustment is applied to those ruptures
         self.run_calc(case_1.__file__, 'job.ini')
 
         # checking hazard curves
-        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
-
-    def test_case_2(self):
-        # Run aftershock calculation also with a per-rupture "is_aftershock"
-        # flag in delta_rates CSV which informs GMMs with aftershock terms of
-        # when to apply such adjustments
-        self.run_calc(case_2.__file__, 'job.ini')
-
-        # Checking hazard curves
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)

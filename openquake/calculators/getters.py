@@ -279,23 +279,14 @@ class CurveGetter(object):
 
 class DeltaRatesGetter(object):
     """
-    Read the delta rates and the optional per-rupture
-    aftershock flags from an aftershock datastore
+    Read the delta rates from an aftershock datastore
     """
     def __init__(self, dstore):
         self.dstore = dstore
 
     def __call__(self, src_id):
         with self.dstore.open('r') as dstore:
-            delta = dstore['delta_rates'][src_id]
-            if 'delta_rates_aftershock' in dstore:
-                # GMMs will use ctx.is_aftershock to inform if
-                # to use aftershock adjustment terms (if present)
-                aft = dstore['delta_rates_aftershock'][src_id]
-            else:
-                # Don't apply aftershock adjustments in GMMs
-                aft = numpy.zeros(len(delta), numpy.uint8)
-            return delta, aft
+            return dstore['delta_rates'][src_id]
 
 
 class MapGetter(object):
