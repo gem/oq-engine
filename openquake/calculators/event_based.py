@@ -219,6 +219,10 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
             computer = get_computer(cmaker, ebr, sites, sec_perils)
         except FarAwayRupture:
             continue
+        # Unlike sig_eps, mea_tau_phi is not indexed by batch events: it
+        # contains one set of rupture/site/GSIM/IMT statistics, appended by
+        # the computer while batches are processed. Keep track of the list
+        # position so each batch transfers only newly appended records.
         mtp_start = 0
         for df, indices, last in computer.compute_all_batches(cmon, umon):
             dic = dict(
