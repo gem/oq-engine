@@ -20,10 +20,14 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+import logging
+
 import numpy as np
 import pandas
+from scipy import special
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib import config
+from openquake.baselib.general import AccumDict, humansize
 from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
@@ -31,6 +35,8 @@ from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
     import NoCrossCorrelation
 from openquake.hazardlib.correlation_models.base import (
     CorrelationContext, ResidualComponent, SpatialCorrelationModel)
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    CirculantEmbeddingFactor, RegularGridLayout)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -40,6 +46,45 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
+CE_MIN_SITES = 1_000
+
+
+def _correlation_budget():
+    """Return the configured per-worker correlation workspace budget."""
+    return int(float(config.memory.correlated_gmf_gb) * 1024 ** 3)
+
+
+def _dense_correlation_bytes(model, sites, num_imts):
+    """Estimate peak bytes required by the existing dense factorization."""
+    if isinstance(model, SpatialCorrelationModel):
+        num_sites = len(sites.complete)
+        matrices = num_imts + 2
+        return matrices * num_sites ** 2 * 8
+    dimension = num_imts * len(sites)
+    return 3 * dimension ** 2 * 8
+
+
+def _site_positions(complete, selected):
+    """Return positions of selected site IDs in the complete collection."""
+    complete_sids = np.asarray(complete.sids)
+    selected_sids = np.asarray(selected.sids)
+    order = np.argsort(complete_sids)
+    sorted_sids = complete_sids[order]
+    positions = np.searchsorted(sorted_sids, selected_sids)
+    if (np.any(positions == len(sorted_sids)) or
+            np.any(sorted_sids[positions] != selected_sids)):
+        raise ValueError('Affected sites are absent from the complete grid')
+    return order[positions]
+
+
+def _truncated_normals(shape, level, rng):
+    """Draw truncated standard normals with one in-place work array."""
+    samples = rng.random(shape)
+    lower = special.ndtr(-level)
+    samples *= special.ndtr(level) - lower
+    samples += lower
+    special.ndtri(samples, out=samples)
+    return samples
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -256,6 +301,8 @@ class GmfComputer(object):
             mag=rupture.mag, rake=getattr(rupture, 'rake', None),
             trt=cmaker.trt)
         self._within_event_factor = None
+        self._ce_factor = None
+        self._ce_checked = False
         self.within_dist = NoCrossCorrelation(
             cmaker.truncation_level_within).distribution
         self.mea_tau_phi = []
@@ -296,20 +343,24 @@ class GmfComputer(object):
         self.sig = np.zeros((E, M), F32)  # same for all events
         self.between_eps = np.zeros((E, M), F32)  # not the same
 
-    def build_sig_eps(self, se_dt):
+    def build_sig_eps(self, se_dt, event_indices=None):
         """
         :returns: a structured array of size E with fields
                   (eid, rlz_id, sig_inter_IMT, eps_inter_IMT)
         """
-        sig_eps = np.zeros(self.E, se_dt)
-        sig_eps['eid'] = self.eid
-        sig_eps['rlz_id'] = self.rlz
+        if event_indices is None:
+            event_indices = np.arange(self.E)
+        sig_eps = np.zeros(len(event_indices), se_dt)
+        sig_eps['eid'] = self.eid[event_indices]
+        sig_eps['rlz_id'] = self.rlz[event_indices]
         for m, imt in enumerate(self.cmaker.imtls):
-            sig_eps[f'sig_inter_{imt}'] = self.sig[:, m]
-            sig_eps[f'eps_inter_{imt}'] = self.between_eps[:, m]
+            sig_eps[f'sig_inter_{imt}'] = self.sig[event_indices, m]
+            sig_eps[f'eps_inter_{imt}'] = \
+                self.between_eps[event_indices, m]
         return sig_eps
 
-    def update(self, data, array, rlzs, mean, max_iml=None):
+    def update(self, data, array, rlzs, mean, max_iml=None,
+               event_indices=None):
         """
         Updates the data dictionary with the values coming from the array
         of GMVs. Also indirectly updates the arrays .sig and .eps.
@@ -322,30 +373,47 @@ class GmfComputer(object):
         set_max_min(array, mean, max_iml, min_iml, self.mmi_index)
         data['gmv'].append(array)
 
-        if self.sec_perils:
+        if self.sec_perils and event_indices is not None:
+            for e in range(len(event_indices)):
+                gmfa = array[:, :, e].T  # shape (M, N)
+                self._update_secondary(data, gmfa, mag)
+        elif self.sec_perils:
             n = 0
             for rlz in rlzs:
                 eids = self.eid[self.rlz == rlz]
                 E = len(eids)
-                for e, eid in enumerate(eids):
+                for e, _eid in enumerate(eids):
                     gmfa = array[:, :, n + e].T  # shape (M, N)
-                    for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
-                        for outkey, outarr in zip(sp.outputs, o):
-                            key = f'{sp.__class__.__name__}_{outkey}'
-                            if outkey == 'Disp':
-                                # Catarina says to ignore small displacements
-                                outarr[outarr < 1e-4] = 0
-                            data[key].append(outarr)
+                    self._update_secondary(data, gmfa, mag)
                 n += E
 
-    def strip_zeros(self, data):
+    def _update_secondary(self, data, gmfa, mag):
+        """Append secondary-peril outputs for one event."""
+        for sp in self.sec_perils:
+            outputs = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
+            for outkey, outarr in zip(sp.outputs, outputs):
+                key = f'{sp.__class__.__name__}_{outkey}'
+                if outkey == 'Disp':
+                    # Catarina says to ignore small displacements
+                    outarr[outarr < 1e-4] = 0
+                data[key].append(outarr)
+
+    def strip_zeros(self, data, event_indices=None):
         """
         :returns: a DataFrame with the nonzero GMVs
         """
         # building an array of shape (3, NE)
-        eid_sid_rlz = build_eid_sid_rlz(
-            self.rlzs, self.ctx.sids, self.eid, self.rlz)
+        if event_indices is None:
+            eid_sid_rlz = build_eid_sid_rlz(
+                self.rlzs, self.ctx.sids, self.eid, self.rlz)
+        else:
+            num_sites = len(self.ctx.sids)
+            eids = self.eid[event_indices]
+            rlzs = self.rlz[event_indices]
+            eid_sid_rlz = np.array([
+                np.repeat(eids, num_sites),
+                np.tile(self.ctx.sids, len(event_indices)),
+                np.repeat(rlzs, num_sites)], dtype=U32)
 
         for key, val in sorted(data.items()):
             data[key] = np.concatenate(data[key], axis=-1, dtype=F32)
@@ -440,13 +508,165 @@ class GmfComputer(object):
         with umon:
             return self.strip_zeros(data)
 
+    def compute_all_batches(self, cmon=Monitor(), umon=Monitor()):
+        """Yield bounded GMF tables and their global event indices."""
+        self.init_eid_rlz_sig_eps()
+        if (self.within_event_model is not None and
+                self.tlw > TRUNCATION_THRESHOLD):
+            factor = self._get_ce_factor()
+        else:
+            factor = None
+        if factor is None:
+            indices = np.arange(self.E)
+            yield self.compute_all(None, cmon, umon), indices, True
+            return
+        yield from self._compute_ce_batches(factor, cmon, umon)
+
+    def _compute_ce_batches(self, factor, cmon, umon):
+        """Yield unconditioned CE fields without forming the full cube."""
+        max_iml = self.cmaker.oq.get_max_iml()
+        batch_size = self._ce_batch_size(factor)
+        streams = np.random.SeedSequence(self.seed).spawn(3)
+        within_rng, between_rng, amplifier_rng = (
+            np.random.default_rng(stream) for stream in streams)
+        batches = []
+        for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
+            idxs, = np.where(np.isin(self.rlz, rlzs))
+            if not len(idxs):
+                continue
+            if self.tlb > TRUNCATION_THRESHOLD:
+                self.between_eps[idxs] = \
+                    self.between_event_model.get_inter_eps(
+                        self.imts, len(idxs), between_rng).T
+            for start in range(0, len(idxs), batch_size):
+                batches.append((g, gs, rlzs,
+                                idxs[start:start + batch_size]))
+        logging.info(
+            'Streaming %d correlated fields in %d batches of at most %d',
+            self.E, len(batches), batch_size)
+
+        recorded_gsims = set()
+        mean_stds_by_gsim = {}
+        for number, (g, gs, rlzs, idxs) in enumerate(batches, 1):
+            if g not in mean_stds_by_gsim:
+                with self.cmaker.gmf_mon:
+                    mean_stds_by_gsim[g] = self.cmaker.get_4MN(
+                        [self.ctx], gs).astype(F32)
+            gs.gid = self.cmaker.gid[g]
+            record_stats = g not in recorded_gsims
+            df = self._compute_ce_batch(
+                factor, gs, rlzs, mean_stds_by_gsim[g], idxs, max_iml,
+                within_rng, amplifier_rng, record_stats,
+                cmon, umon)
+            recorded_gsims.add(g)
+            yield df, idxs, number == len(batches)
+
+    def _ce_batch_size(self, factor):
+        """Bound a batch by both FFT workspace and returned GMF rows."""
+        fft_events = factor.batch_size(_correlation_budget())
+        max_rows = int(config.memory.max_gmvs_chunk)
+        output_events = max(1, max_rows // self.N)
+        return min(fft_events, output_events)
+
+    def _compute_ce_batch(self, factor, gs, rlzs, mean_stds, idxs,
+                          max_iml, within_rng, amplifier_rng, record_stats,
+                          cmon, umon):
+        """Compute and tabulate one bounded group of CE realizations."""
+        num_events = len(idxs)
+        data = AccumDict(accum=[])
+        with cmon:
+            result = np.zeros((self.M, self.N, num_events), F32)
+            within_eps = self._draw_ce_eps(
+                factor, num_events, within_rng)
+            mean = []
+            for m, imt in enumerate(self.imts):
+                ms = mean_stds[:, m]
+                mean.append(ms[0])
+                self._compute_update(
+                    result, m, imt, gs, ms, idxs, within_eps,
+                    amplifier_rng, record_stats)
+        with umon:
+            result = result.transpose(1, 0, 2)
+            self.update(
+                data, result, rlzs, np.array(mean), max_iml, idxs)
+            return self.strip_zeros(data, idxs)
+
+    def _get_ce_factor(self):
+        """Return a cached CE factor when the large-grid path is eligible."""
+        if self._ce_checked:
+            return self._ce_factor
+        self._ce_checked = True
+        model = self.within_event_model
+        dense_bytes = _dense_correlation_bytes(model, self.sites, self.M)
+        dense_sites = (len(self.sites.complete)
+                       if isinstance(model, SpatialCorrelationModel)
+                       else len(self.sites))
+        compatible = model.SUPPORTS_CIRCULANT_EMBEDDING
+        if dense_sites < CE_MIN_SITES or not compatible:
+            if dense_bytes > _correlation_budget():
+                qualifier = ('too small for automatic circulant embedding'
+                             if compatible else
+                             'not enabled for circulant embedding')
+                raise ValueError(
+                    f'{model.__class__.__name__} is {qualifier}; its dense '
+                    f'factorization requires about '
+                    f'{humansize(dense_bytes)}')
+            return None
+
+        try:
+            complete = self.sites.complete
+            layout = RegularGridLayout.from_sites(complete)
+            positions = _site_positions(complete, self.sites)
+            site_indices = layout.site_indices[positions]
+            self._ce_factor = CirculantEmbeddingFactor.build(
+                model, self.imts, layout.grid_shape, layout.spacing,
+                ResidualComponent.WITHIN_EVENT,
+                self.correlation_context, site_indices)
+        except ValueError as exc:
+            if dense_bytes > _correlation_budget():
+                raise ValueError(
+                    f'Cannot sample {model.__class__.__name__} within the '
+                    f'correlation memory budget: {exc}') from exc
+            logging.warning(
+                'Falling back to dense %s correlation: %s',
+                model.__class__.__name__, exc)
+            return None
+
+        factor = self._ce_factor
+        logging.info(
+            'Using circulant embedding for %s: grid=%sx%s, '
+            'occupancy=%.1f%%, embedding=%sx%s, factor=%s',
+            model.__class__.__name__, *layout.grid_shape,
+            100 * layout.occupancy, *factor.embedded_shape,
+            humansize(factor.spectral_root.nbytes))
+        return factor
+
+    def _draw_ce_eps(self, factor, num_events, rng=None):
+        """Draw correlated residual fields in bounded FFT batches."""
+        if rng is None:
+            rng = self.rng
+        batch_size = min(
+            num_events, factor.batch_size(_correlation_budget()))
+        correlated = np.empty(
+            (factor.output_size, num_events), dtype=F32)
+        for start in range(0, num_events, batch_size):
+            stop = min(start + batch_size, num_events)
+            samples = _truncated_normals(
+                (stop - start, factor.input_size), self.tlw, rng)
+            correlated[:, start:stop] = factor.apply(samples.T)
+        return correlated.reshape(self.M, self.N, num_events)
+
     def _draw_within_eps(self, num_events, correlate=True):
         if self.tlw <= TRUNCATION_THRESHOLD:
             return np.zeros((self.M, self.N, num_events), F32)
+        model = self.within_event_model
+        if correlate and model is not None:
+            factor = self._get_ce_factor()
+            if factor is not None:
+                return self._draw_ce_eps(factor, num_events)
         samples = np.asarray([
             self.within_dist.rvs((self.N, num_events), self.rng).astype(F32)
             for _ in range(self.M)])
-        model = self.within_event_model
         if (not correlate or model is None or
                 isinstance(model, SpatialCorrelationModel)):
             return samples
@@ -458,9 +678,11 @@ class GmfComputer(object):
         correlated = self._within_event_factor.apply(flattened)
         return correlated.reshape(samples.shape).astype(F32)
 
-    def _compute_update(self, result, m, imt, gs, ms, idxs, within_eps):
+    def _compute_update(self, result, m, imt, gs, ms, idxs, within_eps,
+                        rng=None, record_stats=True):
         try:
-            result[m] = self._compute(ms, m, imt, gs, within_eps[m], idxs)
+            result[m] = self._compute(
+                ms, m, imt, gs, within_eps[m], idxs, record_stats)
         except Exception as exc:
             if exc.__class__ is RuntimeError:
                 msg = str(exc)
@@ -471,13 +693,15 @@ class GmfComputer(object):
             ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
-                self.ctx.ampcode, result, m, imt, self.rng)
+                self.ctx.ampcode, result, m, imt,
+                self.rng if rng is None else rng)
 
-    def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs):
+    def _compute(self, mean_stds, m, imt, gsim, within_eps, idxs,
+                 record_stats=True):
         # regular case, sets self.sig, returns gmf
         im = imt.string
         mean, sig, tau, phi = mean_stds  # shapes N
-        if self.cmaker.oq.mea_tau_phi:
+        if self.cmaker.oq.mea_tau_phi and record_stats:
             min_iml = self.cmaker.min_iml[m]
             gmv = np.exp(mean)
             for s, sid in enumerate(self.ctx.sids):
@@ -511,7 +735,9 @@ class GmfComputer(object):
             # a[:, newaxis] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             within_res = phi[:, np.newaxis] * within_eps  # shape (N, E)
-            if isinstance(self.within_event_model, SpatialCorrelationModel):
+            if (isinstance(
+                    self.within_event_model, SpatialCorrelationModel) and
+                    self._ce_factor is None):
                 within_res = self.within_event_model.apply_correlation(
                     self.sites, imt, within_res, phi).astype(F32)
             between_res = tau[:, np.newaxis] * self.between_eps[idxs, m]

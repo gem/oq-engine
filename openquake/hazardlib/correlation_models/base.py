@@ -67,6 +67,7 @@ class CholeskyFactor:
 class CorrelationModel:
     """Common metadata and validation for all correlation models."""
 
+    SUPPORTS_CIRCULANT_EMBEDDING = False
     DEFINED_FOR_RESIDUAL_COMPONENT = None
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
