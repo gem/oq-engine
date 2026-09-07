@@ -262,6 +262,10 @@ class BaseRupture(metaclass=abc.ABCMeta):
         Object representing the rupture surface geometry.
     :param rupture_slip_direction:
         Angle describing rupture propagation direction in decimal degrees.
+    :param is_aftershock:
+        Boolean flag indicating whether the rupture represents an aftershock.
+        Defaults to False (mainshock). Consumed by GMMs that scale their
+        median and/or sigma differently for aftershocks (e.g. CY08, Bradley13).
 
     :raises ValueError:
         If magnitude value is not positive, or tectonic region type is unknown.
@@ -296,7 +300,8 @@ class BaseRupture(metaclass=abc.ABCMeta):
         return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, rupture_slip_direction=None, weight=None):
+                 surface, rupture_slip_direction=None, weight=None,
+                 is_aftershock=False):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         NodalPlane.check_rake(rake)
@@ -307,6 +312,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
         self.ruid = None
+        self.is_aftershock = is_aftershock
 
     @property
     def hypo_depth(self):
@@ -636,7 +642,8 @@ class PointRupture(ParametricProbabilisticRupture):
     size effects can be neglected.
     """
     def __init__(self, mag, tectonic_region_type, hypocenter,
-                 occurrence_rate, temporal_occurrence_model, zbot=0):
+                 occurrence_rate, temporal_occurrence_model, zbot=0,
+                 is_aftershock=False):
         self.mag = mag
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
@@ -647,6 +654,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.dip = 0
         self.strike = 0
         self.zbot = zbot  # bottom edge depth, used in Campbell-Bozorgnia
+        self.is_aftershock = is_aftershock
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

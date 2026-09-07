@@ -943,7 +943,7 @@ class ContextMaker(object):
                 else:
                     value = rup.hypocenter.depth
             elif param == 'is_aftershock':
-                value = getattr(rup, 'is_aftershock', False)
+                value = rup.is_aftershock
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
