@@ -264,8 +264,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         Angle describing rupture propagation direction in decimal degrees.
     :param is_aftershock:
         Boolean flag indicating whether the rupture represents an aftershock.
-        Defaults to False (mainshock). Consumed by GMMs that scale their
-        median and/or sigma differently for aftershocks (e.g. CY08, Bradley13).
+        Defaults to False (mainshock).
 
     :raises ValueError:
         If magnitude value is not positive, or tectonic region type is unknown.
