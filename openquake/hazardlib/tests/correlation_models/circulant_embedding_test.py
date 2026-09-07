@@ -122,6 +122,27 @@ def test_layout():
     assert layout.maximum_error < 1
     assert layout.occupancy == 11 / 12
 
+    rows, columns = layout.grid_coordinates(sites)
+    actual = numpy.rint(rows).astype(int) * 4
+    actual += numpy.rint(columns).astype(int)
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_expanded_layout():
+    sites, _ = geographic_grid((3, 4))
+    layout = RegularGridLayout.from_sites(sites)
+    expanded = layout.expanded(sites, margin=2)
+
+    assert expanded.grid_shape == (7, 8)
+    rows, columns = expanded.grid_coordinates(sites)
+    assert rows.min() > 1.99
+    assert columns.min() > 1.99
+    assert rows.max() < 4.01
+    assert columns.max() < 5.01
+    expected = numpy.rint(rows).astype(int) * 8
+    expected += numpy.rint(columns).astype(int)
+    numpy.testing.assert_array_equal(expanded.site_indices, expected)
+
 
 def test_irregular_layout():
     sites, _ = geographic_grid((3, 4), perturb=0.002)
