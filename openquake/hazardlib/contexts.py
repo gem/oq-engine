@@ -1538,9 +1538,9 @@ class RmapMaker(object):
                 return
         for ctx in self.cmaker.get_ctxs(src, sites):
             if self.cmaker.deltagetter:
-                # Every rupture listed in delta_rates is an aftershock:
-                # shift its occurrence_rate and, for GMMs that use it,
-                # set is_aftershock so aftershock adjustment terms fire
+                # Every rup listed in delta_rates is an aftershock, so
+                # shift its occurrence_rate and set is_aftershock as True
+                # so aftershock terms are applied in GMMs containing them
                 with self.cmaker.delta_mon:
                     delta = self.cmaker.deltagetter(src.id)
                     d = delta[ctx.rup_id]
