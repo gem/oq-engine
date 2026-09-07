@@ -1718,16 +1718,28 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
 def read_delta_rates(fname, idx_nr):
     """
     :param fname:
-        path to a CSV file with fields (source_id, rup_id, delta)
+        path to a CSV file with fields (source_id, rup_id, delta) and an
+        optional "is_aftershock" column (0 = False, 1 = True). This latter
+        column is used to inform GMMs with an aftershock term/correction to
+        apply the it to these ruptures.
     :param idx_nr:
         dictionary source_id -> (src_id, num_ruptures) with Ns sources
     :returns:
-        list of Ns floating point arrays of different lenghts
+        pair of lists of arrays of length Ns, one containing the floating
+        point rate corrections and the other boolean aftershock flags
     """
-    delta_df = pandas.read_csv(fname, converters=dict(
-        source_id=str, rup_id=int, delta=float), index_col=0)
-    assert list(delta_df.columns) == ['rup_id', 'delta']
+    converters = dict(source_id=str, rup_id=int, delta=float)
+    delta_df = pandas.read_csv(fname, converters=converters, index_col=0)
+    cols = list(delta_df.columns)
+    has_aftershock = 'is_aftershock' in cols
+    expected = ['rup_id', 'delta']
+    if has_aftershock:
+        expected.append('is_aftershock')
+    if cols != expected:
+        raise InvalidFile(
+            '%s: expected columns %s, got %s' % (fname, expected, cols))
     delta = [numpy.zeros(0) for _ in idx_nr]
+    aftershocks = [numpy.zeros(0, U8) for _ in idx_nr]
     for src, df in delta_df.groupby(delta_df.index):
         idx, nr = idx_nr[src]
         rupids = df.rup_id.to_numpy()
@@ -1736,7 +1748,11 @@ def read_delta_rates(fname, idx_nr):
         drates = numpy.zeros(nr)
         drates[rupids] = df.delta.to_numpy()
         delta[idx] = drates
-    return delta
+        aft = numpy.zeros(nr, U8)
+        if has_aftershock:
+            aft[rupids] = df.is_aftershock.to_numpy().astype(U8)
+        aftershocks[idx] = aft
+    return delta, aftershocks
 
 
 def get_shapefiles(dirname):

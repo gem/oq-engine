@@ -439,8 +439,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         if fname:
             idx_nr = {row[0]: (idx, row[NUM_RUPTURES])
                       for idx, row in enumerate(self.csm.source_info.values())}
-            deltas = readinput.read_delta_rates(fname, idx_nr)
+            deltas, a_shocks = readinput.read_delta_rates(fname, idx_nr)
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
+            self.datastore.hdf5.save_vlen('delta_rates_aftershock', a_shocks)
 
         # save 'source_groups'
         self.max_weight = store_csm(
