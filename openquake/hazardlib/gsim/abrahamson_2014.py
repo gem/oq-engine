@@ -146,7 +146,8 @@ def _get_aftershock_term(C, ctx):
      NOTE: Rupture IDs specified using a "delta_rates" CSV are automatically
      labelled as aftershocks (ctx.is_aftershock=True) and crjb can be specified
      for each of these ruptures in this "delta_rates" CSV too. If crjb is not
-     provided for each aftershock in this CSV, an error is raised here.
+     provided for each aftershock in this CSV, an error is raised here given it
+     is required for this GMM's aftershock term.
     """
     f11 = np.zeros_like(ctx.mag)
     # Aftershocks are labelled via ctx.is_aftershock (set from delta_rates)
