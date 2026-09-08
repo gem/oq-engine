@@ -1734,21 +1734,20 @@ def read_delta_rates(fname, idx_nr):
     :param idx_nr:
         dictionary source_id -> (src_id, num_ruptures) with Ns sources
     :returns:
-        list of Ns structured arrays with dtype
-        [('delta', f8), ('crjb', f8)]; entries for ruptures not listed
-        in the CSV have delta=0 and crjb=NaN
+        list of Ns structured arrays with dtype [('delta', f8), ('crjb', f8)]
     """
     converters = dict(source_id=str, rup_id=int, delta=float, crjb=float)
-    delta_df = pandas.read_csv(fname, converters=converters, index_col=0)
-    cols = list(delta_df.columns)
-    if cols == ['rup_id', 'delta']:
-        has_crjb = False
-    elif cols == ['rup_id', 'delta', 'crjb']:
-        has_crjb = True
-    else:
+    delta_df = pandas.read_csv(fname, converters=converters)
+    required = {'source_id', 'rup_id', 'delta'}
+    missing = required - set(delta_df.columns)
+    if missing:
+        # Only check the essential columns - if Crjb is required but it
+        # is missing the GMM will raise an error when trying to retrieve
+        # from the ctx (cannot determine within readinput if GMMs req. it)
         raise InvalidFile(
-            '%s: expected columns source_id,rup_id,delta[,crjb], got %s' %
-            (fname, ['source_id'] + cols))
+            '%s: missing required column(s) %s' % (fname, sorted(missing)))
+    has_crjb = 'crjb' in delta_df.columns
+    delta_df = delta_df.set_index('source_id')
     delta = [numpy.zeros(0, delta_dt) for _ in idx_nr]
     for src, df in delta_df.groupby(delta_df.index):
         idx, nr = idx_nr[src]
