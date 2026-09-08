@@ -10,7 +10,8 @@ https://wheelhouse.openquake.org/v3/linux/py311/gdal-3.13.1-cp311-cp311-manylinu
 https://wheelhouse.openquake.org/v3/linux/py311/h3-4.4.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/h5py-3.13.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/kiwisolver-1.4.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py311/llvmlite-0.44.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+#https://wheelhouse.openquake.org/v3/linux/py311/llvmlite-0.44.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+llvmlite==0.49.0
 https://wheelhouse.openquake.org/v3/linux/py311/matplotlib-3.10.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #https://wheelhouse.openquake.org/v3/linux/py311/numba-0.61.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 #https://wheelhouse.openquake.org/v3/linux/py311/numpy-2.2.6-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl

@@ -26,7 +26,7 @@ classifiers = [
 # Note: oq-engine uses requirements-py3x.txt files for exact pinning
 dependencies = [
     "numpy>=2.5.0",
-    "scipy>=1.7",
+    "scipy~=1.18",
     "pandas>=2.2.3",
     "h5py>=3.13",
     "django>=4.2, <5",
