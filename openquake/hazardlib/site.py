@@ -322,7 +322,8 @@ site_param_dt = {
     # other parameters
     'custom_site_id': (numpy.bytes_, 8),
     'region': numpy.uint32,
-    'in_cshm': bool  # used in mcverry
+    'in_cshm': bool,  # used in mcverry
+    'is_aftershock': bool
 }
 
 
