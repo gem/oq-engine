@@ -139,3 +139,34 @@ def ui_logged_in_page(
 
     page.wait_for_url(f"{live_server.url}/engine/")
     return page
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-abort-jobs",
+        action="store_true",
+        default=False,
+        help="Skip aborting jobs after test execution."
+    )
+    parser.addoption(
+        "--skip-remove-jobs",
+        action="store_true",
+        default=False,
+        help="Skip removing jobs after test execution."
+    )
+
+
+@pytest.fixture
+def should_abort_job(request):
+    """
+    Returns True by default, False if --skip-abort-jobs is passed.
+    """
+    return not request.config.getoption("--skip-abort-jobs")
+
+
+@pytest.fixture
+def should_remove_job(request):
+    """
+    Returns True by default, False if --skip-remove-jobs is passed.
+    """
+    return not request.config.getoption("--skip-remove-jobs")

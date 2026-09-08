@@ -48,6 +48,7 @@ from django.core.mail.backends.filebased import (
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
+from django.utils.html import urlize
 import numpy
 
 from openquake.baselib import hdf5, config, parallel
@@ -63,8 +64,8 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
-    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION,
-    DISPLAY_NAME)
+    export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
+    EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -204,8 +205,8 @@ def _get_base_url(request):
     return base_url
 
 
-def get_bool_param(request, name, default=False):
-    val = request.GET.get(name)
+def _get_bool_param(obj, name, default=False):
+    val = obj.get(name)
     if val is None:
         return default
     return str(val).lower() in ('1', 'true', 'yes', '')
@@ -1098,7 +1099,7 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
-    exclude_from_print = ['rupture_from_usgs']
+    exclude_from_print = ['rupture_from_usgs', 'postrisk_func', 'export_dir']
     if 'shakemap_uri' in params:
         exclude_from_print.extend([
             'station_data_file', 'station_data_issue',
@@ -1117,9 +1118,13 @@ def impact_callback(
                     if rupkey not in exclude_from_print:
                         if rupkey == 'approach':
                             rupval = IMPACT_APPROACHES[rupval]
-                        params_to_print += f'{rupkey}: {rupval}\n'
+                        if rupval is not None and str(rupval).strip() != '':
+                            if rupkey not in params:
+                                # e.g. avoid writing the description twice
+                                params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
-                params_to_print += f'{key}: {val}\n'
+                if val is not None and str(val).strip() != '':
+                    params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
         with open(params['inputs']['station_data'], 'r',
                   encoding='utf-8') as file:
@@ -1138,7 +1143,6 @@ def impact_callback(
         for warning in warnings:
             body += warning + '\n'
     if exc:
-        job_id = job_id
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
     else:
@@ -1169,8 +1173,8 @@ def impact_get_rupture_data(request):
     rup, rupdic, _oqparams, err = impact_validate(
         request.POST, request.user, rupture_path)
     if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err,
+                            status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)
@@ -1319,6 +1323,22 @@ def create_impact_job(request, params, email_file_path):
     return response_data
 
 
+def _run_impact_job(request, post_data, rupture_path=None,
+                    station_data_file=None):
+    _rup, _rupdic, params, err = impact_validate(
+        post_data, request.user, rupture_path, station_data_file)
+    if err:
+        return JsonResponse(err,
+                            status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    make_impact_reports = _get_bool_param(post_data, 'make_impact_reports')
+    if make_impact_reports:
+        params['postrisk_func'] = 'make_impact_reports.main'
+    email_file_path = request.POST.get('email_file_path')
+    response_data = create_impact_job(request, params, email_file_path)
+    return JsonResponse(response_data, status=200)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1354,17 +1374,11 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, _rupdic, params, err = impact_validate(
-        request.POST, request.user, rupture_path, station_data_file)
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
+    post = request.POST.copy()
     if station_source is not None:
-        params['station_source'] = station_source
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+        post['station_source'] = station_source
+    return _run_impact_job(request, post, rupture_path=rupture_path,
+                           station_data_file=station_data_file)
 
 
 @csrf_exempt
@@ -1386,35 +1400,73 @@ def impact_run_with_shakemap(request):
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
     if 'shakemap_version' in request.POST:
-        shakemap_version = request.POST['shakemap_version']
-        post['shakemap_version'] = shakemap_version
+        post['shakemap_version'] = request.POST['shakemap_version']
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(
             err, status=400 if 'invalid_inputs' in err else 500)
-    post = {key: str(val) for key, val in rupdic.items()
-            if key != 'shakemap_array'}
+    post.update({key: str(val) for key, val in rupdic.items()
+                 if key != 'shakemap_array'})
+    rupture_path = post.get('rupture_file', '')
+    if rupture_path == 'None':
+        rupture_path = ''  # For consistency with impact_run
     if 'time_event' in request.POST:
         post['time_event'] = request.POST['time_event']
-    post['approach'] = 'use_shakemap_from_usgs'
-    post['use_shakemap'] = 'true'
-    if 'shakemap_version' in request.POST:
-        post['shakemap_version'] = shakemap_version
     maxdist = request.POST.get('maximum_distance')
     if maxdist:  # set in the _success test for speed
         post['maximum_distance'] = maxdist
+    if 'make_impact_reports' in request.POST:
+        post['make_impact_reports'] = request.POST['make_impact_reports']
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(
-        post, request.user, post['rupture_file'])
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+    return _run_impact_job(request, post, rupture_path=rupture_path)
+
+
+def extract_report_from_datastore(dstore, iso3, file_format):
+    impact_group = dstore['impact']
+    if iso3 not in impact_group:
+        raise ValueError(f"ISO3 '{iso3}' not found")
+    data = impact_group[iso3][f'report_{file_format}'][()]
+    return bytes(data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def impact_report(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    iso3 = request.GET.get("iso3")
+    if not iso3:
+        return HttpResponse("Missing iso3 parameter", status=400)
+    file_format = request.GET.get("format", "pdf").lower()
+    if file_format not in ["pdf", "png"]:
+        return HttpResponse(
+            f'Invalid format parameter "{file_format}".'
+            f' Choose "pdf" or "png".', status=400)
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content=f'{exc.__class__.__name__}: {exc}\n{tb}',
+            content_type='text/plain',
+            status=400
+        )
+    if file_format == "png":
+        response = HttpResponse(report_bytes, content_type="image/png")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.png")
+    else:
+        response = HttpResponse(report_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f"inline; filename=impact_report_{iso3}.pdf")
+    return response
 
 
 def aelo_validate(request):
@@ -2114,7 +2166,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
     elif application_mode == 'IMPACT':
-        kwargs['warnings'] = get_aristotle_warnings(ds)
+        kwargs['warnings'] = get_impact_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 
 
@@ -2318,11 +2370,68 @@ def determine_precision(weights):
     return max_decimal_places
 
 
-def get_aristotle_warnings(ds):
+def get_impact_warnings(ds):
     warnings = None
     if 'warnings' in ds:
         warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
     return warnings
+
+
+def format_oqparam(oqparam):
+    ret_dict = {}
+    rupdic = oqparam.rupture_dict
+    approach = rupdic['approach']
+    ret_dict['Approach'] = IMPACT_APPROACHES[approach]
+    if 'from_usgs' in approach:
+        ret_dict[IMPACT_FORM_LABELS['usgs_id']] = rupdic['usgs_id']
+        ret_dict[IMPACT_FORM_LABELS['shakemap_desc']] = rupdic['shakemap_desc']
+        ret_dict[IMPACT_FORM_LABELS['time_event']] = oqparam.time_event
+
+    # e.g. from {'default': [[2.5, 150.0], [10.2, 150.0]]} to 150
+    ret_dict[IMPACT_FORM_LABELS['maximum_distance']] = \
+        oqparam.maximum_distance['default'][0][1]
+
+    # e.g. from 0.000000001 to 0
+    ret_dict[IMPACT_FORM_LABELS['truncation_level']] = \
+        oqparam.truncation_level if oqparam.truncation_level > 1e-6 else 0
+
+    ret_dict[IMPACT_FORM_LABELS['number_of_ground_motion_fields']] = \
+        oqparam.number_of_ground_motion_fields
+
+    # NOTE: e.g. from {'default': 14.0} to 14.0
+    ret_dict[IMPACT_FORM_LABELS['asset_hazard_distance']] = \
+        oqparam.asset_hazard_distance['default']
+
+    ret_dict[IMPACT_FORM_LABELS['ses_seed']] = oqparam.ses_seed
+    if approach != 'use_shakemap_from_usgs':
+        ret_dict[IMPACT_FORM_LABELS['mosaic_model']] = oqparam.mosaic_model
+        ret_dict[IMPACT_FORM_LABELS['trt']] = oqparam.tectonic_region_type
+        ret_dict['Station data'] = (
+            'yes' if 'station_data' in oqparam.inputs else 'no')
+    if approach in ['build_rup_from_usgs',
+                    'provide_rup_params']:
+        ret_dict[IMPACT_FORM_LABELS['lon']] = rupdic['lon']
+        ret_dict[IMPACT_FORM_LABELS['lat']] = rupdic['lat']
+        ret_dict[IMPACT_FORM_LABELS['dep']] = rupdic['dep']
+        ret_dict[IMPACT_FORM_LABELS['mag']] = rupdic['mag']
+        ret_dict[IMPACT_FORM_LABELS['msr']] = rupdic['msr']
+        ret_dict[IMPACT_FORM_LABELS['aspect_ratio']] = rupdic['aspect_ratio']
+        ret_dict[IMPACT_FORM_LABELS['rake']] = rupdic['rake']
+        ret_dict[IMPACT_FORM_LABELS['dip']] = rupdic['dip']
+        ret_dict[IMPACT_FORM_LABELS['strike']] = rupdic['strike']
+
+    # NOTE: when the rupture file is uploaded by the user, it is copied
+    # into a temporary file that might be unavailable when the job outputs
+    # page is requested. Furthermore, the name of the file is random (not
+    # the same name as the original uploaded file). So, with the current
+    # implementation, it does not make sense to show to the user the
+    # internal name of the volatile rupture file. If we need to offer that
+    # possibility, we must store the rupture file persistently into the
+    # datastore.
+    # if approach == 'provide_rup':
+    #     ret_dict[IMPACT_FORM_LABELS['rupture_file']] = rupdic['rupture_file']
+
+    return ret_dict
 
 
 @cross_domain_ajax
@@ -2360,12 +2469,20 @@ def web_engine_get_outputs_impact(request, calc_id):
                                if k.startswith('avg_gmf-')]
             pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
+        input_params = format_oqparam(oqparam)
+        usgs_id = None
+        if hasattr(oqparam.rupture_dict, 'usgs_id'):
+            usgs_id = oqparam.rupture_dict['usgs_id']
         if hasattr(oqparam, 'local_timestamp'):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
+        if 'impact' in ds:
+            impact_iso3_list = list(ds['impact'])
+        else:
+            impact_iso3_list = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    warnings = get_aristotle_warnings(ds)
+    warnings = get_impact_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
     exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
     exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
@@ -2393,9 +2510,11 @@ def web_engine_get_outputs_impact(request, calc_id):
                        weights_precision=weights_precision,
                        pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
+                       impact_iso3_list=impact_iso3_list,
                        aggrisk_tags=aggrisk_tags,
                        exposure_by_liq_lse=exposure_by_liq_lse,
-                       exposure_by_land_lse=exposure_by_land_lse)
+                       exposure_by_land_lse=exposure_by_land_lse,
+                       usgs_id=usgs_id, input_params=input_params)
                   )
 
 
@@ -2447,7 +2566,7 @@ def can_extract(request, resource):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
-    summarize = get_bool_param(request, 'summarize')
+    summarize = _get_bool_param(request.GET, 'summarize')
     secondary_peril = request.GET.get('secondary_peril')
     if secondary_peril:
         name += f'?secondary_peril={secondary_peril}'
@@ -2520,12 +2639,18 @@ def extract_html_table(request, calc_id, name):
     }
 
     table_contents = table.to_numpy()
+    field_explanations = {}
     if summarize and name == 'aggrisk_tags':  # the impact table
-        table_header = table_header[1:-1]
-        # keep only rows with '*total*' and discard first and last columns
-        # (ID and NAME)
+        # keep only rows with '*total*' and discard first and last 2 columns
+        # (ID_0, ID and NAME)
+        table_header = table_header[1:-2]
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
-            :, 1:-1]
+            :, 1:-2]
+
+        # NOTE: Intentionally excluding embodied_carbon from this summary
+        table_contents = table_contents[
+            table_contents[:, 0] != 'embodied_carbon']
+
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
         mask = numpy.isin(table_contents[:, 0], rows_to_sum)
@@ -2536,6 +2661,13 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+        field_explanations = [
+            {
+                'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
+                'explanation': urlize(explanation),
+            }
+            for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+        ]
 
     # Decode byte strings to plain str
     table_rows = [
@@ -2550,7 +2682,8 @@ def extract_html_table(request, calc_id, name):
                    'table_name': table_name,
                    'table_header': table_header,
                    'table_rows': table_rows,
-                   'string_columns': string_columns})
+                   'string_columns': string_columns,
+                   'field_explanations': field_explanations})
 
 
 @csrf_exempt

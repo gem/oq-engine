@@ -34,13 +34,11 @@
                     {% elif header in string_columns %}
                     <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
                     {% else %}
-                    <td>
-                        {% if item|stringformat:"s"|floatformat %}
-                        {{ item|humanize_number }}
-                        {% else %}
-                        {{ item|stringformat:"s"|linebreaksbr }}
-                        {% endif %}
-                    </td>
+                    {% if item|stringformat:"s"|floatformat %}
+                      <td style="text-align: right;">{{ item|humanize_number }}</td>
+                    {% else %}
+                      <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
+                    {% endif %}
                     {% endif %}
                 {% endfor %}
                 </tr>
@@ -51,9 +49,16 @@
             <div id="summary-btn">
               {% if is_summary %}
               <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=0" class="btn btn-sm">Show full table</a>
+              <hr/>
+              <h4>Definitions</h4>
+              <ul>
+                {% for item in field_explanations %}
+                <li><strong>{{ item.description }}:</strong> {{ item.explanation|safe }}</li>
+                {% endfor %}
+              </ul>
               {% else %}
               <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">Show summary</a>
-              {% endif%}
+              {% endif %}
             </div>
             {% endif %}
           </div>

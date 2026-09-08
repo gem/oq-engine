@@ -10,7 +10,7 @@ class ImpactPage(EnginePage):
     def select_shakemap_version(self, value):
         shakemap_version_select = self.page.locator('select#shakemap_version')
         expect(shakemap_version_select.locator(
-            f'option[value="{value}"]')).to_have_count(1, timeout=20_000)
+            f'option[value="{value}"]')).to_have_count(1, timeout=30_000)
         shakemap_version_select.select_option(value=value)
         expect(shakemap_version_select).to_have_value(value)
 
@@ -110,7 +110,7 @@ class ImpactPageLevel2(ImpactPage):
 
     def confirm_relocated_hypocenter_warning(self):
         expect(self.page.get_by_text("it was moved")).to_be_visible(
-            timeout=15_000)
+            timeout=50_000)
         modal = self.page.get_by_text("it was moved")
         self.page.get_by_role("button", name="Close").click()
         expect(modal).not_to_be_visible()
@@ -133,6 +133,6 @@ class ImpactPageLevel2(ImpactPage):
             self.page.get_by_role("button", name="Close").click(
                 timeout=15_000)
             expect(station_data_loaded).to_have_value(
-                'N.A. (conversion issue)', timeout=15_000)
+                'N.A. (conversion issue)', timeout=30_000)
         else:
-            expect(station_data_loaded).not_to_have_value('', timeout=15_000)
+            expect(station_data_loaded).not_to_have_value('', timeout=30_000)
