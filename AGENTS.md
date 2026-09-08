@@ -18,3 +18,6 @@ The performance of a system can be assessed with the command
 `oq engine --run https://downloads.openquake.org/jobs/performance.zip`.
 On a laptop with an Intel Ultra/Ryzen 7 (or a modern Mac)
 it should take less than 10 minutes.
+
+Contributors wanting to develop with the engine should read
+doc/contributing/developing-with-the-engine.rst
