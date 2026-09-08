@@ -15,7 +15,7 @@ https://wheelhouse.openquake.org/v3/linux/py313/matplotlib-3.10.1-cp313-cp313-ma
 #https://wheelhouse.openquake.org/v3/linux/py313/numba-0.61.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 #https://wheelhouse.openquake.org/v3/linux/py313/numpy-2.2.6-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 numba==0.67.0
-numpy==2.5.3
+numpy==2.4.6
 https://wheelhouse.openquake.org/v3/linux/py313/onnxruntime-1.23.2-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/pandas-2.2.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/pillow-12.2.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
