@@ -24,7 +24,7 @@ https://wheelhouse.openquake.org/v3/linux/py313/pyogrio-0.12.1-cp313-cp313-manyl
 https://wheelhouse.openquake.org/v3/linux/py313/pyproj-3.7.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/pyzmq-26.2.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #https://wheelhouse.openquake.org/v3/linux/py313/scipy-1.15.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-scipy==1.18.1
+scipy==1.17.1
 https://wheelhouse.openquake.org/v3/linux/py313/setproctitle-1.3.7-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py313/shapely-2.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #pp
