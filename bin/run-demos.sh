@@ -87,7 +87,7 @@ echo "Testing job exporter for all generated jobs"
 failed_export_job_zips=()
 for job_id in $(oq db "SELECT id FROM job" | grep -oE '[0-9]+'); do
     echo "--> Testing export job zip for job ID: ${job_id}"
-    if ! oq export "job" -e zip ${job_id}; then
+    if ! oq export "job" ${job_id} -e zip; then
         failed_export_job_zips+=("${job_id}")
     fi
 done
