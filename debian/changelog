@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Support aftershock terms in GMMs by setting `ctx.is_aftershock=True` for any
+    rupture labelled as an aftershock through use of a `delta_rates` CSV file.
+
   [Paolo Tormene]
   * Added "Download zip" button in the WebUI and tested the exporter on the demos
 

@@ -942,6 +942,10 @@ class ContextMaker(object):
                     value = rup.surface.mesh.depths.max()
                 else:
                     value = rup.hypocenter.depth
+            elif param == 'is_aftershock':
+                # Set to True later in RmapMaker for ruptures with a
+                # non-zero delta_rate. Without delta_rates it stays False
+                value = False
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -1534,10 +1538,15 @@ class RmapMaker(object):
                 return
         for ctx in self.cmaker.get_ctxs(src, sites):
             if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
+                # Every rup listed in delta_rates is an aftershock, so
+                # shift its occurrence_rate and set is_aftershock as True
+                # so aftershock terms are applied in GMMs containing them
                 with self.cmaker.delta_mon:
                     delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
+                    d = delta[ctx.rup_id]
+                    ctx.occurrence_rate += d
+                    if 'is_aftershock' in ctx.dtype.names:
+                        ctx.is_aftershock = d != 0
             if self.fewsites:  # keep rupdata in memory
                 if self.src_mutex:
                     # needed for Disaggregator.init
