@@ -441,6 +441,66 @@ class ImpactModeTestCase(django.test.TestCase):
                     maximum_distance='100', make_impact_reports=True)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
+    def test_make_impact_reports_endpoint(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000t7zp'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '10']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100', make_impact_reports=False)
+        with tempfile.TemporaryDirectory() as email_dir:
+            data['email_file_path'] = email_dir
+            resp = self.post('impact_run_with_shakemap', data=data)
+            self.assertEqual(resp.status_code, 200)
+            [job_id] = json.loads(resp.content.decode('utf8'))
+            job_dic = self.wait(job_id)
+            self.assertEqual(job_dic['status'], 'complete')
+
+            job = logs.dbcmd('get_job', job_id)
+            with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                self.assertNotIn('impact', ds)
+
+            # Clear any emails produced during calculation
+            for fname in os.listdir(email_dir):
+                os.remove(os.path.join(email_dir, fname))
+
+            ret = self.c.get(
+                f'/v1/calc/{job_id}/make_impact_reports'
+                f'?email_file_path={email_dir}')
+            self.assertEqual(ret.status_code, 200)
+            self.assertEqual(ret.content.decode('utf8'),
+                             'Reports are being generated')
+
+            email_files = os.listdir(email_dir)
+            self.assertEqual(
+                len(email_files), 1,
+                f'Expected exactly one email, found {len(email_files)}'
+                f' in {email_dir}: {email_files}')
+
+            with open(os.path.join(email_dir, email_files[0])) as f:
+                email_content = f.read()
+            check_email(job_id, email_content, expected_error=None)
+
+            with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                self.assertIn('impact', ds)
+                impact_iso3_list = list(ds['impact'])
+                self.assertGreater(len(impact_iso3_list), 0)
+                for iso3 in impact_iso3_list:
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                    self.assertEqual(ret.status_code, 200)
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                        f'&format=png')
+                    self.assertEqual(ret.status_code, 200)
+
+            # Cleanup
+            ret = self.post('%s/remove' % job_id)
+            self.assertEqual(ret.status_code, 200)
+
     # check that the URL 'run' cannot be accessed in IMPACT mode
     def test_can_not_run_normal_calc(self):
         self.set_user_level_and_remove_groups(1)

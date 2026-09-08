@@ -45,6 +45,15 @@
               {% endif %}
 
               {% if user_level >= 2 %}
+              <div class="my-pngs">
+                <form method="post"
+                      action="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/make_impact_reports"
+                      target="_blank">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm">
+                    Generate impact reports</button>
+                </form>
+              </div>
               {% if aggrisk_tags %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">

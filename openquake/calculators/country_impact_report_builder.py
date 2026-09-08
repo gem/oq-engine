@@ -49,7 +49,8 @@ class CountryImpactReportBuilder:
 
     def __init__(
             self, iso3, adm_level, event: EventContext, options: ReportOptions,
-            losses_df, summary_data, dstore, time_of_calc, oqparam):
+            losses_df, summary_data, dstore, time_of_calc, oqparam,
+            output_dstore=None):
         try:
             import reportlab
             from reportlab import platypus
@@ -86,6 +87,7 @@ class CountryImpactReportBuilder:
         self.losses_df = losses_df
         self.summary_data = summary_data
         self.dstore = dstore
+        self.output_dstore = output_dstore or dstore
         self.time_of_calc = time_of_calc
 
         # Unpacking EventContext
@@ -368,7 +370,8 @@ class CountryImpactReportBuilder:
             points_gdf, admin_boundaries, tags_agg_losses)
         aggloss_df = aggloss_df.rename(columns={k: v["label"]
                                        for k, v in LOSS_METADATA.items()})
-        save_most_affected_regions(aggloss_df, self.dstore, self.iso3)
+        save_most_affected_regions(
+            aggloss_df, self.output_dstore, self.iso3)
         self.x_limits, self.y_limits = self._compute_viewport_from_boundaries(
             aggloss_df)
         self.cities = self._get_cities_in_viewport()
@@ -554,7 +557,7 @@ class CountryImpactReportBuilder:
         return summary_table
 
     def _build_left_bundle(self, summary_table, body_left_style, title_style):
-        most_affected = self.dstore[
+        most_affected = self.output_dstore[
             f"impact/{self.iso3}/most_affected_regions"
         ]
         left_bundle = [
@@ -740,7 +743,7 @@ class CountryImpactReportBuilder:
         buffer.seek(0)
         pdf_bytes = buffer.getvalue()
         pdf_path = f'impact/{self.iso3}/report_pdf'
-        self.dstore[pdf_path] = pdf_bytes
+        self.output_dstore[pdf_path] = pdf_bytes
         logging.info(
             f'The impact report in PDF format was saved into the datastore'
             f' as {pdf_path}')
@@ -752,7 +755,7 @@ class CountryImpactReportBuilder:
         # Render to a crisp image at 3.0x scaling (~300 DPI equivalent)
         pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
         png_path = f'impact/{self.iso3}/report_png'
-        self.dstore[png_path] = pix.tobytes("png")
+        self.output_dstore[png_path] = pix.tobytes("png")
         pdf_doc.close()
         logging.info(
             f'The impact report in PNG format was saved into the datastore'

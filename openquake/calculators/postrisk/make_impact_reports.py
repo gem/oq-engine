@@ -20,6 +20,10 @@
 import pathlib
 import tempfile
 import logging
+import os
+import shutil
+import fcntl
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import pandas as pd
 from openquake.baselib import config, sap
@@ -28,7 +32,7 @@ from openquake.calculators.country_impact_report_builder import (
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA)
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries
 
 cd = pathlib.Path(__file__).parent
@@ -85,10 +89,12 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
 
 def make_report_for_country(
         iso3, adm_level, event, options, losses_df, summary_data,
-        dstore, time_of_calc, oqparam):
+        dstore, time_of_calc, oqparam, output_dstore=None):
     builder = CountryImpactReportBuilder(
         iso3, adm_level, event, options, losses_df, summary_data,
         dstore, time_of_calc, oqparam)
+    if output_dstore is not None:
+        builder.output_dstore = output_dstore
     builder.build()
 
 
@@ -119,21 +125,6 @@ def get_dynamic_threshold(mag):
         return 3.0  # ~333 km
     else:
         return 5.0  # ~555 km
-
-
-def _open_dstore(dstore):
-    """
-    Resolve the dstore argument (path/int from CLI, or an open Datastore),
-    returning (dstore, calc_id).
-    """
-    if isinstance(dstore, (str, int)):
-        # NOTE: called from the command line
-        from openquake.commonlib import datastore
-        calc_id = int(dstore)
-        dstore = datastore.read(calc_id, mode='r+')
-    else:
-        calc_id = dstore.calc_id
-    return dstore, calc_id
 
 
 def _get_basemap_path():
@@ -240,24 +231,77 @@ def main(dstore, adm_level=1, threshold_deg=None):
     """
     Create an impact report in PDF and PNG formats
     """
-    dstore, calc_id = _open_dstore(dstore)
     adm_level = int(adm_level)
 
-    dstore.close()
-    dstore.open('r+')
-    dstore.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    oqparam = dstore['oqparam']
+    calc_id = dstore.calc_id if isinstance(
+        dstore, datastore.DataStore) else int(dstore)
+    job = logs.dbcmd('get_job', calc_id)
+    tmp_root = config.directory.custom_tmp or tempfile.gettempdir()
+    report_dir = os.path.join(tmp_root, 'impact_reports', str(calc_id))
+    os.makedirs(report_dir, exist_ok=True)
+    lock_path = os.path.join(report_dir, '.lock')
+    staging_dir = tempfile.mkdtemp(prefix='.staging-', dir=report_dir)
+    source_ds = None
+    try:
+        with open(lock_path, 'w') as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            source = (dstore if isinstance(dstore, datastore.DataStore)
+                      else job.ds_calc_dir + '.hdf5')
+            source_context = (nullcontext(source)
+                              if isinstance(source, datastore.DataStore)
+                              else datastore.read(source, mode='r'))
+            source_ds = source if isinstance(
+                source, datastore.DataStore) else source_context
+            with source_context as ds:
+                ds.export_dir = tmp_root
+                oqparam = ds['oqparam']
+                outputs = {}
+                generated = []
+                skipped = []
 
-    event_ctx, report_opts, losses_df, iso3_codes, time_of_calc = (
-        _build_report_contexts(dstore, oqparam, calc_id, threshold_deg))
+                event_ctx, report_opts, losses_df, iso3_codes, time_of_calc = (
+                    _build_report_contexts(
+                        ds, oqparam, calc_id, threshold_deg))
 
-    for iso3 in iso3_codes:
-        summary_data = _get_impact_summary_data(
-            dstore, iso3, report_opts.no_uncertainty)
-        if summary_data is not None:
-            make_report_for_country(
-                iso3, adm_level, event_ctx, report_opts,
-                losses_df, summary_data, dstore, time_of_calc, oqparam)
+                for iso3 in iso3_codes:
+                    summary_data = _get_impact_summary_data(
+                        ds, iso3, report_opts.no_uncertainty)
+                    if summary_data is not None:
+                        make_report_for_country(
+                            iso3, adm_level, event_ctx, report_opts,
+                            losses_df, summary_data, ds, time_of_calc,
+                            oqparam, outputs)
+                        generated.append(iso3)
+                    else:
+                        skipped.append(iso3)
+
+            if source_ds is not dstore:
+                source_ds.close()
+                source_ds = None
+
+            for key, value in outputs.items():
+                path = os.path.join(staging_dir, key.replace('/', '_'))
+                with open(path, 'wb') as fobj:
+                    fobj.write(value if isinstance(value, bytes)
+                               else str(value).encode())
+
+            if isinstance(dstore, datastore.DataStore):
+                target_context = nullcontext(dstore)
+            else:
+                target_context = datastore.read(
+                    job.ds_calc_dir + '.hdf5', mode='r+')
+            with target_context as ds:
+                for key, value in outputs.items():
+                    group_name = os.path.dirname(key)
+                    if group_name:
+                        ds.hdf5.require_group(group_name)
+                    ds[key] = value
+                ds.flush()
+        return dict(generated=generated, skipped=skipped)
+    finally:
+        if source_ds is not None and source_ds is not dstore:
+            source_ds.close()
+        shutil.rmtree(staging_dir, ignore_errors=True)
 
 
 if __name__ == '__main__':

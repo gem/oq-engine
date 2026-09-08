@@ -1158,6 +1158,44 @@ def impact_callback(
                  connection=connection).send()
 
 
+def impact_reports_callback(
+        job_id, job_owner_email, outputs_uri,
+        exc=None, email_file_path=None, report_result=None):
+    if not job_owner_email:
+        return
+
+    from_email = settings.EMAIL_HOST_USER
+    to = [job_owner_email]
+    reply_to = settings.EMAIL_SUPPORT
+    if exc:
+        subject = f'Job {job_id} failed'
+        body = (f'There was an error generating reports for job {job_id}:\n'
+                f'{exc}')
+    else:
+        subject = f'Job {job_id} finished correctly'
+        generated = (report_result or {}).get('generated', [])
+        skipped = (report_result or {}).get('skipped', [])
+        if generated:
+            generated_text = ', '.join(generated)
+            body = (f'Impact report generation for job {job_id} is complete.\n\n'
+                    f'Reports generated for: {generated_text}.\n')
+        else:
+            body = (f'Impact report generation for job {job_id} is complete, '
+                    f'but no reports were generated.\n')
+        if skipped:
+            skipped_text = ', '.join(skipped)
+            body += f'Reports skipped for: {skipped_text}.\n'
+        body += f'\nPlease find the results here:\n{outputs_uri}'
+    connection = None
+    if email_file_path:
+        # NOTE: file_path is actually a directory where Django stores each
+        # email with a unique name like: file_path/20260319-123456-abcdefg.log
+        connection = FileEmailBackend(file_path=email_file_path)
+    EmailMessage(subject, body, from_email, to,
+                 reply_to=[reply_to],
+                 connection=connection).send()
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1467,6 +1505,36 @@ def impact_report(request, calc_id):
         response["Content-Disposition"] = (
             f"inline; filename=impact_report_{iso3}.pdf")
     return response
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET', 'POST'])
+def make_impact_reports(request, calc_id):
+    calc_id = int(calc_id)
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    job_owner_email = request.user.email
+    outputs_uri = request.build_absolute_uri(
+        reverse('outputs_impact', args=[calc_id]))
+    email_file_path = (request.GET.get('email_file_path') or
+                       request.POST.get('email_file_path'))
+    kwargs = {}
+    if 'threshold_deg' in request.GET:
+        kwargs['threshold_deg'] = float(request.GET['threshold_deg'])
+
+    args = (calc_id, job_owner_email, outputs_uri,
+            impact_reports_callback, email_file_path)
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        impact.make_reports_web(*args, **kwargs)
+    else:
+        mp.Process(target=impact.make_reports_web,
+                   args=args, kwargs=kwargs).start()
+    return HttpResponse(content='Reports are being generated',
+                        content_type='text/plain', status=200)
 
 
 def aelo_validate(request):

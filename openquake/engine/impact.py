@@ -40,6 +40,15 @@ def trivial_callback(
     print('Finished job(s) %d correctly. Params: %s' % (job_id, params))
 
 
+def trivial_reports_callback(
+        job_id, job_owner_email=None, outputs_uri=None, exc=None,
+        email_file_path=None, report_result=None):
+    if exc:
+        logging.error('', exc_info=True)
+        sys.exit('There was an error: %s' % exc)
+    print('Finished reports for job %d correctly.' % job_id)
+
+
 def main_web(allparams, jobctxs,
              job_owner_email=None, outputs_uri=None,
              callback=trivial_callback, email_file_path=None):
@@ -55,6 +64,27 @@ def main_web(allparams, jobctxs,
         else:  # success
             callback(job.calc_id, params, job_owner_email, outputs_uri,
                      email_file_path=email_file_path)
+
+
+def make_reports_web(calc_id, job_owner_email=None, outputs_uri=None,
+                     callback=trivial_reports_callback,
+                     email_file_path=None, **kwargs):
+    """
+    Run make_impact_reports and notify completion via callback.
+    This script is meant to be called from the WebUI
+    """
+    from openquake.calculators.postrisk.make_impact_reports import (
+        main as _make_impact_reports)
+    try:
+        report_result = _make_impact_reports(calc_id, **kwargs)
+    except Exception as exc:
+        callback(calc_id, job_owner_email, outputs_uri,
+                 exc=exc, email_file_path=email_file_path,
+                 report_result=None)
+    else:
+        callback(calc_id, job_owner_email, outputs_uri,
+                 exc=None, email_file_path=email_file_path,
+                 report_result=report_result)
 
 
 def main_cmd(usgs_id, rupture_file=None,
