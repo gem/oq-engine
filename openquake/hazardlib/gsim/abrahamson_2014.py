@@ -149,20 +149,27 @@ def _get_aftershock_term(C, ctx):
      provided for each aftershock in this CSV, an error is raised here given it
      is required for this GMM's aftershock term.
     """
+    # Set initially as no adjustment
     f11 = np.zeros_like(ctx.mag)
-    # Aftershocks are labelled via ctx.is_aftershock (set from delta_rates)
+    # Get aftershock flags from the ctx
     aft = ctx.is_aftershock
     if not aft.any():
+        # No aftershocks - return the zeroed out array
         return f11
+    # Get the crjb values of the aftershocks
     crjb = ctx.crjb[aft]
     if np.isnan(crjb).any():
+        # Need a crjb for each event to determine if class 2 or not
         raise ValueError(
             'ASK14 aftershock term requires crjb for aftershock ruptures')
+    # Initially zero adjustment until classified as class 2 (aftershock)
     sub = np.zeros_like(crjb)
-    idx = crjb <= 5.
+    # Class 2 (aftershock) events are those with crjb of less than 15 km
+    idx = crjb <= 5. 
     sub[idx] = C['a14']
     idx = (crjb > 5.) & (crjb < 15.)
     sub[idx] = C['a14'] * (1. - (crjb[idx] - 5.) / 10.)
+    # No adjustment for crjb >= 15 km (not class 2), else adjustment applied
     f11[aft] = sub
     return f11
 
