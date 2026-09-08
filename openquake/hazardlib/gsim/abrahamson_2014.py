@@ -137,6 +137,35 @@ def _get_derivative(C, sa1180, vs30):
     return derAmp
 
 
+def _get_aftershock_term(C, ctx):
+    """
+    Compute and return aftershock scaling term (f11), see equation 20
+    on page 1043.
+
+    NOTE: Rupture IDs specified using a "delta_rates" CSV are automatically
+    labelled as aftershocks (ctx.is_aftershock=True) and crjb (centroid rjb)
+    can be specified for each of these ruptures in this "delta_rates" CSV
+    too. If crjb is not provided for each aftershock in this CSV, an error is
+    raised here.
+    """
+    f11 = np.zeros_like(ctx.mag)
+    # Aftershocks are labelled via ctx.is_aftershock (set from delta_rates)
+    aft = ctx.is_aftershock
+    if not aft.any():
+        return f11
+    crjb = ctx.crjb[aft]
+    if np.isnan(crjb).any():
+        raise ValueError(
+            'ASK14 aftershock term requires crjb for aftershock ruptures')
+    sub = np.zeros_like(crjb)
+    idx = crjb <= 5.
+    sub[idx] = C['a14']
+    idx = (crjb > 5.) & (crjb < 15.)
+    sub[idx] = C['a14'] * (1. - (crjb[idx] - 5.) / 10.)
+    f11[aft] = sub
+    return f11
+
+
 def _get_faulting_style_term(C, ctx):
     """
     Compute and return faulting style term, that is the sum of the second
@@ -434,15 +463,16 @@ def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False):
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
             _get_hanging_wall_term(C, ctx) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
+            _get_aftershock_term(C, ctx) +
             _get_basin_term(C, ctx, region, imt, usgs_baf, cy, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
+
 
 def get_epistemic_sigma(ctx):
     """
     This function gives the epistemic sigma computed following USGS-2014
-    approach. Also, note that the events are
-    counted in each magnitude and distance bins. However, the epistemic sigma
-    is based on NZ SMDB v1.0
+    approach. Also, note that the events are counted in each magnitude and
+    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
     """
     n = 2
     dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11),
@@ -495,9 +525,12 @@ class AbrahamsonEtAl2014(GMPE):
     #: Unit of measure for Z1.0 is [m]
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0', 'vs30measured'}
 
-    #: Required rupture parameters are magnitude, rake, dip, ztor, and width
-    #: (see table 2, page 1031)
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
+    #: Required rupture parameters are magnitude, rake, dip, ztor, width,
+    #: the aftershock flag (is_aftershock, set to True for Class 2
+    #: ruptures) and the centroid Joyner-Boore distance (crjb) used in
+    #: the aftershock scaling term (see table 2, page 1031)
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width',
+                                   'is_aftershock', 'crjb'}
 
     #: Required distance measures are Rrup, Rjb, Ry0 and Rx (see Table 2,
     #: page 1031).
@@ -529,23 +562,13 @@ class AbrahamsonEtAl2014(GMPE):
                                             self.usgs_basin_scaling,
                                             self.cybershake_basin_adj))
 
-            # For debugging purposes
-            # f1 = _get_basic_term(C, ctx)
-            # f4 = _get_hanging_wall_term(C, ctx)
-            # f5 = _get_site_response_term(C, imt, ctx.vs30, sa1180)
-            # f6 = _get_top_of_rupture_depth_term(C, imt, ctx)
-            # f7 = _get_faulting_style_term(C, ctx)
-            # f10 = _get_basin_term(C, ctx, self.region, imt,
-            #                       self.usgs_basin_scaling,
-            #                       self.cybershake)
-            # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
-
             # get the mean value
             mean[m] = (_get_basic_term(C, ctx) +
                        _get_hanging_wall_term(C, ctx) +
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
+                       _get_aftershock_term(C, ctx) +
                        _get_basin_term(C, ctx, self.region, imt,
                                        self.usgs_basin_scaling,
                                        self.cybershake_basin_adj))

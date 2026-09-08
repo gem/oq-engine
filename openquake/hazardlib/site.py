@@ -323,7 +323,8 @@ site_param_dt = {
     'custom_site_id': (numpy.bytes_, 8),
     'region': numpy.uint32,
     'in_cshm': bool,  # used in mcverry
-    'is_aftershock': bool
+    'is_aftershock': bool,
+    'crjb': numpy.float64 # used in ASK14 GMM
 }
 
 

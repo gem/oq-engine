@@ -1721,27 +1721,46 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
+delta_dt = numpy.dtype([('delta', numpy.float64),
+                        ('crjb', numpy.float64)])
+
+
 def read_delta_rates(fname, idx_nr):
     """
     :param fname:
-        path to a CSV file with fields (source_id, rup_id, delta)
+        path to a CSV file with fields (source_id, rup_id, delta) and an
+        optional crjb column (centroid Joyner-Boore distance in km, used
+        by aftershock GMMs such as ASK14)
     :param idx_nr:
         dictionary source_id -> (src_id, num_ruptures) with Ns sources
     :returns:
-        list of Ns floating point arrays of different lenghts
+        list of Ns structured arrays with dtype
+        [('delta', f8), ('crjb', f8)]; entries for ruptures not listed
+        in the CSV have delta=0 and crjb=NaN
     """
-    delta_df = pandas.read_csv(fname, converters=dict(
-        source_id=str, rup_id=int, delta=float), index_col=0)
-    assert list(delta_df.columns) == ['rup_id', 'delta']
-    delta = [numpy.zeros(0) for _ in idx_nr]
+    converters = dict(source_id=str, rup_id=int, delta=float, crjb=float)
+    delta_df = pandas.read_csv(fname, converters=converters, index_col=0)
+    cols = list(delta_df.columns)
+    if cols == ['rup_id', 'delta']:
+        has_crjb = False
+    elif cols == ['rup_id', 'delta', 'crjb']:
+        has_crjb = True
+    else:
+        raise InvalidFile(
+            '%s: expected columns source_id,rup_id,delta[,crjb], got %s' %
+            (fname, ['source_id'] + cols))
+    delta = [numpy.zeros(0, delta_dt) for _ in idx_nr]
     for src, df in delta_df.groupby(delta_df.index):
         idx, nr = idx_nr[src]
         rupids = df.rup_id.to_numpy()
         if len(numpy.unique(rupids)) < len(rupids):
             raise InvalidFile('%s: duplicated rup_id for %s' % (fname, src))
-        drates = numpy.zeros(nr)
-        drates[rupids] = df.delta.to_numpy()
-        delta[idx] = drates
+        arr = numpy.zeros(nr, delta_dt)
+        arr['crjb'] = numpy.nan
+        arr['delta'][rupids] = df.delta.to_numpy()
+        if has_crjb:
+            arr['crjb'][rupids] = df.crjb.to_numpy()
+        delta[idx] = arr
     return delta
 
 
