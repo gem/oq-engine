@@ -139,14 +139,14 @@ def _get_derivative(C, sa1180, vs30):
 
 def _get_aftershock_term(C, ctx):
     """
-    Compute and return aftershock scaling term (f11), see equation 20
-    on page 1043.
+    Aftershock scaling term (f11), equation 20 on page 1043. crjb is the
+    shortest horizontal distance from the aftershock rupture centroid to
+    the edge of the main shock rupture.
 
-    NOTE: Rupture IDs specified using a "delta_rates" CSV are automatically
-    labelled as aftershocks (ctx.is_aftershock=True) and crjb (centroid rjb)
-    can be specified for each of these ruptures in this "delta_rates" CSV
-    too. If crjb is not provided for each aftershock in this CSV, an error is
-    raised here.
+     NOTE: Rupture IDs specified using a "delta_rates" CSV are automatically
+     labelled as aftershocks (ctx.is_aftershock=True) and crjb can be specified
+     for each of these ruptures in this "delta_rates" CSV too. If crjb is not
+     provided for each aftershock in this CSV, an error is raised here.
     """
     f11 = np.zeros_like(ctx.mag)
     # Aftershocks are labelled via ctx.is_aftershock (set from delta_rates)
