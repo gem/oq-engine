@@ -137,6 +137,43 @@ def _get_derivative(C, sa1180, vs30):
     return derAmp
 
 
+def _get_aftershock_term(C, ctx):
+    """
+    Aftershock scaling term (f11), equation 20 on page 1043. crjb is the
+    shortest horizontal distance from the aftershock rupture centroid to
+    the edge of the main shock rupture.
+
+     NOTE: Rupture IDs specified using a "delta_rates" CSV are automatically
+     labelled as aftershocks (ctx.is_aftershock=True) and crjb can be specified
+     for each of these ruptures in this "delta_rates" CSV too. If crjb is not
+     provided for each aftershock in this CSV, an error is raised here given it
+     is required for this GMM's aftershock term.
+    """
+    # Set initially as no adjustment
+    f11 = np.zeros_like(ctx.mag)
+    # Get aftershock flags from the ctx
+    aft = ctx.is_aftershock
+    if not aft.any():
+        # No aftershocks - return the zeroed out array
+        return f11
+    # Get the crjb values of the aftershocks
+    crjb = ctx.crjb[aft]
+    if np.isnan(crjb).any():
+        # Need a crjb for each event to determine if class 2 or not
+        raise ValueError(
+            'ASK14 aftershock term requires crjb for aftershock ruptures')
+    # Initially zero adjustment until classified as class 2 (aftershock)
+    sub = np.zeros_like(crjb)
+    # Class 2 (aftershock) events are those with crjb of less than 15 km
+    idx = crjb <= 5. 
+    sub[idx] = C['a14']
+    idx = (crjb > 5.) & (crjb < 15.)
+    sub[idx] = C['a14'] * (1. - (crjb[idx] - 5.) / 10.)
+    # No adjustment for crjb >= 15 km (not class 2), else adjustment applied
+    f11[aft] = sub
+    return f11
+
+
 def _get_faulting_style_term(C, ctx):
     """
     Compute and return faulting style term, that is the sum of the second
@@ -434,15 +471,16 @@ def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False):
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
             _get_hanging_wall_term(C, ctx) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
+            _get_aftershock_term(C, ctx) +
             _get_basin_term(C, ctx, region, imt, usgs_baf, cy, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
+
 
 def get_epistemic_sigma(ctx):
     """
     This function gives the epistemic sigma computed following USGS-2014
-    approach. Also, note that the events are
-    counted in each magnitude and distance bins. However, the epistemic sigma
-    is based on NZ SMDB v1.0
+    approach. Also, note that the events are counted in each magnitude and
+    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
     """
     n = 2
     dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11),
@@ -495,9 +533,12 @@ class AbrahamsonEtAl2014(GMPE):
     #: Unit of measure for Z1.0 is [m]
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0', 'vs30measured'}
 
-    #: Required rupture parameters are magnitude, rake, dip, ztor, and width
-    #: (see table 2, page 1031)
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
+    #: Required rupture parameters are magnitude, rake, dip, ztor, width,
+    #: the aftershock flag (is_aftershock, set to True for Class 2
+    #: ruptures) and the centroid Joyner-Boore distance (crjb) used in
+    #: the aftershock scaling term (see table 2, page 1031)
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width',
+                                   'is_aftershock', 'crjb'}
 
     #: Required distance measures are Rrup, Rjb, Ry0 and Rx (see Table 2,
     #: page 1031).
@@ -529,23 +570,13 @@ class AbrahamsonEtAl2014(GMPE):
                                             self.usgs_basin_scaling,
                                             self.cybershake_basin_adj))
 
-            # For debugging purposes
-            # f1 = _get_basic_term(C, ctx)
-            # f4 = _get_hanging_wall_term(C, ctx)
-            # f5 = _get_site_response_term(C, imt, ctx.vs30, sa1180)
-            # f6 = _get_top_of_rupture_depth_term(C, imt, ctx)
-            # f7 = _get_faulting_style_term(C, ctx)
-            # f10 = _get_basin_term(C, ctx, self.region, imt,
-            #                       self.usgs_basin_scaling,
-            #                       self.cybershake)
-            # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
-
             # get the mean value
             mean[m] = (_get_basic_term(C, ctx) +
                        _get_hanging_wall_term(C, ctx) +
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
+                       _get_aftershock_term(C, ctx) +
                        _get_basin_term(C, ctx, self.region, imt,
                                        self.usgs_basin_scaling,
                                        self.cybershake_basin_adj))
