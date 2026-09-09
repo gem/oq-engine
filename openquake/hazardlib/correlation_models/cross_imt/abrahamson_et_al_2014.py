@@ -108,6 +108,8 @@ def _positive_projection(matrix, floor=1E-5):
                  eigenvectors.T)
     scale = numpy.sqrt(numpy.diag(corrected))
     corrected /= scale[:, numpy.newaxis] * scale[numpy.newaxis, :]
+    corrected = (corrected + corrected.T) / 2
+    numpy.fill_diagonal(corrected, 1)
     corrected.setflags(write=False)
     return corrected
 

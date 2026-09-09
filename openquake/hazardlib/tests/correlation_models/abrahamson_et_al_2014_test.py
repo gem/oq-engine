@@ -97,9 +97,8 @@ def test_between_repair():
         9.999951300144685E-6, abs=1E-14)
     assert difference.max() == pytest.approx(
         0.003887625919241411, abs=1E-14)
-    numpy.testing.assert_allclose(
-        _BETWEEN_CORRELATION, _BETWEEN_CORRELATION.T,
-        rtol=0, atol=2E-16)
+    numpy.testing.assert_array_equal(
+        _BETWEEN_CORRELATION, _BETWEEN_CORRELATION.T)
     numpy.testing.assert_allclose(
         numpy.diag(_BETWEEN_CORRELATION), 1.0, rtol=0, atol=1E-15)
 
