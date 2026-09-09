@@ -24,6 +24,7 @@ import logging
 import getpass
 import threading
 import subprocess
+import requests
 
 from openquake.baselib import (
     config, zeromq as z, workerpool as w, parallel as p)
@@ -132,13 +133,31 @@ def different_paths(path1, path2):
 
 def get_status(address=None):
     """
-    Check if the DbServer is up.
+    Check if both the DbServer and its HTTP API are up.
 
     :param address: pair (hostname, port)
-    :returns: 'running' or 'not-running'
+    :returns: 'running', 'degraded', or 'not-running'
     """
     address = address or valid.host_port()
-    return 'running' if socket_ready(address) else 'not-running'
+    zmq_running = socket_ready(address)
+    http_running = _http_ready()
+    if zmq_running and http_running:
+        return 'running'
+    if zmq_running:
+        return 'degraded'
+    return 'not-running'
+
+
+def _http_ready():
+    """Return whether the FastAPI service responds on its configured port."""
+    host = config.dbserver.host
+    port = getattr(config.dbserver, 'http_port', 8800)
+    try:
+        response = requests.get(
+            f'http://{host}:{port}/v1/engine_version', timeout=1)
+        return response.ok
+    except requests.RequestException:
+        return False
 
 
 def _foreign_server_error():
