@@ -483,7 +483,7 @@ if __name__ == '__main__':
                 run_calc(jobctx)
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
-        rows = logs.dbcmd('get_uncompleted_jobs', ids)
+        rows = logs.dbcmd('get_executing_jobs', ids)
         for jid, in rows:
             logs.dbcmd('set_status', jid, 'failed')
         raise

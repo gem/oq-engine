@@ -220,7 +220,7 @@ def get_jobs(db, job_ids):
     return db('SELECT * FROM job WHERE id IN (?X) ORDER BY id', job_ids)
 
 
-def get_uncompleted_jobs(db, job_ids):
+def get_executing_jobs(db, job_ids):
     """
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_ids: sequence of job IDs
