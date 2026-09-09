@@ -48,6 +48,15 @@ def check_outdated(db):
     return upgrader.check_versions(db.conn)
 
 
+def has_job_table(db):
+    """
+    Check if the job table exists in the database
+
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    """
+    return bool(db("SELECT name FROM sqlite_master WHERE name='job'"))
+
+
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
@@ -198,6 +207,39 @@ def get_job(db, job_id, username=None):
         return
     else:
         return joblist[-1]
+
+
+def get_jobs(db, job_ids):
+    """
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param job_ids: sequence of job IDs
+    :returns: job records for the given IDs
+    """
+    if not job_ids:
+        return []
+    return db('SELECT * FROM job WHERE id IN (?X) ORDER BY id', job_ids)
+
+
+def get_uncompleted_jobs(db, job_ids):
+    """
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param job_ids: sequence of job IDs
+    :returns: jobs that are created or executing
+    """
+    if not job_ids:
+        return []
+    return db("SELECT id FROM job WHERE id IN (?X) "
+              "AND status IN ('created', 'executing')", job_ids)
+
+
+def get_running_jobs(db, host):
+    """
+    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
+    :param host: host name
+    :returns: executing or submitted jobs on the given host
+    """
+    return db("SELECT * FROM job WHERE status IN ('executing', 'submitted') "
+              "AND host=?x AND is_running=1 AND pid > 0 ORDER BY id", host)
 
 
 def get_weight(db, job_id):
@@ -435,17 +477,24 @@ def get_output(db, output_id):
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
 
 
-# used in make_report
-def fetch(db, templ, *args):
-    """
-    Run generic queries directly on the database. See the documentation
-    of the dbapi module.
+def get_jobs_by_date(db, start_time, end_time):
+    """Return the jobs started in the given half-open date interval.
 
-    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :param templ: a SQL query template
-    :param args: arguments to pass to the template
+    This is used by the report generator instead of exposing a generic SQL
+    query action through the database dispatcher.
     """
-    return db(templ, *args)
+    return db(
+        'SELECT id, user_name, status, ds_calc_dir FROM job '
+        'WHERE start_time >= ?x AND start_time < ?x ORDER BY stop_time',
+        start_time, end_time)
+
+
+def get_job_stats(db, job_id):
+    """Return the timing and status information needed by a job report."""
+    return db(
+        "SELECT id, user_name, start_time, stop_time, status, "
+        "strftime('%s', stop_time) - strftime('%s', start_time) AS duration "
+        'FROM job WHERE id=?x', job_id)
 
 
 def get_path(db):
@@ -945,15 +994,14 @@ def get_executing_jobs(db):
     :param db:
         a :class:`openquake.commonlib.dbapi.Db` instance
     :returns:
-        (id, user_name, start_time) tuples
+        a List of job records for executing/submitted jobs
     """
-    fields = 'id,pid,user_name,start_time'
+    fields = 'id,pid,user_name,calculation_mode,description'
     running = List()
     running._fields = fields.split(',')
-    query = ('''-- executing jobs
-SELECT %s FROM job WHERE is_running=1
-AND start_time > datetime('now', '-2 days')
-ORDER BY id desc''' % fields)
+    query = (f'''-- executing jobs
+SELECT {fields} FROM job WHERE status IN ('executing', 'submitted')
+AND is_running=1 ORDER BY id desc''')
     running.extend(db(query))
     return running
 
@@ -1023,6 +1071,20 @@ def get_checksum_from_job(db, job_id):
     checksum = db('SELECT hazard_checksum FROM checksum WHERE job_id=?x',
                   job_id, scalar=True)
     return checksum
+
+
+def get_job_id_from_checksum(db, checksum):
+    """
+    :param db:
+        a :class:`openquake.commonlib.dbapi.Db` instance
+    :param checksum:
+        the checksum (32 bit integer)
+    :returns:
+        the job ID or 0
+    """
+    jobs = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+              checksum)
+    return jobs[0].job_id if jobs else 0
 
 
 def get_job_from_checksum(db, checksum):

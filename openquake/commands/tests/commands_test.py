@@ -556,8 +556,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         run_jobs(jobs)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
-                'select id, hazard_calculation_id from job '
-                'where id in (?S) order by id', [job.calc_id for job in jobs])
+                'get_jobs', [job.calc_id for job in jobs])
         self.assertEqual(r1.hazard_calculation_id, None)
         self.assertEqual(r2.hazard_calculation_id, None)
 
