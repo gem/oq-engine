@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import getpass
+import hashlib
 import operator
 from datetime import datetime, timezone
 
@@ -497,6 +498,20 @@ def get_job_stats(db, job_id):
         'FROM job WHERE id=?x', job_id)
 
 
+# called in check_foreign; db is not used but must be passed
+def installation_id(db):
+    """Return the identity of the current installation"""
+    path = os.path.splitext(os.path.realpath(server_path))[0]
+    return hashlib.sha256(path.encode()).hexdigest()[:16]
+
+
+def get_installation_id(db):
+    """Return the identity of the installation running the DbServer."""
+    # Extracted from the server_path)
+    return {'installation_id': installation_id(db)}
+
+
+# used for backward compatibility in check_foreign, will be removed
 def get_path(db):
     """
     :param db:
