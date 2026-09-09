@@ -59,14 +59,9 @@ class DbServer(object):
                     msg = getattr(master, cmd[8:])()
                     sock.send(msg)
                     continue
-                try:
-                    func = getattr(actions, cmd)
-                except AttributeError:  # SQL string
-                    res = p.safely_call(self.db, (cmd,) + args)
-                    sock.send(res)
-                else:  # action
-                    res = p.safely_call(func, (self.db,) + args)
-                    sock.send(res)
+                func = getattr(actions, cmd)
+                res = p.safely_call(func, (self.db,) + args)
+                sock.send(res)
 
     def start(self):
         """
