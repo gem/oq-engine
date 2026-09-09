@@ -66,7 +66,9 @@ openquake/hazardlib/correlation_models/
 
 Use a lowercase file name and a CamelCase class name containing the authors'
 names and publication year. For example, `loth_baker_2013.py` contains
-`LothBaker2013`. Each model should be implemented in its own dedicated file.
+`LothBaker2013`. Each publication or model family should normally have its own
+dedicated file. Closely related variants from the same publication may share a
+file when they also share substantial data and implementation machinery.
 
 ## Declare model metadata
 

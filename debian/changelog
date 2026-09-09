@@ -4,6 +4,8 @@
     not actually used.
 
   [Anirudh Rao]
+  * Implemented the Abrahamson et al. (2014) between-event and within-event 
+    cross-IM correlation models for PGA-SA-PGV based on the NGA-West2 database
   * Enabled memory-efficient circulant embedding for unconditioned spatially 
     and cross-IMT correlated GMFs on large regular grids
   * Added local Kriging for obtaining correlated field values at off-grid
