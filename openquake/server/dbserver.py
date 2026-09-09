@@ -120,17 +120,33 @@ def get_status(address=None):
     return 'running' if socket_ready(address) else 'not-running'
 
 
+def _foreign_server_error():
+    """Return the error shown when the configured server is foreign."""
+    return ('You are trying to contact a DbServer from another installation. '
+            'Check the configuration or stop the foreign DbServer instance')
+
+
 def check_foreign():
     """
-    Check if we the DbServer is the right one
+    Check that the DbServer belongs to this installation.
+
+    New servers expose a stable, non-sensitive installation identity. The
+    path-based check is retained for compatibility with older DbServers.
     """
-    if not config.multi_user and not os.environ.get('OQ_DATABASE'):
+    if config.multi_user or os.environ.get('OQ_DATABASE'):
+        return
+
+    try:
+        identity = logs.dbcmd('get_identity')
+    except Exception:
+        # ``get_identity`` was added after ``get_path``. Keep this fallback
+        # while old DbServers may still be running.
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
-            return('You are trying to contact a DbServer from another'
-                   ' instance (got %s, expected %s)\n'
-                   'Check the configuration or stop the foreign'
-                   ' DbServer instance') % (remote_server_path, server_path)
+            return _foreign_server_error()
+    else:
+        if identity.get('installation_id') != actions.installation_id():
+            return _foreign_server_error()
 
 
 def ensure_on():
