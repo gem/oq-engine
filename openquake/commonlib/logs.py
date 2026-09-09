@@ -38,6 +38,10 @@ LEVELS = {'debug': logging.DEBUG,
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 root = logging.root
+WORKER_ACTIONS = {
+    'workers_' + action
+    for action in 'start stop status restart wait kill debug'.split()
+}
 
 
 def on_workers(action):
@@ -59,20 +63,15 @@ def dbcmd(action, *args):
             raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     hc = config.zworkers.host_cores
-    if action.startswith('workers_') and hc.startswith('127.0.0.1 '):
+    if action in WORKER_ACTIONS and hc.startswith('127.0.0.1 '):
         return on_workers(action)  # local zmq
     elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly
-        if action.startswith('workers_'):
+        if action in WORKER_ACTIONS:
             return on_workers(action)
         from openquake.server.db import actions
-        try:
-            func = getattr(actions, action)
-        except AttributeError:
-            # a query like SELECT name FROM sqlite_master WHERE name='job'
-            return dbapi.db(action, *args)
-        else:
-            return func(dbapi.db, *args)
+        func = getattr(actions, action)
+        return func(dbapi.db, *args)
 
     # send a command to the database
     tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
@@ -219,7 +218,7 @@ class LogContext:
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, pdb=None):
-        if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
+        if not dbcmd('has_job_table'):
             raise RuntimeError('You forgot to run oq engine --upgrade-db')
         self.log_level = log_level
         self.log_file = log_file
