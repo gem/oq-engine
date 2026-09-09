@@ -24,7 +24,7 @@ from urllib.parse import parse_qs
 from xml.parsers.expat import ExpatError
 
 import numpy
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
@@ -32,7 +32,7 @@ from openquake.baselib.general import gettemp
 from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import IMPACT_FORM_DEFAULTS
-from openquake.commonlib import logs, oqvalidation
+from openquake.commonlib import dbapi, logs, oqvalidation
 
 app = FastAPI(title='OpenQuake API')
 
@@ -95,6 +95,15 @@ def calc_list_tags():
 def calc_log_size(calc_id: int):
     """Return the number of log lines for a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
+
+
+@app.get('/v1/calc/{calc_id}/traceback')
+def calc_traceback(calc_id: int):
+    """Return the traceback for a calculation."""
+    try:
+        return logs.dbcmd('get_traceback', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
 
 
 @app.post('/v1/valid/')
