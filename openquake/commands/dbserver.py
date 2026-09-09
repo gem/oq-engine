@@ -50,7 +50,7 @@ def main(cmd,
     if cmd == 'status':
         print('dbserver ' + status)
     elif cmd == 'stop':
-        if status == 'running':
+        if status in ('running', 'degraded'):
             pid = logs.dbcmd('getpid')
             os.kill(pid, signal.SIGINT)  # this is trapped by the DbServer
         else:
