@@ -42,7 +42,7 @@ def start_http_server(loglevel):
     port = getattr(config.dbserver, 'http_port', 8800)
     return subprocess.Popen([
         sys.executable, '-m', 'uvicorn',
-        'openquake.server.api:app',
+        'openquake.server.asgi:app',
         '--host', host,
         '--port', str(port),
         '--log-level', loglevel.lower(),
