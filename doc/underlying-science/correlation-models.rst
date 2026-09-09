@@ -84,6 +84,8 @@ A cross-IMT model gives the correlation between two IMTs at the same site:
 The residual component for which the model was calibrated remains essential.
 For example, a total-residual cross-IMT model must not be substituted for a
 between-event model merely because both return an IMT-by-IMT matrix.
+A within-event cross-IMT model used on its own applies the same IMT
+correlation independently at every site; it supplies no spatial dependence.
 
 Joint spatial and cross-IMT correlation
 ***************************************
@@ -266,6 +268,9 @@ cross-IMT reconstruction used during posterior sampling.
 References
 ----------
 
+* Abrahamson, N. A., Silva, W. J., and Kamai, R. (2014). Summary of the ASK14
+  ground motion relation for active crustal regions. *Earthquake Spectra*,
+  30(3), 1025-1055. https://doi.org/10.1193/070913EQS198M
 * Baker, J. W., and Cornell, C. A. (2006). Correlation of response spectral
   values for multicomponent ground motions. *Bulletin of the Seismological
   Society of America*, 96(1), 215-227.
