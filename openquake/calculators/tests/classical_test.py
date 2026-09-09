@@ -282,11 +282,15 @@ class ClassicalTestCase(CalculatorTestCase):
             case_12.__file__)
 
     def test_case_13(self):
-        # Test specification of reference z1pt4
+        # Test specification of reference z1pt4: the site_model.csv carries
+        # deliberately wrong z1pt4=9999 values which must be overridden by
+        # reference_depth_to_1pt4km_per_sec=50 from the [site_params] block
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.5).csv'],
             case_13.__file__)
+        sitecol = self.calc.datastore['sitecol']
+        aac(sitecol.z1pt4, [50, 50, 50])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
