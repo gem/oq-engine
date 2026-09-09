@@ -498,8 +498,8 @@ def get_job_stats(db, job_id):
         'FROM job WHERE id=?x', job_id)
 
 
-# called in check_foreign
-def installation_id():
+# called in check_foreign; db is not used but must be passed
+def installation_id(db):
     """Return the identity of the current installation"""
     path = os.path.splitext(os.path.realpath(server_path))[0]
     return hashlib.sha256(path.encode()).hexdigest()[:16]
@@ -508,7 +508,7 @@ def installation_id():
 def get_installation_id(db):
     """Return the identity of the installation running the DbServer."""
     # Extracted from the server_path)
-    return {'installation_id': installation_id()}
+    return {'installation_id': installation_id(db)}
 
 
 # used for backward compatibility in check_foreign, will be removed

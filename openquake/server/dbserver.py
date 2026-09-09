@@ -140,7 +140,7 @@ def check_foreign():
         if different_paths(server_path, remote_server_path):
             return _foreign_server_error()
     else:
-        if identity.get('installation_id') != actions.installation_id():
+        if identity.get('installation_id') != actions.installation_id(db):
             return _foreign_server_error()
 
 
