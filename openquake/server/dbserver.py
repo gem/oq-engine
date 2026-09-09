@@ -29,6 +29,7 @@ from openquake.baselib import (
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
+from openquake.commonlib.logs import WORKER_ACTIONS
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
@@ -53,7 +54,7 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd.startswith('workers_'):
+                elif cmd in WORKER_ACTIONS:
                     master = w.WorkerMaster(args[0])  # zworkers
                     msg = getattr(master, cmd[8:])()
                     sock.send(msg)
