@@ -66,12 +66,19 @@ class CholeskyFactor:
 
 @dataclass(frozen=True)
 class SiteIndependentFactor:
-    """Cross-IMT factor applied independently at every site."""
+    """Cross-IMT factor applied independently at every site.
+
+    ``lower_triangle`` is the Cholesky factor of the ``M x M`` IMT
+    correlation matrix and ``num_sites`` is ``N``. In IMT-major ordering,
+    this object applies the equivalent of ``lower_triangle`` Kronecker
+    ``I_N`` without constructing that ``(M*N) x (M*N)`` matrix.
+    """
 
     lower_triangle: numpy.ndarray
     num_sites: int
 
     def apply(self, samples):
+        """Correlate ``(M*N, E)`` samples while retaining their shape."""
         samples = numpy.asarray(samples)
         num_imts = len(self.lower_triangle)
         expected = num_imts * self.num_sites
@@ -385,7 +392,12 @@ class SpatialCorrelationModel(SpatialCrossIMTCorrelationModel):
 
 
 class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
-    """Cross-IMT correlation at a single site."""
+    """Cross-IMT correlation at a single site.
+
+    These models describe dependence among IMTs but not spatial dependence.
+    When used for within-event residuals, the same IMT correlation is applied
+    independently at each site.
+    """
 
     def rho(self, from_imt, to_imt, component=None, context=None):
         """Return the correlation between two IMTs."""
@@ -451,7 +463,14 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
         return covariance
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
-        """Return same-site cross-IMT correlation and zero otherwise."""
+        """Return a rectangular block for conditioning calculations.
+
+        Cross-IMT correlation is assigned to colocated pairs, identified by
+        zero separation in ``distances``. Pairs at different locations are
+        independent because this interface supplies no spatial model. The
+        result follows the IMT-major ordering required by
+        :meth:`SpatialCrossIMTCorrelationModel.correlation_block`.
+        """
         correlations = numpy.array([
             [self.rho(imt1, imt2, context=context) for imt2 in imts2]
             for imt1 in imts1])
@@ -464,7 +483,13 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
 
     def factor(self, sites, imts, component=None, context=None,
                ensure_psd=True):
-        """Factor the small IMT matrix once for all independent sites."""
+        """Factor the small IMT matrix once for all independent sites.
+
+        The returned :class:`SiteIndependentFactor` reuses one ``M x M``
+        Cholesky factor across ``N`` sites. This is the sampling equivalent of
+        factoring the full site-and-IMT covariance, without its quadratic
+        memory cost.
+        """
         matrix = self.correlation_matrix(imts, component, context)
         try:
             lower_triangle = numpy.linalg.cholesky(matrix)
