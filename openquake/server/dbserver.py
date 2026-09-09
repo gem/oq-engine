@@ -137,9 +137,9 @@ def check_foreign():
         return
 
     try:
-        identity = logs.dbcmd('get_identity')
+        identity = logs.dbcmd('get_installation_id')
     except Exception:
-        # ``get_identity`` was added after ``get_path``. Keep this fallback
+        # ``get_installation_id`` was added after ``get_path``. Keep this fallback
         # while old DbServers may still be running.
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
