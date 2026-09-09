@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Changed the default configuration to use the DbServer
+
   [Christopher Brooks]
   * Add the aftershock term to the ASK14 GMM and the ability to specify the Crjb
     (Centroid Joyner-Boore) distance metric per aftershock rupture within the

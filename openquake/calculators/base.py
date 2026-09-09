@@ -333,9 +333,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
                 self.datastore = datastore.read(old_job_id)
-                logs.dbcmd(
-                    "UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
-                    self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                logs.dbcmd('update_job', calc_id,
+                           {'ds_calc_dir': self.datastore.filename[:-5]})
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported

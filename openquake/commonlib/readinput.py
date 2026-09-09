@@ -2045,12 +2045,7 @@ def jobs_from_inis(inis):
     try:
         for ini in inis:
             checksum = get_checksum32(get_oqparam(ini))
-            jobs = logs.dbcmd('SELECT job_id FROM checksum '
-                              'WHERE hazard_checksum=?x', checksum)
-            if jobs:
-                jids.append(jobs[0].job_id)
-            else:
-                jids.append(0)
+            jids.append(logs.dbcmd('get_job_id_from_checksum', checksum))
     except Exception:
         return {'success': [], 'error': traceback.format_exc()}
     return {'success': jids, 'error': ''}

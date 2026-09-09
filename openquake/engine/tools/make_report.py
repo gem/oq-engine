@@ -24,18 +24,6 @@ from openquake.calculators.views import text_table
 from openquake.commonlib import logs, datastore
 
 
-JOB_STATS = '''
-SELECT id, user_name, start_time, stop_time, status,
-strftime('%s', stop_time) - strftime('%s', start_time) AS duration
-FROM job WHERE id=?x;
-'''
-
-ALL_JOBS = '''
-SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE start_time >= ?x AND start_time < ?x ORDER BY stop_time
-'''
-
-
 def make_report(isodate='today'):
     """
     Build a Markdown report with the computations performed at the given
@@ -47,9 +35,8 @@ def make_report(isodate='today'):
         isodate = date(*time.strptime(isodate, '%Y-%m-%d')[:3])
     isodate1 = isodate + timedelta(1)  # +1 day
 
-    # the fetcher returns a header which is stripped with [1:]
     jobs = logs.dbcmd(
-        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())
+        'get_jobs_by_date', isodate.isoformat(), isodate1.isoformat())
 
     lines = ['# %d job(s) finished before midnight of %s\n' % (
         len(jobs), isodate)]
@@ -61,7 +48,7 @@ def make_report(isodate='today'):
     lines.append('\n---\n')
 
     for job_id, user, status, ds_calc in jobs:
-        [stats] = logs.dbcmd('fetch', JOB_STATS, job_id)
+        [stats] = logs.dbcmd('get_job_stats', job_id)
         (job_id, _user, _start_time, _stop_time, status, _duration) = stats
         try:
             ds = datastore.read(job_id, datadir=os.path.dirname(ds_calc))

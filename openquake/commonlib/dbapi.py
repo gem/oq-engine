@@ -192,7 +192,19 @@ import sqlite3
 import warnings
 import threading
 import collections
+import datetime
 from openquake.baselib import config
+
+
+def _convert_timestamp(value):
+    """Convert SQLite timestamps, including date-only and ISO values."""
+    return datetime.datetime.fromisoformat(value.decode())
+
+
+# The sqlite3 default timestamp converter only accepts a space between the
+# date and time, while SQLite also accepts values produced by isoformat().
+# Register a converter that handles both forms (and date-only values).
+sqlite3.register_converter('TIMESTAMP', _convert_timestamp)
 
 
 class NotFound(Exception):
