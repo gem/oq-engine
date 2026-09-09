@@ -52,15 +52,27 @@ def main(archive, oqdata):
     db = Db(sqlite3.connect, dbpath, isolation_level=None,
             detect_types=sqlite3.PARSE_DECLTYPES)
     n = 0
+    calc_ids = []
     for fname in os.listdir(oqdata):
         mo = re.match(r'calc_(\d+)\.hdf5', fname)
         if mo:
             job_id = int(mo.group(1))
+            calc_ids.append(job_id)
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5
             db("UPDATE job SET user_name=?x, ds_calc_dir=?x WHERE id=?x",
                getpass.getuser(), fullname, job_id)
             safeprint('Restoring ' + fname)
             n += 1
+    if calc_ids:
+        # The archive can contain datastores whose jobs are missing from the
+        # copied database. Keep SQLite from reusing one of their IDs.
+        last_id = max(calc_ids)
+        cursor = db(
+            "UPDATE sqlite_sequence SET seq=?x "
+            "WHERE name='job' AND seq<?x", last_id, last_id)
+        if not cursor.rowcount:
+            db("INSERT OR IGNORE INTO sqlite_sequence(name, seq) "
+               "VALUES ('job', ?x)", last_id)
     dt = time.time() - t0
     safeprint('Extracted %d calculations into %s in %d seconds'
               % (n, oqdata, dt))
