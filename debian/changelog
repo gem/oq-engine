@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Fixed a bug meaning that when using `sites_csv` with z1pt4 in the site
+    CSV columns that the reference override z1pt4 value in the job file was
+    not actually used.
+
   [Anirudh Rao]
   * Enabled memory-efficient circulant embedding for unconditioned spatially 
     and cross-IMT correlated GMFs on large regular grids
