@@ -74,7 +74,7 @@ def main(job_ids: int, save=False):
     Wait for the given jobs to finish and then collect the results
     """
     while True:
-        rows = logs.dbcmd('SELECT id, status FROM job WHERE id in (?X)', job_ids)
+        rows = logs.dbcmd('get_jobs', job_ids)
         # print(rows)
         failed = [row for row in rows if row.status == 'failed']
         if failed:

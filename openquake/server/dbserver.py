@@ -19,6 +19,7 @@
 import os
 import sys
 import time
+import signal
 import logging
 import getpass
 import threading
@@ -29,9 +30,35 @@ from openquake.baselib import (
 from openquake.baselib.general import socket_ready, detach_process
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
+from openquake.commonlib.logs import WORKER_ACTIONS
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
+
+
+def start_http_server(loglevel):
+    """Start the openquake API served by Uvicorn."""
+    host = config.dbserver.host
+    port = getattr(config.dbserver, 'http_port', 8800)
+    return subprocess.Popen([
+        sys.executable, '-m', 'uvicorn',
+        'openquake.server.api:app',
+        '--host', host,
+        '--port', str(port),
+        '--log-level', loglevel.lower(),
+    ])
+
+
+def stop_http_server(process):
+    """Stop the Uvicorn process and wait for it to exit."""
+    if process.poll() is not None:
+        return
+    process.send_signal(signal.SIGTERM)
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 class DbServer(object):
@@ -53,19 +80,14 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd.startswith('workers_'):
+                elif cmd in WORKER_ACTIONS:
                     master = w.WorkerMaster(args[0])  # zworkers
                     msg = getattr(master, cmd[8:])()
                     sock.send(msg)
                     continue
-                try:
-                    func = getattr(actions, cmd)
-                except AttributeError:  # SQL string
-                    res = p.safely_call(self.db, (cmd,) + args)
-                    sock.send(res)
-                else:  # action
-                    res = p.safely_call(func, (self.db,) + args)
-                    sock.send(res)
+                func = getattr(actions, cmd)
+                res = p.safely_call(func, (self.db,) + args)
+                sock.send(res)
 
     def start(self):
         """
@@ -119,17 +141,33 @@ def get_status(address=None):
     return 'running' if socket_ready(address) else 'not-running'
 
 
+def _foreign_server_error():
+    """Return the error shown when the configured server is foreign."""
+    return ('You are trying to contact a DbServer from another installation. '
+            'Check the configuration or stop the foreign DbServer instance')
+
+
 def check_foreign():
     """
-    Check if we the DbServer is the right one
+    Check that the DbServer belongs to this installation.
+
+    New servers expose a stable, non-sensitive installation identity. The
+    path-based check is retained for compatibility with older DbServers.
     """
-    if not config.multi_user and not os.environ.get('OQ_DATABASE'):
+    if config.multi_user or os.environ.get('OQ_DATABASE'):
+        return
+
+    try:
+        identity = logs.dbcmd('get_installation_id')
+    except Exception:
+        # ``get_installation_id`` was added after ``get_path``. Keep this fallback
+        # while old DbServers may still be running.
         remote_server_path = logs.dbcmd('get_path')
         if different_paths(server_path, remote_server_path):
-            return('You are trying to contact a DbServer from another'
-                   ' instance (got %s, expected %s)\n'
-                   'Check the configuration or stop the foreign'
-                   ' DbServer instance') % (remote_server_path, server_path)
+            return _foreign_server_error()
+    else:
+        if identity.get('installation_id') != actions.installation_id(db):
+            return _foreign_server_error()
 
 
 def ensure_on():
@@ -194,4 +232,8 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         # but only if multi_user = False, otherwise init/supervisor
         # will loose control of the process
         detach_process()
-    DbServer(db, addr).start()  # expects to be killed with CTRL-C
+    http_process = start_http_server(loglevel)
+    try:
+        DbServer(db, addr).start()  # expects to be killed with CTRL-C
+    finally:
+        stop_http_server(http_process)
