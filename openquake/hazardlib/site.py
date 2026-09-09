@@ -321,9 +321,10 @@ site_param_dt = {
 
     # other parameters
     'custom_site_id': (numpy.bytes_, 8),
-    'region': numpy.uint32,
+    'region': numpy.uint32, # K20 ESHM20 residual attenuation region
     'in_cshm': bool,  # used in mcverry
-    'is_aftershock': bool
+    'is_aftershock': bool, # Flag for some GMMs with aftershock terms to use them
+    'crjb': numpy.float64  # Used in ASK14 GMM's aftershock term
 }
 
 

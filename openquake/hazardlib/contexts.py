@@ -946,6 +946,10 @@ class ContextMaker(object):
                 # Set to True later in RmapMaker for ruptures with a
                 # non-zero delta_rate. Without delta_rates it stays False
                 value = False
+            elif param == 'crjb':
+                # Centroid Joyner-Boore distance between an aftershock rup and
+                # its main shock. Can be provided from the delta_rates CSV
+                value = numpy.nan
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -1543,10 +1547,13 @@ class RmapMaker(object):
                 # so aftershock terms are applied in GMMs containing them
                 with self.cmaker.delta_mon:
                     delta = self.cmaker.deltagetter(src.id)
-                    d = delta[ctx.rup_id]
+                    row = delta[ctx.rup_id]
+                    d = row['delta']
                     ctx.occurrence_rate += d
                     if 'is_aftershock' in ctx.dtype.names:
                         ctx.is_aftershock = d != 0
+                    if 'crjb' in ctx.dtype.names:
+                        ctx.crjb = row['crjb']
             if self.fewsites:  # keep rupdata in memory
                 if self.src_mutex:
                     # needed for Disaggregator.init

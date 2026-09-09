@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -x
-          export PIP_DEFAULT_TIMEOUT=100
+          export PIP_DEFAULT_TIMEOUT=100 OQ_DATABASE=127.0.0.1
           #macpython_py_prefix=/Library/Frameworks/Python.framework/Versions
           #py_version=${{ matrix.python-version }}
           #py_mm=${py_version%.*}
