@@ -498,12 +498,17 @@ def get_job_stats(db, job_id):
         'FROM job WHERE id=?x', job_id)
 
 
+# called in check_foreign
+def installation_id():
+    """Return the identity of the current installation"""
+    path = os.path.splitext(os.path.realpath(server_path))[0]
+    return hashlib.sha256(path.encode()).hexdigest()[:16]
+
+
 def get_installation_id(db):
     """Return the identity of the installation running the DbServer."""
-    # Extracted from the server_path
-    path = os.path.splitext(os.path.realpath(server_path))[0]
-    hash = hashlib.sha256(path.encode()).hexdigest()[:16]
-    return {'installation_id': hash}
+    # Extracted from the server_path)
+    return {'installation_id': installation_id()}
 
 
 # used for backward compatibility in check_foreign, will be removed
