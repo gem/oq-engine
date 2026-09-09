@@ -1,3 +1,11 @@
+  [Anirudh Rao]
+  * Enabled memory-efficient circulant embedding for unconditioned spatially 
+    and cross-IMT correlated GMFs on large regular grids
+  * Added local Kriging for obtaining correlated field values at off-grid
+    station locations
+  * Added scalable station-conditioned correlated GMFs using circulant
+    embedding, local Kriging, and Matheron substitution
+
   [Michele Simionato]
   * Changed the default configuration to use the DbServer
 
