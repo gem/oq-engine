@@ -1115,7 +1115,7 @@ class HazardCalculator(BaseCalculator):
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
-                    self.sitecol.set_global_params(oq)
+                    self.sitecol.set_global_params(oq, oq.req_site_params)
                 else:
                     # associate the site model parameters
                     # NB: in AELO mode (i.e. with siteid) associate even
