@@ -283,8 +283,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_13(self):
         # Test specification of reference z1pt4: the site_model.csv carries
-        # deliberately wrong z1pt4=9999 values which must be overridden by
-        # reference_depth_to_1pt4km_per_sec=50 from the [site_params] block
+        # values which must be overridden by reference z1pt4 in the job file
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.5).csv'],
