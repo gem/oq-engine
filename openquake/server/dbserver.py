@@ -19,6 +19,7 @@
 import os
 import sys
 import time
+import signal
 import logging
 import getpass
 import threading
@@ -33,6 +34,31 @@ from openquake.commonlib.logs import WORKER_ACTIONS
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
+
+
+def start_http_server(loglevel):
+    """Start the openquake API served by Uvicorn."""
+    host = config.dbserver.host
+    port = getattr(config.dbserver, 'http_port', 8800)
+    return subprocess.Popen([
+        sys.executable, '-m', 'uvicorn',
+        'openquake.server.api:app',
+        '--host', host,
+        '--port', str(port),
+        '--log-level', loglevel.lower(),
+    ])
+
+
+def stop_http_server(process):
+    """Stop the Uvicorn process and wait for it to exit."""
+    if process.poll() is not None:
+        return
+    process.send_signal(signal.SIGTERM)
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 class DbServer(object):
@@ -206,4 +232,8 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         # but only if multi_user = False, otherwise init/supervisor
         # will loose control of the process
         detach_process()
-    DbServer(db, addr).start()  # expects to be killed with CTRL-C
+    http_process = start_http_server(loglevel)
+    try:
+        DbServer(db, addr).start()  # expects to be killed with CTRL-C
+    finally:
+        stop_http_server(http_process)

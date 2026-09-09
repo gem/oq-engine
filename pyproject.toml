@@ -30,6 +30,8 @@ dependencies = [
     "pandas>=2.2.3",
     "h5py>=3.13",
     "django>=4.2, <5",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
     "psutil",
     "requests",
     "pyzmq~=26.0.3; python_version <= '3.11'",
