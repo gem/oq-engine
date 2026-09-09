@@ -16,10 +16,9 @@
 """Checks against the Abrahamson et al. (2014) supplement.
 
 The reference values were extracted directly from the publisher's electronic
-supplement ``esp4bf00365-sup-0001.xls``, SHA-256
-``5c2c6436e34a3955aae603440c27b8dd6d67355b7bf2d9c522b79340badbaa6a``.
-Neither the OpenQuake implementation nor its production CSV files were used
-to compute them.
+supplement ``esp4bf00365-sup-0001.xls``, available at ``SUPPLEMENT_URL``
+below. Neither the OpenQuake implementation nor its production CSV files were
+used to compute them.
 """
 
 import csv
@@ -41,6 +40,9 @@ from openquake.hazardlib.imt import PGA, PGD, PGV, SA, from_string
 
 
 DATA = Path(__file__).with_name('data') / 'ABRAHAMSON_ET_AL_2014'
+SUPPLEMENT_URL = (
+    'https://onlinelibrary.wiley.com/action/downloadSupplement?'
+    'doi=10.1193%2F070913EQS198M&file=esp4bf00365-sup-0001.xls')
 
 
 def _index(imt):
