@@ -34,7 +34,8 @@ from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.correlation_models.cross_imt.no_cross_correlation \
     import NoCrossCorrelation
 from openquake.hazardlib.correlation_models.base import (
-    CorrelationContext, ResidualComponent, SpatialCorrelationModel)
+    CorrelationContext, CrossIMTCorrelationModel, ResidualComponent,
+    SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
@@ -56,6 +57,8 @@ def _correlation_budget():
 
 def _dense_correlation_bytes(model, sites, num_imts):
     """Estimate peak bytes required by the existing dense factorization."""
+    if isinstance(model, CrossIMTCorrelationModel):
+        return 3 * num_imts ** 2 * 8
     if isinstance(model, SpatialCorrelationModel):
         num_sites = len(sites.complete)
         matrices = num_imts + 2

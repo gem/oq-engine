@@ -64,6 +64,28 @@ class CholeskyFactor:
         return self.lower_triangle @ samples
 
 
+@dataclass(frozen=True)
+class SiteIndependentFactor:
+    """Cross-IMT factor applied independently at every site."""
+
+    lower_triangle: numpy.ndarray
+    num_sites: int
+
+    def apply(self, samples):
+        samples = numpy.asarray(samples)
+        num_imts = len(self.lower_triangle)
+        expected = num_imts * self.num_sites
+        if samples.ndim != 2 or samples.shape[0] != expected:
+            raise ValueError(
+                f'Expected samples with shape ({expected}, E), got '
+                f'{samples.shape}')
+        reshaped = samples.reshape(
+            num_imts, self.num_sites, samples.shape[1])
+        correlated = numpy.einsum(
+            'ij,jne->ine', self.lower_triangle, reshaped)
+        return correlated.reshape(samples.shape)
+
+
 class CorrelationModel:
     """Common metadata and validation for all correlation models."""
 
@@ -427,6 +449,31 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
                        for imt_index in range(num_imts)]
             covariance[numpy.ix_(indexes, indexes)] = imt_correlation
         return covariance
+
+    def _correlation_block(self, distances, imts1, imts2, context=None):
+        """Return same-site cross-IMT correlation and zero otherwise."""
+        correlations = numpy.array([
+            [self.rho(imt1, imt2, context=context) for imt2 in imts2]
+            for imt1 in imts1])
+        same_site = numpy.isclose(distances, 0, rtol=0, atol=1E-12)
+        block = numpy.einsum(
+            'ij,ab->iajb', correlations, same_site)
+        return block.reshape(
+            len(imts1) * distances.shape[0],
+            len(imts2) * distances.shape[1])
+
+    def factor(self, sites, imts, component=None, context=None,
+               ensure_psd=True):
+        """Factor the small IMT matrix once for all independent sites."""
+        matrix = self.correlation_matrix(imts, component, context)
+        try:
+            lower_triangle = numpy.linalg.cholesky(matrix)
+        except numpy.linalg.LinAlgError:
+            if not ensure_psd:
+                raise
+            matrix = cov_nearest(matrix, threshold=1E-12)
+            lower_triangle = numpy.linalg.cholesky(matrix)
+        return SiteIndependentFactor(lower_triangle, len(sites))
 
 
 class TruncatedCrossIMTCorrelationModel(CrossIMTCorrelationModel):
