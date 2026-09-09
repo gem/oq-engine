@@ -238,6 +238,30 @@ class OqParamTestCase(unittest.TestCase):
         ).get_total_residual_correlation_model()
         self.assertEqual(model.__class__.__name__, 'Bradley2012')
 
+    def test_within_cross_imt_model(self):
+        # Within-event settings may select a same-site cross-IMT model even
+        # when that model does not also describe spatial dependence.
+        common = dict(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3')
+        oq = OqParam(
+            **common,
+            within_event_correlation_model=(
+                'AbrahamsonEtAl2014WithinEvent'),
+            between_event_correlation_model=(
+                'AbrahamsonEtAl2014BetweenEvent'))
+        oq.validate()
+        within = oq.get_within_event_correlation_model()
+        between = oq.get_between_event_correlation_model()
+        self.assertEqual(
+            within.__class__.__name__,
+            'AbrahamsonEtAl2014WithinEvent')
+        self.assertEqual(
+            between.__class__.__name__,
+            'AbrahamsonEtAl2014BetweenEvent')
+        self.assertEqual(between.truncation_level, 3)
+
     def test_conditional_spectrum_cross_correlation_alias(self):
         oq = OqParam(
             calculation_mode='classical', inputs=fakeinputs,

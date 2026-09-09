@@ -25,11 +25,13 @@ from scipy import stats
 
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.gmf import (
-    F32, GmfComputer, _truncated_normals)
+    F32, GmfComputer, _dense_correlation_bytes, _truncated_normals)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor)
+from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
+    import BakerJayaram2008
 from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 \
     import HeresiMiranda2019
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
@@ -232,3 +234,10 @@ def test_memory_guard():
             return_value=1):
         with pytest.raises(ValueError, match='not enabled'):
             computer._get_ce_factor()
+
+
+def test_cross_im_memory():
+    # Same-site cross-IMT correlation factors one M by M matrix, independent
+    # of the site count, instead of a dense joint field matrix.
+    model = BakerJayaram2008()
+    assert _dense_correlation_bytes(model, range(50_000), 4) == 3 * 4 ** 2 * 8
