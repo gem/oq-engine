@@ -19,12 +19,14 @@
 """Minimal FastAPI application served by the DbServer."""
 
 import re
+import secrets
 import zlib
 from urllib.parse import parse_qs
 from xml.parsers.expat import ExpatError
 
 import numpy
-from fastapi import FastAPI, HTTPException, Request
+from django.conf import settings
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
@@ -35,6 +37,52 @@ from openquake.hazardlib.shakemap.validate import IMPACT_FORM_DEFAULTS
 from openquake.commonlib import dbapi, logs, oqvalidation
 
 app = FastAPI(title='OpenQuake API')
+
+
+def _check_api_key(api_key):
+    """Raise ``HTTPException`` unless the internal API key is valid."""
+    if not api_key or not secrets.compare_digest(
+            api_key, settings.OQ_API_KEY):
+        raise HTTPException(status_code=403, detail='Invalid API key')
+
+
+@app.get('/v0/calc/list_tags')
+def v0calc_list_tags(x_api_key: str | None = Header(default=None)):
+    """Return calculation tags for authenticated internal callers."""
+    _check_api_key(x_api_key)
+    return logs.dbcmd('list_tags')
+
+
+@app.get('/v0/calc/{calc_id}')
+def v0_calc(calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Return calculation information for authenticated internal callers."""
+    _check_api_key(x_api_key)
+    try:
+        return logs.dbcmd('calc_info', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
+@app.get('/v0/calc/{calc_id}/log/size')
+def v0calc_log_size(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Return the calculation log size for an authenticated caller."""
+    _check_api_key(x_api_key)
+    try:
+        return logs.dbcmd('get_log_size', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
+@app.get('/v0/calc/{calc_id}/traceback')
+def v0calc_traceback(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Return a calculation traceback for an authenticated caller."""
+    _check_api_key(x_api_key)
+    try:
+        return logs.dbcmd('get_traceback', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
 
 
 @app.get('/v1/engine_version', response_class=PlainTextResponse)
@@ -67,6 +115,16 @@ def available_gsims():
     return list(gsim.get_available_gsims())
 
 
+def _contains_nonfinite(value):
+    """Return whether a nested value contains a non-finite float."""
+    if isinstance(value, dict):
+        return any(_contains_nonfinite(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_nonfinite(item) for item in value)
+    return (isinstance(value, (float, numpy.floating)) and
+            not numpy.isfinite(value))
+
+
 @app.get('/v1/ini_defaults')
 def ini_defaults():
     """Return the default values of the INI parameters."""
@@ -78,32 +136,10 @@ def ini_defaults():
         obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param) and
                 obj.default is not valid.Param.NODEFAULT):
-            if (isinstance(obj.default, (float, numpy.floating)) and
-                    not numpy.isfinite(obj.default)):
+            if _contains_nonfinite(obj.default):
                 continue
             defaults[name] = obj.default
     return defaults
-
-
-@app.get('/v1/calc/list_tags')
-def calc_list_tags():
-    """Return all calculation tags."""
-    return logs.dbcmd('list_tags')
-
-
-@app.get('/v1/calc/{calc_id}/log/size')
-def calc_log_size(calc_id: int):
-    """Return the number of log lines for a calculation."""
-    return logs.dbcmd('get_log_size', calc_id)
-
-
-@app.get('/v1/calc/{calc_id}/traceback')
-def calc_traceback(calc_id: int):
-    """Return the traceback for a calculation."""
-    try:
-        return logs.dbcmd('get_traceback', calc_id)
-    except dbapi.NotFound as exc:
-        raise HTTPException(status_code=404) from exc
 
 
 @app.post('/v1/valid/')
