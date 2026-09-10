@@ -31,7 +31,7 @@ commands = ['start']
 def runserver(hostport=None, skip_browser=False):
     """Start Uvicorn and serve the combined WebUI application."""
     url = 'http://' + hostport
-    if check_webserver_running(url):
+    if check_webserver_running(url, max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         return
