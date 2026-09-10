@@ -28,7 +28,6 @@ import os
 import tempfile
 import subprocess
 import traceback
-import signal
 import zlib
 import re
 import psutil
@@ -683,64 +682,28 @@ def calc_list(request, id=None):
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_abort(request, calc_id):
-    """
-    Abort the given calculation, it is it running
-    """
+    """Abort a running calculation after checking its ownership."""
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
-        message = {'error': 'Unknown job %s' % calc_id}
-        return JsonResponse(message)
-
+        return JsonResponse({'error': 'Unknown job %s' % calc_id})
     if job.status not in ('submitted', 'executing'):
-        message = {'error': 'Job %s is not running' % job.id}
-        return JsonResponse(message)
-
-    # only the owner or superusers can abort a calculation
+        return JsonResponse({'error': 'Job %s is not running' % job.id})
     if (job.user_name not in utils.get_valid_users(request) and
             not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return JsonResponse(message, status=403)
-
-    if job.pid:  # is a spawned job
-        try:
-            os.kill(job.pid, signal.SIGINT)
-        except Exception as exc:
-            logging.error(exc)
-        else:
-            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
-            logs.dbcmd('set_status', job.id, 'aborted')
-        message = {'success': 'Killing job %d' % job.id}
-        return JsonResponse(message)
-
-    message = {'error': 'PID for job %s not found' % job.id}
-    return JsonResponse(message)
+    return _post_api(request, 'v0/calc/%s/abort' % calc_id, {})
 
 
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
-    """
-    Remove the calculation id
-    """
-    # Only the owner can remove a job
+    """Remove a calculation for its owner."""
     user = utils.get_username(request)
-    try:
-        message = logs.dbcmd('del_calc', calc_id, user)
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-
-    if 'success' in message:
-        return JsonResponse(message, status=200)
-    elif 'error' in message:
-        logging.error(message['error'])
-        return JsonResponse(message, status=403)
-    else:
-        # This is an untrapped server error
-        logging.error(message)
-        return HttpResponse(content=message,
-                            content_type='text/plain', status=500)
+    return _post_api(
+        request, 'v0/calc/%s/remove' % calc_id, {'username': user})
 
 
 def share_job(user_level, calc_id, share):

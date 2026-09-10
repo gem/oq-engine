@@ -19,8 +19,10 @@
 """Minimal FastAPI application served by the DbServer."""
 
 import logging
+import os
 import re
 import secrets
+import signal
 import traceback
 import zlib
 from urllib.parse import parse_qs
@@ -28,7 +30,7 @@ from xml.parsers.expat import ExpatError
 
 import numpy
 from django.conf import settings
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
@@ -84,6 +86,43 @@ async def v0_calc_run(
                 'job_id': getattr(exc, 'job_id', None),
             }, status_code=500)
     return logs.get_job_info(job_id)
+
+
+@app.post('/v0/calc/{calc_id}/abort')
+def v0_calc_abort(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Abort a running calculation for an authenticated caller."""
+    _check_api_key(x_api_key)
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return {'error': 'Unknown job %s' % calc_id}
+    if job.status not in ('submitted', 'executing'):
+        return {'error': 'Job %s is not running' % job.id}
+    if job.pid:
+        try:
+            os.kill(job.pid, signal.SIGINT)
+        except Exception as exc:
+            logging.error(exc)
+        else:
+            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
+            logs.dbcmd('set_status', job.id, 'aborted')
+        return {'success': 'Killing job %d' % job.id}
+    return {'error': 'PID for job %s not found' % job.id}
+
+
+@app.post('/v0/calc/{calc_id}/remove')
+def v0_calc_remove(
+        calc_id: int, username: str = Form(...),
+        x_api_key: str | None = Header(default=None)):
+    """Remove a calculation for an authenticated caller."""
+    _check_api_key(x_api_key)
+    try:
+        message = logs.dbcmd('del_calc', calc_id, username)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    if 'success' in message or 'error' in message:
+        return message
+    raise HTTPException(status_code=500, detail=str(message))
 
 
 @app.get('/v1/calc/list_tags')

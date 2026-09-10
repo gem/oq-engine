@@ -121,7 +121,7 @@ def get_or_create_user(level):
     return user, password  # user.password is the hashed password instead
 
 
-class EngineServerTestCase(django.test.TestCase):
+class EngineServerTestCase(django.test.TransactionTestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
