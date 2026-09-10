@@ -24,6 +24,7 @@ import os
 import re
 import secrets
 import signal
+import tempfile
 import traceback
 import zlib
 from types import SimpleNamespace
@@ -31,15 +32,17 @@ from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
 
 import numpy
-from django.conf import settings
 from fastapi import FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
+from openquake.baselib import config
+from openquake.server.auth import API_KEY
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
 from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
-from openquake.hazardlib.shakemap.validate import IMPACT_FORM_DEFAULTS
+from openquake.hazardlib.shakemap.validate import (
+    IMPACT_FORM_DEFAULTS, impact_validate)
 from openquake.commonlib import dbapi, logs, oqvalidation
 
 app = FastAPI(title='OpenQuake API')
@@ -47,8 +50,7 @@ app = FastAPI(title='OpenQuake API')
 
 def _check_api_key(api_key):
     """Raise ``HTTPException`` unless the internal API key is valid."""
-    if not api_key or not secrets.compare_digest(
-            api_key, settings.OQ_API_KEY):
+    if not api_key or not secrets.compare_digest(api_key, API_KEY):
         raise HTTPException(status_code=403, detail='Invalid API key')
 
 
@@ -156,6 +158,62 @@ async def v0_aelo_run(
     return JSONResponse(content=response_data, status_code=status)
 
 
+@app.post('/v0/calc/impact_run')
+async def v0_impact_run(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Run IMPACT for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    post = {
+        key: value for key, value in form.multi_items()
+        if not hasattr(value, 'file') and key not in (
+            'user_level', 'username', 'email', 'base_url')}
+    try:
+        user_level = int(form.get('user_level', 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400,
+                            detail='Invalid IMPACT user level')
+    files = {
+        key: value for key, value in form.multi_items()
+        if hasattr(value, 'file')}
+    from openquake.server.views import (
+        create_impact_job, get_uploaded_file_path)
+    user = SimpleNamespace(level=user_level, testdir=None)
+    adapter = SimpleNamespace(POST=post, FILES=files)
+    rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
+    station_path = get_uploaded_file_path(adapter, 'station_data_file')
+    station_from_usgs = post.get('station_data_file_from_usgs', '')
+    station_source = None
+    if station_path:
+        station_source = 'user-provided'
+    elif station_from_usgs:
+        station_path = station_from_usgs
+        station_source = 'USGS'
+    _rup, _rupdic, params, err = impact_validate(
+        post, user, rupture_path, station_path)
+    if err:
+        return JSONResponse(
+            content=err, status_code=400 if 'invalid_inputs' in err else 500)
+    if station_source is not None:
+        params['station_source'] = station_source
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+
+    def build_absolute_uri(path):
+        return urljoin(
+            form.get('base_url', '').rstrip('/') + '/', path.lstrip('/'))
+
+    job_request = SimpleNamespace(
+        POST=form,
+        user=SimpleNamespace(
+            email=form.get('email') or '',
+            username=form.get('username'), is_authenticated=True,
+            level=user_level, testdir=None),
+        build_absolute_uri=build_absolute_uri)
+    response_data = create_impact_job(
+        job_request, params, form.get('email_file_path'))
+    return JSONResponse(content=response_data, status_code=200)
+
+
 @app.post('/v0/calc/impact_get_rupture_data')
 async def v0_impact_get_rupture_data(
         request: Request, x_api_key: str | None = Header(default=None)):
@@ -189,10 +247,30 @@ def calc_list_tags():
     return logs.dbcmd('list_tags')
 
 
+def _calc_log_slice(calc_id, start, stop):
+    """Return a calculation log slice."""
+    try:
+        return logs.dbcmd('get_log_slice', calc_id, start, stop)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
 @app.get('/v1/calc/{calc_id}/log/size')
 def calc_log_size(calc_id: int):
     """Return the number of log lines for a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
+
+
+@app.get('/v1/calc/{calc_id}/log/{log_range:path}')
+def calc_log(calc_id: int, log_range: str):
+    """Return a calculation log slice."""
+    try:
+        start, stop = log_range.split(':', 1)
+        start = int(start or 0)
+        stop = int(stop or 0)
+    except ValueError as exc:
+        raise HTTPException(status_code=400) from exc
+    return _calc_log_slice(calc_id, start, stop)
 
 
 @app.get('/v1/calc/{calc_id}/traceback')
