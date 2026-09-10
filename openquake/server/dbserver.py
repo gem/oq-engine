@@ -19,13 +19,10 @@
 import os
 import sys
 import time
-import signal
 import logging
 import getpass
 import threading
 import subprocess
-import requests
-
 from openquake.baselib import (
     config, zeromq as z, workerpool as w, parallel as p)
 from openquake.baselib.general import socket_ready, detach_process
@@ -35,31 +32,6 @@ from openquake.commonlib.logs import WORKER_ACTIONS
 from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server import __file__ as server_path
-
-
-def start_http_server(loglevel):
-    """Start the openquake API served by Uvicorn."""
-    host = config.dbserver.host
-    port = getattr(config.dbserver, 'http_port', 8800)
-    return subprocess.Popen([
-        sys.executable, '-m', 'uvicorn',
-        'openquake.server.asgi:app',
-        '--host', host,
-        '--port', str(port),
-        '--log-level', loglevel.lower(),
-    ])
-
-
-def stop_http_server(process):
-    """Stop the Uvicorn process and wait for it to exit."""
-    if process.poll() is not None:
-        return
-    process.send_signal(signal.SIGTERM)
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
 
 
 class DbServer(object):
@@ -133,31 +105,13 @@ def different_paths(path1, path2):
 
 def get_status(address=None):
     """
-    Check if both the DbServer and its HTTP API are up.
+    Check if the DbServer is up.
 
     :param address: pair (hostname, port)
-    :returns: 'running', 'degraded', or 'not-running'
+    :returns: 'running' or 'not-running'
     """
     address = address or valid.host_port()
-    zmq_running = socket_ready(address)
-    http_running = _http_ready()
-    if zmq_running and http_running:
-        return 'running'
-    if zmq_running:
-        return 'degraded'
-    return 'not-running'
-
-
-def _http_ready():
-    """Return whether the FastAPI service responds on its configured port."""
-    host = config.dbserver.host
-    port = getattr(config.dbserver, 'http_port', 8800)
-    try:
-        response = requests.get(
-            f'http://{host}:{port}/v1/engine_version', timeout=1)
-        return response.ok
-    except requests.RequestException:
-        return False
+    return 'running' if socket_ready(address) else 'not-running'
 
 
 def _foreign_server_error():
@@ -251,8 +205,4 @@ def run_server(dbhostport=None, loglevel='WARN', foreground=False):
         # but only if multi_user = False, otherwise init/supervisor
         # will loose control of the process
         detach_process()
-    http_process = start_http_server(loglevel)
-    try:
-        DbServer(db, addr).start()  # expects to be killed with CTRL-C
-    finally:
-        stop_http_server(http_process)
+    DbServer(db, addr).start()  # expects to be killed with CTRL-C
