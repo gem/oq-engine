@@ -189,10 +189,30 @@ def calc_list_tags():
     return logs.dbcmd('list_tags')
 
 
+def _calc_log_slice(calc_id, start, stop):
+    """Return a calculation log slice."""
+    try:
+        return logs.dbcmd('get_log_slice', calc_id, start, stop)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
 @app.get('/v1/calc/{calc_id}/log/size')
 def calc_log_size(calc_id: int):
     """Return the number of log lines for a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
+
+
+@app.get('/v1/calc/{calc_id}/log/{log_range:path}')
+def calc_log(calc_id: int, log_range: str):
+    """Return a calculation log slice."""
+    try:
+        start, stop = log_range.split(':', 1)
+        start = int(start or 0)
+        stop = int(stop or 0)
+    except ValueError as exc:
+        raise HTTPException(status_code=400) from exc
+    return _calc_log_slice(calc_id, start, stop)
 
 
 @app.get('/v1/calc/{calc_id}/traceback')
