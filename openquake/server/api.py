@@ -35,7 +35,7 @@ import numpy
 from fastapi import FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
-from openquake.baselib import config
+from openquake.baselib import config, workerpool as w
 from openquake.server.auth import API_KEY
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
@@ -61,6 +61,22 @@ def calc_info(calc_id: int):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.post('/v0/worker_{action}')
+async def v0_worker(
+        action: str, request: Request,
+        x_api_key: str | None = Header(default=None)):
+    """Run an authenticated worker-control action."""
+    _check_api_key(x_api_key)
+    full_action = 'workers_' + action
+    if full_action not in logs.WORKER_ACTIONS:
+        raise HTTPException(status_code=404)
+    body = await request.body()
+    payload = json.loads(body) if body else {}
+    args = payload.get('args', [])
+    master = w.WorkerMaster(args[0] if args else -1)
+    return getattr(master, action)()
 
 
 @app.post('/v0/calc/run')

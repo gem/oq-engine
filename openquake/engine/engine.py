@@ -39,6 +39,7 @@ import h5py
 import numpy
 import psutil
 import requests
+from openquake.baselib import via_server
 from openquake.commonlib import logs, readinput
 
 try:
@@ -266,7 +267,10 @@ def start_workers(job_id, dist, nodes):
     """
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)
-        logs.dbcmd('workers_start', dict(config.zworkers))
+        if via_server():
+            logs.dbcmd('workers_start', dict(config.zworkers))
+        else:
+            w.WorkerMaster(job_id).start()
     elif dist == 'slurm':
         slurm.start_workers(job_id, nodes)
         slurm.wait_workers(job_id, nodes)

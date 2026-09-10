@@ -24,9 +24,11 @@ import time
 import getpass
 import logging
 import traceback
+import requests
 from pdb import post_mortem
 from datetime import datetime, timezone
-from openquake.baselib import config, zeromq, parallel, workerpool as w
+from openquake.baselib import config, zeromq, parallel
+from openquake.server.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -44,9 +46,19 @@ WORKER_ACTIONS = {
 }
 
 
-def on_workers(action):
-    master = w.WorkerMaster(-1)  # current job
-    return getattr(master, action[8:])()  # workers_(stop|kill)
+def _worker_api(action, *args):
+    """Call a worker-control endpoint on the WebUI API."""
+    endpoint = '%s/v0/worker_%s' % (
+        config.webapi.server.rstrip('/'), action[8:])
+    try:
+        response = requests.post(
+            endpoint, json={'args': args},
+            headers={'X-API-Key': API_KEY}, timeout=600)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Unable to call worker endpoint %s: %s' % (endpoint, exc)) from exc
+    return response.json()
 
 
 def dbcmd(action, *args):
@@ -61,14 +73,11 @@ def dbcmd(action, *args):
     for arg in args:
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
+    if action in WORKER_ACTIONS:
+        return _worker_api(action, *args)
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    hc = config.zworkers.host_cores
-    if action in WORKER_ACTIONS and hc.startswith('127.0.0.1 '):
-        return on_workers(action)  # local zmq
-    elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
+    if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly
-        if action in WORKER_ACTIONS:
-            return on_workers(action)
         from openquake.server.db import actions
         func = getattr(actions, action)
         return func(dbapi.db, *args)
