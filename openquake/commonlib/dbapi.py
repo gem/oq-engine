@@ -321,8 +321,10 @@ class Db(object):
             if dname and not os.path.exists(dname):
                 os.makedirs(dname)
             self.local.conn = self.connect(*self.args, **self.kw)
-            # set WAL mode to avoid OperationalError: database is locked
+            # set WAL mode to serialize multiple writers
             self.local.conn.execute('PRAGMA journal_mode = WAL')
+            # set busy_timeout to avoid OperationalError: database is locked
+            self.local.conn.execute('PRAGMA busy_timeout=5000')
             # honor ON DELETE CASCADE
             self.local.conn.execute('PRAGMA foreign_keys = ON')
             return self.local.conn
