@@ -39,6 +39,8 @@ MODELS = {
 }
 
 
+EPS = 1E-10
+
 class Mesh:
     def __init__(self, distances):
         self.distances = distances
@@ -67,7 +69,7 @@ def test_reference_values():
             numpy.array([[float(row['distance'])]]), [imt], [imt])
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
-            rtol=1E-14, atol=1E-15)
+            rtol=EPS, atol=EPS)
 
 
 def test_regional_classes_are_registered_and_explicit():

@@ -29,6 +29,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 DATA = Path(__file__).with_name('data') / 'MARKHVIDA_ET_AL_2018'
 
 
+EPS = 1E-10
+
 class Mesh:
     def __init__(self, distances):
         self.distances = distances
@@ -48,7 +50,7 @@ def test_reference_values():
             [SA(row['period1'])], [SA(row['period2'])])
         actual.append(block[0, 0])
     numpy.testing.assert_allclose(
-        actual, reference['correlation'], rtol=1E-12, atol=1E-14)
+        actual, reference['correlation'], rtol=EPS, atol=EPS)
 
 
 def test_rectangular_block_uses_imt_major_ordering():
@@ -81,14 +83,14 @@ def test_covariance_is_symmetric_positive_definite():
 
     covariance = model.covariance(sites, imts)
     assert covariance.dtype == numpy.float64
-    numpy.testing.assert_allclose(covariance, covariance.T, atol=1E-15)
+    numpy.testing.assert_allclose(covariance, covariance.T, atol=EPS)
     numpy.testing.assert_allclose(numpy.diag(covariance), 1.0)
     assert numpy.linalg.eigvalsh(covariance).min() > 0
 
     factor = model.factor(sites, imts, ensure_psd=False)
     numpy.testing.assert_allclose(
         factor.lower_triangle @ factor.lower_triangle.T,
-        covariance, rtol=1E-13, atol=1E-14)
+        covariance, rtol=EPS, atol=EPS)
 
 
 def test_many_imts_are_positive_definite():

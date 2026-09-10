@@ -395,6 +395,8 @@ F32 = numpy.float32
 Precomputed = namedtuple('Precomputed', 'ctx_Y ctx_D YY YD DY DD conditioners')
 
 
+EPS = 1E-12
+
 def conditionable_imts(imts):
     """Return the IMTs supported by ground-motion conditioning."""
     return [imt for imt in imts if imt.string != 'MMI']
@@ -719,7 +721,7 @@ def build_station_conditioning(inp, mean_stds_D, DD):
     cov_YD_YD_inv = numpy.linalg.pinv(cov_YD_YD, hermitian=True)
     projected_residual = cov_YD_YD @ cov_YD_YD_inv @ zeta_D
     if not numpy.allclose(
-            projected_residual, zeta_D, rtol=1E-9, atol=1E-12):
+            projected_residual, zeta_D, rtol=1E-9, atol=EPS):
         raise ValueError(
             'Station observations are incompatible with their singular '
             'covariance matrix')
@@ -1061,7 +1063,7 @@ def build_joint_conditioning(
         projected_YD = (cov_Y_YD @ station.cov_YD_YD_inv @
                         station.cov_YD_YD)
         if not numpy.allclose(
-                projected_YD, cov_Y_YD, rtol=1E-9, atol=1E-12):
+                projected_YD, cov_Y_YD, rtol=1E-9, atol=EPS):
             raise ValueError(
                 'Target-station covariance is incompatible with the '
                 'singular station covariance matrix')

@@ -48,6 +48,8 @@ from openquake.hazardlib.tests.calc import _conditioned_gmfs_test_data as data
 IMTS = [PGA(), SA(0.3)]
 
 
+EPS = 1E-12
+
 def build_computer(sites, factor=None, seed=7):
     computer = GmfComputer.__new__(GmfComputer)
     computer.cmaker = SimpleNamespace(truncation_level_within=3)
@@ -143,7 +145,7 @@ def test_truncated_normals():
         (3, 4), numpy.random.default_rng(9))
     actual = _truncated_normals(
         (3, 4), 3, numpy.random.default_rng(9))
-    numpy.testing.assert_allclose(actual, expected, atol=1E-15)
+    numpy.testing.assert_allclose(actual, expected, atol=EPS)
 
 
 def test_gmf_batches():

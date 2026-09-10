@@ -23,6 +23,8 @@ from openquake.fdha.primary_surf_rup.youngs2003 import (
 # Data: 105 earthquakes, Mw 4.5–7.6
 # Source: Youngs et al. (2003), Appendix, p. 25
 # ---------------------------------------------------------------------------
+EPS = 1E-10
+
 class Youngs2003ExCTestCase(unittest.TestCase):
     """Tests for Youngs2003PrimarySR_ExC."""
 
@@ -41,7 +43,7 @@ class Youngs2003ExCTestCase(unittest.TestCase):
             7.1443044088033858e-01, 8.6732370731218145e-01,
         ])
         got = self.model.get_prob(RuptureContext([('mag', mags)]))
-        np.testing.assert_allclose(got, expected, rtol=1e-10)
+        np.testing.assert_allclose(got, expected, rtol=EPS)
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +70,7 @@ class Youngs2003GBTestCase(unittest.TestCase):
             9.4130982500790894e-01, 9.8397578070554537e-01,
         ])
         got = self.model.get_prob(RuptureContext([('mag', mags)]))
-        np.testing.assert_allclose(got, expected, rtol=1e-10)
+        np.testing.assert_allclose(got, expected, rtol=EPS)
 
 
 # ---------------------------------------------------------------------------
@@ -95,4 +97,4 @@ class Youngs2003nBRTestCase(unittest.TestCase):
             9.2936658960231722e-01, 9.8365736029029804e-01,
         ])
         got = self.model.get_prob(RuptureContext([('mag', mags)]))
-        np.testing.assert_allclose(got, expected, rtol=1e-10)
+        np.testing.assert_allclose(got, expected, rtol=EPS)

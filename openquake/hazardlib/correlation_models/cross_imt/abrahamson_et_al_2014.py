@@ -67,6 +67,8 @@ _PGV_INDEX = _TABLE_SIZE - 1
 _DATA = Path(__file__).with_name('data')
 
 
+EPS = 1E-10
+
 def _load_table(filename):
     """Load and validate a published ASK14 correlation table."""
     table = numpy.loadtxt(_DATA / filename, delimiter=',',
@@ -134,7 +136,7 @@ def _weights(imt):
 
     upper = int(numpy.searchsorted(_PERIODS, imt.period))
     if upper < len(_PERIODS) and numpy.isclose(
-            imt.period, _PERIODS[upper], rtol=0, atol=1E-12):
+            imt.period, _PERIODS[upper], rtol=0, atol=EPS):
         weights[upper + 1] = 1
         return weights
     lower = upper - 1

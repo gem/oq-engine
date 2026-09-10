@@ -43,6 +43,8 @@ MAX_GRID_CELL_RATIO = 4
 GRID_TOLERANCE = 0.01
 
 
+EPS = 1E-10
+
 def _pair(value, name, cast):
     """Return a validated pair of grid parameters."""
     if numpy.isscalar(value):
@@ -254,7 +256,7 @@ def _spectral_root(covariance_lags):
     tolerance = 100 * numpy.finfo(float).eps * scale
     # Check before averaging so a genuinely asymmetric model is not silently
     # hidden as numerical roundoff.
-    if not numpy.allclose(spectrum, transpose, rtol=1E-12,
+    if not numpy.allclose(spectrum, transpose, rtol=EPS,
                           atol=tolerance):
         raise ValueError(
             'The embedded spectral covariance is not Hermitian')

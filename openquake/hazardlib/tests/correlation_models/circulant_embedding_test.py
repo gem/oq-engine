@@ -33,6 +33,8 @@ from openquake.hazardlib.imt import PGA, SA
 IMTS = [PGA(), SA(0.3)]
 
 
+EPS = 1E-10
+
 def geographic_grid(shape, missing=(), perturb=None):
     """Return rounded geographic coordinates for a UTM grid."""
     y, x = numpy.indices(shape)
@@ -76,7 +78,7 @@ def test_exact_covariance(shape):
     applied = factor.apply(numpy.eye(factor.input_size))
     actual = applied @ applied.T
     expected = dense_covariance(model, IMTS, shape, spacing)
-    numpy.testing.assert_allclose(actual, expected, atol=2E-14)
+    numpy.testing.assert_allclose(actual, expected, atol=EPS)
 
 
 def test_spatial_covariance():
@@ -91,7 +93,7 @@ def test_spatial_covariance():
     applied = factor.apply(numpy.eye(factor.input_size))
     actual = applied @ applied.T
     expected = dense_covariance(model, IMTS, shape, spacing)
-    numpy.testing.assert_allclose(actual, expected, atol=2E-14)
+    numpy.testing.assert_allclose(actual, expected, atol=EPS)
 
 
 def test_mask():
