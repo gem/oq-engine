@@ -18,6 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Minimal FastAPI application served by the DbServer."""
 
+import json
 import logging
 import os
 import re
@@ -25,7 +26,8 @@ import secrets
 import signal
 import traceback
 import zlib
-from urllib.parse import parse_qs
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
 
 import numpy
@@ -123,6 +125,62 @@ def v0_calc_remove(
     if 'success' in message or 'error' in message:
         return message
     raise HTTPException(status_code=500, detail=str(message))
+
+
+@app.post('/v0/calc/aelo_run')
+async def v0_aelo_run(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Run an AELO calculation for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    username = form.get('username')
+    base_url = form.get('base_url')
+    if not username or not base_url:
+        raise HTTPException(status_code=400,
+                            detail='Missing AELO caller information')
+    from openquake.server.views import aelo_validate, _run_aelo
+    result = aelo_validate(SimpleNamespace(POST=form))
+    if hasattr(result, 'status_code'):
+        return JSONResponse(
+            content=json.loads(result.content),
+            status_code=result.status_code)
+    lon, lat, site_name, asce_version, site_class, vs30 = result
+
+    def build_absolute_uri(path):
+        return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+
+    response_data, status = _run_aelo(
+        lon, lat, site_name, asce_version, site_class, vs30,
+        username, form.get('email') or '', build_absolute_uri,
+        form.get('email_file_path'))
+    return JSONResponse(content=response_data, status_code=status)
+
+
+@app.post('/v0/calc/impact_get_rupture_data')
+async def v0_impact_get_rupture_data(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Build IMPACT rupture data for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    post = {
+        key: value for key, value in form.multi_items()
+        if key not in ('rupture_file', 'user_level')}
+    try:
+        user_level = int(form.get('user_level', 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400,
+                            detail='Invalid IMPACT user level')
+    from openquake.server.views import (
+        get_impact_rupture_data, get_uploaded_file_path)
+    user = SimpleNamespace(level=user_level)
+    files = {
+        key: value for key, value in form.multi_items()
+        if hasattr(value, 'file')}
+    adapter = SimpleNamespace(POST=post, FILES=files)
+    rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
+    response_data, status = get_impact_rupture_data(
+        post, user, rupture_path)
+    return JSONResponse(content=response_data, status_code=status)
 
 
 @app.get('/v1/calc/list_tags')
