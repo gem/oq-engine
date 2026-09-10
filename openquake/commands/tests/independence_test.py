@@ -56,6 +56,9 @@ class IndependenceTestCase(unittest.TestCase):
         assert_independent('openquake.engine', 'openquake.server')
         assert_independent('openquake.calculators', 'openquake.engine')
 
+    def test_api(self):
+        assert_independent('openquake.server.api', 'django')
+
 
 class CaseConsistencyTestCase(unittest.TestCase):
     """
