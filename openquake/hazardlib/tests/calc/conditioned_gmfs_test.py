@@ -55,6 +55,8 @@ from openquake.hazardlib.tests.calc import \
 aac = numpy.testing.assert_allclose
 
 
+EPS = 1E-12
+
 class TwoIMTCorrelation(SpatialCrossIMTCorrelationModel):
     """Stationary joint model used only by the CE conditioning tests."""
 
@@ -449,7 +451,7 @@ def test_matheron_transform():
     transformed = joint.condition(
         factor[:num_targets], factor[num_targets:])
     centered = transformed - mean[:, None]
-    aac(centered @ centered.T, covariance, atol=1E-12)
+    aac(centered @ centered.T, covariance, atol=EPS)
 
 
 class BasisRNG:
@@ -531,7 +533,7 @@ def test_ce_prior_covariance():
         BasisRNG(total), mean_stds_Y, station, total)
 
     aac(unconditional_D @ unconditional_D.T,
-        station.cov_YD_YD, atol=2E-12)
+        station.cov_YD_YD, atol=EPS)
     target_positions = numpy.flatnonzero(
         numpy.isin(targets.sids, sites_D.sids))
     target_rows = numpy.concatenate([
@@ -548,7 +550,7 @@ def test_ce_prior_covariance():
     T_Y[numpy.arange(len(target_rows)),
         numpy.repeat(numpy.arange(len(imts)), D)] = tau_Y
     expected += T_Y @ station.cov_HD_HD @ station.T_D.T
-    aac(actual, expected, atol=2E-12)
+    aac(actual, expected, atol=EPS)
 
     weights = build_ce_weights(
         inp, mean_stds_Y, station, sampler,
@@ -705,7 +707,7 @@ def test_singular_station_sampling():
         numpy.ones((1, 2)), station)
 
     samples = joint.sample(numpy.random.default_rng(7), 3)
-    aac(samples, numpy.full((1, 3), 0.5), atol=1E-12)
+    aac(samples, numpy.full((1, 3), 0.5), atol=EPS)
 
 
 def test_incompatible_station_system():
@@ -733,7 +735,7 @@ def test_incompatible_station_system():
     joint = build_joint_conditioning(
         inp, mean_stds_Y, station,
         numpy.zeros((1, 1)), numpy.zeros((1, 2)))
-    aac(joint.posterior_mean(), 0.0, atol=1E-12)
+    aac(joint.posterior_mean(), 0.0, atol=EPS)
 
 
 def test_chunked_joint_mean():

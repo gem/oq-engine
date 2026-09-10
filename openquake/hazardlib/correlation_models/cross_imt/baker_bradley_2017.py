@@ -78,10 +78,12 @@ _OTHER_IMT_INDEX = {
 }
 
 
+EPS = 1E-12
+
 def _sa_index(period):
     """Return the table index for a published SA period."""
     indexes = numpy.flatnonzero(numpy.isclose(
-        _SA_PERIODS, period, rtol=0.0, atol=1E-12))
+        _SA_PERIODS, period, rtol=0.0, atol=EPS))
     if not indexes.size:
         raise ValueError(
             'BakerBradley2017 does not publish a correlation value for '

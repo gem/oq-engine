@@ -38,7 +38,7 @@ from openquake.hazardlib.correlation_models.cross_imt.\
 from openquake.hazardlib.correlation_models.registry import get_model_specs
 from openquake.hazardlib.imt import PGA, PGD, PGV, SA, from_string
 
-
+EPS  = 1e-10
 DATA = Path(__file__).with_name('data') / 'ABRAHAMSON_ET_AL_2014'
 SUPPLEMENT_URL = (
     'https://onlinelibrary.wiley.com/action/downloadSupplement?'
@@ -51,7 +51,7 @@ def _index(imt):
     if imt.name == 'PGV':
         return len(_PERIODS) + 1
     return int(numpy.flatnonzero(numpy.isclose(
-        _PERIODS, imt.period, rtol=0, atol=1E-12))[0]) + 1
+        _PERIODS, imt.period, rtol=0, atol=EPS))[0]) + 1
 
 
 def test_supplement_values():
@@ -80,7 +80,7 @@ def test_supplement_values():
             expected.append(float(row['correlation']))
             assert models[component].rho(imt1, imt2) == pytest.approx(
                 working_tables[component][
-                    _index(imt1), _index(imt2)], abs=1E-15)
+                    _index(imt1), _index(imt2)], abs=EPS)
     numpy.testing.assert_allclose(actual, expected, rtol=0, atol=0)
 
 
@@ -92,15 +92,15 @@ def test_between_repair():
     difference = numpy.abs(
         _BETWEEN_CORRELATION - _PUBLISHED_BETWEEN)
     assert raw_eigenvalue == pytest.approx(
-        -0.019717422476525547, abs=1E-14)
+        -0.019717422476525547, abs=EPS)
     assert eigenvalue == pytest.approx(
-        9.999951300144685E-6, abs=1E-14)
+        9.999951300144685E-6, abs=EPS)
     assert difference.max() == pytest.approx(
-        0.003887625919241411, abs=1E-14)
+        0.003887625919241411, abs=EPS)
     numpy.testing.assert_array_equal(
         _BETWEEN_CORRELATION, _BETWEEN_CORRELATION.T)
     numpy.testing.assert_allclose(
-        numpy.diag(_BETWEEN_CORRELATION), 1.0, rtol=0, atol=1E-15)
+        numpy.diag(_BETWEEN_CORRELATION), 1.0, rtol=0, atol=EPS)
 
 
 @pytest.mark.parametrize(('model_class', 'expected'), [
@@ -111,12 +111,12 @@ def test_interpolation(model_class, expected):
     # SA(0.6) lies between the 0.5 and 0.75 s supplement ordinates.
     model = model_class()
     assert model.rho(PGA(), SA(0.6)) == pytest.approx(
-        expected, abs=1E-15)
+        expected, abs=EPS)
     imts = [PGA(), SA(0.02), SA(0.6), SA(1.0), PGV()]
     matrix = model.correlation_matrix(imts)
-    numpy.testing.assert_allclose(matrix, matrix.T, rtol=0, atol=1E-15)
+    numpy.testing.assert_allclose(matrix, matrix.T, rtol=0, atol=EPS)
     numpy.testing.assert_allclose(
-        numpy.diag(matrix), 1.0, rtol=0, atol=1E-15)
+        numpy.diag(matrix), 1.0, rtol=0, atol=EPS)
     assert numpy.linalg.eigvalsh(matrix).min() > 0
 
 

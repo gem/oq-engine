@@ -19,6 +19,8 @@ import numpy as np
 from openquake.hazardlib.scalerel.bchydro_nva_msr import BCHydroNVAMSR
 
 
+EPS = 1E-10
+
 class BCHydroNVAMSRTestCase(unittest.TestCase):
     """
     Tests for the BC Hydro NVA magnitude-area scaling relationship.
@@ -36,4 +38,4 @@ class BCHydroNVAMSRTestCase(unittest.TestCase):
         mags = np.array([5.0, 6.0, 7.0, 7.5, 8.0])
         expected = np.exp(2.095 * mags - 7.883)
         got = np.array([msr.get_median_area(m, 90) for m in mags])
-        np.testing.assert_allclose(got, expected, rtol=1e-10)
+        np.testing.assert_allclose(got, expected, rtol=EPS)

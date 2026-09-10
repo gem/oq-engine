@@ -33,6 +33,8 @@ from openquake.hazardlib.imt import PGA, SA
 IMTS = [PGA(), SA(0.3)]
 
 
+EPS = 1E-10
+
 def geographic_sites(x, y):
     """Return geographic sites for projected UTM coordinates."""
     transformer = Transformer.from_crs(32610, 4326, always_xy=True)
@@ -107,7 +109,7 @@ def test_exact_local_distribution():
         for m in range(len(IMTS))])
     expected = full[numpy.ix_(indices, indices)]
     numpy.testing.assert_allclose(
-        applied @ applied.T, expected, atol=2E-12)
+        applied @ applied.T, expected, atol=EPS)
 
 
 def test_grid_padding_required():

@@ -28,6 +28,8 @@ from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 
+EPS = 1E-12
+
 class ResidualComponent(str, Enum):
     """Residual components for which a model can be calibrated."""
 
@@ -474,7 +476,7 @@ class CrossIMTCorrelationModel(SpatialCrossIMTCorrelationModel):
         correlations = numpy.array([
             [self.rho(imt1, imt2, context=context) for imt2 in imts2]
             for imt1 in imts1])
-        same_site = numpy.isclose(distances, 0, rtol=0, atol=1E-12)
+        same_site = numpy.isclose(distances, 0, rtol=0, atol=EPS)
         block = numpy.einsum(
             'ij,ab->iajb', correlations, same_site)
         return block.reshape(
