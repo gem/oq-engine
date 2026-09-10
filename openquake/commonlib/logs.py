@@ -28,7 +28,7 @@ import requests
 from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel
-from openquake.server.auth import API_KEY
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc

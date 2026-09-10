@@ -75,7 +75,7 @@ from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
-from openquake.server.auth import API_KEY
+from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
 from django.http import FileResponse

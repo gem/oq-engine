@@ -36,7 +36,7 @@ from fastapi import FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from openquake.baselib import config, workerpool as w
-from openquake.server.auth import API_KEY
+from openquake.commonlib.auth import API_KEY
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
 from openquake.engine import engine
