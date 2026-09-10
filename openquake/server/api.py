@@ -18,14 +18,18 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Minimal FastAPI application served by the DbServer."""
 
+import logging
 import re
+import secrets
+import traceback
 import zlib
 from urllib.parse import parse_qs
 from xml.parsers.expat import ExpatError
 
 import numpy
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from django.conf import settings
+from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
@@ -37,6 +41,13 @@ from openquake.commonlib import dbapi, logs, oqvalidation
 app = FastAPI(title='OpenQuake API')
 
 
+def _check_api_key(api_key):
+    """Raise ``HTTPException`` unless the internal API key is valid."""
+    if not api_key or not secrets.compare_digest(
+            api_key, settings.OQ_API_KEY):
+        raise HTTPException(status_code=403, detail='Invalid API key')
+
+
 @app.get('/v1/calc_info/{calc_id}')
 def calc_info(calc_id: int):
     """Return calculation information."""
@@ -44,6 +55,33 @@ def calc_info(calc_id: int):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.post('/v0/calc/run')
+async def v0_calc_run(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Submit a calculation for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    ini = form.get('ini') or form.get('job_ini') or '.ini'
+    hazard_job_id = form.get('hazard_job_id') or None
+    username = form.get('username')
+    if not username:
+        raise HTTPException(status_code=400,
+                            detail='Missing calculation owner')
+    notify_to = form.get('notify_to') or None
+    from openquake.server.views import submit_job
+    try:
+        job_id = submit_job(form, ini, username, hazard_job_id, notify_to)
+    except Exception as exc:
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        return JSONResponse(
+            content={
+                'traceback': exc_msg.splitlines(),
+                'job_id': getattr(exc, 'job_id', None),
+            }, status_code=500)
+    return logs.get_job_info(job_id)
 
 
 @app.get('/v1/calc/list_tags')

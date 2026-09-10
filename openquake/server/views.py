@@ -221,26 +221,37 @@ def store(request_files, ini, calc_id):
     """
     calc_dir = parallel.calc_dir(calc_id)
     input_files = request_files.getlist('archive')
-    zip_file = None
-    for input_file in input_files:
-        if input_file.name.endswith('.zip'):
-            zip_file = input_file
+    named_files = [
+        (input_file, getattr(input_file, 'name', None) or
+         getattr(input_file, 'filename', ''))
+        for input_file in input_files]
+    zip_file = next(
+        (input_file for input_file, name in named_files
+         if name.endswith('.zip')), None)
     if zip_file is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
         # NB: TemporaryUploadedFile Django objects are not sortable
-        for input_file in input_files:
-            new_path = os.path.join(calc_dir, input_file.name)
+        for input_file, name in named_files:
+            new_path = os.path.join(calc_dir, name)
             # Using shutil.copy2, Django deletes the temporary file
             # when the request ends. With shutil.move it would
             # attempt to delete it immediately when it is still in
             # use by the Django process, which would raise an
             # exception on Windows.
-            shutil.copy2(input_file.temporary_file_path(), new_path)
-            if input_file.name.endswith(ini):
+            source = getattr(input_file, 'file', None)
+            if source is None:
+                shutil.copy2(input_file.temporary_file_path(), new_path)
+            else:
+                source.seek(0)
+                with open(new_path, 'wb') as target:
+                    shutil.copyfileobj(source, target)
+            if name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
-        inifiles = readinput.extract_from_zip(zip_file, ini, calc_dir)
+        source = getattr(zip_file, 'file', zip_file)
+        source.seek(0)
+        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
@@ -569,6 +580,27 @@ def _call_api(request, endpoint):
     if response.status_code != 200:
         return HttpResponse(status=502)
     return HttpResponse(content=response.content, content_type=JSON)
+
+
+def _post_api(request, endpoint, data):
+    """Post form data and uploaded files to an internal API endpoint."""
+    files = [
+        ('archive', (upload.name, upload.file, upload.content_type))
+        for upload in request.FILES.getlist('archive')]
+    url = '%s/%s' % (_get_base_url(request), endpoint)
+    try:
+        response = requests.post(
+            url, data=data, files=files or None,
+            headers={'X-API-Key': settings.OQ_API_KEY}, timeout=10)
+    except requests.RequestException:
+        return HttpResponse(status=503)
+    if response.status_code == 404:
+        return HttpResponseNotFound()
+    if response.status_code not in (200, 500):
+        return HttpResponse(status=502)
+    return HttpResponse(
+        content=response.content, content_type=JSON,
+        status=response.status_code)
 
 
 @require_http_methods(['GET'])
@@ -934,21 +966,16 @@ def calc_run(request):
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    try:
-        job_id = submit_job(
-            request.FILES, ini, username, hazard_job_id, notify_to)
-    except Exception as exc:  # job failed, for instance missing .xml file
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = {
+        'ini': ini,
+        'username': username,
+        'hazard_job_id': hazard_job_id or '',
+        'notify_to': request.POST.get('notify_to') or '',
+    }
+    return _post_api(request, 'v0/calc/run', data)
 
 
 @csrf_exempt
