@@ -18,14 +18,22 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Minimal FastAPI application served by the DbServer."""
 
+import json
+import logging
+import os
 import re
+import secrets
+import signal
+import traceback
 import zlib
-from urllib.parse import parse_qs
+from types import SimpleNamespace
+from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
 
 import numpy
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from django.conf import settings
+from fastapi import FastAPI, Form, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
@@ -37,6 +45,13 @@ from openquake.commonlib import dbapi, logs, oqvalidation
 app = FastAPI(title='OpenQuake API')
 
 
+def _check_api_key(api_key):
+    """Raise ``HTTPException`` unless the internal API key is valid."""
+    if not api_key or not secrets.compare_digest(
+            api_key, settings.OQ_API_KEY):
+        raise HTTPException(status_code=403, detail='Invalid API key')
+
+
 @app.get('/v1/calc_info/{calc_id}')
 def calc_info(calc_id: int):
     """Return calculation information."""
@@ -44,6 +59,128 @@ def calc_info(calc_id: int):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.post('/v0/calc/run')
+async def v0_calc_run(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Submit a calculation for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    ini = form.get('ini') or form.get('job_ini') or '.ini'
+    hazard_job_id = form.get('hazard_job_id') or None
+    username = form.get('username')
+    if not username:
+        raise HTTPException(status_code=400,
+                            detail='Missing calculation owner')
+    notify_to = form.get('notify_to') or None
+    from openquake.server.views import submit_job
+    request_files = form if form.getlist('archive') else []
+    try:
+        job_id = submit_job(
+            request_files, ini, username, hazard_job_id, notify_to)
+    except Exception as exc:
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        return JSONResponse(
+            content={
+                'traceback': exc_msg.splitlines(),
+                'job_id': getattr(exc, 'job_id', None),
+            }, status_code=500)
+    return logs.get_job_info(job_id)
+
+
+@app.post('/v0/calc/{calc_id}/abort')
+def v0_calc_abort(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Abort a running calculation for an authenticated caller."""
+    _check_api_key(x_api_key)
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return {'error': 'Unknown job %s' % calc_id}
+    if job.status not in ('submitted', 'executing'):
+        return {'error': 'Job %s is not running' % job.id}
+    if job.pid:
+        try:
+            os.kill(job.pid, signal.SIGINT)
+        except Exception as exc:
+            logging.error(exc)
+        else:
+            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
+            logs.dbcmd('set_status', job.id, 'aborted')
+        return {'success': 'Killing job %d' % job.id}
+    return {'error': 'PID for job %s not found' % job.id}
+
+
+@app.post('/v0/calc/{calc_id}/remove')
+def v0_calc_remove(
+        calc_id: int, username: str = Form(...),
+        x_api_key: str | None = Header(default=None)):
+    """Remove a calculation for an authenticated caller."""
+    _check_api_key(x_api_key)
+    try:
+        message = logs.dbcmd('del_calc', calc_id, username)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    if 'success' in message or 'error' in message:
+        return message
+    raise HTTPException(status_code=500, detail=str(message))
+
+
+@app.post('/v0/calc/aelo_run')
+async def v0_aelo_run(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Run an AELO calculation for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    username = form.get('username')
+    base_url = form.get('base_url')
+    if not username or not base_url:
+        raise HTTPException(status_code=400,
+                            detail='Missing AELO caller information')
+    from openquake.server.views import aelo_validate, _run_aelo
+    result = aelo_validate(SimpleNamespace(POST=form))
+    if hasattr(result, 'status_code'):
+        return JSONResponse(
+            content=json.loads(result.content),
+            status_code=result.status_code)
+    lon, lat, site_name, asce_version, site_class, vs30 = result
+
+    def build_absolute_uri(path):
+        return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+
+    response_data, status = _run_aelo(
+        lon, lat, site_name, asce_version, site_class, vs30,
+        username, form.get('email') or '', build_absolute_uri,
+        form.get('email_file_path'))
+    return JSONResponse(content=response_data, status_code=status)
+
+
+@app.post('/v0/calc/impact_get_rupture_data')
+async def v0_impact_get_rupture_data(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Build IMPACT rupture data for an authenticated Django caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    post = {
+        key: value for key, value in form.multi_items()
+        if key not in ('rupture_file', 'user_level')}
+    try:
+        user_level = int(form.get('user_level', 0))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400,
+                            detail='Invalid IMPACT user level')
+    from openquake.server.views import (
+        get_impact_rupture_data, get_uploaded_file_path)
+    user = SimpleNamespace(level=user_level)
+    files = {
+        key: value for key, value in form.multi_items()
+        if hasattr(value, 'file')}
+    adapter = SimpleNamespace(POST=post, FILES=files)
+    rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
+    response_data, status = get_impact_rupture_data(
+        post, user, rupture_path)
+    return JSONResponse(content=response_data, status_code=status)
 
 
 @app.get('/v1/calc/list_tags')

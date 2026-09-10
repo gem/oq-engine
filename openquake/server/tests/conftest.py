@@ -23,6 +23,7 @@ import shutil
 import pathlib
 import subprocess
 from django.contrib.auth import get_user_model
+from openquake.server.tests.views_test import start_uvicorn, stop_uvicorn
 
 # pytest-playwright starts an asyncio event loop at session startup.
 # Django 4+ forbids synchronous ORM/database operations when an event loop
@@ -105,7 +106,7 @@ def user(db, application_mode, test_credentials, request):
 
 
 @pytest.fixture
-def authenticated_session(db, user):
+def authenticated_session(transactional_db, user):
     from django.test import Client
     client = Client()
     client.force_login(user)
@@ -115,16 +116,19 @@ def authenticated_session(db, user):
 
 
 @pytest.fixture
-def authenticated_page(
-        page, live_server, authenticated_session, application_mode):
-    page.context.clear_cookies()
-    page.context.add_cookies([{
-        "name": "sessionid",
-        "value": authenticated_session,
-        "url": live_server.url,
-    }])
-    page.goto(f"{live_server.url}/engine/")
-    return page
+def authenticated_page(page, authenticated_session, application_mode):
+    server, thread, client = start_uvicorn()
+    try:
+        page.context.clear_cookies()
+        page.context.add_cookies([{
+            "name": "sessionid",
+            "value": authenticated_session,
+            "url": client.base_url,
+        }])
+        page.goto(f"{client.base_url}/engine/")
+        yield page
+    finally:
+        stop_uvicorn(server, thread)
 
 
 @pytest.fixture

@@ -31,6 +31,7 @@ dependencies = [
     "h5py>=3.13",
     "django>=4.2, <5",
     "fastapi>=0.115",
+    "python-multipart>=0.0.20",
     "uvicorn>=0.30",
     "psutil",
     "requests",

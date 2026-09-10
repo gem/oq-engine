@@ -51,9 +51,12 @@ class UvicornClient:
             self.session.cookies.set('sessionid', cookie)
         return logged_in
 
+    def _url(self, path):
+        return path if path.startswith('http') else self.base_url + path
+
     def get(self, path, data=None, **kwargs):
         """Send a GET request to the Uvicorn server."""
-        return self.session.get(self.base_url + path, params=data)
+        return self.session.get(self._url(path), params=data)
 
     def post(self, path, data=None, **kwargs):
         """Send a POST request to the Uvicorn server."""
@@ -64,11 +67,11 @@ class UvicornClient:
                  if hasattr(value, 'read')}
         form = {key: value for key, value in data.items() if key not in files}
         return self.session.post(
-            self.base_url + path, data=form, files=files or None)
+            self._url(path), data=form, files=files or None)
 
     def head(self, path, **kwargs):
         """Send a HEAD request to the Uvicorn server."""
-        return self.session.head(self.base_url + path)
+        return self.session.head(self._url(path))
 
 
 def start_uvicorn():
@@ -121,7 +124,7 @@ def get_or_create_user(level):
     return user, password  # user.password is the hashed password instead
 
 
-class EngineServerTestCase(django.test.TestCase):
+class EngineServerTestCase(django.test.TransactionTestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
