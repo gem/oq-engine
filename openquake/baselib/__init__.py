@@ -18,6 +18,7 @@
 
 import os
 import sys
+import getpass
 import configparser
 
 # use utf8 as default encodings on all platforms (i.e. Windows)
@@ -133,6 +134,12 @@ else:  # linux
     except KeyError:  # on the IUSS cluster
         install_user = None
     config.multi_user = install_user in ('root', 'openquake')
+
+
+def via_server():
+    """:returns: True for regular users in a server installation"""
+    return config.multi_user and getpass.getuser() != 'openquake'
+
 
 # the version is managed by the universal installer
 __version__ = '3.27.0'
