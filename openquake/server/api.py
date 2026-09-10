@@ -46,13 +46,6 @@ def _check_api_key(api_key):
         raise HTTPException(status_code=403, detail='Invalid API key')
 
 
-@app.get('/v0/calc/list_tags')
-def v0calc_list_tags(x_api_key: str | None = Header(default=None)):
-    """Return calculation tags for authenticated internal callers."""
-    _check_api_key(x_api_key)
-    return logs.dbcmd('list_tags')
-
-
 @app.get('/v0/calc/{calc_id}')
 def v0_calc(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return calculation information for authenticated internal callers."""
@@ -63,22 +56,21 @@ def v0_calc(calc_id: int, x_api_key: str | None = Header(default=None)):
         raise HTTPException(status_code=404) from exc
 
 
-@app.get('/v0/calc/{calc_id}/log/size')
-def v0calc_log_size(
-        calc_id: int, x_api_key: str | None = Header(default=None)):
-    """Return the calculation log size for an authenticated caller."""
-    _check_api_key(x_api_key)
-    try:
-        return logs.dbcmd('get_log_size', calc_id)
-    except dbapi.NotFound as exc:
-        raise HTTPException(status_code=404) from exc
+@app.get('/v1/calc/list_tags')
+def calc_list_tags():
+    """Return all calculation tags."""
+    return logs.dbcmd('list_tags')
 
 
-@app.get('/v0/calc/{calc_id}/traceback')
-def v0calc_traceback(
-        calc_id: int, x_api_key: str | None = Header(default=None)):
-    """Return a calculation traceback for an authenticated caller."""
-    _check_api_key(x_api_key)
+@app.get('/v1/calc/{calc_id}/log/size')
+def calc_log_size(calc_id: int):
+    """Return the number of log lines for a calculation."""
+    return logs.dbcmd('get_log_size', calc_id)
+
+
+@app.get('/v1/calc/{calc_id}/traceback')
+def calc_traceback(calc_id: int):
+    """Return the traceback for a calculation."""
     try:
         return logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound as exc:

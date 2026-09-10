@@ -876,8 +876,14 @@ def calc_log(request, calc_id, start, stop):
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc_log_size(request, calc_id):
-    """Get the current number of lines in the log."""
-    return _call_v0(request, '%s/log/size' % calc_id)
+    """
+    Get the current number of lines in the log
+    """
+    try:
+        response_data = logs.dbcmd('get_log_size', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return JsonResponse(response_data)
 
 
 job_complete_callback_state = {'event': Event(), 'data': {}}
@@ -1735,8 +1741,15 @@ def calc_results(request, calc_id):
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc_traceback(request, calc_id):
-    """Get the traceback as a list of lines for a given ``calc_id``."""
-    return _call_v0(request, '%s/traceback' % calc_id)
+    """
+    Get the traceback as a list of lines for a given ``calc_id``.
+    """
+    # If the specified calculation doesn't exist throw back a 404.
+    try:
+        response_data = logs.dbcmd('get_traceback', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @cross_domain_ajax
@@ -2666,8 +2679,10 @@ def calc_get_preferred_job_for_tag(request, tag_name):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def calc_list_tags(request):
-    """List all the available tags."""
-    return _call_v0(request, 'list_tags')
+    """
+    List all the available tags
+    """
+    return list_tags()
 
 
 @require_http_methods(['GET'])
