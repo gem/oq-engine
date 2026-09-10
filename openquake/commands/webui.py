@@ -18,6 +18,7 @@
 
 import os
 import sys
+import subprocess
 import webbrowser
 
 from openquake.baselib import config, general
@@ -28,12 +29,29 @@ commands = ['start']
 
 
 def runserver(hostport=None, skip_browser=False):
-    """Open the Uvicorn-served WebUI."""
+    """Start Uvicorn and serve the combined WebUI application."""
     url = 'http://' + hostport
-    if not check_webserver_running(url):
-        sys.exit('The Uvicorn web server is not responding at %s' % url)
-    if not skip_browser:
+    if check_webserver_running(url):
+        if not skip_browser:
+            webbrowser.open(url)
+        return
+
+    host, port = hostport.rsplit(':', 1)
+    process = subprocess.Popen([
+        sys.executable, '-m', 'uvicorn',
+        'openquake.server.asgi:app',
+        '--host', host,
+        '--port', port,
+    ])
+    if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        process.terminate()
+        process.wait()
+    if process.returncode:
+        sys.exit(process.returncode)
 
 
 def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
