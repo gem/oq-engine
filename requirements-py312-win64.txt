@@ -8,13 +8,10 @@ https://wheelhouse.openquake.org/v3/windows/py312/gdal-3.11.4-cp312-cp312-win_am
 https://wheelhouse.openquake.org/v3/windows/py312/h3-4.4.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/h5py-3.13.0-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/kiwisolver-1.4.7-cp312-cp312-win_amd64.whl
-#https://wheelhouse.openquake.org/v3/windows/py312/llvmlite-0.44.0-cp312-cp312-win_amd64.whl
-llvmlite==0.49.0
+https://wheelhouse.openquake.org/v3/windows/py312/llvmlite-0.49.0-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/matplotlib-3.10.1-cp312-cp312-win_amd64.whl
-#https://wheelhouse.openquake.org/v3/windows/py312/numba-0.61.2-cp312-cp312-win_amd64.whl
-#https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.6-cp312-cp312-win_amd64.whl
-numba==0.67.0
-numpy==2.4.6
+https://wheelhouse.openquake.org/v3/windows/py312/numba-0.67.0-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.4.6-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/onnxruntime-1.23.2-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pandas-2.2.3-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pillow-12.2.0-cp312-cp312-win_amd64.whl
@@ -22,8 +19,7 @@ https://wheelhouse.openquake.org/v3/windows/py312/psutil-7.2.2-cp37-abi3-win_amd
 https://wheelhouse.openquake.org/v3/windows/py312/pyogrio-0.11.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyproj-3.7.2-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
-#https://wheelhouse.openquake.org/v3/windows/py312/scipy-1.15.3-cp312-cp312-win_amd64.whl
-scipy==1.17.1
+https://wheelhouse.openquake.org/v3/windows/py312/scipy-1.17.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/setproctitle-1.3.7-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/shapely-2.1.0-cp312-cp312-win_amd64.whl
 #pp
