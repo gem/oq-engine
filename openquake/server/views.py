@@ -75,6 +75,7 @@ from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
+from openquake.server.auth import API_KEY
 
 from django.conf import settings
 from django.http import FileResponse
@@ -581,7 +582,7 @@ def _call_api(request, endpoint):
     return HttpResponse(content=response.content, content_type=JSON)
 
 
-def _post_api(request, endpoint, data):
+def _post_api(request, endpoint, data, timeout=10):
     """Post form data and uploaded files to an internal API endpoint."""
     files = []
     for field, uploads in request.FILES.lists():
@@ -592,7 +593,7 @@ def _post_api(request, endpoint, data):
     try:
         response = requests.post(
             url, data=data, files=files or None,
-            headers={'X-API-Key': settings.OQ_API_KEY}, timeout=10)
+            headers={'X-API-Key': API_KEY}, timeout=timeout)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:
@@ -1351,35 +1352,15 @@ def impact_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    # NOTE: this is called via AJAX so the context processor isn't
-    # automatically applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    if (not rupture_path and request.POST.get('rupture_was_loaded')):
-        rupture_path = request.POST.get('rupture_from_usgs', '')
-    station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    station_data_file_from_usgs = request.POST.get(
-        'station_data_file_from_usgs', '')
-    station_source = None
-    if station_data_file:
-        station_source = 'user-provided'
-    elif station_data_file_from_usgs:
-        station_source = 'USGS'
-    # giving priority to the user-uploaded stations
-    if not station_data_file and station_data_file_from_usgs:
-        station_data_file = station_data_file_from_usgs
-    _rup, _rupdic, params, err = impact_validate(
-        request.POST, request.user, rupture_path, station_data_file)
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
-    if station_source is not None:
-        params['station_source'] = station_source
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+    data = request.POST.dict()
+    data.update(
+        user_level=str(request.user.level),
+        username=utils.get_username(request),
+        email=getattr(request.user, 'email', ''),
+        base_url=_get_base_url(request))
+    return _post_api(request, 'v0/calc/impact_run', data, timeout=120)
 
 
 @csrf_exempt
