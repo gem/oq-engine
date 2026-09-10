@@ -29,7 +29,7 @@ import string
 import random
 import logging
 import django
-from django.test import LiveServerTestCase, Client, override_settings
+from django.test import LiveServerTestCase, override_settings
 from unittest import skipIf
 from threading import Event
 from openquake.baselib import config
@@ -403,7 +403,8 @@ class CallbackTest(LiveServerTestCase):
     """
 
     def setUp(self):
-        self.client = Client()
+        (self.webserver, self.webserver_thread,
+         self.client) = start_uvicorn()
         self.on_job_complete_event = Event()
         self.on_job_complete_data = {}
         job_complete_callback_state['event'] = self.on_job_complete_event
@@ -434,6 +435,10 @@ class CallbackTest(LiveServerTestCase):
         self.assertEqual(body['user_name'], 'custom_owner')
         self.assertEqual(get_params['first'], 'one')
         self.assertEqual(get_params['second'], 'two')
+
+    def tearDown(self):
+        stop_uvicorn(self.webserver, self.webserver_thread)
+        super().tearDown()
 
     # TODO: we could add a test to test the callback in case of a job that starts
     # successfully (the inputs are valid) but fails afterwards.

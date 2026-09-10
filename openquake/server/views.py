@@ -1004,21 +1004,16 @@ def calc_run_ini(request):
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    try:
-        job_id = submit_job(
-            [], ini, username, hazard_job_id, notify_to=notify_to)
-    except Exception as exc:  # job failed, for instance missing .ini file
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = {
+        'ini': ini,
+        'username': username,
+        'hazard_job_id': hazard_job_id or '',
+        'notify_to': request.POST.get('notify_to') or '',
+    }
+    return _post_api(request, 'v0/calc/run', data)
 
 
 @csrf_exempt

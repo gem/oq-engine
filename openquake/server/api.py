@@ -71,8 +71,10 @@ async def v0_calc_run(
                             detail='Missing calculation owner')
     notify_to = form.get('notify_to') or None
     from openquake.server.views import submit_job
+    request_files = form if form.getlist('archive') else []
     try:
-        job_id = submit_job(form, ini, username, hazard_job_id, notify_to)
+        job_id = submit_job(
+            request_files, ini, username, hazard_job_id, notify_to)
     except Exception as exc:
         exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
