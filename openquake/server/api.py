@@ -37,6 +37,36 @@ from openquake.commonlib import dbapi, logs, oqvalidation
 app = FastAPI(title='OpenQuake API')
 
 
+@app.get('/v1/calc_info/{calc_id}')
+def calc_info(calc_id: int):
+    """Return calculation information."""
+    try:
+        return logs.dbcmd('calc_info', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
+@app.get('/v1/calc/list_tags')
+def calc_list_tags():
+    """Return all calculation tags."""
+    return logs.dbcmd('list_tags')
+
+
+@app.get('/v1/calc/{calc_id}/log/size')
+def calc_log_size(calc_id: int):
+    """Return the number of log lines for a calculation."""
+    return logs.dbcmd('get_log_size', calc_id)
+
+
+@app.get('/v1/calc/{calc_id}/traceback')
+def calc_traceback(calc_id: int):
+    """Return the traceback for a calculation."""
+    try:
+        return logs.dbcmd('get_traceback', calc_id)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+
+
 @app.get('/v1/engine_version', response_class=PlainTextResponse)
 def engine_version():
     """Return the engine version as plain text."""
@@ -67,6 +97,16 @@ def available_gsims():
     return list(gsim.get_available_gsims())
 
 
+def _contains_nonfinite(value):
+    """Return whether a nested value contains a non-finite float."""
+    if isinstance(value, dict):
+        return any(_contains_nonfinite(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_nonfinite(item) for item in value)
+    return (isinstance(value, (float, numpy.floating)) and
+            not numpy.isfinite(value))
+
+
 @app.get('/v1/ini_defaults')
 def ini_defaults():
     """Return the default values of the INI parameters."""
@@ -78,32 +118,10 @@ def ini_defaults():
         obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param) and
                 obj.default is not valid.Param.NODEFAULT):
-            if (isinstance(obj.default, (float, numpy.floating)) and
-                    not numpy.isfinite(obj.default)):
+            if _contains_nonfinite(obj.default):
                 continue
             defaults[name] = obj.default
     return defaults
-
-
-@app.get('/v1/calc/list_tags')
-def calc_list_tags():
-    """Return all calculation tags."""
-    return logs.dbcmd('list_tags')
-
-
-@app.get('/v1/calc/{calc_id}/log/size')
-def calc_log_size(calc_id: int):
-    """Return the number of log lines for a calculation."""
-    return logs.dbcmd('get_log_size', calc_id)
-
-
-@app.get('/v1/calc/{calc_id}/traceback')
-def calc_traceback(calc_id: int):
-    """Return the traceback for a calculation."""
-    try:
-        return logs.dbcmd('get_traceback', calc_id)
-    except dbapi.NotFound as exc:
-        raise HTTPException(status_code=404) from exc
 
 
 @app.post('/v1/valid/')

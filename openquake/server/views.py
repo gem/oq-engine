@@ -32,6 +32,7 @@ import signal
 import zlib
 import re
 import psutil
+import requests
 
 from threading import Event
 from unittest.mock import patch
@@ -556,13 +557,28 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
+def _call_api(request, endpoint):
+    """Call an internal FastAPI endpoint and return its JSON response."""
+    url = '%s/%s' % (_get_base_url(request), endpoint)
+    try:
+        response = requests.get(url, timeout=10)
+    except requests.RequestException:
+        return HttpResponse(status=503)
+    if response.status_code == 404:
+        return HttpResponseNotFound()
+    if response.status_code != 200:
+        return HttpResponse(status=502)
+    return HttpResponse(content=response.content, content_type=JSON)
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
     """
-    Get a JSON blob containing all of parameters for the given calculation
-    (specified by ``calc_id``). Also includes the current job status (
-    executing, complete, etc.).
+    Authenticate the request and proxy calculation information to FastAPI.
+
+    Django remains responsible for the user and ACL checks. The internal
+    FastAPI endpoint owns the calculation-information query.
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
@@ -571,7 +587,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return JsonResponse(info)
+    return _call_api(request, 'v1/calc_info/%s' % calc_id)
 
 
 @require_http_methods(['GET'])
