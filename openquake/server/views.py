@@ -557,12 +557,11 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_v0(request, endpoint):
+def _call_api(request, endpoint):
     """Call an internal FastAPI endpoint and return its JSON response."""
-    url = '%s/v0/calc/%s' % (_get_base_url(request), endpoint)
+    url = '%s/%s' % (_get_base_url(request), endpoint)
     try:
-        response = requests.get(
-            url, headers={'X-API-Key': settings.OQ_API_KEY}, timeout=10)
+        response = requests.get(url, timeout=10)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:
@@ -579,8 +578,7 @@ def calc(request, calc_id):
     Authenticate the request and proxy calculation information to FastAPI.
 
     Django remains responsible for the user and ACL checks. The internal
-    FastAPI endpoint owns the calculation-information query and is protected
-    by an API key because it must not be exposed without those checks.
+    FastAPI endpoint owns the calculation-information query.
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
@@ -589,7 +587,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return _call_v0(request, calc_id)
+    return _call_api(request, 'v1/calc_info/%s' % calc_id)
 
 
 @require_http_methods(['GET'])

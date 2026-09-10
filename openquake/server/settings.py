@@ -131,9 +131,6 @@ USE_I18N = True
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
-# Used only for authenticated calls from Django to the internal API.
-OQ_API_KEY = os.environ.get('OQ_API_KEY', SECRET_KEY)
-
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

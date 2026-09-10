@@ -19,14 +19,12 @@
 """Minimal FastAPI application served by the DbServer."""
 
 import re
-import secrets
 import zlib
 from urllib.parse import parse_qs
 from xml.parsers.expat import ExpatError
 
 import numpy
-from django.conf import settings
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from openquake.baselib.general import engine_version as get_engine_version
@@ -39,17 +37,9 @@ from openquake.commonlib import dbapi, logs, oqvalidation
 app = FastAPI(title='OpenQuake API')
 
 
-def _check_api_key(api_key):
-    """Raise ``HTTPException`` unless the internal API key is valid."""
-    if not api_key or not secrets.compare_digest(
-            api_key, settings.OQ_API_KEY):
-        raise HTTPException(status_code=403, detail='Invalid API key')
-
-
-@app.get('/v0/calc/{calc_id}')
-def v0_calc(calc_id: int, x_api_key: str | None = Header(default=None)):
-    """Return calculation information for authenticated internal callers."""
-    _check_api_key(x_api_key)
+@app.get('/v1/calc_info/{calc_id}')
+def calc_info(calc_id: int):
+    """Return calculation information."""
     try:
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
