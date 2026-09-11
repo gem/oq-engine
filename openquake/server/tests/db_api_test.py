@@ -18,15 +18,14 @@ def api_client():
 
 def test_database_api_requires_api_key(api_client):
     response = api_client.session.post(
-        api_client.base_url + '/v0/db/engine_version',
-        json={'args': []})
+        api_client.base_url + '/v0/db/engine_version')
     assert response.status_code == 403
 
 
 def test_database_api_executes_registered_action(api_client):
     response = api_client.session.post(
         api_client.base_url + '/v0/db/engine_version',
-        headers={'X-API-Key': API_KEY}, json={'args': []})
+        headers={'X-API-Key': API_KEY})
     assert response.status_code == 200
     assert response.json().startswith('3.')
 
@@ -34,7 +33,7 @@ def test_database_api_executes_registered_action(api_client):
 def test_database_api_rejects_unknown_action(api_client):
     response = api_client.session.post(
         api_client.base_url + '/v0/db/not_an_action',
-        headers={'X-API-Key': API_KEY}, json={'args': []})
+        headers={'X-API-Key': API_KEY})
     assert response.status_code == 404
 
 
