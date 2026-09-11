@@ -90,7 +90,6 @@ DATABASE = {
     'NAME': os.path.expanduser(config.dbserver.file),
     'USER': getpass.getuser(),
     'HOST': config.dbserver.host,
-    'PORT': config.dbserver.port,
 }
 DATABASES = {'default': DATABASE}
 
