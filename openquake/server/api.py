@@ -38,6 +38,7 @@ import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 
 from openquake.baselib import config, workerpool as w
 from openquake.commonlib.auth import API_KEY
