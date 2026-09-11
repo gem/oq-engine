@@ -513,9 +513,8 @@ def validate_ini(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    ini = request.FILES.get('job_ini')
-    # assume ini is a full accessible path name
-    return JsonResponse(validate_job(ini))
+    return _post_api(
+        request, 'v0/calc/validate_ini', request.POST.dict())
 
 
 @csrf_exempt
@@ -534,11 +533,8 @@ def validate_zip(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    archive = request.FILES.get('archive')
-    if not archive:
-        return HttpResponseBadRequest('Missing archive file')
-    job_zip = archive.temporary_file_path()
-    return JsonResponse(validate_job(job_zip))
+    return _post_api(
+        request, 'v0/calc/validate_zip', request.POST.dict())
 
 
 @require_http_methods(['GET'])

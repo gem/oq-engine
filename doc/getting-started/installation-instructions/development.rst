@@ -168,12 +168,11 @@ page.
 Sync the source code with remote
 --------------------------------
 
-You can pull all the latest changes to the source code running
+You can pull all the latest changes to the source code by running
 
 .. code:: bash
 
    cd oq-engine
-   oq dbserver stop
    git pull
 
 Uninstall the OpenQuake Engine

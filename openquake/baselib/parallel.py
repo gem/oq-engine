@@ -188,7 +188,6 @@ import time
 import socket
 import signal
 import pickle
-import sqlite3
 import getpass
 import inspect
 import logging
@@ -444,10 +443,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     engine_version()))
-            if mon.dbserver_host != config.dbserver.host:
+            if mon.database_host != config.dbserver.host:
                 raise RuntimeError(
-                    'The worker has dbserver.host=%s while the master has %s'
-                    % (mon.dbserver_host, config.dbserver.host))
+                    'The worker has database.host=%s while the master has %s'
+                    % (mon.database_host, config.dbserver.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -458,9 +457,6 @@ class Result(object):
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
-            if isinstance(val, sqlite3.Cursor):
-                # happens when the DbServer performs an UPDATE command
-                val = val.lastrowid
             res = Result(val, mon)
         return res
 
@@ -481,8 +477,6 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
         return msg % (used_mem_percent, socket.gethostname())
 
 
-dummy_mon = Monitor(dbserver_host=config.dbserver.host)
-dummy_mon.backurl = None
 DEBUG = False
 
 
@@ -512,7 +506,7 @@ def sendback(res, zsocket):
     return nbytes
 
 
-def safely_call(func, args, task_no=0, mon=dummy_mon):
+def safely_call(func, args, task_no, mon):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -529,9 +523,6 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
-    if mon is dummy_mon:  # in the DbServer
-        assert not isgenfunc, func
-        return Result.new(func, args, mon)
     # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
@@ -791,7 +782,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.name = task_func.__name__
-        self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
+        self.monitor = Monitor(self.name, database_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         if distribute == 'zmq':

@@ -22,7 +22,9 @@ import subprocess
 import webbrowser
 
 from openquake.baselib import config, general
-from openquake.server import dbserver
+from openquake.commonlib import dbapi
+from openquake.commonlib.auth import API_KEY
+from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
 commands = ['start']
@@ -37,12 +39,17 @@ def runserver(hostport=None, skip_browser=False):
         return
 
     host, port = hostport.rsplit(':', 1)
+    api_host = '127.0.0.1' if host == '0.0.0.0' else host
+    env = os.environ.copy()
+    env.update(
+        OQ_API_KEY=API_KEY,
+        OQ_WEBAPI_SERVER='http://%s:%s' % (api_host, port))
     process = subprocess.Popen([
         sys.executable, '-m', 'uvicorn',
         'openquake.server.asgi:app',
         '--host', host,
         '--port', port,
-    ])
+    ], env=env)
     if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)
     try:
@@ -61,11 +68,17 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     command-line utility for administrative tasks, e.g.:
     manage.py <command> [options]
     """
+    os.environ.setdefault('OQ_API_KEY', API_KEY)
+    api_host, api_port = hostport.rsplit(':', 1)
+    if api_host == '0.0.0.0':
+        api_host = '127.0.0.1'
+    os.environ.setdefault(
+        'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
-    dbserver.ensure_on()  # start the dbserver in a subprocess
+    actions.upgrade_db(dbapi.db)
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

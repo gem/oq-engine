@@ -136,7 +136,7 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 
-def via_server():
+def use_server():
     """:returns: True for regular users in a server installation"""
     return config.multi_user and getpass.getuser() != 'openquake'
 

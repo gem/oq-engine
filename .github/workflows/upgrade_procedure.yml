@@ -69,12 +69,10 @@ jobs:
         source /opt/openquake/venv/bin/activate
         oq --version
         deactivate
-        sudo systemctl stop openquake-dbserver
         sleep 10
         sudo env "PATH=$PATH" python install.py server --remove
         sudo env "PATH=$PATH" python install.py server --version=master
         source /opt/openquake/venv/bin/activate
-        journalctl -xe -u openquake-dbserver
         sleep 5
         oq --version
         oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"

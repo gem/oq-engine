@@ -17,13 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import getpass
-import hashlib
 import operator
 from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
-from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
@@ -61,7 +59,7 @@ def has_job_table(db):
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
-    DbServer is restarted: the idea is that it is restarted only when
+    The WebUI is restarted: the idea is that it is restarted only when
     all computations are completed.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
@@ -337,12 +335,12 @@ def create_outputs(db, job_id, keysize, ds_size):
     :param keysize: a list of pairs (key, size_mb)
     :param ds_size: total datastore size in MB
     """
-    # the DbServer should accept missing output types
-    # (it happens if the DbServer is outdated)
+    # the WebUI should accept missing output types
+    # (it happens if the WebUI is outdated)
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
     if getpass.getuser() != 'openquake':
-        # outside of the DbServer we should raise a clear error instead
+        # outside of the WebUI we should raise a clear error instead
         for key, size in keysize:
             if key not in DISPLAY_NAME:
                 raise NameError(f'{key} is missing in DISPLAY_NAME')
@@ -496,39 +494,6 @@ def get_job_stats(db, job_id):
         "SELECT id, user_name, start_time, stop_time, status, "
         "strftime('%s', stop_time) - strftime('%s', start_time) AS duration "
         'FROM job WHERE id=?x', job_id)
-
-
-# called in check_foreign; db is not used but must be passed
-def installation_id(db):
-    """Return the identity of the current installation"""
-    path = os.path.splitext(os.path.realpath(server_path))[0]
-    return hashlib.sha256(path.encode()).hexdigest()[:16]
-
-
-def get_installation_id(db):
-    """Return the identity of the installation running the DbServer."""
-    # Extracted from the server_path)
-    return {'installation_id': installation_id(db)}
-
-
-# used for backward compatibility in check_foreign, will be removed
-def get_path(db):
-    """
-    :param db:
-        a :class:`openquake.commonlib.dbapi.Db` instance
-    :returns: the full path to the dbserver codebase
-    """
-    return server_path
-
-
-def get_dbpath(db):
-    """
-    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :returns: the path to the database file.
-    """
-    rows = db('PRAGMA database_list')
-    # return a row with fields (id, dbname, dbpath)
-    return rows[0].file
 
 
 def engine_version(db):

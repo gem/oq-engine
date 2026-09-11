@@ -16,24 +16,26 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""Minimal FastAPI application served by the DbServer."""
+"""Minimal FastAPI application served by Uvicorn."""
 
 import json
 import logging
 import multiprocessing as mp
 import os
 import re
+import sqlite3
 import secrets
 import signal
 import tempfile
 import traceback
 import zlib
+from datetime import datetime
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
 
 import numpy
-from fastapi import FastAPI, Form, Header, HTTPException, Request
+from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -46,6 +48,7 @@ from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
 from openquake.commonlib import dbapi, logs, oqvalidation
+from openquake.server.db.registry import get_action
 
 app = FastAPI(title='OpenQuake API')
 
@@ -65,17 +68,66 @@ def calc_info(calc_id: int):
         raise HTTPException(status_code=404) from exc
 
 
+def _json_value(value):
+    """Convert database action results to JSON-compatible values."""
+    if isinstance(value, dbapi.Row):
+        return {
+            '__oq_type__': 'row',
+            'fields': list(value._fields),
+            'values': [_json_value(item) for item in value._values],
+        }
+    if isinstance(value, dbapi.Table):
+        return {
+            '__oq_type__': 'table',
+            'fields': list(value._fields),
+            'rows': [_json_value(row) for row in value],
+        }
+    if isinstance(value, datetime):
+        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
+    if isinstance(value, sqlite3.Cursor):
+        return None
+    if isinstance(value, dict):
+        return {key: _json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    if isinstance(value, numpy.generic):
+        return value.item()
+    return value
+
+
+@app.post('/v0/db/{action}')
+def v0_db_action(
+        action: str, payload: dict | None = Body(default=None),
+        x_api_key: str | None = Header(default=None)):
+    """Execute an allowlisted database action."""
+    _check_api_key(x_api_key)
+    try:
+        func = get_action(action)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    payload = payload or {}
+    args = logs._decode_db_value(payload.get('args', []))
+    kwargs = logs._decode_db_value(payload.get('kwargs', {}))
+    try:
+        result = func(dbapi.db, *args, **kwargs)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    except Exception as exc:
+        logging.exception('Database action failed: %s', action)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return JSONResponse(content=_json_value(result))
+
+
 @app.post('/v0/worker_{action}')
-async def v0_worker(
-        action: str, request: Request,
+def v0_worker(
+        action: str, payload: dict | None = Body(default=None),
         x_api_key: str | None = Header(default=None)):
     """Run an authenticated worker-control action."""
     _check_api_key(x_api_key)
     full_action = 'workers_' + action
     if full_action not in logs.WORKER_ACTIONS:
         raise HTTPException(status_code=404)
-    body = await request.body()
-    payload = json.loads(body) if body else {}
+    payload = payload or {}
     args = payload.get('args', [])
     master = w.WorkerMaster(args[0] if args else -1)
     return getattr(master, action)()
@@ -88,12 +140,14 @@ async def _validate_uploaded_file(request, field, missing_message):
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
     from openquake.server.views import get_uploaded_file_path, validate_job
-    path = (get_uploaded_file_path(
-        SimpleNamespace(POST=form, FILES=files), field)
-        if field in files else form.get(field))
+    if field in files:
+        path = get_uploaded_file_path(
+            SimpleNamespace(POST=form, FILES=files), field)
+    else:
+        path = form.get(field)
     if not path:
-        return JSONResponse(
-            content={'detail': missing_message}, status_code=400)
+        return JSONResponse(content={'detail': missing_message},
+                            status_code=400)
     result = await run_in_threadpool(validate_job, path)
     return JSONResponse(content=result, status_code=200)
 
@@ -101,7 +155,7 @@ async def _validate_uploaded_file(request, field, missing_message):
 @app.post('/v0/calc/validate_ini')
 async def v0_validate_ini(
         request: Request, x_api_key: str | None = Header(default=None)):
-    """Validate an uploaded INI file."""
+    """Validate an uploaded INI file for an authenticated caller."""
     _check_api_key(x_api_key)
     return await _validate_uploaded_file(
         request, 'job_ini', 'Missing job_ini file')
@@ -114,44 +168,6 @@ async def v0_validate_zip(
     _check_api_key(x_api_key)
     return await _validate_uploaded_file(
         request, 'archive', 'Missing archive file')
-
-
-@app.post('/v0/calc/run_scenario_calc_from_ses_rupture/{rup_id}')
-async def v0_run_scenario(
-        rup_id: int, request: Request,
-        x_api_key: str | None = Header(default=None)):
-    """Run a papers scenario calculation."""
-    _check_api_key(x_api_key)
-    form = await request.form()
-    username = form.get('username')
-    if not username:
-        raise HTTPException(status_code=400,
-                            detail='Missing calculation owner')
-    from openquake.server.papers import base as papers
-    consequence_model = form.get('consequence_model')
-    consequence = (json.loads(consequence_model)
-                   if consequence_model else papers.CONSEQUENCE)
-    try:
-        job_ctx = await run_in_threadpool(
-            papers.get_job_ctx, rup_id, papers.FNAME, papers.GMM_LT,
-            papers.SITE_MODEL, papers.IMTS_RISK, papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION, papers.NGMFS,
-            form.get('exposure_filepath', papers.EXPOSURE),
-            form.get('mapping', papers.MAPPING),
-            form.get('fragility_curves', papers.FRAGILITY), consequence,
-            papers.HAZARD_ONLY, username)
-        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
-            'notify_to': form.get('notify_to')}).start()
-        response_data = await run_in_threadpool(
-            logs.get_job_info, job_ctx.calc_id)
-    except Exception as exc:
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        return JSONResponse(
-            content={'traceback': exc_msg.splitlines(),
-                     'job_id': getattr(exc, 'job_id', None)},
-            status_code=500)
-    return JSONResponse(content=response_data, status_code=200)
 
 
 @app.post('/v0/calc/run')
@@ -170,8 +186,8 @@ async def v0_calc_run(
     from openquake.server.views import submit_job
     request_files = form if form.getlist('archive') else []
     try:
-        job_id = submit_job(
-            request_files, ini, username, hazard_job_id, notify_to)
+        job_id = await run_in_threadpool(
+            submit_job, request_files, ini, username, hazard_job_id, notify_to)
     except Exception as exc:
         exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
@@ -180,7 +196,7 @@ async def v0_calc_run(
                 'traceback': exc_msg.splitlines(),
                 'job_id': getattr(exc, 'job_id', None),
             }, status_code=500)
-    return logs.get_job_info(job_id)
+    return await run_in_threadpool(logs.get_job_info, job_id)
 
 
 @app.post('/v0/calc/{calc_id}/abort')
@@ -232,7 +248,8 @@ async def v0_aelo_run(
         raise HTTPException(status_code=400,
                             detail='Missing AELO caller information')
     from openquake.server.views import aelo_validate, _run_aelo
-    result = aelo_validate(SimpleNamespace(POST=form))
+    result = await run_in_threadpool(
+        aelo_validate, SimpleNamespace(POST=form))
     if hasattr(result, 'status_code'):
         return JSONResponse(
             content=json.loads(result.content),
@@ -242,11 +259,49 @@ async def v0_aelo_run(
     def build_absolute_uri(path):
         return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
 
-    response_data, status = _run_aelo(
-        lon, lat, site_name, asce_version, site_class, vs30,
+    response_data, status = await run_in_threadpool(
+        _run_aelo, lon, lat, site_name, asce_version, site_class, vs30,
         username, form.get('email') or '', build_absolute_uri,
         form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=status)
+
+
+@app.post('/v0/calc/run_scenario_calc_from_ses_rupture/{rup_id}')
+async def v0_run_scenario(
+        rup_id: int, request: Request,
+        x_api_key: str | None = Header(default=None)):
+    """Run a papers scenario calculation for an authenticated caller."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    username = form.get('username')
+    if not username:
+        raise HTTPException(status_code=400,
+                            detail='Missing calculation owner')
+    from openquake.server.papers import base as papers
+    consequence_model = form.get('consequence_model')
+    consequence = (json.loads(consequence_model)
+                   if consequence_model else papers.CONSEQUENCE)
+    try:
+        job_ctx = await run_in_threadpool(
+            papers.get_job_ctx, rup_id, papers.FNAME, papers.GMM_LT,
+            papers.SITE_MODEL, papers.IMTS_RISK, papers.INTEGRATION_DISTANCE,
+            papers.TRUNCATION, papers.NGMFS,
+            form.get('exposure_filepath', papers.EXPOSURE),
+            form.get('mapping', papers.MAPPING),
+            form.get('fragility_curves', papers.FRAGILITY), consequence,
+            papers.HAZARD_ONLY, username)
+        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
+            'notify_to': form.get('notify_to')}).start()
+        response_data = await run_in_threadpool(
+            logs.get_job_info, job_ctx.calc_id)
+    except Exception as exc:
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        return JSONResponse(
+            content={'traceback': exc_msg.splitlines(),
+                     'job_id': getattr(exc, 'job_id', None)},
+            status_code=500)
+    return JSONResponse(content=response_data, status_code=200)
 
 
 @app.post('/v0/calc/impact_run')
@@ -280,8 +335,8 @@ async def v0_impact_run(
     elif station_from_usgs:
         station_path = station_from_usgs
         station_source = 'USGS'
-    _rup, _rupdic, params, err = impact_validate(
-        post, user, rupture_path, station_path)
+    _rup, _rupdic, params, err = await run_in_threadpool(
+        impact_validate, post, user, rupture_path, station_path)
     if err:
         return JSONResponse(
             content=err, status_code=400 if 'invalid_inputs' in err else 500)
@@ -300,8 +355,9 @@ async def v0_impact_run(
             username=form.get('username'), is_authenticated=True,
             level=user_level, testdir=None),
         build_absolute_uri=build_absolute_uri)
-    response_data = create_impact_job(
-        job_request, params, form.get('email_file_path'))
+    response_data = await run_in_threadpool(
+        create_impact_job, job_request, params,
+        form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
 
@@ -327,8 +383,8 @@ async def v0_impact_get_rupture_data(
         if hasattr(value, 'file')}
     adapter = SimpleNamespace(POST=post, FILES=files)
     rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
-    response_data, status = get_impact_rupture_data(
-        post, user, rupture_path)
+    response_data, status = await run_in_threadpool(
+        get_impact_rupture_data, post, user, rupture_path)
     return JSONResponse(content=response_data, status_code=status)
 
 

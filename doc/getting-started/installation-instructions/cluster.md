@@ -50,13 +50,11 @@ It is not necessary to configure `openquake.cfg` for `/opt/openquake/venv`
 ### Network and security considerations
 
 The worker nodes should be isolated from the external network using
-either a dedicated internal network or a firewall.  Additionally,
-access to the DbServer ports should be limited (again by internal LAN
-or firewall) so that external traffic is excluded.
+either a dedicated internal network or a firewall. Also the WebUI
+is meant to be used internally and should not face the public directly.
 
 The following ports must be open on the **master node**:
 
-* 1908 for DbServer (or any other port allocated for the DbServer in the `openquake.cfg`)
 * 1912-1920 for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
@@ -124,7 +122,6 @@ oq_distribute = zmq
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
 host = < IP address of master>
-port = 1908
 receiver_ports = 1912-1920
 authkey = somethingstronger
 
@@ -144,14 +141,13 @@ workers that you want to use.
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
 
-### Configuring daemons
+### Configuring the WebUI service
 
-The required systemd services are configured from the universal installer into the folder /etc/systemd/system/
+The required systemd service is configured by the universal installer into the folder /etc/systemd/system/
 
 #### Master node
 
-- OpenQuake Engine DbServer - `openquake-dbserver.service`
-- OpenQuake Engine WebUI - `openquake-webui.service` (optional)
+- OpenQuake Engine WebUI - `openquake-webui.service`
 
 ### Monitoring zmq
 

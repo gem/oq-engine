@@ -14,11 +14,11 @@ You can see the full list of commands by running *oq –help*::
 
 	$ oq --help
 	usage: oq [-h] [-v]
-	          {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+	          {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
 	          ...
 	
 	positional arguments:
-	  {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+	  {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
 	                        available subcommands; use oq <subcmd> --help
 	
 	options:
