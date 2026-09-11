@@ -6,7 +6,6 @@ After=network.target
 [Service]
 User=openquake
 Group=openquake
-Environment=OQ_DB_API=fastapi
 #in WorkingDirectory use the folder of the sources from what are installed the engine
 WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
