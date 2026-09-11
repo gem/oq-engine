@@ -321,7 +321,7 @@ async def v0_impact_get_rupture_data(
                             detail='Invalid IMPACT user level')
     from openquake.server.views import (
         get_impact_rupture_data, get_uploaded_file_path)
-    user = SimpleNamespace(level=user_level)
+    user = SimpleNamespace(level=user_level, testdir=None)
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
