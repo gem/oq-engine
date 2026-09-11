@@ -36,7 +36,6 @@ from xml.parsers.expat import ExpatError
 
 import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
-from starlette.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
