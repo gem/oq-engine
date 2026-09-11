@@ -211,7 +211,7 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     else:
         urlpatterns = urlpatterns
 
-    # To enable gunicorn debug without Nginx (to serve static files)
+    # To enable uvicorn debug without Nginx (to serve static files)
     # uncomment the following lines
     # from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     # urlpatterns += staticfiles_urlpatterns()

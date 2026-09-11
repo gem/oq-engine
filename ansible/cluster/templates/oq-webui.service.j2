@@ -9,9 +9,9 @@ Group=openquake
 Environment=
 WorkingDirectory={{ webuidir_services }}
 ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver {{ server_host }}:8800 --noreload
-# Using gunicorn (Nginx or another webserver is needed for static content)
-# ExecStart=/opt/openquake/bin/gunicorn -w 2 openquake.server.wsgi:application
-# ExecStart=/opt/openquake/bin/gunicorn --bind localhost:8001 --workers 16 --timeout 1200 wsgi:application
+# Using uvicorn (Nginx or another webserver is needed for static content)
+# ExecStart=/opt/openquake/bin/python3 -m uvicorn openquake.server.asgi:application --workers 2
+# ExecStart=/opt/openquake/bin/python3 -m uvicorn openquake.server.asgi:application --host localhost --port 8001 --workers 16 --timeout 1200
 Restart=always
 RestartSec=30
 KillMode=control-group
