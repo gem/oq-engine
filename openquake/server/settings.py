@@ -26,8 +26,6 @@ import logging
 from openquake.baselib import config
 from openquake.commonlib import datastore
 
-# optionally overrided in local_settings.py
-STANDALONE_APP_NAME_MAP = {}
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
@@ -212,6 +210,14 @@ APPLICATION_MODES = [
     'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
 
 APPLICATION_MODE = 'PUBLIC'
+
+# Definition of Django applications
+STANDALONE_APP_NAME_MAP = {
+        'openquakeplatform_ipt': 'ipt',
+        'django_gem_taxonomy': 'taxonomy',
+    }
+if APPLICATION_MODE != 'TOOLS_ONLY':
+    STANDALONE_APP_NAME_MAP['openquakeplatform_taxonomy'] = 'glossary'
 
 ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
