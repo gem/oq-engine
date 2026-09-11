@@ -17,13 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import getpass
-import hashlib
 import operator
 from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
-from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
@@ -496,39 +494,6 @@ def get_job_stats(db, job_id):
         "SELECT id, user_name, start_time, stop_time, status, "
         "strftime('%s', stop_time) - strftime('%s', start_time) AS duration "
         'FROM job WHERE id=?x', job_id)
-
-
-# called in check_foreign; db is not used but must be passed
-def installation_id(db):
-    """Return the identity of the current installation"""
-    path = os.path.splitext(os.path.realpath(server_path))[0]
-    return hashlib.sha256(path.encode()).hexdigest()[:16]
-
-
-def get_installation_id(db):
-    """Return the identity of the installation running the database service."""
-    # Extracted from the server_path)
-    return {'installation_id': installation_id(db)}
-
-
-# used for backward compatibility in check_foreign, will be removed
-def get_path(db):
-    """
-    :param db:
-        a :class:`openquake.commonlib.dbapi.Db` instance
-    :returns: the full path to the engine codebase
-    """
-    return server_path
-
-
-def get_dbpath(db):
-    """
-    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :returns: the path to the database file.
-    """
-    rows = db('PRAGMA database_list')
-    # return a row with fields (id, dbname, dbpath)
-    return rows[0].file
 
 
 def engine_version(db):

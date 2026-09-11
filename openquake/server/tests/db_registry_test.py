@@ -46,5 +46,4 @@ def test_logs_callers_are_registered():
             if isinstance(action, ast.Constant) and isinstance(
                     action.value, str):
                 actions_used.add(action.value)
-    special = {'getpid'}
-    assert actions_used <= set(ACTION_REGISTRY) | WORKER_ACTIONS | special
+    assert actions_used <= set(ACTION_REGISTRY) | WORKER_ACTIONS
