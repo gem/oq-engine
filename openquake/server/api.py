@@ -107,22 +107,6 @@ def _json_value(value):
     return value
 
 
-def _execute_db_action(spec, func, args, kwargs):
-    """Execute one database action in a worker thread."""
-    connection = dbapi.db.conn
-    try:
-        if spec.transaction == 'explicit':
-            connection.execute('BEGIN')
-        result = func(dbapi.db, *args, **kwargs)
-        if spec.transaction == 'explicit':
-            connection.commit()
-        return result
-    except Exception:
-        if spec.transaction == 'explicit':
-            connection.rollback()
-        raise
-
-
 @app.post('/v0/db/{action}')
 def v0_db_action(
         action: str, payload: dict | None = Body(default=None),
@@ -130,14 +114,14 @@ def v0_db_action(
     """Execute an allowlisted database action."""
     _check_api_key(x_api_key)
     try:
-        spec, func = get_action(action)
+        func = get_action(action)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     payload = payload or {}
     args = _decode_db_argument(payload.get('args', []))
     kwargs = _decode_db_argument(payload.get('kwargs', {}))
     try:
-        result = _execute_db_action(spec, func, args, kwargs)
+        result = func(dbapi.db, *args, **kwargs)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
     except Exception as exc:

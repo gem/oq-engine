@@ -17,9 +17,7 @@ def test_registry_contains_all_database_actions():
 
 def test_registry_resolves_actions():
     for name in ACTION_REGISTRY:
-        spec, action = get_action(name)
-        assert spec.name == name
-        assert callable(action)
+        assert callable(get_action(name))
 
 
 def test_worker_actions_are_not_database_actions():

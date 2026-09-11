@@ -1,15 +1,6 @@
 """Registry of database actions exposed by the internal API."""
 
-from dataclasses import dataclass
 from openquake.server.db import actions
-
-
-@dataclass(frozen=True)
-class ActionSpec:
-    """Metadata for one database action."""
-
-    name: str
-    transaction: str = 'autocommit'
 
 
 _ACTION_NAMES = (
@@ -30,25 +21,11 @@ _ACTION_NAMES = (
     'get_job_id_from_checksum', 'get_job_from_checksum',
 )
 
-_TRANSACTIONAL_ACTIONS = frozenset({
-    'reset_is_running', 'keep', 'set_status', 'create_job', 'import_job',
-    'delete_uncompleted_calculations', 'create_outputs', 'finish', 'del_calc',
-    'log', 'upgrade_db', 'update_job', 'share_job', 'add_tag_to_job',
-    'remove_tag_from_job', 'set_preferred_job_for_tag',
-    'unset_preferred_job_for_tag', 'create_tag', 'delete_tag',
-    'update_parent_child', 'update_job_checksum',
-})
-
-ACTION_REGISTRY = {
-    name: ActionSpec(
-        name, 'explicit' if name in _TRANSACTIONAL_ACTIONS else 'autocommit')
-    for name in _ACTION_NAMES}
+ACTION_REGISTRY = frozenset(_ACTION_NAMES)
 
 
 def get_action(name):
-    """Return a registered database action and its metadata."""
-    try:
-        spec = ACTION_REGISTRY[name]
-    except KeyError:
+    """Return a registered database action."""
+    if name not in ACTION_REGISTRY:
         raise KeyError('Unknown database action: %s' % name) from None
-    return spec, getattr(actions, name)
+    return getattr(actions, name)
