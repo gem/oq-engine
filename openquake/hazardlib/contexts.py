@@ -942,6 +942,14 @@ class ContextMaker(object):
                     value = rup.surface.mesh.depths.max()
                 else:
                     value = rup.hypocenter.depth
+            elif param == 'is_aftershock':
+                # Set to True later in RmapMaker for ruptures with a
+                # non-zero delta_rate. Without delta_rates it stays False
+                value = False
+            elif param == 'crjb':
+                # Centroid Joyner-Boore distance between an aftershock rup and
+                # its main shock. Can be provided from the delta_rates CSV
+                value = numpy.nan
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
@@ -1534,10 +1542,18 @@ class RmapMaker(object):
                 return
         for ctx in self.cmaker.get_ctxs(src, sites):
             if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
+                # Every rup listed in delta_rates is an aftershock, so
+                # shift its occurrence_rate and set is_aftershock as True
+                # so aftershock terms are applied in GMMs containing them
                 with self.cmaker.delta_mon:
                     delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
+                    row = delta[ctx.rup_id]
+                    d = row['delta']
+                    ctx.occurrence_rate += d
+                    if 'is_aftershock' in ctx.dtype.names:
+                        ctx.is_aftershock = d != 0
+                    if 'crjb' in ctx.dtype.names:
+                        ctx.crjb = row['crjb']
             if self.fewsites:  # keep rupdata in memory
                 if self.src_mutex:
                     # needed for Disaggregator.init
@@ -1964,13 +1980,13 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    from openquake.hazardlib.site_amplification import AmplFunction
+    from openquake.hazardlib.site_amplification import AmplificationFunction
     if not hasattr(full_lt, 'weights'):
         full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
+        df = AmplificationFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplificationFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)

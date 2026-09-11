@@ -1,24 +1,60 @@
+  [Christopher Brooks]
+  * Fixed a bug meaning that when using `sites_csv` with z1pt4 in the site
+    CSV columns that the reference override z1pt4 value in the job file was
+    not actually used.
+
   [Anirudh Rao]
-  * Add a cicrculant embedding module for efficient simulation of 
+  * Implemented the Abrahamson et al. (2014) between-event and within-event 
+    cross-IM correlation models for PGA-SA-PGV based on the NGA-West2 database
+  * Enabled memory-efficient circulant embedding for unconditioned spatially 
+    and cross-IMT correlated GMFs on large regular grids
+  * Added local Kriging for obtaining correlated field values at off-grid
+    station locations
+  * Added scalable station-conditioned correlated GMFs using circulant
+    embedding, local Kriging, and Matheron substitution
+
+  [Michele Simionato]
+  * Changed the default configuration to use the DbServer
+
+  [Christopher Brooks]
+  * Add the aftershock term to the ASK14 GMM and the ability to specify the Crjb
+    (Centroid Joyner-Boore) distance metric per aftershock rupture within the
+    `delta_rates` CSV file. QA test in aftershock/case_2.
+  * Support aftershock terms in GMMs by setting `ctx.is_aftershock=True` for any
+    rupture labelled as an aftershock through use of a `delta_rates` CSV file.
+
+  [Paolo Tormene]
+  * Added "Download zip" button in the WebUI and tested the exporter on the demos
+
+  [Christopher Brooks]
+  * Added capability to specify logic trees for the amplification model
+    used in the convolution approach. Initial implementation only supports
+    classical PSHA calculations.
+  * Optimise the spatial lookups in the KothaEtAl2020regional GSIM by
+    performing them once per call of the `compute` method instead of
+    per IMT (the events and sites don't vary with IMT in `ctx` recarray).
+
+  [Anirudh Rao]
+  * Add a cicrculant embedding module for efficient simulation of
     spatially-cross-correlated ground motion fields
   * Refresh the risk doc pages in the user manual
-  * For conditioned gmf calculations, for each GSIM branch, keep only 
+  * For conditioned gmf calculations, for each GSIM branch, keep only
     the IMTs supported by that GSIM and drop the rest
   * Add the Du and Ning (2021) within-event joint spatial and cross-IMT
-    correlation model for PGA, SAs at 17 periods, PGV, Ia, CAV, and 
+    correlation model for PGA, SAs at 17 periods, PGV, Ia, CAV, and
     significant durations
-  * Add the Baker and Bradley (2017) empirical cross-IMT correlation model 
-    as measured from the NGA-West2 database for PGA, SA, PGV, IA, and 
+  * Add the Baker and Bradley (2017) empirical cross-IMT correlation model
+    as measured from the NGA-West2 database for PGA, SA, PGV, IA, and
     Significant Duration (for 5–75% and 5–95% definitions)
   * Harmonize correlation module metadata with GSIM conventions, abstract
     out common validation functions to the correlation base class
-  * Add independent verification for pre-existing correlation models, and 
+  * Add independent verification for pre-existing correlation models, and
     remove unsupported IMT combinations
   * Add the Wang and Du (2013) joint spatial and cross-IMT within-event
     correlation models for PGA-IA-PGV and SAs considering regional site-
     conditions
   * Add the Markhvida et al. (2018) joint spatial and cross-IMT within-event
-    correlation model 
+    correlation model
 
   [Vitor Azevedo Monteiro, Anirudh Rao]
   * Add the Schiappapietra et al. and Aldea et al. (2022) within-event

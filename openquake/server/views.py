@@ -28,10 +28,10 @@ import os
 import tempfile
 import subprocess
 import traceback
-import signal
 import zlib
 import re
 import psutil
+import requests
 
 from threading import Event
 from unittest.mock import patch
@@ -75,13 +75,12 @@ from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
+from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
 from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
-
-from openquake.server.papers import base as papers
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -220,26 +219,37 @@ def store(request_files, ini, calc_id):
     """
     calc_dir = parallel.calc_dir(calc_id)
     input_files = request_files.getlist('archive')
-    zip_file = None
-    for input_file in input_files:
-        if input_file.name.endswith('.zip'):
-            zip_file = input_file
+    named_files = [
+        (input_file, getattr(input_file, 'name', None) or
+         getattr(input_file, 'filename', ''))
+        for input_file in input_files]
+    zip_file = next(
+        (input_file for input_file, name in named_files
+         if name.endswith('.zip')), None)
     if zip_file is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
         # NB: TemporaryUploadedFile Django objects are not sortable
-        for input_file in input_files:
-            new_path = os.path.join(calc_dir, input_file.name)
+        for input_file, name in named_files:
+            new_path = os.path.join(calc_dir, name)
             # Using shutil.copy2, Django deletes the temporary file
             # when the request ends. With shutil.move it would
             # attempt to delete it immediately when it is still in
             # use by the Django process, which would raise an
             # exception on Windows.
-            shutil.copy2(input_file.temporary_file_path(), new_path)
-            if input_file.name.endswith(ini):
+            source = getattr(input_file, 'file', None)
+            if source is None:
+                shutil.copy2(input_file.temporary_file_path(), new_path)
+            else:
+                source.seek(0)
+                with open(new_path, 'wb') as target:
+                    shutil.copyfileobj(source, target)
+            if name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
-        inifiles = readinput.extract_from_zip(zip_file, ini, calc_dir)
+        source = getattr(zip_file, 'file', zip_file)
+        source.seek(0)
+        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
@@ -348,6 +358,18 @@ def get_engine_version(request):
     Return a string with the openquake.engine version
     """
     return HttpResponse(oqversion)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_authentication_status(request):
+    """Return whether this engine requires client authentication.
+
+    This endpoint is intentionally public: clients need to distinguish a
+    public engine from an engine requiring credentials before attempting to
+    log in.
+    """
+    return JsonResponse({'authentication_required': settings.LOCKDOWN})
 
 
 @cross_domain_ajax
@@ -477,14 +499,14 @@ def validate_nrml(request):
 
 
 def validate_job(job_file):
+    """Validate a calculation input and return its JSON-compatible result."""
     try:
         oq = readinput.get_oqparam(job_file)
         with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
             base.calculators(oq, calc_id=None).run()
     except Exception as exc:
-        return _make_response(str(exc), None, valid=False)
-    else:
-        return _make_response(None, None, valid=True)
+        return dict(error_msg=str(exc), error_line=None, valid=False)
+    return dict(error_msg=None, error_line=None, valid=True)
 
 
 @csrf_exempt
@@ -505,7 +527,7 @@ def validate_ini(request):
     """
     ini = request.FILES.get('job_ini')
     # assume ini is a full accessible path name
-    return validate_job(ini)
+    return JsonResponse(validate_job(ini))
 
 
 @csrf_exempt
@@ -528,7 +550,7 @@ def validate_zip(request):
     if not archive:
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
-    return validate_job(job_zip)
+    return JsonResponse(validate_job(job_zip))
 
 
 @require_http_methods(['GET'])
@@ -556,13 +578,51 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
+def _call_api(request, endpoint):
+    """Call an internal FastAPI endpoint and return its JSON response."""
+    url = '%s/%s' % (_get_base_url(request), endpoint)
+    try:
+        response = requests.get(url, timeout=10)
+    except requests.RequestException:
+        return HttpResponse(status=503)
+    if response.status_code == 404:
+        return HttpResponseNotFound()
+    if response.status_code != 200:
+        return HttpResponse(status=502)
+    return HttpResponse(content=response.content, content_type=JSON)
+
+
+def _post_api(request, endpoint, data, timeout=10):
+    """Post form data and uploaded files to an internal API endpoint."""
+    files = []
+    for field, uploads in request.FILES.lists():
+        for upload in uploads:
+            files.append((
+                field, (upload.name, upload.file, upload.content_type)))
+    url = '%s/%s' % (_get_base_url(request), endpoint)
+    try:
+        response = requests.post(
+            url, data=data, files=files or None,
+            headers={'X-API-Key': API_KEY}, timeout=timeout)
+    except requests.RequestException:
+        return HttpResponse(status=503)
+    if response.status_code == 404:
+        return HttpResponseNotFound()
+    if response.status_code not in (200, 400, 500):
+        return HttpResponse(status=502)
+    return HttpResponse(
+        content=response.content, content_type=JSON,
+        status=response.status_code)
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
     """
-    Get a JSON blob containing all of parameters for the given calculation
-    (specified by ``calc_id``). Also includes the current job status (
-    executing, complete, etc.).
+    Authenticate the request and proxy calculation information to FastAPI.
+
+    Django remains responsible for the user and ACL checks. The internal
+    FastAPI endpoint owns the calculation-information query.
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
@@ -571,7 +631,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return JsonResponse(info)
+    return _call_api(request, 'v1/calc_info/%s' % calc_id)
 
 
 @require_http_methods(['GET'])
@@ -635,64 +695,28 @@ def calc_list(request, id=None):
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_abort(request, calc_id):
-    """
-    Abort the given calculation, it is it running
-    """
+    """Abort a running calculation after checking its ownership."""
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
-        message = {'error': 'Unknown job %s' % calc_id}
-        return JsonResponse(message)
-
+        return JsonResponse({'error': 'Unknown job %s' % calc_id})
     if job.status not in ('submitted', 'executing'):
-        message = {'error': 'Job %s is not running' % job.id}
-        return JsonResponse(message)
-
-    # only the owner or superusers can abort a calculation
+        return JsonResponse({'error': 'Job %s is not running' % job.id})
     if (job.user_name not in utils.get_valid_users(request) and
             not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return JsonResponse(message, status=403)
-
-    if job.pid:  # is a spawned job
-        try:
-            os.kill(job.pid, signal.SIGINT)
-        except Exception as exc:
-            logging.error(exc)
-        else:
-            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
-            logs.dbcmd('set_status', job.id, 'aborted')
-        message = {'success': 'Killing job %d' % job.id}
-        return JsonResponse(message)
-
-    message = {'error': 'PID for job %s not found' % job.id}
-    return JsonResponse(message)
+    return _post_api(request, 'v0/calc/%s/abort' % calc_id, {})
 
 
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
-    """
-    Remove the calculation id
-    """
-    # Only the owner can remove a job
+    """Remove a calculation for its owner."""
     user = utils.get_username(request)
-    try:
-        message = logs.dbcmd('del_calc', calc_id, user)
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-
-    if 'success' in message:
-        return JsonResponse(message, status=200)
-    elif 'error' in message:
-        logging.error(message['error'])
-        return JsonResponse(message, status=403)
-    else:
-        # This is an untrapped server error
-        logging.error(message)
-        return HttpResponse(content=message,
-                            content_type='text/plain', status=500)
+    return _post_api(
+        request, 'v0/calc/%s/remove' % calc_id, {'username': user})
 
 
 def share_job(user_level, calc_id, share):
@@ -918,21 +942,16 @@ def calc_run(request):
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    try:
-        job_id = submit_job(
-            request.FILES, ini, username, hazard_job_id, notify_to)
-    except Exception as exc:  # job failed, for instance missing .xml file
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = {
+        'ini': ini,
+        'username': username,
+        'hazard_job_id': hazard_job_id or '',
+        'notify_to': request.POST.get('notify_to') or '',
+    }
+    return _post_api(request, 'v0/calc/run', data)
 
 
 @csrf_exempt
@@ -961,21 +980,16 @@ def calc_run_ini(request):
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    try:
-        job_id = submit_job(
-            [], ini, username, hazard_job_id, notify_to=notify_to)
-    except Exception as exc:  # job failed, for instance missing .ini file
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = {
+        'ini': ini,
+        'username': username,
+        'hazard_job_id': hazard_job_id or '',
+        'notify_to': request.POST.get('notify_to') or '',
+    }
+    return _post_api(request, 'v0/calc/run', data)
 
 
 @csrf_exempt
@@ -983,50 +997,14 @@ def calc_run_ini(request):
 @require_http_methods(['POST'])
 # used in PAPERS
 def calc_run_scenario_from_ses(request, rup_id):
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    exposure_filepath = request.POST.get(
-        'exposure_filepath', papers.EXPOSURE)
-    fragility_curves_filepath = request.POST.get(
-        'fragility_curves', papers.FRAGILITY)
-    consequence_model = request.POST.get('consequence_model', None)
-    # NB: build consequence_model_dic as {'taxonomy': list of paths}
-    if consequence_model:
-        consequence_model_dic = {
-            'taxonomy': json.loads(consequence_model)}
-    else:
-        consequence_model_dic = papers.CONSEQUENCE
-    mapping_filepath = request.POST.get('mapping', papers.MAPPING)
-
-    # Build the job for the extracted rupture
-    try:
-        job_ctx = papers.get_job_ctx(
-            rup_id,
-            papers.FNAME,
-            papers.GMM_LT,
-            papers.SITE_MODEL,
-            papers.IMTS_RISK,
-            papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION,
-            papers.NGMFS,
-            exposure_filepath,
-            mapping_filepath,
-            fragility_curves_filepath,
-            consequence_model_dic,
-            papers.HAZARD_ONLY,
-            username)
-        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
-            'notify_to': notify_to}).start()
-    except Exception as exc:
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_ctx.calc_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = request.POST.dict()
+    data['username'] = username
+    return _post_api(
+        request, 'v0/calc/run_scenario_calc_from_ses_rupture/%s' % rup_id,
+        data, timeout=120)
 
 
 def aelo_callback(
@@ -1154,23 +1132,12 @@ def impact_callback(
                  connection=connection).send()
 
 
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def impact_get_rupture_data(request):
-    """
-    Retrieve rupture parameters corresponding to a given usgs id
-
-    :param request:
-        a `django.http.HttpRequest` object containing usgs_id, approach,
-        rupture_file, use_shakemap
-    """
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+def get_impact_rupture_data(post, user, rupture_path):
+    """Validate a rupture and build the data needed by the IMPACT UI."""
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, request.user, rupture_path)
+        post, user, rupture_path)
     if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
+        return err, 400 if 'invalid_inputs' in err else 500
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)
@@ -1183,14 +1150,29 @@ def impact_get_rupture_data(request):
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
     elif rup is not None:
-        img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
-                                  with_region_labels=True,
-                                  return_base64=True)
-        rupdic['rupture_png'] = img_base64
-    if request.user.level < 2 and 'warning_msg' in rupdic:
+        rupdic['rupture_png'] = plot_rupture(
+            rup, backend='Agg', figsize=(8, 8), with_region_labels=True,
+            return_base64=True)
+    if user.level < 2 and 'warning_msg' in rupdic:
         # we don't want to show the warning to level 1 users
         del rupdic['warning_msg']
-    return JsonResponse(rupdic, status=200)
+    return rupdic, 200
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_rupture_data(request):
+    """
+    Retrieve rupture parameters corresponding to a given usgs id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id, approach,
+        rupture_file, use_shakemap
+    """
+    data = request.POST.dict()
+    data['user_level'] = str(request.user.level)
+    return _post_api(request, 'v0/calc/impact_get_rupture_data', data)
 
 
 @csrf_exempt
@@ -1267,8 +1249,16 @@ def get_uploaded_file_path(request, filename):
         # NOTE: we could not find a reliable way to avoid the deletion of the
         # uploaded file right after the request is consumed, therefore we need
         # to store a copy of it
-        suffix = file.name[-4:]
-        return gettemp(open(file.temporary_file_path()).read(), suffix=suffix)
+        name = getattr(file, 'name', None) or file.filename
+        suffix = name[-4:]
+        source = getattr(file, 'file', None)
+        if source is None:
+            with open(file.temporary_file_path(), 'rb') as stream:
+                content = stream.read()
+        else:
+            source.seek(0)
+            content = source.read()
+        return gettemp(content, suffix=suffix)
 
 
 def create_impact_job(request, params, email_file_path):
@@ -1336,35 +1326,15 @@ def impact_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    # NOTE: this is called via AJAX so the context processor isn't
-    # automatically applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    if (not rupture_path and request.POST.get('rupture_was_loaded')):
-        rupture_path = request.POST.get('rupture_from_usgs', '')
-    station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    station_data_file_from_usgs = request.POST.get(
-        'station_data_file_from_usgs', '')
-    station_source = None
-    if station_data_file:
-        station_source = 'user-provided'
-    elif station_data_file_from_usgs:
-        station_source = 'USGS'
-    # giving priority to the user-uploaded stations
-    if not station_data_file and station_data_file_from_usgs:
-        station_data_file = station_data_file_from_usgs
-    _rup, _rupdic, params, err = impact_validate(
-        request.POST, request.user, rupture_path, station_data_file)
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
-    if station_source is not None:
-        params['station_source'] = station_source
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+    data = request.POST.dict()
+    data.update(
+        user_level=str(request.user.level),
+        username=utils.get_username(request),
+        email=getattr(request.user, 'email', ''),
+        base_url=_get_base_url(request))
+    return _post_api(request, 'v0/calc/impact_run', data, timeout=120)
 
 
 @csrf_exempt
@@ -1494,6 +1464,55 @@ def aelo_validate(request):
     return lon, lat, site_name, asce_version, site_class, vs30
 
 
+def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
+              username, job_owner_email, build_absolute_uri,
+              email_file_path):
+    """Create and start an AELO job after Django has authenticated it."""
+    description = f'AELO for {site_name}'
+    try:
+        params = get_params_from(
+            dict(sites='%s %s' % (lon, lat),
+                 asce_version=asce_version, site_class=site_class, vs30=vs30,
+                 description=description),
+            config.directory.mosaic_dir, exclude=['USA'])
+        logging.root.handlers = []  # avoid breaking the logs
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        logging.exception(str(exc))
+        return response_data, 400
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, None, username, None)
+    job_id = jobctx.calc_id
+    outputs_uri_web = build_absolute_uri(
+        reverse('outputs_aelo', args=[job_id]))
+    outputs_uri_api = build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = build_absolute_uri(reverse('log', args=[job_id, '0', '']))
+    traceback_uri = build_absolute_uri(reverse('traceback', args=[job_id]))
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is specified for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+    args = (
+        lon, lat, vs30, params['siteid'], description, asce_version,
+        site_class, jobctx, job_owner_email, outputs_uri_web,
+        config.directory.mosaic_dir, aelo_callback, email_file_path)
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        aelo.main(*args)
+    else:
+        mp.Process(target=aelo.main, args=args).start()
+    return response_data, 200
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1505,72 +1524,12 @@ def aelo_run(request):
         a `django.http.HttpRequest` object containing lon, lat, site_name,
         asce_version, site_class, vs30
     """
-    res = aelo_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    lon, lat, site_name, asce_version, site_class, vs30 = res
-    # NOTE: the site_name is transformed into a description and a
-    # custom_site_id
-    description = f'AELO for {site_name}'
-
-    # build a LogContext object associated to a database job
-    try:
-        # NOTE: get_params_from transforms the site_name into a siteid
-        params = get_params_from(
-            dict(sites='%s %s' % (lon, lat),
-                 asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=description),
-            config.directory.mosaic_dir, exclude=['USA'])
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        logging.exception(str(exc))
-        return JsonResponse(response_data, status=400)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    [jobctx] = engine.create_jobs(
-        [params],
-        config.distribution.log_level, None, utils.get_username(request), None)
-    job_id = jobctx.calc_id
-
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_aelo', args=[job_id]))
-
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-
-    response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-
-    job_owner_email = request.user.email
-    if not job_owner_email:
-        response_data['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the following'
-            ' link: %s. If the job fails, the error traceback will be'
-            ' accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-
-    email_file_path = request.POST.get('email_file_path')
-    args = (
-        lon, lat, vs30, params['siteid'], description, asce_version,
-        site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback, email_file_path)
-
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        aelo.main(*args)
-    else:
-        # spawn the AELO main process
-        mp.Process(target=aelo.main, args=args).start()
-    return JsonResponse(response_data, status=200)
+    data = request.POST.dict()
+    data.update(
+        username=utils.get_username(request),
+        email=getattr(getattr(request, 'user', None), 'email', ''),
+        base_url=_get_base_url(request))
+    return _post_api(request, 'v0/calc/aelo_run', data)
 
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):

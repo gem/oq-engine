@@ -22,7 +22,7 @@ import getpass
 from decorator import getfullargspec
 from openquake.baselib import config
 from openquake.calculators.views import text_table
-from openquake.commonlib import logs
+from openquake.commonlib import dbapi, logs
 from openquake.server.db import actions
 
 commands = {}
@@ -48,13 +48,17 @@ def main(cmd, args=()):
     """
     Run a database command
     """
-    if cmd in commands and len(args) != len(commands[cmd]):
+    known_action = cmd in commands
+    if known_action and len(args) != len(commands[cmd]):
         sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
-    elif (cmd not in commands and not cmd.upper().startswith('SELECT') and
+    elif (not known_action and not cmd.upper().startswith('SELECT') and
           config.multi_user and getpass.getuser() != 'openquake'):
         sys.exit('You have no permission to run %s' % cmd)
-    res = logs.dbcmd(cmd, *convert(args))
+    if known_action:
+        res = logs.dbcmd(cmd, *convert(args))
+    else:
+        res = dbapi.db(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
         print(text_table(res, ext='org'))
     else:

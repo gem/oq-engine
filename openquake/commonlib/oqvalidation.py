@@ -2140,10 +2140,9 @@ class OqParam(valid.ParamSet):
             return
         cls = get_model_class(name)
         if component == ResidualComponent.WITHIN_EVENT:
-            valid_type = (
-                issubclass(cls, SpatialCrossIMTCorrelationModel) and
-                not issubclass(cls, CrossIMTCorrelationModel))
-            expected_type = 'spatial or spatial-cross-IMT'
+            valid_type = issubclass(
+                cls, SpatialCrossIMTCorrelationModel)
+            expected_type = 'spatial, cross-IMT, or spatial-cross-IMT'
         else:
             valid_type = issubclass(cls, CrossIMTCorrelationModel)
             expected_type = 'cross-IMT'

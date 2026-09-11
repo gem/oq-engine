@@ -29,20 +29,29 @@ commands = ['start']
 
 
 def runserver(hostport=None, skip_browser=False):
-    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
-    # the reload functionality of the Django development server interferes
-    # with SIGCHLD and causes zombies, thus it is disabled
-    args.append('--noreload')
-    if hostport:
-        args.append(hostport)
-    p = subprocess.Popen(args)
-    if not skip_browser:
-        url = 'http://' + hostport
-        if check_webserver_running(url):
+    """Start Uvicorn and serve the combined WebUI application."""
+    url = 'http://' + hostport
+    if check_webserver_running(url, max_retries=1, warn=False):
+        if not skip_browser:
             webbrowser.open(url)
-    p.wait()
-    if p.returncode != 0:
-        sys.exit(p.returncode)
+        return
+
+    host, port = hostport.rsplit(':', 1)
+    process = subprocess.Popen([
+        sys.executable, '-m', 'uvicorn',
+        'openquake.server.asgi:app',
+        '--host', host,
+        '--port', port,
+    ])
+    if not skip_browser and check_webserver_running(url):
+        webbrowser.open(url)
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        process.terminate()
+        process.wait()
+    if process.returncode:
+        sys.exit(process.returncode)
 
 
 def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):

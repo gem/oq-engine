@@ -106,7 +106,7 @@ def _get_decimal_from_datetime(time):
         np.array([time.hour], dtype=int),
         np.array([time.minute], dtype=int),
         np.array([temp_seconds], dtype=int),
-    )
+    )[0]
 
 
 class CatalogueSelector(object):

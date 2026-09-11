@@ -47,6 +47,8 @@ ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
+EPS = 1E-12
+
 def get_dists(dstore):
     dic = general.AccumDict(accum=[])  # site_id -> distances
     rup = dstore['rup']
@@ -207,13 +209,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # check the mean hazard curves manually
         hcurve0, wei0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)
-        aac(wei0, [0.2, 0.8, 0., 1.], atol=1e-12)
+        aac(wei0, [0.2, 0.8, 0., 1.], atol=EPS)
         hcurve1, wei1 = calc.mean_rates.calc_mcurves(
             src_groups, sites1, flt1, oq)
-        aac(wei1, [0., 1., 0., 1.], atol=1e-12)
+        aac(wei1, [0., 1., 0., 1.], atol=EPS)
         hcurve2, wei2 = calc.mean_rates.calc_mcurves(
             src_groups, sites2, flt2, oq)
-        aac(wei2, [0.2, 0.6, 0.2, 1.], atol=1e-12)
+        aac(wei2, [0.2, 0.6, 0.2, 1.], atol=EPS)
         pga0 = self.calc.datastore['hcurves-stats'][0]
         pga1 = self.calc.datastore['hcurves-stats'][1]
         pga2 = self.calc.datastore['hcurves-stats'][2]
@@ -282,11 +284,14 @@ class ClassicalTestCase(CalculatorTestCase):
             case_12.__file__)
 
     def test_case_13(self):
-        # Test specification of reference z1pt4
+        # Test specification of reference z1pt4: the site_model.csv carries
+        # values which must be overridden by reference z1pt4 in the job file
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.5).csv'],
             case_13.__file__)
+        sitecol = self.calc.datastore['sitecol']
+        aac(sitecol.z1pt4, [50, 50, 50])
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',

@@ -18,14 +18,14 @@
 
 import django
 from datetime import datetime, timedelta
-from django.test import Client
 from openquake.commonlib import logs
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
-from openquake.server.tests.views_test import get_or_create_user, random_string
+from openquake.server.tests.views_test import (
+    get_or_create_user, random_string, start_uvicorn, stop_uvicorn)
 
 
-class RestrictedModeTestCase(django.test.TestCase):
+class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def post(cls, path, data=None):
@@ -39,16 +39,17 @@ class RestrictedModeTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user0, cls.password0 = get_or_create_user(0)  # level 0
-        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
-        cls.user2, cls.password2 = get_or_create_user(2)  # level 2
-        cls.c = Client()
+        (cls.webserver, cls.webserver_thread,
+         cls.c) = start_uvicorn()
+
+    def setUp(self):
+        self.user0, self.password0 = get_or_create_user(0)
+        self.user1, self.password1 = get_or_create_user(1)
+        self.user2, self.password2 = get_or_create_user(2)
 
     @classmethod
     def tearDownClass(cls):
-        cls.user0.delete()
-        cls.user1.delete()
-        cls.user2.delete()
+        stop_uvicorn(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def remove_calc(self, calc_id):
@@ -56,6 +57,11 @@ class RestrictedModeTestCase(django.test.TestCase):
         if ret.status_code != 200:
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (calc_id, ret))
+
+    def test_authentication_status(self):
+        response = self.c.get('/v1/authentication/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authentication_required': True})
 
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',

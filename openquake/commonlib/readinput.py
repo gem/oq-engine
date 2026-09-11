@@ -62,7 +62,9 @@ from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt)
+    pmf, logictree, gsim_lt, get_smlt, amp_lt)
+from openquake.hazardlib.site_amplification import (
+    AmplificationFunction, Amplifier, AmplificationModel)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
@@ -976,6 +978,59 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
+#TODO: add support for disagg
+AMP_LT_SUPPORTED_MODES = ('classical')
+
+
+def _expand_amp_lt(oqparam):
+    """
+    If oqparam.inputs['amplification'] points at an amp-LT XML, parse it,
+    cache the tree on oqparam._amp_lt, and rewrite the inputs entry to
+    the list of per-branch CSV file paths. Otherwise return None.
+    """
+    if getattr(oqparam, '_amp_lt', None) is not None:
+        # Guard for if already parsed on a previous call
+        return oqparam._amp_lt
+    fname = oqparam.inputs.get('amplification')
+    if not fname:
+        return None  # No amplification input
+    if not amp_lt.AmplificationLogicTree.is_amp_lt(fname):
+        return None  # Regular amplification model (no logic tree)
+    if oqparam.calculation_mode not in AMP_LT_SUPPORTED_MODES:
+        raise InvalidFile(
+            '%s: amplification logic tree is only supported for %s'
+            ' calculations, got calculation_mode=%r'
+            % (fname, ' and '.join(
+                AMP_LT_SUPPORTED_MODES), oqparam.calculation_mode))
+    if oqparam.amplification_method != 'convolution':
+        raise InvalidFile(
+            '%s: amplification logic tree is only supported with'
+            ' amplification_method="convolution", got %r'
+            % (fname, oqparam.amplification_method))
+    tree = amp_lt.AmplificationLogicTree(fname)
+    oqparam._amp_lt = tree
+    oqparam.inputs['amplification'] = tree.filenames
+    return tree
+
+
+def get_amp_functions(oqparam):
+    """
+    :returns: an :class:`AmplificationModel` with Amplifier instances
+        built from the amp-LT branch CSVs, or None if the amplification
+        input is not an amp-LT XML
+    """
+    tree = _expand_amp_lt(oqparam)
+    if tree is None:
+        return None
+    dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
+    amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
+                  for df in dframes]
+    return AmplificationModel(
+        tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
+        filenames=tree.filenames, tree_filename=tree.filename,
+        branchset_id=tree.branchset_id)
+
+
 def get_full_lt(oqparam):
     """
     :param oqparam:
@@ -995,7 +1050,9 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
+    amep = get_amp_functions(oqparam)
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, amp_lt=amep)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
     if oqparam.number_of_logic_tree_samples:
@@ -1160,7 +1217,13 @@ def read_consdict(oqparam, limit_states, perils):
             fnames = [fnames]
         # i.e. files collapsed.csv, fatalities.csv, ... with headers like
         # taxonomy,consequence,slight,moderate,extensive
-        df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+        dfs = []
+        for fname in fnames:
+            if os.path.exists(fname):
+                dfs.append(pandas.read_csv(fname))
+        if not dfs:
+            continue
+        df = pandas.concat(dfs)
         # NB: consequence files depend on loss_type, unlike fragility files
         if 'taxonomy' in df.columns:  # obsolete name
             df['risk_id'] = df['taxonomy']
@@ -1658,27 +1721,45 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
+delta_dt = numpy.dtype([('delta', numpy.float64),
+                        ('crjb', numpy.float64)])
+
+
 def read_delta_rates(fname, idx_nr):
     """
     :param fname:
-        path to a CSV file with fields (source_id, rup_id, delta)
+        path to a CSV file with fields (source_id, rup_id, delta) and an
+        optional crjb column (centroid Joyner-Boore distance in km, used
+        by aftershock GMMs such as ASK14)
     :param idx_nr:
         dictionary source_id -> (src_id, num_ruptures) with Ns sources
     :returns:
-        list of Ns floating point arrays of different lenghts
+        list of Ns structured arrays with dtype [('delta', f8), ('crjb', f8)]
     """
-    delta_df = pandas.read_csv(fname, converters=dict(
-        source_id=str, rup_id=int, delta=float), index_col=0)
-    assert list(delta_df.columns) == ['rup_id', 'delta']
-    delta = [numpy.zeros(0) for _ in idx_nr]
+    converters = dict(source_id=str, rup_id=int, delta=float, crjb=float)
+    delta_df = pandas.read_csv(fname, converters=converters)
+    required = {'source_id', 'rup_id', 'delta'}
+    missing = required - set(delta_df.columns)
+    if missing:
+        # Only check the essential columns - if Crjb is required but it
+        # is missing the GMM will raise an error when trying to retrieve
+        # from the ctx (cannot determine within readinput if GMMs req. it)
+        raise InvalidFile(
+            '%s: missing required column(s) %s' % (fname, sorted(missing)))
+    has_crjb = 'crjb' in delta_df.columns
+    delta_df = delta_df.set_index('source_id')
+    delta = [numpy.zeros(0, delta_dt) for _ in idx_nr]
     for src, df in delta_df.groupby(delta_df.index):
         idx, nr = idx_nr[src]
         rupids = df.rup_id.to_numpy()
         if len(numpy.unique(rupids)) < len(rupids):
             raise InvalidFile('%s: duplicated rup_id for %s' % (fname, src))
-        drates = numpy.zeros(nr)
-        drates[rupids] = df.delta.to_numpy()
-        delta[idx] = drates
+        arr = numpy.zeros(nr, delta_dt)
+        arr['crjb'] = numpy.nan
+        arr['delta'][rupids] = df.delta.to_numpy()
+        if has_crjb:
+            arr['crjb'][rupids] = df.crjb.to_numpy()
+        delta[idx] = arr
     return delta
 
 
@@ -1964,12 +2045,7 @@ def jobs_from_inis(inis):
     try:
         for ini in inis:
             checksum = get_checksum32(get_oqparam(ini))
-            jobs = logs.dbcmd('SELECT job_id FROM checksum '
-                              'WHERE hazard_checksum=?x', checksum)
-            if jobs:
-                jids.append(jobs[0].job_id)
-            else:
-                jids.append(0)
+            jids.append(logs.dbcmd('get_job_id_from_checksum', checksum))
     except Exception:
         return {'success': [], 'error': traceback.format_exc()}
     return {'success': jids, 'error': ''}
