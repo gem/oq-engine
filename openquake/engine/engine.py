@@ -263,7 +263,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
 
 def start_workers(job_id, dist, nodes):
     """
-    Start the workers via the database service or via slurm
+    Start the workers via the WebUI or via slurm
     """
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)

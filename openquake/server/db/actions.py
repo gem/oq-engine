@@ -59,7 +59,7 @@ def has_job_table(db):
 def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
-    The database service is restarted: the idea is that it is restarted only when
+    The WebUI is restarted: the idea is that it is restarted only when
     all computations are completed.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
@@ -335,12 +335,12 @@ def create_outputs(db, job_id, keysize, ds_size):
     :param keysize: a list of pairs (key, size_mb)
     :param ds_size: total datastore size in MB
     """
-    # the database service should accept missing output types
-    # (it happens if the database service is outdated)
+    # the WebUI should accept missing output types
+    # (it happens if the WebUI is outdated)
     rows = [(job_id, DISPLAY_NAME.get(key, key), key, size)
             for key, size in keysize]
     if getpass.getuser() != 'openquake':
-        # outside of the database service we should raise a clear error instead
+        # outside of the WebUI we should raise a clear error instead
         for key, size in keysize:
             if key not in DISPLAY_NAME:
                 raise NameError(f'{key} is missing in DISPLAY_NAME')
