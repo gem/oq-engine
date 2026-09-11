@@ -4,7 +4,7 @@
 import os
 
 
-# These tests exercise datastore and logging behaviour, not the DbServer
+# These tests exercise datastore and logging behaviour, not the database service
 # transport.  Force the single-user dispatcher path unless the caller has
 # explicitly selected another database.
 os.environ.setdefault('OQ_DATABASE', '127.0.0.1')

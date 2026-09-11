@@ -24,12 +24,12 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 from django.core.management import execute_from_command_line
-from openquake.server import dbserver
+from openquake.commonlib import dbapi
 from openquake.server.db import actions
 from openquake.commonlib import logs
 
 
-# bypass the DbServer and run the action directly
+# bypass the database API and run the action directly
 def fakedbcmd(action, *args):
     """
     A dispatcher to the database server.
@@ -37,7 +37,7 @@ def fakedbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    return getattr(actions, action)(dbserver.db, *args)
+    return getattr(actions, action)(dbapi.db, *args)
 
 
 # the code here is run in development mode; for instance
@@ -49,11 +49,7 @@ if __name__ == "__main__":
     if 'runserver' in sys.argv:
         if '--nothreading' in sys.argv:
             logs.dbcmd = fakedbcmd  # turn this on when debugging
-        # check if we are talking to the right server
-        err = dbserver.check_foreign()
-        if err:
-            sys.exit(err)
-        logs.dbcmd('upgrade_db')  # make sure the DB exists
+        actions.upgrade_db(dbapi.db)  # make sure the DB exists
 
     setproctitle('oq-webui')
     execute_from_command_line(sys.argv)

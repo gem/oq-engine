@@ -29,7 +29,7 @@ from openquake.calculators import base, views
 from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.workflow import run_workflow
-from openquake.server import db, dbserver
+from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -88,20 +88,9 @@ def main(job_ini,
     """
     user_name = getpass.getuser()
 
-    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if (host == '127.0.0.1' and
-        config.dbserver.file == '~/oqdata/db.sqlite3' and
-        user_name != 'openquake'):
-        # Use the local database directly for the regular user.
-        dbfile = os.path.expanduser(config.dbserver.file)
-        if not os.path.exists(dbfile):
-            db.actions.upgrade_db(dbapi.db)
-    else:
-        # start the DbServer if needed and check we are using the right one
-        dbserver.ensure_on()
-        err = dbserver.check_foreign()
-        if err:
-            raise SystemExit(err)
+    dbfile = os.path.expanduser(config.database.file)
+    if not os.path.exists(dbfile):
+        db.actions.upgrade_db(dbapi.db)
     try:
         host = socket.gethostname()
     except Exception:  # gaierror

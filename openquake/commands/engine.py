@@ -27,7 +27,6 @@ from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_report import make_report as makerep
-from openquake.server import dbserver
 from openquake.commands.abort import main as abort
 
 
@@ -120,18 +119,9 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    fname = os.path.expanduser(config.dbserver.file)
-    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
-        if not os.path.exists(fname):
-            upgrade_db = True  # automatically creates the db
-    else:  # DbServer yes
-        print(f'Using the DbServer on {host}')
-        dbserver.ensure_on()
-        # check that we are talking to the right server
-        err = dbserver.check_foreign()
-        if err:
-            sys.exit(err)
+    fname = os.path.expanduser(config.database.file)
+    if not os.path.exists(fname):
+        upgrade_db = True  # automatically creates the db
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

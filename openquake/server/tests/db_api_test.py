@@ -39,7 +39,7 @@ def test_database_api_rejects_unknown_action(api_client):
 
 
 def test_dbcmd_can_use_database_api(api_client, monkeypatch):
-    monkeypatch.setenv('OQ_DB_API', 'fastapi')
+    monkeypatch.setattr(logs, 'use_server', lambda: True)
     old_server = config.webapi.server
     config.webapi.server = api_client.base_url
     try:
@@ -50,7 +50,7 @@ def test_dbcmd_can_use_database_api(api_client, monkeypatch):
 
 
 def test_dbcmd_uses_explicit_write_transaction(api_client, monkeypatch):
-    monkeypatch.setenv('OQ_DB_API', 'fastapi')
+    monkeypatch.setattr(logs, 'use_server', lambda: True)
     old_server = config.webapi.server
     config.webapi.server = api_client.base_url
     tag_name = uuid.uuid4().hex[:16]

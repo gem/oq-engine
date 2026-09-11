@@ -1,16 +1,16 @@
 [Unit]
 Description=The OpenQuake Engine WebUI
 Documentation=https://github.com/gem/oq-engine/
-After=network.target openquake-dbserver.service
+After=network.target
 
 [Service]
 User=openquake
 Group=openquake
-Environment=
+Environment=OQ_DB_API=fastapi
 #in WorkingDirectory use the folder of the sources from what are installed the engine
 WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
-ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
+ExecStart=/opt/openquake/bin/python3 -m uvicorn openquake.server.asgi:app --host 127.0.0.1 --port 8800
 # Using gunicorn (Nginx or another webserver is needed for static content)
 # ExecStart=/opt/openquake/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
 Type=exec

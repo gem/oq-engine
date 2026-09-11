@@ -27,7 +27,7 @@ import traceback
 import requests
 from pdb import post_mortem
 from datetime import datetime, timezone
-from openquake.baselib import config, zeromq, parallel
+from openquake.baselib import config, parallel, use_server
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
 
@@ -127,25 +127,14 @@ def dbcmd(action, *args):
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
     if action in WORKER_ACTIONS:
+        if not use_server():
+            from openquake.baselib.workerpool import WorkerMaster
+            return getattr(WorkerMaster(-1), action[8:])()
         return _worker_api(action, *args)
-    if os.environ.get('OQ_DB_API') == 'fastapi':
-        return _db_api(action, *args)
-    dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
-        # no server mode, access the database directly
-        from openquake.server.db import actions
-        func = getattr(actions, action)
-        return func(dbapi.db, *args)
-
-    # send a command to the database
-    tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
-    sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
-                         timeout=600)  # when the system is loaded
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
-    return res
+    if not use_server():
+        from openquake.server.db import actions as db_actions
+        return getattr(db_actions, action)(dbapi.db, *args)
+    return _db_api(action, *args)
 
 
 def get_job_info(job_id):

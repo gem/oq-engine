@@ -1536,7 +1536,7 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         for job in jobs:
             with open(os.path.join(CWD, 'job.yaml')) as f:
                 yaml = string.Template(f.read()).substitute(
-                    DATABASE='%(host)s:%(port)d' % config.dbserver,
+                    DATABASE='%(host)s:%(port)d' % config.database,
                     CALC_PIK=save_pik(job, custom_tmp),
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))

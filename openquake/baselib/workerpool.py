@@ -207,12 +207,12 @@ class WorkerMaster(object):
         self.start()
         try:
             mon = performance.Monitor(
-                'zmq-debug', dbserver_host=config.dbserver.host)
+                'zmq-debug', database_host=config.database.host)
             mon.inject = True
-            rec_host = (config.dbserver.receiver_host or config.dbserver.host
+            rec_host = (config.database.receiver_host or config.database.host
                         or '127.0.0.1')
             receiver = 'tcp://%s:%s' % (
-                rec_host, config.dbserver.receiver_ports)
+                rec_host, config.database.receiver_ports)
             ntasks = len(self.host_cores) * 2
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
@@ -353,7 +353,7 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
-    # NB: unexpected errors will appear in the DbServer log
+    # NB: unexpected errors will appear in the worker service log
     wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
     wpool.start()
 

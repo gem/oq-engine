@@ -16,7 +16,7 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""Minimal FastAPI application served by the DbServer."""
+"""Minimal FastAPI application served by Uvicorn."""
 
 import json
 import logging

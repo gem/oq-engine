@@ -444,10 +444,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     engine_version()))
-            if mon.dbserver_host != config.dbserver.host:
+            if mon.database_host != config.database.host:
                 raise RuntimeError(
-                    'The worker has dbserver.host=%s while the master has %s'
-                    % (mon.dbserver_host, config.dbserver.host))
+                    'The worker has database.host=%s while the master has %s'
+                    % (mon.database_host, config.database.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -459,7 +459,7 @@ class Result(object):
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
             if isinstance(val, sqlite3.Cursor):
-                # happens when the DbServer performs an UPDATE command
+                # happens when the database service performs an UPDATE command
                 val = val.lastrowid
             res = Result(val, mon)
         return res
@@ -481,7 +481,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
         return msg % (used_mem_percent, socket.gethostname())
 
 
-dummy_mon = Monitor(dbserver_host=config.dbserver.host)
+dummy_mon = Monitor(database_host=config.database.host)
 dummy_mon.backurl = None
 DEBUG = False
 
@@ -529,7 +529,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
-    if mon is dummy_mon:  # in the DbServer
+    if mon is dummy_mon:  # in the database service
         assert not isgenfunc, func
         return Result.new(func, args, mon)
     # debug(f'{mon.backurl=}, {task_no=}')
@@ -791,7 +791,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.name = task_func.__name__
-        self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
+        self.monitor = Monitor(self.name, database_host=config.database.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         if distribute == 'zmq':
@@ -808,11 +808,11 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.receiver = 'tcp://0.0.0.0:%s' % config.database.receiver_ports
         if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = get_return_ip(config.dbserver.receiver_host)
+            self.return_ip = get_return_ip(config.database.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = {}  # populated by .submit

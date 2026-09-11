@@ -21,7 +21,8 @@ from django.apps import AppConfig
 from django.conf import settings
 from sqlite3 import OperationalError
 from openquake.baselib import config
-from openquake.server import dbserver, db
+from openquake.commonlib import dbapi
+from openquake.server.db import actions
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
 
@@ -45,7 +46,7 @@ class ServerConfig(AppConfig):
 
         # reset any computation left in the 'executing' state
         try:
-            db.actions.reset_is_running(dbserver.db)
+            actions.reset_is_running(dbapi.db)
         except OperationalError:
             # in the action "docs" the database does not exist
             pass

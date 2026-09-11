@@ -21,7 +21,7 @@ import sqlite3
 import os.path
 import tempfile
 from openquake.baselib.general import safeprint, zipfiles
-from openquake.server.dbserver import db
+from openquake.commonlib.dbapi import db
 
 
 def smart_save(dbpath, archive, calc_id):
