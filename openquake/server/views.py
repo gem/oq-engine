@@ -362,6 +362,18 @@ def get_engine_version(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def get_authentication_status(request):
+    """Return whether this engine requires client authentication.
+
+    This endpoint is intentionally public: clients need to distinguish a
+    public engine from an engine requiring credentials before attempting to
+    log in.
+    """
+    return JsonResponse({'authentication_required': settings.LOCKDOWN})
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def get_engine_latest_version(request):
     """
     Return a string with if new versions have been released.

@@ -94,6 +94,8 @@ if settings.WEBUI:
 if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
+        re_path(r'^v1/authentication/status$',
+                views.get_authentication_status),
         re_path(r'^v1/engine_latest_version$',
                 views.get_engine_latest_version),
         re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
