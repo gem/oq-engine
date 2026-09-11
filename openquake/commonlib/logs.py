@@ -48,8 +48,8 @@ WORKER_ACTIONS = {
 
 def _worker_api(action, *args):
     """Call a worker-control endpoint on the WebUI API."""
-    endpoint = '%s/v0/worker_%s' % (
-        config.webapi.server.rstrip('/'), action[8:])
+    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
+    endpoint = '%s/v0/worker_%s' % (server.rstrip('/'), action[8:])
     try:
         response = requests.post(
             endpoint, json={'args': args},
@@ -59,6 +59,59 @@ def _worker_api(action, *args):
         raise RuntimeError(
             'Unable to call worker endpoint %s: %s' % (endpoint, exc)) from exc
     return response.json()
+
+
+def _decode_db_value(value):
+    """Restore values encoded by the FastAPI database endpoint."""
+    if isinstance(value, dict):
+        kind = value.get('__oq_type__')
+        if kind == 'datetime':
+            return datetime.fromisoformat(value['value'])
+        if kind == 'row':
+            return dbapi.Row(
+                value['fields'],
+                [_decode_db_value(item) for item in value['values']])
+        if kind == 'table':
+            return dbapi.Table(
+                value['fields'],
+                [_decode_db_value(item) for item in value['rows']])
+        return {key: _decode_db_value(item)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode_db_value(item) for item in value]
+    return value
+
+
+def _encode_db_value(value):
+    """Encode database action arguments as JSON values."""
+    if isinstance(value, datetime):
+        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
+    if isinstance(value, dict):
+        return {key: _encode_db_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_encode_db_value(item) for item in value]
+    return value
+
+
+def _db_api(action, *args):
+    """Call a database action through the FastAPI endpoint."""
+    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
+    endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
+    try:
+        response = requests.post(
+            endpoint, json={'args': _encode_db_value(args)},
+            headers={'X-API-Key': API_KEY}, timeout=600)
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Unable to call database endpoint %s: %s' % (endpoint, exc)) from exc
+    if response.status_code == 404:
+        raise dbapi.NotFound
+    try:
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Database action %s failed: %s' % (action, response.text)) from exc
+    return _decode_db_value(response.json())
 
 
 def dbcmd(action, *args):
@@ -75,6 +128,8 @@ def dbcmd(action, *args):
             raise TypeError(f'{arg} is not a simple type')
     if action in WORKER_ACTIONS:
         return _worker_api(action, *args)
+    if os.environ.get('OQ_DB_API') == 'fastapi':
+        return _db_api(action, *args)
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly

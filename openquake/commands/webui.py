@@ -22,6 +22,7 @@ import subprocess
 import webbrowser
 
 from openquake.baselib import config, general
+from openquake.commonlib.auth import API_KEY
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
@@ -37,12 +38,17 @@ def runserver(hostport=None, skip_browser=False):
         return
 
     host, port = hostport.rsplit(':', 1)
+    env = os.environ.copy()
+    env.update(
+        OQ_API_KEY=API_KEY,
+        OQ_DB_API='fastapi',
+        OQ_WEBAPI_SERVER=url)
     process = subprocess.Popen([
         sys.executable, '-m', 'uvicorn',
         'openquake.server.asgi:app',
         '--host', host,
         '--port', port,
-    ])
+    ], env=env)
     if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)
     try:

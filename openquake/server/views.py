@@ -82,8 +82,6 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
-from openquake.server.papers import base as papers
-
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
@@ -489,14 +487,14 @@ def validate_nrml(request):
 
 
 def validate_job(job_file):
+    """Validate a calculation input and return its JSON-compatible result."""
     try:
         oq = readinput.get_oqparam(job_file)
         with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
             base.calculators(oq, calc_id=None).run()
     except Exception as exc:
-        return _make_response(str(exc), None, valid=False)
-    else:
-        return _make_response(None, None, valid=True)
+        return dict(error_msg=str(exc), error_line=None, valid=False)
+    return dict(error_msg=None, error_line=None, valid=True)
 
 
 @csrf_exempt
@@ -515,9 +513,8 @@ def validate_ini(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    ini = request.FILES.get('job_ini')
-    # assume ini is a full accessible path name
-    return validate_job(ini)
+    return _post_api(
+        request, 'v0/calc/validate_ini', request.POST.dict())
 
 
 @csrf_exempt
@@ -536,11 +533,8 @@ def validate_zip(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    archive = request.FILES.get('archive')
-    if not archive:
-        return HttpResponseBadRequest('Missing archive file')
-    job_zip = archive.temporary_file_path()
-    return validate_job(job_zip)
+    return _post_api(
+        request, 'v0/calc/validate_zip', request.POST.dict())
 
 
 @require_http_methods(['GET'])
@@ -987,50 +981,14 @@ def calc_run_ini(request):
 @require_http_methods(['POST'])
 # used in PAPERS
 def calc_run_scenario_from_ses(request, rup_id):
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    exposure_filepath = request.POST.get(
-        'exposure_filepath', papers.EXPOSURE)
-    fragility_curves_filepath = request.POST.get(
-        'fragility_curves', papers.FRAGILITY)
-    consequence_model = request.POST.get('consequence_model', None)
-    # NB: build consequence_model_dic as {'taxonomy': list of paths}
-    if consequence_model:
-        consequence_model_dic = {
-            'taxonomy': json.loads(consequence_model)}
-    else:
-        consequence_model_dic = papers.CONSEQUENCE
-    mapping_filepath = request.POST.get('mapping', papers.MAPPING)
-
-    # Build the job for the extracted rupture
-    try:
-        job_ctx = papers.get_job_ctx(
-            rup_id,
-            papers.FNAME,
-            papers.GMM_LT,
-            papers.SITE_MODEL,
-            papers.IMTS_RISK,
-            papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION,
-            papers.NGMFS,
-            exposure_filepath,
-            mapping_filepath,
-            fragility_curves_filepath,
-            consequence_model_dic,
-            papers.HAZARD_ONLY,
-            username)
-        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
-            'notify_to': notify_to}).start()
-    except Exception as exc:
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_ctx.calc_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = request.POST.dict()
+    data['username'] = username
+    return _post_api(
+        request, 'v0/calc/run_scenario_calc_from_ses_rupture/%s' % rup_id,
+        data, timeout=120)
 
 
 def aelo_callback(
@@ -1379,38 +1337,14 @@ def impact_run_with_shakemap(request):
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
-    post = dict(usgs_id=request.POST['usgs_id'],
-                use_shakemap='true', approach='use_shakemap_from_usgs')
-    if 'shakemap_version' in request.POST:
-        shakemap_version = request.POST['shakemap_version']
-        post['shakemap_version'] = shakemap_version
-    _rup, rupdic, _params, err = impact_validate(post, request.user)
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
-    post = {key: str(val) for key, val in rupdic.items()
-            if key != 'shakemap_array'}
-    if 'time_event' in request.POST:
-        post['time_event'] = request.POST['time_event']
-    post['approach'] = 'use_shakemap_from_usgs'
-    post['use_shakemap'] = 'true'
-    if 'shakemap_version' in request.POST:
-        post['shakemap_version'] = shakemap_version
-    maxdist = request.POST.get('maximum_distance')
-    if maxdist:  # set in the _success test for speed
-        post['maximum_distance'] = maxdist
-    for field in IMPACT_FORM_DEFAULTS:
-        if field not in post and IMPACT_FORM_DEFAULTS[field]:
-            post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(
-        post, request.user, post['rupture_file'])
-    if err:
-        return JsonResponse(
-            err, status=400 if 'invalid_inputs' in err else 500)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    email_file_path = request.POST.get('email_file_path')
-    response_data = create_impact_job(request, params, email_file_path)
-    return JsonResponse(response_data, status=200)
+    data = request.POST.dict()
+    data.update(
+        user_level=str(request.user.level),
+        username=utils.get_username(request),
+        email=getattr(request.user, 'email', ''),
+        base_url=_get_base_url(request))
+    return _post_api(
+        request, 'v0/calc/impact_run_with_shakemap', data, timeout=120)
 
 
 def aelo_validate(request):

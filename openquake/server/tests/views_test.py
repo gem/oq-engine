@@ -83,12 +83,12 @@ def start_uvicorn():
     server = uvicorn.Server(uvicorn.Config(
         'openquake.server.asgi:app', host='127.0.0.1', port=port,
         log_level='error'))
+    client = UvicornClient('http://127.0.0.1:%d' % port)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
     for _ in range(100):
         if server.started:
-            return server, thread, UvicornClient(
-                'http://127.0.0.1:%d' % port)
+            return server, thread, client
         time.sleep(0.1)
     server.should_exit = True
     thread.join(timeout=10)
