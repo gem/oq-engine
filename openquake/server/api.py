@@ -373,64 +373,6 @@ async def v0_impact_run(
     return JSONResponse(content=response_data, status_code=200)
 
 
-@app.post('/v0/calc/impact_run_with_shakemap')
-async def v0_impact_run_with_shakemap(
-        request: Request, x_api_key: str | None = Header(default=None)):
-    """Run IMPACT with a USGS ShakeMap for a Django caller."""
-    _check_api_key(x_api_key)
-    form = await request.form()
-    try:
-        user_level = int(form.get('user_level', 0))
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400,
-                            detail='Invalid IMPACT user level')
-    if user_level == 0:
-        raise HTTPException(status_code=403)
-    post = dict(
-        usgs_id=form.get('usgs_id'), use_shakemap='true',
-        approach='use_shakemap_from_usgs')
-    if form.get('shakemap_version'):
-        post['shakemap_version'] = form.get('shakemap_version')
-    user = SimpleNamespace(level=user_level, testdir=None)
-    _rup, rupdic, _params, err = await run_in_threadpool(
-        impact_validate, post, user)
-    if err:
-        return JSONResponse(
-            content=err, status_code=400 if 'invalid_inputs' in err else 500)
-    post = {key: str(value) for key, value in rupdic.items()
-            if key != 'shakemap_array'}
-    for field in ('time_event', 'maximum_distance'):
-        if form.get(field):
-            post[field] = form.get(field)
-    post.update(approach='use_shakemap_from_usgs', use_shakemap='true')
-    for field in IMPACT_FORM_DEFAULTS:
-        if field not in post and IMPACT_FORM_DEFAULTS[field]:
-            post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = await run_in_threadpool(
-        impact_validate, post, user, post['rupture_file'])
-    if err:
-        return JSONResponse(
-            content=err, status_code=400 if 'invalid_inputs' in err else 500)
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-
-    def build_absolute_uri(path):
-        return urljoin(
-            form.get('base_url', '').rstrip('/') + '/', path.lstrip('/'))
-
-    from openquake.server.views import create_impact_job
-    job_request = SimpleNamespace(
-        POST=form,
-        user=SimpleNamespace(
-            email=form.get('email') or '',
-            username=form.get('username'), is_authenticated=True,
-            level=user_level, testdir=None),
-        build_absolute_uri=build_absolute_uri)
-    response_data = await run_in_threadpool(
-        create_impact_job, job_request, params,
-        form.get('email_file_path'))
-    return JSONResponse(content=response_data, status_code=200)
-
-
 @app.post('/v0/calc/impact_get_rupture_data')
 async def v0_impact_get_rupture_data(
         request: Request, x_api_key: str | None = Header(default=None)):

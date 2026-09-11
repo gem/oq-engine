@@ -1337,14 +1337,38 @@ def impact_run_with_shakemap(request):
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
-    data = request.POST.dict()
-    data.update(
-        user_level=str(request.user.level),
-        username=utils.get_username(request),
-        email=getattr(request.user, 'email', ''),
-        base_url=_get_base_url(request))
-    return _post_api(
-        request, 'v0/calc/impact_run_with_shakemap', data, timeout=120)
+    post = dict(usgs_id=request.POST['usgs_id'],
+                use_shakemap='true', approach='use_shakemap_from_usgs')
+    if 'shakemap_version' in request.POST:
+        shakemap_version = request.POST['shakemap_version']
+        post['shakemap_version'] = shakemap_version
+    _rup, rupdic, _params, err = impact_validate(post, request.user)
+    if err:
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
+    post = {key: str(val) for key, val in rupdic.items()
+            if key != 'shakemap_array'}
+    if 'time_event' in request.POST:
+        post['time_event'] = request.POST['time_event']
+    post['approach'] = 'use_shakemap_from_usgs'
+    post['use_shakemap'] = 'true'
+    if 'shakemap_version' in request.POST:
+        post['shakemap_version'] = shakemap_version
+    maxdist = request.POST.get('maximum_distance')
+    if maxdist:  # set in the _success test for speed
+        post['maximum_distance'] = maxdist
+    for field in IMPACT_FORM_DEFAULTS:
+        if field not in post and IMPACT_FORM_DEFAULTS[field]:
+            post[field] = IMPACT_FORM_DEFAULTS[field]
+    _rup, rupdic, params, err = impact_validate(
+        post, request.user, post['rupture_file'])
+    if err:
+        return JsonResponse(
+            err, status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    email_file_path = request.POST.get('email_file_path')
+    response_data = create_impact_job(request, params, email_file_path)
+    return JsonResponse(response_data, status=200)
 
 
 def aelo_validate(request):
