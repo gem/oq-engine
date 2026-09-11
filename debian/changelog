@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Backported fix to MANIFEST.in for onnx files
+
   [Matteo Nastasi]
   * Allow free mapping between standlone apps and their url path prefix
     (regardless of their name)
