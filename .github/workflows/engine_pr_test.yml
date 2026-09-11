@@ -175,6 +175,15 @@ jobs:
             --tracing retain-on-failure \
             --screenshot only-on-failure \
             --video retain-on-failure
+          OQ_APPLICATION_MODE=IMPACT pytest \
+            --browser ${{ matrix.browser }} \
+            --capture=no \
+            --maxfail=1 \
+            --tb=short \
+            openquake/server/tests/test_impact_mode_ui.py \
+            --tracing retain-on-failure \
+            --screenshot only-on-failure \
+            --video retain-on-failure
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v4
