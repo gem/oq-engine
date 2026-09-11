@@ -74,7 +74,7 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         api_host = '127.0.0.1'
     os.environ.setdefault(
         'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
-    dbpath = os.path.realpath(os.path.expanduser(config.database.file))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')

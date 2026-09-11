@@ -88,7 +88,7 @@ def main(job_ini,
     """
     user_name = getpass.getuser()
 
-    dbfile = os.path.expanduser(config.database.file)
+    dbfile = os.path.expanduser(config.dbserver.file)
     if not os.path.exists(dbfile):
         db.actions.upgrade_db(dbapi.db)
     try:

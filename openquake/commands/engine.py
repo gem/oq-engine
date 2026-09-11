@@ -119,7 +119,7 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    fname = os.path.expanduser(config.database.file)
+    fname = os.path.expanduser(config.dbserver.file)
     if not os.path.exists(fname):
         upgrade_db = True  # automatically creates the db
 

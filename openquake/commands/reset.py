@@ -32,7 +32,7 @@ def main(yes=False):
     if not ok:
         return
 
-    dbpath = os.path.realpath(os.path.expanduser(config.database.file))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
     else:
