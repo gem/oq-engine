@@ -68,18 +68,6 @@ def calc_info(calc_id: int):
         raise HTTPException(status_code=404) from exc
 
 
-def _decode_db_argument(value):
-    """Restore database action arguments from JSON."""
-    if isinstance(value, dict):
-        if value.get('__oq_type__') == 'datetime':
-            return datetime.fromisoformat(value['value'])
-        return {key: _decode_db_argument(item)
-                for key, item in value.items()}
-    if isinstance(value, list):
-        return [_decode_db_argument(item) for item in value]
-    return value
-
-
 def _json_value(value):
     """Convert database action results to JSON-compatible values."""
     if isinstance(value, dbapi.Row):
@@ -118,8 +106,8 @@ def v0_db_action(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     payload = payload or {}
-    args = _decode_db_argument(payload.get('args', []))
-    kwargs = _decode_db_argument(payload.get('kwargs', {}))
+    args = logs._decode_db_value(payload.get('args', []))
+    kwargs = logs._decode_db_value(payload.get('kwargs', {}))
     try:
         result = func(dbapi.db, *args, **kwargs)
     except dbapi.NotFound as exc:
