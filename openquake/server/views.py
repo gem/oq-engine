@@ -75,14 +75,12 @@ from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
-from openquake.server.auth import API_KEY
+from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
 from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
-
-from openquake.server.papers import base as papers
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -501,14 +499,14 @@ def validate_nrml(request):
 
 
 def validate_job(job_file):
+    """Validate a calculation input and return its JSON-compatible result."""
     try:
         oq = readinput.get_oqparam(job_file)
         with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
             base.calculators(oq, calc_id=None).run()
     except Exception as exc:
-        return _make_response(str(exc), None, valid=False)
-    else:
-        return _make_response(None, None, valid=True)
+        return dict(error_msg=str(exc), error_line=None, valid=False)
+    return dict(error_msg=None, error_line=None, valid=True)
 
 
 @csrf_exempt
@@ -529,7 +527,7 @@ def validate_ini(request):
     """
     ini = request.FILES.get('job_ini')
     # assume ini is a full accessible path name
-    return validate_job(ini)
+    return JsonResponse(validate_job(ini))
 
 
 @csrf_exempt
@@ -552,7 +550,7 @@ def validate_zip(request):
     if not archive:
         return HttpResponseBadRequest('Missing archive file')
     job_zip = archive.temporary_file_path()
-    return validate_job(job_zip)
+    return JsonResponse(validate_job(job_zip))
 
 
 @require_http_methods(['GET'])
@@ -999,50 +997,14 @@ def calc_run_ini(request):
 @require_http_methods(['POST'])
 # used in PAPERS
 def calc_run_scenario_from_ses(request, rup_id):
-    notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner') or utils.get_username(request)
-    exposure_filepath = request.POST.get(
-        'exposure_filepath', papers.EXPOSURE)
-    fragility_curves_filepath = request.POST.get(
-        'fragility_curves', papers.FRAGILITY)
-    consequence_model = request.POST.get('consequence_model', None)
-    # NB: build consequence_model_dic as {'taxonomy': list of paths}
-    if consequence_model:
-        consequence_model_dic = {
-            'taxonomy': json.loads(consequence_model)}
-    else:
-        consequence_model_dic = papers.CONSEQUENCE
-    mapping_filepath = request.POST.get('mapping', papers.MAPPING)
-
-    # Build the job for the extracted rupture
-    try:
-        job_ctx = papers.get_job_ctx(
-            rup_id,
-            papers.FNAME,
-            papers.GMM_LT,
-            papers.SITE_MODEL,
-            papers.IMTS_RISK,
-            papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION,
-            papers.NGMFS,
-            exposure_filepath,
-            mapping_filepath,
-            fragility_curves_filepath,
-            consequence_model_dic,
-            papers.HAZARD_ONLY,
-            username)
-        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
-            'notify_to': notify_to}).start()
-    except Exception as exc:
-        # get the exception message
-        exc_msg = traceback.format_exc() + str(exc)
-        logging.error(exc_msg)
-        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
-        status = 500
-    else:
-        response_data = logs.get_job_info(job_ctx.calc_id)
-        status = 200
-    return JsonResponse(response_data, status=status)
+    username = utils.get_username(request)
+    if utils.is_superuser(request):
+        username = request.POST.get('job_owner') or username
+    data = request.POST.dict()
+    data['username'] = username
+    return _post_api(
+        request, 'v0/calc/run_scenario_calc_from_ses_rupture/%s' % rup_id,
+        data, timeout=120)
 
 
 def aelo_callback(

@@ -20,6 +20,7 @@
 
 import json
 import logging
+import multiprocessing as mp
 import os
 import re
 import secrets
@@ -34,9 +35,10 @@ from xml.parsers.expat import ExpatError
 import numpy
 from fastapi import FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 
-from openquake.baselib import config
-from openquake.server.auth import API_KEY
+from openquake.baselib import config, workerpool as w
+from openquake.commonlib.auth import API_KEY
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
 from openquake.engine import engine
@@ -61,6 +63,95 @@ def calc_info(calc_id: int):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.post('/v0/worker_{action}')
+async def v0_worker(
+        action: str, request: Request,
+        x_api_key: str | None = Header(default=None)):
+    """Run an authenticated worker-control action."""
+    _check_api_key(x_api_key)
+    full_action = 'workers_' + action
+    if full_action not in logs.WORKER_ACTIONS:
+        raise HTTPException(status_code=404)
+    body = await request.body()
+    payload = json.loads(body) if body else {}
+    args = payload.get('args', [])
+    master = w.WorkerMaster(args[0] if args else -1)
+    return getattr(master, action)()
+
+
+async def _validate_uploaded_file(request, field, missing_message):
+    """Validate one uploaded calculation file."""
+    form = await request.form()
+    files = {
+        key: value for key, value in form.multi_items()
+        if hasattr(value, 'file')}
+    from openquake.server.views import get_uploaded_file_path, validate_job
+    path = (get_uploaded_file_path(
+        SimpleNamespace(POST=form, FILES=files), field)
+        if field in files else form.get(field))
+    if not path:
+        return JSONResponse(
+            content={'detail': missing_message}, status_code=400)
+    result = await run_in_threadpool(validate_job, path)
+    return JSONResponse(content=result, status_code=200)
+
+
+@app.post('/v0/calc/validate_ini')
+async def v0_validate_ini(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Validate an uploaded INI file."""
+    _check_api_key(x_api_key)
+    return await _validate_uploaded_file(
+        request, 'job_ini', 'Missing job_ini file')
+
+
+@app.post('/v0/calc/validate_zip')
+async def v0_validate_zip(
+        request: Request, x_api_key: str | None = Header(default=None)):
+    """Validate an uploaded calculation archive."""
+    _check_api_key(x_api_key)
+    return await _validate_uploaded_file(
+        request, 'archive', 'Missing archive file')
+
+
+@app.post('/v0/calc/run_scenario_calc_from_ses_rupture/{rup_id}')
+async def v0_run_scenario(
+        rup_id: int, request: Request,
+        x_api_key: str | None = Header(default=None)):
+    """Run a papers scenario calculation."""
+    _check_api_key(x_api_key)
+    form = await request.form()
+    username = form.get('username')
+    if not username:
+        raise HTTPException(status_code=400,
+                            detail='Missing calculation owner')
+    from openquake.server.papers import base as papers
+    consequence_model = form.get('consequence_model')
+    consequence = (json.loads(consequence_model)
+                   if consequence_model else papers.CONSEQUENCE)
+    try:
+        job_ctx = await run_in_threadpool(
+            papers.get_job_ctx, rup_id, papers.FNAME, papers.GMM_LT,
+            papers.SITE_MODEL, papers.IMTS_RISK, papers.INTEGRATION_DISTANCE,
+            papers.TRUNCATION, papers.NGMFS,
+            form.get('exposure_filepath', papers.EXPOSURE),
+            form.get('mapping', papers.MAPPING),
+            form.get('fragility_curves', papers.FRAGILITY), consequence,
+            papers.HAZARD_ONLY, username)
+        mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
+            'notify_to': form.get('notify_to')}).start()
+        response_data = await run_in_threadpool(
+            logs.get_job_info, job_ctx.calc_id)
+    except Exception as exc:
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        return JSONResponse(
+            content={'traceback': exc_msg.splitlines(),
+                     'job_id': getattr(exc, 'job_id', None)},
+            status_code=500)
+    return JSONResponse(content=response_data, status_code=200)
 
 
 @app.post('/v0/calc/run')
