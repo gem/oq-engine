@@ -586,7 +586,7 @@ agg_id
 
     def test_case_09(self):
         # aep, oep curves with post loss amplification
-        self.run_calc(case_09.__file__, 'job.ini', concurrent_tasks='8')
+        self.run_calc(case_09.__file__, 'job.ini', concurrent_tasks='4')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
