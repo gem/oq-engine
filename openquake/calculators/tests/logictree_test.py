@@ -504,7 +504,8 @@ hazard_uhs-std.csv
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
         # sampled to keep the calc fast (highly simplified version)
-        self.run_calc(case_25.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_25.__file__, 'job.ini', exports='csv',
+                      concurrent_tasks='4')
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
