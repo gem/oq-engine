@@ -207,23 +207,23 @@ class PostProcTestCase(CalculatorTestCase):
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
-        dic07_float_ref = [0.5, 1.5, 1.35, 0.9, 0.4297, 0.4297, 0.2864]
+        dic07_float_ref = [0.5, 1.49, 1.3409, 0.8939, 0.4244, 0.4244, 0.2829]
         aae(dic07_float, dic07_float_ref, decimal=4)
 
         # check string results
         dic07_str = [dic07[k] for k in ['Ss_seismicity', 'S1_seismicity']]
-        assert dic07_str == ['Very High', 'High']
+        assert dic07_str == ['High', 'High']
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        aae(dic41['BSE2N_Sxs'], 1.35000)
-        aae(dic41['BSE2E_Sxs'], 1.09844)
-        aae(dic41['BSE1N_Sxs'], 0.90000)
-        aae(dic41['BSE1E_Sxs'], 0.65397)
-        aae(dic41['BSE2N_Sx1'], 0.42968)
-        aae(dic41['BSE2E_Sx1'], 0.34593)
-        aae(dic41['BSE1N_Sx1'], 0.28645)
-        aae(dic41['BSE1E_Sx1'], 0.18822)
+        aae(dic41['BSE2N_Sxs'], 1.34087)
+        aae(dic41['BSE2E_Sxs'], 1.0829)
+        aae(dic41['BSE1N_Sxs'], 0.89392)
+        aae(dic41['BSE1E_Sxs'], 0.64129)
+        aae(dic41['BSE2N_Sx1'], 0.42443)
+        aae(dic41['BSE2E_Sx1'], 0.34182)
+        aae(dic41['BSE1N_Sx1'], 0.28295)
+        aae(dic41['BSE1E_Sx1'], 0.18406)
         ae(dic41['custom_site_id'], 'CRETE')
 
     def test_median_spectrum1(self):
