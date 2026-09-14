@@ -59,7 +59,11 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
             f"No losses estimated for country {iso3}. Skipping report")
         return None
     loss_threshold = 1
-    if all(r.lossmea < loss_threshold for _, r in rows.iterrows()):
+    has_fatality = rows.loc[
+        rows['loss_type'] == mapping['Fatalities'], 'lossmea'
+    ].ge(loss_threshold).any()
+    if (all(r.lossmea < loss_threshold for _, r in rows.iterrows())
+            and not has_fatality):
         logging.info(f"Estimated losses for country {iso3} are negligible"
                      f" (all lossmea < {loss_threshold}). Skipping report.")
         return None
