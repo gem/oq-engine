@@ -78,3 +78,18 @@ https://wheelhouse.openquake.org/unified/urllib3-2.7.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/zipp-3.19.1-py3-none-any.whl
 # Added at branch updatedeps
 https://wheelhouse.openquake.org/unified/pygments-2.20.0-py3-none-any.whl
+# Added at branch unified-wheel
+https://wheelhouse.openquake.org/unified/typing_extensions-4.16.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/starlette-1.6.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/pydantic-2.13.5-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/fastapi-0.141.1-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/annotated_doc-0.0.5-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/typing_inspection-0.4.4-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/idna-3.19-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/anyio-4.15.1-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/annotated_types-0.8.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/python_multipart-0.0.32-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/uvicorn-0.53.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/click-8.5.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/h11-0.16.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/pydantic_core-2.46.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
