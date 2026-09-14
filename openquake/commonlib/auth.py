@@ -1,7 +1,8 @@
 """Authentication values shared by the Django and FastAPI layers."""
 
 import os
-import secrets
+
+from openquake.baselib import config
 
 
-API_KEY = os.environ.get('OQ_API_KEY') or secrets.token_urlsafe(32)
+API_KEY = os.environ.get('OQ_API_KEY') or config.webapi.authkey
