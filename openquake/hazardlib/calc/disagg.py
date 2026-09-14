@@ -304,7 +304,7 @@ def _amp_poes_by_eps(mea_g, std_g, iml2, eps_edges, phi_b,
 
 
 def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
-                      gp, infer_occur_rates, amplifier, ampcode, imts,
+                      gp, infer_occur_rates, amplifier, ampcode,
                       mon1, mon2, mon3):
     """
     Amplitude model LT supporting version of _disaggregate
@@ -315,7 +315,6 @@ def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
     :param iml2: log soil IMLs of shape (M, P)
     :param amplifier: an :class:`Amplifier` for the rlz's amp branch
     :param ampcode: 2-letter code for the site's amplification function
-    :param imts: sequence of intensity measure types
     :returns: a disagg matrix (6D array)
     """
     if epsstar:
@@ -330,7 +329,7 @@ def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
         # Per-rupture, per-eps-bin soil exceedance PoE via amp integration
         poes = gp * _amp_poes_by_eps(
             mea[g], std[g], iml2, bin_edges[-1], cmaker.phi_b,
-            amplifier, ampcode, imts)
+            amplifier, ampcode, cmaker.imts)
 
     with mon2:
         # Convert per-rupture PoEs into per-rupture no-exceedance probs
@@ -565,7 +564,7 @@ class Disaggregator(object):
                     self.ctx, mea, std, self.cmaker, g, imlog2,
                     self.bin_edges, self.epsstar, gp,
                     self.cmaker.oq.infer_occur_rates,
-                    amp, self.ampcode, imts,
+                    amp, self.ampcode,
                     self.mon1, self.mon2, self.mon3)
             else:
                 poes = _disaggregate(self.ctx, mea, std, self.cmaker,
