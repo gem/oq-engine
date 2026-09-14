@@ -29,6 +29,7 @@ from openquake.calculators.country_impact_report_utils import (
     _read_world_cities, build_classifiers, load_admin_boundaries,
     points_to_gdf, aggregate_losses, save_most_affected_regions)
 from openquake.calculators.postproc.plots import plot_variable, MapDataElements
+from openquake.hazardlib.calc.filters import upper_maxdist
 
 cd = Path(__file__).parent
 
@@ -87,6 +88,7 @@ class CountryImpactReportBuilder:
         self.summary_data = summary_data
         self.dstore = dstore
         self.time_of_calc = time_of_calc
+        self.maximum_distance = upper_maxdist(oqparam.maximum_distance)
 
         # Unpacking EventContext
         self.event_name = event.name
@@ -566,10 +568,9 @@ class CountryImpactReportBuilder:
             self.Spacer(1, 6),
         ]
 
-        maximum_distance = 300  # FIXME function argument
         exposed_value_txt = (
             f'The exposed value refers to the assets and population located'
-            f' within a {maximum_distance}km radius of the epicentre.')
+            f' within a {self.maximum_distance}km radius of the epicentre.')
         left_bundle.append(
             self.Paragraph(exposed_value_txt, body_left_style))
         if self.no_uncertainty:
