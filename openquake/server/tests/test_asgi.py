@@ -8,10 +8,13 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-import pytest
-from django.contrib.staticfiles import finders
+from pathlib import Path
 
-from openquake.server.tests.views_test import start_uvicorn, stop_uvicorn
+import pytest
+from django.conf import settings
+from django.contrib.staticfiles.finders import get_finders
+
+from .views_test import start_uvicorn, stop_uvicorn
 
 
 @pytest.fixture
@@ -24,13 +27,30 @@ def uvicorn_client():
         stop_uvicorn(server, thread)
 
 
+def static_paths():
+    """Return the files contributed by all installed Django apps."""
+    locations = set()
+    paths = []
+    for finder in get_finders():
+        for storage in finder.storages.values():
+            location = Path(storage.location)
+            if location in locations:
+                continue
+            locations.add(location)
+            paths.extend(
+                path.relative_to(location).as_posix()
+                for path in location.rglob('*') if path.is_file())
+    return sorted(paths)
+
+
 def test_static_files_are_served(uvicorn_client):
-    """Serve engine and installed-tool static files through Uvicorn."""
-    paths = ['css/base.css']
-    if finders.find('ipt/css/ipt.css'):
-        paths.append('ipt/css/ipt.css')
+    """Serve static files contributed by every installed Django app."""
+    paths = static_paths()
+    assert paths
 
     for path in paths:
-        response = uvicorn_client.get('/static/' + path)
-        assert response.status_code == 200
-        assert response.headers['content-type'].startswith('text/css')
+        response = uvicorn_client.get(
+            settings.STATIC_URL + path)
+        assert response.status_code == 200, path
+        if path.endswith('.css'):
+            assert response.headers['content-type'].startswith('text/css')
