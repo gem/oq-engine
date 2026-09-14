@@ -710,6 +710,10 @@ class CountryImpactReportBuilder:
             rightMargin=self.MARGIN,
             topMargin=self.MARGIN,
             bottomMargin=self.MARGIN,
+            # A country report is deliberately a single-page document.  Do
+            # not let ReportLab silently split the master table onto another
+            # page if its contents grow beyond the allocated layout.
+            allowSplitting=0,
         )
 
         master_layout = self.Table(
@@ -740,6 +744,14 @@ class CountryImpactReportBuilder:
 
         buffer.seek(0)
         pdf_bytes = buffer.getvalue()
+        pdf_doc = self.fitz.open(stream=pdf_bytes, filetype="pdf")
+        page_count = pdf_doc.page_count
+        if page_count != 1:
+            pdf_doc.close()
+            raise RuntimeError(
+                f"Impact report for {self.iso3} has "
+                f"{page_count} pages; expected exactly one")
+
         pdf_path = f'impact/{self.iso3}/report_pdf'
         self.dstore[pdf_path] = pdf_bytes
         logging.info(
@@ -747,8 +759,6 @@ class CountryImpactReportBuilder:
             f' as {pdf_path}')
 
         # Generate and save an exact PNG duplicate of the layout
-        pdf_doc = self.fitz.open(stream=pdf_bytes, filetype="pdf")
-        # NOTE: this grid is hard-coded to a single A4 page
         page = pdf_doc.load_page(0)
         # Render to a crisp image at 3.0x scaling (~300 DPI equivalent)
         pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
