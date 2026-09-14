@@ -375,6 +375,7 @@ class CountryImpactReportBuilder:
             aggloss_df)
         self.cities = self._get_cities_in_viewport()
 
+        # UserDefined adds a final bin if values exceed the last bound.
         classifiers = build_classifiers(aggloss_df, breaks=[1, 10, 100, 1000])
         images = {}
         for meta in LOSS_METADATA.values():
