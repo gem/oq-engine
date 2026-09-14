@@ -301,6 +301,11 @@ except ImportError:
         # settings in this file only will be used
         pass
 
+# Local defaults must not affect the test suite. In particular, a configured
+# IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
+if TEST:
+    IMPACT_DEFAULT_USGS_ID = ''
+
 if SUPPRESS_PERMISSION_DENIED_WARNINGS:
     class SuppressPermissionDeniedWarnings(logging.Filter):
         def filter(self, record):
