@@ -174,8 +174,8 @@ Disaggregation with amplification
 Disaggregation is supported alongside amplification (single CSV or amp-LT). The mag, dist, and lon/lat axes behave as
 usual. The epsilon axis requires two clarifications:
 
-* **Meaning of the epsilon axis.** Under amplification the epsilon axis is the **rock-GMPE residual**, not a soil-scale
-  epsilon. For each rupture and each rock-epsilon bin, the calculator evaluates the amplification function at the rock
+* **Meaning of the epsilon axis.** Under amplification the epsilon axis is the **epsilon of the rock ground motion**,
+  not a soil-scale epsilon. For each rupture and each rock-epsilon bin, the calculator evaluates the amplification function at the rock
   IML midpoint of the bin and integrates its distribution to obtain the soil-exceedance contribution. A bar at
   ``epsilon=+1`` therefore reads as: "contribution to soil exceedance from cases where the rock ground motion was
   around 1σ above the GMPE median, averaged over the amp function."

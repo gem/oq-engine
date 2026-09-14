@@ -64,8 +64,9 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
     :param amplifier:
-        an AmplificationModel or None. When set hmap3 is treated
-        as soil-scale target IMLs and _disaggregate_amp func is used
+        an AmplificationModel or None. When an AmplificationModel is present
+        hmap3 is treated as soil-scale target IMLs and _disaggregate_amp
+        is used
     :param monitor:
         monitor of the currently running job
     :returns:
