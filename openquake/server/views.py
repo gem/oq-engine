@@ -362,6 +362,18 @@ def get_engine_version(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def get_authentication_status(request):
+    """Return whether this engine requires client authentication.
+
+    This endpoint is intentionally public: clients need to distinguish a
+    public engine from an engine requiring credentials before attempting to
+    log in.
+    """
+    return JsonResponse({'authentication_required': settings.LOCKDOWN})
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def get_engine_latest_version(request):
     """
     Return a string with if new versions have been released.
@@ -1156,7 +1168,8 @@ def impact_get_rupture_data(request):
     """
     data = request.POST.dict()
     data['user_level'] = str(request.user.level)
-    return _post_api(request, 'v0/calc/impact_get_rupture_data', data)
+    return _post_api(
+        request, 'v0/calc/impact_get_rupture_data', data, timeout=120)
 
 
 @csrf_exempt

@@ -58,6 +58,11 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (calc_id, ret))
 
+    def test_authentication_status(self):
+        response = self.c.get('/v1/authentication/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authentication_required': True})
+
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_share_complete_job')
