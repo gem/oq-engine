@@ -319,8 +319,10 @@ def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
     :returns: a disagg matrix (6D array)
     """
     if epsstar:
-        # eps is intrinsically a rock-GMPE residual, so eps* semantics
-        # do not translate to soil exceedance - raise a hard error
+        # Epsilon is binned based on rock predictions, and therefore when using
+        # an amp model, any epsilon binning is corresponding to pre-amp bedrock
+        # rather than post-amp, so technically we would be misrepresenting the
+        # per epsilon bin contribution if supporting this
         raise NotImplementedError(
             'epsilon_star=true is not supported with an amp model/amp model LT'
             )
