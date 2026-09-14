@@ -2661,12 +2661,56 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+        additional_explanations = {
+            'value': (
+                'The exposed value depends on the impact metric. Below we '
+                'describe the meaning of the exposed value per impact metric.'
+                '<ul>'
+                '<li>Affected population and Rendered homeless: Population '
+                'in the area included in the impact analysis.</li>'
+                '<li>Floor area lost (m²): Total floor area of buildings, '
+                'including all storeys, in the area included in the impact '
+                'analysis.</li>'
+                '<li>Number of injured people and fatalities: Population '
+                'assumed to be inside the building stock in the area '
+                'included in the impact analysis.</li>'
+                '<li>Buildings destroyed: Number of buildings in the area '
+                'included in the impact analysis.</li>'
+                '<li>Economic loss (USD): Replacement value of buildings and '
+                'their contents in the area included in the impact analysis.'
+                '</li></ul>'
+            ),
+            'lossmea': (
+                'Arithmetic mean of the estimated impact values, accounting '
+                'for the uncertainties propagated through the impact '
+                'analysis.'
+            ),
+            'q50': (
+                'The 50th percentile of the estimated impact distribution. '
+                'Half of the estimated impact values are below the median and '
+                'half are above it.'
+            ),
+            'q05': (
+                'Value below which 5% of the estimated impact values fall. '
+                'It represents the lower end of the range of plausible '
+                'impacts.'
+            ),
+            'q95': (
+                'Value below which 95% of the estimated impact values fall. '
+                'It represents the upper end of the range of plausible '
+                'impacts.'
+            ),
+        }
+        explanations = {
+            **AGGRISK_FIELD_EXPLANATION,
+            **additional_explanations,
+        }
         field_explanations = [
             {
                 'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
                 'explanation': urlize(explanation),
             }
-            for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+            for key, explanation in explanations.items()
         ]
 
     # Decode byte strings to plain str
