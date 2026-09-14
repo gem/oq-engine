@@ -24,7 +24,7 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import pandas as pd
-from openquake.baselib import config, sap
+from openquake.baselib import config, hdf5, sap
 from openquake.calculators.country_impact_report_builder import (
     CountryImpactReportBuilder)
 from openquake.calculators.extract import extract
@@ -271,6 +271,23 @@ def _log_report_error(message):
     logging.error("%s\n%s", message, traceback.format_exc())
 
 
+def _add_report_warning(dstore, message):
+    # Add a report warning to the datastore
+    try:
+        warnings = []
+        if 'warnings' in dstore:
+            warnings = [
+                item.decode('utf8') if isinstance(item, bytes) else str(item)
+                for item in dstore['warnings'][:]
+            ]
+        dstore['warnings'] = hdf5.array_of_vstr(warnings + [message])
+    except Exception:
+        logging.error(
+            "Could not save the report warning in the datastore",
+            exc_info=True,
+        )
+
+
 def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
     """
     Create an impact report in PDF and PNG formats
@@ -286,8 +303,13 @@ def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
                 dstore, oqparam, calc_id, threshold_deg))
     except Exception:
         _log_report_error("Error while preparing country impact reports")
+        _add_report_warning(
+            dstore,
+            "Country impact report generation failed during preparation. "
+            "See the job log for details.")
         return
 
+    failed_countries = []
     for iso3 in iso3_codes:
         try:
             summary_data = _get_impact_summary_data(
@@ -298,8 +320,15 @@ def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
                     losses_df, summary_data, dstore, time_of_calc, oqparam)
         except Exception:
             _log_report_error(
-                f"Error while generating impact report for {iso3}",
-            )
+                f"Error while generating impact report for {iso3}")
+            failed_countries.append(iso3)
+
+    if failed_countries:
+        countries = ', '.join(failed_countries)
+        _add_report_warning(
+            dstore,
+            "Country impact report generation failed for: "
+            f"{countries}. See the job log for details.")
 
 
 def main(dstore, adm_level=1, threshold_deg=None):
