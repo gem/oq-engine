@@ -1,6 +1,5 @@
 #,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.25.0-git3bba9a1a69', start_date='2025-11-04T17:56:29', checksum=1576150219, kind='quantile-0.95', risk_investigation_time=1.0"
 asset_id,ADRESS,ID_0,LEVEL,MUNICIPALITY,NAME,PUPILS,REGION,SOURCE,STAFF,STATUS,taxonomy,lon,lat
-127,"st. Ribnik, n. 14",E_122,Secondary,Shtip,DSUOR Iskra,48,Eastern,AREC/WEB,39,Central,MUR/LWAL+DNO/H2-C,22.17614,41.73146
 125,"st. Trajko Kosevski, nn",E_120,Secondary,Shtip,SOU Jane Sandanski,743,Eastern,AREC/WEB,69,Central,CR/LFINF+CDL+DUL/H3,22.19924,41.73216
 101,v. Lakavica,E_96,Primary,Shtip,POU Vanco Prke,12,Eastern,AREC/WEB,1,Regional,CR/LFINF+CDM+DUM/H1,22.23614,41.63809
 519,v. Ciflik,Po_98.1,Primary,Zhelino,OOU Rametulla Ameti,97,Polog,IZIIS,15,Central,CR/LFINF+CDM+DUM/H2,21.12010,41.95310
@@ -19,3 +18,4 @@ asset_id,ADRESS,ID_0,LEVEL,MUNICIPALITY,NAME,PUPILS,REGION,SOURCE,STAFF,STATUS,t
 1035,v. Dobovjani,SW_124,Primary,Struga,POU Zini Hani,9,Southwestern,AREC/WEB,1,Regional,MUR/LWAL+DNO/H1-R,20.65270,41.25160
 482,"st. Ljube Bozinovski Pis, n. 41",Po_61,Primary,Tetovo,POU Bratstvo Migjeni,534,Polog,AREC/WEB,73,Central,MUR/LWAL+DNO/H1-C,20.97556,42.01268
 20,v. Lipec,E_19,Primary,Vinica,POU Koco Racin,8,Eastern,AREC/WEB,3,Regional,MUR/LWAL+DNO/H1-R,22.55094,41.84148
+127,"st. Ribnik, n. 14",E_122,Secondary,Shtip,DSUOR Iskra,48,Eastern,AREC/WEB,39,Central,MUR/LWAL+DNO/H2-C,22.17614,41.73146
