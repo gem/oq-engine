@@ -34,7 +34,7 @@ automatic tests executed by GitHub, i.e. the GitHub Actions.
 This manual will focus solely on the OpenQuake engine and it assumes
 that you already know how to use it, i.e. you have read the User
 Manual first. It is also useful to have an idea of the architecture
-of the engine and its components, like the DbServer and the
+of the engine and its components, like the
 WebUI. For that you should read the :ref:`Architecture of the
 OpenQuake engine <architecture-of-oq-engine>` section.
 
@@ -49,7 +49,7 @@ The first thing to do
 
 The first thing to do if you want to develop with the engine is to remove any non-development installation of the engine
 that you may have. While it is perfectly possible to install on the same machine both a development and a production
-instance of the engine (it is enough to configure the ports of the DbServer and WebUI) it is easier to work with a
+instance of the engine (it is enough to configure the port of the WebUI) it is easier to work with a
 single instance. In that way you will have a single code base and no risks of editing the wrong code. A development
 installation the engine works as any other development installation in Python: you should clone the engine repository,
 create and activate a virtualenv and then perform a *pip install -e* . from the engine main directory, as normal. You can

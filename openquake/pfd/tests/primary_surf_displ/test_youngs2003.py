@@ -16,7 +16,7 @@ import unittest
 
 import numpy as np
 
-from openquake.fdha.primary_surf_displ.youngs2003 import (
+from openquake.pfd.primary_surf_displ.youngs2003 import (
     Youngs2003PrimaryFD_AD,
     Youngs2003PrimaryFD_MD,
 )

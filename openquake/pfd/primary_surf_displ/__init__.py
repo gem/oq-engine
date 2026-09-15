@@ -17,6 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Package :mod:`openquake.fdha.primary_surf_rup` contains implementations
-of fault displacement prediction models.
+Package :mod:`openquake.pfd.primary_surf_displ` contains models for
+conditional exceedance probability of primary surface fault displacement.
 """

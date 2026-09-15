@@ -9,14 +9,6 @@ db command
     :undoc-members:
     :show-inheritance:
 
-dbserver command
---------------------------------
-
-.. automodule:: openquake.commands.dbserver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 engine command
 --------------------------------
 

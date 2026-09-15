@@ -105,17 +105,6 @@ command::
 
 to retrieve the path of its virtual environment.
 
-Another parameter accepted by the ``install.py`` script is
-``--dbport``, that specifies the port number used by the engine
-dbserver. This is only relevant for server installations.  By default,
-the port is set to 1907. The port can be customized through the
-attribute ``port`` of section ``[dbserver]`` in the configuration file
-``openquake.cfg``, placed inside the virtual environment directory,
-e.g.::
-
-	[dbserver]
-        port = 1908
-
 ########################################################################
 Can two installations of the engine share the same ``oqdata`` directory?
 ########################################################################
