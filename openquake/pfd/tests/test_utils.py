@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Tests for :mod:`openquake.fdha.utils`.
+Tests for :mod:`openquake.pfd.utils`.
 """
 import unittest
 
 import numpy as np
 
-from openquake.fdha.utils import rake_to_style
+from openquake.pfd.utils import rake_to_style
 
 
 class RakeToStyleScalarTestCase(unittest.TestCase):

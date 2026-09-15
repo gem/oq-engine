@@ -17,38 +17,27 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.fdha.primary_surf_displ.base` defines the abstract
-base class for primary surface fault displacement exceedance models.
+Module :mod:`openquake.pfd.primary_surf_rup.base` defines the abstract
+base class for primary surface rupture probability models.
 """
 
 import abc
 
 
-class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
+class BasePrimarySurfRup(metaclass=abc.ABCMeta):
     """
-    Abstract base class for models that compute the conditional
-    probability of exceeding a given primary surface fault displacement.
+    Abstract base class for primary surface rupture probability models.
     """
 
     @abc.abstractmethod
-    def get_prob(self, d, x_l, mag, rake=0.0):
+    def get_prob(self, ctx):
         """
-        Return the conditional probability that primary fault displacement
-        exceeds *d* metres, given magnitude and position along the rupture.
+        Return the probability that the rupture will reach the surface.
 
-        :param d:
-            Target displacement(s) in metres, scalar or array-like.
-        :param x_l:
-            Relative along-strike position x/L (0 = end, 0.5 = centre),
-            scalar or array-like.
-        :param mag:
-            Earthquake moment magnitude (scalar).
-        :param rake:
-            Rake angle in degrees (scalar), in [-180, 180]. See
-            :mod:`openquake.hazardlib.valid` for ``rake_range``.
+        :param ctx:
+            Context object with at least attribute ``mag`` (magnitude).
         :returns:
-            Exceedance probability array, shape
-            ``(n_displacements, n_sites)``.
+            Probability as float (scalar) or :class:`numpy.ndarray`.
         """
         pass
 
@@ -69,3 +58,4 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
             The class name in angular brackets, e.g. ``<ClassName>``.
         """
         return "<%s>" % self.__class__.__name__
+
