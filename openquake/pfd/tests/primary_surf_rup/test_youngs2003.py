@@ -10,7 +10,7 @@ import unittest
 import numpy as np
 
 from openquake.hazardlib.contexts import RuptureContext
-from openquake.fdha.primary_surf_rup.youngs2003 import (
+from openquake.pfd.primary_surf_rup.youngs2003 import (
     Youngs2003PrimarySR_ExC,
     Youngs2003PrimarySR_GB,
     Youngs2003PrimarySR_nBR,
