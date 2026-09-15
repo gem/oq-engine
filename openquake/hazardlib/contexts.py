@@ -60,7 +60,7 @@ TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
-azimuthcp rvolc clon_clat clon clat'''.split())
+azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
@@ -240,6 +240,9 @@ def kround1(ctx, kfields):
         if kfield == 'vs30':
             out[kfield][close] = numpy.round(kval[close])  # round less
             out[kfield][far] = numpy.round(kval[far], 1)  # round more
+        elif kfield == 'x_l':
+            # dimensionless [0, 1]; rounding would destroy it
+            out[kfield] = ctx[kfield]
         elif kval.dtype == F64 and kfield != 'mag':
             out[kfield][close] = F16(kval[close])  # round less
             out[kfield][far] = numpy.round(kval[far])  # round more
@@ -257,6 +260,9 @@ def kround2(ctx, kfields):
         kval = ctx[kfield]
         if kfield == 'rx':   # can be negative
             out[kfield] = numpy.round(kval)
+        elif kfield == 'x_l':
+            # dimensionless [0, 1]; ceil-to-km would collapse it
+            out[kfield] = ctx[kfield]
         elif kfield in KNOWN_DISTANCES:
             out[kfield][close] = numpy.ceil(kval[close])  # round to 1 km
             out[kfield][far] = round_dist(kval[far])  # round more
@@ -909,6 +915,10 @@ class ContextMaker(object):
                     value = msparam['ztor']
                 else:
                     value = rup.surface.get_top_edge_depth()
+            elif param == 'length':
+                # top rupture trace length (PFDHA); scalar per rupture
+                value = (rup.surface.get_tor_length()
+                         if rup.surface else 0.0)
             elif param == 'hypo_lon':
                 value = rup.hypocenter.longitude
             elif param == 'hypo_lat':
@@ -1774,7 +1784,7 @@ class RuptureContext(BaseContext):
     rup_id = 0
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc', 'src_id', 'rup_id')
+        'hypo_depth', 'width', 'hypo_loc', 'length', 'src_id', 'rup_id')
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
