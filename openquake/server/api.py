@@ -403,9 +403,10 @@ async def v0_impact_run(
                 f'/v1/calc/{job_id}/traceback'),
         }
 
-    response_data = create_impact_job(
-        params, form.get('username'), form.get('email') or '', build_urls,
-        _adapter('impact_callback'), form.get('email_file_path'))
+    response_data = await run_in_threadpool(
+        create_impact_job, params, form.get('username'),
+        form.get('email') or '', build_urls, _adapter('impact_callback'),
+        form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
 
