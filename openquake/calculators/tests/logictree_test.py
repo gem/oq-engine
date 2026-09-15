@@ -528,9 +528,9 @@ hazard_uhs-std.csv
                 self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_27(self):
-        # 3-branch amp LT, disaggregation, full enumeration and sampling
+        # 2 GMM x 3-branch amp LT, disaggregation, full enum + sampling
         for kwargs, prefix, nrlz in [
-                ({}, '', 3), # Full enumeration
+                ({}, '', 6), # Full enumeration: 1 SSC x 2 GMM x 3 amp
                 ({'number_of_logic_tree_samples': '2'}, 'sampling_', 2)]:
             self.run_calc(case_27.__file__, 'job.ini', **kwargs)
             self.assertEqual(len(self.calc.full_lt.rlzs), nrlz)
