@@ -167,3 +167,20 @@ IMTs listed in ``intensity_measure_types_and_levels``. Beyond that, nothing has 
 AF and sigma values, the rock-IML ``level`` grid, the ``from_mag`` and ``from_rrup`` grids, and any extra ampcodes or
 IMT columns may all differ. Branches may therefore represent alternative discretisations and value sets as legitimate
 epistemic choices.
+
+Disaggregation with amplification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Disaggregation is supported alongside amplification (single CSV or amp-LT). The mag, dist, and lon/lat axes behave as
+usual. The epsilon axis requires two clarifications:
+
+* **Meaning of the epsilon axis.** Under amplification the epsilon axis is the **epsilon of the rock ground motion**,
+  not a soil-scale epsilon. For each rupture and each rock-epsilon bin, the calculator evaluates the amplification function
+  at the rock IML midpoint of the bin and integrates its distribution to obtain the soil-exceedance contribution. A bar at
+  ``epsilon=+1`` in a 3D disagg plot would therefore read as: "contribution to soil exceedance from cases where the rock ground
+  motion was around 1 sigma above the GMM median, averaged over the amplification model."
+* **``epsilon_star`` is not supported with amplification.** The ``epsilon_star`` mode collapses each rupture's
+  contribution into the single epsilon bin at which its rock ground motion crosses the target IML. Under a stochastic
+  amplification function (any amplification model CSV with a non-zero ``sigma_<IMT>`` column) every rock epsilon contributes with
+  some probability once the amplification is convolved, so no single "epsilon at exceedance" exists per rupture. Setting
+  ``epsilon_star = true`` alongside an amplification model raises an error.
