@@ -27,8 +27,6 @@ displacement is derived from rupture length following the author's
 prescription ``AD = 1.7e-5 * L`` where ``L`` is in metres.
 """
 
-from __future__ import annotations
-
 import math
 import numpy as np
 

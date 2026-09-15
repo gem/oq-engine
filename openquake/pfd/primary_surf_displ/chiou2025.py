@@ -24,8 +24,6 @@ faults. Earthquake Spectra, 41(4), 2746-2782.
 https://doi.org/10.1177/87552930251337703
 """
 
-from __future__ import annotations
-
 import os
 import logging
 import numpy as np

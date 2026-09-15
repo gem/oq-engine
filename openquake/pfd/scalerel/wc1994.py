@@ -36,8 +36,6 @@ Conventions:
 - For displacement (MD/AD), both forward and inverse forms are provided.
 """
 
-from __future__ import annotations
-
 from collections import namedtuple
 import math
 import numpy as np

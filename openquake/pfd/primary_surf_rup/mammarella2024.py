@@ -82,8 +82,6 @@ to avoid large repeat/tile expansions. Final probability is the sum of joint
 weights satisfying the condition.
 """
 
-from __future__ import annotations
-
 import numpy as np
 from scipy.stats import norm, truncnorm
 
