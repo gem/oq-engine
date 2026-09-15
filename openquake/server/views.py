@@ -34,7 +34,6 @@ import psutil
 import requests
 
 from threading import Event
-from unittest.mock import patch
 from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
@@ -498,17 +497,6 @@ def validate_nrml(request):
         return _make_response(error_msg=None, error_line=None, valid=True)
 
 
-def validate_job(job_file):
-    """Validate a calculation input and return its JSON-compatible result."""
-    try:
-        oq = readinput.get_oqparam(job_file)
-        with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
-            base.calculators(oq, calc_id=None).run()
-    except Exception as exc:
-        return dict(error_msg=str(exc), error_line=None, valid=False)
-    return dict(error_msg=None, error_line=None, valid=True)
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -525,9 +513,8 @@ def validate_ini(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    ini = request.FILES.get('job_ini')
-    # assume ini is a full accessible path name
-    return JsonResponse(validate_job(ini))
+    return _post_api(
+        request, 'v0/calc/validate_ini', request.POST.dict())
 
 
 @csrf_exempt
@@ -546,11 +533,8 @@ def validate_zip(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    archive = request.FILES.get('archive')
-    if not archive:
-        return HttpResponseBadRequest('Missing archive file')
-    job_zip = archive.temporary_file_path()
-    return JsonResponse(validate_job(job_zip))
+    return _post_api(
+        request, 'v0/calc/validate_zip', request.POST.dict())
 
 
 @require_http_methods(['GET'])
@@ -1242,24 +1226,6 @@ def impact_get_nodal_planes_and_info(request):
     response_data = dict(nodal_planes=nodal_planes,
                          nodal_planes_issue=nodal_planes_issue, info=info)
     return JsonResponse(response_data)
-
-
-def get_uploaded_file_path(request, filename):
-    file = request.FILES.get(filename)
-    if file:
-        # NOTE: we could not find a reliable way to avoid the deletion of the
-        # uploaded file right after the request is consumed, therefore we need
-        # to store a copy of it
-        name = getattr(file, 'name', None) or file.filename
-        suffix = name[-4:]
-        source = getattr(file, 'file', None)
-        if source is None:
-            with open(file.temporary_file_path(), 'rb') as stream:
-                content = stream.read()
-        else:
-            source.seek(0)
-            content = source.read()
-        return gettemp(content, suffix=suffix)
 
 
 def create_impact_job(request, params, email_file_path):

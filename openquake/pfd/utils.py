@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.fdha.utils` provides shared utility functions
+Module :mod:`openquake.pfd.utils` provides shared utility functions
 for fault displacement hazard analysis (FDHA) models.
 """
 

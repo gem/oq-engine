@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.fdha.primary_surf_displ.youngs2003` implements
+Module :mod:`openquake.pfd.primary_surf_displ.youngs2003` implements
 the Youngs et al. (2003) model for the conditional probability of
 exceeding principal surface fault displacement on normal faults.
 
@@ -43,7 +43,7 @@ log-normal uncertainty in AD or MD (epsilon-based weighted sum).
 
 The :meth:`get_prob` method takes a **rake** angle (degrees, -180 to 180).
 Rake is mapped to Wells & Coppersmith (1994) style via
-:func:`~openquake.fdha.utils.rake_to_style`: normal faulting
+:func:`~openquake.pfd.utils.rake_to_style`: normal faulting
 (-150 < rake < -30) uses WC94 normal coefficients; all other rake
 values (including ``"undefined"``) use WC94 "all styles" coefficients.
 See :mod:`openquake.hazardlib.valid` for ``rake_range``.
@@ -102,8 +102,8 @@ Wells, D.L. and Coppersmith, K.J. (1994). New empirical relationships
 
 import numpy as np
 from scipy.stats import gamma, norm, beta
-from openquake.fdha.primary_surf_displ.base import BasePrimarySurfDispl
-from openquake.fdha.utils import rake_to_style
+from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
+from openquake.pfd.utils import rake_to_style
 
 
 # -----------------------------------------------------------------------
@@ -215,7 +215,7 @@ class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
             Earthquake moment magnitude (scalar).
         :param rake:
             Rake angle in degrees (scalar), in [-180, 180]. Mapped to
-            WC94 style via :func:`~openquake.fdha.utils.rake_to_style`
+            WC94 style via :func:`~openquake.pfd.utils.rake_to_style`
             (normal if -150 < rake < -30, else all styles).
         :returns:
             Exceedance probability, shape ``(n_displacements, n_sites)``.

@@ -36,7 +36,7 @@ from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.dbserver import db
+from openquake.commonlib.dbapi import db
 from openquake.server.views import job_complete_callback_state
 from openquake.server.tests.views_test import (
     EngineServerTestCase, loadnpz, start_uvicorn, stop_uvicorn)

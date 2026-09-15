@@ -17,12 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.fdha.primary_surf_rup.youngs2003` implements
+Module :mod:`openquake.pfd.primary_surf_rup.youngs2003` implements
 regional models of Youngs et al. (2003) for primary surface rupture.
 """
 
 import numpy as np
-from openquake.fdha.primary_surf_rup.base import BasePrimarySurfRup
+from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
 class Youngs2003Base(BasePrimarySurfRup):
