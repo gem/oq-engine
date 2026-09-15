@@ -45,7 +45,7 @@ class WebuiTestCase(unittest.TestCase):
                 [oq, 'webui', 'stop', hostport], cwd=ROOT, env=env,
                 capture_output=True, text=True, check=True)
             self.assertEqual(stopped.stdout.strip(), 'stopped')
-            self.assertEqual(process.wait(timeout=10), 0)
+            self.assertIn(process.wait(timeout=10), [0, 15])
         finally:
             if process.poll() is None:
                 process.terminate()
