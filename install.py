@@ -103,6 +103,7 @@ class server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
 
     @classmethod
     def manage_py(cls):
@@ -142,6 +143,7 @@ class devel_server:
         DBPORT,
         DBPATH,
     )
+    USER = "openquake"
     exit = server.exit
 
     @classmethod
@@ -171,6 +173,7 @@ class user:
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     DBPORT = 1908
     CONFIG = ""
+    USER = None
 
     @classmethod
     def manage_py(cls):
