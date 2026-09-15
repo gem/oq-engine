@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Introduced a uvicorn server replacing the DbServer with a REST API
+    and serving also the Django (sub)applications
+
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference
     is the .gpkg file, not the code
@@ -8,9 +12,9 @@
     not actually used.
 
   [Anirudh Rao]
-  * Implemented the Abrahamson et al. (2014) between-event and within-event 
+  * Implemented the Abrahamson et al. (2014) between-event and within-event
     cross-IM correlation models for PGA-SA-PGV based on the NGA-West2 database
-  * Enabled memory-efficient circulant embedding for unconditioned spatially 
+  * Enabled memory-efficient circulant embedding for unconditioned spatially
     and cross-IMT correlated GMFs on large regular grids
   * Added local Kriging for obtaining correlated field values at off-grid
     station locations
