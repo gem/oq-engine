@@ -262,6 +262,16 @@ def get_requirements_branch(version, inst, from_fork):
         return version
 
 
+def _run_subprocess(inst, args):
+    # Run subprocess use sudo if inst.USER != None
+    if inst.USER is None:
+        subprocess.check_call(args)
+    else:
+        # user=inst.USER does not appear to work in the same
+        # way as sudo -u $USER
+        subprocess.check_call(['sudo', '-u', inst.USER] + args)
+
+
 def install_or_postinstall_standalone(venv, is_install=True):
     """
     Install the standalone Django applications if possible or
@@ -301,6 +311,18 @@ def install_or_postinstall_standalone(venv, is_install=True):
                 # for instance is somebody removed a wheel from the wheelhouse
                 errors.append("%s: could not install %s" % (exc, app['pkg']))
     else:
+        # Obtain paths for python and manage.py in VENV, we cannot use
+        # site.getsitepackages here since we are not yet running in the venv
+        if sys.platform == "win32":
+            python = ['Scripts', 'python.exe']
+        else:
+            python = ["bin", "python"]
+
+        # Run python manage.py migrate before running app postinstall
+        _run_subprocess(
+            inst,
+            [os.path.join(inst.VENV, *python), inst.manage_py(), "migrate"])
+
         for app in STANDALONE_APP_INFO:
             if not app['name']:
                 continue
