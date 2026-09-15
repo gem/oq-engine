@@ -30,6 +30,7 @@ import tempfile
 import traceback
 import zlib
 from datetime import datetime
+from unittest.mock import patch
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
@@ -47,7 +48,8 @@ from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
-from openquake.commonlib import dbapi, logs, oqvalidation
+from openquake.commonlib import dbapi, logs, oqvalidation, readinput
+from openquake.calculators import base
 from openquake.server.db.registry import get_action
 
 app = FastAPI(title='OpenQuake API')
@@ -57,6 +59,36 @@ def _check_api_key(api_key):
     """Raise ``HTTPException`` unless the internal API key is valid."""
     if not api_key or not secrets.compare_digest(api_key, API_KEY):
         raise HTTPException(status_code=403, detail='Invalid API key')
+
+
+def validate_job(job_file):
+    """Validate a calculation input and return its JSON-compatible result."""
+    try:
+        oq = readinput.get_oqparam(job_file)
+        with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+            base.calculators(oq, calc_id=None).run()
+    except Exception as exc:
+        return dict(error_msg=str(exc), error_line=None, valid=False)
+    return dict(error_msg=None, error_line=None, valid=True)
+
+
+def get_uploaded_file_path(request, filename):
+    """Copy an uploaded file to a temporary path and return its location."""
+    file = request.FILES.get(filename)
+    if file:
+        # NOTE: we could not find a reliable way to avoid the deletion of the
+        # uploaded file right after the request is consumed, therefore we need
+        # to store a copy of it
+        name = getattr(file, 'name', None) or file.filename
+        suffix = name[-4:]
+        source = getattr(file, 'file', None)
+        if source is None:
+            with open(file.temporary_file_path(), 'rb') as stream:
+                content = stream.read()
+        else:
+            source.seek(0)
+            content = source.read()
+        return gettemp(content, suffix=suffix)
 
 
 @app.get('/v1/calc_info/{calc_id}')
@@ -139,7 +171,6 @@ async def _validate_uploaded_file(request, field, missing_message):
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
-    from openquake.server.views import get_uploaded_file_path, validate_job
     if field in files:
         path = get_uploaded_file_path(
             SimpleNamespace(POST=form, FILES=files), field)
@@ -322,8 +353,7 @@ async def v0_impact_run(
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
-    from openquake.server.views import (
-        create_impact_job, get_uploaded_file_path)
+    from openquake.server.views import create_impact_job
     user = SimpleNamespace(level=user_level, testdir=None)
     adapter = SimpleNamespace(POST=post, FILES=files)
     rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
@@ -375,8 +405,7 @@ async def v0_impact_get_rupture_data(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400,
                             detail='Invalid IMPACT user level')
-    from openquake.server.views import (
-        get_impact_rupture_data, get_uploaded_file_path)
+    from openquake.server.views import get_impact_rupture_data
     user = SimpleNamespace(level=user_level, testdir=None)
     files = {
         key: value for key, value in form.multi_items()
