@@ -942,6 +942,12 @@ def calc_run_scenario_from_ses(request, rup_id):
 def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs,
         exc=None, warnings=None, email_file_path=None):
+    """Send AELO notifications using Django's email configuration.
+
+    This is a Django adapter: it reads ``settings.EMAIL_*`` and uses
+    ``EmailMessage``/``FileEmailBackend``.  The AELO calculation itself is
+    framework-neutral and lives in ``server.services``.
+    """
     if not job_owner_email:
         return
     from_email = settings.EMAIL_HOST_USER
@@ -1243,7 +1249,13 @@ def impact_run_with_shakemap(request):
 
 
 def aelo_validate(request):
-    """Validate AELO input and return the Django response."""
+    """Validate AELO input and return a Django response.
+
+    The validation rules are implemented by the Django-independent
+    ``validate_aelo_data`` service.  This adapter only supplies
+    ``request.POST``, the Django setting for the maximum site-name length,
+    and converts validation errors into ``JsonResponse`` objects.
+    """
     result, status = validate_aelo_data(
         request.POST, AELO_FORM_LABELS, settings.MAX_AELO_SITE_NAME_LEN)
     if status != 200:
@@ -1255,7 +1267,12 @@ def aelo_validate(request):
 def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
               username, job_owner_email, build_absolute_uri,
               email_file_path):
-    """Create and start an AELO job after Django has authenticated it."""
+    """Create an AELO job through the Django adapter layer.
+
+    ``run_aelo`` contains the framework-neutral job setup and process
+    spawning.  This wrapper injects Django URL reversing and the Django email
+    callback, while the service remains independent of Django.
+    """
     def build_urls(job_id):
         return {
             'outputs_uri_web': build_absolute_uri(

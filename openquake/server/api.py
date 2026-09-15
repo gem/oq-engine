@@ -54,10 +54,20 @@ from openquake.server.db.registry import get_action
 from openquake.server.papers import base as papers
 from openquake.server.services import (
     create_impact_job, get_impact_rupture_data, submit_job)
-from openquake.server.views import (
-    aelo_validate, _run_aelo, impact_callback)
-
 app = FastAPI(title='OpenQuake API')
+app.state.adapters = {}
+
+
+def configure_adapters(**adapters):
+    """Register framework-specific adapters for the API endpoints."""
+    app.state.adapters.update(adapters)
+
+
+def _adapter(name):
+    try:
+        return app.state.adapters[name]
+    except KeyError as exc:
+        raise RuntimeError('Missing API adapter: %s' % name) from exc
 
 
 def _check_api_key(api_key):
@@ -285,7 +295,7 @@ async def v0_aelo_run(
         raise HTTPException(status_code=400,
                             detail='Missing AELO caller information')
     result = await run_in_threadpool(
-        aelo_validate, SimpleNamespace(POST=form))
+        _adapter('aelo_validate'), SimpleNamespace(POST=form))
     if hasattr(result, 'status_code'):
         return JSONResponse(
             content=json.loads(result.content),
@@ -296,8 +306,8 @@ async def v0_aelo_run(
         return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
 
     response_data, status = await run_in_threadpool(
-        _run_aelo, lon, lat, site_name, asce_version, site_class, vs30,
-        username, form.get('email') or '', build_absolute_uri,
+        _adapter('run_aelo'), lon, lat, site_name, asce_version, site_class,
+        vs30, username, form.get('email') or '', build_absolute_uri,
         form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=status)
 
@@ -395,7 +405,7 @@ async def v0_impact_run(
 
     response_data = create_impact_job(
         params, form.get('username'), form.get('email') or '', build_urls,
-        impact_callback, form.get('email_file_path'))
+        _adapter('impact_callback'), form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
 
