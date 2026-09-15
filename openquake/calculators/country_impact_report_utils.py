@@ -58,8 +58,8 @@ LOSS_METADATA = {
             '#fff5f0', '#fcbba1', '#fb6a4a', '#cb181d', '#67000d'],
     },
     "residents": {
-        "label": "Displaced",
-        "title": "displaced population",
+        "label": "Rendered Homeless",
+        "title": "population rendered homeless",
         "colors": [
             '#f1eef6', '#d7b5d8', '#df65b0', '#dd1c77', '#980043'],
     },
