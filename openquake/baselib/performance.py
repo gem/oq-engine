@@ -235,7 +235,7 @@ class Monitor(object):
     version = None  # set by Starmap
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None, dbserver_host='127.0.0.1'):
+                 h5=None, database_host='127.0.0.1'):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
@@ -248,7 +248,7 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
-        self.dbserver_host = dbserver_host
+        self.database_host = database_host
 
     @property
     def mem(self):
