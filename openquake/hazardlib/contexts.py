@@ -886,89 +886,96 @@ class ContextMaker(object):
                 ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
 
+    @staticmethod
+    def _get_zbot(rup, msparam):
+        """
+        Bottom-edge depth; needed for width estimation in
+        CampbellBozorgnia2014.
+        """
+        if msparam:
+            return msparam['zbot']
+        elif rup.surface and hasattr(rup, 'surfaces'):
+            return rup.surface.zbot
+        elif rup.surface:
+            return rup.surface.mesh.depths.max()
+        else:
+            return rup.hypocenter.depth
+
+    @staticmethod
+    def _get_in_cshm(rup):
+        """
+        Whether the rupture intersects the CSHM polygon; used in the
+        McVerry and Bradley GMPEs. This is really expensive.
+        """
+        if not rup.surface:
+            return False
+        lons = rup.surface.mesh.lons.flatten()
+        lats = rup.surface.mesh.lats.flatten()
+        points_in_polygon = (
+            shapely.geometry.Point(lon, lat).within(cshm_polygon)
+            for lon, lat in zip(lons, lats))
+        return any(points_in_polygon)
+
+    def _get_rup_param(self, rup, param, msparam):
+        """
+        :param rup: a rupture
+        :param param: a rupture parameter name
+        :param msparam: multi-fault section parameters, or None
+        :returns: the value of the given rupture parameter
+        """
+        surface = rup.surface
+        if param == 'mag':
+            return numpy.round(rup.mag, 3)
+        elif param == 'strike':
+            return msparam['strike'] if msparam else surface.get_strike()
+        elif param == 'dip':
+            return msparam['dip'] if msparam else surface.get_dip()
+        elif param == 'rake':
+            return rup.rake
+        elif param == 'ztor':
+            return (msparam['ztor'] if msparam
+                    else surface.get_top_edge_depth())
+        elif param == 'width':
+            return msparam['width'] if msparam else surface.get_width()
+        elif param == 'zbot':
+            return self._get_zbot(rup, msparam)
+        elif param == 'length':
+            # top rupture trace length (PFDHA); scalar per rupture
+            return surface.get_tor_length() if surface else 0.0
+        elif param == 'in_cshm':
+            return self._get_in_cshm(rup)
+        elif param == 'hypo_lon':
+            return rup.hypocenter.longitude
+        elif param == 'hypo_lat':
+            return rup.hypocenter.latitude
+        elif param == 'hypo_depth':
+            return rup.hypocenter.depth
+        elif param == 'is_aftershock':
+            # Set to True later in RmapMaker for ruptures with a non-zero
+            # delta_rate. Without delta_rates it stays False
+            return False
+        elif param == 'crjb':
+            # Centroid Joyner-Boore distance between an aftershock rup and
+            # its main shock. Can be provided from the delta_rates CSV
+            return numpy.nan
+        else:
+            raise ValueError('%s requires unknown rupture parameter %r' %
+                             (type(self).__name__, param))
+
     def get_rparams(self, rup):
         """
         :returns: a dictionary with the rupture parameters
         """
-        dic = {}
-        if self.dparam:
-            msparam = rup.surface.msparam
-        else:
-            msparam = None
-        for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if param == 'mag':
-                value = numpy.round(rup.mag, 3)
-            elif param == 'strike':
-                if msparam:
-                    value = msparam['strike']
-                else:
-                    value = rup.surface.get_strike()
-            elif param == 'dip':
-                if msparam:
-                    value = msparam['dip']
-                else:
-                    value = rup.surface.get_dip()
-            elif param == 'rake':
-                value = rup.rake
-            elif param == 'ztor':
-                if msparam:
-                    value = msparam['ztor']
-                else:
-                    value = rup.surface.get_top_edge_depth()
-            elif param == 'length':
-                # top rupture trace length (PFDHA); scalar per rupture
-                value = (rup.surface.get_tor_length()
-                         if rup.surface else 0.0)
-            elif param == 'hypo_lon':
-                value = rup.hypocenter.longitude
-            elif param == 'hypo_lat':
-                value = rup.hypocenter.latitude
-            elif param == 'hypo_depth':
-                value = rup.hypocenter.depth
-            elif param == 'width':
-                if msparam:
-                    value = msparam['width']
-                else:
-                    value = rup.surface.get_width()
-            elif param == 'in_cshm':
-                # used in McVerry and Bradley GMPEs
-                if rup.surface:
-                    # this is really expensive
-                    lons = rup.surface.mesh.lons.flatten()
-                    lats = rup.surface.mesh.lats.flatten()
-                    points_in_polygon = (
-                        shapely.geometry.Point(lon, lat).within(cshm_polygon)
-                        for lon, lat in zip(lons, lats))
-                    value = any(points_in_polygon)
-                else:
-                    value = False
-            elif param == 'zbot':
-                # needed for width estimation in CampbellBozorgnia2014
-                if msparam:
-                    value = msparam['zbot']
-                elif rup.surface and hasattr(rup, 'surfaces'):
-                    value = rup.surface.zbot
-                elif rup.surface:
-                    value = rup.surface.mesh.depths.max()
-                else:
-                    value = rup.hypocenter.depth
-            elif param == 'is_aftershock':
-                # Set to True later in RmapMaker for ruptures with a
-                # non-zero delta_rate. Without delta_rates it stays False
-                value = False
-            elif param == 'crjb':
-                # Centroid Joyner-Boore distance between an aftershock rup and
-                # its main shock. Can be provided from the delta_rates CSV
-                value = numpy.nan
-            else:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (type(self).__name__, param))
-            dic[param] = value
+        msparam = rup.surface.msparam if self.dparam else None
+        dic = {param: self._get_rup_param(rup, param, msparam)
+               for param in self.REQUIRES_RUPTURE_PARAMETERS}
         dic['occurrence_rate'] = getattr(rup, 'occurrence_rate', numpy.nan)
         if hasattr(rup, 'temporal_occurrence_model'):
-            if isinstance(rup.temporal_occurrence_model, NegativeBinomialTOM):
-                dic['probs_occur'] = rup.temporal_occurrence_model.get_pmf(
-                    rup.occurrence_rate)
+            if isinstance(rup.temporal_occurrence_model,
+                          NegativeBinomialTOM):
+                dic['probs_occur'] = (
+                    rup.temporal_occurrence_model.get_pmf(
+                        rup.occurrence_rate))
         elif hasattr(rup, 'probs_occur'):
             dic['probs_occur'] = rup.probs_occur
 
