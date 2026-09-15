@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="case 85 source model A">
+        <simpleFaultSource id="src_a" name="src_a"
+                           tectonicRegion="active shallow crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -0.05 0.0
+                         0.05 0.0
+                    </gml:posList>
+                </gml:LineString>
+                <dip>90.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0"
+                                      maxMag="7.0" minMag="5.0"/>
+            <rake>0.0</rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>
