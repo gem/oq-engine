@@ -127,7 +127,7 @@ def _fkp_ha18(kappa, C, mag, dsigma):
             for j in range(4):
                 p[j, k] = np.polyval([C[f'd{i}{j}2'], C[f'd{i}{j}1'],
                                       C[f'd{i}{j}0']], np.log10(dsigma[k]))
-            ek0[i, k] = np.polyval(p[::-1, k], math.log10(mag))
+            ek0[i, k] = np.polyval(p[::-1, k], np.log10(mag[0]))
     return 3 * ek0[0] - 9 * ek0[1] + 27 * ek0[2] - 81 * ek0[3] \
         + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
         + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
@@ -209,7 +209,7 @@ def _fz_ha18(rt, C, mag, rrup):
     s = CONSTANTS
     h = 10 ** (-0.405 + 0.235 * mag)
     ref = np.sqrt(rrup ** 2 + h ** 2)
-    rref = math.sqrt(1 ** 2 + h ** 2)
+    rref = np.sqrt(1 ** 2 + h ** 2)
 
     return np.where(ref <= rt, s['b1'] * np.log10(ref)
                     + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref),

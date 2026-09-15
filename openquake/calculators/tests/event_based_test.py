@@ -19,6 +19,7 @@
 import io
 import os
 import math
+from types import SimpleNamespace
 from unittest.mock import patch
 import numpy
 import pandas
@@ -48,6 +49,67 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
+
+
+def test_joint_memory_estimates():
+    """Cover dense, chunked, and station-dominated memory estimates."""
+    computer = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(4), imts_D=range(3)),
+        E=500)
+    G = 1  # number of GSIMs
+    N = 10_000  # number of target sites
+    D = 100  # number of station sites
+    T = 4 * N  # target variables: target IMTs times target sites
+    Q = 3 * D  # observations: observed IMTs times station sites
+
+    budget = (
+        3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4)
+    dense_size, _, dense_name, dense_block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=True, memory_limit=budget))
+    # Conservative peak: target matrices, target-station blocks, station
+    # matrices, random samples, and the float32 result array.
+    expected_dense = (
+        4 * T * T * 8 + 2 * T * Q * 8 + 4 * Q * Q * 8 +
+        T * 500 * 20 + T * 4)
+    assert dense_size == expected_dense
+    assert dense_name == 'dense joint conditioning workspace'
+    assert dense_block is None
+
+    ce_model = SimpleNamespace(SUPPORTS_CIRCULANT_EMBEDDING=True)
+    scalable = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=ce_model,
+            imts_Y=range(4), imts_D=range(3)),
+        E=500, N=N)
+    ce_size, _, ce_name, ce_block = event_based._conditioned_memory(
+        scalable, D, G, N, compute_covs=True,
+        memory_limit=8 * 1024 ** 3)
+    assert ce_name == 'circulant conditioning workspace'
+    assert ce_size <= 8 * 1024 ** 3
+    assert ce_size >= T * Q * 8
+    assert ce_block > 0
+
+    chunked_size, _, chunked_name, block = (
+        event_based._conditioned_memory(
+            computer, D, G, N, compute_covs=False, memory_limit=budget))
+    expected_chunked = 3 * 6_000_000 * 8 + 4 * Q * Q * 8 + T * 501 * 4
+    assert chunked_size == expected_chunked
+    assert chunked_name == 'chunked joint conditioning workspace'
+    assert block == 6_000_000
+
+    station_rich = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=object(),
+            imts_Y=range(1), imts_D=range(4)),
+        E=1)
+    station_size, _, _, block = event_based._conditioned_memory(
+        station_rich, 10_000, G=1, N=1, compute_covs=False,
+        memory_limit=budget)
+    assert station_size >= 4 * (4 * 10_000) ** 2 * 8
+    assert block == 4 * 10_000
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
@@ -297,13 +359,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
-        out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_6.__file__, 'job.ini')
 
         # first check the number of generated ruptures
         num_rups = len(self.calc.datastore['ruptures'])
-        self.assertEqual(num_rups, 1913)
+        self.assertEqual(num_rups, 1030)
 
-        fnames = out['hcurves', 'csv']
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)

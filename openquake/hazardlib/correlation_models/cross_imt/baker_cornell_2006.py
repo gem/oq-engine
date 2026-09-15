@@ -28,20 +28,28 @@ import math
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 @register_model(description='Baker and Cornell (2006) SA correlation')
 class BakerCornell2006(CrossIMTCorrelationModel):
-    """Total-residual spectral correlation by Baker and Cornell (2006)."""
+    """Total-residual spectral correlation by Baker and Cornell (2006).
 
-    name = 'BakerCornell2006'
-    calibrated_component = ResidualComponent.TOTAL
-    # The historical ShakeMap implementation treats PGA and PGV as
-    # 0.05-second SA for this correlation calculation.
-    supported_imts = ('PGA', 'PGV', 'SA')
+    The publication calibrated 5%-damped SA from 0.05 to 5 seconds. PGA and
+    PGV are retained temporarily using the engine's historical SA(0.05) proxy.
+    """
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {
+        PGA: SA(0.05),
+        PGV: SA(0.05),
+    }
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.05, 5.0)
+
+    def _rho(self, from_imt, to_imt, context=None):
         if from_imt == to_imt:
             return 1.0
         min_period = min(from_imt.period or 0.05,

@@ -52,14 +52,6 @@ https://docs.openquake.org/oq-engine/master/manual/
 * [Contributing](https://docs.openquake.org/oq-engine/master/manual/contributing/)
 * [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq.html)
 
-
-## Mirrors
-
-A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
-
-The main download server ([downloads.openquake.org](https://downloads.openquake.org/)) is hosted in Nürnberg (Germany).
-
-
 ## License
 
 The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICENSE)**.

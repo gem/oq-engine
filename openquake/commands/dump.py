@@ -31,15 +31,18 @@ def smart_save(dbpath, archive, calc_id):
     """
     tmpdir = tempfile.mkdtemp()
     newdb = os.path.join(tmpdir, os.path.basename(dbpath))
-    shutil.copy(dbpath, newdb)
+    src = sqlite3.connect(dbpath)
     try:
-        with sqlite3.connect(newdb) as conn:
-            conn.execute('DELETE FROM job WHERE status != "complete"')
+        with sqlite3.connect(newdb) as dst:
+            src.backup(dst)
+            dst.execute('DELETE FROM job WHERE status != "complete"')
             if calc_id:
-                conn.execute('DELETE FROM job WHERE id != %d' % calc_id)
+                dst.execute('DELETE FROM job WHERE id != %d' % calc_id)
     except Exception:
         safeprint('Please check the copy of the db in %s' % newdb)
         raise
+    finally:
+        src.close()
     zipfiles([newdb], archive, 'a', safeprint)
     shutil.rmtree(tmpdir)
 

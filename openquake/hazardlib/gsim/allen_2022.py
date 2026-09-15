@@ -63,7 +63,7 @@ def _get_depth_scaling(C, hypo_depth):
     it is recommended to truncate hz to either 10 or 500 km."
     The original OQ implementation omitted this truncation.
     """
-    hz = np.clip(hypo_depth, 10.0, 500.0)  # BUG FIX: depth truncation
+    hz = np.clip(hypo_depth, 10.0, 500.0)
     log_hz = np.log10(hz)
     return C["d0"] + C["d1"] * (log_hz ** 3) + C["d2"] * (log_hz ** 2) + C["d3"] * log_hz
 

@@ -15,6 +15,8 @@ class ImpactPage(EnginePage):
         expect(shakemap_version_select).to_have_value(value)
 
     def retrieve_data(self):
+        self.page.locator('.modal-backdrop').wait_for(
+            state='detached', timeout=15_000)
         self.page.locator("#submit_impact_get_rupture").click()
 
     def run_impact_calc(self):
@@ -130,9 +132,9 @@ class ImpactPageLevel2(ImpactPage):
         station_data_loaded = self.page.locator(
             'input#station_data_file_loaded')
         if expect_no_seismic_stations:
-            self.page.get_by_role("button", name="Close").click(
-                timeout=15_000)
             expect(station_data_loaded).to_have_value(
                 'N.A. (conversion issue)', timeout=15_000)
+            self.page.get_by_role("button", name="Close").click(
+                timeout=15_000)
         else:
             expect(station_data_loaded).not_to_have_value('', timeout=15_000)

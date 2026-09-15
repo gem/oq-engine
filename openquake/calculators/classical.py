@@ -260,7 +260,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param amplifier: instance of Amplifier or None
+    :param amplifier: an AmplificationModel or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -271,9 +271,12 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         pgetter.init()
 
     if amplifier:
+        # AmplificationModel: single branch (plain CSV) or amp-LT branches;
+        # AmplificationModel.amplify() picks the right branch per rlz
         # amplification is meant for few sites, i.e. no tiling
         with hdf5.File(pgetter.filenames[0], 'r') as f:
             ampcode = f['sitecol'].ampcode
+        # switch imtls from rock IMT grid to the soil intensity grid
         imtls = DictArray({imt: amplifier.amplevels
                            for imt in pgetter.imtls})
     else:
@@ -295,10 +298,11 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         sidx = MapArray(sids, 1, 1).fill(0).sidx
         for sid in sids:
             idx = sidx[sid]
-            pc = pgetter.get_hcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid)  # rock hcurve, shape (L, R)
             if amplifier:
+                # rock -> soil; with amp-LT each column uses its branch AF
                 pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the hcurve have soil levels != IMT levels
+                # NB: the hcurve now has soil levels != IMT levels
             if pc.sum() == 0:  # no data
                 continue
             if R == 1 or individual_rlzs:

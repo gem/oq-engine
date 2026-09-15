@@ -277,3 +277,58 @@ The new parameters introduced in the above risk configuration file example are d
 - ``lrem_steps_per_interval``: this parameter controls the number of intermediate values between consecutive loss ratios (as defined in the Vulnerability Model) that are considered in the risk calculations. A larger number of loss ratios than those defined in each Vulnerability Function should be considered, in order to better account for the uncertainty in the loss ratio distribution. If this parameter is not defined in the configuration file, the OpenQuake engine assumes the ``lrem_steps_per_interval`` to be equal to 5. More details are provided in the OpenQuake Book (Risk).
 - ``quantiles``: this parameter can be used to request the computation of quantile loss curves for computations involving non-trivial logic trees. The quantiles for which the loss curves should be computed must be provided as a comma separated list. If this parameter is not included in the configuration file, quantile loss curves will not be computed.
 - ``conditional_loss_poes``: this parameter can be used to request the computation of probabilistic loss maps, which give the loss levels exceeded at the specified probabilities of exceedance over the time period specified by ``risk_investigation_time``. The probabilities of exceedance for which the loss maps should be computed must be provided as a comma separated list. If this parameter is not included in the configuration file, probabilistic loss maps will not be computed.
+
+.. _classical-risk-hazard-curves-csv:
+
+Using exported hazard curves
+============================
+
+``classical_damage`` and ``classical_risk`` calculations can also start from
+hazard curves exported by the engine. This is useful when the source model is
+not available to the risk modeller or when the curves need to be transferred
+between engine installations. For example:
+
+.. code-block:: ini
+
+   [general]
+   description = Classical risk from exported hazard curves
+   calculation_mode = classical_risk
+
+   [hazard]
+   hazard_curves_csv = hazard_curve-mean.csv
+
+   [exposure]
+   exposure_file = exposure_model.xml
+
+   [vulnerability]
+   structural_vulnerability_file = structural_vulnerability_model.xml
+
+   [risk_calculation]
+   lrem_steps_per_interval = 5
+   conditional_loss_poes = 0.01
+
+List more than one file, separated by spaces, when the risk functions require
+multiple intensity measure types:
+
+.. code-block:: ini
+
+   hazard_curves_csv = hcurves-PGA.csv hcurves-SA(0.3).csv
+
+Each file must contain one intensity measure type. Its first commented line
+must include the ``imt`` and ``investigation_time`` metadata written by the
+engine exporter. The remaining header fields are ``lon``, ``lat``, ``depth``,
+and one ``poe-<IML>`` column for each intensity measure level. The sites and
+their order must be identical in every file. See the
+:doc:`classical PSHA output format
+</user-guide/outputs/classical-psha-outputs>` for an example.
+
+The supplied curves must cover every intensity measure type required by the
+fragility or vulnerability functions. The engine associates each asset with
+the closest hazard site and skips assets for which no site is found within
+``asset_hazard_distance``. Set that distance explicitly when the hazard grid
+and exposure locations do not coincide.
+
+Use ``hazard_curves_csv`` only when the CSV files themselves are the intended
+hazard input. To use all compatible results and realization information from
+an existing engine calculation instead, run the risk job with ``--hc`` and
+the hazard calculation ID.

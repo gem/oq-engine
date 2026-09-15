@@ -12,7 +12,7 @@ Reading the datastore with python
 ---------------------------------
 
 Read the datastore for a given calculation id and list
-the availabe datastore keys::
+the available datastore keys::
 
 	>> from openquake.commonlib.datastore import read
 	>> dstore = read(calc_id)

@@ -20,13 +20,85 @@ import os
 import sys
 import json
 import time
+import socket
 import string
 import secrets
 import random
+import threading
+
 import django
+import requests
+import uvicorn
 from django.contrib.auth import get_user_model
+from django.test import Client
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
+
+
+class UvicornClient:
+    """Small requests-based client for the combined ASGI application."""
+
+    def __init__(self, base_url):
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.django_client = Client()
+
+    def login(self, **credentials):
+        """Authenticate through Django and copy the session cookie."""
+        logged_in = self.django_client.login(**credentials)
+        if logged_in:
+            cookie = self.django_client.cookies['sessionid'].value
+            self.session.cookies.set('sessionid', cookie)
+        return logged_in
+
+    def _url(self, path):
+        return path if path.startswith('http') else self.base_url + path
+
+    def get(self, path, data=None, **kwargs):
+        """Send a GET request to the Uvicorn server."""
+        return self.session.get(self._url(path), params=data)
+
+    def post(self, path, data=None, **kwargs):
+        """Send a POST request to the Uvicorn server."""
+        if data is None and kwargs:
+            data = kwargs
+        data = data or {}
+        files = {key: value for key, value in data.items()
+                 if hasattr(value, 'read')}
+        form = {key: value for key, value in data.items() if key not in files}
+        return self.session.post(
+            self._url(path), data=form, files=files or None)
+
+    def head(self, path, **kwargs):
+        """Send a HEAD request to the Uvicorn server."""
+        return self.session.head(self._url(path))
+
+
+def start_uvicorn():
+    """Start a temporary Uvicorn server for an integration test."""
+    sock = socket.socket()
+    sock.bind(('127.0.0.1', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    server = uvicorn.Server(uvicorn.Config(
+        'openquake.server.asgi:app', host='127.0.0.1', port=port,
+        log_level='error'))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    for _ in range(100):
+        if server.started:
+            return server, thread, UvicornClient(
+                'http://127.0.0.1:%d' % port)
+        time.sleep(0.1)
+    server.should_exit = True
+    thread.join(timeout=10)
+    raise RuntimeError('Unable to start the Uvicorn test server')
+
+
+def stop_uvicorn(server, thread):
+    """Stop a temporary Uvicorn server."""
+    server.should_exit = True
+    thread.join(timeout=10)
 
 
 def random_string(length=10):
@@ -52,7 +124,7 @@ def get_or_create_user(level):
     return user, password  # user.password is the hashed password instead
 
 
-class EngineServerTestCase(django.test.TestCase):
+class EngineServerTestCase(django.test.TransactionTestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -69,12 +141,15 @@ class EngineServerTestCase(django.test.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        if hasattr(resp, 'content'):
+        if hasattr(resp, 'streaming_content'):
+            js = bytes(loadnpz(resp.streaming_content)['json'])
+        elif any(kind in resp.headers.get('Content-Type', '')
+                 for kind in ('json', 'text/')):
             assert resp.content, (
                 'No content from http://localhost:8800/v1/calc/%s' % path)
             js = resp.content.decode('utf8')
         else:
-            js = bytes(loadnpz(resp.streaming_content)['json'])
+            return json.loads(bytes(loadnpz([resp.content])['json']))
         if not js:
             print('Empty json from ')
             return {}
@@ -90,7 +165,9 @@ class EngineServerTestCase(django.test.TestCase):
         resp = cls.c.get('/v1/calc/%s' % path, data)
         if resp.status_code == 500:
             raise Exception(resp.content.decode('utf8'))
-        return b''.join(resp.streaming_content)
+        if hasattr(resp, 'streaming_content'):
+            return b''.join(resp.streaming_content)
+        return resp.content
 
     @classmethod
     def wait(cls):

@@ -30,12 +30,12 @@ import logging
 import django
 from django.apps import apps
 from django.contrib.auth import get_user_model
-from django.test import Client
 from django.conf import settings
 from openquake.calculators.base import get_aelo_version
 from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
-from openquake.server.tests.views_test import EngineServerTestCase
+from openquake.server.tests.views_test import (
+    EngineServerTestCase, start_uvicorn, stop_uvicorn)
 from openquake.server.views import get_disp_val
 
 django.setup()
@@ -55,25 +55,42 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         username = 'django-test-user'
-        email = 'django-test-user@email.test'
         password = ''.join((secrets.choice(
             string.ascii_letters + string.digits + string.punctuation)
             for i in range(8)))
-        cls.user, created = User.objects.get_or_create(
-            username=username, email=email)
+        cls.username = username
+        cls.password = password
+        (cls.webserver, cls.webserver_thread,
+         cls.c) = start_uvicorn()
+
+    def setUp(self):
+        self.user, created = User.objects.get_or_create(
+            username=self.username, email='django-test-user@email.test')
         if created:
-            cls.user.set_password(password)
-            cls.user.save()
-        cls.c = Client()
-        cls.c.login(username=username, password=password)
+            self.user.set_password(self.password)
+            self.user.save()
+        self.c.session.cookies.clear()
+        self.c.login(username=self.username, password=self.password)
 
     @classmethod
     def tearDownClass(cls):
+        cleanup_user, created = User.objects.get_or_create(
+            username=cls.username, email='django-test-user@email.test')
+        if created:
+            cleanup_user.set_password(cls.password)
+            cleanup_user.save()
+        cls.c.session.cookies.clear()
+        cls.c.login(username=cls.username, password=cls.password)
         try:
             cls.wait()
         finally:
-            cls.user.delete()
+            stop_uvicorn(cls.webserver, cls.webserver_thread)
+            cleanup_user.delete()
         super().tearDownClass()
+
+    def tearDown(self):
+        self.user.delete()
+        super().tearDown()
 
     def aelo_run_then_remove(self, params, failure_reason=None):
         # NOTE: We make Django filebased.EmailBackend write each email

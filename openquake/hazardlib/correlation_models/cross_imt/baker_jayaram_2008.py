@@ -25,26 +25,34 @@ https://doi.org/10.1193/1.2857544
 import numpy
 from scipy import constants
 
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent)
 from openquake.hazardlib.correlation_models.registry import register_model
+from openquake.hazardlib.imt import PGA, SA
 
 
 @register_model(
     'BJ2008',
     description='Baker and Jayaram (2008) cross-IMT correlation')
 class BakerJayaram2008(CrossIMTCorrelationModel):
-    """Total-residual cross-IMT correlation for GMRotI50."""
+    """Total-residual cross-IMT correlation for GMRotI50.
 
-    name = 'BakerJayaram2008'
-    calibrated_component = ResidualComponent.TOTAL
-    supported_imts = ('PGA', 'SA')
-    imc = 'GMRotI50'
+    The publication calibrated 5%-damped SA from 0.01 to 10 seconds. PGA is
+    represented by the model's shortest calibrated period, SA(0.01).
+    """
 
-    def rho(self, from_imt, to_imt, component=None, context=None):
-        self._get_component(component)
-        from_period = from_imt.period
-        to_period = to_imt.period
+    DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
+    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+
+    def _rho(self, from_imt, to_imt, context=None):
+        from_period = from_imt.period or 0.01
+        to_period = to_imt.period or 0.01
         if numpy.abs(from_period - to_period) < 1E-10:
             return 1.0
 

@@ -1,8 +1,8 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.26.0-gitdad8eb2fff', start_date='2026-06-19T01:20:52', checksum=1085302542, investigation_time=1.0, risk_investigation_time=1.0"
+#,,,,,,,,,"generated_by='OpenQuake engine 3.27.0-git7697ce2618', start_date='2026-09-13T05:17:24', checksum=2168093742, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,NAME_1,NAME_2,NAME_3,NAME_4,taxonomy,lon,lat,structural-losses,structural-fatalities
-a2568,Mid-Western,Bheri,Bardiya,Royal Bardiya Nation,Adobe,81.51382,28.41117,1.166091E+03,3.069145E-01
-a4540,Mid-Western,Karnali,Humla,Limi,Stone-Masonry,81.51382,30.28617,8.012682E+01,2.071217E-02
-a7243,Mid-Western,Karnali,Humla,Limi,Unreinforced-Brick-Masonry,81.66382,30.36117,7.063148E+02,1.356869E-01
-a2950,Mid-Western,Karnali,Mugu,Dhainakot,Adobe,81.88882,29.61117,7.244515E+03,1.942644E+00
-a8381,East,Sagarmatha,Siraha,Chandrodayapur,Unreinforced-Brick-Masonry,86.31382,26.83617,2.343719E+04,6.016391E+00
-a400,East,Koshi,Sankhuwasabha,Chepuwa,Wood,87.43882,27.81117,3.292932E+02,4.151730E-02
+a2568,Mid-Western,Bheri,Bardiya,Royal Bardiya Nation,Adobe,81.51382,28.41117,1.001743E+03,2.567579E-01
+a4540,Mid-Western,Karnali,Humla,Limi,Stone-Masonry,81.51382,30.28617,9.062144E+01,2.410882E-02
+a7243,Mid-Western,Karnali,Humla,Limi,Unreinforced-Brick-Masonry,81.66382,30.36117,9.555535E+02,1.796385E-01
+a2950,Mid-Western,Karnali,Mugu,Dhainakot,Adobe,81.88882,29.61117,6.599795E+03,1.800683E+00
+a8381,East,Sagarmatha,Siraha,Chandrodayapur,Unreinforced-Brick-Masonry,86.31382,26.83617,2.088190E+04,4.756040E+00
+a400,East,Koshi,Sankhuwasabha,Chepuwa,Wood,87.43882,27.81117,3.273270E+02,3.534812E-02

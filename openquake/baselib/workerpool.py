@@ -18,13 +18,12 @@
 import os
 import sys
 import time
-import shutil
 import socket
+import signal
 import getpass
-import tempfile
-import functools
 import subprocess
-from datetime import datetime, timezone
+from datetime import timezone
+from concurrent.futures import ProcessPoolExecutor
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -251,24 +250,6 @@ def debug_task(msg, mon):
     return mon.task_no
 
 
-def call(func, args, taskno, mon, executing):
-    fname = os.path.join(executing, f'{mon.calc_id}-{taskno}')
-    # NB: very hackish way of keeping track of the running tasks,
-    # used in get_executing, could litter the file system
-    open(fname, 'w').close()
-    parallel.safely_call(func, args, taskno, mon)
-    os.remove(fname)
-
-
-def errback(job_id, task_no, exc):
-    # NB: job_id can be None if the Starmap was invoked without h5
-    from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
-          '%s/%s' % (job_id, task_no), str(exc))
-    e = exc.__class__('in job %d, task %d' % (job_id, task_no))
-    raise e.with_traceback(exc.__traceback__)
-
-
 class WorkerPool(object):
     """
     A pool of workers accepting various commands.
@@ -287,12 +268,8 @@ class WorkerPool(object):
         else:
             self.num_workers = num_workers
         self.calc_dir = parallel.calc_dir(job_id)
-        self.executing = tempfile.mkdtemp(dir=self.calc_dir if job_id else None)
-        try:
-            os.mkdir(self.executing)
-        except FileExistsError:  # already created by another WorkerPool
-            pass
         self.pid = os.getpid()
+        self.futures = set()
 
     def start(self):
         """
@@ -310,53 +287,60 @@ class WorkerPool(object):
 
         print(f'Starting oq-zworkerpool on {self.hostname}', file=sys.stderr)
         setproctitle('oq-zworkerpool')
-        self.pool = general.mp.Pool(self.num_workers, init_workers)
-        pids = [proc.pid for proc in self.pool._pool]
+        self.pool = ProcessPoolExecutor(
+            self.num_workers, general.mp, init_workers)
         # start control loop accepting the commands stop
+        ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
         try:
-            ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
             with z.Socket(ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
                 for cmd in ctrlsock:
                     if cmd == 'stop':
-                        ctrlsock.send(self.stop())
+                        # ZMQ expects a reply, we have to send a dummy
+                        # message to avoid zombies
+                        ctrlsock.send(f'stopping pid={self.pid}')
                         break
                     elif cmd == 'restart':
                         self.stop()
-                        self.pool = general.mp.Pool(self.num_workers)
+                        self.pool = ProcessPoolExecutor(
+                            self.num_workers, general.mp, init_workers)
+                        self.futures.clear()
                         ctrlsock.send('restarted')
                     elif cmd == 'getpid':
-                        ctrlsock.send(self.proc.pid)
+                        ctrlsock.send(self.pid)
                     elif cmd == 'get_num_workers':
                         ctrlsock.send(self.num_workers)
                     elif cmd == 'get_executing':
-                        executing = sorted(os.listdir(self.executing))
-                        ctrlsock.send(' '.join(executing))
+                        ctrlsock.send(
+                            ' '.join(sorted(f.task_id for f in self.futures)))
                     elif cmd == 'run_jobs':
                         pik = os.path.join(self.calc_dir, 'jobs.pik')
                         lst = ['python', '-m', 'openquake.engine.engine', pik]
                         subprocess.Popen(lst)
                         ctrlsock.send("started %d" % self.job_id)
                     elif cmd == 'memory_gb':
-                        ctrlsock.send(performance.memory_gb(pids))
+                        ctrlsock.send(performance.memory_gb(
+                            self.pool._processes))
                     elif isinstance(cmd, tuple):
                         _func, _args, taskno, mon = cmd
-                        self.pool.apply_async(
-                            call, cmd + (self.executing,),
-                            error_callback=functools.partial(
-                                errback, mon.calc_id, taskno))
+                        fut = self.pool.submit(parallel.safely_call, *cmd)
+                        fut.task_id = f'{mon.calc_id}-{taskno}'
+                        self.futures.add(fut)
+                        fut.add_done_callback(self.futures.discard)
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')
         finally:
-            shutil.rmtree(self.executing)
+            self.stop()
 
     def stop(self):
         """
         Terminate the pool
         """
-        self.pool.close()
-        self.pool.terminate()
-        self.pool.join()
+        if hasattr(self.pool, '_processes') and self.pool._processes:
+            for proc in self.pool._processes.values():
+                proc.terminate()
+        self.pool.shutdown()
+        self.futures.clear()
         return 'WorkerPool on %s stopped' % self.hostname
 
 
@@ -364,12 +348,14 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     """
     Start a workerpool with the given number of workers.
     """
+    # The workerpool is controlled through ZMQ. It must not react to the
+    # SIGINT sent to the foreground process group with the engine.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if hasattr(signal, 'SIGHUP'):
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
     # NB: unexpected errors will appear in the DbServer log
     wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
-    try:
-        wpool.start()
-    finally:
-        wpool.stop()
+    wpool.start()
 
 workerpool.num_workers = dict(help='number of cores to use')
 workerpool.job_id = dict(help='associated job, if any')

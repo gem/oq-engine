@@ -3,156 +3,84 @@
 Consequence Models
 ==================
 
-Starting from OpenQuake engine v1.7, the Scenario Damage calculator also accepts consequence models in addition to 
-fragility models, in order to estimate consequences based on the calculated damage distribution. The user may provide 
-one *Consequence Model* file corresponding to each loss type (amongst structural, nonstructural, contents, and business 
-interruption) for which a *Fragility Model* file is provided. Whereas providing a *Fragility Model* file for at least one 
-loss type is mandatory for running a Scenario Damage calculation, providing corresponding *Consequence Model* files is 
-optional.
+Consequence models are optional inputs for ``scenario_damage`` and
+``event_based_damage`` calculations. They convert the damage distributions
+computed from fragility functions into quantities such as economic losses,
+fatalities, homelessness, collapse, or loss of functionality.
 
-This section describes the schema currently used to store consequence models, which are optional inputs for the Scenario 
-Damage Calculator. A *Consequence Model* defines a set of consequence functions, describing the distribution of the loss 
-(or consequence) ratio conditional on a set of discrete limit (or damage) states. These *Consequence Function* can be 
-currently defined in OpenQuake engine by specifying the parameters of the continuous distribution of the loss ratio for 
-each limit state specified in the fragility model for the corresponding loss type, for each taxonomy defined in the 
-exposure model.
+Consequence models use CSV format. The former NRML/XML consequence format is
+no longer supported. A minimal model for ground-shaking losses is:
 
-An example *Consequence Model* is shown in the listing below.::
+.. code-block:: csv
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<consequenceModel id="consequence_example"
-	                  assetCategory="buildings"
-	                  lossCategory="structural">
-	
-	  <description>Consequence Model Example</description>
-	  <limitStates>slight moderate extensive complete</limitStates>
-	
-	  <consequenceFunction id="RC_LowRise" dist="LN">
-	    <params ls="slight" mean="0.04" stddev="0.00"/>
-	    <params ls="moderate" mean="0.16" stddev="0.00"/>
-	    <params ls="extensive" mean="0.32" stddev="0.00"/>
-	    <params ls="complete" mean="0.64" stddev="0.00"/>
-	  </consequenceFunction>
-	
-	</consequenceModel>
-	
-	</nrml>
+   risk_id,consequence,loss_type,peril,slight,moderate,extreme,complete
+   Adobe,losses,structural,groundshaking,0.04,0.31,0.60,1.00
+   Concrete,losses,structural,groundshaking,0.04,0.31,0.60,1.00
 
-The initial portion of the schema contains general information that describes some general aspects of the *Consequence 
-Model*. The information in this metadata section is common to all of the functions in the *Consequence Model* and needs 
-to be included at the beginning of every *Consequence Model* file. The parameters are described below:
+The columns have the following meanings:
 
-- ``id``: a unique string used to identify the *Consequence Model*. This string can contain letters (a–z; A–Z), numbers (0–9), dashes (-), and underscores (_), with a maximum of 100 characters.
-- ``assetCategory``: an optional string used to specify the type of assets for which consequencefunctions will be defined in this file (e.g: buildings, lifelines).
-- ``lossCategory``: mandatory; valid strings for this attribute are “structural”, “nonstructural”, “contents”, and “business_interruption”.
-- ``description``: mandatory; a brief string (ASCII) with further information about the *Consequence Model*, for example, which building typologies are covered or the source of the functions in the *Consequence Model*.
-- ``limitStates``: mandatory; this field is used to define the number and nomenclature of each limit state. Four limit states are employed in the example above, but it is possible to use any number of discrete states. The limit states must be provided as a set of strings separated by white spaces between each limit state. Each limit state string can contain letters (a–z; A–Z), numbers (0–9), dashes (-), and underscores (_). Please ensure that there is no white space within the name of any individual limit state. The number and nomenclature of the limit states used in the *Consequence Model* should match those used in the corresponding *Fragility Model*.::
+- ``risk_id`` identifies the fragility function to which the row applies.
+  It must be consistent with the risk IDs selected by the taxonomy mapping.
+- ``consequence`` selects the calculation applied to the coefficients. Run
+  ``oq info consequences`` to list the values supported by the installed
+  engine version. Common values include ``losses``, ``collapsed``,
+  ``injured``, ``fatalities``, ``homeless``, and ``non_operational``.
+- ``loss_type`` identifies the corresponding fragility loss type. It defaults
+  to ``structural`` when omitted.
+- ``peril`` identifies the peril associated with the fragility function. It
+  defaults to ``groundshaking`` when omitted and must be explicit in a
+  multi-peril model.
+- The remaining column names must exactly match the limit states in the
+  corresponding fragility model. Each value is the coefficient conditional
+  on that damage state.
 
-	<consequenceModel id="consequence_example"
-	                  assetCategory="buildings"
-	                  lossCategory="structural">
-	
-	  <description>Consequence Model Example</description>
-	  <limitStates>slight moderate extensive complete</limitStates>
+For a ``losses`` consequence, a coefficient of 0.25 means that the repair cost
+is 25 percent of the asset value for the specified loss type and damage
+state. Other consequences use the relevant exposure quantity: for example,
+``collapsed`` applies to the number of units, ``fatalities`` and ``injured``
+apply to occupants at the configured ``time_event``, and ``homeless`` applies
+to residents.
 
-The following snippet from the above *Consequence Model* example file defines a *Consequence Function* using a lognormal 
-distribution to model the uncertainty in the consequence ratio for each limit state::
+Reference the CSV file in ``job.ini`` as follows:
 
-	  <consequenceFunction id="RC_LowRise" dist="LN">
-	    <params ls="slight" mean="0.04" stddev="0.00"/>
-	    <params ls="moderate" mean="0.16" stddev="0.00"/>
-	    <params ls="extensive" mean="0.32" stddev="0.00"/>
-	    <params ls="complete" mean="0.64" stddev="0.00"/>
-	  </consequenceFunction>
+.. code-block:: ini
 
-The following attributes are needed to define a *Consequence Function*:
+   [consequence]
+   consequence_file = {'taxonomy': 'consequences.csv'}
 
-- ``id``: mandatory; a unique string used to identify the taxonomy for which the function is being defined. This string is used to relate the *Consequence Function* with the relevant asset in the *Exposure Model*. This string can contain letters (a–z; A–Z), numbers (0–9), dashes (-), and underscores (_), with a maximum of 100 characters.
-- ``dist``: mandatory; for vulnerability function which use a continuous distribution to model the uncertainty in the conditional loss ratios, this attribute should be set to either ``“LN”`` if using the lognormal distribution, or to ``“BT”`` if using the Beta distribution [1]_.
-- ``params``: mandatory; this field is used to define the parameters of the continuous distribution used for modelling the uncertainty in the loss ratios for each limit state for this *Consequence Function*. For a lognormal distrbution, the two parameters required to specify the function are the mean and standard deviation of the consequence ratio. These parameters are defined for each limit state using the attributes ``mean`` and ``stddev`` respectively. The attribute ``ls`` specifies the limit state for which the parameters are being defined. The parameters for each limit state must be provided on a separate line. The number and names of the limit states in each *Consequence Function* must be equal to the number of limit states defined in the corresponding *Fragility Model* using the attribute ``limitStates``.
+The ``taxonomy`` key is retained for compatibility and maps the CSV
+``risk_id`` values to the selected risk functions. A consequence file can
+also be keyed by another exposure tag when coefficients vary by a property
+such as occupancy or roof type.
 
-Extended consequences
----------------------
-
-Scenario damage calculations produce damage distributions, i.e. arrays containing the number of buildings in each damage 
-state defined in the fragility functions. There is a damage distribution per each asset, event and loss type, so you can 
-easily produce *billions* of damage distributions. This is why the engine provide facilities to compute results based on 
-aggregating the damage distributions, possibly multiplied by suitable coefficients, i.e. *consequences*.
-
-For instance, from the probability of being in the collapsed damage state, one may estimate the number of fatalities, 
-given the right multiplicative coefficient. Another commonly computed consequence is the economic loss; in order to 
-estimated it, one need a different multiplicative coefficient for each damage state and for each taxonomy. The table of 
-coefficients, a.k.a. the *consequence model*, can be represented as a CSV file like the following:
-
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|      taxonomy     | consequence |  loss_type | slight | moderate | extensive | complete |
-+===================+=============+============+========+==========+===========+==========+
-|  CR_LFINF-DUH_H2  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|  CR_LFINF-DUH_H4  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|  MCF_LWAL-DNO_H3  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|   MR_LWAL-DNO_H1  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|   MR_LWAL-DNO_H2  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|  MUR_LWAL-DNO_H1  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|  W-WS_LPB-DNO_H1  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-| W-WWD_LWAL-DNO_H1 |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-|   MR_LWAL-DNO_H3  |    losses   | structural |  0.05  |   0.25   |    0.6    |     1    |
-+-------------------+-------------+------------+--------+----------+-----------+----------+
-
-The first field in the header is the name of a tag in the exposure; in this case it is the taxonomy but it could be any 
-other tag — for instance, for volcanic ash-fall consequences, the roof-type might be more relevant, and for recovery 
-time estimates, the occupancy class might be more relevant.
-
-The consequence framework is meant to be used for generic consequences, not necessarily limited to earthquakes, because 
-since version 3.6 the engine provides a multi-hazard risk calculator.
-
-The second field of the header, the ``consequence``, is a string identifying the kind of consequence we are considering. 
-It is important because it is associated to the name of the function to use to compute the consequence. It is rather 
-easy to write an additional function in case one needed to support a new kind of consequence. You can show the list of 
-consequences by the version of the engine that you have installed with the command::
-
-	$ oq info consequences  # in version 3.12
-	The following 5 consequences are implemented:
-	losses
-	collapsed
-	injured
-	fatalities
-	homeless
-
-The other fields in the header are the loss type and the damage states. For instance the coefficient 0.25 for “moderate” 
-means that the cost to bring a structure in “moderate damage” back to its undamaged state is 25% of the total 
-replacement value of the asset. The loss type refers to the fragility model, i.e. ``structural`` will mean that the 
-coefficients apply to damage distributions obtained from the fragility functions defined in the file ``structural_fragility_model.xml``.
+The CSV stores deterministic coefficients. It does not define a probability
+distribution or uncertainty for a consequence ratio. Providing at least one
+fragility model is mandatory for a damage calculation; providing a
+consequence model is optional.
 
 ****************************
 discrete_damage_distribution
 ****************************
 
-Damage distributions are called discrete when the number of buildings in each damage is an integer, and continuous when 
-the number of buildings in each damage state is a floating point number. Continuous distributions are a lot more 
-efficient to compute and therefore that is the default behavior of the engine, at least starting from version 3.13. You 
-can ask the engine to use discrete damage distribution by setting the flag in the job.ini file ``discrete_damage_distribution = true``
-However, it should be noticed that setting ``discrete_damage_distribution = true`` will raise an error if the exposure 
-contains a floating point number of buildings for some asset. Having a floating point number of buildings in the 
-exposure is quite common since the “number” field is often estimated as an average.
+Damage distributions are called discrete when the number of buildings in each
+damage state is an integer, and continuous when it is a floating-point number.
+Continuous distributions are more efficient to compute and are the default.
+To request a discrete damage distribution, set
+``discrete_damage_distribution = true`` in ``job.ini``. This setting raises an
+error if the exposure contains a non-integer number of buildings for any
+asset. Non-integer values are common when ``number`` is an estimate or
+average.
 
-Even if the exposure contains only integers and you have set ``discrete_damage_distribution = true`` in the job.ini, the 
-aggregate damage distributions will normally contains floating point numbers, since they are obtained by summing 
-integer distributions for all seismic events of a given hazard realization and dividing by the number of events of that 
-realization.
+Even when the exposure contains only integers and
+``discrete_damage_distribution = true``, aggregate damage distributions
+normally contain floating-point numbers. They are obtained by summing integer
+distributions for all seismic events in a hazard realization and dividing by
+the number of events in that realization.
 
-By summing the number of buildings in each damage state one will get the total number of buildings for the given 
-aggregation level; if the exposure contains integer numbers than the sum of the numbers will be an integer, apart from 
-minor differences due to numeric errors, since the engine stores even discrete distributions as floating point numbers.
+Summing the values in all damage states gives the total number of buildings
+for an aggregation level. If the exposure contains integers, this sum will be
+an integer apart from small numerical differences, because the engine stores
+even discrete distributions as floating-point numbers.
 
 *************************
 The EventBasedDamage demo
@@ -229,10 +157,13 @@ Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` 
 The number of buildings in each damage state is integer (even if stored as a float) because the exposure contains only 
 integers and the job.ini is setting explicitly ``discrete_damage_distribution = true``.
 
-It should be noted that while there is a CSV exporter for the ``risk_by_event`` table, it is designed to export only the 
-total aggregation component (i.e. ``agg_id=9`` in this example) for reasons of backward compatibility with the past, the 
-time when the only aggregation the engine could perform was the total aggregation. Since the ``risk_by_event`` table can 
-be rather large, it is recommmended to interact with it with pandas and not to export in CSV.
+It should be noted that while there is a CSV exporter for the
+``risk_by_event`` table, it is designed to export only the total aggregation
+component (i.e. ``agg_id=8`` in this example) for reasons of backward
+compatibility with the past, when the only aggregation the engine could
+perform was the total aggregation. Since the ``risk_by_event`` table can be
+rather large, it is recommended to interact with it with pandas and not to
+export it to CSV.
 
 There is instead a CSV exporter for the aggregated damage distributions (together with the aggregated consequences) that 
 you may call with the command ``oq export aggrisk``; you can also see the distributions directly::
@@ -260,9 +191,11 @@ By summing on the damage states one gets the total number of buildings for each 
 The ScenarioDamage demo
 ***********************
 
-The demo in ``demos/risk/ScenarioDamage`` is similar to the EventBasedDemo (it still refers to Nepal) but it uses a 
-much large exposure with 9063 assets and 5,365,761 building. Moreover the configuration file is split in two: first you 
-should run ``job_hazard.ini`` and then run ``job_risk.ini`` with the ``--hc`` option.
+The demo in ``demos/risk/ScenarioDamage`` is similar to the EventBasedDemo
+(it still refers to Nepal), but it uses a much larger exposure with 9063
+assets and 5,365,761 buildings. Moreover, the configuration file is split in
+two: first run ``job_hazard.ini`` and then run ``job_risk.ini`` with the
+``--hc`` option.
 
 The first calculation will produce 2 sets of 100 ground motion fields each (since ``job_hazard.ini`` contains 
 ``number_of_ground_motion_fields = 100`` and the gsim logic tree file contains two GMPEs). The second calculation will 
@@ -288,5 +221,3 @@ the realization::
 
 In this demo there is no ``aggregate_by`` specified, so the only aggregation which is performed is the total aggregation. 
 You are invited to specify ``aggregate_by`` and study how ``aggrisk`` changes.
-
-.. [1] Note that as of OpenQuake engine v1.8, the uncertainty in the consequence ratios is ignored, and only the mean consequence ratios for the set of limit states is considered when computing the consequences from the damage distribution. Consideration of the uncertainty in the consequence ratios is planned for future releases of the OpenQuake engine.

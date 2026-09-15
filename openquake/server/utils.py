@@ -156,7 +156,8 @@ def oq_server_context_processor(request):
     return context
 
 
-def check_webserver_running(url="http://localhost:8800", max_retries=30):
+def check_webserver_running(url="http://localhost:8800", max_retries=30,
+                            warn=True):
     """
     Returns True if a given URL is responding within a given timeout.
     """
@@ -170,11 +171,12 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
             response = requests.head(url, allow_redirects=True).status_code
             success = True
         except Exception:
-            sleep(1)
+            if retry + 1 < max_retries:
+                sleep(1)
 
         retry += 1
 
-    if not success:
+    if not success and warn:
         logging.warning('Unable to connect to %s within %s retries'
                         % (url, max_retries))
     return success

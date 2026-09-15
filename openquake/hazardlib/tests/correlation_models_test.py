@@ -17,10 +17,13 @@
 import numpy
 import pytest
 
-from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib import const, correlation, cross_correlation
 from openquake.hazardlib import correlation_models
 from openquake.hazardlib.correlation_models.base import (
-    ResidualComponent, SpatialCrossIMTCorrelationModel)
+    CrossIMTCorrelationModel, ResidualComponent,
+    SpatialCrossIMTCorrelationModel)
+from openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017 import (
+    BakerBradley2017)
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 import (
@@ -39,7 +42,10 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     loth_baker_2013 import LothBaker2013
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     markhvida_et_al_2018 import MarkhvidaEtAl2018
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    wang_du_2013 import (
+        WangDu2013PGAIAPGV, WangDu2013SpectralAcceleration)
+from openquake.hazardlib.imt import IA, PGA, PGV, RSD575, RSD595, SA
 
 
 def test_registry_aliases_and_metadata():
@@ -56,25 +62,57 @@ def test_registry_aliases_and_metadata():
         'HM2019', 'HM2018', 'HM2018CorrelationModel')
     assert specs['JayaramBaker2009'].aliases == (
         'JB2009', 'JB2009CorrelationModel')
-    assert specs['JayaramBaker2009'].calibrated_component == (
+    assert specs['JayaramBaker2009'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert specs['JayaramBaker2009'].supported_imts == (
-        'PGA', 'PGV', 'SA')
+    assert specs['JayaramBaker2009'].supported_imts == {PGA, PGV, SA}
+    assert specs['JayaramBaker2009'].calibrated_imts == {PGA, SA}
+    assert specs[
+        'JayaramBaker2009'
+    ].intensity_measure_type_approximations == {PGV: SA(1.0)}
+    assert specs['JayaramBaker2009'].sa_period_range == (0.01, 10.0)
+    assert specs['JayaramBaker2009'].sa_damping == 5.0
     cross_imt = get_model_specs('cross_imt')
-    assert cross_imt['GodaAtkinson2009'].calibrated_component == (
+    assert cross_imt['BakerCornell2006'].supported_imts == {
+        PGA, PGV, SA}
+    assert cross_imt['BakerBradley2017'].cls is BakerBradley2017
+    assert cross_imt['BakerBradley2017'].residual_component == (
+        ResidualComponent.TOTAL)
+    assert cross_imt['BakerBradley2017'].supported_imts == {
+        PGA, PGV, RSD575, RSD595, SA}
+    assert cross_imt['BakerBradley2017'].imc is None
+    assert cross_imt['BakerBradley2017'].sa_period_range == (0.01, 10.0)
+    assert cross_imt['BakerBradley2017'].sa_damping == 5.0
+    assert cross_imt['BakerCornell2006'].calibrated_imts == {SA}
+    assert cross_imt[
+        'BakerCornell2006'
+    ].intensity_measure_type_approximations == {
+        PGA: SA(0.05), PGV: SA(0.05)}
+    assert cross_imt['GodaAtkinson2009'].residual_component == (
         ResidualComponent.BETWEEN_EVENT)
-    assert cross_imt['Bradley2012'].calibrated_component == (
+    assert cross_imt['Bradley2012'].residual_component == (
         ResidualComponent.TOTAL)
     joint = get_model_specs('spatial_cross_imt')
     assert joint['LothBaker2013'].cls is LothBaker2013
-    assert joint['LothBaker2013'].calibrated_component == (
+    assert joint['LothBaker2013'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert joint['LothBaker2013'].supported_imts == ('PGA', 'SA')
+    assert joint['LothBaker2013'].supported_imts == {PGA, SA}
+    assert joint['LothBaker2013'].calibrated_imts == {SA}
     assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
-    assert joint['MarkhvidaEtAl2018'].calibrated_component == (
+    assert joint['MarkhvidaEtAl2018'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert joint['MarkhvidaEtAl2018'].supported_imts == ('PGA', 'SA')
-    assert joint['MarkhvidaEtAl2018'].imc == 'RotD50'
+    assert joint['MarkhvidaEtAl2018'].supported_imts == {PGA, SA}
+    assert joint['MarkhvidaEtAl2018'].imc is const.IMC.RotD50
+    assert joint['WangDu2013PGAIAPGV'].cls is WangDu2013PGAIAPGV
+    assert joint['WangDu2013PGAIAPGV'].residual_component == (
+        ResidualComponent.WITHIN_EVENT)
+    assert joint['WangDu2013PGAIAPGV'].supported_imts == {
+        PGA, IA, PGV}
+    assert joint['WangDu2013SpectralAcceleration'].cls is (
+        WangDu2013SpectralAcceleration)
+    assert joint[
+        'WangDu2013SpectralAcceleration'
+    ].residual_component == ResidualComponent.WITHIN_EVENT
+    assert joint['WangDu2013SpectralAcceleration'].supported_imts == {SA}
 
 
 def test_registry_instantiation_and_type_validation():
@@ -85,6 +123,29 @@ def test_registry_instantiation_and_type_validation():
         get_model_class('BakerJayaram2008', model_type='spatial')
     with pytest.raises(KeyError, match='Unknown correlation model'):
         get_model_class('MissingModel')
+
+
+def test_imc_metadata_validation():
+    model = BakerJayaram2008()
+    attr = 'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT'
+    assert getattr(model, attr) is const.IMC.GMRotI50
+    setattr(model, attr, 'GMRotI50')
+    with pytest.raises(TypeError, match=f'{attr} must be an .*const.IMC'):
+        model.validate()
+
+
+def test_intensity_measure_type_metadata_validation():
+    class UnsupportedCalibration(BakerJayaram2008):
+        CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
+
+    with pytest.raises(ValueError, match='does not support'):
+        UnsupportedCalibration().validate()
+
+    class InvalidApproximation(BakerJayaram2008):
+        INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: 'SA(0.01)'}
+
+    with pytest.raises(TypeError, match='must map to IMT instances'):
+        InvalidApproximation().validate()
 
 
 def test_package_does_not_reexport_models():
@@ -102,9 +163,14 @@ def test_residual_component_validation():
                   ResidualComponent.WITHIN_EVENT)
 
 
+def test_baker_cornell_preserves_historical_pgv_proxy():
+    model = BakerCornell2006()
+    assert model.rho(PGV(), SA(0.3)) == model.rho(PGA(), SA(0.3))
+
+
 def test_cross_im_covariance_uses_imt_major_ordering():
     model = BakerJayaram2008()
-    imts = [PGA(), SA(0.5)]
+    imts = [SA(0.01), SA(0.5)]
     sites = range(2)
     correlation_value = model.rho(*imts)
     expected = numpy.array([
@@ -117,15 +183,52 @@ def test_cross_im_covariance_uses_imt_major_ordering():
         model.covariance(sites, imts), expected)
 
 
+def test_cross_im_block():
+    # A cross-IMT-only model correlates colocated pairs but has no spatial
+    # dependence between locations with nonzero separation.
+    class FixedModel(CrossIMTCorrelationModel):
+        def _rho(self, from_imt, to_imt, context=None):
+            return 1.0 if from_imt == to_imt else 0.4
+
+    distances = numpy.array([[0.0, 10.0], [5.0, 0.0]])
+    actual = FixedModel().correlation_block(
+        distances, [PGA(), SA(1.0)], [PGV()])
+    expected = numpy.array([
+        [0.4, 0.0],
+        [0.0, 0.4],
+        [0.4, 0.0],
+        [0.0, 0.4],
+    ])
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_cross_im_factor():
+    # The effective IMT-major factor repeats one small IMT factor at every
+    # site rather than constructing a dense (M*N) by (M*N) matrix.
+    model = BakerJayaram2008()
+    sites = range(3)
+    imts = [SA(0.1), SA(0.5)]
+    factor = model.factor(sites, imts, ensure_psd=False)
+    effective = factor.apply(numpy.eye(6))
+    numpy.testing.assert_allclose(
+        effective @ effective.T, model.covariance(sites, imts))
+    assert factor.lower_triangle.shape == (2, 2)
+    assert factor.num_sites == 3
+    with pytest.raises(ValueError, match='Expected samples with shape'):
+        factor.apply(numpy.ones((5, 2)))
+
+
 def test_default_factor_repairs_indefinite_covariance():
     class IndefiniteModel(SpatialCrossIMTCorrelationModel):
         def covariance(self, sites, imts, component=None, context=None):
             return numpy.array([[1.0, 1.01], [1.01, 1.0]])
 
     model = IndefiniteModel()
+    sites = range(2)
+    imts = [SA(1.0)]
     with pytest.raises(numpy.linalg.LinAlgError):
-        model.factor(None, None, ensure_psd=False)
-    factor = model.factor(None, None)
+        model.factor(sites, imts, ensure_psd=False)
+    factor = model.factor(sites, imts)
     repaired = factor.lower_triangle @ factor.lower_triangle.T
     assert numpy.linalg.eigvalsh(repaired).min() > 0
 

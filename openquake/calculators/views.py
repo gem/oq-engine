@@ -1488,6 +1488,9 @@ def view_branches(token, dstore):
             % gslt.filename)
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
+    if full_lt.amp_lt is not None:
+        for k, v in full_lt.amp_lt.shortener.items():
+            tbl.append((k, v, k))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
 
 
@@ -1513,6 +1516,8 @@ def view_rlz(token, dstore):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
+    if rlz.ampl_rlz is not None:
+        tbl.append(('amplificationModel', rlz.ampl_rlz.value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
 
@@ -1523,8 +1528,11 @@ def view_branchsets(token, dstore):
     """
     flt = dstore['full_lt']
     clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
-    return text_table(enumerate(map(repr, clt.branchsets)),
-                      header=['bsno', 'bset'], ext='org')
+    rows = list(enumerate(map(repr, clt.branchsets)))
+    if flt.amp_lt is not None:
+        rows.append((len(rows),
+                     '<amplificationModel(%d)>' % flt.amp_lt.R_amp))
+    return text_table(rows, header=['bsno', 'bset'], ext='org')
 
 @view.add('sm_rlzs')
 def view_sm_rlzs(token, dstore):

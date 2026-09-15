@@ -1532,12 +1532,17 @@ def extract_disagg(dstore, what):
     imt = attrs['imt'][0]
     if len(oq.poes) == 0:
         mean_curve = dstore.sel(
-            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
+            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0].reshape(-1)
+        # When amplification is inputted (i.e., amplification model(s) present)
+        # the stored hcurves-stats are on soil_intensities, and otherwise they
+        # are on oq.imtls
+        levels = (oq.soil_intensities if 'amplification' in oq.inputs
+                  else oq.imtls[imt])
         # using loglog interpolation like in compute_hazard_maps
         attrs['poe'] = numpy.exp(
             numpy.interp(numpy.log(oq.iml_disagg[imt]),
-                         numpy.log(oq.imtls[imt]),
-                         numpy.log(mean_curve.reshape(-1))))
+                         numpy.log(levels),
+                         numpy.log(mean_curve)))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:

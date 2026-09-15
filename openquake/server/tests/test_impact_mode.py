@@ -27,13 +27,13 @@ from io import BytesIO
 
 import django
 from django.apps import apps
-from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
-from openquake.server.tests.views_test import get_or_create_user
+from openquake.server.tests.views_test import (
+    get_or_create_user, start_uvicorn, stop_uvicorn)
 
 CALC_RUN_TIMEOUT = 60
 
@@ -55,7 +55,7 @@ def check_email(job_id, email_content, expected_error):
         assert f'engine/{job_id}/outputs_impact' in email_content
 
 
-class ImpactModeTestCase(django.test.TestCase):
+class ImpactModeTestCase(django.test.TransactionTestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -135,24 +135,37 @@ class ImpactModeTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Group = apps.get_model('auth', 'Group')
-        Permission = apps.get_model('auth', 'Permission')
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        cls.user, cls.password = get_or_create_user(1)  # level 1
-        cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
-            name='Users who can view the exposure')
-        perm = Permission.objects.get(codename='can_view_exposure')
-        cls.users_who_can_view_exposure.permissions.add(perm)
-        cls.c = Client()
-        cls.c.login(username=cls.user.username, password=cls.password)
         cls.maxDiff = None
+        (cls.webserver, cls.webserver_thread,
+         cls.c) = start_uvicorn()
+
+    def setUp(self):
+        Group = apps.get_model('auth', 'Group')
+        Permission = apps.get_model('auth', 'Permission')
+        ContentType = apps.get_model('contenttypes', 'ContentType')
+        self.user, self.password = get_or_create_user(1)
+        self.users_who_can_view_exposure, _ = Group.objects.get_or_create(
+            name='Users who can view the exposure')
+        content_type = ContentType.objects.get(
+            app_label='auth', model='permission')
+        perm, _ = Permission.objects.get_or_create(
+            codename='can_view_exposure', name='Can view exposure',
+            content_type=content_type)
+        self.users_who_can_view_exposure.permissions.add(perm)
+        self.c.session.cookies.clear()
+        self.c.login(username=self.user.username, password=self.password)
+
+    def tearDown(self):
+        self.user.delete()
+        super().tearDown()
 
     @classmethod
     def tearDownClass(cls):
-        cls.user.delete()
+        stop_uvicorn(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def set_user_level_and_remove_groups(self, level):
