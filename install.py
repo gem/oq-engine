@@ -150,6 +150,7 @@ class devel_server:
     def manage_py(cls):
         return os.path.join('openquake', 'server', 'manage.py')
 
+
 class user:
     """
     Parameters for a user installation
@@ -241,6 +242,7 @@ GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
 # demos are not included in engine-3.23 wheel so we must download them.
 DEMOS = "https://artifacts.openquake.org/travis/demos-engine-3.23.zip"
+
 
 def ensure(pip=None, pyvenv=None):
     """
@@ -371,7 +373,9 @@ def install_or_postinstall_standalone(venv, is_install=True):
                     env=django_env)
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
-                errors.append("%s: error during %s postinstall command execution" % (exc, app['name']))
+                errors.append(
+                    "%s: error during %s postinstall command execution" % (
+                        exc, app['name']))
 
     return errors
 
@@ -379,8 +383,10 @@ def install_or_postinstall_standalone(venv, is_install=True):
 def install_standalone(venv):
     return install_or_postinstall_standalone(venv, is_install=True)
 
+
 def postinstall_standalone(venv):
     return install_or_postinstall_standalone(venv, is_install=False)
+
 
 def before_checks(inst, args, usage):
     """
@@ -599,7 +605,8 @@ def install(inst, version, from_fork, novenv, noupgrade):
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
             [pycmd, "-m", "pip", "install"] + ([
-                ] if noupgrade else ["--upgrade"]) + [f"openquake.engine{normalize_version(version)}"]
+                ] if noupgrade else ["--upgrade"]) + [
+                    f"openquake.engine{normalize_version(version)}"]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
@@ -772,7 +779,8 @@ if __name__ == "__main__":
         if args.remove:
             remove(inst)
         else:
-            errors = install(inst, args.version, args.from_fork, args.novenv, args.noupgrade)
+            errors = install(inst, args.version, args.from_fork, args.novenv,
+                             args.noupgrade)
             if errors:
                 # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
