@@ -21,13 +21,51 @@ import sys
 import subprocess
 import webbrowser
 
+import psutil
+
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi
 from openquake.commonlib.auth import API_KEY
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
-commands = ['start']
+commands = ['start', 'status', 'stop']
+
+
+def _find_webui_process(hostport):
+    """Find the Uvicorn process listening on the requested port."""
+    _host, port = hostport.rsplit(':', 1)
+    for connection in psutil.net_connections(kind='tcp'):
+        if (connection.status == psutil.CONN_LISTEN and
+                connection.laddr.port == int(port)):
+            try:
+                return psutil.Process(connection.pid)
+            except psutil.NoSuchProcess:
+                return None
+    return None
+
+
+def _status(hostport):
+    """Print whether the WebUI responds on the requested address."""
+    url = 'http://' + hostport
+    running = check_webserver_running(url, max_retries=1, warn=False)
+    print('running' if running else 'stopped')
+    return running
+
+
+def _stop(hostport):
+    """Stop the Uvicorn process serving the requested WebUI port."""
+    process = _find_webui_process(hostport)
+    if process is None:
+        print('WebUI is not running')
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=10)
+    except psutil.TimeoutExpired:
+        process.kill()
+        process.wait()
+    print('stopped')
 
 
 def runserver(hostport=None, skip_browser=False):
@@ -57,7 +95,7 @@ def runserver(hostport=None, skip_browser=False):
     except KeyboardInterrupt:
         process.terminate()
         process.wait()
-    if process.returncode:
+    if process.returncode not in (0, -15):
         sys.exit(process.returncode)
 
 
@@ -68,6 +106,13 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     command-line utility for administrative tasks, e.g.:
     manage.py <command> [options]
     """
+    if cmd == 'status':
+        _status(hostport)
+        return
+    if cmd == 'stop':
+        _stop(hostport)
+        return
+
     os.environ.setdefault('OQ_API_KEY', API_KEY)
     api_host, api_port = hostport.rsplit(':', 1)
     if api_host == '0.0.0.0':
