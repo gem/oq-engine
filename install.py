@@ -105,6 +105,13 @@ class server:
     )
 
     @classmethod
+    def manage_py(cls):
+        return os.path.join(cls.VENV, 'lib',
+                            f'python{PYVER[0]}.{PYVER[1]}',
+                            'site-packages', 'openquake',
+                            'server', 'manage.py')
+
+    @classmethod
     def exit(cls):
         return f"""There is a DbServer running on port {cls.DBPORT} from a
 previous installation.
@@ -137,6 +144,9 @@ class devel_server:
     )
     exit = server.exit
 
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
 
 class user:
     """
@@ -163,6 +173,18 @@ class user:
     CONFIG = ""
 
     @classmethod
+    def manage_py(cls):
+        if sys.platform == "win32":
+            return os.path.join(cls.VENV, 'lib',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
+        else:
+            return os.path.join(cls.VENV, 'lib',
+                                f'python{PYVER[0]}.{PYVER[1]}',
+                                'site-packages', 'openquake',
+                                'server', 'manage.py')
+
+    @classmethod
     def exit(cls):
         return f"""There is a DbServer running on port {cls.DBPORT} from a
 previous installation. Please stop the server with the command
@@ -175,6 +197,10 @@ class devel(user):
     """
 
     exit = user.exit
+
+    @classmethod
+    def manage_py(cls):
+        return os.path.join('openquake', 'server', 'manage.py')
 
 
 PACKAGES = """It looks like you have an installation from packages.
