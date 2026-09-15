@@ -1,498 +1,268 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
-# Copyright (C) 2012-2026 GEM Foundation
-#
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
-Module :mod:`openquake.pfd.primary_surf_displ.youngs2003` implements
-the Youngs et al. (2003) model for the conditional probability of
-exceeding principal surface fault displacement on normal faults.
-
-Two classes are provided, corresponding to the two normalization
-approaches described in the paper:
-
-* :class:`Youngs2003PrimaryFD_AD` — displacement normalized by average
-  displacement (D/AD), modelled with a **gamma distribution** whose
-  parameters are functions of relative location x/L along the rupture.
-
-* :class:`Youngs2003PrimaryFD_MD` — displacement normalized by maximum
-  displacement (D/MD), modelled with a **beta distribution** whose
-  parameters are functions of x/L.
-
-Both classes convolve their respective profile distributions with
-Wells and Coppersmith (1994) magnitude–displacement scaling relations
-to produce the conditional probability of exceedance:
-
-    P(D > d | m, x/L, Slip)
-
-The convolution is performed via numerical integration over the
-log-normal uncertainty in AD or MD (epsilon-based weighted sum).
-
-The :meth:`get_prob` method takes a **rake** angle (degrees, -180 to 180).
-Rake is mapped to Wells & Coppersmith (1994) style via
-:func:`~openquake.pfd.utils.rake_to_style`: normal faulting
-(-150 < rake < -30) uses WC94 normal coefficients; all other rake
-values (including ``"undefined"``) use WC94 "all styles" coefficients.
-See :mod:`openquake.hazardlib.valid` for ``rake_range``.
-
-**Important:** The Youngs et al. (2003) displacement profile model was
-developed for and validated against **normal faulting only** (McCalpin
-and Slemmons, 1998, 11 normal-faulting earthquakes).  The use of WC94
-"all styles" coefficients for non-normal rake is a pragmatic extension
-not present in the original paper -- it changes only the
-magnitude-to-displacement scaling while reusing the normal-faulting
-profile shape.  For rigorous application to strike-slip or reverse
-faulting, dedicated models (e.g. Lavrentiadis et al. 2023, Kuehn et al.
-2024) should be preferred.
-
-PEP8-friendly aliases :meth:`Youngs2003PrimaryFD_AD.get_prob_d_ad` and
-:meth:`Youngs2003PrimaryFD_MD.get_prob_d_md` call :meth:`get_prob` when
-the normalization type should be explicit at the call site.
-
-Profile distribution coefficients
----------------------------------
-D/AD gamma distribution (Youngs et al., 2003, Appendix, Figure 7
-lower panel; data from McCalpin and Slemmons, 1998, 11 normal
-faulting earthquakes):
-
-    a = exp(−0.193 + 1.628 × x/L)
-    b = exp( 0.009 − 0.476 × x/L)
-
-D/MD beta distribution (Youngs et al., 2003, Appendix, Figure 7
-upper panel; data from McCalpin and Slemmons, 1998):
-
-    a = exp(−0.705 + 1.138 × x/L)
-    b = exp( 0.421 − 0.257 × x/L)
-
-Both with 0 ≤ x/L ≤ 0.5 (symmetric about midpoint).
-
-Wells & Coppersmith (1994) scaling coefficients
-------------------------------------------------
-log₁₀(D) = intercept + slope × M,  σ in log₁₀ units
-
-AD, all styles:    intercept = −4.80, slope = 0.69, σ = 0.36
-AD, normal:        intercept = −4.45, slope = 0.63, σ = 0.33
-MD, all styles:    intercept = −5.46, slope = 0.82, σ = 0.42
-MD, normal:        intercept = −5.90, slope = 0.89, σ = 0.38
+Principal fault-displacement model of Youngs et al. (2003), using the
+Wells and Coppersmith (1994) magnitude-displacement scaling relations.
 
 References
 ----------
 Youngs, R.R., et al. (2003). A methodology for probabilistic fault
-    displacement hazard analysis (PFDHA). Earthquake Spectra, 19(1),
-    191–219. doi:10.1193/1.1542891, Appendix pp. 25–26, Figures 7–8.
-
-Wells, D.L. and Coppersmith, K.J. (1994). New empirical relationships
-    among magnitude, rupture length, rupture width, rupture area, and
-    surface displacement. Bulletin of the Seismological Society of
-    America, 84, 974–1002, Table 2.
+displacement hazard analysis (PFDHA). Earthquake Spectra, 19(1), 191-219.
 """
 
 import numpy as np
 from scipy.stats import gamma, norm, beta
+from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.primary_surf_displ.base import BasePrimarySurfDispl
-from openquake.pfd.utils import rake_to_style
 
-
-# -----------------------------------------------------------------------
-# Base class
-# -----------------------------------------------------------------------
-class _Youngs2003PrimaryFDBase(BasePrimarySurfDispl):
+class Youngs2003PrimaryFD(BasePrimarySurfDispl):
     """
-    Base class for the Youngs et al. (2003) principal fault displacement
-    model.  Subclasses define:
+    Model of Youngs et al. (2003) for the probability of exceeding
+    principal surface fault displacement thresholds on normal faults.
 
-    * ``norm_disp_type``  — ``"AD"`` or ``"MD"``
-    * ``_wc94_all``      — WC94 coefficients for all faulting styles
-    * ``_wc94_normal``   — WC94 coefficients for normal faulting
-    * ``_get_profile_params(x_l)`` — distribution parameters vs x/L
-    * ``_compute_sf(y, alpha, beta_param)`` — survival function of the
-      normalised displacement distribution
+    This model uses the Wells & Coppersmith (1994) magnitude-displacement
+    scaling relations. Two coefficient sets are available, selected with the
+    ``style`` parameter:
+
+    - ``style="all"``: the "All styles" coefficients from WC94.
+    - ``style="normal"``: the "Normal faulting" coefficients from WC94.
+
+    Model contract: DISPLACEMENT_DEFINITION = "principal",
+    DISPLACEMENT_COMPONENT = "vertical" -- Youngs et al. (2003) predict
+    principal-fault displacement of normal-faulting earthquakes measured as
+    vertical separation; Sarmiento et al. (2025, Earthquake Spectra) Table 1
+    lists YEA03 as D_P,V (principal, vertical).
     """
 
-    # Subclasses must override
-    norm_disp_type = None
-    _wc94_all = None
-    _wc94_normal = None
+    DISPLACEMENT_DEFINITION = "principal"
+    DISPLACEMENT_COMPONENT = "vertical"
+
+    # Wells & Coppersmith (1994) coefficients for "All styles"
+    # (recommended - consistent with Youngs et al. 2003 paper and fdhpy)
+    _WC94_ALL = {
+        "AD": {"intercept": -4.80, "slope": 0.69, "sigma": 0.36},
+        "MD": {"intercept": -5.46, "slope": 0.82, "sigma": 0.42},
+    }
+
+    # Wells & Coppersmith (1994) coefficients for "Normal faulting"
+    _WC94_NORMAL = {
+        "AD": {"intercept": -4.45, "slope": 0.63, "sigma": 0.33},
+        "MD": {"intercept": -5.90, "slope": 0.89, "sigma": 0.38},
+    }
 
     # Integration parameters
-    # ±6 sigma truncation, step 0.1 in standard-normal space
-    _n_eps = 6
-    _dz = 0.1
+    _DZ = 0.1   # Step size in epsilon space
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _fold_x_l(x_l):
+    _ACCEPTED_DISP_TYPES = frozenset(["AD", "MD"])
+    _ACCEPTED_STYLES = frozenset(["all", "normal"])
+    # The ε-space convolution below needs log10-space (intercept, slope,
+    # sigma) regressions for BOTH AD and MD per style; only Wells &
+    # Coppersmith (1994) provides them here (and is the relation used by
+    # Youngs et al. 2003 themselves). LEONARD2010 / THINGBAIJAM2017 expose
+    # AD-only regressions (see openquake.pfd.scalerel) and their use inside
+    # the Youngs (2003) convolution has not been validated, so they are
+    # rejected rather than silently ignored.
+    _ACCEPTED_SCALING_MODELS = frozenset(["WC1994"])
+
+    def __init__(self, n_sigma=6.0, scaling_model="WC1994", style=None,
+                 norm_disp_type=None):
         """
-        Fold x/L to [0, 0.5] by reflecting about the midpoint.
-
-        The displacement profile is assumed symmetric about x/L = 0.5
-        (Youngs et al., 2003, p. 9).  Values outside [0, 1] are first
-        reduced modulo 1.
-        """
-        r = x_l - np.floor(x_l)
-        return 0.5 - np.abs(r - 0.5)
-
-    def _get_wc94_coeffs(self, style):
-        """
-        Return WC94 coefficient dict for the given faulting style.
-
+        :param n_sigma:
+            Half-width of the ±σ ε-space integration truncation. Defaults to 6
+            (improves accuracy over the historical ±3σ). Overridable from the
+            logic tree via ``[Youngs2003PrimaryFD] n_sigma = <value>``.
+        :param scaling_model:
+            Magnitude-displacement scaling relation used to convert magnitude
+            into AD/MD inside the convolution. Only ``"WC1994"`` (the relation
+            used by Youngs et al. 2003) is implemented; any other value raises
+            ``ValueError`` instead of being silently ignored.
         :param style:
-            One of ``"normal"``, ``"reverse"``, ``"strike_slip"``,
-            ``"all"``.  Only ``"normal"`` uses the normal-specific
-            WC94 coefficients; all other styles fall back to the
-            ``"all"`` regression.
-        :returns:
-            dict with keys ``"intercept"``, ``"slope"``, ``"sigma"``
+            Optional WC94 coefficient-set selector pinned by the logic-tree
+            branch ('all' or 'normal'); ``None`` defers to the ``get_prob``
+            call.
+        :param norm_disp_type:
+            Optional normalization type pinned by the logic-tree branch
+            ('AD' or 'MD'); ``None`` defers to the ``get_prob`` call.
         """
-        if style == "normal":
-            return self._wc94_normal
-        return self._wc94_all
+        super().__init__()
+        self._N_EPS = float(n_sigma)  # ±n_sigma truncation in epsilon space
+        if self._N_EPS <= 0.0:
+            raise ValueError(f"n_sigma must be positive; got {self._N_EPS}")
+        self.scaling_model = self._check_scaling_model(scaling_model)
+        self.style = check_style(type(self).__name__, style,
+                                 self._ACCEPTED_STYLES)
+        self.norm_disp_type = check_choice(
+            type(self).__name__, "norm_disp_type", norm_disp_type,
+            self._ACCEPTED_DISP_TYPES, canon=lambda v: str(v).upper())
 
-    def _get_profile_params(self, x_l):
+    @classmethod
+    def _check_scaling_model(cls, scaling_model):
+        """Validate ``scaling_model``, returning its canonical (upper) form."""
+        sm = str(scaling_model).upper()
+        if sm not in cls._ACCEPTED_SCALING_MODELS:
+            raise ValueError(
+                f"{cls.__name__} only implements scaling_model='WC1994' "
+                f"(the magnitude-displacement relation used by Youngs et al. "
+                f"2003); got {scaling_model!r}. LEONARD2010/THINGBAIJAM2017 "
+                f"provide AD-only regressions and are not validated inside "
+                f"the Youngs (2003) convolution."
+            )
+        return sm
+
+    def _get_wc94_coeffs(self, style, norm_disp_type):
         """
-        Return (alpha, beta_param) arrays for the displacement profile
-        distribution at the given folded x/L values.  Implemented by
-        subclasses.
+        Get Wells & Coppersmith (1994) coefficients based on style and displacement type.
+
+        :param style: Faulting style ("all" or "normal")
+        :param norm_disp_type: Normalization type ("AD" or "MD")
+        :returns: Dictionary with 'intercept', 'slope', 'sigma' keys
         """
-        raise NotImplementedError
+        if style == "all":
+            return self._WC94_ALL[norm_disp_type]
+        elif style == "normal":  # normal
+            return self._WC94_NORMAL[norm_disp_type]
 
-    def _compute_sf(self, y, alpha, beta_param):
+    def get_prob(self, d, X_L_ratio, mag, style=None, norm_disp_type=None,
+                 scaling_model=None):
         """
-        Compute the survival function (1 − CDF) of the normalised
-        displacement distribution for a single site.
+        Model of Youngs et al. (2003) for the probability of exceeding
+        threshold values of primary displacement [m].
 
-        :param y:
-            Normalised displacement values, shape ``(n_displacements, n_eps)``
-        :param alpha:
-            Shape parameter (scalar, for one site)
-        :param beta_param:
-            Scale/shape parameter (scalar, for one site)
-        :returns:
-            Survival function values, same shape as *y*
+        This method uses numerical integration (epsilon-based weighted sum)
+        to convolve the statistical distributions and capture total aleatory
+        variability, matching the fdhpy implementation.
+
+        :param d: Target displacement in meters (scalar or array-like, shape (n_displacements,))
+        :param X_L_ratio: Ratio of distance from the closest rupture end to the total rupture length
+                         (scalar or array-like, shape (n_sites,))
+        :param mag: Earthquake magnitude (scalar)
+        :param style: Faulting style for WC94 coefficients. Valid options are:
+                     - "all": Use WC94 "All styles" coefficients
+                     - "normal": Use WC94 "Normal faulting" coefficients
+        :param norm_disp_type: Normalization displacement type. Valid options are "AD" or "MD".
+        :param scaling_model: Optional call-time override of the constructor's
+                             ``scaling_model``; validated the same way
+                             (only "WC1994" is implemented).
+        :returns: Probability of exceeding target displacement (m), shape (n_displacements, n_sites).
         """
-        raise NotImplementedError
+        # Fall back to constructor-pinned values (call-time argument wins)
+        if style is None:
+            style = self.style
+        if norm_disp_type is None:
+            norm_disp_type = self.norm_disp_type
+        if style is None or norm_disp_type is None:
+            raise ValueError(
+                f"{type(self).__name__}: style and norm_disp_type must be "
+                f"given either in the logic-tree branch or at call time")
+        # Validate inputs
+        if scaling_model is not None:
+            self._check_scaling_model(scaling_model)
+        style_lower = style.lower() if isinstance(style, str) else str(style).lower()
+        if style_lower not in self._ACCEPTED_STYLES:
+            raise ValueError(
+                f"Invalid style '{style}'. Accepted values are: {', '.join(self._ACCEPTED_STYLES)}"
+            )
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-    def get_prob(self, d, x_l, mag, rake=0.0):
-        """
-        Conditional probability that principal fault displacement exceeds
-        *d* metres, given magnitude *mag* and relative position *x/L*
-        along the rupture.
-
-        Computed by convolving the displacement profile distribution
-        (D/AD or D/MD) with the Wells & Coppersmith (1994) log-normal
-        distribution for AD or MD as a function of magnitude.
-
-        Corresponds to P_kn(D > d | m, r, Slip) in Youngs et al. (2003),
-        Equation 3, computed via numerical integration as shown in
-        Figure 8.
-
-        :param d:
-            Target displacement(s) in metres.
-            Scalar or array-like, shape ``(n_displacements,)``.
-        :param x_l:
-            Relative position along the rupture, x/L (0 = end, 0.5 =
-            centre).  Values outside [0, 0.5] are folded by symmetry.
-            Scalar or array-like, shape ``(n_sites,)``.
-        :param mag:
-            Earthquake moment magnitude (scalar).
-        :param rake:
-            Rake angle in degrees (scalar), in [-180, 180]. Mapped to
-            WC94 style via :func:`~openquake.pfd.utils.rake_to_style`
-            (normal if -150 < rake < -30, else all styles).
-        :returns:
-            Exceedance probability, shape ``(n_displacements, n_sites)``.
-        """
-        # --- Validate ---
-        style_lower = rake_to_style(rake)
+        if norm_disp_type not in self._ACCEPTED_DISP_TYPES:
+            raise ValueError(
+                f"Invalid displacement type '{norm_disp_type}'. Accepted values are: {', '.join(self._ACCEPTED_DISP_TYPES)}"
+            )
         if not np.isscalar(mag):
             raise ValueError("mag must be a scalar value")
 
-        # --- Convert and fold ---
-        d = np.atleast_1d(np.asarray(d, dtype=float))
-        x_l = np.atleast_1d(np.asarray(x_l, dtype=float))
-        x_l = self._fold_x_l(x_l)
+        # Convert inputs to numpy arrays
+        d = np.atleast_1d(d)  # Shape (n_displacements,)
+        X_L_ratio = np.atleast_1d(X_L_ratio)  # Shape (n_sites,)
 
-        # --- WC94 scaling: log10(D) ~ N(mu, sigma^2) ---
-        coeffs = self._get_wc94_coeffs(style_lower)
-        mu = coeffs["intercept"] + coeffs["slope"] * mag
-        sigma = coeffs["sigma"]
+        # Fold X/L to [0, 0.5] using modulus reflection, robust to 1±eps
+        r = X_L_ratio - np.floor(X_L_ratio)
+        X_L_ratio = 0.5 - np.abs(r - 0.5)
 
-        # --- Profile distribution parameters ---
-        alpha, beta_param = self._get_profile_params(x_l)
+        # Get WC94 coefficients based on style and displacement type
+        coeffs = self._get_wc94_coeffs(style_lower, norm_disp_type)
+        mu = coeffs["intercept"] + coeffs["slope"] * mag  # Mean in log10 space
+        sigma = coeffs["sigma"]  # Std dev in log10 space
 
-        # --- Epsilon grid for numerical integration ---
-        epsilons = np.arange(
-            -self._n_eps, self._n_eps + self._dz, self._dz
-        )
-        prob_eps = norm.pdf(epsilons)
+        # Get gamma/beta distribution parameters based on x/L
+        if norm_disp_type == "AD":
+            alpha = np.exp(-0.193 + 1.628 * X_L_ratio)  # Shape (n_sites,)
+            beta_param = np.exp(0.009 - 0.476 * X_L_ratio)   # Shape (n_sites,)
+        else:  # "MD"
+            alpha = np.exp(-0.705 + 1.138 * X_L_ratio)  # Shape (n_sites,)
+            beta_param = np.exp(0.421 - 0.257 * X_L_ratio)   # Shape (n_sites,)
 
-        # --- WC94 displacement samples: D_norm(eps) ---
-        z = np.power(10.0, mu + epsilons * sigma)  # (n_eps,)
+        # Create epsilon array for integration (matching fdhpy: ±6σ, step 0.1)
+        epsilons = np.arange(-self._N_EPS, self._N_EPS + self._DZ, self._DZ)  # Shape (n_eps,)
+        prob_eps = norm.pdf(epsilons)  # Shape (n_eps,)
 
-        # --- Normalised displacement: d / D_norm ---
-        y = d[:, np.newaxis] / z[np.newaxis, :]  # (n_disp, n_eps)
+        # Compute array of XD (AD or MD) values
+        z = np.power(10, mu + epsilons * sigma)  # Shape (n_eps,)
 
-        # --- Integrate over epsilon for each site ---
+        # Compute normalized displacement D/XD for each displacement and XD value
+        # d: (n_displacements,), z: (n_eps,)
+        # y: (n_displacements, n_eps)
+        y = d[:, np.newaxis] / z[np.newaxis, :]
+
+        # Initialize output array: (n_displacements, n_sites)
         n_displacements = len(d)
-        n_sites = len(x_l)
-        prob_exceed = np.zeros((n_displacements, n_sites))
+        n_sites = len(X_L_ratio)
+        prob_exceeding_d = np.zeros((n_displacements, n_sites))
 
+        # For each site, compute the exceedance probability
         for i_site in range(n_sites):
-            sf = self._compute_sf(
-                y, alpha[i_site], beta_param[i_site]
-            )  # (n_disp, n_eps)
-            prob_exceed[:, i_site] = np.dot(sf, prob_eps) * self._dz
+            a_site = alpha[i_site]
+            b_site = beta_param[i_site]
 
-        return prob_exceed
+            if norm_disp_type == "AD":
+                # Gamma distribution survival function (1 - CDF = exceedance probability)
+                # y: (n_displacements, n_eps)
+                sf_matrix = gamma.sf(y, a_site, loc=0, scale=b_site)  # (n_displacements, n_eps)
+            else:  # "MD"
+                # Beta distribution survival function
+                # Truncation to correct for D/MD > 1
+                cdf_matrix = beta.cdf(y, a_site, b_site)  # (n_displacements, n_eps)
+                cdf_value_at_1 = beta.cdf(1.0, a_site, b_site)
+                cdf_matrix = np.where(y > 1, 1.0, cdf_matrix / cdf_value_at_1)
+                sf_matrix = 1.0 - cdf_matrix  # (n_displacements, n_eps)
 
-    def get_prob_normalized(self, d_norm, x_l):
+            # Compute weighted sum (numerical integration)
+            prob_exceeding_d[:, i_site] = np.dot(sf_matrix, prob_eps) * self._DZ
+
+        return prob_exceeding_d
+
+    def get_prob_D_AD(self, D_AD, x_L_ratio):
         """
-        Survival function of the normalised displacement profile
-        distribution alone, without WC94 magnitude convolution.
+        Model of Youngs et al. (2003) for the probability of normalized displacement
+        using the D/AD (average displacement) formulation.
 
-        For the AD class this returns P(D/AD > d_norm | x/L) using the
-        gamma distribution.  For the MD class it returns
-        P(D/MD > d_norm | x/L) using the beta distribution.
-
-        :param d_norm:
-            Normalised displacement value(s).
-            Scalar or array-like, broadcastable with *x_l*.
-        :param x_l:
-            Relative position along the rupture, x/L ∈ [0, 0.5].
-            Scalar or array-like, broadcastable with *d_norm*.
-        :returns:
-            Exceedance probability, same shape as broadcast of
-            *d_norm* and *x_l*.
+        :param D_AD: Normalized displacement (D/Avg_D), shape (n_displacements, 1) or scalar
+        :param x_L_ratio: Ratio of distance from the closest rupture end to the total rupture length,
+                         shape (1, n_sites) or scalar
+        :returns: Probability of exceeding 'D_AD', shape (n_displacements, n_sites) or scalar
         """
-        d_norm = np.asarray(d_norm, dtype=float)
-        x_l = np.asarray(x_l, dtype=float)
-
+        # Allow tiny numerical noise around bounds
         tol = 1e-10
-        if np.any((x_l < -tol) | (x_l > 0.5 + tol)):
-            raise ValueError("x_l must be between 0 and 0.5")
+        if np.any((x_L_ratio < -tol) | (x_L_ratio > 0.5 + tol)):
+            raise ValueError("x_L_ratio must be between 0 and 0.5")
 
-        alpha, beta_param = self._get_profile_params(x_l)
-        return self._compute_sf_broadcast(d_norm, alpha, beta_param)
+        # Gamma distribution parameters from Youngs et al. (2003) Eq. 9-10
+        a = np.exp(-0.193 + 1.628 * x_L_ratio)  # Shape (1, n_sites) or scalar
+        b = np.exp(0.009 - 0.476 * x_L_ratio)   # Shape (1, n_sites) or scalar
+        return gamma.sf(D_AD, a, loc=0, scale=b)
 
-    def _compute_sf_broadcast(self, d_norm, alpha, beta_param):
+    def get_prob_D_MD(self, D_MD, x_L_ratio):
         """
-        Broadcastable survival function for the normalised displacement.
-        Implemented by subclasses.
+        Model of Youngs et al. (2003) for the probability of normalized displacement
+        using the D/MD (maximum displacement) formulation.
+
+        :param D_MD: Normalized displacement (D/Max_D), shape (n_displacements, 1) or scalar
+        :param x_L_ratio: Ratio of distance from the closest rupture end to the total rupture length,
+                         shape (1, n_sites) or scalar
+        :returns: Probability of exceeding 'D_MD', shape (n_displacements, n_sites) or scalar
         """
-        raise NotImplementedError
+        tol = 1e-12
+        if np.any((x_L_ratio < -tol) | (x_L_ratio > 0.5 + tol)):
+            raise ValueError("x_L_ratio must be between 0 and 0.5")
 
-
-# -----------------------------------------------------------------------
-# AD class — gamma distribution
-# -----------------------------------------------------------------------
-class Youngs2003PrimaryFD_AD(_Youngs2003PrimaryFDBase):
-    """
-    Youngs et al. (2003) principal fault displacement model using
-    **average displacement (AD)** normalization.
-
-    The displacement profile D/AD is modelled with a **gamma
-    distribution** whose parameters are functions of x/L:
-
-        a = exp(−0.193 + 1.628 × x/L)
-        b = exp( 0.009 − 0.476 × x/L)
-
-    Source: Youngs et al. (2003), Appendix, "Coefficients for gamma
-    distribution for D/AD shown on Figure 7"; McCalpin and Slemmons
-    (1998), 11 normal faulting earthquakes.
-
-    The AD scaling with magnitude uses Wells and Coppersmith (1994):
-
-        log₁₀(AD) = intercept + slope × M
-
-    Coefficients (WC94, Table 2A):
-        All styles:    intercept = −4.80, slope = 0.69, σ = 0.36
-        Normal:        intercept = −4.45, slope = 0.63, σ = 0.33
-    """
-
-    norm_disp_type = "AD"
-
-    _wc94_all = {"intercept": -4.80, "slope": 0.69, "sigma": 0.36}
-    _wc94_normal = {"intercept": -4.45, "slope": 0.63, "sigma": 0.33}
-
-    # Gamma distribution profile coefficients
-    # Youngs et al. (2003), Appendix, Figure 7 lower panel
-    _profile_a_intercept = -0.193
-    _profile_a_slope = 1.628
-    _profile_b_intercept = 0.009
-    _profile_b_slope = -0.476
-
-    def _get_profile_params(self, x_l):
-        """
-        Gamma distribution parameters for D/AD as functions of x/L.
-
-        :param x_l:
-            Folded x/L array, shape ``(n_sites,)``.
-        :returns:
-            Tuple ``(alpha, beta_param)`` arrays, each shape
-            ``(n_sites,)``.
-        """
-        alpha = np.exp(
-            self._profile_a_intercept + self._profile_a_slope * x_l
-        )
-        beta_param = np.exp(
-            self._profile_b_intercept + self._profile_b_slope * x_l
-        )
-        return alpha, beta_param
-
-    def _compute_sf(self, y, alpha_site, beta_site):
-        """
-        Gamma survival function for D/AD.
-
-        :param y:
-            Normalised displacement, shape ``(n_disp, n_eps)``.
-        :param alpha_site:
-            Gamma shape parameter (scalar).
-        :param beta_site:
-            Gamma scale parameter (scalar).
-        :returns:
-            P(D/AD > y), shape ``(n_disp, n_eps)``.
-        """
-        return gamma.sf(y, alpha_site, loc=0, scale=beta_site)
-
-    def _compute_sf_broadcast(self, d_norm, alpha, beta_param):
-        """
-        Broadcastable gamma survival function.
-
-        :param d_norm:
-            Normalised displacement value(s).
-        :param alpha:
-            Gamma shape parameter.
-        :param beta_param:
-            Gamma scale parameter.
-        :returns:
-            P(D/AD > d_norm), same shape as broadcast inputs.
-        """
-        return gamma.sf(d_norm, alpha, loc=0, scale=beta_param)
-
-    def get_prob_d_ad(self, d, x_l, mag, rake=0.0):
-        """
-        Alias for :meth:`get_prob` for D/AD (average displacement).
-        PEP8-friendly name when the normalization type should be explicit.
-        """
-        return self.get_prob(d, x_l, mag, rake)
-
-
-# -----------------------------------------------------------------------
-# MD class — beta distribution
-# -----------------------------------------------------------------------
-class Youngs2003PrimaryFD_MD(_Youngs2003PrimaryFDBase):
-    """
-    Youngs et al. (2003) principal fault displacement model using
-    **maximum displacement (MD)** normalization.
-
-    The displacement profile D/MD is modelled with a **beta
-    distribution** whose parameters are functions of x/L:
-
-        a = exp(−0.705 + 1.138 × x/L)
-        b = exp( 0.421 − 0.257 × x/L)
-
-    Source: Youngs et al. (2003), Appendix, "Coefficients for beta
-    distribution for D/MD shown on Figure 7"; McCalpin and Slemmons
-    (1998), 11 normal faulting earthquakes.
-
-    The MD scaling with magnitude uses Wells and Coppersmith (1994):
-
-        log₁₀(MD) = intercept + slope × M
-
-    Coefficients (WC94, Table 2B):
-        All styles:    intercept = −5.46, slope = 0.82, σ = 0.42
-        Normal:        intercept = −5.90, slope = 0.89, σ = 0.38
-
-    Note: D/MD is bounded on [0, 1]. Values of D/MD > 1 are mapped to
-    a CDF of 1.0 (probability of exceedance = 0).
-    """
-
-    norm_disp_type = "MD"
-
-    _wc94_all = {"intercept": -5.46, "slope": 0.82, "sigma": 0.42}
-    _wc94_normal = {"intercept": -5.90, "slope": 0.89, "sigma": 0.38}
-
-    # Beta distribution profile coefficients
-    # Youngs et al. (2003), Appendix, Figure 7 upper panel
-    _profile_a_intercept = -0.705
-    _profile_a_slope = 1.138
-    _profile_b_intercept = 0.421
-    _profile_b_slope = -0.257
-
-    def _get_profile_params(self, x_l):
-        """
-        Beta distribution parameters for D/MD as functions of x/L.
-
-        :param x_l:
-            Folded x/L array, shape ``(n_sites,)``.
-        :returns:
-            Tuple ``(alpha, beta_param)`` arrays, each shape
-            ``(n_sites,)``.
-        """
-        alpha = np.exp(
-            self._profile_a_intercept + self._profile_a_slope * x_l
-        )
-        beta_param = np.exp(
-            self._profile_b_intercept + self._profile_b_slope * x_l
-        )
-        return alpha, beta_param
-
-    def _compute_sf(self, y, alpha_site, beta_site):
-        """
-        Beta survival function for D/MD with truncation at 1.
-
-        D/MD > 1 is physically impossible, so the exceedance probability
-        is set to 0 for y >= 1.
-
-        :param y:
-            Normalised displacement, shape ``(n_disp, n_eps)``.
-        :param alpha_site:
-            Beta shape parameter *a* (scalar).
-        :param beta_site:
-            Beta shape parameter *b* (scalar).
-        :returns:
-            P(D/MD > y), shape ``(n_disp, n_eps)``.
-        """
-        sf = beta.sf(y, alpha_site, beta_site)
-        return np.where(y >= 1.0, 0.0, sf)
-
-    def _compute_sf_broadcast(self, d_norm, alpha, beta_param):
-        """
-        Broadcastable beta survival function with truncation at 1.
-
-        :param d_norm:
-            Normalised displacement value(s).
-        :param alpha:
-            Beta shape parameter *a*.
-        :param beta_param:
-            Beta shape parameter *b*.
-        :returns:
-            P(D/MD > d_norm), same shape as broadcast inputs.
-        """
-        sf = beta.sf(d_norm, alpha, beta_param)
-        return np.where(d_norm >= 1.0, 0.0, sf)
-
-    def get_prob_d_md(self, d, x_l, mag, rake=0.0):
-        """
-        Alias for :meth:`get_prob` for D/MD (maximum displacement).
-        PEP8-friendly name when the normalization type should be explicit.
-        """
-        return self.get_prob(d, x_l, mag, rake)
+        # Beta distribution parameters from Youngs et al. (2003) Eq. 11-12
+        a = np.exp(-0.705 + 1.138 * x_L_ratio)  # Shape (1, n_sites) or scalar
+        b = np.exp(0.421 - 0.257 * x_L_ratio)   # Shape (1, n_sites) or scalar
+        return beta.sf(D_MD, a, b)
