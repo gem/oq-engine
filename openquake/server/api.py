@@ -393,9 +393,8 @@ async def v0_impact_run(
             username=form.get('username'), is_authenticated=True,
             level=user_level, testdir=None),
         build_absolute_uri=build_absolute_uri)
-    response_data = await run_in_threadpool(
-        create_impact_job, job_request, params,
-        form.get('email_file_path'))
+    response_data = create_impact_job(
+        job_request, params, form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
 
