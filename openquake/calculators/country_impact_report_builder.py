@@ -534,8 +534,9 @@ class CountryImpactReportBuilder:
         ]]
         for meta in LOSS_METADATA.values():
             # NOTE: in order to make it easier to understand and communicate,
-            # we use 'residents' for both 'Fatalities' and 'Displaced'
-            if meta["label"] in ["Fatalities", "Displaced"]:
+            # we use 'residents' for both 'Fatalities' and
+            # 'Rendered Homeless'
+            if meta["label"] in ["Fatalities", "Rendered Homeless"]:
                 exposed_key = LOSS_METADATA["residents"]["label"] + "_exposed"
             else:
                 exposed_key = meta["label"] + "_exposed"

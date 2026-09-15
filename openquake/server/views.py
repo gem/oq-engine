@@ -2583,41 +2583,38 @@ def extract_html_table(request, calc_id, name):
         additional_explanations = {
             'value': (
                 'The exposed value depends on the impact metric. Below we '
-                'describe the meaning of the exposed value per impact metric.'
+                'describe the meaning of the exposed value per impact metric:'
                 '<ul>'
                 '<li>Affected population and Rendered homeless: Population '
-                'in the area included in the impact analysis.</li>'
+                'that lives in the area included in the impact analysis.'
+                '</li>'
                 '<li>Floor area lost (m²): Total floor area of buildings, '
                 'including all storeys, in the area included in the impact '
                 'analysis.</li>'
                 '<li>Number of injured people and fatalities: Population '
                 'assumed to be inside the building stock in the area '
-                'included in the impact analysis.</li>'
+                'included in the impact analysis when the event occurs.</li>'
                 '<li>Buildings destroyed: Number of buildings in the area '
                 'included in the impact analysis.</li>'
                 '<li>Economic loss (USD): Replacement value of buildings and '
                 'their contents in the area included in the impact analysis.'
                 '</li></ul>'
             ),
-            'lossmea': (
-                'Arithmetic mean of the estimated impact values, accounting '
-                'for the uncertainties propagated through the impact '
-                'analysis.'
-            ),
-            'q50': (
-                'The 50th percentile of the estimated impact distribution. '
-                'Half of the estimated impact values are below the median and '
-                'half are above it.'
-            ),
-            'q05': (
-                'Value below which 5% of the estimated impact values fall. '
-                'It represents the lower end of the range of plausible '
-                'impacts.'
-            ),
-            'q95': (
-                'Value below which 95% of the estimated impact values fall. '
-                'It represents the upper end of the range of plausible '
-                'impacts.'
+            'Reported values': (
+                '<ul>'
+                '<li><strong>Mean:</strong> Arithmetic mean of the estimated '
+                'impact values, accounting for the uncertainties propagated '
+                'through the impact analysis.</li>'
+                '<li><strong>Median:</strong> The 50th percentile of the '
+                'estimated impact distribution. Half of the estimated impact '
+                'values are below the median and half are above it.</li>'
+                '<li><strong>5th percentile:</strong> Value below which 5% '
+                'of the estimated impact values fall. It represents the lower '
+                'end of the range of plausible impacts.</li>'
+                '<li><strong>95th percentile:</strong> Value below which 95% '
+                'of the estimated impact values fall. It represents the upper '
+                'end of the range of plausible impacts.</li>'
+                '</ul>'
             ),
         }
         explanations = {
