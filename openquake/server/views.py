@@ -70,7 +70,7 @@ from openquake.engine.aelo import (
     PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
-from openquake.server.api import validate_aelo_data, run_aelo
+from openquake.server.services import run_aelo, validate_aelo_data
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
@@ -1317,7 +1317,6 @@ def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
               username, job_owner_email, build_absolute_uri,
               email_file_path):
     """Create and start an AELO job after Django has authenticated it."""
-
     def build_urls(job_id):
         return {
             'outputs_uri_web': build_absolute_uri(
