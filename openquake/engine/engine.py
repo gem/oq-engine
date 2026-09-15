@@ -266,8 +266,10 @@ def start_workers(job_id, dist, nodes):
     Start the workers via the WebUI or via slurm
     """
     if dist == 'zmq':
-        print('Starting the workers %s' % config.zworkers.host_cores)
-        if use_server():
+        host_cores = config.zworkers.host_cores
+        print(f'Starting the workers {host_cores}')
+        if use_server() and not host_cores.startswith('127.0.0.1'):
+            # in zmq cluster start the workers from the WebAPI
             logs.dbcmd('workers_start', dict(config.zworkers))
         else:
             w.WorkerMaster(job_id).start()
