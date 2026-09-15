@@ -65,7 +65,7 @@ jobs:
           set -e
           source ~/openquake/bin/activate
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
-          pip install pyshp pytest flake8 ruff~=0.14.0 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          pip install pyshp pytest flake8 ruff~=0.14.0 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           cd openquake
           ruff check --preview .
