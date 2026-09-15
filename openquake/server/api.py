@@ -29,7 +29,7 @@ import signal
 import tempfile
 import traceback
 import zlib
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import patch
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urljoin
@@ -59,10 +59,6 @@ from openquake.server.views import (
     get_impact_rupture_data)
 
 app = FastAPI(title='OpenQuake API')
-UTC = timezone.utc
-CWD = os.path.dirname(__file__)
-KUBECTL = 'kubectl apply -f -'.split()
-ENGINE = 'python -m openquake.engine.engine'.split()
 
 
 def _check_api_key(api_key):
