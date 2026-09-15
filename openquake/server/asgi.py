@@ -30,11 +30,13 @@ actions.upgrade_db(dbapi.db)
 django_application = get_asgi_application()
 from openquake.server.views import (  # noqa: E402
     _run_aelo, aelo_validate, impact_callback)
+from openquake.server.papers import base as papers  # noqa: E402
 
 configure_adapters(
     aelo_validate=aelo_validate,
     run_aelo=_run_aelo,
-    impact_callback=impact_callback)
+    impact_callback=impact_callback,
+    papers=papers)
 static_dir = settings.STATICFILES_DIRS[0]
 static_packages = []
 # Include the static directories supplied by installed Django apps.  The

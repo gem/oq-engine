@@ -2,6 +2,7 @@
 """Framework-neutral server services shared by API adapters."""
 
 import ast
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -136,6 +137,20 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
                 args=(job.calc_id, proc.pid,
                       int(config.webapi.calc_timeout))).start()
     return job.calc_id
+
+def get_papers_job_ctx(papers, rup_id, form):
+    """Build a PAPERS job context using an injected papers adapter."""
+    consequence_model = form.get('consequence_model')
+    consequence = (json.loads(consequence_model)
+                   if consequence_model else papers.CONSEQUENCE)
+    return papers.get_job_ctx(
+        rup_id, papers.FNAME, papers.GMM_LT, papers.SITE_MODEL,
+        papers.IMTS_RISK, papers.INTEGRATION_DISTANCE, papers.TRUNCATION,
+        papers.NGMFS, form.get('exposure_filepath', papers.EXPOSURE),
+        form.get('mapping', papers.MAPPING),
+        form.get('fragility_curves', papers.FRAGILITY), consequence,
+        papers.HAZARD_ONLY, form.get('username'))
+
 
 def create_impact_job(params, username, job_owner_email, build_urls,
                       callback, email_file_path):

@@ -51,9 +51,9 @@ from openquake.hazardlib.shakemap.validate import (
 from openquake.commonlib import dbapi, logs, oqvalidation, readinput
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
-from openquake.server.papers import base as papers
 from openquake.server.services import (
-    create_impact_job, get_impact_rupture_data, submit_job)
+    create_impact_job, get_impact_rupture_data, get_papers_job_ctx,
+    submit_job)
 app = FastAPI(title='OpenQuake API')
 app.state.adapters = {}
 
@@ -323,18 +323,10 @@ async def v0_run_scenario(
     if not username:
         raise HTTPException(status_code=400,
                             detail='Missing calculation owner')
-    consequence_model = form.get('consequence_model')
-    consequence = (json.loads(consequence_model)
-                   if consequence_model else papers.CONSEQUENCE)
+    papers = _adapter('papers')
     try:
         job_ctx = await run_in_threadpool(
-            papers.get_job_ctx, rup_id, papers.FNAME, papers.GMM_LT,
-            papers.SITE_MODEL, papers.IMTS_RISK, papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION, papers.NGMFS,
-            form.get('exposure_filepath', papers.EXPOSURE),
-            form.get('mapping', papers.MAPPING),
-            form.get('fragility_curves', papers.FRAGILITY), consequence,
-            papers.HAZARD_ONLY, username)
+            get_papers_job_ctx, papers, rup_id, form)
         mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
             'notify_to': form.get('notify_to')}).start()
         response_data = await run_in_threadpool(
