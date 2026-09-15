@@ -243,7 +243,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         elif self.amplifier:
             # hcurves-stats is on soil_intensities when amplifying, so hmap3
             # stores soil-scale IMTLs and uses _disaggregate_amp which then
-            # integrates the amp func against bedrock distributions rup by rup
+            # integrates the amplification function against bedrock
+            # distributions rupture by rupture
             soil_imtls = {imt: oq.soil_intensities for imt in oq.imtls}
             iml3 = map_array.compute_hmaps(mean_curves, soil_imtls, oq.poes)
         else:

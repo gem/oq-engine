@@ -6,7 +6,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <sourceModel name="test source model">
     <characteristicFaultSource id="1" name="test" tectonicRegion="Active Shallow Crust">
       <incrementalMFD minMag="7.5" binWidth="0.1">
-        <occurRates>0.01</occurRates>
+        <occurRates>0.00011904761904761905</occurRates>
       </incrementalMFD>
       <rake>0</rake>
       <surface>

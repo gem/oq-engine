@@ -307,23 +307,22 @@ def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
                       gp, infer_occur_rates, amplifier, ampcode,
                       mon1, mon2, mon3):
     """
-    Amplitude model LT supporting version of _disaggregate
+    Site amplification logic tree supporting version of _disaggregate
 
     NOTE: epsilon_star is unsupported because it's inherently a rock-GMPE
     residual, so this does not work with soil exceedance.
 
     :param iml2: log soil IMLs of shape (M, P)
     :param amplifier: an :class:`Amplifier` for the rlz's amp branch
-    :param ampcode: 2-letter code for the site's amplification function
+    :param ampcode: 2-letter code identifying the site's amplification entry
     :returns: a disagg matrix (6D array)
     """
     if epsstar:
-        # Epsilon is binned based on rock predictions, and therefore when using
-        # an amp model, any epsilon binning is corresponding to pre-amp bedrock
-        # rather than post-amp, so technically we would be misrepresenting the
-        # per epsilon bin contribution if supporting this
+        # Epsilon is binned on rock predictions, so with amplification the
+        # binning corresponds to pre-amp bedrock rather than post-amp soil;
+        # supporting epsilon_star here would misrepresent per-bin contribution
         raise NotImplementedError(
-            'epsilon_star=true is not supported with an amp model/amp model LT'
+            'epsilon_star=true is not supported with amplification'
             )
     with mon1:
         # Per-rupture, per-eps-bin soil exceedance PoE via amp integration

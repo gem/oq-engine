@@ -183,4 +183,4 @@ usual. The epsilon axis requires two clarifications:
   contribution into the single epsilon bin at which its rock ground motion crosses the target IML. Under a stochastic
   amplification function (any amplification model CSV with a non-zero ``sigma_<IMT>`` column) every rock epsilon contributes with
   some probability once the amplification is convolved, so no single "epsilon at exceedance" exists per rupture. Setting
-  ``epsilon_star = true`` alongside an amplifications model raises an error.
+  ``epsilon_star = true`` alongside an amplification model raises an error.

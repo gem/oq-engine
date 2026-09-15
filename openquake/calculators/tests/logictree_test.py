@@ -528,9 +528,9 @@ hazard_uhs-std.csv
                 self.assertEqualFiles('expected/%s' % fname, actual)
 
     def test_case_27(self):
-        # 2 GMM x 3-branch amp LT, disaggregation, full enum + sampling
+        # 3-branch amp LT, disaggregation, full enum + sampling
         for kwargs, prefix, nrlz in [
-                ({}, '', 6), # Full enumeration: 1 SSC x 2 GMM x 3 amp
+                ({}, '', 3), # Full enumeration: 1 SSC x 1 GMM x 3 amp
                 ({'number_of_logic_tree_samples': '2'}, 'sampling_', 2)]:
             self.run_calc(case_27.__file__, 'job.ini', **kwargs)
             self.assertEqual(len(self.calc.full_lt.rlzs), nrlz)
@@ -539,6 +539,13 @@ hazard_uhs-std.csv
             for fname in got:
                 self.assertEqualFiles(
                     'expected/%s%s' % (prefix, strip_calc_id(fname)), fname)
+
+        # Full-enum hcurves must match case_26 (classical vs disagg)
+        self.run_calc(case_27.__file__, 'job.ini')
+        hcurves = self.calc.datastore['hcurves-stats'][:, 0]
+        self.run_calc(case_26.__file__, 'job.ini')
+        expected = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(hcurves, expected, rtol=1e-6)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
