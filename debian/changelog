@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Introduced a uvicorn server replacing the DbServer with a REST API
-    and serving also the Django (sub)applications
+    and serving also the Django (sub)applications; introduced a scientific
+    REST API based on FastAPI and supporting OpenAPI
 
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference
