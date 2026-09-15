@@ -1,3 +1,6 @@
+  [Amir Banimahd]
+  * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
+
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference
     is the .gpkg file, not the code
