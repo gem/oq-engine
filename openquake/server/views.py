@@ -21,12 +21,9 @@ import ast
 import csv
 import shutil
 import json
-import string
-import pickle
 import logging
 import os
 import tempfile
-import subprocess
 import traceback
 import zlib
 import re
@@ -49,7 +46,7 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
 
-from openquake.baselib import hdf5, config, parallel
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -60,7 +57,6 @@ from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
-from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION,
     DISPLAY_NAME)
@@ -69,11 +65,12 @@ from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo, impact
+from openquake.engine import engine, impact
 from openquake.engine.aelo import (
-    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
+    PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
+from openquake.server.api import validate_aelo_data, run_aelo
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
@@ -85,7 +82,6 @@ if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
 UTC = timezone.utc
-CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -109,8 +105,6 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
 
-KUBECTL = "kubectl apply -f -".split()
-ENGINE = "python -m openquake.engine.engine".split()
 
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
@@ -207,51 +201,6 @@ def get_bool_param(request, name, default=False):
     if val is None:
         return default
     return str(val).lower() in ('1', 'true', 'yes', '')
-
-
-def store(request_files, ini, calc_id):
-    """
-    Store the uploaded files in calc_dir and select the job file by looking
-    at the .ini extension.
-
-    :returns: full path of the ini file
-    """
-    calc_dir = parallel.calc_dir(calc_id)
-    input_files = request_files.getlist('archive')
-    named_files = [
-        (input_file, getattr(input_file, 'name', None) or
-         getattr(input_file, 'filename', ''))
-        for input_file in input_files]
-    zip_file = next(
-        (input_file for input_file, name in named_files
-         if name.endswith('.zip')), None)
-    if zip_file is None:
-        # move each file to calc_dir using the upload file names
-        inifiles = []
-        # NB: TemporaryUploadedFile Django objects are not sortable
-        for input_file, name in named_files:
-            new_path = os.path.join(calc_dir, name)
-            # Using shutil.copy2, Django deletes the temporary file
-            # when the request ends. With shutil.move it would
-            # attempt to delete it immediately when it is still in
-            # use by the Django process, which would raise an
-            # exception on Windows.
-            source = getattr(input_file, 'file', None)
-            if source is None:
-                shutil.copy2(input_file.temporary_file_path(), new_path)
-            else:
-                source.seek(0)
-                with open(new_path, 'wb') as target:
-                    shutil.copyfileobj(source, target)
-            if name.endswith(ini):
-                inifiles.append(new_path)
-    else:  # extract the files from the archive into calc_dir
-        source = getattr(zip_file, 'file', zip_file)
-        source.seek(0)
-        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
-    if not inifiles:
-        raise NotFound('There are no %s files in the archive' % ini)
-    return inifiles[0]
 
 
 def stream_response(fname, content_type, exportname=''):
@@ -1355,129 +1304,33 @@ def impact_run_with_shakemap(request):
 
 
 def aelo_validate(request):
-    validation_errs = {}
-    invalid_inputs = []
-    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    try:
-        site_name = request.POST.get('site_name')
-        if not site_name:
-            raise ValueError("can not be empty")
-        if len(site_name) > settings.MAX_AELO_SITE_NAME_LEN:
-            raise ValueError(
-                "site name can not be longer than %s characters" %
-                settings.MAX_AELO_SITE_NAME_LEN)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_name']] = str(exc)
-        invalid_inputs.append('site_name')
-    try:
-        asce_version = request.POST.get(
-            'asce_version', oqvalidation.OqParam.asce_version.default)
-        oqvalidation.OqParam.asce_version.validator(asce_version)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
-        invalid_inputs.append('asce_version')
-    try:
-        site_class = request.POST.get('site_class')
-        oqvalidation.OqParam.site_class.validator(site_class)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
-        invalid_inputs.append('site_class')
-    try:
-        vs30s_in = sorted(
-            float(val) for val in request.POST.get('vs30').split())
-        if not vs30s_in:
-            raise ValueError('can not be empty')
-        vs30s_out = []
-        for vs30 in vs30s_in:
-            vs30s_out.append(validate_vs30(vs30))
-        vs30 = ' '.join(str(val) for val in vs30s_out)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
-        invalid_inputs.append('vs30')
-    if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[
-            asce_version][site_class]['vs30']
-        if isinstance(valid_vs30, list):
-            expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
-        else:
-            expected_vs30 = str(float(valid_vs30))
-        if vs30 != expected_vs30:
-            # NOTE: this should never happen when using the web form, but it
-            # could happen calling the 'aelo_run' API endpoint programmatically
-            err_msg = (f'For site class {site_class} the expected Vs30 is'
-                       f' {expected_vs30} instead of {vs30}')
-            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
-            invalid_inputs.append('vs30')
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return JsonResponse(response_data, status=400)
-    return lon, lat, site_name, asce_version, site_class, vs30
+    """Validate AELO input and return the Django response."""
+    result, status = validate_aelo_data(
+        request.POST, AELO_FORM_LABELS, settings.MAX_AELO_SITE_NAME_LEN)
+    if status != 200:
+        logging.error(result['error_msg'])
+        return JsonResponse(result, status=status)
+    return result
 
 
 def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
               username, job_owner_email, build_absolute_uri,
               email_file_path):
     """Create and start an AELO job after Django has authenticated it."""
-    description = f'AELO for {site_name}'
-    try:
-        params = get_params_from(
-            dict(sites='%s %s' % (lon, lat),
-                 asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=description),
-            config.directory.mosaic_dir, exclude=['USA'])
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        logging.exception(str(exc))
-        return response_data, 400
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, None, username, None)
-    job_id = jobctx.calc_id
-    outputs_uri_web = build_absolute_uri(
-        reverse('outputs_aelo', args=[job_id]))
-    outputs_uri_api = build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = build_absolute_uri(reverse('log', args=[job_id, '0', '']))
-    traceback_uri = build_absolute_uri(reverse('traceback', args=[job_id]))
-    response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the following'
-            ' link: %s. If the job fails, the error traceback will be'
-            ' accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-    args = (
-        lon, lat, vs30, params['siteid'], description, asce_version,
-        site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback, email_file_path)
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        aelo.main(*args)
-    else:
-        mp.Process(target=aelo.main, args=args).start()
-    return response_data, 200
+
+    def build_urls(job_id):
+        return {
+            'outputs_uri_web': build_absolute_uri(
+                reverse('outputs_aelo', args=[job_id])),
+            'outputs_uri': build_absolute_uri(reverse('results', args=[job_id])),
+            'log_uri': build_absolute_uri(reverse('log', args=[job_id, '0', ''])),
+            'traceback_uri': build_absolute_uri(
+                reverse('traceback', args=[job_id])),
+        }
+
+    return run_aelo(
+        lon, lat, site_name, asce_version, site_class, vs30, username,
+        job_owner_email, build_urls, aelo_callback, email_file_path)
 
 
 @csrf_exempt
@@ -1497,79 +1350,6 @@ def aelo_run(request):
         email=getattr(getattr(request, 'user', None), 'email', ''),
         base_url=_get_base_url(request))
     return _post_api(request, 'v0/calc/aelo_run', data)
-
-
-def submit_job(request_files, ini, username, hc_id, notify_to=None):
-    """
-    Create a job object from the given files and run it in a new process.
-
-    :returns: a job ID
-    """
-    # build a LogContext object associated to a database job
-    [job] = engine.create_jobs(
-        [dict(calculation_mode='custom',
-              description='Calculation waiting to start')],
-        config.distribution.log_level, None, username, hc_id)
-
-    # store the request files and perform some validation
-    try:
-        if request_files:
-            job_ini = store(request_files, ini, job.calc_id)
-        else:  # called by calc_run_ini
-            job_ini = ini
-        job.oqparam = oq = readinput.get_oqparam(
-            job_ini, kw={'hazard_calculation_id': hc_id,
-                         'export_dir': (config.directory.custom_tmp or
-                                        tempfile.gettempdir())})
-        dic = dict(calculation_mode=oq.calculation_mode,
-                   description=oq.description, hazard_calculation_id=hc_id)
-        logs.dbcmd('update_job', job.calc_id, dic)
-        jobs = [job]
-    except Exception as exc:
-        tb = traceback.format_exc()
-        logs.dbcmd('log', job.calc_id, datetime.now(UTC), 'CRITICAL',
-                   'before starting', tb)
-        logs.dbcmd('finish', job.calc_id, 'failed')
-        exc.job_id = job.calc_id
-        raise exc
-
-    custom_tmp = os.path.dirname(job_ini)
-    submit_cmd = config.distribution.submit_cmd.split()
-    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
-    if submit_cmd == ENGINE:  # used for debugging
-        for job in jobs:
-            subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
-    elif submit_cmd == KUBECTL and big_job:
-        for job in jobs:
-            with open(os.path.join(CWD, 'job.yaml')) as f:
-                yaml = string.Template(f.read()).substitute(
-                    DATABASE='%(host)s:%(port)d' % config.dbserver,
-                    CALC_PIK=save_pik(job, custom_tmp),
-                    CALC_NAME='calc%d' % job.calc_id)
-            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
-    else:
-        kwargs = {}
-        if notify_to is not None:
-            kwargs['notify_to'] = notify_to
-        proc = mp.Process(target=engine.run_jobs, args=([job], 1),
-                          kwargs=kwargs)
-        proc.start()
-        if config.webapi.calc_timeout:
-            mp.Process(
-                target=engine.watchdog,
-                args=(job.calc_id, proc.pid, int(config.webapi.calc_timeout))
-            ).start()
-    return job.calc_id
-
-
-def save_pik(job, dirname):
-    """
-    Save a LogContext object in pickled format; returns the path to it
-    """
-    pathpik = os.path.join(dirname, 'calc%d.pik' % job.calc_id)
-    with open(pathpik, 'wb') as f:
-        pickle.dump([job], f)
-    return pathpik
 
 
 def get_allowed_outputs(oes, request):
