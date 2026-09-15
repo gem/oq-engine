@@ -127,5 +127,43 @@ We used this feature to split the ESHM20 model in two parts (Northern Europe and
 full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
 overlap, thus making impossible to join the outputs.
 
-A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the
 unique identification of all potential sites across the globe.
+
+Amplification logic trees
+-------------------------
+
+Since engine v3.27, ``amplification_csv`` in job.ini can point at either a plain amplification CSV (unchanged
+behaviour) or at a NRML XML file describing an *amplification logic tree*: a set of alternative amplification-function
+CSVs with weights summing to 1, representing epistemic uncertainty on the site-amplification function as a logic-tree
+branchset alongside the SSC and GMM logic trees.
+
+The XML has a single branchset with ``uncertaintyType="amplificationModel"``:
+
+.. code-block:: xml
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+      <logicTree logicTreeID="lt_ampl">
+        <logicTreeBranchSet uncertaintyType="amplificationModel" branchSetID="bs_ampl">
+          <logicTreeBranch branchID="af_low">
+            <uncertaintyModel>amp_low.csv</uncertaintyModel>
+            <uncertaintyWeight>0.185</uncertaintyWeight>
+          </logicTreeBranch>
+          <logicTreeBranch branchID="af_med">
+            <uncertaintyModel>amp_med.csv</uncertaintyModel>
+            <uncertaintyWeight>0.630</uncertaintyWeight>
+          </logicTreeBranch>
+          <logicTreeBranch branchID="af_high">
+            <uncertaintyModel>amp_high.csv</uncertaintyModel>
+            <uncertaintyWeight>0.185</uncertaintyWeight>
+          </logicTreeBranch>
+        </logicTreeBranchSet>
+      </logicTree>
+    </nrml>
+
+Each branch is validated on its own: every branch must define AFs for all ampcodes used by the site model and for all
+IMTs listed in ``intensity_measure_types_and_levels``. Beyond that, nothing has to match between branches: the numeric
+AF and sigma values, the rock-IML ``level`` grid, the ``from_mag`` and ``from_rrup`` grids, and any extra ampcodes or
+IMT columns may all differ. Branches may therefore represent alternative discretisations and value sets as legitimate
+epistemic choices.

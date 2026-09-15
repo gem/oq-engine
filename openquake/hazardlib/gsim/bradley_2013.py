@@ -138,8 +138,8 @@ def set_adjusted_stddevs(
         clsname, additional_sigma, ctx, C, ln_y_ref,
         exp1, exp2, in_cshm, in_cbd, imt_per, sig, tau, phi):
 
-    # aftershock flag is zero, we consider only main shock.
-    AS = 0
+    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
+    AS = ctx.is_aftershock
     Fmeasured = ctx.vs30measured
     Finferred = ~ctx.vs30measured
 
@@ -326,8 +326,8 @@ def _get_ln_y_ref(trt, ctx, C):
     Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1.
     # hanging wall flag
     Fhw = ctx.rx >= 0
-    # aftershock flag. always zero since we only consider main shock
-    AS = 0
+    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
+    AS = ctx.is_aftershock
 
     ln_y_ref = (
         # first line of eq. 4 in Bradley 2013
@@ -391,8 +391,8 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
 
 def set_stddevs(additional_sigma, ctx, C,
                 ln_y_ref, exp1, exp2, sig, tau, phi):
-    # aftershock flag is zero, we consider only main shock.
-    AS = 0
+    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
+    AS = ctx.is_aftershock
     Fmeasured = ctx.vs30measured
     Finferred = 1 - ctx.vs30measured
 
@@ -490,8 +490,9 @@ class Bradley2013(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake (eq. 13a and 13b),
-    #: dip (eq. 13a) and ztor (eq. 13a).
-    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
+    #: dip (eq. 13a), ztor (eq. 13a) and is_aftershock (aftershock flag AS
+    #: appearing in eq. 4 and eq. 20, defaults to False).
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor', 'is_aftershock'}
 
     #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}

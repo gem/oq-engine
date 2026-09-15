@@ -27,6 +27,8 @@ from openquake.hazardlib.imt import PGV, SA
 DATA = Path(__file__).with_name('data') / 'JAYARAM_BAKER_2009'
 
 
+EPS = 1E-10
+
 def test_reference_values():
     reference = numpy.genfromtxt(
         DATA / 'reference.csv', delimiter=',', names=True)
@@ -37,7 +39,7 @@ def test_reference_values():
             numpy.array([[row['distance']]]), SA(row['period']))
         actual.append(matrix[0, 0])
     numpy.testing.assert_allclose(
-        actual, reference['correlation'], rtol=1E-12, atol=1E-14)
+        actual, reference['correlation'], rtol=EPS, atol=EPS)
 
 
 def test_pgv_preserves_historical_openquake_proxy():

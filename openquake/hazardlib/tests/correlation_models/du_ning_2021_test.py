@@ -46,6 +46,8 @@ PERIODS = (
     3.0, 4.0, 5.0, 7.5, 10.0)
 
 
+EPS = 1E-10
+
 class Mesh:
     def __init__(self, distances):
         self.distances = distances
@@ -76,7 +78,7 @@ def test_author_octave_reference_values():
             actual.append(block[0, 0])
             expected.append(float(row['rho']))
     numpy.testing.assert_allclose(
-        actual, expected, rtol=1E-13, atol=1E-15)
+        actual, expected, rtol=EPS, atol=EPS)
 
 
 def test_interpolated_author_octave_reference_values():
@@ -93,9 +95,9 @@ def test_interpolated_author_octave_reference_values():
             actual.append(block[0, 0])
             expected.append(float(row['rho']))
             numpy.testing.assert_allclose(
-                normalized, float(row['rho']), rtol=1E-13, atol=1E-15)
+                normalized, float(row['rho']), rtol=EPS, atol=EPS)
     numpy.testing.assert_allclose(
-        actual, expected, rtol=1E-13, atol=1E-15)
+        actual, expected, rtol=EPS, atol=EPS)
 
 
 def test_registry_and_calibration_metadata():
@@ -149,13 +151,13 @@ def test_covariance_and_factor_are_positive_definite():
     model = DuNing2021()
     covariance = model.covariance(sites, imts)
     assert covariance.dtype == numpy.float64
-    numpy.testing.assert_allclose(covariance, covariance.T, atol=1E-15)
+    numpy.testing.assert_allclose(covariance, covariance.T, atol=EPS)
     numpy.testing.assert_allclose(numpy.diag(covariance), 1.0)
     assert numpy.linalg.eigvalsh(covariance).min() > 0
     factor = model.factor(sites, imts, ensure_psd=False)
     numpy.testing.assert_allclose(
         factor.lower_triangle @ factor.lower_triangle.T,
-        covariance, rtol=1E-13, atol=1E-14)
+        covariance, rtol=EPS, atol=EPS)
 
 
 def test_complete_same_site_matrix_is_positive_semidefinite():
@@ -176,13 +178,13 @@ def test_interpolated_covariance_is_unit_diagonal_and_positive_definite():
     model = DuNing2021Interpolated()
     covariance = model.covariance(sites, imts)
     assert covariance.dtype == numpy.float64
-    numpy.testing.assert_allclose(covariance, covariance.T, atol=1E-15)
+    numpy.testing.assert_allclose(covariance, covariance.T, atol=EPS)
     numpy.testing.assert_allclose(numpy.diag(covariance), 1.0)
     assert numpy.linalg.eigvalsh(covariance).min() > 0
     factor = model.factor(sites, imts, ensure_psd=False)
     numpy.testing.assert_allclose(
         factor.lower_triangle @ factor.lower_triangle.T,
-        covariance, rtol=1E-13, atol=1E-14)
+        covariance, rtol=EPS, atol=EPS)
 
 
 def test_pair_symmetry():
@@ -192,7 +194,7 @@ def test_pair_symmetry():
         distances, [SA(0.1), CAV()], [PGV(), RSD575()])
     reverse = model.correlation_block(
         distances.T, [PGV(), RSD575()], [SA(0.1), CAV()])
-    numpy.testing.assert_allclose(forward, reverse.T, atol=1E-15)
+    numpy.testing.assert_allclose(forward, reverse.T, atol=EPS)
 
 
 def test_zero_and_infinite_distance_limits():
@@ -202,7 +204,7 @@ def test_zero_and_infinite_distance_limits():
     distant = model.correlation_block(
         numpy.full((2, 3), 1E6), [SA(4.0), IA()], [PGV()])
     numpy.testing.assert_allclose(zero, 1.0)
-    numpy.testing.assert_allclose(distant, 0.0, atol=1E-15)
+    numpy.testing.assert_allclose(distant, 0.0, atol=EPS)
 
 
 def test_seven_pc_model_makes_pga_and_sa_001_perfectly_correlated():

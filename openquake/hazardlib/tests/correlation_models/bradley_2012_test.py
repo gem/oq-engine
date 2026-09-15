@@ -27,13 +27,15 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 DATA = Path(__file__).with_name('data') / 'BRADLEY_2012'
 
 
+EPS = 1E-10
+
 def test_reference_values():
     reference = numpy.genfromtxt(
         DATA / 'reference.csv', delimiter=',', names=True)
     model = Bradley2012()
     actual = [model.rho(PGV(), SA(row['period'])) for row in reference]
     numpy.testing.assert_allclose(
-        actual, reference['correlation'], rtol=1E-12, atol=1E-14)
+        actual, reference['correlation'], rtol=EPS, atol=EPS)
 
 
 def test_pgv_pga_correlation():

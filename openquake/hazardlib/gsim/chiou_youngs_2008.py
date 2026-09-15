@@ -65,8 +65,8 @@ def _get_ln_y_ref(ctx, C):
     Fnm[(-120 <= ctx.rake) & (ctx.rake <= -60)] = 1
     # hanging wall flag
     Fhw = np.where(ctx.rx >= 0, 1, 0)
-    # aftershock flag. always zero since we only consider main shock
-    AS = 0
+    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
+    AS = ctx.is_aftershock
 
     ln_y_ref = (
         # first line of eq. 13a
@@ -135,8 +135,8 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     Implements equations 19, 20 and 21 for inter-event, intra-event
     and total standard deviations respectively.
     """
-    # aftershock flag is zero, we consider only main shock.
-    AS = 0
+    # aftershock flag (defaults to zero when the rupture is unlabelled)
+    AS = ctx.is_aftershock
     Fmeasured = np.where(ctx.vs30measured, True, False)
     Finferred = ~Fmeasured
 
@@ -196,8 +196,9 @@ class ChiouYoungs2008(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     #: Required rupture parameters are magnitude, rake (eq. 13a and 13b),
-    #: dip (eq. 13a) and ztor (eq. 13a).
-    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
+    #: dip (eq. 13a), ztor (eq. 13a) and is_aftershock (aftershock flag AS
+    #: appearing in eq. 13a and eq. 20, defaults to False).
+    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor', 'is_aftershock'}
 
     #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}

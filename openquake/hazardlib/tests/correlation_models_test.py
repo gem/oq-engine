@@ -20,7 +20,8 @@ import pytest
 from openquake.hazardlib import const, correlation, cross_correlation
 from openquake.hazardlib import correlation_models
 from openquake.hazardlib.correlation_models.base import (
-    ResidualComponent, SpatialCrossIMTCorrelationModel)
+    CrossIMTCorrelationModel, ResidualComponent,
+    SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017 import (
     BakerBradley2017)
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
@@ -180,6 +181,41 @@ def test_cross_im_covariance_uses_imt_major_ordering():
     ])
     numpy.testing.assert_allclose(
         model.covariance(sites, imts), expected)
+
+
+def test_cross_im_block():
+    # A cross-IMT-only model correlates colocated pairs but has no spatial
+    # dependence between locations with nonzero separation.
+    class FixedModel(CrossIMTCorrelationModel):
+        def _rho(self, from_imt, to_imt, context=None):
+            return 1.0 if from_imt == to_imt else 0.4
+
+    distances = numpy.array([[0.0, 10.0], [5.0, 0.0]])
+    actual = FixedModel().correlation_block(
+        distances, [PGA(), SA(1.0)], [PGV()])
+    expected = numpy.array([
+        [0.4, 0.0],
+        [0.0, 0.4],
+        [0.4, 0.0],
+        [0.0, 0.4],
+    ])
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_cross_im_factor():
+    # The effective IMT-major factor repeats one small IMT factor at every
+    # site rather than constructing a dense (M*N) by (M*N) matrix.
+    model = BakerJayaram2008()
+    sites = range(3)
+    imts = [SA(0.1), SA(0.5)]
+    factor = model.factor(sites, imts, ensure_psd=False)
+    effective = factor.apply(numpy.eye(6))
+    numpy.testing.assert_allclose(
+        effective @ effective.T, model.covariance(sites, imts))
+    assert factor.lower_triangle.shape == (2, 2)
+    assert factor.num_sites == 3
+    with pytest.raises(ValueError, match='Expected samples with shape'):
+        factor.apply(numpy.ones((5, 2)))
 
 
 def test_default_factor_repairs_indefinite_covariance():

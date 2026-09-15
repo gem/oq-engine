@@ -53,6 +53,7 @@ class JayaramBaker2009(SpatialCorrelationModel):
     is retained temporarily using OpenQuake's historical SA(1.0) proxy.
     """
 
+    SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}

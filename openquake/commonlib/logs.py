@@ -24,9 +24,11 @@ import time
 import getpass
 import logging
 import traceback
+import requests
 from pdb import post_mortem
 from datetime import datetime, timezone
-from openquake.baselib import config, zeromq, parallel, workerpool as w
+from openquake.baselib import config, parallel, use_server
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
 
 UTC = timezone.utc
@@ -38,11 +40,78 @@ LEVELS = {'debug': logging.DEBUG,
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 root = logging.root
+WORKER_ACTIONS = {
+    'workers_' + action
+    for action in 'start stop status restart wait kill debug'.split()
+}
 
 
-def on_workers(action):
-    master = w.WorkerMaster(-1)  # current job
-    return getattr(master, action[8:])()  # workers_(stop|kill)
+def _worker_api(action, *args):
+    """Call a worker-control endpoint on the WebUI API."""
+    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
+    endpoint = '%s/v0/worker_%s' % (server.rstrip('/'), action[8:])
+    try:
+        response = requests.post(
+            endpoint, json={'args': args},
+            headers={'X-API-Key': API_KEY}, timeout=600)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Unable to call worker endpoint %s: %s' % (endpoint, exc)) from exc
+    return response.json()
+
+
+def _decode_db_value(value):
+    """Restore values encoded by the FastAPI database endpoint."""
+    if isinstance(value, dict):
+        kind = value.get('__oq_type__')
+        if kind == 'datetime':
+            return datetime.fromisoformat(value['value'])
+        if kind == 'row':
+            return dbapi.Row(
+                value['fields'],
+                [_decode_db_value(item) for item in value['values']])
+        if kind == 'table':
+            return dbapi.Table(
+                value['fields'],
+                [_decode_db_value(item) for item in value['rows']])
+        return {key: _decode_db_value(item)
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode_db_value(item) for item in value]
+    return value
+
+
+def _encode_db_value(value):
+    """Encode database action arguments as JSON values."""
+    if isinstance(value, datetime):
+        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
+    if isinstance(value, dict):
+        return {key: _encode_db_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_encode_db_value(item) for item in value]
+    return value
+
+
+def _db_api(action, *args):
+    """Call a database action through the FastAPI endpoint."""
+    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
+    endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
+    try:
+        response = requests.post(
+            endpoint, json={'args': _encode_db_value(args)},
+            headers={'X-API-Key': API_KEY}, timeout=600)
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Unable to call database endpoint %s: %s' % (endpoint, exc)) from exc
+    if response.status_code == 404:
+        raise dbapi.NotFound
+    try:
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            'Database action %s failed: %s' % (action, response.text)) from exc
+    return _decode_db_value(response.json())
 
 
 def dbcmd(action, *args):
@@ -57,32 +126,15 @@ def dbcmd(action, *args):
     for arg in args:
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
-    dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    hc = config.zworkers.host_cores
-    if action.startswith('workers_') and hc.startswith('127.0.0.1 '):
-        return on_workers(action)  # local zmq
-    elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
-        # no server mode, access the database directly
-        if action.startswith('workers_'):
-            return on_workers(action)
-        from openquake.server.db import actions
-        try:
-            func = getattr(actions, action)
-        except AttributeError:
-            # a query like SELECT name FROM sqlite_master WHERE name='job'
-            return dbapi.db(action, *args)
-        else:
-            return func(dbapi.db, *args)
-
-    # send a command to the database
-    tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
-    sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
-                         timeout=600)  # when the system is loaded
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
-    return res
+    if action in WORKER_ACTIONS:
+        if not use_server():
+            from openquake.baselib.workerpool import WorkerMaster
+            return getattr(WorkerMaster(-1), action[8:])()
+        return _worker_api(action, *args)
+    if not use_server():
+        from openquake.server.db import actions as db_actions
+        return getattr(db_actions, action)(dbapi.db, *args)
+    return _db_api(action, *args)
 
 
 def get_job_info(job_id):
@@ -219,7 +271,7 @@ class LogContext:
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, pdb=None):
-        if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
+        if not dbcmd('has_job_table'):
             raise RuntimeError('You forgot to run oq engine --upgrade-db')
         self.log_level = log_level
         self.log_file = log_file

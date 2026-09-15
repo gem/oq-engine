@@ -13,6 +13,13 @@ class EnginePage:
             state="detached", timeout=10_000)
         locator.click(timeout=timeout)
 
+    def latest_job_row(self):
+        """Return the most recently created job row."""
+        return self.calculation_table.locator("tbody tr").first
+
+    def abort_latest_job(self):
+        self.abort_job(self.get_job_id_from_new_job())
+
     def get_job_row(self, job_id):
         return self.page.locator("tr").filter(
             has=self.page.locator("td:first-child").get_by_text(
@@ -23,8 +30,7 @@ class EnginePage:
         expect(executing_status).to_be_visible(timeout=50_000)
         target_row = self.page.locator("tr").filter(
             has_text="executing").first
-        job_id = target_row.locator("td").first.inner_text()
-        return job_id.strip()
+        return target_row.locator("td").first.inner_text().strip()
 
     def wait_for_job_completion(self, job_id):
         job_row = self.get_job_row(job_id)
@@ -35,7 +41,7 @@ class EnginePage:
         expect(job_row.get_by_text("executing")).to_be_visible(
             timeout=80_000)
         self._click_clear_of_backdrop(
-            job_row.get_by_role("link", name="Abort"))
+            job_row.get_by_role("link", name="Abort"), timeout=20_000)
         self.page.get_by_role("button", name="Yes, abort").click(
             timeout=20_000)
         expect(self.page.get_by_text("has been aborted")).to_be_visible(
@@ -69,10 +75,8 @@ class EnginePage:
         with self.page.expect_download() as download_info:
             self.page.get_by_text("Download job.zip").click()
         download = download_info.value
-        # assert download.suggested_filename.startswith('calc_')
         assert download.suggested_filename.endswith(".zip")
-        path = download.path()
-        assert path is not None
+        assert download.path() is not None
 
     def download_datastore(self):
         with self.page.expect_download() as download_info:
@@ -80,5 +84,4 @@ class EnginePage:
         download = download_info.value
         assert download.suggested_filename.startswith('calc_')
         assert download.suggested_filename.endswith(".hdf5")
-        path = download.path()
-        assert path is not None
+        assert download.path() is not None

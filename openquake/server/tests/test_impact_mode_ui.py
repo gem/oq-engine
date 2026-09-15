@@ -54,6 +54,7 @@ def test_impact_ui_level_1(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
+    page.set_make_impact_reports()
     page.run_impact_calc()
     job_id = page.get_job_id_from_new_job()
     page.wait_for_job_completion(job_id)
