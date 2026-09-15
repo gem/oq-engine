@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Framework-neutral server services shared by API adapters."""
 
+import ast
 import logging
 import multiprocessing as mp
 import os
@@ -16,11 +17,39 @@ from datetime import datetime, timezone
 from openquake.baselib import config, parallel
 from openquake.calculators.getters import NotFound
 from openquake.commonlib import logs, oqvalidation, readinput
-from openquake.engine import aelo, engine
+from openquake.engine import aelo, engine, impact
 from openquake.engine.aelo import get_params_from
 from openquake.hazardlib import valid
+from openquake.hazardlib.shakemap.validate import impact_validate
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 
 UTC = timezone.utc
+
+
+def get_impact_rupture_data(post, user, rupture_path):
+    """Validate a rupture and build the data needed by the IMPACT UI."""
+    rup, rupdic, _oqparams, err = impact_validate(
+        post, user, rupture_path)
+    if err:
+        return err, 400 if 'invalid_inputs' in err else 500
+    if rupdic.get('shakemap_array') is not None:
+        shakemap_array = rupdic['shakemap_array']
+        figsize = (6.3, 6.3)
+        rupdic['pga_map_png'] = plot_shakemap(
+            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        rupdic['mmi_map_png'] = plot_shakemap(
+            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        del rupdic['shakemap_array']
+    elif rup is not None:
+        rupdic['rupture_png'] = plot_rupture(
+            rup, backend='Agg', figsize=(8, 8), with_region_labels=True,
+            return_base64=True)
+    if user.level < 2 and 'warning_msg' in rupdic:
+        del rupdic['warning_msg']
+    return rupdic, 200
+
 CWD = os.path.dirname(__file__)
 KUBECTL = 'kubectl apply -f -'.split()
 ENGINE = 'python -m openquake.engine.engine'.split()
@@ -107,6 +136,35 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
                 args=(job.calc_id, proc.pid,
                       int(config.webapi.calc_timeout))).start()
     return job.calc_id
+
+def create_impact_job(params, username, job_owner_email, build_urls,
+                      callback, email_file_path):
+    """Create and start an IMPACT job using injected adapters."""
+    rupdic = ast.literal_eval(params['rupture_dict'])
+    if rupdic['approach'] == 'use_shakemap_from_usgs':
+        params['secondary_perils'] = (
+            'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
+        params['intensity_measure_types'] = (
+            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, user_name=username)
+    urls = build_urls(jobctx.calc_id)
+    response = {jobctx.calc_id: dict(status='created', job_id=jobctx.calc_id,
+                                     **urls)}
+    if not job_owner_email:
+        response[jobctx.calc_id]['WARNING'] = (
+            'No email address is specified for your user account, therefore '
+            'email notifications will be disabled. As soon as the job '
+            'completes, you can access its outputs at: %s. The traceback is '
+            'available at: %s' % (urls['outputs_uri'], urls['traceback_uri']))
+    args = ([params], [jobctx], job_owner_email, urls['outputs_uri_web'],
+            callback, email_file_path)
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        impact.main_web(*args)
+    else:
+        mp.Process(target=impact.main_web, args=args).start()
+    return response
+
 
 def validate_aelo_data(post, form_labels, max_site_name_length):
     """Validate AELO form data without depending on Django."""

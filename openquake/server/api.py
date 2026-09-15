@@ -53,10 +53,9 @@ from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.papers import base as papers
 from openquake.server.services import (
-    submit_job)
+    create_impact_job, get_impact_rupture_data, submit_job)
 from openquake.server.views import (
-    aelo_validate, _run_aelo, create_impact_job,
-    get_impact_rupture_data)
+    aelo_validate, _run_aelo, impact_callback)
 
 app = FastAPI(title='OpenQuake API')
 
@@ -382,15 +381,21 @@ async def v0_impact_run(
         return urljoin(
             form.get('base_url', '').rstrip('/') + '/', path.lstrip('/'))
 
-    job_request = SimpleNamespace(
-        POST=form,
-        user=SimpleNamespace(
-            email=form.get('email') or '',
-            username=form.get('username'), is_authenticated=True,
-            level=user_level, testdir=None),
-        build_absolute_uri=build_absolute_uri)
+    def build_urls(job_id):
+        return {
+            'outputs_uri_web': build_absolute_uri(
+                f'/engine/{job_id}/outputs_impact'),
+            'outputs_uri': build_absolute_uri(
+                f'/v1/calc/result/{job_id}'),
+            'log_uri': build_absolute_uri(
+                f'/v1/calc/{job_id}/log/0:'),
+            'traceback_uri': build_absolute_uri(
+                f'/v1/calc/{job_id}/traceback'),
+        }
+
     response_data = create_impact_job(
-        job_request, params, form.get('email_file_path'))
+        params, form.get('username'), form.get('email') or '', build_urls,
+        impact_callback, form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
 
