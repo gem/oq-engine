@@ -770,7 +770,7 @@ class FdhaModelChoice:
 
 
 @dataclass
-class PDFBranch:
+class PFDBranch:
     """
     A fully-enumerated FDHA realization for one source.
 
@@ -891,7 +891,7 @@ class FdhaLogicTree(object):
         """
         :param sources: iterable of ``(source_id, style)`` pairs, style one
             of 'normal' / 'reverse' / 'strike-slip' (used by applyToStyle)
-        :returns: one :class:`PDFBranch` per (source, branch combination)
+        :returns: one :class:`PFDBranch` per (source, branch combination)
         """
         realizations = []
         for source_id, style in sources:
@@ -926,7 +926,7 @@ class FdhaLogicTree(object):
                             (new_sel, chosen_ids | {bid}, weight * w))
                 partials = nxt
             for selections, _ids, weight in partials:
-                realizations.append(PDFBranch(
+                realizations.append(PFDBranch(
                     source_id, style, weight, selections))
         return realizations
 
