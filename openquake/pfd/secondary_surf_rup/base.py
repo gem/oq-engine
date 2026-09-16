@@ -17,18 +17,18 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.pfd.primary_surf_rup.base` defines abstract base
-classes for :class:`BasePrimarySurfRup` and :class:`BaseSecondarySurfDispl`
+Module :mod:`openquake.pfd.secondary_surf_rup.base` defines abstract base
+classes for :class:`BaseSecondarySurfRup` and :class:`BaseSecondarySurfDispl`
 """
 
 import abc
 
 
-class BasePrimarySurfRup(metaclass=abc.ABCMeta):
-    """Abstract base class for principal (primary) surface-rupture models.
+class BaseSecondarySurfRup(metaclass=abc.ABCMeta):
+    """Abstract base class for distributed (secondary) surface-rupture models.
 
-    Subclasses implement :meth:`get_prob`, returning the probability that a
-    rupture reaches the surface as the principal fault trace.
+    Subclasses implement :meth:`get_prob`, returning the probability of
+    distributed (off-fault) surface rupture at a site.
     """
 
     #: Reference-line treatment this model needs when the source has no
@@ -36,6 +36,16 @@ class BasePrimarySurfRup(metaclass=abc.ABCMeta):
     #: 'lcp', 'ecs', 'segments'. Mirrors hazardlib's REQUIRES_DISTANCES
     #: declarative pattern. Irrelevant for single-strand sources.
     MULTIFAULT_REFERENCE_LINE = "lcp"
+
+    #: Distributed-contribution pipeline the hazard kernel must route this
+    #: model through. ``"generic"`` (default) = the standard adapter path
+    #: ``P(SR) x P(FD)``; ``"visini"`` = the combined A/B/C combination +
+    #: rank-2 Monte Carlo path in :class:`~openquake.pfd.calc.visini.
+    #: VisiniSecondaryCalculator`, which needs site coordinates and rank-1.5
+    #: traces the generic interface does not carry. Declared on the model
+    #: class so the kernel never matches class names; a Visini subclass or
+    #: renamed variant keeps the correct routing automatically.
+    SECONDARY_PIPELINE = "generic"
 
     @abc.abstractmethod
     def get_prob(self):
@@ -63,7 +73,7 @@ class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
     distributed displacement exceeds a given value (in metres).
     """
 
-    #: See BasePrimarySurfRup.MULTIFAULT_REFERENCE_LINE.
+    #: See BaseSecondarySurfRup.MULTIFAULT_REFERENCE_LINE.
     MULTIFAULT_REFERENCE_LINE = "lcp"
 
     @abc.abstractmethod
