@@ -24,7 +24,8 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip --disable-pip-version-check install . -r requirements-py311-linux64.txt --no-warn-script-location
+        python3.11 install.py user --version=$oq_branch
+# OLD    pip --disable-pip-version-check install . -r requirements-py311-linux64.txt --no-warn-script-location
 #
 FROM python:3.11.6-slim AS build-image
 COPY --from=compile-image /opt/openquake/ /opt/openquake/
