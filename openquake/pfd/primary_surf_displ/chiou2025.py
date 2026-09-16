@@ -175,7 +175,7 @@ class Chiou2025PrimaryFD(BasePrimarySurfDispl):
         versions_available = {row[0].lower(): i for i, row in enumerate(self._COEFFS)}
         if ver not in versions_available:
             raise ValueError(
-                f"Unknown version '{version}'. Expected one of: {sorted(versions_available.keys())}"
+                f"Unknown version '{version}'. Expected one of: {sorted(versions_available)}"
             )
         row = self._COEFFS[versions_available[ver]]
 

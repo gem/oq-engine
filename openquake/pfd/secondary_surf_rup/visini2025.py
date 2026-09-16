@@ -275,7 +275,8 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
         if style not in self.coeffs_occurrence:
             raise ValueError("style must be 'normal' or 'reverse'")
         if pixel_size not in self.coeffs_occurrence[style]:
-            raise ValueError("pixel_size must be one of {list(self.coeffs_occurrence[style].keys())}")
+            raise ValueError(
+                f"pixel_size must be one of {list(self.coeffs_occurrence[style])}")
         if combination not in ('A','B','C'):
             raise ValueError("combination must be 'A','B' or 'C'")
 
@@ -770,5 +771,5 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
         """Return cache statistics for debugging."""
         return {
             "cache_size": len(self._mc_cache),
-            "cache_keys": list(self._mc_cache.keys())[:10]  # First 10 keys
+            "cache_keys": list(self._mc_cache)[:10]  # First 10 keys
         }

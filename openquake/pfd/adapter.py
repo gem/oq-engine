@@ -147,7 +147,7 @@ class LegacyModelAdapter:
             else:
                 try:
                     sig = inspect.signature(method)
-                    self._signature_cache[cache_key] = set(sig.parameters.keys())
+                    self._signature_cache[cache_key] = set(sig.parameters)
                 except (ValueError, TypeError):
                     self._signature_cache[cache_key] = set()
 

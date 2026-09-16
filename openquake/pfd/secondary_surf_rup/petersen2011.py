@@ -139,7 +139,7 @@ class Petersen2011SecondarySR(BaseSecondarySurfRup):
             except ValueError:
                 raise ValueError("Pixel size must be convertible to an integer")
         if pixel_size not in self.PIXEL_SIZES:
-            raise ValueError(f"Pixel size must be one of {list(self.PIXEL_SIZES.keys())} m")
+            raise ValueError(f"Pixel size must be one of {list(self.PIXEL_SIZES)} m")
 
         # Get pixel size parameters
         params = self.PIXEL_SIZES[pixel_size]

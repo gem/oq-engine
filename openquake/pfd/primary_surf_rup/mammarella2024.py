@@ -228,7 +228,7 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         if HDD_str is not None and HDD_str not in TAB2:
             raise ValueError(
                 f"{type(self).__name__}: invalid HDD_str {HDD_str!r}; "
-                f"expected one of {sorted(TAB2.keys())}")
+                f"expected one of {sorted(TAB2)}")
         self.MSR = None if MSR is None else int(MSR)
         self.HDD_str = HDD_str
         self.dip_mu = None if dip_mu is None else float(dip_mu)
@@ -298,7 +298,7 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
             sof = 5
 
         if HDD_str not in TAB2:
-            raise ValueError(f"Invalid HDD_str '{HDD_str}'. Expected one of {sorted(TAB2.keys())}")
+            raise ValueError(f"Invalid HDD_str '{HDD_str}'. Expected one of {sorted(TAB2)}")
         hdd_mu, hdd_sigma = map(float, TAB2[HDD_str])
 
         dip_mu = float(dip_mu)

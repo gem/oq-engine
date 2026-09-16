@@ -91,7 +91,7 @@ class FerrarioLivio2021SecondarySR(BaseSecondarySurfRup):
         if version not in self.COEFFS:
             raise ValueError(
                 f"Invalid version '{version}'. "
-                f"Accepted values are: {', '.join(self.COEFFS.keys())}"
+                f"Accepted values are: {', '.join(self.COEFFS)}"
             )
 
         # Convert inputs to arrays

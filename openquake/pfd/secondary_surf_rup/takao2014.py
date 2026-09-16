@@ -76,7 +76,7 @@ class Takao2014SecondarySR(BaseSecondarySurfRup):
         }
 
         if pixel_size not in coefficients:
-            raise ValueError(f"Invalid pixel size. Must be one of {list(coefficients.keys())} meters")
+            raise ValueError(f"Invalid pixel size. Must be one of {list(coefficients)} meters")
 
         C1, C2, C3 = coefficients[pixel_size]
         # Logistic regression z = C1 + C2*ln(r + C3); the model is

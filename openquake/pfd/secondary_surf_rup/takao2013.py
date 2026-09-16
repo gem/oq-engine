@@ -68,7 +68,7 @@ class Takao2013SecondarySR(BaseSecondarySurfRup):
         if pixel_size not in self.COEFFS:
             raise ValueError(
                 f"Invalid pixel_size '{pixel_size}'. "
-                f"Must be one of {list(self.COEFFS.keys())} meters"
+                f"Must be one of {list(self.COEFFS)} meters"
             )
 
         # Get coefficients
