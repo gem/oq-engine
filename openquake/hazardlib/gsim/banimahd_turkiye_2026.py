@@ -189,7 +189,7 @@ class Banimahd2026Turkiye(GMPE):
                 out_idx = 1
                 key = "ln(PGV)"
             elif imt_str.startswith("SA(") and imt_str.endswith(")"):
-                period = float(imt_str[3:-1])
+                period = imt.period
                 out_idx = 7 + self._PERIODS.index(period)
                 key = f"ln(PSA={period})"
             else:
