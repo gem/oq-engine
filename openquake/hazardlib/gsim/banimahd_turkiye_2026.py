@@ -190,6 +190,9 @@ class Banimahd2026Turkiye(GMPE):
                 key = "ln(PGV)"
             elif imt_str.startswith("SA(") and imt_str.endswith(")"):
                 period = imt.period
+                # The ONNX model returns 25 outputs in this order:
+                #   0: PGA, 1: PGV, 2: Ia, 3: D5-75, 4: D5-95, 5: Tm, 6: CAV
+                #   7-24: SA at 18 periods (see _PERIODS)
                 out_idx = 7 + self._PERIODS.index(period)
                 key = f"ln(PSA={period})"
             else:
