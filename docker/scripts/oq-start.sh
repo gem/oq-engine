@@ -19,18 +19,7 @@
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
 export PYTHONPATH=$HOME
 
-oq dbserver start &
-
-# Wait the DbServer to come up; may be replaced with a "oq dbserver wait"
-while :
-do
-    (echo > /dev/tcp/localhost/1908) >/dev/null 2>&1
-    result=$?
-    if [[ $result -eq 0 ]]; then
-        break
-    fi
-    sleep 1
-done
+oq engine --upgrade-db  &
 
 if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
     oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
