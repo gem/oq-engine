@@ -17,12 +17,12 @@ Model overview
 --------------
 - Trained on strong-motion data from Turkiye.
 - ML regressor: ensemble of 10 feed-forward neural networks.
-- Inputs (in the order used for training and ONNX):
-    1. FD         : focal depth (km)
-    2. FM         : fault mechanism (1=Normal, 2=Reverse, 3=StrikeSlip)
-    3. Mw         : moment magnitude
-    4. RJB        : Joyner-Boore distance (km)
-    5. Vs30       : averaged shear-wave velocity in the top 30 m (m/s)
+Inputs (in the order used for training and ONNX):
+    1. fd         : focal depth (km)
+    2. fm         : fault mechanism (1=Normal, 2=Reverse, 3=StrikeSlip)
+    3. mw         : moment magnitude
+    4. rjb        : Joyner-Boore distance (km)
+    5. vs30       : averaged shear-wave velocity in the top 30 m (m/s)
 
 Outputs (25 values, in ln-space):
     - PGA, PSA(T): ln(g)
@@ -170,7 +170,7 @@ class Banimahd2026Turkiye(GMPE):
         fm[rake > 30.0] = 2.0
         fm[(rake > 150.0) | (rake < -150.0)] = 3.0
 
-        # Build input matrix (FD, FM, Mw, RJB, VS30)
+        # Build input matrix (fd, fm, mw, rjb, vs30)
         X = np.column_stack([fd, fm, mw, rjb, vs30]).astype(np.float32)
      
         # Run ONNX inference once for all 25 outputs
