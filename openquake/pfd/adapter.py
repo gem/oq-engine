@@ -67,6 +67,21 @@ def effective_displacement_definition(model):
     return getattr(model, 'DISPLACEMENT_DEFINITION', None)
 
 
+def style_from_rake(rake):
+    """Return the faulting style for a rake angle in degrees.
+
+    The thresholds match the oq-pfdha ``classify_style`` helper: the
+    engine's :class:`~openquake.hazardlib.contexts.RuptureContext` carries
+    ``rake`` where the FDHA context exposes a derived ``style`` array.
+    """
+    rake = float(rake)
+    if -150.0 <= rake <= -30.0:
+        return 'normal'
+    if 30.0 <= rake <= 150.0:
+        return 'reverse'
+    return 'strike-slip'
+
+
 class LegacyModelAdapter:
     """
     Wraps legacy FDHA models for use with FDHAContext.
@@ -116,7 +131,13 @@ class LegacyModelAdapter:
         """
         style = self.model_params.get('style')
         if style is None:
-            style = ctx.style[0]  # Derived from rake angle
+            # FDHAContext exposes a derived `style` array; the engine's
+            # RuptureContext carries `rake` instead (PR-4 wiring).
+            style_arr = getattr(ctx, 'style', None)
+            if style_arr is None:
+                style = style_from_rake(ctx.rake[0])
+            else:
+                style = style_arr[0]
         model_name = self.model.__class__.__name__
         if 'Youngs2003' in model_name and style not in ('all', 'normal'):
             raise ValueError(
@@ -192,9 +213,25 @@ class LegacyModelAdapter:
         class attribute (ecs | lcp | segments); the context carries one
         metric set per method required by the configured models. For
         single-strand ruptures this is simply the canonical trace-based set.
+
+        Three context shapes are supported, in priority order: an explicit
+        per-method ``ref_metrics`` mapping (multi-fault, PR-8), an
+        ``FDHAContext``-style ``metrics_for`` method, and finally the
+        engine's :class:`~openquake.hazardlib.contexts.RuptureContext`
+        distance/rupture-parameter fields added by PR-3 (``rtor``, ``x_l``,
+        ``length``). Until multi-fault routing lands (PR-8) every method
+        resolves to the single top-trace metric.
         """
         method = getattr(self.model, 'MULTIFAULT_REFERENCE_LINE', 'lcp')
-        return ctx.metrics_for(method)
+        ref_metrics = getattr(ctx, 'ref_metrics', None)
+        if ref_metrics and method in ref_metrics:
+            m = ref_metrics[method]
+            return m['r'], m['x_L'], m['L']
+        metrics_for = getattr(ctx, 'metrics_for', None)
+        if metrics_for is not None:
+            return metrics_for(method)
+        # engine RuptureContext (hazardlib PR-3 fields)
+        return ctx.rtor, ctx.x_l, ctx.length
 
     def compute_primary_sr(
         self,
