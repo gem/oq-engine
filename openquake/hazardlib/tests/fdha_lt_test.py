@@ -21,7 +21,7 @@ import pytest
 
 from openquake.baselib.node import Node
 from openquake.hazardlib import lt
-from openquake.hazardlib.gsim_lt import FdhaLogicTree, InvalidLogicTree
+from openquake.hazardlib.gsim_lt import PFDLogicTree, InvalidLogicTree
 from openquake.hazardlib.lt import LogicTreeError
 
 
@@ -124,7 +124,7 @@ def test_unknown_utype_rejected(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
     with pytest.raises(InvalidLogicTree, match="unknown FDHA uncertaintyType"):
-        FdhaLogicTree(path)
+        PFDLogicTree(path)
 
 
 def test_weights_must_sum_to_one(tmp_path):
@@ -133,11 +133,11 @@ def test_weights_must_sum_to_one(tmp_path):
             ("B1a", "MossRoss2011PrimarySR", 0.7),
             ("B1b", "Takao2013PrimarySR", 0.2)]))
     with pytest.raises(InvalidLogicTree, match="FDLT-001"):
-        FdhaLogicTree(path)
+        PFDLogicTree(path)
 
 
 def test_enumerate_single_chain(tmp_path):
-    lt = FdhaLogicTree(write(tmp_path, *full_chain()))
+    lt = PFDLogicTree(write(tmp_path, *full_chain()))
     [eb] = lt.enumerate([("src1", "reverse")])
     assert eb.source_id == "src1"
     assert eb.style == "reverse"
@@ -160,7 +160,7 @@ def test_enumerate_two_branches_and_weights(tmp_path):
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)],
             applyToBranches="B1a B1b"))
-    branches = FdhaLogicTree(path).enumerate([("src1", "strike-slip")])
+    branches = PFDLogicTree(path).enumerate([("src1", "strike-slip")])
     assert [b.selections["primary_surf_rup"].branch_id for b in branches] == [
         "B1a", "B1b"]
     assert [b.weight for b in branches] == [0.7, 0.3]
@@ -176,7 +176,7 @@ def test_apply_to_branches_filter(tmp_path):
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
     by_id = {b.selections["primary_surf_rup"].branch_id: b
-             for b in FdhaLogicTree(path).enumerate(
+             for b in PFDLogicTree(path).enumerate(
                  [("src1", "strike-slip")])}
     assert "primary_surf_displ" in by_id["B1a"].selections
     assert "primary_surf_displ" not in by_id["B1b"].selections
@@ -186,7 +186,7 @@ def test_apply_to_style_filter(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
         applyToStyle="reverse"))
-    lt = FdhaLogicTree(path)
+    lt = PFDLogicTree(path)
     assert lt.enumerate([("src1", "reverse")])[0].selections
     assert lt.enumerate([("src1", "normal")])[0].selections == {}
 
@@ -195,7 +195,7 @@ def test_apply_to_sources_filter(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
         applyToSources="src1"))
-    branches = FdhaLogicTree(path).enumerate(
+    branches = PFDLogicTree(path).enumerate(
         [("src1", "normal"), ("src2", "normal")])
     assert branches[0].selections and branches[1].selections == {}
 
@@ -207,20 +207,20 @@ def test_calc_r_sigma_branch(tmp_path):
             ("B1", "MossRoss2011PrimarySR", 1.0)]),
         branchset("bs_sigma", "fdhaCalcRSigma", [
             ("SIG0", "0", 0.4), ("SIG2", "2", 0.6)]))
-    branches = FdhaLogicTree(path).enumerate([("src1", "normal")])
+    branches = PFDLogicTree(path).enumerate([("src1", "normal")])
     assert [b.weight for b in branches] == [0.4, 0.6]
     assert branches[0].selections["calc_r_sigma"].params == {"r_sigma_km": 0.0}
     assert branches[1].selections["calc_r_sigma"].params == {"r_sigma_km": 2.0}
 
 
 def test_check_r_sigma_conflict(tmp_path):
-    lt = FdhaLogicTree(write(tmp_path, *full_chain()))
+    lt = PFDLogicTree(write(tmp_path, *full_chain()))
     branches = lt.enumerate([("src1", "normal")])
     lt.check_r_sigma_conflict(None, branches)  # no scalar -> fine
 
     path2 = write(tmp_path, *full_chain(), branchset(
         "bs_sigma", "fdhaCalcRSigma", [("SIG", "1", 1.0)]))
-    lt2 = FdhaLogicTree(path2)
+    lt2 = PFDLogicTree(path2)
     branches2 = lt2.enumerate([("src1", "normal")])
     with pytest.raises(InvalidLogicTree, match="both"):
         lt2.check_r_sigma_conflict(1.0, branches2)

@@ -809,7 +809,7 @@ def _fdha_branchset_applies(bs, source_id, style, chosen_ids):
     return True
 
 
-class FdhaLogicTree(object):
+class PFDLogicTree(object):
     """
     Reader and realization enumerator for FDHA-style logic trees.
 
