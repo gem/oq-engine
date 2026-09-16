@@ -64,7 +64,6 @@ class Petersen2011PrimaryFD(BasePrimarySurfDispl):
             ``None`` defers to the ``get_prob`` call (legacy default:
             'quadratic').
         """
-        super().__init__()
         self.version = check_choice(type(self).__name__, "version", version,
                                     self._ACCEPTED_VERSIONS,
                                     canon=lambda v: str(v).lower())

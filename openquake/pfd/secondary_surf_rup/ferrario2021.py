@@ -58,7 +58,6 @@ class FerrarioLivio2021SecondarySR(BaseSecondarySurfRup):
             ('regular' or 'conservative'); ``None`` defers to the
             ``get_prob`` call (legacy default: 'regular').
         """
-        super().__init__()
         self.version = check_choice(
             type(self).__name__, "version", version,
             frozenset(["regular", "conservative"]),

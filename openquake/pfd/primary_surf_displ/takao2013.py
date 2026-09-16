@@ -69,7 +69,6 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
             numbers; it is stored (validated against the global style
             vocabulary) as a declaration of the branch context.
         """
-        super().__init__()
         self.n_sigma = float(n_sigma)
         if self.n_sigma <= 0.0:
             raise ValueError(f"n_sigma must be positive; got {self.n_sigma}")

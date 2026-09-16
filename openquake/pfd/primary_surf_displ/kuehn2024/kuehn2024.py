@@ -86,7 +86,6 @@ class Kuehn2024PrimaryFD(BasePrimarySurfDispl):
         :param coefficient_type: optional legacy alias ('full' enables
             epistemic uncertainty); ``None`` defers to the call.
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style,
                                  self._ACCEPTED_STYLES)
         self.epistemic_uncertainty = check_bool(

@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2024-2026 Yen-Shin Chen, OGS
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """
 Module :mod:`openquake.pfd.primary_surf_displ.chiou2025` implements
 Chiou et al. (2025) primary surface fault displacement model (sum-of-principal)
@@ -14,7 +31,7 @@ Behavior and constraints:
 - The model returns exceedance probabilities for the provided displacement threshold(s).
 
 Coefficients are loaded from
-``openquake/fdha/primary_surf_displ/data/chiou_2025_coefficients.csv``.
+``openquake/pfd/primary_surf_displ/data/chiou_2025_coefficients.csv``.
 
 References
 ----------
@@ -105,7 +122,6 @@ class Chiou2025PrimaryFD(BasePrimarySurfDispl):
         :param style: optional faulting style pinned by the logic-tree
             branch; only 'strike-slip' is supported by this model.
         """
-        super().__init__()
         self.version = None if version is None else str(version)
         self.style = check_style(type(self).__name__, style,
                                  frozenset(["strike-slip"]))

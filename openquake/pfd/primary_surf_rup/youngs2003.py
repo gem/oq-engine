@@ -56,7 +56,6 @@ class Youngs2003PrimarySR(BasePrimarySurfRup):
             subset). ``None`` defers the choice to the ``get_prob`` call
             (legacy default: 'all').
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style,
                                  self._ACCEPTED_STYLES)
 

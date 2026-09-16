@@ -51,7 +51,6 @@ class Takao2013PrimarySR(BasePrimarySurfRup):
             against the global style vocabulary) as a declaration of the
             branch context.
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style)
 
     def get_prob(

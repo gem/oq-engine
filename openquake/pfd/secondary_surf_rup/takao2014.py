@@ -48,7 +48,6 @@ class Takao2014SecondarySR(BaseSecondarySurfRup):
             the logic-tree branch; ``None`` defers to the ``get_prob`` call
             (legacy default: 100).
         """
-        super().__init__()
         self.pixel_size = check_positive(type(self).__name__, "pixel_size",
                                          pixel_size)
 

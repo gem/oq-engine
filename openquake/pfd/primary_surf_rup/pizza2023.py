@@ -47,7 +47,6 @@ class Pizza2023PrimarySR(BasePrimarySurfRup):
             defers the choice to the ``get_prob`` call (legacy default:
             'all').
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style)
 
     def get_prob(self, mag, style=None):

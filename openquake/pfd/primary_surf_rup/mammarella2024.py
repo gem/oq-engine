@@ -221,7 +221,6 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         call-time argument always wins (``dip_mu`` in particular normally
         comes from the rupture context unless pinned here).
         """
-        super().__init__()
         if MSR is not None and int(MSR) not in (0, 1, 2):
             raise ValueError(
                 f"{type(self).__name__}: MSR must be one of {{0, 1, 2}}; "

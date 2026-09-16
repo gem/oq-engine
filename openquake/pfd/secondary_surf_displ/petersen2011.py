@@ -88,7 +88,6 @@ class Petersen2011SecondaryFD(BaseSecondarySurfDispl):
             (legacy default: 25).
         :param cell_size: deprecated alias of ``pixel_size``.
         """
-        super().__init__()
         self.pixel_size = check_positive(type(self).__name__, "pixel_size",
                                          pixel_size)
         self.cell_size = check_positive(type(self).__name__, "cell_size",

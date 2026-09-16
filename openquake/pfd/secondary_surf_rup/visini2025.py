@@ -99,7 +99,6 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
             ('uniform', 'exponential' or 'average'), consumed by the
             secondary calculation pipeline.
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style,
                                  frozenset(["normal", "reverse"]))
         self.pixel_size = check_positive(type(self).__name__, "pixel_size",

@@ -153,7 +153,7 @@ class BaseSecondarySurfDispl(metaclass=abc.ABCMeta):
     #:
     #: Used at run time for a once-per-model-per-run ``logging.warning``
     #: when sites are evaluated outside the range (extrapolation); it never
-    #: changes results (openquake/fdha/calc/hazard.py).
+    #: changes results (the oq-pfdha hazard kernel).
     APPLICABILITY_RANGE = None
 
     #: Near-field regularisation for the distributed *displacement* evaluation,

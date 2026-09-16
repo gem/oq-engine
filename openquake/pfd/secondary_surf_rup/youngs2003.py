@@ -46,7 +46,6 @@ class Youngs2003SecondarySR(BaseSecondarySurfRup):
             stored (validated against the global style vocabulary) as a
             declaration of the branch context.
         """
-        super().__init__()
         self.version = check_choice(type(self).__name__, "version", version,
                                     frozenset(["1", "2", "3"]), canon=str)
         self.style = check_style(type(self).__name__, style)

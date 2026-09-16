@@ -82,7 +82,6 @@ class Youngs2003SecondaryFD(BaseSecondarySurfDispl):
             change the numbers; it is stored (validated against the global
             style vocabulary) as a declaration of the branch context.
         """
-        super().__init__()
         self.percentile = check_choice(
             type(self).__name__, "percentile", percentile,
             frozenset(["85", "95"]), canon=str)

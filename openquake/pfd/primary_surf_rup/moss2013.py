@@ -52,7 +52,6 @@ class Moss2013PrimarySR(BasePrimarySurfRup):
             site-specific one, matching the historical parameter-merge
             behaviour of the calculators.
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style,
                                  self._ACCEPTED_STYLES)
         self.vs30 = None if vs30 is None else float(vs30)

@@ -126,7 +126,6 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
             combination B, consumed by the secondary calculation pipeline;
             stored as given.
         """
-        super().__init__()
         # ``truncation_eps`` is the deprecated former name for ``n_sigma``; it is
         # still accepted (e.g. from older logic-tree configs) and takes priority.
         self.n_sigma = float(truncation_eps if truncation_eps is not None else n_sigma)

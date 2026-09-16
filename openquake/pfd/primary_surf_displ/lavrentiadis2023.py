@@ -82,7 +82,6 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
         :param include_zero_slip: optional flag pinned by the logic-tree
             branch; ``None`` defers to the call (legacy default: False).
         """
-        super().__init__()
         self.style = check_style(type(self).__name__, style)
         if output_type is not None:
             output_type = str(output_type)

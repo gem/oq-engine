@@ -58,7 +58,6 @@ class MossRoss2011PrimaryFD(BasePrimarySurfDispl):
             logic-tree branch ('AD' or 'MD'); ``None`` defers to the
             ``get_prob`` call.
         """
-        super().__init__()
         self.n_sigma = float(n_sigma)
         if self.n_sigma <= 0.0:
             raise ValueError(f"n_sigma must be positive; got {self.n_sigma}")

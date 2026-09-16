@@ -66,7 +66,6 @@ class Petersen2011SecondarySR(BaseSecondarySurfRup):
             stored (validated against the global style vocabulary) as a
             declaration of the branch context.
         """
-        super().__init__()
         self.pixel_size = check_positive(type(self).__name__, "pixel_size",
                                          pixel_size)
         self.version = check_choice(type(self).__name__, "version", version,
