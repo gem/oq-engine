@@ -762,7 +762,7 @@ FDHA_UNCERTAINTY_TYPES = frozenset(FDHA_SLOTS_BY_UTYPE) | frozenset(
 
 @dataclass
 class FdhaModelChoice:
-    """One uncertaintyModel selection inside an FDHA end branch."""
+    """One uncertaintyModel selection inside a PFD realization."""
     class_name: str
     params: dict
     branch_id: str
@@ -811,7 +811,7 @@ def _fdha_branchset_applies(bs, source_id, style, chosen_ids):
 
 class FdhaLogicTree(object):
     """
-    Reader and end-branch enumerator for FDHA-style logic trees.
+    Reader and realization enumerator for FDHA-style logic trees.
 
     The XML schema is the oq-pfdha one (decision D5), modernised to put the
     ``<logicTreeBranchSet>`` elements directly under ``<logicTree>``: the
@@ -893,7 +893,7 @@ class FdhaLogicTree(object):
             of 'normal' / 'reverse' / 'strike-slip' (used by applyToStyle)
         :returns: one :class:`PFDRealization` per (source, branch combination)
         """
-        end_branches = []
+        realizations = []
         for source_id, style in sources:
             partials = [({}, set(), 1.0)]
             for bs in self.branchsets:
@@ -926,11 +926,11 @@ class FdhaLogicTree(object):
                             (new_sel, chosen_ids | {bid}, weight * w))
                 partials = nxt
             for selections, _ids, weight in partials:
-                end_branches.append(PFDRealization(
+                realizations.append(PFDRealization(
                     source_id, style, weight, selections))
-        return end_branches
+        return realizations
 
-    def check_r_sigma_conflict(self, r_sigma_km, end_branches):
+    def check_r_sigma_conflict(self, r_sigma_km, realizations):
         """
         Reject a scalar ``[calculation] r_sigma_km`` combined with an
         ``fdhaCalcRSigma`` logic-tree branch: the two would fight over the
@@ -939,7 +939,7 @@ class FdhaLogicTree(object):
         """
         if r_sigma_km is None:
             return
-        if any(CALC_R_SIGMA_SLOT in eb.selections for eb in end_branches):
+        if any(CALC_R_SIGMA_SLOT in eb.selections for eb in realizations):
             raise InvalidLogicTree(
                 'r_sigma_km is set both as a scalar [calculation] parameter '
                 'and as an fdhaCalcRSigma logic-tree branch; remove one of '
