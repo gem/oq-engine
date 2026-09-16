@@ -32,7 +32,8 @@ Outputs (25 values, in ln-space):
 import os
 import csv
 import numpy as np
-import onnxruntime as ort
+import gzip
+from openquake.baselib.onnx import PicklableInferenceSession
 
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
@@ -51,7 +52,7 @@ _DATA_DIR = os.path.join(
     "banimahd_turkiye_2026_data",
 )
 
-_ONNX_FILE = os.path.join(_DATA_DIR, "onnx_models", "GMM_Turkiye_2026.onnx")
+_ONNX_FILE = os.path.join(_DATA_DIR, "onnx_models", "GMM_Turkiye_2026.onnx.gz")
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
 
@@ -79,22 +80,7 @@ def _load_stddev_tables():
 _load_stddev_tables()
 
 
-# ---------------------------------------------------------------------
-# ONNX session cache
-# ---------------------------------------------------------------------
-_SESSION = None
 
-
-def _get_session():
-    global _SESSION
-    if _SESSION is None:
-        if not os.path.exists(_ONNX_FILE):
-            raise IOError(f"Cannot find ONNX file: {_ONNX_FILE}")
-        opt = ort.SessionOptions()
-        opt.intra_op_num_threads = 1
-        opt.inter_op_num_threads = 1
-        _SESSION = ort.InferenceSession(_ONNX_FILE, sess_options=opt)
-    return _SESSION
 
 
 
@@ -131,7 +117,12 @@ class Banimahd2026Turkiye(GMPE):
 
     _PERIODS = [0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4,
                 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
-
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        with gzip.open(_ONNX_FILE, "rb") as f:
+            model_bytes = f.read()
+        self.session = PicklableInferenceSession(model_bytes)
+ 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Compute mean and standard deviations for all requested IMTs at once.
@@ -173,10 +164,9 @@ class Banimahd2026Turkiye(GMPE):
         X = np.column_stack([fd, fm, mw, rjb, vs30]).astype(np.float32)
      
         # Run ONNX inference once for all 25 outputs
-        sess = _get_session()
-        input_name = sess.get_inputs()[0].name
-        output_name = sess.get_outputs()[0].name
-        out = sess.run([output_name], {input_name: X})[0]
+        input_name = self.session.get_inputs()[0].name
+        output_name = self.session.get_outputs()[0].name
+        out = self.session.run([output_name], {input_name: X})[0]
 
         # Fill mean/sig/tau/phi for each requested IMT
         for m, imt in enumerate(imts):
