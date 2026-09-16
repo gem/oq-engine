@@ -9,11 +9,9 @@ the old heuristic silently returned the element-wise diagonal (site i paired
 with threshold i) instead of the full matrix.
 """
 import numpy as np
-import pytest
 
 from openquake.pfd.secondary_surf_displ.visini2025 import Visini2025SecondaryFD
 
-pytestmark = [pytest.mark.unit, pytest.mark.visini2025]
 
 
 D3 = np.array([0.01, 0.1, 1.0])

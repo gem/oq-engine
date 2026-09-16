@@ -6,11 +6,9 @@ Tests the x/L folding symmetry in Youngs2003 model.
 
 import numpy as np
 import math
-import pytest
 
 from openquake.pfd.primary_surf_displ.youngs2003 import Youngs2003PrimaryFD
 
-pytestmark = pytest.mark.unit
 
 
 def _fold(model, x):

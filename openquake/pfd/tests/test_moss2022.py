@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from scipy import stats
 
-pytestmark = pytest.mark.unit
 
 # =====================================================================
 # Primary FD
@@ -78,7 +77,6 @@ class TestMoss2022PrimaryFDReportReferences:
 class TestMoss2022PrimaryFDProduction:
     """Direct numerical checks for the production principal-FD model."""
 
-    pytestmark = pytest.mark.regression
 
     def setup_method(self):
         self.model = Moss2022PrimaryFD()
@@ -200,7 +198,6 @@ class TestMoss2022SecondarySR:
         with pytest.raises(ValueError):
             self.model.get_prob(r=0.5, rx=0.1, method="biexp")
 
-    @pytest.mark.regression
     @pytest.mark.parametrize("r_km, rx, mag, expected", [
         (0.1, 0.1, 7.2, 0.9118305884),
         (0.5, 0.1, 7.2, 0.6672961255),
@@ -305,7 +302,6 @@ class TestMoss2022SecondaryFDBasic:
         )).flatten()
         assert np.allclose(p, expected, rtol=1e-12, atol=1e-12)
 
-    @pytest.mark.regression
     def test_gamma_method_reference_values_multi_site(self):
         """Regression anchor for the distributed-FD gamma branch."""
         p = np.asarray(self.model.get_prob(
@@ -324,7 +320,6 @@ class TestMoss2022SecondaryFDBasic:
         assert p.shape == (3, 3)
         assert np.allclose(p, expected, rtol=1e-7, atol=1e-10)
 
-    @pytest.mark.regression
     def test_envelope_method_reference_values_multi_site(self):
         """Regression anchor for the distributed-FD deterministic branch."""
         p = np.asarray(self.model.get_prob(

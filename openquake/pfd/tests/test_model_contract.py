@@ -24,7 +24,6 @@ from openquake.pfd.primary_surf_displ.base import (
     DISPLACEMENT_DEFINITIONS,
 )
 
-pytestmark = pytest.mark.unit
 
 
 def _registered(package, base):
@@ -112,7 +111,6 @@ def test_expected_contract_has_no_stale_entries():
     assert set(EXPECTED_CONTRACT) <= registered
 
 
-@pytest.mark.lavrentiadis2023
 def test_lavrentiadis_two_classes_static_contracts():
     """LA23 publishes two displacement definitions, and the class choice IS
     the definition (Petersen2011PrimaryFD_* variant idiom): the parent class
@@ -126,7 +124,6 @@ def test_lavrentiadis_two_classes_static_contracts():
     assert issubclass(principal, parent)
 
 
-@pytest.mark.lavrentiadis2023
 def test_lavrentiadis_parent_rejects_prnc_output_type():
     """The aggregate class refuses to evaluate the sum-of-principal metric;
     the error names the class to use instead."""
@@ -138,7 +135,6 @@ def test_lavrentiadis_parent_rejects_prnc_output_type():
                        output_type="disp_prnc_prime")
 
 
-@pytest.mark.lavrentiadis2023
 @pytest.mark.parametrize("output_type", [
     "disp_prnc_prime", "disp_agg_prime", "disp_agg_seg", "bogus"])
 def test_lavrentiadis_principal_rejects_any_explicit_output_type(output_type):
@@ -150,7 +146,6 @@ def test_lavrentiadis_principal_rejects_any_explicit_output_type(output_type):
                        mag=7.0, style="normal", output_type=output_type)
 
 
-@pytest.mark.lavrentiadis2023
 def test_lavrentiadis_principal_numerical_identity():
     """Lavrentiadis2023PrimaryFD_principal.get_prob must reproduce the old
     single-class disp_prnc_prime evaluation EXACTLY (the IAEA L23 chains
@@ -182,7 +177,6 @@ def test_lavrentiadis_principal_numerical_identity():
                     assert not np.array_equal(got, agg)
 
 
-@pytest.mark.kuehn2024
 def test_kuehn_contract_is_static_aggregate():
     cls = primary_surf_displ.Kuehn2024PrimaryFD
     assert effective_displacement_definition(cls) == "aggregate"

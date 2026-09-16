@@ -20,7 +20,6 @@ import math
 import numpy as np
 import pytest
 
-pytestmark = pytest.mark.unit
 
 from openquake.pfd.primary_surf_rup.mammarella2024 import (
     Mammarella2024PrimarySR,

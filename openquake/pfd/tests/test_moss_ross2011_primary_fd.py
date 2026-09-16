@@ -12,7 +12,6 @@ from numpy.testing import assert_allclose
 
 from openquake.pfd.primary_surf_displ import MossRoss2011PrimaryFD
 
-pytestmark = pytest.mark.unit
 
 
 FIG6_DIGITIZED = {
