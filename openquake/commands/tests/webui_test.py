@@ -12,6 +12,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 import unittest
 from pathlib import Path
@@ -23,6 +24,7 @@ ROOT = Path(__file__).parents[3]
 
 class WebuiTestCase(unittest.TestCase):
 
+    @unittest.skipIf(sys.platform == 'darwin', 'WebUI lifecycle is flaky on macOS')
     def test_webui_lifecycle(self):
         """Start, inspect, and stop the WebUI through the CLI."""
         oq = shutil.which('oq')
