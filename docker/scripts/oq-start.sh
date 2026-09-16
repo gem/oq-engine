@@ -19,8 +19,6 @@
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
 export PYTHONPATH=$HOME
 
-oq engine --upgrade-db  &
-
 if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
     oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
     for f in $(ls ${oq_basedir}/openquake/server/templates/registration/*.default.tmpl)
@@ -38,9 +36,11 @@ fi
 
 if [ -t 1 ]; then
     # TTY mode
+    oq engine --upgrade-db  &
     exec oq webui start 0.0.0.0:8800 -s &>> $HOME/oqdata/webui.log &
     /bin/bash
 else
     # Headless mode or Run command
+    oq engine --upgrade-db  &
     exec "$@"
 fi
