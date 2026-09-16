@@ -31,12 +31,16 @@ import numpy as np
 from scipy.stats import norm
 from openquake.pfd.params import check_choice, check_style
 from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
-from openquake.pfd.scalerel import WellsCoppersmith1994, Thingbaijam2017, Leonard2010
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.scalerel.thingbaijam2017 import Thingbaijam2017
+from openquake.hazardlib.scalerel.leonard2010 import Leonard2010
 
 
-# Map of scaling relation names used by this module
+# Map of scaling relation names used by this module.  The relations live in
+# hazardlib (PR-2 of the oq-engine integration plan); the canonical oq-pfdha
+# name "WC1994" is mapped onto the hazardlib :class:`WC1994` class.
 _SCALERS = {
-    "WC1994": WellsCoppersmith1994(),
+    "WC1994": WC1994(),
     "THINGBAIJAM2017": Thingbaijam2017(),
     "LEONARD2010": Leonard2010(),
 }
