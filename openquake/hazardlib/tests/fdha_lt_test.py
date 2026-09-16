@@ -21,7 +21,7 @@ import pytest
 
 from openquake.baselib.node import Node
 from openquake.hazardlib import lt
-from openquake.hazardlib.pfd_lt import PFDLogicTree, InvalidLogicTree
+from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.hazardlib.lt import LogicTreeError
 
 
@@ -123,7 +123,7 @@ def test_parse_r_sigma_rejects(text):
 def test_unknown_utype_rejected(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
-    with pytest.raises(InvalidLogicTree, match="unknown FDHA uncertaintyType"):
+    with pytest.raises(LogicTreeError, match="unknown FDHA uncertaintyType"):
         PFDLogicTree(path)
 
 
@@ -132,7 +132,7 @@ def test_weights_must_sum_to_one(tmp_path):
         "bs1", "fdhaPrimarySRModel", [
             ("B1a", "MossRoss2011PrimarySR", 0.7),
             ("B1b", "Takao2013PrimarySR", 0.2)]))
-    with pytest.raises(InvalidLogicTree, match="FDLT-001"):
+    with pytest.raises(LogicTreeError, match="weights sum"):
         PFDLogicTree(path)
 
 
@@ -222,7 +222,7 @@ def test_check_r_sigma_conflict(tmp_path):
         "bs_sigma", "fdhaCalcRSigma", [("SIG", "1", 1.0)]))
     lt2 = PFDLogicTree(path2)
     branches2 = lt2.enumerate([("src1", "normal")])
-    with pytest.raises(InvalidLogicTree, match="both"):
+    with pytest.raises(LogicTreeError, match="both"):
         lt2.check_r_sigma_conflict(1.0, branches2)
 
 def test_h5_roundtrip(tmp_path):

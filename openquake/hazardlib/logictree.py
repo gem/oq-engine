@@ -134,26 +134,29 @@ def h5_to_branches(array):
     return utypes, rows
 
 
-def invalid_weight_sum(bsid, weights):
+def check_branchset_weights(node, filename, bsid, weights):
     """
-    Shared branch-weight validation: ``SourceModelLogicTree`` and
-    ``PFDLogicTree`` differ in the exception they raise, so this returns the
-    error message (or ``None``) and the caller raises its own error.
+    Raise a :class:`LogicTreeError` unless the branch weights sum to 1
+    (within ``pmf.PRECISION``); shared by ``SourceModelLogicTree`` and
+    ``PFDLogicTree``.
 
+    :param node: XML node for the error line number (or ``None``)
+    :param filename: logic tree filename
     :param bsid: branchset ID, used in the message
     :param weights: iterable of weights (float or float-convertible)
-    :returns: ``None`` if the weights sum to 1 within ``pmf.PRECISION``,
-        else an error message
     """
     tot = 0.0
     for weight in weights:
         try:
             tot += float(weight)
         except (TypeError, ValueError):
-            return f"branchset {bsid}: non-numeric weight {weight!r}"
+            raise LogicTreeError(
+                node, filename,
+                f"branchset {bsid}: non-numeric weight {weight!r}")
     if abs(tot - 1.0) > pmf.PRECISION:
-        return f"branchset {bsid} weights sum up to {tot}, not 1"
-    return None
+        raise LogicTreeError(
+            node, filename,
+            f"branchset {bsid} weights sum up to {tot}, not 1")
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
@@ -724,9 +727,7 @@ class SourceModelLogicTree(object):
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
 
-        msg = invalid_weight_sum(bs_id, weights)
-        if msg:
-            raise LogicTreeError(branchset_node, self.filename, msg)
+        check_branchset_weights(branchset_node, self.filename, bs_id, weights)
         if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,

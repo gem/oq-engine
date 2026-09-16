@@ -35,9 +35,9 @@ from dataclasses import dataclass
 
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
-from openquake.hazardlib.gsim_lt import InvalidLogicTree, bsnodes
+from openquake.hazardlib.gsim_lt import bsnodes
 from openquake.hazardlib.logictree import (
-    branches_to_h5, h5_to_branches, invalid_weight_sum)
+    branches_to_h5, check_branchset_weights, h5_to_branches)
 
 
 FDHA_SLOTS_BY_UTYPE = {
@@ -131,10 +131,10 @@ class PFDLogicTree(object):
             for branchset in bsnodes(self.filename, node):
                 utype = branchset['uncertaintyType']
                 if utype not in FDHA_UNCERTAINTY_TYPES:
-                    raise InvalidLogicTree(
-                        '%s: unknown FDHA uncertaintyType %r; expected one '
-                        'of %s' % (self.filename, utype,
-                                   sorted(FDHA_UNCERTAINTY_TYPES)))
+                    raise lt.LogicTreeError(
+                        branchset, self.filename,
+                        'unknown FDHA uncertaintyType %r; expected one of %s'
+                        % (utype, sorted(FDHA_UNCERTAINTY_TYPES)))
                 branches = []
                 for branch in branchset:
                     with context(self.filename, branch):
@@ -142,10 +142,10 @@ class PFDLogicTree(object):
                             model = branch.uncertaintyModel
                             weight = branch.uncertaintyWeight
                         except AttributeError:
-                            raise InvalidLogicTree(
-                                '%s: branch %r is missing uncertaintyModel/'
-                                'uncertaintyWeight'
-                                % (self.filename, branch.get('branchID')))
+                            raise lt.LogicTreeError(
+                                branch, self.filename,
+                                'branch %r is missing uncertaintyModel/'
+                                'uncertaintyWeight' % branch.get('branchID'))
                         value = lt.parse_uncertainty(
                             utype, model, self.filename)
                     branches.append((branch.get('branchID', ''), value,
@@ -162,10 +162,9 @@ class PFDLogicTree(object):
         return branchsets
 
     def _check_weights(self, bs):
-        msg = invalid_weight_sum(
-            bs.branch_set_id, [w for _bid, _model, w in bs.branches])
-        if msg:
-            raise InvalidLogicTree(f'{self.filename}: {msg} (FDLT-001)')
+        check_branchset_weights(
+            None, self.filename, bs.branch_set_id,
+            [w for _bid, _model, w in bs.branches])
 
     def enumerate(self, sources):
         """
@@ -260,7 +259,8 @@ class PFDLogicTree(object):
         if r_sigma_km is None:
             return
         if any(CALC_R_SIGMA_SLOT in eb.selections for eb in realizations):
-            raise InvalidLogicTree(
+            raise lt.LogicTreeError(
+                None, self.filename,
                 'r_sigma_km is set both as a scalar [calculation] parameter '
                 'and as an fdhaCalcRSigma logic-tree branch; remove one of '
                 'the two')
