@@ -9,15 +9,15 @@ for Turkiye by Banimahd et al. (2026) as an OpenQuake GSIM/GMPE.
 Reference
 ---------
 Banimahd A, Karimzadeh S, et al. (2026).
-"Artificial neural network-based non-parametric ground motion models for
- multiple intensity measures in Turkiye."
+Artificial neural network-based non-parametric ground motion models for
+multiple intensity measures in Turkiye.
 Engineering Applications of Artificial Intelligence.
 
 Model overview
 --------------
 - Trained on strong-motion data from Turkiye.
 - ML regressor: ensemble of 10 feed-forward neural networks.
-Inputs (in the order used for training and ONNX):
+- Inputs (in the order used for training and ONNX):
     1. fd         : focal depth (km)
     2. fm         : fault mechanism (1=Normal, 2=Reverse, 3=StrikeSlip)
     3. mw         : moment magnitude
