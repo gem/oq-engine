@@ -21,10 +21,11 @@ PFD (Probabilistic Fault Displacement) logic tree.
 
 The PFD logic tree is an NRML 0.4 ``<logicTree>`` whose ``uncertaintyType``
 is one of the four model slots plus the ``fdhaCalcRSigma`` calculation
-parameter, with ``<logicTreeBranchSet>`` elements directly under
-``<logicTree>`` (the obsolete ``<logicTreeBranchingLevel>`` wrapper is
-rejected).  Like :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
-it is source-oriented (``applyToSources`` / ``applyToBranches`` /
+parameter, with the ``<logicTreeBranchSet>`` elements directly under
+``<logicTree>`` or wrapped in the legacy ``<logicTreeBranchingLevel>``
+(both accepted through ``gsim_lt.bsnodes``).  Like
+:class:`openquake.hazardlib.logictree.SourceModelLogicTree` it is
+source-oriented (``applyToSources`` / ``applyToBranches`` /
 ``applyToStyle``), so it lives in its own module rather than in
 :mod:`openquake.hazardlib.gsim_lt`; the ``<uncertaintyModel>`` values are
 parsed by :data:`openquake.hazardlib.lt.parse_uncertainty`.
@@ -34,7 +35,7 @@ from dataclasses import dataclass
 
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
-from openquake.hazardlib.gsim_lt import InvalidLogicTree
+from openquake.hazardlib.gsim_lt import InvalidLogicTree, bsnodes
 from openquake.hazardlib.logictree import (
     branches_to_h5, h5_to_branches, invalid_weight_sum)
 
@@ -105,15 +106,15 @@ class PFDLogicTree(object):
     """
     Reader and realization enumerator for FDHA-style logic trees.
 
-    The XML schema is the oq-pfdha one (decision D5), modernised to put the
-    ``<logicTreeBranchSet>`` elements directly under ``<logicTree>``: the
-    legacy ``<logicTreeBranchingLevel>`` wrapper is obsolete for FDHA and is
-    rejected (it is still supported for regular GSIM/source-model trees).
-    Each branch set carries one of the four model slots or
-    ``fdhaCalcRSigma``; ``<uncertaintyModel>`` is a bare model class name or
-    an oq-engine style ``[ClassName]`` TOML block.  End branches are
-    enumerated per source with the oq-pfdha ``applyToSources`` /
-    ``applyToBranches`` / ``applyToStyle`` semantics.
+    The XML schema is the oq-pfdha one (decision D5).  The
+    ``<logicTreeBranchSet>`` elements may sit directly under ``<logicTree>``
+    or be wrapped in a ``<logicTreeBranchingLevel>``: both are accepted,
+    through the same ``gsim_lt.bsnodes`` helper used by
+    ``SourceModelLogicTree``.  Each branch set carries one of the four model
+    slots or ``fdhaCalcRSigma``; ``<uncertaintyModel>`` is a bare model
+    class name or an oq-engine style ``[ClassName]`` TOML block.  End
+    branches are enumerated per source with the oq-pfdha ``applyToSources``
+    / ``applyToBranches`` / ``applyToStyle`` semantics.
     """
 
     def __init__(self, fname):
@@ -123,46 +124,41 @@ class PFDLogicTree(object):
 
     def _parse(self):
         branchsets = []
-        for branchset in self._ltnode:
-            tag = branchset.tag
-            if tag.endswith('logicTreeBranchingLevel'):
-                raise InvalidLogicTree(
-                    '%s: <logicTreeBranchingLevel> is obsolete for FDHA '
-                    'logic trees; put <logicTreeBranchSet> directly under '
-                    '<logicTree>' % self.filename)
-            if not tag.endswith('logicTreeBranchSet'):
-                raise InvalidLogicTree(
-                    '%s: unexpected <%s> under <logicTree>'
-                    % (self.filename, tag))
-            utype = branchset['uncertaintyType']
-            if utype not in FDHA_UNCERTAINTY_TYPES:
-                raise InvalidLogicTree(
-                    '%s: unknown FDHA uncertaintyType %r; expected one '
-                    'of %s' % (self.filename, utype,
-                               sorted(FDHA_UNCERTAINTY_TYPES)))
-            branches = []
-            for branch in branchset:
-                with context(self.filename, branch):
-                    try:
-                        model = branch.uncertaintyModel
-                        weight = branch.uncertaintyWeight
-                    except AttributeError:
-                        raise InvalidLogicTree(
-                            '%s: branch %r is missing uncertaintyModel/'
-                            'uncertaintyWeight'
-                            % (self.filename, branch.get('branchID')))
-                    value = lt.parse_uncertainty(utype, model, self.filename)
-                branches.append((branch.get('branchID', ''), value,
-                                 weight.text or ''))
-            bset = _FdhaBranchSet(
-                branch_set_id=branchset.get('branchSetID', ''),
-                uncertainty_type=utype,
-                apply_to_sources=branchset.get('applyToSources'),
-                apply_to_branches=branchset.get('applyToBranches'),
-                apply_to_style=branchset.get('applyToStyle'),
-                branches=tuple(branches))
-            self._check_weights(bset)
-            branchsets.append(bset)
+        for node in self._ltnode:
+            # bsnodes accepts either a <logicTreeBranchSet> directly or
+            # wrapped in a <logicTreeBranchingLevel>, like
+            # SourceModelLogicTree
+            for branchset in bsnodes(self.filename, node):
+                utype = branchset['uncertaintyType']
+                if utype not in FDHA_UNCERTAINTY_TYPES:
+                    raise InvalidLogicTree(
+                        '%s: unknown FDHA uncertaintyType %r; expected one '
+                        'of %s' % (self.filename, utype,
+                                   sorted(FDHA_UNCERTAINTY_TYPES)))
+                branches = []
+                for branch in branchset:
+                    with context(self.filename, branch):
+                        try:
+                            model = branch.uncertaintyModel
+                            weight = branch.uncertaintyWeight
+                        except AttributeError:
+                            raise InvalidLogicTree(
+                                '%s: branch %r is missing uncertaintyModel/'
+                                'uncertaintyWeight'
+                                % (self.filename, branch.get('branchID')))
+                        value = lt.parse_uncertainty(
+                            utype, model, self.filename)
+                    branches.append((branch.get('branchID', ''), value,
+                                     weight.text or ''))
+                bset = _FdhaBranchSet(
+                    branch_set_id=branchset.get('branchSetID', ''),
+                    uncertainty_type=utype,
+                    apply_to_sources=branchset.get('applyToSources'),
+                    apply_to_branches=branchset.get('applyToBranches'),
+                    apply_to_style=branchset.get('applyToStyle'),
+                    branches=tuple(branches))
+                self._check_weights(bset)
+                branchsets.append(bset)
         return branchsets
 
     def _check_weights(self, bs):

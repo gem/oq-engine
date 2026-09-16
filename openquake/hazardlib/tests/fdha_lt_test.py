@@ -250,3 +250,28 @@ def test_h5_roundtrip(tmp_path):
                 for r in r1] == \
                [(r.source_id, r.style, r.weight, r.slots, r.selections)
                 for r in r2]
+
+
+def write_wrapped(tmp_path, *branchsets):
+    body = "".join(
+        f'    <logicTreeBranchingLevel branchingLevelID="bl{i}">\n{bs}'
+        f'    </logicTreeBranchingLevel>\n'
+        for i, bs in enumerate(branchsets))
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">\n'
+           '  <logicTree logicTreeID="lt">\n'
+           f'{body}'
+           '  </logicTree>\n</nrml>\n')
+    path = tmp_path / "lt_wrapped.xml"
+    path.write_text(xml)
+    return str(path)
+
+
+def test_branching_level_accepted(tmp_path):
+    """The legacy <logicTreeBranchingLevel> wrapper is accepted via bsnodes."""
+    direct = PFDLogicTree(write(tmp_path, *full_chain()))
+    wrapped = PFDLogicTree(write_wrapped(tmp_path, *full_chain()))
+    r1 = direct.enumerate([("src1", "reverse")])
+    r2 = wrapped.enumerate([("src1", "reverse")])
+    assert [(r.weight, r.selections, r.slots) for r in r1] == \
+           [(r.weight, r.selections, r.slots) for r in r2]
