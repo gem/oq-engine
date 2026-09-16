@@ -168,13 +168,11 @@ class Banimahd2026Turkiye(GMPE):
         # Number of sites
         N = len(ctx)
 
-        # Extract scalar values from ctx
-        mag = np.atleast_1d(ctx.mag).astype(float)[0]
-        hypo_depth = np.atleast_1d(ctx.hypo_depth).astype(float)[0]
-        rake_val = np.atleast_1d(ctx.rake).astype(float)[0]
-
-        rjb_arr = np.atleast_1d(ctx.rjb).astype(float)
-        vs30_arr = np.atleast_1d(ctx.vs30).astype(float)
+        mw = ctx.mag.astype(float)
+        rjb = ctx.rjb.astype(float)
+        vs30 = ctx.vs30.astype(float)
+        fd = ctx.hypo_depth.astype(float)
+        rake = ctx.rake.astype(float)
 
         # Build input arrays
         Mw = np.full(N, mag, dtype=float)
