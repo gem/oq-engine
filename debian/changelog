@@ -1,9 +1,19 @@
+python3-oq-engine (3.23.5-1~xenial01) xenial; urgency=low
+  [Matteo Nastasi]
+  * Block `ruff` version to ~=0.14.0 to avoid syntax error flooding, must
+    be managed in a separate branch
+  * perform django database migration for all django apps installed
+  * managed `postinstall` functionalities for all django apps of openquake
+    engine ecosystem
+
   [Michele Simionato]
   * Backported fix to MANIFEST.in for onnx files
 
   [Matteo Nastasi]
   * Allow free mapping between standlone apps and their url path prefix
     (regardless of their name)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 16 Sep 2026 13:07:20 +0000
 
 python3-oq-engine (3.23.4-1~xenial01) xenial; urgency=low
   [Michele Simionato]
