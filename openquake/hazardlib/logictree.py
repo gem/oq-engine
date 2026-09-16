@@ -133,6 +133,28 @@ def h5_to_branches(array):
             (rec['branch'], value, float(rec['weight'])))
     return utypes, rows
 
+
+def invalid_weight_sum(bsid, weights):
+    """
+    Shared branch-weight validation: ``SourceModelLogicTree`` and
+    ``PFDLogicTree`` differ in the exception they raise, so this returns the
+    error message (or ``None``) and the caller raises its own error.
+
+    :param bsid: branchset ID, used in the message
+    :param weights: iterable of weights (float or float-convertible)
+    :returns: ``None`` if the weights sum to 1 within ``pmf.PRECISION``,
+        else an error message
+    """
+    tot = 0.0
+    for weight in weights:
+        try:
+            tot += float(weight)
+        except (TypeError, ValueError):
+            return f"branchset {bsid}: non-numeric weight {weight!r}"
+    if abs(tot - 1.0) > pmf.PRECISION:
+        return f"branchset {bsid} weights sum up to {tot}, not 1"
+    return None
+
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
@@ -634,7 +656,7 @@ class SourceModelLogicTree(object):
         """
         correlated = branchset_node.get('applyToSources') == '*'
         bs_id = branchset_node['branchSetID']
-        weight_sum = 0
+        weights = []
         branches = branchset_node.nodes
         if OQ_REDUCE:  # only take first branch
             branches = [branches[0]]
@@ -696,16 +718,15 @@ class SourceModelLogicTree(object):
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, BASE183)
-            weight_sum += weight
+            weights.append(weight)
         if zeros:
             branch = Branch(zero_id, '', sum(zeros), bs_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
 
-        if abs(weight_sum - 1.0) > pmf.PRECISION:
-            raise LogicTreeError(
-                branchset_node, self.filename,
-                f"branchset weights sum up to {weight_sum}, not 1")
+        msg = invalid_weight_sum(bs_id, weights)
+        if msg:
+            raise LogicTreeError(branchset_node, self.filename, msg)
         if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,

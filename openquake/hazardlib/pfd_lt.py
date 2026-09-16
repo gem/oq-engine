@@ -35,7 +35,8 @@ from dataclasses import dataclass
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
-from openquake.hazardlib.logictree import branches_to_h5, h5_to_branches
+from openquake.hazardlib.logictree import (
+    branches_to_h5, h5_to_branches, invalid_weight_sum)
 
 
 FDHA_SLOTS_BY_UTYPE = {
@@ -165,18 +166,10 @@ class PFDLogicTree(object):
         return branchsets
 
     def _check_weights(self, bs):
-        total = 0.0
-        for _bid, _model, w in bs.branches:
-            try:
-                total += float(w)
-            except (TypeError, ValueError):
-                raise InvalidLogicTree(
-                    '%s: branch set %r has a non-numeric weight %r'
-                    % (self.filename, bs.branch_set_id, w))
-        if abs(total - 1.0) > 1e-9:
-            raise InvalidLogicTree(
-                '%s: branch set %r weights sum to %s, not 1.0 (FDLT-001)'
-                % (self.filename, bs.branch_set_id, total))
+        msg = invalid_weight_sum(
+            bs.branch_set_id, [w for _bid, _model, w in bs.branches])
+        if msg:
+            raise InvalidLogicTree(f'{self.filename}: {msg} (FDLT-001)')
 
     def enumerate(self, sources):
         """
