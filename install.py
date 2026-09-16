@@ -679,6 +679,8 @@ def install(inst, version, from_fork, novenv, noupgrade):
 
     if inst in (user, devel):  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
+    else:
+        subprocess.run(['sudo', '-u', 'openquake', oqreal, "engine", "--upgrade-db"])
 
     errors += postinstall_standalone(inst)
 

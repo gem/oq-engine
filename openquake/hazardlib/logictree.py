@@ -93,6 +93,71 @@ branch_dt = numpy.dtype([
     ('weight', float),
 ])
 
+
+def branches_to_h5(branches, bsetdict):
+    """
+    Build the ``(branch_dt array, attrs)`` pair shared by the logic-tree
+    classes, so their ``__toh5__`` methods do not duplicate the layout.
+
+    :param branches:
+        iterable of ``(branchset_id, branch_id, uncertainty_type, value,
+        weight)``
+    :param bsetdict:
+        mapping ``branchset_id -> attribute dict``
+    """
+    tbl = [(bsid, bid, utype, repr(value), float(weight))
+           for bsid, bid, utype, value, weight in branches]
+    return numpy.array(tbl, branch_dt), dict(bsetdict=json.dumps(bsetdict))
+
+
+def h5_to_branches(array):
+    """
+    Decode a ``branch_dt`` array into the shared ``(utypes, rows)`` form.
+
+    :returns:
+        ``utypes`` maps ``branchset_id -> uncertainty_type`` and ``rows``
+        maps ``branchset_id -> [(branch_id, value, weight), ...]`` in file
+        order
+    """
+    utypes = {}
+    rows = {}
+    for rec in array:
+        rec = fix_bytes(rec)
+        bsid = rec['branchset']
+        utypes[bsid] = rec['utype']
+        try:
+            value = ast.literal_eval(rec['uvalue'])
+        except (SyntaxError, ValueError):
+            value = rec['uvalue']  # not really deserializable :-(
+        rows.setdefault(bsid, []).append(
+            (rec['branch'], value, float(rec['weight'])))
+    return utypes, rows
+
+
+def check_branchset_weights(node, filename, bsid, weights):
+    """
+    Raise a :class:`LogicTreeError` unless the branch weights sum to 1
+    (within ``pmf.PRECISION``); shared by ``SourceModelLogicTree`` and
+    ``PFDLogicTree``.
+
+    :param node: XML node for the error line number (or ``None``)
+    :param filename: logic tree filename
+    :param bsid: branchset ID, used in the message
+    :param weights: iterable of weights (float or float-convertible)
+    """
+    tot = 0.0
+    for weight in weights:
+        try:
+            tot += float(weight)
+        except (TypeError, ValueError):
+            raise LogicTreeError(
+                node, filename,
+                f"branchset {bsid}: non-numeric weight {weight!r}")
+    if abs(tot - 1.0) > pmf.PRECISION:
+        raise LogicTreeError(
+            node, filename,
+            f"branchset {bsid} weights sum up to {tot}, not 1")
+
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
@@ -594,7 +659,7 @@ class SourceModelLogicTree(object):
         """
         correlated = branchset_node.get('applyToSources') == '*'
         bs_id = branchset_node['branchSetID']
-        weight_sum = 0
+        weights = []
         branches = branchset_node.nodes
         if OQ_REDUCE:  # only take first branch
             branches = [branches[0]]
@@ -656,16 +721,13 @@ class SourceModelLogicTree(object):
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, BASE183)
-            weight_sum += weight
+            weights.append(weight)
         if zeros:
             branch = Branch(zero_id, '', sum(zeros), bs_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
 
-        if abs(weight_sum - 1.0) > pmf.PRECISION:
-            raise LogicTreeError(
-                branchset_node, self.filename,
-                f"branchset weights sum up to {weight_sum}, not 1")
+        check_branchset_weights(branchset_node, self.filename, bs_id, weights)
         if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,
@@ -888,14 +950,15 @@ class SourceModelLogicTree(object):
 
     # SourceModelLogicTree
     def __toh5__(self):
-        tbl = []
+        branches = []
         for brid, br in self.branches.items():
             if br.bs_id.startswith('dummy'):
                 continue  # don't store dummy branches
-            dic = self.bsetdict[br.bs_id].copy()
-            utype = dic['uncertaintyType']
-            tbl.append((br.bs_id, brid, utype, repr(br.value), br.weight))
-        attrs = dict(bsetdict=json.dumps(self.bsetdict))
+            branches.append((
+                br.bs_id, brid,
+                self.bsetdict[br.bs_id]['uncertaintyType'],
+                br.value, br.weight))
+        array, attrs = branches_to_h5(branches, self.bsetdict)
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['sampling_method'] = self.sampling_method
@@ -904,7 +967,7 @@ class SourceModelLogicTree(object):
         attrs['is_source_specific'] = self.is_source_specific
         attrs['source_id'] = self.source_id
         attrs['branchID'] = self.branchID
-        return numpy.array(tbl, branch_dt), attrs
+        return array, attrs
 
     # SourceModelLogicTree
     def __fromh5__(self, array, attrs):
@@ -917,13 +980,9 @@ class SourceModelLogicTree(object):
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
         self.shortener = {}
-        acc = AccumDict(accum=[])  # bsid -> rows
-        for rec in array:
-            rec = fix_bytes(rec)
-            # NB: it is important to keep the order of the branchsets
-            acc[rec['branchset']].append(rec)
+        utypes, acc = h5_to_branches(array)
         for ordinal, (bsid, rows) in enumerate(acc.items()):
-            utype = rows[0]['utype']
+            utype = utypes[bsid]
             filters = {}
             ats = self.bsetdict[bsid].get('applyToSources')
             atb = self.bsetdict[bsid].get('applyToBranches')
@@ -933,12 +992,8 @@ class SourceModelLogicTree(object):
                 filters['applyToBranches'] = sorted(atb.split())
             bset = BranchSet(utype, filters, ordinal)
             bset.id = bsid
-            for no, row in enumerate(rows):
-                try:
-                    uvalue = ast.literal_eval(row['uvalue'])
-                except (SyntaxError, ValueError):
-                    uvalue = row['uvalue']  # not really deserializable :-(
-                br = Branch(row['branch'], uvalue, float(row['weight']), bsid)
+            for no, (branch_id, value, weight) in enumerate(rows):
+                br = Branch(branch_id, value, weight, bsid)
                 self.branches[br.branch_id] = br
                 self.shortener[br.branch_id] = keyno(
                     br.branch_id, ordinal, no, BASE183)
