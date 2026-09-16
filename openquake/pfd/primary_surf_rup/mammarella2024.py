@@ -172,6 +172,28 @@ def _calc_LogW_mu_fn(msr: int, a: float, b: float):
     raise ValueError("Invalid Magnitude Scaling Relation (MSR); expected 0, 1, or 2")
 
 
+def _resolve_width_model(width_model):
+    """Return a width scaling-relation instance for a name or instance.
+
+    ``None`` passes through.  A string is resolved through
+    :func:`openquake.hazardlib.valid.mag_scale_rel` (the canonical
+    magnitude-scaling-relationship registry), so callers can use either a
+    scalerel instance or its registered name - PR-2 of the oq-engine
+    integration plan.  The instance must expose ``get_median_width`` and
+    ``get_std_dev_width``.
+    """
+    if width_model is None:
+        return None
+    if isinstance(width_model, str):
+        from openquake.hazardlib import valid
+        width_model = valid.mag_scale_rel(width_model)
+    for meth in ("get_median_width", "get_std_dev_width"):
+        if not hasattr(width_model, meth):
+            raise ValueError(
+                f"width_model must provide {meth}; got {width_model!r}")
+    return width_model
+
+
 class Mammarella2024PrimarySR(BasePrimarySurfRup):
     """
     Probability of principal surface rupture after Mammarella et al. (2024).
@@ -187,6 +209,13 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         Seismogenic thickness Zs_mu (km).
     MSR : int
         Magnitude scaling relation code in {0, 1, 2}.
+    width_model : scalerel instance or str, optional
+        Explicit hazardlib width scaling relation replacing the integer
+        ``MSR`` code.  Accepts a scalerel instance (exposing
+        ``get_median_width`` / ``get_std_dev_width``) or a registered name
+        resolved through :func:`openquake.hazardlib.valid.mag_scale_rel`
+        (e.g. ``"Leonard2014_Interplate"``); when given, ``MSR`` is not
+        required.
     HDD_str : str
         Hypocentral depth distribution label; must be a key of TAB2.
     dip_mu : float
@@ -208,7 +237,7 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
 
     def __init__(self, MSR=None, HDD_str=None, dip_mu=None, dip_sigma=None,
                  t_d=None, Zs_sigma=None, t_z=None, style=None,
-                 seismothickness=None, Zs_mu=None):
+                 seismothickness=None, Zs_mu=None, width_model=None):
         """
         Constructor-pinned model parameters, each defaulting to ``None``
         ("provide at call time instead"): the magnitude-scaling-relation
@@ -240,11 +269,12 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         self.seismothickness = (None if seismothickness is None
                                 else float(seismothickness))
         self.Zs_mu = None if Zs_mu is None else float(Zs_mu)
+        self.width_model = _resolve_width_model(width_model)
 
     def get_prob(self, mag, MSR=None, HDD_str=None,
                  dip_mu=None, dip_sigma=None, t_d=None, Zs_sigma=None,
                  t_z=None, rake=None, style=None, seismothickness=None,
-                 Zs_mu=None):
+                 Zs_mu=None, width_model=None):
         """Return the probability of principal surface rupture.
 
         See the class docstring for the full description of parameters
@@ -264,21 +294,31 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         seismothickness = (self.seismothickness if seismothickness is None
                            else seismothickness)
         Zs_mu = self.Zs_mu if Zs_mu is None else Zs_mu
+        # A width scalerel instance (or registered name) replaces the
+        # integer MSR code with a hazardlib scaling relation.
+        width_model = _resolve_width_model(
+            self.width_model if width_model is None else width_model)
 
         missing = [n for n, v in [("MSR", MSR), ("HDD_str", HDD_str),
                                   ("dip_mu", dip_mu), ("dip_sigma", dip_sigma),
                                   ("t_d", t_d), ("Zs_sigma", Zs_sigma),
-                                  ("t_z", t_z)] if v is None]
+                                  ("t_z", t_z)]
+                   if v is None and not (n == "MSR"
+                                         and width_model is not None)]
         if missing:
             raise ValueError(
                 f"{type(self).__name__}: missing required parameter(s) "
                 f"{missing}; provide them in the logic-tree branch or at "
                 f"call time")
 
-        # Validate and prepare inputs
-        msr = int(MSR)
-        if msr not in (0, 1, 2):
-            raise ValueError("MSR must be one of {0, 1, 2}")
+        # Validate and prepare inputs.  The MSR code is only required when no
+        # explicit width scaling relation is given.
+        if width_model is None:
+            msr = int(MSR)
+            if msr not in (0, 1, 2):
+                raise ValueError("MSR must be one of {0, 1, 2}")
+        else:
+            msr = None
 
         # Determine style of faulting code (SoF)
         if style is not None:
@@ -311,8 +351,13 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         zs_sigma = float(Zs_sigma)
         t_z = float(t_z)
 
-        a, b, w_sigma = _get_tab1_params(msr, sof)
-        logw_mu_fn = _calc_LogW_mu_fn(msr, a, b)
+        if width_model is None:
+            a, b, w_sigma = _get_tab1_params(msr, sof)
+            logw_mu_fn = _calc_LogW_mu_fn(msr, a, b)
+        else:
+            # Representative rake for the width scaling relation: normal,
+            # reverse and strike-slip map to the SoF codes 3, 4 and 5.
+            width_rake = {3: -90.0, 4: 90.0, 5: 0.0}[sof]
 
         # Grids
         # LogW ~ truncnorm centered at LogW_mu(m), +/- T_W * w_sigma
@@ -349,7 +394,13 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
         # Iterate magnitudes (light loop; heavy vectorization inside)
         for i, m in enumerate(m_arr):
             # LogW discretization around mean
-            logw_mu = float(logw_mu_fn(m))
+            if width_model is None:
+                logw_mu = float(logw_mu_fn(m))
+            else:
+                logw_mu = float(np.log10(
+                    width_model.get_median_width(m, width_rake)))
+                w_sigma = float(
+                    width_model.get_std_dev_width(m, width_rake))
             logw_min = logw_mu - T_W * w_sigma
             logw_max = logw_mu + T_W * w_sigma
             logw_grid = np.linspace(logw_min, logw_max, DISCRETIZATION.N_LOGW)

@@ -217,3 +217,35 @@ def test_parity_against_cpsr_like(Mw, MSR, style, HDD):
     )
     # Allow tolerance since reference approximates MATLAB truncnorm and uses equal shapes
     assert p_model == pytest.approx(p_ref, rel=2e-2, abs=2e-2)
+
+
+@pytest.mark.parametrize("msr,cls_name,style", [
+    (0, "Leonard2014_Interplate", "reverse"),
+    (1, "Leonard2014_SCR", "normal"),
+    (2, "Thingbaijam2017", "strike-slip"),
+])
+def test_width_model_instance_matches_msr(msr, cls_name, style):
+    """A hazardlib width scalerel (instance or registered name) reproduces
+    the TAB1/MSR width rows exactly (PR-2 of the oq-engine integration
+    plan: consumers take scalerel instances, resolved via mag_scale_rel,
+    instead of integer MSR codes)."""
+    from openquake.hazardlib import valid
+
+    model = Mammarella2024PrimarySR()
+    params = dict(
+        HDD_str="AGG_R",
+        dip_mu=45.0,
+        dip_sigma=10.0,
+        t_d=2.0,
+        Zs_mu=12.0,
+        Zs_sigma=2.0,
+        t_z=2.0,
+    )
+    p_msr = model.get_prob(mag=6.5, MSR=msr, style=style, **params)
+    p_instance = model.get_prob(
+        mag=6.5, width_model=valid.mag_scale_rel(cls_name),
+        style=style, **params)
+    p_name = model.get_prob(
+        mag=6.5, width_model=cls_name, style=style, **params)
+    assert p_instance == pytest.approx(p_msr, rel=1e-12, abs=1e-12)
+    assert p_name == pytest.approx(p_msr, rel=1e-12, abs=1e-12)

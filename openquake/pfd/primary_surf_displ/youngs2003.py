@@ -75,7 +75,7 @@ class Youngs2003PrimaryFD(BasePrimarySurfDispl):
     # sigma) regressions for BOTH AD and MD per style; only Wells &
     # Coppersmith (1994) provides them here (and is the relation used by
     # Youngs et al. 2003 themselves). LEONARD2010 / THINGBAIJAM2017 expose
-    # AD-only regressions (see openquake.pfd.scalerel) and their use inside
+    # AD-only regressions (see openquake.hazardlib.scalerel) and their use inside
     # the Youngs (2003) convolution has not been validated, so they are
     # rejected rather than silently ignored.
     _ACCEPTED_SCALING_MODELS = frozenset(["WC1994"])
