@@ -184,8 +184,8 @@ class Banimahd2026Turkiye(GMPE):
         fm[(rake > 150.0) | (rake < -150.0)] = 3.0
 
         # Build input matrix (FD, FM, Mw, RJB, VS30)
-        X = np.column_stack([FD, FM, Mw, RJB, Vs30]).astype(np.float32)
-
+        X = np.column_stack([fd, fm, mw, rjb, vs30]).astype(np.float32)
+     
         # Run ONNX inference once for all 25 outputs
         sess = _get_session()
         input_name = sess.get_inputs()[0].name
