@@ -37,11 +37,9 @@ def branchset(bsid, utype, branches, **attrs):
         f'<uncertaintyWeight>{weight}</uncertaintyWeight>'
         f'</logicTreeBranch>\n'
         for bid, model, weight in branches)
-    return (f'    <logicTreeBranchingLevel branchingLevelID="bl_{bsid}">\n'
-            f'      <logicTreeBranchSet branchSetID="{bsid}" '
+    return (f'      <logicTreeBranchSet branchSetID="{bsid}" '
             f'uncertaintyType="{utype}"{attrs_str}>\n{brs}'
-            f'      </logicTreeBranchSet>\n'
-            f'    </logicTreeBranchingLevel>\n')
+            f'      </logicTreeBranchSet>\n')
 
 
 def write(tmp_path, *branchsets):
@@ -116,6 +114,29 @@ def test_unknown_utype_rejected(tmp_path):
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
     with pytest.raises(InvalidLogicTree, match="unknown FDHA uncertaintyType"):
         FdhaLogicTree(path)
+
+
+def test_branching_level_rejected_as_obsolete(tmp_path):
+    # the legacy <logicTreeBranchingLevel> wrapper must not be accepted in
+    # FDHA logic trees (still supported for GSIM/source-model trees)
+    body = ('    <logicTreeBranchingLevel branchingLevelID="bl1">\n'
+            '      <logicTreeBranchSet branchSetID="bs1" '
+            'uncertaintyType="fdhaPrimarySRModel">\n'
+            '        <logicTreeBranch id="B1" branchID="B1">'
+            '<uncertaintyModel>Moss2013PrimarySR</uncertaintyModel>'
+            '<uncertaintyWeight>1.0</uncertaintyWeight>'
+            '</logicTreeBranch>\n'
+            '      </logicTreeBranchSet>\n'
+            '    </logicTreeBranchingLevel>\n')
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">\n'
+           '  <logicTree logicTreeID="lt">\n'
+           f'{body}'
+           '  </logicTree>\n</nrml>\n')
+    path = tmp_path / "lt.xml"
+    path.write_text(xml)
+    with pytest.raises(InvalidLogicTree, match="obsolete"):
+        FdhaLogicTree(str(path))
 
 
 def test_weights_must_sum_to_one(tmp_path):

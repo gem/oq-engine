@@ -741,11 +741,13 @@ def collect_files(gsim_lt_path):
 # FDHA logic tree (oq-pfdha NRML schema)
 #
 # The FDHA logic tree is an NRML 0.4 <logicTree> whose uncertaintyType is one
-# of the four model slots plus the fdhaCalcRSigma calculation parameter.  It
-# reuses the same NRML scaffolding as GsimLogicTree (nrml.read, bsnodes,
-# context, InvalidLogicTree); because GsimLogicTree's __init__ is TRT/GSIM
-# specific (applyToTectonicRegionType keying, IMT weights, valid.gsim) it is
-# implemented here as a sibling class, not a subclass.
+# of the four model slots plus the fdhaCalcRSigma calculation parameter, with
+# the <logicTreeBranchSet> elements directly under <logicTree> (the obsolete
+# <logicTreeBranchingLevel> wrapper is rejected).  It reuses the same NRML
+# scaffolding as GsimLogicTree (nrml.read, context, InvalidLogicTree); because
+# GsimLogicTree's __init__ is TRT/GSIM specific (applyToTectonicRegionType
+# keying, IMT weights, valid.gsim) it is implemented here as a sibling class,
+# not a subclass.
 # ---------------------------------------------------------------------------
 FDHA_SLOTS_BY_UTYPE = {
     "fdhaPrimarySRModel": "primary_surf_rup",
@@ -881,54 +883,64 @@ class FdhaLogicTree(object):
     """
     Reader and end-branch enumerator for FDHA-style logic trees.
 
-    The XML schema is the oq-pfdha one (decision D5): an NRML 0.4
-    ``<logicTree>`` with one branch set per branching level, each carrying
-    one of the four model-slots or ``fdhaCalcRSigma``; ``<uncertaintyModel>``
-    is a bare model class name or an oq-engine style ``[ClassName]`` INI
-    block.  End branches are enumerated per source with the oq-pfdha
-    ``applyToSources`` / ``applyToBranches`` / ``applyToStyle`` semantics.
+    The XML schema is the oq-pfdha one (decision D5), modernised to put the
+    ``<logicTreeBranchSet>`` elements directly under ``<logicTree>``: the
+    legacy ``<logicTreeBranchingLevel>`` wrapper is obsolete for FDHA and is
+    rejected (it is still supported for regular GSIM/source-model trees).
+    Each branch set carries one of the four model slots or
+    ``fdhaCalcRSigma``; ``<uncertaintyModel>`` is a bare model class name or
+    an oq-engine style ``[ClassName]`` INI block.  End branches are
+    enumerated per source with the oq-pfdha ``applyToSources`` /
+    ``applyToBranches`` / ``applyToStyle`` semantics.
     """
 
     def __init__(self, fname):
         self.filename = fname
         self._ltnode = nrml.read(fname).logicTree
-        self.levels = self._parse()
+        self.branchsets = self._parse()
 
     def _parse(self):
-        levels = []
-        for blnode in self._ltnode:
-            bsets = []
-            for branchset in bsnodes(self.filename, blnode):
-                utype = branchset['uncertaintyType']
-                if utype not in FDHA_UNCERTAINTY_TYPES:
-                    raise InvalidLogicTree(
-                        '%s: unknown FDHA uncertaintyType %r; expected one '
-                        'of %s' % (self.filename, utype,
-                                   sorted(FDHA_UNCERTAINTY_TYPES)))
-                branches = []
-                for branch in branchset:
-                    with context(self.filename, branch):
-                        try:
-                            model = branch.uncertaintyModel
-                            weight = branch.uncertaintyWeight
-                        except AttributeError:
-                            raise InvalidLogicTree(
-                                '%s: branch %r is missing uncertaintyModel/'
-                                'uncertaintyWeight'
-                                % (self.filename, branch.get('branchID')))
-                        branches.append((branch.get('branchID', ''),
-                                         model.text or '', weight.text or ''))
-                bset = _FdhaBranchSet(
-                    branch_set_id=branchset.get('branchSetID', ''),
-                    uncertainty_type=utype,
-                    apply_to_sources=branchset.get('applyToSources'),
-                    apply_to_branches=branchset.get('applyToBranches'),
-                    apply_to_style=branchset.get('applyToStyle'),
-                    branches=tuple(branches))
-                self._check_weights(bset)
-                bsets.append(bset)
-            levels.append(tuple(bsets))
-        return levels
+        branchsets = []
+        for branchset in self._ltnode:
+            tag = branchset.tag
+            if tag.endswith('logicTreeBranchingLevel'):
+                raise InvalidLogicTree(
+                    '%s: <logicTreeBranchingLevel> is obsolete for FDHA '
+                    'logic trees; put <logicTreeBranchSet> directly under '
+                    '<logicTree>' % self.filename)
+            if not tag.endswith('logicTreeBranchSet'):
+                raise InvalidLogicTree(
+                    '%s: unexpected <%s> under <logicTree>'
+                    % (self.filename, tag))
+            utype = branchset['uncertaintyType']
+            if utype not in FDHA_UNCERTAINTY_TYPES:
+                raise InvalidLogicTree(
+                    '%s: unknown FDHA uncertaintyType %r; expected one '
+                    'of %s' % (self.filename, utype,
+                               sorted(FDHA_UNCERTAINTY_TYPES)))
+            branches = []
+            for branch in branchset:
+                with context(self.filename, branch):
+                    try:
+                        model = branch.uncertaintyModel
+                        weight = branch.uncertaintyWeight
+                    except AttributeError:
+                        raise InvalidLogicTree(
+                            '%s: branch %r is missing uncertaintyModel/'
+                            'uncertaintyWeight'
+                            % (self.filename, branch.get('branchID')))
+                    branches.append((branch.get('branchID', ''),
+                                     model.text or '', weight.text or ''))
+            bset = _FdhaBranchSet(
+                branch_set_id=branchset.get('branchSetID', ''),
+                uncertainty_type=utype,
+                apply_to_sources=branchset.get('applyToSources'),
+                apply_to_branches=branchset.get('applyToBranches'),
+                apply_to_style=branchset.get('applyToStyle'),
+                branches=tuple(branches))
+            self._check_weights(bset)
+            branchsets.append(bset)
+        return branchsets
 
     def _check_weights(self, bs):
         total = 0.0
@@ -953,37 +965,36 @@ class FdhaLogicTree(object):
         end_branches = []
         for source_id, style in sources:
             partials = [({}, set(), 1.0)]
-            for level in self.levels:
-                for bs in level:
-                    nxt = []
-                    for selections, chosen_ids, weight in partials:
-                        if not _fdha_branchset_applies(
-                                bs, source_id, style, chosen_ids):
-                            nxt.append((selections, chosen_ids, weight))
-                            continue
-                        slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                        calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                        for bid, model, raw_weight in bs.branches:
-                            try:
-                                w = float(raw_weight)
-                            except (TypeError, ValueError):
-                                w = float('nan')
-                            if calc_slot is not None:
-                                choice = FdhaModelChoice(
-                                    R_SIGMA_KM_KEY,
-                                    {R_SIGMA_KM_KEY: parse_fdha_r_sigma(model)},
-                                    bid, w)
-                                key = calc_slot
-                            else:
-                                class_name, params = parse_fdha_model(model)
-                                choice = FdhaModelChoice(
-                                    class_name, params, bid, w)
-                                key = slot
-                            new_sel = dict(selections)
-                            new_sel[key] = choice
-                            nxt.append(
-                                (new_sel, chosen_ids | {bid}, weight * w))
-                    partials = nxt
+            for bs in self.branchsets:
+                nxt = []
+                for selections, chosen_ids, weight in partials:
+                    if not _fdha_branchset_applies(
+                            bs, source_id, style, chosen_ids):
+                        nxt.append((selections, chosen_ids, weight))
+                        continue
+                    slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
+                    calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
+                    for bid, model, raw_weight in bs.branches:
+                        try:
+                            w = float(raw_weight)
+                        except (TypeError, ValueError):
+                            w = float('nan')
+                        if calc_slot is not None:
+                            choice = FdhaModelChoice(
+                                R_SIGMA_KM_KEY,
+                                {R_SIGMA_KM_KEY: parse_fdha_r_sigma(model)},
+                                bid, w)
+                            key = calc_slot
+                        else:
+                            class_name, params = parse_fdha_model(model)
+                            choice = FdhaModelChoice(
+                                class_name, params, bid, w)
+                            key = slot
+                        new_sel = dict(selections)
+                        new_sel[key] = choice
+                        nxt.append(
+                            (new_sel, chosen_ids | {bid}, weight * w))
+                partials = nxt
             for selections, _ids, weight in partials:
                 end_branches.append(FdhaEndBranch(
                     source_id, style, weight, selections))
