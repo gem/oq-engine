@@ -29,11 +29,16 @@ it is source-oriented (``applyToSources`` / ``applyToBranches`` /
 :mod:`openquake.hazardlib.gsim_lt`; the ``<uncertaintyModel>`` values are
 parsed by :data:`openquake.hazardlib.lt.parse_uncertainty`.
 """
+import ast
+import json
 from dataclasses import dataclass
+
+import numpy
 
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
-from openquake.hazardlib.gsim_lt import InvalidLogicTree
+from openquake.hazardlib.gsim_lt import fix_bytes, InvalidLogicTree
+from openquake.hazardlib.logictree import branch_dt
 
 
 FDHA_SLOTS_BY_UTYPE = {
@@ -218,6 +223,53 @@ class PFDLogicTree(object):
                 realizations.append(PFDBranch(
                     source_id, style, weight, selections))
         return realizations
+
+    def __toh5__(self):
+        """
+        Serialize the branch sets and branches with the engine's
+        ``branch_dt`` layout, the same used by
+        :class:`openquake.hazardlib.logictree.SourceModelLogicTree`.
+        """
+        tbl = []
+        for bs in self.branchsets:
+            for bid, value, weight in bs.branches:
+                tbl.append((bs.branch_set_id, bid, bs.uncertainty_type,
+                            repr(value), float(weight)))
+        attrs = dict(
+            filename=self.filename,
+            bsetdict=json.dumps({
+                bs.branch_set_id: dict(
+                    uncertaintyType=bs.uncertainty_type,
+                    applyToSources=bs.apply_to_sources,
+                    applyToBranches=bs.apply_to_branches,
+                    applyToStyle=bs.apply_to_style)
+                for bs in self.branchsets}))
+        return numpy.array(tbl, branch_dt), attrs
+
+    def __fromh5__(self, array, attrs):
+        """
+        Restore a PFD logic tree serialized by :meth:`__toh5__`.
+        """
+        self.filename = attrs['filename']
+        self.bsetdict = json.loads(attrs['bsetdict'])
+        acc = {}
+        for rec in array:
+            rec = fix_bytes(rec)
+            acc.setdefault(rec['branchset'], []).append(rec)
+        branchsets = []
+        for bsid, rows in acc.items():
+            dic = self.bsetdict[bsid]
+            branchsets.append(_FdhaBranchSet(
+                branch_set_id=bsid,
+                uncertainty_type=rows[0]['utype'],
+                apply_to_sources=dic.get('applyToSources'),
+                apply_to_branches=dic.get('applyToBranches'),
+                apply_to_style=dic.get('applyToStyle'),
+                branches=tuple(
+                    (row['branch'], ast.literal_eval(row['uvalue']),
+                     str(row['weight']))
+                    for row in rows)))
+        self.branchsets = branchsets
 
     def check_r_sigma_conflict(self, r_sigma_km, realizations):
         """

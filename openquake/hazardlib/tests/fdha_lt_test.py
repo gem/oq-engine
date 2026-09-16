@@ -224,3 +224,29 @@ def test_check_r_sigma_conflict(tmp_path):
     branches2 = lt2.enumerate([("src1", "normal")])
     with pytest.raises(InvalidLogicTree, match="both"):
         lt2.check_r_sigma_conflict(1.0, branches2)
+
+def test_h5_roundtrip(tmp_path):
+    """__toh5__/__fromh5__ preserve branches, filters and calc parameters."""
+    path = write(
+        tmp_path,
+        branchset("bs1", "fdhaPrimarySRModel", [
+            ("B1", toml_block("Youngs2003PrimarySR", style="all"), 1.0)],
+            applyToSources="src1", applyToStyle="reverse"),
+        branchset("bs2", "fdhaPrimaryFDModel", [
+            ("B2", toml_block("Youngs2003PrimaryFD", style="normal",
+                              norm_disp_type="AD"), 1.0)],
+            applyToBranches="B1"),
+        branchset("bs_sigma", "fdhaCalcRSigma", [
+            ("SIG0", "0", 0.4), ("SIG2", "2", 0.6)]))
+    lt = PFDLogicTree(path)
+    array, attrs = lt.__toh5__()
+    lt2 = object.__new__(PFDLogicTree)
+    lt2.__fromh5__(array, attrs)
+    for source in [("src1", "reverse"), ("src1", "normal"),
+                   ("src2", "reverse")]:
+        r1 = lt.enumerate([source])
+        r2 = lt2.enumerate([source])
+        assert [(r.source_id, r.style, r.weight, r.slots, r.selections)
+                for r in r1] == \
+               [(r.source_id, r.style, r.weight, r.slots, r.selections)
+                for r in r2]
