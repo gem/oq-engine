@@ -166,7 +166,7 @@ class Banimahd2026Turkiye(GMPE):
             Output array for intra-event stddev, shape (M, N).
         """
         # Number of sites
-        N = mean.shape[1]
+        N = len(ctx)
 
         # Extract scalar values from ctx
         mag = np.atleast_1d(ctx.mag).astype(float)[0]
