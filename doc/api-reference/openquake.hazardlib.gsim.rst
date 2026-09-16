@@ -1563,3 +1563,5 @@ banimahd_turkiye_2026
     :members:
     :undoc-members:
     :show-inheritance:
+
+.. _banimahd_turkiye_2026_reference:
