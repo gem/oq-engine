@@ -41,20 +41,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 # ---------------------------------------------------------------------
 # Choose a suitable IM component, robust across OQ versions
 # ---------------------------------------------------------------------
-_IMC_CANDIDATES = [
-    "GMEAN",
-    "GEOMETRIC_MEAN",
-    "AVERAGE_HORIZONTAL",
-    "HORIZONTAL",
-    "RANDOM_HORIZONTAL",
-]
-
-for _name in _IMC_CANDIDATES:
-    if hasattr(const.IMC, _name):
-        _IMC_GMEAN = getattr(const.IMC, _name)
-        break
-else:
-    _IMC_GMEAN = list(const.IMT)[0]
+_IMC_GMEAN = const.IMC.GEOMETRIC_MEAN
 
 # ---------------------------------------------------------------------
 # Paths
