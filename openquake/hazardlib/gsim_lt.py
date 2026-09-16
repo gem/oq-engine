@@ -819,7 +819,7 @@ class FdhaLogicTree(object):
     rejected (it is still supported for regular GSIM/source-model trees).
     Each branch set carries one of the four model slots or
     ``fdhaCalcRSigma``; ``<uncertaintyModel>`` is a bare model class name or
-    an oq-engine style ``[ClassName]`` INI block.  End branches are
+    an oq-engine style ``[ClassName]`` TOML block.  End branches are
     enumerated per source with the oq-pfdha ``applyToSources`` /
     ``applyToBranches`` / ``applyToStyle`` semantics.
     """

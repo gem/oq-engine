@@ -253,7 +253,7 @@ _FDHA_MODEL_UTYPES = (
 def fdha_model(utype, node, filename):
     """
     Parse an FDHA ``<uncertaintyModel>``: a bare model class name or an
-    oq-engine style ``[ClassName]`` INI block of constructor parameters.
+    oq-engine style ``[ClassName]`` TOML block of constructor parameters.
 
     :returns: ``(class_name, params)``
     """
@@ -261,7 +261,7 @@ def fdha_model(utype, node, filename):
     if not raw:
         raise LogicTreeError(node, filename, 'empty uncertaintyModel')
     if raw.startswith('[') and ']' in raw.splitlines()[0]:
-        return _parse_fdha_ini_block(node, filename)
+        return _parse_fdha_toml_block(node, filename)
     if '\n' in raw:
         # tolerate wrapped text; a bare name is a single token
         raw = ''.join(line.strip() for line in raw.splitlines()
@@ -269,20 +269,20 @@ def fdha_model(utype, node, filename):
     return raw, {}
 
 
-def _parse_fdha_ini_block(node, filename):
+def _parse_fdha_toml_block(node, filename):
     # NRML indents the block to the XML nesting depth, so strip every line
     # before handing it to configparser (values are single-line).
     lines = [ln.strip() for ln in (node.text or "").splitlines()
              if ln.strip()]
     if not lines:
-        raise LogicTreeError(node, filename, 'empty INI block')
+        raise LogicTreeError(node, filename, 'empty TOML block')
     header = lines[0]
     if not (header.startswith('[') and header.endswith(']')):
         raise LogicTreeError(
-            node, filename, 'INI block must start with [ClassName]')
+            node, filename, 'TOML block must start with [ClassName]')
     class_name = header[1:-1].strip()
     if not class_name:
-        raise LogicTreeError(node, filename, 'empty class name in INI header')
+        raise LogicTreeError(node, filename, 'empty class name in TOML header')
     cp = configparser.RawConfigParser()
     cp.optionxform = str
     cp.read_string('\n'.join(lines))

@@ -35,7 +35,7 @@ def parse_sigma(text):
         "fdhaCalcRSigma", Node("uncertaintyModel", text=text), "lt.xml")
 
 
-def ini(cls, **params):
+def toml_block(cls, **params):
     body = "\n".join(f"            {k} = {v}" for k, v in params.items())
     return f"\n            [{cls}]\n{body}\n          "
 
@@ -69,16 +69,16 @@ def full_chain():
     """The minimal four-slot chain (one branch each)."""
     return (
         branchset("bs1", "fdhaPrimarySRModel", [
-            ("B1", ini("Youngs2003PrimarySR", style="all"), 1.0)]),
+            ("B1", toml_block("Youngs2003PrimarySR", style="all"), 1.0)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
-            ("B2", ini("Youngs2003PrimaryFD", style="normal",
+            ("B2", toml_block("Youngs2003PrimaryFD", style="normal",
                        norm_disp_type="AD"), 1.0)],
             applyToBranches="B1"),
         branchset("bs3", "fdhaSecondarySRModel", [
-            ("B3", ini("Youngs2003SecondarySR", version=3, style="all"),
+            ("B3", toml_block("Youngs2003SecondarySR", version=3, style="all"),
              1.0)], applyToBranches="B2"),
         branchset("bs4", "fdhaSecondaryFDModel", [
-            ("B4", ini("Youngs2003SecondaryFD", style="normal"), 1.0)],
+            ("B4", toml_block("Youngs2003SecondaryFD", style="normal"), 1.0)],
             applyToBranches="B3"),
     )
 
@@ -91,8 +91,8 @@ def test_parse_plain_class_name():
         "Youngs2003PrimarySR", {})
 
 
-def test_parse_ini_block_types():
-    cls, params = parse_model(ini(
+def test_parse_toml_block_types():
+    cls, params = parse_model(toml_block(
         "Moss2024PrimaryFD", version="MD", completeness="all",
         pixel_size=50, fractions=[0.1, 0.9]))
     assert cls == "Moss2024PrimaryFD"
@@ -100,8 +100,8 @@ def test_parse_ini_block_types():
                       "pixel_size": 50, "fractions": [0.1, 0.9]}
 
 
-def test_parse_ini_block_numeric_version_stays_int():
-    _cls, params = parse_model(ini("X", version=3))
+def test_parse_toml_block_numeric_version_stays_int():
+    _cls, params = parse_model(toml_block("X", version=3))
     assert params["version"] == 3 and isinstance(params["version"], int)
 
 
