@@ -21,7 +21,7 @@ import pytest
 
 from openquake.baselib.node import Node
 from openquake.hazardlib import lt
-from openquake.hazardlib.gsim_lt import PFDLogicTree, InvalidLogicTree
+from openquake.hazardlib.pfd_lt import PFDLogicTree, InvalidLogicTree
 from openquake.hazardlib.lt import LogicTreeError
 
 
