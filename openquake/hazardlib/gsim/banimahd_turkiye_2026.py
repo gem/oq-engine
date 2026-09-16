@@ -194,8 +194,8 @@ class Banimahd2026Turkiye(GMPE):
 
         # Fill mean/sig/tau/phi for each requested IMT
         for m, imt in enumerate(imts):
-            imt_str = str(imt)
-
+            imt_str = imt.string
+         
             if imt_str == "PGA":
                 out_idx = 0
                 key = "ln(PGA)"
