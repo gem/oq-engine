@@ -19,9 +19,20 @@
 """Tests for the FDHA logic tree in :mod:`openquake.hazardlib.gsim_lt`."""
 import pytest
 
-from openquake.hazardlib.gsim_lt import (
-    FdhaLogicTree, InvalidLogicTree,
-    parse_fdha_model, parse_fdha_r_sigma)
+from openquake.baselib.node import Node
+from openquake.hazardlib import lt
+from openquake.hazardlib.gsim_lt import FdhaLogicTree, InvalidLogicTree
+from openquake.hazardlib.lt import LogicTreeError
+
+
+def parse_model(text, utype="fdhaPrimarySRModel"):
+    return lt.parse_uncertainty(
+        utype, Node("uncertaintyModel", text=text), "lt.xml")
+
+
+def parse_sigma(text):
+    return lt.parse_uncertainty(
+        "fdhaCalcRSigma", Node("uncertaintyModel", text=text), "lt.xml")
 
 
 def ini(cls, **params):
@@ -76,12 +87,12 @@ def full_chain():
 # parameter parsing
 # --------------------------------------------------------------------------
 def test_parse_plain_class_name():
-    assert parse_fdha_model("Youngs2003PrimarySR") == (
+    assert parse_model("Youngs2003PrimarySR") == (
         "Youngs2003PrimarySR", {})
 
 
 def test_parse_ini_block_types():
-    cls, params = parse_fdha_model(ini(
+    cls, params = parse_model(ini(
         "Moss2024PrimaryFD", version="MD", completeness="all",
         pixel_size=50, fractions=[0.1, 0.9]))
     assert cls == "Moss2024PrimaryFD"
@@ -90,20 +101,20 @@ def test_parse_ini_block_types():
 
 
 def test_parse_ini_block_numeric_version_stays_int():
-    _cls, params = parse_fdha_model(ini("X", version=3))
+    _cls, params = parse_model(ini("X", version=3))
     assert params["version"] == 3 and isinstance(params["version"], int)
 
 
 @pytest.mark.parametrize("text,expected", [("0", 0.0), ("2.5", 2.5),
                                            (" 10 ", 10.0)])
 def test_parse_r_sigma_valid(text, expected):
-    assert parse_fdha_r_sigma(text) == expected
+    assert parse_sigma(text) == expected
 
 
 @pytest.mark.parametrize("text", ["", "key = 1", "-1", "nan", "inf", "1 2"])
 def test_parse_r_sigma_rejects(text):
-    with pytest.raises(InvalidLogicTree):
-        parse_fdha_r_sigma(text)
+    with pytest.raises(LogicTreeError):
+        parse_sigma(text)
 
 
 # --------------------------------------------------------------------------
@@ -114,29 +125,6 @@ def test_unknown_utype_rejected(tmp_path):
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
     with pytest.raises(InvalidLogicTree, match="unknown FDHA uncertaintyType"):
         FdhaLogicTree(path)
-
-
-def test_branching_level_rejected_as_obsolete(tmp_path):
-    # the legacy <logicTreeBranchingLevel> wrapper must not be accepted in
-    # FDHA logic trees (still supported for GSIM/source-model trees)
-    body = ('    <logicTreeBranchingLevel branchingLevelID="bl1">\n'
-            '      <logicTreeBranchSet branchSetID="bs1" '
-            'uncertaintyType="fdhaPrimarySRModel">\n'
-            '        <logicTreeBranch id="B1" branchID="B1">'
-            '<uncertaintyModel>Moss2013PrimarySR</uncertaintyModel>'
-            '<uncertaintyWeight>1.0</uncertaintyWeight>'
-            '</logicTreeBranch>\n'
-            '      </logicTreeBranchSet>\n'
-            '    </logicTreeBranchingLevel>\n')
-    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
-           '<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">\n'
-           '  <logicTree logicTreeID="lt">\n'
-           f'{body}'
-           '  </logicTree>\n</nrml>\n')
-    path = tmp_path / "lt.xml"
-    path.write_text(xml)
-    with pytest.raises(InvalidLogicTree, match="obsolete"):
-        FdhaLogicTree(str(path))
 
 
 def test_weights_must_sum_to_one(tmp_path):

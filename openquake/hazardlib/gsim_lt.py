@@ -20,13 +20,11 @@ import os
 import ast
 import copy
 import json
-import math
 import shutil
 import logging
 import operator
 import tempfile
 import itertools
-import configparser
 from dataclasses import dataclass
 from collections import defaultdict
 import toml
@@ -789,74 +787,6 @@ class FdhaEndBranch:
         return tuple(sorted(self.selections))
 
 
-def parse_fdha_model(text):
-    """
-    Parse the text of an FDHA ``<uncertaintyModel>`` element.
-
-    :returns: ``(class_name, params)``; ``params`` is empty for a bare class
-        name and the parsed ``[ClassName]`` INI block otherwise.
-    """
-    raw = (text or "").strip()
-    if not raw:
-        raise InvalidLogicTree("Empty uncertaintyModel")
-    if raw.startswith("[") and "]" in raw.splitlines()[0]:
-        return _parse_fdha_ini_block(raw)
-    if "\n" in raw:
-        # tolerate wrapped text; a bare name is a single token
-        raw = "".join(line.strip() for line in raw.splitlines() if line.strip())
-    return raw, {}
-
-
-def _parse_fdha_ini_block(raw):
-    # NRML indents the block to the XML nesting depth, so strip every line
-    # before handing it to configparser (values are single-line).
-    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-    header = lines[0]
-    if not (header.startswith("[") and header.endswith("]")):
-        raise InvalidLogicTree("INI block must start with [ClassName]")
-    class_name = header[1:-1].strip()
-    if not class_name:
-        raise InvalidLogicTree("Empty class name in INI header")
-    cp = configparser.RawConfigParser()
-    cp.optionxform = str
-    cp.read_string("\n".join(lines))
-    params = {}
-    if cp.has_section(class_name):
-        for k, v in cp.items(class_name):
-            params[k] = _parse_fdha_value(v)
-    return class_name, params
-
-
-def _parse_fdha_value(value):
-    s = value.strip()
-    if s == "":
-        return ""
-    try:
-        return ast.literal_eval(s)
-    except Exception:
-        return s
-
-
-def parse_fdha_r_sigma(text):
-    """
-    Parse an ``fdhaCalcRSigma`` ``<uncertaintyModel>``: the two-sided
-    mapping-accuracy sigma ``r_sigma_km`` -- a finite float ``>= 0`` (zero
-    selects the boxcar ``W_p`` path).
-    """
-    raw = (text or "").strip()
-    try:
-        value = float(raw)
-    except (TypeError, ValueError):
-        raise InvalidLogicTree(
-            "fdhaCalcRSigma: expected a single non-negative float (km) in "
-            "<uncertaintyModel>, got %r" % raw)
-    if not math.isfinite(value) or value < 0.0:
-        raise InvalidLogicTree(
-            "fdhaCalcRSigma value must be a non-negative finite float (km); "
-            "got %r" % raw)
-    return value
-
-
 @dataclass
 class _FdhaBranchSet:
     branch_set_id: str
@@ -929,8 +859,9 @@ class FdhaLogicTree(object):
                             '%s: branch %r is missing uncertaintyModel/'
                             'uncertaintyWeight'
                             % (self.filename, branch.get('branchID')))
-                    branches.append((branch.get('branchID', ''),
-                                     model.text or '', weight.text or ''))
+                    value = lt.parse_uncertainty(utype, model, self.filename)
+                branches.append((branch.get('branchID', ''), value,
+                                 weight.text or ''))
             bset = _FdhaBranchSet(
                 branch_set_id=branchset.get('branchSetID', ''),
                 uncertainty_type=utype,
@@ -974,7 +905,7 @@ class FdhaLogicTree(object):
                         continue
                     slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
                     calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                    for bid, model, raw_weight in bs.branches:
+                    for bid, value, raw_weight in bs.branches:
                         try:
                             w = float(raw_weight)
                         except (TypeError, ValueError):
@@ -982,11 +913,10 @@ class FdhaLogicTree(object):
                         if calc_slot is not None:
                             choice = FdhaModelChoice(
                                 R_SIGMA_KM_KEY,
-                                {R_SIGMA_KM_KEY: parse_fdha_r_sigma(model)},
-                                bid, w)
+                                {R_SIGMA_KM_KEY: value}, bid, w)
                             key = calc_slot
                         else:
-                            class_name, params = parse_fdha_model(model)
+                            class_name, params = value
                             choice = FdhaModelChoice(
                                 class_name, params, bid, w)
                             key = slot
