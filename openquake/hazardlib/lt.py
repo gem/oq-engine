@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import copy
+import math
 import pickle
 import operator
 import itertools
+import configparser
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183
@@ -238,6 +241,87 @@ def recur_row(utype, node, filename):
 @parse_uncertainty.add('rateSplit')
 def rate_split(utype, node, filename):
     return node.row.attrib
+
+
+# FDHA logic tree: the four model slots and the r_sigma calculation parameter.
+_FDHA_MODEL_UTYPES = (
+    'fdhaPrimarySRModel', 'fdhaPrimaryFDModel',
+    'fdhaSecondarySRModel', 'fdhaSecondaryFDModel')
+
+
+@parse_uncertainty.add(*_FDHA_MODEL_UTYPES)
+def fdha_model(utype, node, filename):
+    """
+    Parse an FDHA ``<uncertaintyModel>``: a bare model class name or an
+    oq-engine style ``[ClassName]`` INI block of constructor parameters.
+
+    :returns: ``(class_name, params)``
+    """
+    raw = (node.text or "").strip()
+    if not raw:
+        raise LogicTreeError(node, filename, 'empty uncertaintyModel')
+    if raw.startswith('[') and ']' in raw.splitlines()[0]:
+        return _parse_fdha_ini_block(node, filename)
+    if '\n' in raw:
+        # tolerate wrapped text; a bare name is a single token
+        raw = ''.join(line.strip() for line in raw.splitlines()
+                      if line.strip())
+    return raw, {}
+
+
+def _parse_fdha_ini_block(node, filename):
+    # NRML indents the block to the XML nesting depth, so strip every line
+    # before handing it to configparser (values are single-line).
+    lines = [ln.strip() for ln in (node.text or "").splitlines()
+             if ln.strip()]
+    if not lines:
+        raise LogicTreeError(node, filename, 'empty INI block')
+    header = lines[0]
+    if not (header.startswith('[') and header.endswith(']')):
+        raise LogicTreeError(
+            node, filename, 'INI block must start with [ClassName]')
+    class_name = header[1:-1].strip()
+    if not class_name:
+        raise LogicTreeError(node, filename, 'empty class name in INI header')
+    cp = configparser.RawConfigParser()
+    cp.optionxform = str
+    cp.read_string('\n'.join(lines))
+    params = {}
+    if cp.has_section(class_name):
+        for k, v in cp.items(class_name):
+            params[k] = _parse_fdha_value(v)
+    return class_name, params
+
+
+def _parse_fdha_value(value):
+    s = value.strip()
+    if s == '':
+        return ''
+    try:
+        return ast.literal_eval(s)
+    except Exception:
+        return s
+
+
+@parse_uncertainty.add('fdhaCalcRSigma')
+def fdha_r_sigma(utype, node, filename):
+    """
+    Parse an ``fdhaCalcRSigma`` ``<uncertaintyModel>``: the two-sided
+    mapping-accuracy sigma ``r_sigma_km`` -- a finite float ``>= 0`` (zero
+    selects the boxcar ``W_p`` path).
+    """
+    raw = (node.text or "").strip()
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        raise LogicTreeError(
+            node, filename,
+            'expected a single non-negative float (km), got %r' % raw)
+    if not math.isfinite(value) or value < 0.0:
+        raise LogicTreeError(
+            node, filename,
+            'value must be a non-negative finite float (km), got %r' % raw)
+    return value
 
 
 # validations
