@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests for the FDHA logic tree in :mod:`openquake.hazardlib.gsim_lt`."""
+"""Tests for the PFD logic tree in :mod:`openquake.hazardlib.pfd_lt`."""
+import collections
+
 import pytest
 
 from openquake.baselib.node import Node
@@ -275,3 +277,58 @@ def test_branching_level_accepted(tmp_path):
     r2 = wrapped.enumerate([("src1", "reverse")])
     assert [(r.weight, r.selections, r.slots) for r in r1] == \
            [(r.weight, r.selections, r.slots) for r in r2]
+
+
+def test_sampling_counts_and_weights(tmp_path):
+    path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
+        ("B1a", "MossRoss2011PrimarySR", 0.7),
+        ("B1b", "Takao2013PrimarySR", 0.3)]))
+    n = 2000
+    branches = PFDLogicTree(
+        path, seed=42, num_samples=n).enumerate([("src1", "normal")])
+    assert len(branches) == n
+    assert all(abs(b.weight - 1.0 / n) < 1e-12 for b in branches)
+    counts = collections.Counter(
+        b.selections["primary_surf_rup"].branch_id for b in branches)
+    assert set(counts) == {"B1a", "B1b"}
+    assert 0.6 < counts["B1a"] / n < 0.8  # weight 0.7
+
+
+def test_sampling_deterministic(tmp_path):
+    path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
+        ("B1a", "MossRoss2011PrimarySR", 0.7),
+        ("B1b", "Takao2013PrimarySR", 0.3)]))
+    a = PFDLogicTree(path, seed=7, num_samples=50).enumerate([("s", "normal")])
+    b = PFDLogicTree(path, seed=7, num_samples=50).enumerate([("s", "normal")])
+    c = PFDLogicTree(path, seed=8, num_samples=50).enumerate([("s", "normal")])
+    assert [r.selections for r in a] == [r.selections for r in b]
+    assert [r.selections for r in a] != [r.selections for r in c]
+
+
+def test_sampling_respects_apply_to_branches(tmp_path):
+    path = write(
+        tmp_path,
+        branchset("bs1", "fdhaPrimarySRModel", [
+            ("B1a", "MossRoss2011PrimarySR", 0.5),
+            ("B1b", "Takao2013PrimarySR", 0.5)]),
+        branchset("bs2", "fdhaPrimaryFDModel", [
+            ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
+    for r in PFDLogicTree(path, seed=1, num_samples=50).enumerate(
+            [("src1", "normal")]):
+        sr = r.selections["primary_surf_rup"].branch_id
+        assert ("primary_surf_displ" in r.selections) == (sr == "B1a")
+
+
+def test_sampling_h5_roundtrip(tmp_path):
+    path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
+        ("B1a", "MossRoss2011PrimarySR", 0.7),
+        ("B1b", "Takao2013PrimarySR", 0.3)]))
+    lt1 = PFDLogicTree(path, seed=5, num_samples=20,
+                       sampling_method='late_weights')
+    array, attrs = lt1.__toh5__()
+    lt2 = object.__new__(PFDLogicTree)
+    lt2.__fromh5__(array, attrs)
+    assert (lt2.seed, lt2.num_samples, lt2.sampling_method) == (
+        5, 20, 'late_weights')
+    assert [r.selections for r in lt1.enumerate([("s", "normal")])] == \
+           [r.selections for r in lt2.enumerate([("s", "normal")])]

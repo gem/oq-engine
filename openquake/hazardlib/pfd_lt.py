@@ -117,8 +117,12 @@ class PFDLogicTree(object):
     / ``applyToBranches`` / ``applyToStyle`` semantics.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, seed=0, num_samples=0,
+                 sampling_method='early_weights'):
         self.filename = fname
+        self.seed = seed
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
         self._ltnode = nrml.read(fname).logicTree
         self.branchsets = self._parse()
 
@@ -168,10 +172,69 @@ class PFDLogicTree(object):
 
     def enumerate(self, sources):
         """
+        Enumerate the PFD realizations for the given sources.
+
         :param sources: iterable of ``(source_id, style)`` pairs, style one
             of 'normal' / 'reverse' / 'strike-slip' (used by applyToStyle)
-        :returns: one :class:`PFDBranch` per (source, branch combination)
+        :returns: one :class:`PFDBranch` per (source, realization).  With
+            ``num_samples`` the realizations are Monte-Carlo sampled, else
+            all the branch combinations are enumerated with their product
+            weight.
         """
+        sources = list(sources)
+        if self.num_samples:
+            return self._sample(sources)
+        return self._enumerate(sources)
+
+    def _sample(self, sources):
+        # Monte-Carlo sampling, one realization per draw.  The branch sets
+        # are walked in document order so applyToBranches filtering sees the
+        # branch IDs chosen for the same draw.  Following the engine
+        # convention, early_* weights are homogeneous (1/num_samples) and
+        # late_* weights are the product of the sampled branch weights.
+        realizations = []
+        n_bsets = len(self.branchsets)
+        for i, (source_id, style) in enumerate(sources):
+            probs = lt.random((self.num_samples, n_bsets), self.seed + i,
+                              self.sampling_method)
+            for s in range(self.num_samples):
+                selections = {}
+                chosen_ids = set()
+                late_weight = 1.0
+                for b, bs in enumerate(self.branchsets):
+                    if not _fdha_branchset_applies(
+                            bs, source_id, style, chosen_ids):
+                        continue
+                    br = self._sample_branch(bs, float(probs[s, b]))
+                    key = (CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
+                           or FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type))
+                    if key == CALC_R_SIGMA_SLOT:
+                        choice = FdhaModelChoice(
+                            R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: br.value},
+                            br.branch_id, br.weight)
+                    else:
+                        class_name, params = br.value
+                        choice = FdhaModelChoice(
+                            class_name, params, br.branch_id, br.weight)
+                    selections[key] = choice
+                    chosen_ids.add(br.branch_id)
+                    late_weight *= br.weight
+                if self.sampling_method.startswith('early'):
+                    weight = 1.0 / self.num_samples
+                else:
+                    weight = late_weight
+                realizations.append(PFDBranch(
+                    source_id, style, weight, selections))
+        return realizations
+
+    def _sample_branch(self, bs, probability):
+        # reuse lt.sample on lt.Branch objects (it reads .weight)
+        branches = [lt.Branch(bid, value, float(w))
+                    for bid, value, w in bs.branches]
+        [branch] = lt.sample(branches, [probability], self.sampling_method)
+        return branch
+
+    def _enumerate(self, sources):
         realizations = []
         for source_id, style in sources:
             partials = [({}, set(), 1.0)]
@@ -227,6 +290,9 @@ class PFDLogicTree(object):
                     for bid, value, weight in bs.branches]
         array, attrs = branches_to_h5(branches, bsetdict)
         attrs['filename'] = self.filename
+        attrs['seed'] = self.seed
+        attrs['num_samples'] = self.num_samples
+        attrs['sampling_method'] = self.sampling_method
         return array, attrs
 
     def __fromh5__(self, array, attrs):
@@ -234,6 +300,9 @@ class PFDLogicTree(object):
         Restore a PFD logic tree serialized by :meth:`__toh5__`.
         """
         self.filename = attrs['filename']
+        self.seed = int(attrs['seed'])
+        self.num_samples = int(attrs['num_samples'])
+        self.sampling_method = str(attrs['sampling_method'])
         self.bsetdict = json.loads(attrs['bsetdict'])
         utypes, rows = h5_to_branches(array)
         branchsets = []
