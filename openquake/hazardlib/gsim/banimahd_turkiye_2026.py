@@ -174,19 +174,14 @@ class Banimahd2026Turkiye(GMPE):
         fd = ctx.hypo_depth.astype(float)
         rake = ctx.rake.astype(float)
 
-        # Build input arrays
-        Mw = np.full(N, mag, dtype=float)
-        RJB = rjb_arr
-        Vs30 = vs30_arr
-        FD = np.full(N, hypo_depth, dtype=float)
-
-        # Fault mechanism
-        if rake_val < -30.0:
-            FM = np.full(N, 1.0, dtype=float)
-        elif rake_val > 30.0:
-            FM = np.full(N, 2.0, dtype=float)
-        else:
-            FM = np.full(N, 3.0, dtype=float)
+        # Fault mechanism (vectorized)
+        # Normal: rake close to -90
+        # Reverse: rake close to +90
+        # Strike-slip: rake close to 0 or ±180
+        fm = np.ones(N, dtype=np.float32)
+        fm[(rake > -30.0) & (rake < 30.0)] = 3.0
+        fm[rake > 30.0] = 2.0
+        fm[(rake > 150.0) | (rake < -150.0)] = 3.0
 
         # Build input matrix (FD, FM, Mw, RJB, VS30)
         X = np.column_stack([FD, FM, Mw, RJB, Vs30]).astype(np.float32)
