@@ -176,12 +176,6 @@ class Banimahd2026Turkiye(GMPE):
         rjb_arr = np.atleast_1d(ctx.rjb).astype(float)
         vs30_arr = np.atleast_1d(ctx.vs30).astype(float)
 
-        # Broadcast to length N
-        if len(rjb_arr) != N:
-            rjb_arr = np.resize(rjb_arr, N)
-        if len(vs30_arr) != N:
-            vs30_arr = np.resize(vs30_arr, N)
-
         # Build input arrays
         Mw = np.full(N, mag, dtype=float)
         RJB = rjb_arr
