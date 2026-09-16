@@ -226,3 +226,4 @@ class Banimahd2026Turkiye(GMPE):
             sig[m, :]  = _PHI_TOTAL[key]     # TOTAL
             tau[m, :]  = _TAU_INTER[key]     # INTER-EVENT
             phi[m, :]  = _SIGMA_INTRA[key]   # INTRA-EVENT
+         
