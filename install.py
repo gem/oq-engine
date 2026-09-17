@@ -471,7 +471,7 @@ def before_checks(inst, args, usage):
         finally:
             sock.close()
         if errcode == 0:  # no error, the DbServer is up
-            inst.exit()
+            sys.exit(inst.exit())
 
     # check if there is an installation from packages
     if inst in (server, devel_server) and os.path.exists(
