@@ -167,8 +167,6 @@
           path: /etc/exports
           line: "{{ top_nfs }}  {{ ansible_facts['eth1']['ipv4']['network'] }}/{{ ansible_facts['eth1']['ipv4']['netmask'] }}{{ nfs_serv_opts }}"
 
-
-
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"
     register: mount_share_nfsv4
@@ -180,14 +178,26 @@
     #  state: mounted
     when: "'worker' in group_names"
 
-  - name: Run install script from github repo only on master node
+  - name: Clone github repo only on master node
     shell: |
       cd "{{ inst_nfs }}"
-      git clone -b {{ oq_version }} --depth=1 https://github.com/gem/oq-engine.git
+      git clone -b {{ oq_version }} --depth=1 --quiet https://github.com/gem/oq-engine.git
       cd oq-engine
       git log -1
-      python3.11 ./install.py devel_server
-    register: oq_install
+    when: "'master' in group_names"
+
+  - name: Run install script from github repo only on master node
+    block:
+      - name: Run install.py on master node
+        ansible.builtin.shell: |
+          cd "{{ inst_nfs }}"
+          cd oq-engine
+          python3.13 ./install.py devel_server
+        register: oq_install
+    rescue:
+      - name: Human Readable Output
+        ansible.builtin.debug:
+          msg: "{{ ansible_failed_result.stderr_lines }}"
     when: "'master' in group_names"
 
   handlers:
