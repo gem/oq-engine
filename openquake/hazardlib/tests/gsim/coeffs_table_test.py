@@ -16,11 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import math
 import unittest
 import toml
 import numpy as np
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.imt import SA
+from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+    AtkinsonBoore2006Modified2011)
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
+    CampbellBozorgnia2014)
 
 
 class TestGetCoefficient(unittest.TestCase):
@@ -85,3 +91,34 @@ a3 = 0.9
         expected_pof = np.array([0.1, 0.5, 1., 10.0,])
         np.testing.assert_array_equal(pof, expected_pof)
         np.testing.assert_array_equal(cff, expected)
+
+    def test_pga_fallback_below_min_sa(self):
+        """
+        SA periods below the smallest tabulated SA row interpolate
+        linearly in period between PGA (period 0) and the smallest SA
+        row.
+        --> AtkinsonBoore2006Modified2011 lowest SA period = 0.025 s
+        --> BooreAtkinson2008 lowest SA period = 0.01 s
+        --> CampbellBozorgnia2014 lowest SA period = 0.01 s
+        """
+        for cls, coeffs in [
+            (AtkinsonBoore2006Modified2011, 'COEFFS_BC'),
+            (BooreAtkinson2008, 'COEFFS'),
+            (CampbellBozorgnia2014, 'COEFFS')
+            ]:
+            table = getattr(cls(), coeffs)
+            t_min, t_next = sorted(imt.period for imt in table.sa_coeffs)[:2]
+            pga = np.array(list(table[PGA()]))
+            row_min = np.array(list(table[SA(t_min)]))
+            row_next = np.array(list(table[SA(t_next)]))
+
+            # Below-min SA: linear-in-period between PGA and SA(t_min)
+            t_lo = t_min / 2
+            np.testing.assert_allclose(
+                list(table[SA(t_lo)]), pga + (t_lo / t_min) * (row_min - pga))
+
+            # In-range SA: log-interp between adjacent SA rows, no PGA
+            t_in = math.sqrt(t_min * t_next)
+            ratio = math.log(t_in / t_min) / math.log(t_next / t_min)
+            np.testing.assert_allclose(
+                list(table[SA(t_in)]), row_min + ratio * (row_next - row_min))
