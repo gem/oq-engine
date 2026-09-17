@@ -16,3 +16,4 @@ class Banimahd2026TurkiyeTestCase(BaseGSIMTestCase):
             "BANIMAHD2026TURKIYE/BANIMAHD2026TURKIYE_STD_TOTAL.csv",
             max_discrep_percentage=0.1,
         )
+        
