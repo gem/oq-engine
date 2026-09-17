@@ -7,6 +7,40 @@ on:
   pull_request:
 
 jobs:
+  # Detects whether install.py changed, to gate the heavy server-installation
+  # tests below.  A gate job (instead of on.pull_request.paths) is used so the
+  # required check is always reported, even when the tests are skipped.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      install: ${{ steps.diff.outputs.install }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect changes to install.py
+        id: diff
+        run: |
+          if git diff --name-only \
+               "${{ github.event.pull_request.base.sha }}" HEAD \
+               | grep -qx install.py; then
+            echo "install=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "install=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  server_install:
+    # End-to-end server installation tests (reused from server_install.yaml);
+    # run them only when install.py changed.  Fork PRs are skipped because the
+    # head branch is not available in this repository.
+    needs: changes
+    if: >-
+      needs.changes.outputs.install == 'true' &&
+      !github.event.pull_request.head.repo.fork
+    uses: ./.github/workflows/server_install.yaml
+    with:
+      git-ref: ${{ github.head_ref }}
+
   calculators:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
