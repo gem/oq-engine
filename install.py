@@ -37,7 +37,6 @@ import sys
 import json
 import glob
 import shutil
-import socket
 import getpass
 import tempfile
 import argparse
@@ -108,16 +107,11 @@ class server:
     OQL = ["sudo", "-H", "-u", "openquake", OQ]
     OQDATA = "/opt/openquake/oqdata"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    DBPORT = 1907
     CONFIG = """[dbserver]
     host = localhost
-    port = %d
     file = %s
     [directory]
-    """ % (
-        DBPORT,
-        DBPATH,
-    )
+    """ % DBPATH
     USER = "openquake"
 
     @classmethod
@@ -126,15 +120,6 @@ class server:
                             f'python{PYVER[0]}.{PYVER[1]}',
                             'site-packages', 'openquake',
                             'server', 'manage.py')
-
-    @classmethod
-    def exit(cls):
-        return f"""There is a DbServer running on port {cls.DBPORT} from a
-previous installation.
-On linux please stop the server with the command
-`sudo systemctl stop openquake-dbserver` or `fuser -k {cls.DBPORT}/tcp`
-On Windows please use Task Manager to stop the process
-On macOS please use Activity Monitor to stop the process"""
 
 
 class devel_server:
@@ -148,18 +133,12 @@ class devel_server:
     OQL = ["sudo", "-H", "-u", "openquake", OQ]
     OQDATA = "/opt/openquake/oqdata"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    DBPORT = 1907
     CONFIG = """[dbserver]
     host = localhost
-    port = %d
     file = %s
     [directory]
-    """ % (
-        DBPORT,
-        DBPATH,
-    )
+    """ % DBPATH
     USER = "openquake"
-    exit = server.exit
 
     @classmethod
     def manage_py(cls):
@@ -187,7 +166,6 @@ class user:
 
     CFG = os.path.join(VENV, "openquake.cfg")
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    DBPORT = 1908
     CONFIG = ""
     USER = None
 
@@ -203,18 +181,11 @@ class user:
                                 'site-packages', 'openquake',
                                 'server', 'manage.py')
 
-    @classmethod
-    def exit(cls):
-        return f"""There is a DbServer running on port {cls.DBPORT} from a
-previous installation. Please stop the server with the command
-`oq dbserver stop` or set a different port with the --port option"""
-
 
 class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-    exit = user.exit
 
     @classmethod
     def manage_py(cls):
@@ -432,8 +403,6 @@ def before_checks(inst, args, usage):
 
     if args.venv:
         inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
-    if args.dbport:
-        inst.DBPORT = int(args.dbport)
 
     if args.novenv:
         # TODO REMOVE or add check for non Windows OS and non "user" usage
@@ -462,16 +431,6 @@ def before_checks(inst, args, usage):
                   f'{branch}')
         # use version consistent with the branch, even if --version flag
         args.version = branch
-
-    # check if there is a DbServer running
-    if not args.remove:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            errcode = sock.connect_ex(("localhost", inst.DBPORT))
-        finally:
-            sock.close()
-        if errcode == 0:  # no error, the DbServer is up
-            sys.exit(inst.exit())
 
     # check if there is an installation from packages
     if inst in (server, devel_server) and os.path.exists(
@@ -705,14 +664,11 @@ def install(inst, version, from_fork, novenv, noupgrade):
     if (inst is server and os.path.exists("/run/systemd/system")) or (
         inst is devel_server and os.path.exists("/run/systemd/system")
     ):
-        for service in ["dbserver", "webui"]:
+        for service in ["webui"]:
             service_name = "openquake-%s.service" % service
             service_path = "/etc/systemd/system/" + service_name
             afterservice = "network.target"
-            command = service + " start -f"
-            if "webui" in service:
-                afterservice = "network.target openquake-dbserver.service"
-                command = service + " -s start"
+            command = service + " -s start"
             if not os.path.exists(service_path):
                 with open(service_path, "w") as f:
                     srv = SERVICE.format(
@@ -745,7 +701,7 @@ def remove(inst):
     remove the systemd services.
     """
     if inst is server or inst is devel_server:
-        for service in ["dbserver", "webui"]:
+        for service in ["webui"]:
             service_name = "openquake-%s.service" % service
             service_path = "/etc/systemd/system/" + service_name
             if os.path.exists(service_path):
@@ -788,8 +744,6 @@ if __name__ == "__main__":
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
-    parser.add_argument("--dbport",
-                        help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
