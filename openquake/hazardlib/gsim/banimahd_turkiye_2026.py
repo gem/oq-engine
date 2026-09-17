@@ -31,10 +31,10 @@ Outputs (25 values, in ln-space):
 
 import os
 import csv
-import numpy as np
 import gzip
-from openquake.baselib.onnx import PicklableInferenceSession
+import numpy as np
 
+from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
