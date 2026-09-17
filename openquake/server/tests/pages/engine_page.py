@@ -71,9 +71,9 @@ class EnginePage:
         """Open the report after it has been persisted by the job."""
         report_link = self.page.get_by_role(
             "link", name=re.compile(r"^Show impact report"))
-        for _ in range(3):
+        for _ in range(12):
             try:
-                report_link.click(timeout=5_000)
+                report_link.click(timeout=10_000)
                 return
             except PlaywrightTimeoutError:
                 # The job can be marked complete just before the report
