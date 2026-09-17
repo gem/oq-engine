@@ -30,6 +30,7 @@ import tempfile
 import traceback
 import zlib
 from datetime import datetime
+from unittest.mock import patch
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urljoin
 from xml.parsers.expat import ExpatError
@@ -47,16 +48,64 @@ from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
-from openquake.commonlib import dbapi, logs, oqvalidation
+from openquake.commonlib import dbapi, logs, oqvalidation, readinput
+from openquake.calculators import base
 from openquake.server.db.registry import get_action
-
+from openquake.server.services import (
+    create_impact_job, get_impact_rupture_data, get_papers_job_ctx,
+    submit_job)
 app = FastAPI(title='OpenQuake API')
+app.state.adapters = {}
+
+
+def configure_adapters(**adapters):
+    """Register framework-specific adapters for the API endpoints."""
+    app.state.adapters.update(adapters)
+
+
+def _adapter(name):
+    try:
+        return app.state.adapters[name]
+    except KeyError as exc:
+        raise RuntimeError('Missing API adapter: %s' % name) from exc
 
 
 def _check_api_key(api_key):
     """Raise ``HTTPException`` unless the internal API key is valid."""
     if not api_key or not secrets.compare_digest(api_key, API_KEY):
         raise HTTPException(status_code=403, detail='Invalid API key')
+
+
+
+
+def validate_job(job_file):
+    """Validate a calculation input and return its JSON-compatible result."""
+    try:
+        oq = readinput.get_oqparam(job_file)
+        with patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+            base.calculators(oq, calc_id=None).run()
+    except Exception as exc:
+        return dict(error_msg=str(exc), error_line=None, valid=False)
+    return dict(error_msg=None, error_line=None, valid=True)
+
+
+def get_uploaded_file_path(request, filename):
+    """Copy an uploaded file to a temporary path and return its location."""
+    file = request.FILES.get(filename)
+    if file:
+        # NOTE: we could not find a reliable way to avoid the deletion of the
+        # uploaded file right after the request is consumed, therefore we need
+        # to store a copy of it
+        name = getattr(file, 'name', None) or file.filename
+        suffix = name[-4:]
+        source = getattr(file, 'file', None)
+        if source is None:
+            with open(file.temporary_file_path(), 'rb') as stream:
+                content = stream.read()
+        else:
+            source.seek(0)
+            content = source.read()
+        return gettemp(content, suffix=suffix)
 
 
 @app.get('/v1/calc_info/{calc_id}')
@@ -139,7 +188,6 @@ async def _validate_uploaded_file(request, field, missing_message):
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
-    from openquake.server.views import get_uploaded_file_path, validate_job
     if field in files:
         path = get_uploaded_file_path(
             SimpleNamespace(POST=form, FILES=files), field)
@@ -183,7 +231,6 @@ async def v0_calc_run(
         raise HTTPException(status_code=400,
                             detail='Missing calculation owner')
     notify_to = form.get('notify_to') or None
-    from openquake.server.views import submit_job
     request_files = form if form.getlist('archive') else []
     try:
         job_id = await run_in_threadpool(
@@ -247,9 +294,8 @@ async def v0_aelo_run(
     if not username or not base_url:
         raise HTTPException(status_code=400,
                             detail='Missing AELO caller information')
-    from openquake.server.views import aelo_validate, _run_aelo
     result = await run_in_threadpool(
-        aelo_validate, SimpleNamespace(POST=form))
+        _adapter('aelo_validate'), SimpleNamespace(POST=form))
     if hasattr(result, 'status_code'):
         return JSONResponse(
             content=json.loads(result.content),
@@ -260,8 +306,8 @@ async def v0_aelo_run(
         return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
 
     response_data, status = await run_in_threadpool(
-        _run_aelo, lon, lat, site_name, asce_version, site_class, vs30,
-        username, form.get('email') or '', build_absolute_uri,
+        _adapter('run_aelo'), lon, lat, site_name, asce_version, site_class,
+        vs30, username, form.get('email') or '', build_absolute_uri,
         form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=status)
 
@@ -277,19 +323,10 @@ async def v0_run_scenario(
     if not username:
         raise HTTPException(status_code=400,
                             detail='Missing calculation owner')
-    from openquake.server.papers import base as papers
-    consequence_model = form.get('consequence_model')
-    consequence = (json.loads(consequence_model)
-                   if consequence_model else papers.CONSEQUENCE)
+    papers = _adapter('papers')
     try:
         job_ctx = await run_in_threadpool(
-            papers.get_job_ctx, rup_id, papers.FNAME, papers.GMM_LT,
-            papers.SITE_MODEL, papers.IMTS_RISK, papers.INTEGRATION_DISTANCE,
-            papers.TRUNCATION, papers.NGMFS,
-            form.get('exposure_filepath', papers.EXPOSURE),
-            form.get('mapping', papers.MAPPING),
-            form.get('fragility_curves', papers.FRAGILITY), consequence,
-            papers.HAZARD_ONLY, username)
+            get_papers_job_ctx, papers, rup_id, form)
         mp.Process(target=engine.run_jobs, args=([job_ctx],), kwargs={
             'notify_to': form.get('notify_to')}).start()
         response_data = await run_in_threadpool(
@@ -322,8 +359,6 @@ async def v0_impact_run(
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}
-    from openquake.server.views import (
-        create_impact_job, get_uploaded_file_path)
     user = SimpleNamespace(level=user_level, testdir=None)
     adapter = SimpleNamespace(POST=post, FILES=files)
     rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
@@ -348,15 +383,21 @@ async def v0_impact_run(
         return urljoin(
             form.get('base_url', '').rstrip('/') + '/', path.lstrip('/'))
 
-    job_request = SimpleNamespace(
-        POST=form,
-        user=SimpleNamespace(
-            email=form.get('email') or '',
-            username=form.get('username'), is_authenticated=True,
-            level=user_level, testdir=None),
-        build_absolute_uri=build_absolute_uri)
+    def build_urls(job_id):
+        return {
+            'outputs_uri_web': build_absolute_uri(
+                f'/engine/{job_id}/outputs_impact'),
+            'outputs_uri': build_absolute_uri(
+                f'/v1/calc/result/{job_id}'),
+            'log_uri': build_absolute_uri(
+                f'/v1/calc/{job_id}/log/0:'),
+            'traceback_uri': build_absolute_uri(
+                f'/v1/calc/{job_id}/traceback'),
+        }
+
     response_data = await run_in_threadpool(
-        create_impact_job, job_request, params,
+        create_impact_job, params, form.get('username'),
+        form.get('email') or '', build_urls, _adapter('impact_callback'),
         form.get('email_file_path'))
     return JSONResponse(content=response_data, status_code=200)
 
@@ -375,9 +416,7 @@ async def v0_impact_get_rupture_data(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400,
                             detail='Invalid IMPACT user level')
-    from openquake.server.views import (
-        get_impact_rupture_data, get_uploaded_file_path)
-    user = SimpleNamespace(level=user_level)
+    user = SimpleNamespace(level=user_level, testdir=None)
     files = {
         key: value for key, value in form.multi_items()
         if hasattr(value, 'file')}

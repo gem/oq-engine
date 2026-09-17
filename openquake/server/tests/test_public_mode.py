@@ -77,6 +77,11 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         else:  # error case
             return dict(tb_str='\n'.join(js['traceback']), job_id=js['job_id'])
 
+    def test_authentication_status(self):
+        response = self.c.get('/v1/authentication/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authentication_required': False})
+
     def test_404(self):
         # looking for a missing calc_id
         resp = self.c.get('/v1/calc/0')

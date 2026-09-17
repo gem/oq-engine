@@ -300,6 +300,11 @@ except ImportError:
         # settings in this file only will be used
         pass
 
+# Local defaults must not affect the test suite. In particular, a configured
+# IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
+if TEST:
+    IMPACT_DEFAULT_USGS_ID = ''
+
 if SUPPRESS_PERMISSION_DENIED_WARNINGS:
     class SuppressPermissionDeniedWarnings(logging.Filter):
         def filter(self, record):
@@ -436,6 +441,7 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
     LOGIN_EXEMPT_URLS = (
         f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
+        f'{WEBUI_PATHPREFIX}/v1/authentication/status',
         'reset_password', 'reset/', 'cookies/',
     )
     LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'

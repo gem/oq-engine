@@ -18,9 +18,8 @@
 import ast
 import sys
 import inspect
-import getpass
 from decorator import getfullargspec
-from openquake.baselib import config
+from openquake.baselib import use_server
 from openquake.calculators.views import text_table
 from openquake.commonlib import dbapi, logs
 from openquake.server.db import actions
@@ -52,8 +51,7 @@ def main(cmd, args=()):
     if known_action and len(args) != len(commands[cmd]):
         sys.exit('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
-    elif (not known_action and not cmd.upper().startswith('SELECT') and
-          config.multi_user and getpass.getuser() != 'openquake'):
+    elif use_server() and not known_action:
         sys.exit('You have no permission to run %s' % cmd)
     if known_action:
         res = logs.dbcmd(cmd, *convert(args))

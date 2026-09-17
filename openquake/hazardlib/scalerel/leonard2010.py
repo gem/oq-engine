@@ -22,6 +22,8 @@ Module :mod:`openquake.hazardlib.scalerel.leonard2014` implements
 :class:`Leonard2010_SCR_M0`
 :class:`Leonard2010_SCR_MX`
 """
+import math
+import numpy as np
 from numpy import power, log10
 from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
@@ -103,5 +105,67 @@ class Leonard2010_SCR_MX(Leonard2010_SCR):
         """
         #based on table 6 relationship for SCR with modification
         return log10(area) + 4.00
+
+
+class Leonard2010(BaseMSRSigma, BaseASRSigma):
+    """
+    Leonard, M. (2010). Earthquake fault scaling: self-consistent relating
+    of rupture length, width, average displacement and moment release.
+    Bulletin of the Seismological Society of America, 100(5A), 1971-1988.
+
+    Bilinear magnitude-to-rupture-length relations for interplate dip-slip
+    (normal and reverse) faults, with average displacement derived from the
+    rupture length as ``AD = 1.7e-5 * L`` (``L`` in metres).  Added for PR-2
+    of the oq-engine integration plan as the ``LEONARD2010`` scaling relation
+    of the FDHA distributed-displacement model (Visini et al., 2025); it is
+    additive to the stable-continental-region classes above.
+    """
+
+    SIGMA_L = 0.23  # log10 standard deviation of rupture length
+
+    def get_median_area(self, mag, rake):
+        """Return median rupture area (km^2) for moment ``mag``."""
+        length = self.get_rupture_length(mag)
+        return length * self._width_from_length(length)
+
+    def get_std_dev_area(self, mag, rake):
+        """Return the log10 standard deviation of rupture area."""
+        return self.SIGMA_L
+
+    def get_median_mag(self, area, rake):
+        """Return median moment magnitude for rupture ``area`` (km^2)."""
+        area = np.asarray(area)
+        thresh = 1.95 * math.pow(99.0, 5.0 / 3.0)
+        length = np.where(
+            area <= thresh, np.power(area / 1.95, 3.0 / 5.0), area / 20.0)
+        return np.where(
+            length <= 99.0,
+            2.0 * (np.log10(length) + 1.9),
+            np.log10(length) + 4.7)
+
+    def get_std_dev_mag(self, area, rake):
+        """Return the log10 standard deviation of moment magnitude."""
+        return self.SIGMA_L
+
+    def _width_from_length(self, length):
+        width = 1.95 * np.power(length, 2.0 / 3.0)
+        return np.where(width > 20.0, 20.0, width)
+
+    def get_rupture_length(self, mag, return_sigma=False):
+        """Return rupture length (km) for moment ``mag``."""
+        mag = np.asarray(mag)
+        log_l = np.where(mag <= 7.1, 0.5 * mag - 1.9, mag - 4.7)
+        length = np.power(10.0, log_l)
+        if return_sigma:
+            return length, self.SIGMA_L
+        return length
+
+    def get_average_displacement(self, mag, style=None, return_sigma=False):
+        """Return average displacement (m) for moment ``mag``."""
+        length_km = np.asarray(self.get_rupture_length(mag))
+        ad = 1.7e-5 * length_km * 1_000.0
+        if return_sigma:
+            return ad, self.SIGMA_L
+        return ad
 
 

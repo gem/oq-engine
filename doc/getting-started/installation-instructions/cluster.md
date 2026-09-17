@@ -123,7 +123,6 @@ oq_distribute = zmq
 # of the master node (on the master node cfg too)
 host = < IP address of master>
 receiver_ports = 1912-1920
-authkey = somethingstronger
 
 [zworkers]
 host_cores = < IP address of worker1> -1, < IP address of worker2> -1

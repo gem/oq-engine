@@ -20,7 +20,14 @@
 Module :mod:`openquake.hazardlib.scalerel.wc1994` implements :class:`WC1994`.
 """
 from math import log10
+from collections import namedtuple
 from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
+
+
+#: coefficient tuple ``log10(Y) = a + b*M`` with log10 standard deviation
+#: ``sigma``, used by the FDHA displacement relations (Wells & Coppersmith
+#: 1994, Table 2B).
+Coeff = namedtuple("Coeff", "a b sigma")
 
 
 class WC1994(BaseMSRSigma, BaseASRSigma):
@@ -394,4 +401,120 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         else:
             # normal
             return 0.31
+
+    # ------------------------------------------------------------------
+    # FDHA extension: displacement versus magnitude (Table 2B).
+    #
+    # Added for Probabilistic Fault Displacement Hazard Analysis (PR-2 of
+    # the oq-engine integration plan).  Purely additive: the PSHA geometry
+    # API above is unchanged and no PSHA code path calls these methods.
+    # The relations use the oq-pfdha convention of selecting the rupture
+    # style by a ``style`` string, while also accepting a hazardlib ``rake``.
+    # ------------------------------------------------------------------
+    # Forward: log10(AD) = a + b*M
+    AD_fwd = {
+        "strike-slip": Coeff(-6.32, 0.90, 0.28),
+        "reverse":     Coeff(-0.74, 0.08, 0.38),
+        "normal":      Coeff(-4.45, 0.63, 0.33),
+        "all":         Coeff(-4.80, 0.69, 0.36),
+    }
+    # Forward: log10(MD) = a + b*M
+    MD_fwd = {
+        "strike-slip": Coeff(-7.03, 1.03, 0.34),
+        "reverse":     Coeff(-1.84, 0.29, 0.42),
+        "normal":      Coeff(-5.90, 0.89, 0.38),
+        "all":         Coeff(-5.46, 0.82, 0.42),
+    }
+
+    @staticmethod
+    def _resolve_style(style, rake):
+        """Return the faulting-style key for a ``style``/``rake`` pair."""
+        if style is not None:
+            return style
+        if rake is None:
+            return "all"
+        if (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            return "strike-slip"
+        return "reverse" if rake > 0 else "normal"
+
+    @staticmethod
+    def _style_rake(style):
+        """Return a representative rake for a faulting-style string.
+
+        Unknown styles (or the aggregate ``"all"``) map to ``None`` so the
+        underlying relation falls back to the all-rake coefficients.
+        """
+        return {
+            "strike-slip": 0.0,
+            "reverse": 90.0,
+            "normal": -90.0,
+        }.get(style)
+
+    def get_surface_rupture_length(self, mag, style=None, rake=None,
+                                   return_sigma=False):
+        """
+        Return median surface rupture length (km) from magnitude.
+
+        Signature-compatible wrapper used by the FDHA models: ``style`` may
+        be a faulting-style string (``"strike-slip"``, ``"reverse"``,
+        ``"normal"``, ``"all"``) instead of a rake angle.
+        """
+        style = self._resolve_style(style, rake)
+        rake = self._style_rake(style)
+        value = self.get_median_srl(mag, rake)
+        if return_sigma:
+            return value, self.get_std_dev_srl(mag, rake)
+        return value
+
+    def get_rupture_width(self, mag, style=None, rake=None,
+                          return_sigma=False):
+        """
+        Return median downdip rupture width (km) from magnitude.
+
+        Signature-compatible wrapper used by the FDHA models; see
+        :meth:`get_surface_rupture_length` for the ``style`` convention.
+        """
+        style = self._resolve_style(style, rake)
+        rake = self._style_rake(style)
+        value = self.get_median_rw(mag, rake)
+        if return_sigma:
+            return value, self.get_std_dev_rw(mag, rake)
+        return value
+
+    def get_average_displacement(self, mag, style=None, rake=None,
+                                 return_sigma=False):
+        """
+        Return median average displacement AD (m) from moment magnitude.
+
+        Wells & Coppersmith (1994) Table 2B, forward form
+        ``log10(AD) = a + b*M``.  Following oq-pfdha, the ``"reverse"``
+        style falls back to the all-rake relation, because the reverse
+        average displacement is not resolved by the 1994 dataset.
+
+        :param return_sigma: if true return ``(AD, sigma)`` where ``sigma``
+            is the standard deviation of ``log10(AD)``.
+        """
+        style = self._resolve_style(style, rake)
+        coeff = self.AD_fwd.get(style, self.AD_fwd["all"])
+        if style == "reverse":
+            coeff = self.AD_fwd["all"]
+        ad = 10.0 ** (coeff.a + coeff.b * float(mag))
+        return (ad, coeff.sigma) if return_sigma else ad
+
+    def get_maximum_displacement(self, mag, style=None, rake=None,
+                                 return_sigma=False):
+        """
+        Return median maximum displacement MD (m) from moment magnitude.
+
+        Wells & Coppersmith (1994) Table 2B, forward form
+        ``log10(MD) = a + b*M``.  As for
+        :meth:`get_average_displacement`, the ``"reverse"`` style falls
+        back to the all-rake relation.
+        """
+        style = self._resolve_style(style, rake)
+        coeff = self.MD_fwd.get(style, self.MD_fwd["all"])
+        if style == "reverse":
+            coeff = self.MD_fwd["all"]
+        md = 10.0 ** (coeff.a + coeff.b * float(mag))
+        return (md, coeff.sigma) if return_sigma else md
     
