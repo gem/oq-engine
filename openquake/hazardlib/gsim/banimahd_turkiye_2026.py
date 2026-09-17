@@ -49,28 +49,6 @@ _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
 
 # ---------------------------------------------------------------------
-# Load standard deviation tables from stds.csv
-# ---------------------------------------------------------------------
-_SIGMA_INTRA = {}
-_TAU_INTER = {}
-_PHI_TOTAL = {}
-
-
-def _load_stddev_tables():
-    if not os.path.exists(_STDS_FILE):
-        raise IOError(f"Cannot find stds.csv at {_STDS_FILE}")
-
-    with open(_STDS_FILE, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            key = row["ID"]
-            _SIGMA_INTRA[key] = float(row["Sigma"])
-            _TAU_INTER[key] = float(row["Tau"])
-            _PHI_TOTAL[key] = float(row["Phi"])
-
-
-_load_stddev_tables()
-# ---------------------------------------------------------------------
 # GSIM class
 # ---------------------------------------------------------------------
 class Banimahd2026Turkiye(GMPE):
@@ -107,6 +85,20 @@ class Banimahd2026Turkiye(GMPE):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.sigma_intra = {}
+        self.tau_inter = {}
+        self.phi_total = {}
+        if not os.path.exists(_STDS_FILE):
+            raise IOError(f"Cannot find stds.csv at {_STDS_FILE}")
+
+        with open(_STDS_FILE, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                key = row["ID"]
+                self.sigma_intra[key] = float(row["Sigma"])
+                self.tau_inter[key] = float(row["Tau"])
+                self.phi_total[key] = float(row["Phi"])
+
         with gzip.open(_ONNX_FILE, "rb") as f:
             model_bytes = f.read()
         self.session = PicklableInferenceSession(model_bytes)
@@ -177,7 +169,7 @@ class Banimahd2026Turkiye(GMPE):
                 raise ValueError(f"IMT {imt_str} not supported")
 
             mean[m, :] = out[:, out_idx]
-            sig[m, :]  = _PHI_TOTAL[key]     # TOTAL
-            tau[m, :]  = _TAU_INTER[key]     # INTER-EVENT
-            phi[m, :]  = _SIGMA_INTRA[key]   # INTRA-EVENT
+            sig[m, :]  = self.phi_total[key]     # TOTAL
+            tau[m, :]  = self.tau_inter[key]     # INTER-EVENT
+            phi[m, :]  = self.sigma_intra[key]   # INTRA-EVENT
          
