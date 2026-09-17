@@ -614,10 +614,13 @@ def _overlay_cities(ax, cities, city_font_size):
         from adjustText import adjust_text
         if texts:
             legend = ax.get_legend()
+            # adjustText otherwise runs until it reaches zero overlap.  For
+            # some city layouts that condition is never reached, leaving the
+            # impact report running indefinitely.
             adjust_text(
                 texts, ax=ax, add_objects=city_scatters + [legend],
                 arrowprops=None, force_text=(0.1, 0.2),
-                expand_points=(1.2, 1.2), save_steps=False
+                expand_points=(1.2, 1.2), save_steps=False, time_lim=2.0
             )
     except ImportError:
         pass
