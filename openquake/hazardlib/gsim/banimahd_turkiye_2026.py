@@ -39,18 +39,14 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-# ---------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "banimahd_turkiye_2026_data")
 
 _ONNX_FILE = os.path.join(_DATA_DIR, "onnx_models", "GMM_Turkiye_2026.onnx.gz")
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
 
 
-# ---------------------------------------------------------------------
 # GSIM class
-# ---------------------------------------------------------------------
 class Banimahd2026Turkiye(GMPE):
     """
     ANN-based Ground-Motion Model for Turkiye (Banimahd et al., 2026).
