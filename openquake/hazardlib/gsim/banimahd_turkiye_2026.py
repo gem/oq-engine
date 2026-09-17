@@ -100,7 +100,9 @@ class Banimahd2026Turkiye(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth", "rake"}
+    
     REQUIRES_DISTANCES = {"rjb"}
+    
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
     _PERIODS = [0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4,
