@@ -14,6 +14,14 @@ on:
         default: false
   schedule:
     - cron: "05 11 * * *"
+  # Called from engine_pr_test.yml (only when install.py changed)
+  workflow_call:
+    inputs:
+      git-ref:
+        description: Git Ref Branch
+        type: string
+        default: master
+        required: false
 
 jobs:
   Sever_Installation:
@@ -30,23 +38,23 @@ jobs:
     steps:
       - name: Clone Repository (Master)
         uses: actions/checkout@v6
-        if: github.event.inputs.git-ref == ''
+        if: inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
         uses: actions/checkout@v6
-        if: github.event.inputs.git-ref != ''
+        if: inputs.git-ref != ''
         with:
-          ref: ${{ github.event.inputs.git-ref }}
+          ref: ${{ inputs.git-ref }}
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install OQ Server with ${{ matrix.python-version }}
         run: |
-          if [ -z ${{ github.event.inputs.git-ref }} ];
+          if [ -z ${{ inputs.git-ref }} ];
           then
              BRANCH=master
           else
-             BRANCH=${{ github.event.inputs.git-ref }}
+             BRANCH=${{ inputs.git-ref }}
           fi
           sudo -H "$(which python3)" install.py --version $BRANCH server
           if [[ $EXIT_CODE -ne 0 ]]; then
@@ -134,7 +142,7 @@ jobs:
            exit 1
           fi
           echo " Run a calc using https"
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
           sleep 10
           status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
@@ -177,4 +185,4 @@ jobs:
            exit 1
           fi
           echo " Run a calc using https"
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'

@@ -202,3 +202,95 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
     def get_std_dev_width(self, mag):
         """Returns std for rupture width."""
         return 0.087
+
+
+#: Per-style crustal classes the dispatcher below delegates to.
+_STYLE_CLASSES = {
+    "strike-slip": ThingbaijamStrikeSlip,
+    "normal": ThingbaijamNormalFault,
+    "reverse": ThingbaijamReverseFault,
+}
+
+#: Average-displacement (slip) coefficients ``log10(AD) = a + b*M`` for
+#: crustal events, Thingbaijam et al. (2017) Table 2.
+_SLIP = {
+    "strike-slip": (-4.032, 0.558, 0.227),
+    "reverse": (-3.156, 0.451, 0.149),
+    "normal": (-4.967, 0.693, 0.195),
+}
+
+
+class Thingbaijam2017(BaseMSRSigma, BaseASRSigma):
+    """
+    Thingbaijam, K. K. S., P. M. Mai, and K. Goda (2017). New Empirical
+    Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of
+    America, 107(5), pp 2225-2946, doi: 10.1785/0120170017.
+
+    Style-dispatching facade over the crustal ``ThingbaijamStrikeSlip`` /
+    ``ThingbaijamNormalFault`` / ``ThingbaijamReverseFault`` relations, with
+    the additional average-displacement (slip) relation used by the FDHA
+    models.  Added for PR-2 of the oq-engine integration plan; it is the
+    canonical ``Thingbaijam2017`` name expected by the FDHA logic tree and
+    reproduces the width rows ``MSR = 2`` of Mammarella et al. (2024)
+    Table 1 (see ``openquake/hazardlib/tests/scalerel/fdha_scalerel_test``).
+    """
+
+    @staticmethod
+    def _style(rake):
+        """Return the faulting-style key for a rake angle in degrees."""
+        if rake is None:
+            return "strike-slip"
+        if (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            return "strike-slip"
+        return "reverse" if rake > 0 else "normal"
+
+    def _delegate(self, rake):
+        return _STYLE_CLASSES[self._style(rake)]()
+
+    def get_median_area(self, mag, rake):
+        """Calculates median area from magnitude."""
+        return self._delegate(rake).get_median_area(mag, rake)
+
+    def get_std_dev_area(self, mag, rake):
+        """Returns std for rupture area."""
+        return self._delegate(rake).get_std_dev_area(mag, rake)
+
+    def get_median_mag(self, area, rake):
+        """Calculates median magnitude from area."""
+        return self._delegate(rake).get_median_mag(area, rake)
+
+    def get_std_dev_mag(self, area, rake):
+        """Returns std for magnitude."""
+        return self._delegate(rake).get_std_dev_mag(area, rake)
+
+    def get_median_length(self, mag, rake=None, return_sigma=False):
+        """Calculates median rupture length (km) from magnitude."""
+        cls = self._delegate(rake)
+        value = cls.get_median_length(mag)
+        if return_sigma:
+            return value, cls.get_std_dev_length(mag)
+        return value
+
+    def get_std_dev_length(self, mag, rake=None):
+        """Returns std for rupture length."""
+        return self._delegate(rake).get_std_dev_length(mag)
+
+    def get_median_width(self, mag, rake=None, return_sigma=False):
+        """Calculates median rupture width (km) from magnitude."""
+        cls = self._delegate(rake)
+        value = cls.get_median_width(mag)
+        if return_sigma:
+            return value, cls.get_std_dev_width(mag)
+        return value
+
+    def get_std_dev_width(self, mag, rake=None):
+        """Returns std for rupture width."""
+        return self._delegate(rake).get_std_dev_width(mag)
+
+    def get_average_displacement(self, mag, style, return_sigma=False):
+        """Return median average displacement (m) from moment magnitude."""
+        a, b, sigma = _SLIP[style]
+        ad = 10.0 ** (a + b * float(mag))
+        if return_sigma:
+            return ad, sigma
+        return ad
