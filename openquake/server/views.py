@@ -2580,6 +2580,12 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
+        loss_types = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s%s</li>' % (
+                AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
+                '<span>.</span>' if key == 'injured' else '.')
+            for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+        ) + '</ul>'
         additional_explanations = {
             'value': (
                 'The exposed value depends on the impact metric. Below we '
@@ -2618,7 +2624,7 @@ def extract_html_table(request, calc_id, name):
             ),
         }
         explanations = {
-            **AGGRISK_FIELD_EXPLANATION,
+            'Loss types': loss_types,
             **additional_explanations,
         }
         field_explanations = [
