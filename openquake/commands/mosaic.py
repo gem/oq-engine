@@ -122,7 +122,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
             # del params['postproc_func']
             allparams.append(params)
             models.append(model)
-    print('Considering %d sites (excluding USA, GLD)' %
+    print('Considering %d sites (excluding USA)' %
           (sum(len(ls) for ls in ids.values())))
 
     logging.root.handlers = []  # avoid too much logging

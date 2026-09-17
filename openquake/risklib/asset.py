@@ -1200,6 +1200,10 @@ class Exposure(object):
             assets_df = pandas.concat(
                 impact_read_assets(f, start, stop, rupfilter)
                 for _hex6, start, stop in slices)
+            sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
+            if sa:
+                # reduce the number of assets for debugging/testing purposes
+                assets_df = general.random_filter(assets_df, sa)
             tagcol = f['tagcol']
             # revert the tagnames so that taxonomy becomes the first field,
             # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']

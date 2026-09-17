@@ -226,6 +226,24 @@ class MultiSurface(BaseSurface):
             surf.get_joyner_boore_distance(mesh) for surf in self.surfaces]
         return np.min(dists, axis=0)
 
+    def get_rtor(self, mesh):
+        """
+        For each point in ``mesh`` return the minimum distance to the top
+        trace of any of the surface-reaching sections (the FDHA 'segments'
+        semantics). See :meth:`BaseSurface.get_rtor`.
+        """
+        dists = [surf.get_rtor(mesh) for surf in self.surfaces]
+        return np.min(dists, axis=0)
+
+    def get_x_l_ratio(self, mesh):
+        """
+        x/L is defined per continuous trace and a MultiSurface has several,
+        so the multi-fault reference-line treatment is a later phase.
+        """
+        raise NotImplementedError(
+            'x_l is not defined for MultiSurface: multi-fault FDHA '
+            'reference-line routing is not implemented yet')
+
     def get_top_edge_depth(self):
         """
         Compute top edge depth of each surface element and return area-weighted
