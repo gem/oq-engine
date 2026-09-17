@@ -96,7 +96,7 @@ a3 = 0.9
         """
         SA periods below the smallest tabulated SA row interpolate
         linearly in period between PGA (period 0) and the smallest SA
-        row.
+        period when requiring a period below the smallest period.
         --> AtkinsonBoore2006Modified2011 lowest SA period = 0.025 s
         --> BooreAtkinson2008 lowest SA period = 0.01 s
         --> CampbellBozorgnia2014 lowest SA period = 0.01 s
