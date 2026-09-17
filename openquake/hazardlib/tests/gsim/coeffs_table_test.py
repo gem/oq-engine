@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import math
 import unittest
 import toml
 import numpy as np
@@ -118,7 +117,7 @@ a3 = 0.9
                 list(table[SA(t_lo)]), pga + (t_lo / t_min) * (row_min - pga))
 
             # In-range SA: log-interp between adjacent SA rows, no PGA
-            t_in = math.sqrt(t_min * t_next)
-            ratio = math.log(t_in / t_min) / math.log(t_next / t_min)
+            t_in = np.sqrt(t_min * t_next)
+            ratio = np.log(t_in / t_min) / np.log(t_next / t_min)
             np.testing.assert_allclose(
                 list(table[SA(t_in)]), row_min + ratio * (row_next - row_min))
