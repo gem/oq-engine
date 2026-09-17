@@ -1509,6 +1509,10 @@ def impact_tmap(oqparam, taxidx):
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
+    if not acc:
+        raise InvalidFile(
+            'There are no assets matching the taxonomy mapping in %s' %
+            oqparam.inputs['exposure'][0])
     return pandas.DataFrame(acc)
 
 
