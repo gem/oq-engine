@@ -40,11 +40,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 # ---------------------------------------------------------------------
-# Choose a suitable IM component, robust across OQ versions
-# ---------------------------------------------------------------------
-_IMC_GMEAN = const.IMC.GEOMETRIC_MEAN
-
-# ---------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------
 _DATA_DIR = os.path.join(
