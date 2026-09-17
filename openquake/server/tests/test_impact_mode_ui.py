@@ -27,7 +27,8 @@ from playwright.sync_api import expect
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_0(
         application_mode, authenticated_page, user, default_usgs_id):
-    ImpactPageLevel0(authenticated_page)
+    page = ImpactPageLevel0(authenticated_page)
+    expect(page.no_uncertainty_ckb()).to_have_count(0)
     # TODO: check that:
     #       * there is no input form
     #       * only shared calculations are visible
@@ -53,7 +54,7 @@ def test_impact_ui_level_1(
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
-    page.set_no_uncertainty()
+    expect(page.no_uncertainty_ckb()).to_have_count(0)
     page.set_make_impact_reports()
     page.run_impact_calc()
     job_id = page.get_job_id_from_new_job()
