@@ -102,6 +102,31 @@ Response::
 	"status": "failed",
 	"start_time": "2017-06-05 12:01:26"}
 
+***********************************************
+GET /v1/calc/:calc_id/repo_status_summary
+***********************************************
+
+Get the repository provenance snapshot stored in the calculation datastore.
+The snapshot identifies the regional model repositories, their submodules,
+``site-models``, commit hashes, branch or detached-head state, and whether the
+working tree was dirty when the exposure HDF5 was built.
+
+Parameters: None
+
+Response when provenance is available::
+
+	{"available": true,
+	 "summary": {
+	   "schema_version": 1,
+	   "generated_at": "2026-06-25T14:32:10+00:00",
+	   "repositories": []
+	 }}
+
+For old datastores without provenance metadata, the endpoint returns::
+
+	{"available": false,
+	 "reason": "Repository provenance metadata is not available"}
+
 *******************************
 GET /v1/calc/:calc_id/traceback
 *******************************

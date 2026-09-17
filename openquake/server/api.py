@@ -48,7 +48,9 @@ from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
-from openquake.commonlib import dbapi, logs, oqvalidation, readinput
+from openquake.commonlib import (
+    dbapi, datastore, logs, oqvalidation, readinput)
+from openquake.commonlib.repo_status import read_repo_status
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 
@@ -98,6 +100,34 @@ def calc_info(calc_id: int):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.get('/v0/calc/repo_status_summary/{calc_id}')
+def v0_repo_status_summary(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Return repository provenance for an authenticated internal caller."""
+    _check_api_key(x_api_key)
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        raise HTTPException(status_code=404)
+    path = job.ds_calc_dir + '.hdf5'
+    if not os.path.exists(path):
+        return {
+            'available': False,
+            'reason': 'Repository provenance metadata is not available',
+        }
+    try:
+        with datastore.read(path) as dstore:
+            summary = read_repo_status(dstore)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        logging.exception('Could not read repository provenance')
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if summary is None:
+        return {
+            'available': False,
+            'reason': 'Repository provenance metadata is not available',
+        }
+    return {'available': True, 'summary': summary}
 
 
 def _json_value(value):
