@@ -142,7 +142,7 @@ jobs:
            exit 1
           fi
           echo " Run a calc using https"
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
           sleep 10
           status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
@@ -185,4 +185,4 @@ jobs:
            exit 1
           fi
           echo " Run a calc using https"
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
