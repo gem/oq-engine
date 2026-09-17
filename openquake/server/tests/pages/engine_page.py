@@ -1,3 +1,6 @@
+import re
+
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import expect
 
 
@@ -65,7 +68,18 @@ class EnginePage:
         self.page.wait_for_load_state("networkidle")
 
     def to_report(self):
-        self.page.get_by_text("Show impact report").click(timeout=10_000)
+        """Open the report after it has been persisted by the job."""
+        report_link = self.page.get_by_role(
+            "link", name=re.compile(r"^Show impact report"))
+        for _ in range(3):
+            try:
+                report_link.click(timeout=5_000)
+                return
+            except PlaywrightTimeoutError:
+                # The job can be marked complete just before the report
+                # datasets become visible to the web process.
+                self.page.reload(wait_until="networkidle")
+        report_link.click(timeout=10_000)
 
     def to_calculations(self):
         self.page.get_by_text("Back to Calculations").click(timeout=10_000)
