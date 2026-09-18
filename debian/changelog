@@ -1,5 +1,9 @@
   [Amir Banimahd]
   * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
+  
+  [Christopher Brooks]
+  * Permit interpolation between PGA and lowest period in a CoeffsTable.
+ 
   [Michele Simionato]
   * Introduced a uvicorn server replacing the DbServer with a REST API
     and serving also the Django (sub)applications; introduced a scientific
