@@ -130,7 +130,7 @@ class NovakovicEtAl2018(GMPE):
         the regional adjustements
 
     NOTE: 5 sigma values for PGA, PGV, SA(0.02), SA(0.0495), SA(0.0655) from
-          erratum table A3 (tau and phi values)
+          erratum table A3 (between event and within event values corrected)
 
     NOTE: Changed T=0.9901 to T=1 in
           novakovic_2018/novakovic_2018_reg_adj_oklahoma.txt to avoid an
