@@ -178,9 +178,7 @@ def _infer_z1pt4_from_vs30(vs30, z1pt4, mask):
 
     NOTE: However, we want to be able to infer a z1pt4 solely from Vs30 when
     not available (as done for GMMs which use either z1pt0 or z2pt5 when set
-    to -999 in the job file). An example application is AELO - we want a
-    consistent z1pt4 for a given Vs30 (using the NIED subsurface model with a
-    spatial lookup is NOT an option here given this).
+    to -999 in the job file).
 
     NOTE: This is GEM's own regression - the values look reasonable (always
     deeper than those obtained using the original CY14 Japan basin term for
