@@ -30,7 +30,7 @@ from openquake.calculators.country_impact_report_builder import (
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA)
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries
 
 cd = pathlib.Path(__file__).parent
@@ -134,7 +134,6 @@ def _open_dstore(dstore):
     """
     if isinstance(dstore, (str, int)):
         # NOTE: called from the command line
-        from openquake.commonlib import datastore
         calc_id = int(dstore)
         dstore = datastore.read(calc_id, mode='r+')
     else:
