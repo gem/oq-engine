@@ -139,7 +139,7 @@ var CalculationTable = Backbone.View.extend({
     show_traceback: function (e) {
         e.preventDefault();
         var calc_id = $(e.target).attr('data-calc-id');
-        var myXhr = $.ajax({url: gem_oq_server_url + "/engine/" + calc_id + "/traceback",
+        var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
                             error: function (jqXHR, textStatus, errorThrown) {
                                 if (jqXHR.status == 404) {
                                     diaerror.show(false, "Calculation " + calc_id + " not found.");
@@ -185,7 +185,7 @@ var CalculationTable = Backbone.View.extend({
         }
         var obj = this;
 
-        this.logXhr = $.ajax({url: gem_oq_server_url + "/engine/" + calc_id + "/log/" + from + ":",
+        this.logXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/log/" + from + ":",
                                 error: function (jqXHR, textStatus, errorThrown) {
                                     if (jqXHR.status == 404) {
                                         diaerror.show(true, "Log of calculation " + calc_id + " not found.");
