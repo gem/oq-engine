@@ -20,7 +20,8 @@ from openquake.hazardlib.gsim.novakovic_2018 import (
     NovakovicEtAl2018)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# Verification tables from the BSSA supplement spreadsheet (erratum applied)
+# Verification tables created using the .xls spreadsheet provided as an
+# elctronic supplement to the BSSA paper
 
 class NovakovicEtAl2018Test(BaseGSIMTestCase):
     GSIM_CLASS = NovakovicEtAl2018
