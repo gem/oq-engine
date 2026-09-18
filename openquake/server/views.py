@@ -50,7 +50,7 @@ from django.shortcuts import render
 from django.utils.html import urlize
 import numpy
 
-from openquake.baselib import hdf5, config, parallel
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -61,7 +61,6 @@ from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
-from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
@@ -75,6 +74,7 @@ from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
+from openquake.server.services import store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
@@ -208,51 +208,6 @@ def _get_bool_param(obj, name, default=False):
     if val is None:
         return default
     return str(val).lower() in ('1', 'true', 'yes', '')
-
-
-def store(request_files, ini, calc_id):
-    """
-    Store the uploaded files in calc_dir and select the job file by looking
-    at the .ini extension.
-
-    :returns: full path of the ini file
-    """
-    calc_dir = parallel.calc_dir(calc_id)
-    input_files = request_files.getlist('archive')
-    named_files = [
-        (input_file, getattr(input_file, 'name', None) or
-         getattr(input_file, 'filename', ''))
-        for input_file in input_files]
-    zip_file = next(
-        (input_file for input_file, name in named_files
-         if name.endswith('.zip')), None)
-    if zip_file is None:
-        # move each file to calc_dir using the upload file names
-        inifiles = []
-        # NB: TemporaryUploadedFile Django objects are not sortable
-        for input_file, name in named_files:
-            new_path = os.path.join(calc_dir, name)
-            # Using shutil.copy2, Django deletes the temporary file
-            # when the request ends. With shutil.move it would
-            # attempt to delete it immediately when it is still in
-            # use by the Django process, which would raise an
-            # exception on Windows.
-            source = getattr(input_file, 'file', None)
-            if source is None:
-                shutil.copy2(input_file.temporary_file_path(), new_path)
-            else:
-                source.seek(0)
-                with open(new_path, 'wb') as target:
-                    shutil.copyfileobj(source, target)
-            if name.endswith(ini):
-                inifiles.append(new_path)
-    else:  # extract the files from the archive into calc_dir
-        source = getattr(zip_file, 'file', zip_file)
-        source.seek(0)
-        inifiles = readinput.extract_from_zip(source, ini, calc_dir)
-    if not inifiles:
-        raise NotFound('There are no %s files in the archive' % ini)
-    return inifiles[0]
 
 
 def stream_response(fname, content_type, exportname=''):
