@@ -33,9 +33,9 @@ from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_25,
-    case_26, case_28, case_29, case_30, case_31, case_32, case_33, case_36,
-    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
-    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
+    case_36, case_39, case_45, case_46, case_52, case_56, case_58, case_59,
+    case_67, case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -526,6 +526,26 @@ hazard_uhs-std.csv
             self.assertEqual(len(expected), len(got), str(got))
             for fname, actual in zip(expected, got):
                 self.assertEqualFiles('expected/%s' % fname, actual)
+
+    def test_case_27(self):
+        # 3-branch amp LT, disaggregation, full enum + sampling
+        for kwargs, prefix, nrlz in [
+                ({}, '', 3), # Full enumeration: 1 SSC x 1 GMM x 3 amp
+                ({'number_of_logic_tree_samples': '2'}, 'sampling_', 2)]:
+            self.run_calc(case_27.__file__, 'job.ini', **kwargs)
+            self.assertEqual(len(self.calc.full_lt.rlzs), nrlz)
+            got = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+            got += export(('disagg-stats', 'csv'), self.calc.datastore)
+            for fname in got:
+                self.assertEqualFiles(
+                    'expected/%s%s' % (prefix, strip_calc_id(fname)), fname)
+
+        # Full-enum hcurves must match case_26 (classical vs disagg)
+        self.run_calc(case_27.__file__, 'job.ini')
+        hcurves = self.calc.datastore['hcurves-stats'][:, 0]
+        self.run_calc(case_26.__file__, 'job.ini')
+        expected = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(hcurves, expected, rtol=1e-6)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
