@@ -148,11 +148,6 @@ jobs:
           pip install -r requirements-aelo-py-linux64.txt
           pip install -r requirements-impact-py311-linux64.txt
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
-          wget https://downloads.openquake.org/test_data/worldcities.csv
-          wget https://downloads.openquake.org/test_data/countries_info.csv
-          wget https://downloads.openquake.org/test_data/World_Adm1_updated.gpkg
-          wget https://downloads.openquake.org/test_data/fonts.zip
-          unzip fonts.zip
           OQ_APPLICATION_MODE=PUBLIC pytest -vx openquake/server/tests/test_public_mode.py
           OQ_APPLICATION_MODE=RESTRICTED pytest -vx openquake/server/tests/test_restricted_mode.py
           OQ_APPLICATION_MODE=READ_ONLY pytest -vx openquake/server/tests/test_read_only_mode.py
@@ -201,11 +196,6 @@ jobs:
           pip install https://wheelhouse.openquake.org/unified/pytest_playwright-0.7.2-py3-none-any.whl
           playwright install chromium firefox
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5; ln -s openquake/qa_tests_data/mosaic/exposure.hdf5
-          wget https://downloads.openquake.org/test_data/worldcities.csv
-          wget https://downloads.openquake.org/test_data/countries_info.csv
-          wget https://downloads.openquake.org/test_data/World_Adm1_updated.gpkg
-          wget https://downloads.openquake.org/test_data/fonts.zip
-          unzip fonts.zip
           OQ_APPLICATION_MODE=AELO pytest \
             --browser ${{ matrix.browser }} \
             --capture=no \

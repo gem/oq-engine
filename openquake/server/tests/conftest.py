@@ -23,7 +23,10 @@ import glob
 import shutil
 import pathlib
 import subprocess
+import tempfile
+import zipfile
 from django.contrib.auth import get_user_model
+from openquake.baselib import config
 from openquake.server.tests.views_test import start_uvicorn, stop_uvicorn
 
 # pytest-playwright starts an asyncio event loop at session startup.
@@ -42,8 +45,69 @@ def copy_from_templates_if_needed(tmpldir, ext):
             shutil.copy(fname, stripped)
 
 
+def _download_server_data(data_dir):
+    """Download the files used by the server integration tests."""
+    base_url = 'https://downloads.openquake.org/test_data'
+    files = ('worldcities.csv', 'countries_info.csv',
+             'World_Adm1_updated.gpkg')
+    for name in files:
+        target = data_dir / name
+        if not target.exists():
+            subprocess.run(
+                ['wget', f'{base_url}/{name}', '-O', str(target)],
+                check=True)
+
+    fonts_dir = data_dir / 'fonts'
+    if not any(fonts_dir.glob('NotoSans*-Regular.ttf')):
+        archive_path = data_dir / 'fonts.zip'
+        if not archive_path.exists():
+            subprocess.run(
+                ['wget', f'{base_url}/fonts.zip', '-O', str(archive_path)],
+                check=True)
+        with zipfile.ZipFile(archive_path) as archive:
+            archive.extractall(data_dir)
+
+
+def _configure_server_data(data_dir):
+    """Configure the downloaded data for this process and its children."""
+    fd, cfg_path = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.cfg')
+    os.close(fd)
+    paths = {
+        'world_cities_file': data_dir / 'worldcities.csv',
+        'countries_info_file': data_dir / 'countries_info.csv',
+        'admin1_boundaries_file': data_dir / 'World_Adm1_updated.gpkg',
+        'fonts_dir': data_dir / 'fonts',
+    }
+    with open(cfg_path, 'w') as cfg:
+        cfg.write('[directory]\\n')
+        for name, path in paths.items():
+            cfg.write(f'{name} = {path}\\n')
+    for name, path in paths.items():
+        config.directory[name] = str(path)
+    return cfg_path
+
+
 @pytest.fixture(scope="session", autouse=True)
-def migrate_before_tests():
+def server_test_data():
+    """Make server test data available, downloading only missing files."""
+    data_dir = pathlib.Path(__file__).parent / 'data'
+    data_dir.mkdir(exist_ok=True)
+    _download_server_data(data_dir)
+    cfg_path = _configure_server_data(data_dir)
+    old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
+    os.environ['OQ_CONFIG_FILE'] = cfg_path
+    try:
+        yield
+    finally:
+        if old_cfg_path is None:
+            os.environ.pop('OQ_CONFIG_FILE', None)
+        else:
+            os.environ['OQ_CONFIG_FILE'] = old_cfg_path
+        pathlib.Path(cfg_path).unlink(missing_ok=True)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def migrate_before_tests(server_test_data):
     """
     Generate registration files before running migrations (if needed),
     then load data fixtures

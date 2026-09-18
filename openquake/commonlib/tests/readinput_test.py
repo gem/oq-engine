@@ -19,6 +19,7 @@
 import os
 import tempfile
 import unittest.mock as mock
+from types import SimpleNamespace
 import unittest
 import pandas
 from io import BytesIO
@@ -26,6 +27,7 @@ from io import BytesIO
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
 from openquake.commonlib.readinput import (
@@ -47,6 +49,23 @@ def getparams(oq):
 
 
 class ParseConfigTestCase(unittest.TestCase):
+
+    def test_get_rupture_from_json(self):
+        rupture_model = general.gettemp("""
+{"type": "FeatureCollection", "metadata": {"reference": "test",
+"lon": 0.5,
+"lat": 0.5, "depth": 7.5, "mag": 6.0, "rake": 0}, "features":
+[{"geometry": {"type": "MultiPolygon", "coordinates": [[[[0, 0, 5],
+[1, 0, 5], [1, 1, 10], [0, 1, 10], [0, 0, 5]]]]}}]}
+""", suffix='.json')
+        oqparam = SimpleNamespace(
+            inputs={'rupture_model': rupture_model},
+            rupture_mesh_spacing=5,
+            rupture_dict=None)
+        rup = readinput.get_rupture(oqparam)
+        self.assertIsInstance(rup, BaseRupture)
+        with open(rupture_model) as f:
+            self.assertEqual(f.read().lstrip()[0], '{')
 
     def test_no_absolute_path(self):
         temp_dir = tempfile.mkdtemp()
