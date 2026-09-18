@@ -167,11 +167,49 @@ def _apply_nied_sigma(imts, sig, sigma_log10):
             sig[m] = sigma_log10 * np.log(10)
 
 
+def _infer_z1pt4_from_vs30(vs30, z1pt4, mask):
+    """
+    Return a Vs30-based estimate of the z1pt4 based on GEM's own regression,
+    within which we fitted the Chiou and Youngs (2014) GMM's Japan-variant
+    Vs30 to z1pt0 equation to NIED station data (measured Vs30s to z1pt4).
+
+    NOTE: No Vs30 to z1pt4 relationship was published alongside this GMM - it
+    treats the parameters as independent.
+
+    NOTE: However, we want to be able to infer a z1pt4 solely from Vs30 when
+    not available (as done for GMMs which use either z1pt0 or z2pt5 when set
+    to -999 in the job file). An example application is AELO - we want a
+    consistent z1pt4 for a given Vs30 (using the NIED subsurface model with a
+    spatial lookup is NOT an option here given this).
+
+    NOTE: This is GEM's own regression - the values look reasonable (always
+    deeper than those obtained using the original CY14 Japan basin term for
+    z1pt0), but the user should always check the values themselves returned
+    for a given Vs30, and decide for themselves if they seem acceptable.
+    """
+    # GEM coeffs fitted to NIED v2024 flatfile station data
+    A, C, D = -6.76, 712.0, 1700.0
+    z1pt4[mask] = (A / 2.0) * np.log((vs30[mask]**2 + C**2) / (D**2 + C**2))
+    return z1pt4
+
+
 ### Original GMM ###
 def _get_basin_term(C, ctx, region=None):
+    """
+    Apply the basin term.
+    """
+    # Set z1pt4 initially as that in site model
+    z1pt4 = ctx.z1pt4
+    vs30 = ctx.vs30
+    # Get sites that have sentinel (-999) z1pt4
+    mask = z1pt4 == -999
+    if len(mask):
+        # Use GEM estimate of z1pt4 from vs30 for these sites
+        z1pt4 = _infer_z1pt4_from_vs30(vs30, z1pt4, mask)
+    # Now compute basin term as usual
     d0 = CONSTS["D0"]
-    tmp = np.ones_like(ctx.z1pt4) * C['Dlmin']
-    return C['pd'] * np.log10(np.maximum(tmp, ctx.z1pt4) / d0)
+    tmp = np.ones_like(z1pt4) * C['Dlmin']
+    return C['pd'] * np.log10(np.maximum(tmp, z1pt4) / d0)
 
 
 def _anomalous_intensity_correction_term(C, region, ctx, trt, php_nshm):
@@ -330,7 +368,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
                         for key, pgn in PHP_PGNS.items()}
         else:
             php_nshm = {}
-
+        
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
