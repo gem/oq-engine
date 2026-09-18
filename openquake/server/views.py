@@ -514,7 +514,8 @@ def _call_api(request, endpoint):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(
+            url, headers={'X-API-Key': API_KEY}, timeout=10)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:

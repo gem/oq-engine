@@ -16,9 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import zlib
+import json
+import string
+import random
+import tempfile
+from unittest import skipIf
 import django
 from datetime import datetime, timedelta
 from openquake.commonlib import logs
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import (
@@ -420,3 +428,43 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
         for job in [older_job, newer_job]:
             self.remove_calc(job.calc_id)
+
+    # NOTE: on_same_fs is an internal feature developed in the context of
+    # hybridge, so it is not a problem skipping it on windows
+    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
+    def test_check_fs_access(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
+            # unauthenticated request must be rejected
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+            self.assertEqual(resp.status_code, 403)
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum},
+                               headers={'X-API-Key': API_KEY})
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertTrue(resp_text_dict['success'])
+
+    def test_check_fs_access_fail(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = 'impossible'
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum},
+                               headers={'X-API-Key': API_KEY})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertFalse(resp_text_dict['success'])
