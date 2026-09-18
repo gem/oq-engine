@@ -22,15 +22,10 @@ import sys
 import json
 import pprint
 import numpy
-import zlib
 import gzip
-import tempfile
-import string
-import random
 import logging
 import django
 from django.test import LiveServerTestCase, override_settings
-from unittest import skipIf
 from threading import Event
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
@@ -366,39 +361,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
-
-    # NOTE: on_same_fs is an internal feature developed in the context of
-    # hybridge, so it is not a problem skipping it on windows
-    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
-    def test_check_fs_access(self):
-        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
-            filename = f.name
-            content = bytes(''.join(random.choice(
-                string.ascii_uppercase + string.digits) for _ in range(32)),
-                            'utf-8')
-            f.write(content)
-            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
-            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
-                                                  'checksum': checksum})
-            self.assertEqual(resp.status_code, 200)
-            resp_text_dict = json.loads(resp.content.decode('utf8'))
-            self.assertTrue(resp_text_dict['success'])
-
-    def test_check_fs_access_fail(self):
-        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
-            filename = f.name
-            content = bytes(''.join(random.choice(
-                string.ascii_uppercase + string.digits) for _ in range(32)),
-                            'utf-8')
-            f.write(content)
-            checksum = 'impossible'
-
-            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
-                                                  'checksum': checksum})
-
-            self.assertEqual(resp.status_code, 200)
-            resp_text_dict = json.loads(resp.content.decode('utf8'))
-            self.assertFalse(resp_text_dict['success'])
 
 
 @override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')

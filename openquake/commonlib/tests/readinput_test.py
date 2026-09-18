@@ -28,6 +28,8 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
+from openquake.commonlib.readinput import (
+    get_close_mosaic_models, get_close_countries)
 from openquake.qa_tests_data.logictree import (
     case_02, case_15, case_21, case_25)
 from openquake.qa_tests_data.classical import case_34, case_65
@@ -530,7 +532,8 @@ class ReadRiskTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_station_data(oq, sitecol, duplicates_strategy='error')
+            readinput.get_station_data(
+                oq, sitecol, duplicates_strategy='error')
         self.assertIn(
             "Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
             str(ctx.exception))
@@ -550,7 +553,8 @@ class ReadRiskTestCase(unittest.TestCase):
             oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
             duplicates_strategy='avg')
         self.assertTrue('GIF001|GIF013' in df['STATION_ID'].values)
-        pga_avg = df[df['STATION_ID'] == 'GIF001|GIF013']['PGA_VALUE'].values[0]
+        pga_avg = df[df['STATION_ID'] == 'GIF001|GIF013'][
+            'PGA_VALUE'].values[0]
         # using the same mean operator used in read_df and expecting the same
         # approximation
         data = {'values': [pga_first, pga_last]}
@@ -563,8 +567,10 @@ class ReadSourceModelsTestCase(unittest.TestCase):
     def test(self):
         base = os.path.dirname(case_65.__file__)
         hdf5path = general.gettemp(suffix='.hdf5')
-        fnames = [os.path.join(base, 'ssm.xml'), os.path.join(base, 'sections.xml')]
-        smodels = readinput.read_source_models(fnames, hdf5path, investigation_time=1.)
+        fnames = [os.path.join(base, 'ssm.xml'),
+                  os.path.join(base, 'sections.xml')]
+        smodels = readinput.read_source_models(
+            fnames, hdf5path, investigation_time=1.)
         nrups = 0
         for smodel in smodels:
             for sg in smodel.src_groups:
@@ -572,3 +578,17 @@ class ReadSourceModelsTestCase(unittest.TestCase):
                     for rup in src.iter_ruptures():
                         nrups += 1
         self.assertEqual(nrups, 3)
+
+
+class GetCloseRegionsTestCase(unittest.TestCase):
+    def test_get_close_mosaic_models(self):
+        lon, lat = 124.0, 8.5
+        mosaic_models = get_close_mosaic_models(lon, lat, buffer_radius=5)
+        self.assertEqual(mosaic_models, ['PHL', 'IDN', 'OPA'])
+        mosaic_models = get_close_mosaic_models(lon, lat, buffer_radius=0.5)
+        self.assertEqual(mosaic_models, ['PHL'])
+
+    def test_get_close_countries(self):
+        lon, lat = 124.0, 8.5
+        countries = get_close_countries(lon, lat, buffer_radius=0.5)
+        self.assertEqual(countries, ['PHL'])

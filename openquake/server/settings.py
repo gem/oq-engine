@@ -24,7 +24,7 @@ import tempfile
 import logging
 
 from openquake.baselib import config
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, auth
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -129,7 +129,7 @@ LANGUAGE_CODE = 'en-us'
 USE_I18N = True
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
+SECRET_KEY = auth.API_KEY
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -285,20 +285,21 @@ if STANDALONE and WEBUI:
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
     TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
-try:
-    # Try to load a local_settings.py from the current folder; this is useful
-    # when packages are used. A custom local_settings.py can be placed in
-    # /usr/share/openquake/engine, avoiding changes inside the python package
-    from local_settings import *  # noqa
-except ImportError:
-    # If no local_settings.py is availble in the current folder let's try to
-    # load it from openquake/server/local_settings.py
+if not TEST:
     try:
-        from openquake.server.local_settings import *  # noqa
+        # Try to load a local_settings.py from the current folder; this is useful
+        # when packages are used. A custom local_settings.py can be placed in
+        # /usr/share/openquake/engine, avoiding changes inside the python package
+        from local_settings import *  # noqa
     except ImportError:
-        # If a local_setting.py does not exist
-        # settings in this file only will be used
-        pass
+        # If no local_settings.py is availble in the current folder let's try to
+        # load it from openquake/server/local_settings.py
+        try:
+            from openquake.server.local_settings import *  # noqa
+        except ImportError:
+            # If a local_setting.py does not exist
+            # settings in this file only will be used
+            pass
 
 # Local defaults must not affect the test suite. In particular, a configured
 # IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
