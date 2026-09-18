@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2026, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Minimal FastAPI application served by Uvicorn."""
@@ -109,8 +108,9 @@ def get_uploaded_file_path(request, filename):
 
 
 @app.get('/v1/calc_info/{calc_id}')
-def calc_info(calc_id: int):
+def calc_info(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return calculation information."""
+    _check_api_key(x_api_key)
     try:
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
@@ -362,6 +362,10 @@ async def v0_impact_run(
     user = SimpleNamespace(level=user_level, testdir=None)
     adapter = SimpleNamespace(POST=post, FILES=files)
     rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
+    if not rupture_path:
+        rupture_path = post.get('rupture_from_usgs') or ''
+    if rupture_path == 'None':
+        rupture_path = ''
     station_path = get_uploaded_file_path(adapter, 'station_data_file')
     station_from_usgs = post.get('station_data_file_from_usgs', '')
     station_source = None
@@ -377,6 +381,8 @@ async def v0_impact_run(
             content=err, status_code=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
+    if params.get('make_impact_reports'):
+        params['postrisk_func'] = 'make_impact_reports.main'
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
 
     def build_absolute_uri(path):
@@ -441,15 +447,17 @@ def _calc_log_slice(calc_id, start, stop):
         raise HTTPException(status_code=404) from exc
 
 
-@app.get('/v1/calc/{calc_id}/log/size')
+@app.get('/v0/calc/{calc_id}/log/size')
 def calc_log_size(calc_id: int):
     """Return the number of log lines for a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
 
 
-@app.get('/v1/calc/{calc_id}/log/{log_range:path}')
-def calc_log(calc_id: int, log_range: str):
+@app.get('/v0/calc/{calc_id}/log/{log_range:path}')
+def calc_log(calc_id: int, log_range: str,
+             x_api_key: str | None = Header(default=None)):
     """Return a calculation log slice."""
+    _check_api_key(x_api_key)
     try:
         start, stop = log_range.split(':', 1)
         start = int(start or 0)
@@ -459,9 +467,10 @@ def calc_log(calc_id: int, log_range: str):
     return _calc_log_slice(calc_id, start, stop)
 
 
-@app.get('/v1/calc/{calc_id}/traceback')
-def calc_traceback(calc_id: int):
+@app.get('/v0/calc/{calc_id}/traceback')
+def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return the traceback for a calculation."""
+    _check_api_key(x_api_key)
     try:
         return logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound as exc:
@@ -560,8 +569,9 @@ async def validate_nrml(request: Request):
 
 
 @app.post('/v1/on_same_fs')
-async def on_same_fs(request: Request):
+async def on_same_fs(request: Request, x_api_key: str | None = Header(default=None)):
     """Check whether the client and server can access the same file."""
+    _check_api_key(x_api_key)
     form = parse_qs((await request.body()).decode())
     filename = form.get('filename', [None])[0]
     checksum_in = form.get('checksum', [None])[0]
