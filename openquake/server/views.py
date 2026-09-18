@@ -854,15 +854,10 @@ def log_to_json(log):
 @cross_domain_ajax
 def calc_log(request, calc_id, start, stop):
     """
-    Get a slice of the calculation log as a JSON list of rows
+    Get a slice of the calculation log as a JSON list of rows.
+    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    start = start or 0
-    stop = stop or 0
-    try:
-        response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return _call_api(request, 'v0/calc/%s/log/%s:%s' % (calc_id, start, stop))
 
 
 @require_http_methods(['GET'])
@@ -1697,13 +1692,9 @@ def calc_results(request, calc_id):
 def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
+    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    # If the specified calculation doesn't exist throw back a 404.
-    try:
-        response_data = logs.dbcmd('get_traceback', calc_id)
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return _call_api(request, 'v0/calc/%s/traceback' % calc_id)
 
 
 @cross_domain_ajax
