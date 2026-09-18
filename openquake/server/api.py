@@ -447,13 +447,13 @@ def _calc_log_slice(calc_id, start, stop):
         raise HTTPException(status_code=404) from exc
 
 
-@app.get('/v1/calc/{calc_id}/log/size')
+@app.get('/v0/calc/{calc_id}/log/size')
 def calc_log_size(calc_id: int):
     """Return the number of log lines for a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
 
 
-@app.get('/v1/calc/{calc_id}/log/{log_range:path}')
+@app.get('/v0/calc/{calc_id}/log/{log_range:path}')
 def calc_log(calc_id: int, log_range: str,
              x_api_key: str | None = Header(default=None)):
     """Return a calculation log slice."""
@@ -467,7 +467,7 @@ def calc_log(calc_id: int, log_range: str,
     return _calc_log_slice(calc_id, start, stop)
 
 
-@app.get('/v1/calc/{calc_id}/traceback')
+@app.get('/v0/calc/{calc_id}/traceback')
 def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return the traceback for a calculation."""
     _check_api_key(x_api_key)
