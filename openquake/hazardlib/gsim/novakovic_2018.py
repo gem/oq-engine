@@ -120,7 +120,8 @@ class NovakovicEtAl2018(GMPE):
           Prediction Equation for Oklahoma" -
 
     Note that the default parameters used are for OK i.e. when the region_fle
-    is left empty, the default file used is `novakovic_2018_reg_adj_ok.txt`
+    is left empty, the default file used is
+    `novakovic_2018/novakovic_2018_reg_adj_oklahoma.txt`
 
     :param d_sigma:
         The stress-drop [bar]
@@ -131,7 +132,8 @@ class NovakovicEtAl2018(GMPE):
     NOTE: 5 sigma values for PGA, PGV, SA(0.02), SA(0.0495), SA(0.0655) from
           erratum table A3 (tau and phi values)
 
-    NOTE: Changed T=0.9901 to T=1 in novakovic_2018_reg_adj_ok.txt to avoid an
+    NOTE: Changed T=0.9901 to T=1 in
+          novakovic_2018/novakovic_2018_reg_adj_oklahoma.txt to avoid an
           interpolation that caused a discrepancy only for SA(1.0) of about
           1.83% - now the tests pass at max discrep of 0.01%
     """
@@ -172,7 +174,9 @@ class NovakovicEtAl2018(GMPE):
         # Read the file and create the coefficient table for the regional
         # adjustment
         if region_fle is None:
-            region_fle = os.path.join(TFP, 'novakovic_2018_reg_adj_ok.txt')
+            region_fle = os.path.join(
+                TFP, 'novakovic_2018',
+                'novakovic_2018_reg_adj_oklahoma.txt')
         with open(region_fle, 'r') as fle:
             data = fle.read()
             self.REA = CoeffsTable(sa_damping=5, table=data)
