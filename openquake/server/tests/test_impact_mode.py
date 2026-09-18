@@ -31,7 +31,7 @@ from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
-from openquake.commonlib.logs import dbcmd
+from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.tests.views_test import (
     get_or_create_user, start_uvicorn, stop_uvicorn)
@@ -137,7 +137,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        dbcmd('reset_is_running')  # cleanup stuck calculations
+        logs.dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
@@ -281,6 +281,20 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             pandas.DataFrame.from_dict(
                 {item: exposure_by_lse[item] for item in exposure_by_lse})
 
+        job = logs.dbcmd('get_job', job_id)
+        if 'make_impact_reports' in data:
+            with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                impact_iso3_list = list(ds['impact'])
+                self.assertGreater(len(impact_iso3_list), 0)
+                for iso3 in impact_iso3_list:
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                    self.assertEqual(ret.status_code, 200)
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                        f'&format=png')
+                    self.assertEqual(ret.status_code, 200)
+
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission
 
@@ -415,6 +429,30 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '1']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_make_impact_report_then_remove_calc(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000t7zp'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '10']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100', make_impact_reports=True)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in IMPACT mode

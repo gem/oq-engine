@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2026, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """Minimal FastAPI application served by Uvicorn."""
@@ -363,6 +362,10 @@ async def v0_impact_run(
     user = SimpleNamespace(level=user_level, testdir=None)
     adapter = SimpleNamespace(POST=post, FILES=files)
     rupture_path = get_uploaded_file_path(adapter, 'rupture_file')
+    if not rupture_path:
+        rupture_path = post.get('rupture_from_usgs') or ''
+    if rupture_path == 'None':
+        rupture_path = ''
     station_path = get_uploaded_file_path(adapter, 'station_data_file')
     station_from_usgs = post.get('station_data_file_from_usgs', '')
     station_source = None
@@ -378,6 +381,8 @@ async def v0_impact_run(
             content=err, status_code=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
+    if params.get('make_impact_reports'):
+        params['postrisk_func'] = 'make_impact_reports.main'
     params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
 
     def build_absolute_uri(path):
