@@ -6,8 +6,6 @@ Banimahd et al. (2026) Turkiye ANN-based Ground-Motion Model
 This module implements the ANN-based, region-specific ground-motion model
 for Turkiye by Banimahd et al. (2026) as an OpenQuake GSIM/GMPE.
 
-Reference
----------
 Banimahd A, Karimzadeh S, et al. (2026).
 Artificial neural network-based non-parametric ground motion models for
 multiple intensity measures in Turkiye.
@@ -141,8 +139,7 @@ class Banimahd2026Turkiye(GMPE):
      
         # Run ONNX inference once for all 25 outputs
         input_name = self.session.get_inputs()[0].name
-        output_name = self.session.get_outputs()[0].name
-        out = self.session.run([output_name], {input_name: X})[0]
+        out = self.session.run(None, {input_name: X})[0]
 
         # Fill mean/sig/tau/phi for each requested IMT
         for m, imt in enumerate(imts):
