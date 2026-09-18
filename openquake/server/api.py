@@ -564,8 +564,7 @@ async def validate_nrml(request: Request):
 
 
 @app.post('/v1/on_same_fs')
-async def on_same_fs(request: Request,
-                     x_api_key: str | None = Header(default=None)):
+async def on_same_fs(request: Request, x_api_key: str | None = Header(default=None)):
     """Check whether the client and server can access the same file."""
     _check_api_key(x_api_key)
     form = parse_qs((await request.body()).decode())
