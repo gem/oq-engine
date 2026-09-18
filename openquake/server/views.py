@@ -2042,6 +2042,35 @@ def web_engine(request, **kwargs):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def web_engine_log(request, calc_id, start, stop):
+    """Proxy a calculation log request to FastAPI after ACL checking."""
+    try:
+        info = logs.dbcmd('calc_info', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(
+            request, info['user_name'], info['status']):
+        return HttpResponseForbidden()
+    endpoint = 'v1/calc/%s/log/%s:%s' % (calc_id, start, stop)
+    return _call_api(request, endpoint)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_traceback(request, calc_id):
+    """Proxy a calculation traceback request after ACL checking."""
+    try:
+        info = logs.dbcmd('calc_info', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(
+            request, info['user_name'], info['status']):
+        return HttpResponseForbidden()
+    return _call_api(request, 'v1/calc/%s/traceback' % calc_id)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
     application_mode = settings.APPLICATION_MODE
     job = logs.dbcmd('get_job', calc_id)

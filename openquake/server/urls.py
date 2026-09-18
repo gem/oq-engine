@@ -117,6 +117,10 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
             re_path(r'^engine/?$', views.web_engine, name="index"),
             re_path(r'^engine/(\d+)/outputs$',
                     views.web_engine_get_outputs, name="outputs"),
+            re_path(r'^engine/(\d+)/log/(\d*):(\d*)$',
+                    views.web_engine_log, name="engine_log"),
+            re_path(r'^engine/(\d+)/traceback$',
+                    views.web_engine_traceback, name="engine_traceback"),
         ]
         if settings.APPLICATION_MODE == 'AELO':
             urlpatterns.append(
