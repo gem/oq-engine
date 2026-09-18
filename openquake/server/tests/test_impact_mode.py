@@ -30,13 +30,13 @@ from django.apps import apps
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
-from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.tests.views_test import (
     get_or_create_user, start_uvicorn, stop_uvicorn)
 
-CALC_RUN_TIMEOUT = 120
+CALC_RUN_TIMEOUT = 60
 
 
 def check_email(job_id, email_content, expected_error):
@@ -88,7 +88,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def get_json(cls, path, **data):
-        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
+        resp = cls.c.get('/v1/calc/%s' % path, data,
+                         headers={'X-API-Key': API_KEY})
         if hasattr(resp, 'content'):
             assert resp.content, (
                 'No content from http://localhost:8800/v1/calc/%s (params: %s)'
@@ -136,7 +137,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        dbcmd('reset_is_running')  # cleanup stuck calculations
+        logs.dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
@@ -409,7 +410,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         expected_error = "The imts {'SA(0.6)'} are required"
         self.impact_run_then_remove('impact_run', data, expected_error)
 
-    def test_run_by_usgs_id_then_remove_calc_discard_sites(self):
+    def test_run_by_usgs_id_then_remove_calc_success(self):
         self.set_user_level_and_remove_groups(1)
         # NOTE: this case tests the extractor for losses_by_site in the
         # case discarding sites that do not correspond to any assets,
