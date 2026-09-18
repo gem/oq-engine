@@ -580,6 +580,7 @@ def _overlay_basemap(ax, basemap_path, target_crs):
         # For impact reports, basemap_path is configured with
         # directory.basemap_file in the OpenQuake configuration. If it is
         # not configured, no raster overlay is drawn.
+        # Currently CI tests do not download nor use any basemap.
         return
     try:
         import rasterio  # noqa
