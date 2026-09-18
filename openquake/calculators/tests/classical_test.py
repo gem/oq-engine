@@ -287,11 +287,17 @@ class ClassicalTestCase(CalculatorTestCase):
         # Test specification of reference z1pt4: the site_model.csv carries
         # values which must be overridden by reference z1pt4 in the job file
         self.assert_curves_ok(
-            ['hazard_curve-mean-PGA.csv',
-             'hazard_curve-mean-SA(0.5).csv'],
+            ['hazard_curve-mean-SA(0.5).csv'],
             case_13.__file__)
         sitecol = self.calc.datastore['sitecol']
         aac(sitecol.z1pt4, [50, 50, 50])
+
+        # Second check: -999 z1pt4 in the site_model triggers the MF13 Vs30
+        # based inference (GEM fitting of CY14-Japan form to NIED data)
+        self.run_calc(case_13.__file__, 'job_infer_z1pt4.ini')
+        [got] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-SA(0.5)_infer_z1pt4.csv', got)
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
