@@ -109,8 +109,9 @@ def get_uploaded_file_path(request, filename):
 
 
 @app.get('/v1/calc_info/{calc_id}')
-def calc_info(calc_id: int):
+def calc_info(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return calculation information."""
+    _check_api_key(x_api_key)
     try:
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
@@ -448,8 +449,10 @@ def calc_log_size(calc_id: int):
 
 
 @app.get('/v1/calc/{calc_id}/log/{log_range:path}')
-def calc_log(calc_id: int, log_range: str):
+def calc_log(calc_id: int, log_range: str,
+             x_api_key: str | None = Header(default=None)):
     """Return a calculation log slice."""
+    _check_api_key(x_api_key)
     try:
         start, stop = log_range.split(':', 1)
         start = int(start or 0)
@@ -460,8 +463,9 @@ def calc_log(calc_id: int, log_range: str):
 
 
 @app.get('/v1/calc/{calc_id}/traceback')
-def calc_traceback(calc_id: int):
+def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
     """Return the traceback for a calculation."""
+    _check_api_key(x_api_key)
     try:
         return logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound as exc:
@@ -560,8 +564,9 @@ async def validate_nrml(request: Request):
 
 
 @app.post('/v1/on_same_fs')
-async def on_same_fs(request: Request):
+async def on_same_fs(request: Request, x_api_key: str | None = Header(default=None)):
     """Check whether the client and server can access the same file."""
+    _check_api_key(x_api_key)
     form = parse_qs((await request.body()).decode())
     filename = form.get('filename', [None])[0]
     checksum_in = form.get('checksum', [None])[0]

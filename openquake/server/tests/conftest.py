@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import pytest
 import glob
 import shutil
@@ -56,12 +57,14 @@ def migrate_before_tests():
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     # the tests share the engine DB (there is no pytest-django test DB), so
     # make sure it is migrated before the server process connects to it
-    subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
+    subprocess.run([sys.executable, serverdir / 'manage.py', 'migrate'],
+                   check=True)
     if appmode in ['AELO', 'IMPACT']:
         # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
-        subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
+        subprocess.run([sys.executable, serverdir / 'manage.py', 'loaddata', js],
+                       check=True)
     yield
 
 

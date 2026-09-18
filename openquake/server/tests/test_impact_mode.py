@@ -30,6 +30,7 @@ from django.apps import apps
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.tests.views_test import (
@@ -87,7 +88,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def get_json(cls, path, **data):
-        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
+        resp = cls.c.get('/v1/calc/%s' % path, data,
+                         headers={'X-API-Key': API_KEY})
         if hasattr(resp, 'content'):
             assert resp.content, (
                 'No content from http://localhost:8800/v1/calc/%s (params: %s)'

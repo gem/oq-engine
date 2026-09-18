@@ -24,7 +24,7 @@ import tempfile
 import logging
 
 from openquake.baselib import config
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, auth
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -129,7 +129,7 @@ LANGUAGE_CODE = 'en-us'
 USE_I18N = True
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
+SECRET_KEY = auth.API_KEY
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
