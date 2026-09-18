@@ -864,13 +864,10 @@ def calc_log(request, calc_id, start, stop):
 @cross_domain_ajax
 def calc_log_size(request, calc_id):
     """
-    Get the current number of lines in the log
+    Get the current number of lines in the log.
+    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    try:
-        response_data = logs.dbcmd('get_log_size', calc_id)
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-    return JsonResponse(response_data)
+    return _call_api(request, 'v0/calc/%s/log/size' % calc_id)
 
 
 job_complete_callback_state = {'event': Event(), 'data': {}}
