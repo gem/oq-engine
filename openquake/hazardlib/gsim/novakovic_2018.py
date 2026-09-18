@@ -116,8 +116,6 @@ class NovakovicEtAl2018(GMPE):
     Implements the model of Novakovic et al. (2018) as described in:
         - Novakovic et al. (2018) "Empirically Calibrated Ground-Motion
           Prediction Equation for Oklahoma" - doi: 10.1785/0120170331
-        - Novakovic et al. (2020) "Empirically Calibrated Ground-Motion
-          Prediction Equation for Oklahoma" -
 
     Note that the default parameters used are for OK i.e. when the region_fle
     is left empty, the default file used is
@@ -127,10 +125,10 @@ class NovakovicEtAl2018(GMPE):
         The stress-drop [bar]
     :param region_fle:
         A .txt file (with the same formats of a coefficient table) containing
-        the regional adjustements
+        the regional adjustments
 
     NOTE: 5 sigma values for PGA, PGV, SA(0.02), SA(0.0495), SA(0.0655) from
-          erratum table A3 (between event and within event values corrected)
+          erratum table A3 (between event and within event values Z)
 
     NOTE: Changed T=0.9901 to T=1 in
           novakovic_2018/novakovic_2018_reg_adj_oklahoma.txt to avoid an
