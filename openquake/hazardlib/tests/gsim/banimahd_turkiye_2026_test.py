@@ -17,3 +17,14 @@ class Banimahd2026TurkiyeTestCase(BaseGSIMTestCase):
             max_discrep_percentage=0.1,
         )
         
+    def test_std_intra(self):
+        self.check(
+            "BANIMAHD2026TURKIYE/BANIMAHD2026TURKIYE_STD_INTRA.csv",
+            max_discrep_percentage=0.1,
+        )
+
+    def test_std_inter(self):
+        self.check(
+            "BANIMAHD2026TURKIYE/BANIMAHD2026TURKIYE_STD_INTER.csv",
+            max_discrep_percentage=0.1,
+        )  
