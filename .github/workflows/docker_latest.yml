@@ -42,8 +42,19 @@ jobs:
         run: |
           docker image ls
       - name: Run calcs on single docker
+        shell: bash
+        env:
+          DOCKER_TAG: ${{ github.event.inputs.tags }}
+          DOCKER_REPO_REF: ${{ github.event.inputs.git-ref }}
         run: |
-          time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
+          echo "docker_tag: $DOCKER_TAG"
+          echo "docker_repo_ref: $DOCKER_REPO_REF"
+          tag="${DOCKER_TAG%%,*}"
+          tag="${tag:-latest}"
+          repo_ref="${DOCKER_REPO_REF:-master}"
+          echo "tag: $tag"
+          echo "repo_ref: $repo_ref"
+          time docker run openquake/engine:$tag "oq engine --run 'https://github.com/gem/oq-engine/blob/${repo_ref}/openquake/server/tests/data/classical.zip?raw=true'"
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
