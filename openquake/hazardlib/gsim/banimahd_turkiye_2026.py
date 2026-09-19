@@ -52,6 +52,9 @@ class Banimahd2026Turkiye(GMPE):
     This GSIM wraps an ensemble of 10 feed-forward neural networks exported
     to a single ONNX file. It returns the mean ln(IM) and standard deviations
     (intra-event, inter-event, total) for each requested IMT.
+
+    NOTE: This implementation only supports PGA, PGV, and SA, and not the
+    other IMTs (IA, RSD575, RSD595, CAV) supported by the original GMM.
     """
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
