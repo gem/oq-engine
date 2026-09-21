@@ -13,8 +13,6 @@ on:
         required: true
   schedule:
     - cron: "30 23 * * *"
- #push:
-    #branches: [ ci ]
 
 jobs:
   docker:
