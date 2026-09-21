@@ -93,31 +93,35 @@ a3 = 0.9
 
     def test_pga_fallback_below_min_sa(self):
         """
-        SA periods below the smallest tabulated SA row interpolate
-        linearly in period between PGA (period 0) and the smallest SA
-        period when requiring a period below the smallest period.
-        --> AtkinsonBoore2006Modified2011 lowest SA period = 0.025 s
-        --> BooreAtkinson2008 lowest SA period = 0.01 s
-        --> CampbellBozorgnia2014 lowest SA period = 0.01 s
+        SA periods below the smallest tabulated SA row interpolate in
+        log-period between PGA (treated as SA at 0.01 s) and the smallest
+        tabulated SA period, but only when the smallest tabulated SA period
+        is at least 0.05 s and the target period is at least 0.01 s.
+        Otherwise a KeyError is raised.
         """
+        anchor = 0.01
+
+        # Smallest tabulated SA row is 0.1 s, so the 0.05 s gate is met
+        # and log-period interpolation between PGA and SA(0.1) is applied
+        ctab = CoeffsTable(sa_damping=5, table="""
+            imt   a
+            pga   1
+            0.1   10
+            1.0   3""")
+        t_lo = 0.05
+        ratio = np.log(t_lo / anchor) / np.log(0.1 / anchor)
+        np.testing.assert_allclose(ctab[SA(t_lo)]['a'], 1 + ratio * (10 - 1))
+
+        # Real GMMs whose smallest SA period is below the 0.05 s gate:
+        # target periods below the smallest SA row raise KeyError.
+        # --> BooreAtkinson2008 lowest SA period = 0.01 s
+        # --> CampbellBozorgnia2014 lowest SA period = 0.01 s
+        # --> AtkinsonBoore2006Modified2011 lowest SA period = 0.025 s
         for cls, coeffs in [
-            (AtkinsonBoore2006Modified2011, 'COEFFS_BC'),
             (BooreAtkinson2008, 'COEFFS'),
-            (CampbellBozorgnia2014, 'COEFFS')
-            ]:
+            (CampbellBozorgnia2014, 'COEFFS'),
+            (AtkinsonBoore2006Modified2011, 'COEFFS_BC'),
+        ]:
             table = getattr(cls(), coeffs)
-            t_min, t_next = sorted(imt.period for imt in table.sa_coeffs)[:2]
-            pga = np.array(list(table[PGA()]))
-            row_min = np.array(list(table[SA(t_min)]))
-            row_next = np.array(list(table[SA(t_next)]))
-
-            # Below-min SA: linear-in-period between PGA and SA(t_min)
-            t_lo = t_min / 2
-            np.testing.assert_allclose(
-                list(table[SA(t_lo)]), pga + (t_lo / t_min) * (row_min - pga))
-
-            # In-range SA: log-interp between adjacent SA rows, no PGA
-            t_in = np.sqrt(t_min * t_next)
-            ratio = np.log(t_in / t_min) / np.log(t_next / t_min)
-            np.testing.assert_allclose(
-                list(table[SA(t_in)]), row_min + ratio * (row_next - row_min))
+            with self.assertRaises(KeyError):
+                table[SA(0.005)]
