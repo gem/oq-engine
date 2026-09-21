@@ -274,7 +274,7 @@ class CoeffsTable(object):
                     and min_above is not None   # Have an SA anchor above
                     and PGA() in self._coeffs   # Table has PGA (anchor row)
                     and imt.period >= pga_anchor         # Target at/above anchor
-                    and min_above.period > pga_anchor):  # No anchor collision
+                    and min_above.period > pga_anchor):  # Smallest SA above anchor
                 if self.logratio:
                     ratio = ((math.log(imt.period) -
                               math.log(pga_anchor)) /
