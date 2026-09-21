@@ -112,9 +112,10 @@ class CoeffsTable(object):
     KeyError: SA(0.9, 15)
 
     Extrapolation is not possible, except below the smallest SA period
-    when the table contains PGA: coefficients are then interpolated
-    linearly in period between PGA (treated as period 0) and the smallest
-    tabulated SA period:
+    when the table contains PGA and the smallest tabulated SA period is
+    strictly above 0.001 s: coefficients are then interpolated in
+    log-period between PGA (treated as SA at 0.001 s) and the smallest
+    tabulated SA period. Target periods below 0.001 s raise KeyError.
 
     >>> ct[imt.SA(period=20, damping=5)]
     Traceback (most recent call last):
@@ -122,7 +123,7 @@ class CoeffsTable(object):
     KeyError: SA(20.0)
 
     >>> '%.5f' % ct[imt.SA(period=0.01, damping=5)]['a']
-    '1.90000'
+    '5.50000'
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -264,15 +265,25 @@ class CoeffsTable(object):
                     if (max_below is None or
                            unscaled_imt.period > max_below.period):
                         max_below = unscaled_imt
-            # Fallback for SA periods below the smallest tabulated SA
-            # period: treat PGA as a period-0 anchor and interpolate
-            # linearly in period between PGA and min_above
+            # Fallback for SA periods below the smallest tabulated SA row:
+            # treat PGA as SA at pga_anchor and interpolate in log-period
+            # (or linear-period if logratio is False) between PGA and min_above.
+            # Refuses extrapolation below the anchor.
+            pga_anchor = 0.001
             if (imt.string.startswith('SA(')
-                    and max_below is None       # Target is below smallest SA
-                    and min_above is not None   # Have an SA anchor above
-                    and PGA() in self._coeffs   # Table has PGA (T~=0 anchor)
-                    ):
-                ratio = imt.period / min_above.period
+                    and max_below is None
+                    and min_above is not None
+                    and PGA() in self._coeffs
+                    and imt.period >= pga_anchor
+                    and min_above.period > pga_anchor):
+                if self.logratio:
+                    ratio = ((math.log(imt.period) -
+                              math.log(pga_anchor)) /
+                             (math.log(min_above.period) -
+                              math.log(pga_anchor)))
+                else:
+                    ratio = ((imt.period - pga_anchor) /
+                             (min_above.period - pga_anchor))
                 below = self._coeffs[PGA()]
                 above = self.sa_coeffs[min_above]
                 lst = [(above[n] - below[n]) * ratio + below[n]
