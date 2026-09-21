@@ -238,6 +238,20 @@ class CoeffsTable(object):
     def __iter__(self):
         return iter(self._coeffs)
 
+    def _interp_row(self, t, t_low, t_high, below, above):
+        """
+        Linearly interpolate each coefficient between the "below" and
+        "above" rows. Position along the period axis is measured in
+        log(T) when self.logratio is True, else linear T.
+        """
+        if self.logratio:
+            ratio = ((math.log(t) - math.log(t_low)) /
+                     (math.log(t_high) - math.log(t_low)))
+        else:
+            ratio = (t - t_low) / (t_high - t_low)
+        return [(above[n] - below[n]) * ratio + below[n]
+                for n in self.rb.names]
+
     def __getitem__(self, imt):
         """
         Return a dictionary of coefficients corresponding to ``imt``
@@ -281,36 +295,18 @@ class CoeffsTable(object):
                     and PGA() in self._coeffs    # Table has PGA (anchor row)
                     and imt.period >= pga_anchor # Target at/above anchor
                     and min_above.period <= min_sa_gate): # Smallest SA <= gate
-                if self.logratio:
-                    ratio = ((math.log(imt.period) -
-                              math.log(pga_anchor)) /
-                             (math.log(min_above.period) -
-                              math.log(pga_anchor)))
-                else:
-                    ratio = ((imt.period - pga_anchor) /
-                             (min_above.period - pga_anchor))
-                below = self._coeffs[PGA()]
-                above = self.sa_coeffs[min_above]
-                lst = [(above[n] - below[n]) * ratio + below[n]
-                       for n in self.rb.names]
+                lst = self._interp_row(
+                    imt.period, pga_anchor, min_above.period,
+                    self._coeffs[PGA()], self.sa_coeffs[min_above])
                 self._coeffs[imt] = c = self.rb(*lst)
                 return c
             if max_below is None or min_above is None:
                 raise KeyError(imt)
-            if self.logratio:  # regular case
-                # ratio tends to 1 when target period tends to a minimum
-                # known period above and to 0 if target period is close
-                # to maximum period below.
-                ratio = ((math.log(imt.period) - math.log(max_below.period)) /
-                         (math.log(min_above.period) -
-                          math.log(max_below.period)))
-            else:  # in the ACME project
-                ratio = ((imt.period - max_below.period) /
-                         (min_above.period - max_below.period))
-            below = self.sa_coeffs[max_below]
-            above = self.sa_coeffs[min_above]
-            lst = [(above[n] - below[n]) * ratio + below[n]
-                   for n in self.rb.names]
+            # Standard SA-to-SA interpolation: target period sits between
+            # two tabulated SA rows
+            lst = self._interp_row(
+                imt.period, max_below.period, min_above.period,
+                self.sa_coeffs[max_below], self.sa_coeffs[min_above])
             self._coeffs[imt] = c = self.rb(*lst)
 
         elif self.opt == 1:
