@@ -116,7 +116,7 @@ class CoeffsTable(object):
     in log-period between PGA (treated as SA at 0.01 s) and the smallest
     tabulated SA period, provided the smallest SA period is at most 0.05 s
     and the target period is at least 0.01 s. This avoids interpolation
-    over wide gaps such as PGA (as 0.01 s) to SA at 0.1 s or larger:
+    over wide period gaps, e.g. from PGA at 0.01 s to SA at 0.1 s or beyond:
 
     >>> ct[imt.SA(period=20, damping=5)]
     Traceback (most recent call last):

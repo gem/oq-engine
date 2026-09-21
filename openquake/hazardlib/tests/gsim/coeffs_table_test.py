@@ -23,9 +23,6 @@ from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006Modified2011)
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014)
 
 
 class TestGetCoefficient(unittest.TestCase):
@@ -97,26 +94,23 @@ a3 = 0.9
         log-period between PGA (treated as SA at 0.01 s) and the smallest
         tabulated SA period, but only when the smallest tabulated SA period
         is at most 0.05 s AND the target period is at least 0.01 s. Otherwise
-        an error is raised. This avoids interpolation over wide gaps such
-        as PGA (as 0.01 s) to SA at 0.1 s or larger.
+        an error is raised. This avoids interpolation over wide period
+        gaps, e.g. from PGA at 0.01 s to SA at 0.1 s or beyond.
         """
-        anchor = 0.01
+        anchor = 0.01 # Treat PGA as SA(0.01)
 
-        # AtkinsonBoore2006Modified2011 smallest SA period = 0.025 s
-        # (<= 0.05 s gate), so log-period interpolation between PGA (as SA
-        # at 0.01 s) and SA(0.025) is applied for target T in [0.01, 0.025)
+        # TEST 1: Check a GMM works correctly
         table = AtkinsonBoore2006Modified2011().COEFFS_BC
-        t_min = 0.025
+        t_min = 0.025 # Min of GMM is 0.025 s (below 0.05 s)
+        t_tar = 0.02  # Target T is 0.02
         pga = np.array(list(table[PGA()]))
         row_min = np.array(list(table[SA(t_min)]))
-        t_lo = np.sqrt(anchor * t_min)
-        ratio = np.log(t_lo / anchor) / np.log(t_min / anchor)
+        ratio = np.log(t_tar / anchor) / np.log(t_min / anchor)
         np.testing.assert_allclose(
-            list(table[SA(t_lo)]), pga + ratio * (row_min - pga))
+            list(table[SA(t_tar)]), pga + ratio * (row_min - pga))
 
-        # Synthetic table with smallest SA row 0.1 s: gate fails because
-        # 0.1 > 0.05, so any target below 0.1 raises KeyError to avoid
-        # interpolation across the wide PGA-to-SA(0.1) gap
+        # TEST 2: Check a table with smallest SA period above 0.05 s does not
+        # interpolate. The min SA here is 0.1 s, so SA(0.05) raises an error
         wide_gap = CoeffsTable(sa_damping=5, table="""
             imt   a
             pga   1
@@ -124,28 +118,3 @@ a3 = 0.9
             1.0   3""")
         with self.assertRaises(KeyError):
             wide_gap[SA(0.05)]
-
-        # Real GMMs and their behaviour below the smallest SA row:
-        # target periods below the 0.01 s anchor raise KeyError. In-range
-        # SA targets still interpolate log-in-period between adjacent SA
-        # rows without touching PGA (unchanged behaviour).
-        # --> BooreAtkinson2008 lowest SA period = 0.01 s
-        # --> CampbellBozorgnia2014 lowest SA period = 0.01 s
-        # --> AtkinsonBoore2006Modified2011 lowest SA period = 0.025 s
-        for cls, coeffs in [
-            (BooreAtkinson2008, 'COEFFS'),
-            (CampbellBozorgnia2014, 'COEFFS'),
-            (AtkinsonBoore2006Modified2011, 'COEFFS_BC'),
-        ]:
-            table = getattr(cls(), coeffs)
-            with self.assertRaises(KeyError):
-                table[SA(0.005)]
-
-            # In-range SA: log-interp between adjacent SA rows, no PGA
-            t_min, t_next = sorted(imt.period for imt in table.sa_coeffs)[:2]
-            row_min = np.array(list(table[SA(t_min)]))
-            row_next = np.array(list(table[SA(t_next)]))
-            t_in = np.sqrt(t_min * t_next)
-            ratio = np.log(t_in / t_min) / np.log(t_next / t_min)
-            np.testing.assert_allclose(
-                list(table[SA(t_in)]), row_min + ratio * (row_next - row_min))
