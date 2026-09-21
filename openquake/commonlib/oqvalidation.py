@@ -46,6 +46,7 @@ from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
+from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
@@ -1519,7 +1520,6 @@ class OqParam(valid.ParamSet):
             if not fname:
                 self.raise_invalid('Missing gsim_logic_tree_file')
             path = os.path.join(self.base_path, fname)
-            from openquake.hazardlib.pfd_lt import PFDLogicTree
             PFDLogicTree(path)  # validate the logic tree
             if not hasattr(self, 'maximum_distance'):
                 # default FDHA integration distance (km), as in oq-pfdha
