@@ -78,6 +78,19 @@ def _download_server_data(data_dir):
     for name in files:
         _download_file(f'{base_url}/{name}', data_dir / name)
 
+    mosaic_dir = pathlib.Path(__file__).parents[2] / 'qa_tests_data' / 'mosaic'
+    mosaic_dir.mkdir(exist_ok=True)
+    exposure = mosaic_dir / 'exposure.hdf5'
+    _download_file(f'{base_url}/exposure.hdf5', exposure)
+    repo_dir = mosaic_dir.parents[2]
+    exposure_link = repo_dir / 'exposure.hdf5'
+    if exposure_link.is_symlink() and not exposure_link.exists():
+        exposure_link.unlink()
+    if (not exposure_link.exists()
+            or exposure_link.stat().st_size == 0):
+        exposure_link.unlink(missing_ok=True)
+        exposure_link.symlink_to(exposure.relative_to(repo_dir))
+
     fonts_dir = data_dir / 'fonts'
     if not any(fonts_dir.glob('NotoSans*-Regular.ttf')):
         archive_path = data_dir / 'fonts.zip'
