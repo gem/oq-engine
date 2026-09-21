@@ -76,26 +76,16 @@ def store(request_files, ini, calc_id):
     if zip_file is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
-        # NB: TemporaryUploadedFile Django objects are not sortable
         for input_file, name in named_files:
+            # input_file is a starlette.datastructures.UploadFile
+            # which contains a .file of kind tempfile.SpooledTemporaryFile
             new_path = os.path.join(calc_dir, name)
-            # Using shutil.copy2, Django deletes the temporary file
-            # when the request ends. With shutil.move it would
-            # attempt to delete it immediately when it is still in
-            # use by the Django process, which would raise an
-            # exception on Windows.
-            source = getattr(input_file, 'file', None)
-            if source is None:
-                shutil.copy2(input_file.temporary_file_path(), new_path)
-            else:
-                source.seek(0)
-                with open(new_path, 'wb') as target:
-                    shutil.copyfileobj(source, target)
+            with open(new_path, 'wb') as target:
+                shutil.copyfileobj(input_file.file, target)
             if name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
         source = getattr(zip_file, 'file', zip_file)
-        source.seek(0)
         inifiles = readinput.extract_from_zip(source, ini, calc_dir)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
