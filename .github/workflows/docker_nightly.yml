@@ -1,16 +1,6 @@
 ---
 name: Build Image Nightly for Docker
 on:
-  workflow_dispatch:
-    inputs:
-      tags:
-        description: Comma-separated list of tags
-        default: nightly
-        required: true
-      git-ref:
-        description: Git Ref
-        default: master
-        required: true
   schedule:
     - cron: "03 00 * * *"
 
