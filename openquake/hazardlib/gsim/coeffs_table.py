@@ -271,7 +271,9 @@ class CoeffsTable(object):
             # Fallback for SA periods below the smallest tabulated SA row:
             # treat PGA as SA at pga_anchor and interpolate in log-period
             # (or linear-period if logratio is False) between PGA and min_above
-            pga_anchor = 0.01  # NOTE: PGA treated as SA at this period
+            pga_anchor = 0.01  # NOTE: PGA treated as SA at this period - this is
+                               # supported by Bommer et al. 2011 paper on approx
+                               # equivalencies between PGA and SA(0.01) overall
             min_sa_gate = 0.05 # NOTE: Min period in coeff tab must be <= this
             if (imt.string.startswith('SA(')
                     and max_below is None        # Target is below smallest SA
