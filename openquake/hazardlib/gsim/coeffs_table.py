@@ -271,11 +271,11 @@ class CoeffsTable(object):
             # Refuses extrapolation below the anchor.
             pga_anchor = 0.001
             if (imt.string.startswith('SA(')
-                    and max_below is None
-                    and min_above is not None
-                    and PGA() in self._coeffs
-                    and imt.period >= pga_anchor
-                    and min_above.period > pga_anchor):
+                    and max_below is None       # Target is below smallest SA
+                    and min_above is not None   # Have an SA anchor above
+                    and PGA() in self._coeffs   # Table has PGA (anchor row)
+                    and imt.period >= pga_anchor         # Target at/above anchor
+                    and min_above.period > pga_anchor):  # No anchor collision
                 if self.logratio:
                     ratio = ((math.log(imt.period) -
                               math.log(pga_anchor)) /
