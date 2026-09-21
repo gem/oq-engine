@@ -114,16 +114,19 @@ class CoeffsTable(object):
     Extrapolation is not possible, except below the smallest SA period
     when the table contains PGA: coefficients are then interpolated
     in log-period between PGA (treated as SA at 0.01 s) and the smallest
-    tabulated SA period, provided the smallest SA period is at least 0.05 s
-    and the target period is at least 0.01 s:
+    tabulated SA period, provided the smallest SA period is at most 0.05 s
+    and the target period is at least 0.01 s. This avoids interpolation
+    over wide gaps such as PGA (as 0.01 s) to SA at 0.1 s or larger:
 
     >>> ct[imt.SA(period=20, damping=5)]
     Traceback (most recent call last):
         ...
     KeyError: SA(20.0)
 
-    >>> '%.5f' % ct[imt.SA(period=0.01, damping=5)]['a']
-    '1.00000'
+    >>> ct[imt.SA(period=0.005, damping=5)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(0.005)
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -269,13 +272,13 @@ class CoeffsTable(object):
             # treat PGA as SA at pga_anchor and interpolate in log-period
             # (or linear-period if logratio is False) between PGA and min_above
             pga_anchor = 0.01  # NOTE: PGA treated as SA at this period
-            min_sa_gate = 0.05 # NOTE: Min period in coeff tab must be >= this
+            min_sa_gate = 0.05 # NOTE: Min period in coeff tab must be <= this
             if (imt.string.startswith('SA(')
                     and max_below is None        # Target is below smallest SA
                     and min_above is not None    # Have an SA anchor above
                     and PGA() in self._coeffs    # Table has PGA (anchor row)
                     and imt.period >= pga_anchor # Target at/above anchor
-                    and min_above.period >= min_sa_gate): # Smallest T > 0.05 s
+                    and min_above.period <= min_sa_gate): # Smallest SA <= gate
                 if self.logratio:
                     ratio = ((math.log(imt.period) -
                               math.log(pga_anchor)) /
