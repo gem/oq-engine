@@ -80,8 +80,7 @@ class Banimahd2026Turkiye(GMPE):
     _PERIODS = [0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4,
                 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
         self.sigma_intra = {}
         self.tau_inter = {}
         self.phi_total = {}
