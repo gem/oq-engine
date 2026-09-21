@@ -497,13 +497,26 @@ def fix_version(commit, venv):
     [fname] = glob.glob(venv + path)
     lines = []
     for line in open(fname):
-        if line.startswith("__version__ = "):
-            vers = line.split("=")[1].strip()[1:-1]
-            lines.append(f'__version__ = "{vers}-git{commit}"\n')
+        if line.startswith("__version__ = ") and "-git" not in line:
+            vers = line.split("=")[1].strip()[1:-1]  # i.e. '3.12.0'
+            lines.append('__version__ = "%s-git%s"\n' % (vers, commit))
         else:
             lines.append(line)
     with open(fname, "w") as f:
         f.write("".join(lines))
+
+
+def normalize_version(version):
+    """
+    Convert a user-supplied --version argument into a pip-compatible
+    version specifier.
+    """
+    if version.count('.') == 1:
+        # e.g. "3.23" -> latest patch in that series, expands to >=3.23.0,<3.24
+        return f"~={version}.0"
+    else:
+        # e.g. "3.23.4" -> exact match
+        return f"=={version}"
 
 
 def _build_requirements_url(branch, inst):
@@ -523,8 +536,8 @@ def _install_engine(pycmd, version, inst,
     if sys.platform != "darwin":
         mac = ""
     req_pre = _build_requirements_url(branch, inst)
-    req = (f"{req_pre}/requirements-py"
-           f"{PYVER[:2]}-{PLATFORM[sys.platform]}{mac}.txt")
+    req = (f"{req_pre}/requirements-py{PYVER[0]}{PYVER[1]}"
+           f"-{PLATFORM[sys.platform][0]}{mac}.txt")
     subprocess.check_call(
         [pycmd, "-m", "pip", "install",
          "--force-reinstall", "--trusted-host", "wheelhouse.openquake.org",
@@ -534,7 +547,8 @@ def _install_engine(pycmd, version, inst,
     elif version is None:
         subprocess.check_call(
             [pycmd, "-m", "pip", "install"] +
-            ([] if noupgrade else ["--upgrade"]) + ["openquake.engine"])
+            ([] if noupgrade else ["--upgrade"]) +
+            [f"openquake.engine{normalize_version(version)}"])
     else:
         commit = latest_commit(version)
         print("Installing commit", commit)
@@ -607,7 +621,9 @@ def _print_success(oqreal, inst):
         if sys.platform == "win32":
             print(f"Please activate with "
                   f"{inst.VENV}\\Scripts\\activate.bat "
-                  f"(CMD) or .ps1 (PowerShell)")
+                  f"(CMD) or "
+                  f"%USERPROFILE%\\openquake\\Scripts\\activate.ps1 "
+                  f"(PowerShell)")
         else:
             print(f"Please activate with source "
                   f"{inst.VENV}/bin/activate")
