@@ -49,7 +49,8 @@ class CountryImpactReportBuilder:
 
     def __init__(
             self, iso3, adm_level, event: EventContext, options: ReportOptions,
-            losses_df, summary_data, dstore, time_of_calc, oqparam):
+            losses_df, summary_data, dstore, time_of_calc, oqparam,
+            points_gdf=None):
         try:
             import reportlab
             from reportlab import platypus
@@ -84,6 +85,7 @@ class CountryImpactReportBuilder:
         self.iso3 = iso3
         self.adm_level = adm_level
         self.losses_df = losses_df
+        self.points_gdf = points_gdf
         self.summary_data = summary_data
         self.dstore = dstore
         self.time_of_calc = time_of_calc
@@ -345,9 +347,14 @@ class CountryImpactReportBuilder:
         tags_agg_losses = list(LOSS_METADATA)
         admin_boundaries = load_admin_boundaries(
             self.country_name, self.iso3, self.adm_level)
-        points_gdf = points_to_gdf(self.losses_df, crs=admin_boundaries.crs)
+        points_gdf = self.points_gdf
+        if points_gdf is None:
+            points_gdf = points_to_gdf(
+                self.losses_df, crs=admin_boundaries.crs)
+        minx, miny, maxx, maxy = admin_boundaries.total_bounds
+        country_points = points_gdf.cx[minx:maxx, miny:maxy]
         aggloss_df = aggregate_losses(
-            points_gdf, admin_boundaries, tags_agg_losses)
+            country_points, admin_boundaries, tags_agg_losses)
         aggloss_df = aggloss_df.rename(columns={k: v["label"]
                                        for k, v in LOSS_METADATA.items()})
         save_most_affected_regions(aggloss_df, self.dstore, self.iso3)
