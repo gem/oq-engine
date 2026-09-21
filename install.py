@@ -325,11 +325,8 @@ def postinstall_standalone(inst):
     # we cannot use site.getsitepackages here since we are not yet
     # running in the target environment
     pycmd = python_exe(inst)
-    # Run python manage.py migrate before running app postinstall.
-    # --fake-initial avoids "table already exists" errors when the
-    # database pre-exists, i.e. when reinstalling
-    _run_subprocess(
-        inst, [pycmd, inst.manage_py(), "migrate", "--fake-initial"])
+    # Run python manage.py migrate before running app postinstall
+    _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
     errors = []
     for app in STANDALONE_APP_INFO:
         if not app['name']:
