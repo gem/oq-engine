@@ -267,17 +267,15 @@ class CoeffsTable(object):
                         max_below = unscaled_imt
             # Fallback for SA periods below the smallest tabulated SA row:
             # treat PGA as SA at pga_anchor and interpolate in log-period
-            # (or linear-period if logratio is False) between PGA and min_above.
-            pga_anchor = 0.01   # PGA treated as SA at this period
-            # smallest SA period in the coefficient table must be >= this
-            # for the fallback interpolation to apply
-            min_sa_gate = 0.05
+            # (or linear-period if logratio is False) between PGA and min_above
+            pga_anchor = 0.01  # NOTE: PGA treated as SA at this period
+            min_sa_gate = 0.05 # NOTE: Min period in coeff tab must be >= this
             if (imt.string.startswith('SA(')
-                    and max_below is None       # Target is below smallest SA
-                    and min_above is not None   # Have an SA anchor above
-                    and PGA() in self._coeffs   # Table has PGA (anchor row)
-                    and imt.period >= pga_anchor         # Target at/above anchor
-                    and min_above.period >= min_sa_gate):  # Smallest SA row >= gate
+                    and max_below is None        # Target is below smallest SA
+                    and min_above is not None    # Have an SA anchor above
+                    and PGA() in self._coeffs    # Table has PGA (anchor row)
+                    and imt.period >= pga_anchor # Target at/above anchor
+                    and min_above.period >= min_sa_gate): # Smallest T > 0.05 s
                 if self.logratio:
                     ratio = ((math.log(imt.period) -
                               math.log(pga_anchor)) /
