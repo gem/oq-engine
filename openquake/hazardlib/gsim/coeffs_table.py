@@ -112,10 +112,9 @@ class CoeffsTable(object):
     KeyError: SA(0.9, 15)
 
     Extrapolation is not possible, except below the smallest SA period
-    when the table contains PGA and the smallest tabulated SA period is
-    strictly above 0.001 s: coefficients are then interpolated in
-    log-period between PGA (treated as SA at 0.001 s) and the smallest
-    tabulated SA period. Target periods below 0.001 s raise KeyError.
+    when the table contains PGA: coefficients are then interpolated
+    in log-period between PGA (treated as SA at 0.001 s) and the smallest
+    tabulated SA period, provided the smallest SA period is above 0.001 s:
 
     >>> ct[imt.SA(period=20, damping=5)]
     Traceback (most recent call last):
