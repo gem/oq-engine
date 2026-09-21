@@ -19,6 +19,7 @@
 import os
 import sys
 import pytest
+import requests
 import glob
 import shutil
 import pathlib
@@ -54,7 +55,12 @@ def _download_file(url, target):
         prefix=f'.{target.name}.', dir=target.parent)
     os.close(fd)
     try:
-        subprocess.run(['wget', url, '-O', temporary], check=True)
+        with requests.get(url, stream=True, timeout=60) as response:
+            response.raise_for_status()
+            with open(temporary, 'wb') as stream:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        stream.write(chunk)
         if not pathlib.Path(temporary).stat().st_size:
             raise OSError(f'Empty download from {url}')
         os.replace(temporary, target)
@@ -158,8 +164,9 @@ def migrate_before_tests(server_test_data):
         # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
-        subprocess.run([sys.executable, serverdir / 'manage.py', 'loaddata', js],
-                       check=True)
+        subprocess.run(
+            [sys.executable, serverdir / 'manage.py', 'loaddata', js],
+            check=True)
     yield
 
 
