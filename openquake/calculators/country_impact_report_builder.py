@@ -18,6 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import sys
 from io import BytesIO
 from pathlib import Path
 from PIL import Image as PILImage
@@ -31,6 +32,7 @@ from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.hazardlib.calc.filters import upper_maxdist
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
+REPORT_DPI = 30 if any('pytest' in arg for arg in sys.argv) else 300
 
 
 class CountryImpactReportBuilder:
@@ -374,7 +376,8 @@ class CountryImpactReportBuilder:
                 elements=elements
             )
             buf = BytesIO()
-            fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
+            fig.savefig(buf, format="png", dpi=REPORT_DPI,
+                        bbox_inches="tight")
             plt.close(fig)
             buf.seek(0)
             images[label] = buf.getvalue()
