@@ -17,7 +17,7 @@ dist
 local_settings.py
 openquake/server/tests/data/worldcities.csv
 openquake/server/tests/data/countries_info.csv
-openquake/server/tests/data/World_Adm1_updated.gpkg
+openquake/server/tests/data/World_Adm1_simplified.gpkg
 openquake/server/tests/data/fonts.zip
 openquake/server/tests/data/fonts/
 demos/*/*.zip

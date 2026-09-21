@@ -45,25 +45,37 @@ def copy_from_templates_if_needed(tmpldir, ext):
             shutil.copy(fname, stripped)
 
 
+def _download_file(url, target):
+    """Download *url* atomically, removing incomplete files on failure."""
+    if target.is_file() and target.stat().st_size:
+        return
+    target.unlink(missing_ok=True)
+    fd, temporary = tempfile.mkstemp(
+        prefix=f'.{target.name}.', dir=target.parent)
+    os.close(fd)
+    try:
+        subprocess.run(['wget', url, '-O', temporary], check=True)
+        if not pathlib.Path(temporary).stat().st_size:
+            raise OSError(f'Empty download from {url}')
+        os.replace(temporary, target)
+    except BaseException:
+        pathlib.Path(temporary).unlink(missing_ok=True)
+        target.unlink(missing_ok=True)
+        raise
+
+
 def _download_server_data(data_dir):
     """Download the files used by the server integration tests."""
     base_url = 'https://downloads.openquake.org/test_data'
     files = ('worldcities.csv', 'countries_info.csv',
-             'World_Adm1_updated.gpkg')
+             'World_Adm1_simplified.gpkg')
     for name in files:
-        target = data_dir / name
-        if not target.exists():
-            subprocess.run(
-                ['wget', f'{base_url}/{name}', '-O', str(target)],
-                check=True)
+        _download_file(f'{base_url}/{name}', data_dir / name)
 
     fonts_dir = data_dir / 'fonts'
     if not any(fonts_dir.glob('NotoSans*-Regular.ttf')):
         archive_path = data_dir / 'fonts.zip'
-        if not archive_path.exists():
-            subprocess.run(
-                ['wget', f'{base_url}/fonts.zip', '-O', str(archive_path)],
-                check=True)
+        _download_file(f'{base_url}/fonts.zip', archive_path)
         with zipfile.ZipFile(archive_path) as archive:
             archive.extractall(data_dir)
 
@@ -75,7 +87,7 @@ def _configure_server_data(data_dir):
     paths = {
         'world_cities_file': data_dir / 'worldcities.csv',
         'countries_info_file': data_dir / 'countries_info.csv',
-        'admin1_boundaries_file': data_dir / 'World_Adm1_updated.gpkg',
+        'admin1_boundaries_file': data_dir / 'World_Adm1_simplified.gpkg',
         'fonts_dir': data_dir / 'fonts',
     }
     with open(cfg_path, 'w') as cfg:
