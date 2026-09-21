@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import functools
 import logging
 import pathlib
@@ -28,7 +27,25 @@ import geopandas as gpd
 from openquake.baselib import config
 
 
-cd = pathlib.Path(__file__).parent
+def get_configured_path(name, directory=False):
+    """Return a configured, existing file or directory path."""
+    try:
+        value = getattr(config.directory, name)
+    except AttributeError as exc:
+        raise AttributeError(
+            f'config.directory.{name} must be specified') from exc
+    if not value:
+        raise AttributeError(
+            f'config.directory.{name} must be specified')
+
+    path = pathlib.Path(value).expanduser()
+    exists = path.is_dir() if directory else path.is_file()
+    if not exists:
+        kind = 'directory' if directory else 'file'
+        raise FileNotFoundError(
+            f'Configured {kind} for config.directory.{name} '
+            f'does not exist: {path}')
+    return path
 
 
 @dataclass
@@ -124,27 +141,10 @@ def build_classifiers(df, *, breaks):
 
 def load_admin_boundaries(
         country_name, iso3, adm_level, crs="EPSG:4326"):
-    if adm_level == 1:
-        try:
-            fname = config.directory.admin1_boundaries_file
-        except AttributeError:
-            # checking if the file is present in the oq-engine directory
-            if not os.path.exists(
-                    fname := cd.parent.parent /
-                    'World_Adm1_simplified.gpkg'):
-                raise AttributeError(
-                    'config.directory.admin1_boundaries_file is missing')
-    elif adm_level == 2:
-        try:
-            fname = config.directory.admin2_boundaries_file
-        except AttributeError as exc:
-            raise AttributeError(
-                'config.directory.admin2_boundaries_file is missing') from exc
-    else:
+    if adm_level not in (1, 2):
         raise NotImplementedError(f'Admin level {adm_level} not supported')
-    if not fname:
-        raise AttributeError(
-            f'config.directory.admin{adm_level}_boundaries_file is missing')
+    fname = get_configured_path(
+        f'admin{adm_level}_boundaries_file')
     # NOTE: be careful not mutating the cached object
     #       (in case we need to mutate it, we should make a copy
     #       right after reading)

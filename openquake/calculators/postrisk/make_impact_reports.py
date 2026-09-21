@@ -141,11 +141,8 @@ def _open_dstore(dstore):
 
 
 def _get_basemap_path():
-    try:
-        return config.directory.basemap_file
-    except AttributeError:
-        logging.error('config.directory.basemap_file is missing!')
-        return None
+    """Return the optional basemap configured for impact reports."""
+    return getattr(config.directory, 'basemap_file', None) or None
 
 
 def _is_no_uncertainty(oqparam):

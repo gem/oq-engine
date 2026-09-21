@@ -17,21 +17,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 from io import BytesIO
 from pathlib import Path
 from PIL import Image as PILImage
 from openquake import baselib
-from openquake.baselib import config
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, _read_countries_info,
     _read_world_cities, build_classifiers, load_admin_boundaries,
-    points_to_gdf, aggregate_losses, save_most_affected_regions)
+    points_to_gdf, aggregate_losses, save_most_affected_regions,
+    get_configured_path)
 from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.hazardlib.calc.filters import upper_maxdist
-
-cd = Path(__file__).parent
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 
@@ -123,15 +120,7 @@ class CountryImpactReportBuilder:
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
-        try:
-            fonts_dir = config.directory.fonts_dir
-        except AttributeError:
-            # checking if the directory is present in the oq-engine directory
-            if not os.path.exists(
-                    fonts_dir := cd.parent.parent / 'fonts'):
-                raise AttributeError(
-                    'config.directory.fonts_dir is missing')
-        fonts_dir = Path(fonts_dir)
+        fonts_dir = get_configured_path('fonts_dir', directory=True)
 
         # family_name -> font file prefix
         font_families = {
@@ -268,17 +257,8 @@ class CountryImpactReportBuilder:
         )
 
     def _load_country_info(self):
-        try:
-            countries_info_file = config.directory.countries_info_file
-        except AttributeError:
-            # checking if the file is present in the oq-engine directory
-            if not os.path.exists(
-                    countries_info_file := cd.parent.parent /
-                    'countries_info.csv'):
-                raise AttributeError(
-                    'config.directory.countries_info_file is missing')
-
-        path_str = str(Path(countries_info_file).resolve())
+        countries_info_file = get_configured_path('countries_info_file')
+        path_str = str(countries_info_file.resolve())
         df = _read_countries_info(path_str)   # cached
         row = df.loc[df["ISO3"] == self.iso3].iloc[0]
         self.country_name = row["ENGLISH_COUNTRY"]
@@ -323,20 +303,12 @@ class CountryImpactReportBuilder:
         Finds Top num_cities cities within the map viewport belonging
         to the current country
         """
-        try:
-            # NOTE: using for the report a file structured differently with
-            # respect to openquake/qa_tests_data/mosaic/worldcities.csv
-            # We may want to replace the other file with this, changing also
-            # the expected column names.
-            world_cities_file = config.directory.world_cities_file
-        except AttributeError:
-            # checking if the file is present in the oq-engine directory
-            if not os.path.exists(
-                    world_cities_file := cd.parent.parent /
-                    'worldcities.csv'):
-                raise AttributeError(
-                    'config.directory.world_cities_file is missing')
-        path_str = str(Path(world_cities_file).resolve())
+        # NOTE: using for the report a file structured differently with
+        # respect to openquake/qa_tests_data/mosaic/worldcities.csv
+        # We may want to replace the other file with this, changing also
+        # the expected column names.
+        world_cities_file = get_configured_path('world_cities_file')
+        path_str = str(world_cities_file.resolve())
         df = _read_world_cities(path_str)   # cached
         # Pull the pre-calculated limits
         min_lon, max_lon = self.x_limits
