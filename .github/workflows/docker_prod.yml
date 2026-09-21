@@ -1,11 +1,11 @@
 ---
-name: Build Image Nightly for Docker
+name: Build Image Production for Docker
 on:
   workflow_dispatch:
     inputs:
       tags:
         description: Comma-separated list of tags
-        default: nightly
+        default: latest
         required: true
       git-ref:
         description: Git Ref
@@ -59,9 +59,10 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
-          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
+          release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
           echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
-          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
           sleep 180
           docker logs openquake -t
           echo "Waiting WEBUI up on port 8800...."
@@ -91,17 +92,9 @@ jobs:
           time docker exec -t openquake oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
           sleep 2
           echo "test run of a calcs on new created container"
-          time docker run openquake/engine:nightly oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+          time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         run: |
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          if [ ${{ github.event.inputs.version }} != '' ]; then
-            echo "Is manual run"
-          else
-            echo "Is scheduled run"
-            DOCKER_TAG=nightly
-            REPO_REF=master
-          fi
-          echo " push image engine with tag :$DOCKER_TAG on docker hub "
-          docker push openquake/engine:$DOCKER_TAG
+          docker push openquake/engine --all-tags
