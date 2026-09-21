@@ -94,8 +94,6 @@ class server:
     # if we support changing venv, we need also to replace CFG and other
     # dependent fields with methods
     #
-    SERVER = True
-    DEVEL = False
     NOVENV = False
     VENV = "/opt/openquake/venv"
     CFG = os.path.join(VENV, "openquake.cfg")
@@ -122,8 +120,6 @@ class devel_server(server):
     Parameters for a development on server installation (with root permissions)
     """
 
-    DEVEL = True
-
     @classmethod
     def manage_py(cls):
         return os.path.join('openquake', 'server', 'manage.py')
@@ -134,8 +130,6 @@ class user:
     Parameters for a user installation
     """
 
-    SERVER = False
-    DEVEL = False
     NOVENV = False
 
     if sys.platform == "win32":
@@ -172,8 +166,6 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
-
-    DEVEL = True
 
     @classmethod
     def manage_py(cls):
@@ -278,7 +270,7 @@ def get_requirements_branch(version, inst, from_fork):
     # another gem repository, we need requirements to be read from the latest
     # stable version unless differently specified.
     if version is None:
-        if inst.DEVEL:
+        if inst in (devel, devel_server):
             return "master"
         # retrieve the tag name of the current stable version
         with urlopen("https://pypi.org/pypi/openquake.engine/json") as resp:
@@ -333,8 +325,11 @@ def postinstall_standalone(inst):
     # we cannot use site.getsitepackages here since we are not yet
     # running in the target environment
     pycmd = python_exe(inst)
-    # Run python manage.py migrate before running app postinstall
-    _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
+    # Run python manage.py migrate before running app postinstall.
+    # --fake-initial avoids "table already exists" errors when the
+    # database pre-exists, i.e. when reinstalling
+    _run_subprocess(
+        inst, [pycmd, inst.manage_py(), "migrate", "--fake-initial"])
     errors = []
     for app in STANDALONE_APP_INFO:
         if not app['name']:
@@ -355,9 +350,12 @@ def check_venv(inst, args, usage):
     """
     Checks on the virtual environment and on the user running the script.
     """
+    if args.novenv and args.venv:
+        sys.exit("Error: --novenv and --venv are mutually exclusive")
+
     # check venv
     if args.novenv:
-        if inst.SERVER:
+        if inst in (server, devel_server):
             sys.exit("Error: --novenv is not supported for server installs")
         # install in the current Python environment
         inst.VENV = sys.prefix
@@ -366,7 +364,7 @@ def check_venv(inst, args, usage):
         sys.exit("You are inside a virtual environment! Please deactivate")
 
     # server and devel_server installs are linux only and with fixed venv
-    if inst.SERVER:
+    if inst in (server, devel_server):
         if sys.platform != "linux":
             sys.exit("Error: this installation method is meant for linux!")
         if args.venv:
@@ -382,10 +380,10 @@ def check_venv(inst, args, usage):
         inst.VENV = os.path.abspath(os.path.expanduser(args.venv))
 
     # check user
-    if not inst.SERVER and getpass.getuser() == "root":
+    if inst not in (server, devel_server) and getpass.getuser() == "root":
         sys.exit("Error: you cannot perform a user or devel installation"
                  " as root.")
-    elif inst.DEVEL and not inst.SERVER:
+    elif inst is devel:
         if shutil.which("git") is None:
             raise RuntimeError("git is missing, please install it")
         try:
@@ -407,9 +405,10 @@ def check_packages(inst):
     Check for a pre-existing installation from packages or a conflicting
     symlink.
     """
-    if inst.SERVER and os.path.exists("/etc/openquake/openquake.cfg"):
+    if (inst in (server, devel_server)
+            and os.path.exists("/etc/openquake/openquake.cfg")):
         sys.exit(PACKAGES)
-    if (inst.SERVER and os.path.exists(inst.OQ)
+    if (inst in (server, devel_server) and os.path.exists(inst.OQ)
             and os.readlink(inst.OQ) != f"{inst.VENV}/bin/oq"):
         sys.exit(f"Error: there is already a link {inst.OQ}->"
                  f"{os.readlink(inst.OQ)}; please remove it")
@@ -475,7 +474,7 @@ def create_openquake_user(inst):
     """
     Create the 'openquake' system user, if needed.
     """
-    if not inst.SERVER:
+    if inst not in (server, devel_server):
         return
     import pwd
 
@@ -493,7 +492,7 @@ def create_dbdir(inst):
     if os.path.exists(inst.OQDATA):
         return
     os.makedirs(inst.OQDATA)
-    if inst.SERVER:
+    if inst in (server, devel_server):
         subprocess.check_call(["chown", "openquake", inst.OQDATA])
 
 
@@ -526,7 +525,7 @@ def requirements_url(inst, version, from_fork):
         mac = "_" + platform.machine()  # x86_64 or arm64
     else:
         mac = ""
-    if inst.DEVEL:
+    if inst in (devel, devel_server):
         # use local requirements file for devel installs
         req_pre = CDIR
     else:
@@ -561,7 +560,7 @@ def install_engine(inst, pycmd, version, noupgrade):
     github branch.
     """
     upgrade = [] if noupgrade else ["--upgrade"]
-    if inst.DEVEL:  # install from the local repo
+    if inst in (devel, devel_server):  # install from the local repo
         subprocess.check_call([pycmd, "-m", "pip", "install", "-e", CDIR])
     elif version is None:  # install the stable version
         subprocess.check_call(
@@ -588,7 +587,7 @@ def create_cfg(inst):
     """
     Create the server openquake.cfg file, unless it already exists.
     """
-    if not inst.SERVER:
+    if inst not in (server, devel_server):
         return
     if os.path.exists(inst.CFG):
         print(f"There is an old file {inst.CFG}; it will not be "
@@ -615,7 +614,7 @@ def upgrade_db(inst, oqreal):
     """
     Create or upgrade the database.
     """
-    if inst.SERVER:
+    if inst in (server, devel_server):
         subprocess.run(
             ['sudo', '-u', 'openquake', oqreal, "engine", "--upgrade-db"])
     else:  # create/upgrade the db in the default location
@@ -626,7 +625,7 @@ def create_symlink(inst, oqreal):
     """
     Create the /usr/bin/oq symlink for server installations.
     """
-    if inst.SERVER and not os.path.exists(inst.OQ):
+    if inst in (server, devel_server) and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
 
 
@@ -634,7 +633,7 @@ def activation_message(inst):
     """
     Print the instructions to activate the virtualenv.
     """
-    if inst.SERVER or inst.NOVENV:
+    if inst in (server, devel_server) or inst.NOVENV:
         return
     if sys.platform == "win32":
         print(f"Please activate the virtualenv with {inst.VENV}"
@@ -649,7 +648,8 @@ def create_services(inst):
     """
     Create and start the systemd services for server installations.
     """
-    if not (inst.SERVER and os.path.exists("/run/systemd/system")):
+    if not (inst in (server, devel_server)
+            and os.path.exists("/run/systemd/system")):
         return
     for service in ["webui"]:
         service_name = f"openquake-{service}.service"
@@ -672,7 +672,7 @@ def success_message(inst, oqreal):
     """
     Print the final success message and a test command.
     """
-    if inst.DEVEL:
+    if inst in (devel, devel_server):
         return
     path = os.path.join(
         inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA", "job.ini")
@@ -723,7 +723,7 @@ def remove(inst):
     Remove the virtualenv directory. In case of a server installation, also
     remove the systemd services.
     """
-    if inst.SERVER:
+    if inst in (server, devel_server):
         for service in ["webui"]:
             service_name = f"openquake-{service}.service"
             service_path = "/etc/systemd/system/" + service_name
@@ -738,7 +738,7 @@ def remove(inst):
     elif os.path.exists(inst.VENV):
         shutil.rmtree(inst.VENV)
         print(f"{inst.VENV} has been removed")
-    if inst.SERVER and os.path.exists(server.OQ):
+    if inst in (server, devel_server) and os.path.exists(server.OQ):
         os.remove(server.OQ)
         print(f"{server.OQ} has been removed")
 
