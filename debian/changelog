@@ -1,3 +1,10 @@
+  [Amir Banimahd]
+  * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
+  
+  [Marco Pagani]
+  * Added the Novakovic et al. (2018) GMM for induced seismicity with
+    verification against tables generated from author-provided files.
+  
   [Christopher Brooks]
   * Add ability to estimate z1pt4 from Vs30 for sites with a sentinel
     z1pt4 of -999 when using MorikawaFujiwara2013 GMM with GEM's own
