@@ -71,6 +71,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
+from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
@@ -904,7 +905,11 @@ def get_gsim_lt(oqparam, trts=()):
         tectonic region types.
     """
     if oqparam.calculation_mode == 'fdha_classical':
-        return get_pfd_lt(oqparam)
+        # FDHA has no GSIMs: the GSIM logic tree is a trivial one-branch
+        # PFDGMPE tree, used only to drive ContextMaker (see
+        # openquake/pfd/gsim.py); the PFD logic tree is read separately
+        # by get_pfd_lt
+        return get_pfd_gsim_lt(trts or ['*'])
     if 'gsim_logic_tree' not in oqparam.inputs:
         return logictree.GsimLogicTree.from_(
             oqparam.gsim, oqparam.inputs['job_ini'])
@@ -1086,19 +1091,13 @@ def get_full_lt(oqparam):
             continue
         elif trt.lower() not in trts_lower:
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
-    if oqparam.calculation_mode == 'fdha_classical':
-        # FDHA has no GSIMs: the second logic tree is a PFD logic tree, and
-        # the GSIM logic tree is a single no-op PFDGMPE per TRT, used only
-        # to drive ContextMaker (see openquake/pfd/gsim.py)
-        from openquake.pfd.gsim import get_pfd_gsim_lt
-        gsim_lt = get_pfd_gsim_lt(trts or ['*'])
-    else:
-        gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
+    gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
     amep = get_amp_functions(oqparam)
     full_lt = logictree.FullLogicTree(
         source_model_lt, gsim_lt, oversampling, amp_lt=amep)
     if oqparam.calculation_mode == 'fdha_classical':
+        # attach the PFD logic tree to be read by the FDHA calculator
         full_lt.pfd_lt = get_pfd_lt(oqparam)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 

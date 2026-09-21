@@ -27,7 +27,8 @@ import unittest
 import numpy
 
 from openquake.commonlib.readinput import (
-    get_oqparam, get_full_lt, get_composite_source_model, get_site_collection)
+    get_oqparam, get_full_lt, get_composite_source_model, get_site_collection,
+    get_gsim_lt)
 from openquake.hazardlib.calc.displacement import calc_rates
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.pfd.adapter import LegacyModelAdapter, style_from_rake
@@ -54,6 +55,10 @@ class EngineContextsTestCase(unittest.TestCase):
 
     def test_full_lt(self):
         oq = get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        # get_gsim_lt returns the no-op PFDGMPE logic tree for fdha_classical
+        glt = get_gsim_lt(oq, [TRT])
+        [gsim] = list(glt.values[TRT])
+        self.assertIsInstance(gsim, PFDGMPE)
         flt = get_full_lt(oq)
         self.assertEqual(flt.get_num_paths(), 1)
         self.assertIsInstance(flt.pfd_lt, PFDLogicTree)
