@@ -775,6 +775,18 @@ rupture_mesh_spacing:
   Example: *rupture_mesh_spacing = 2.0*.
   Default: 5.0
 
+r_threshold_km:
+  FDHA only: half-width (km) of the on-trace principal-displacement zone
+  for the boxcar rupture-location weight (used when r_sigma_km == 0).
+  Example: *r_threshold_km = 0.1*.
+  Default: 0.1
+
+r_sigma_km:
+  FDHA only: two-sided mapping-error sigma (km) for the Petersen Gaussian
+  rupture-location weight; 0 selects the boxcar/complementary split.
+  Example: *r_sigma_km = 0.5*.
+  Default: 0.0
+
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -982,6 +994,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
+                   'fdha_classical',
                    'scenario_damage',
                    'workflow']
 
@@ -1259,6 +1272,8 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
+    r_sigma_km = valid.Param(valid.positivefloat, 0.0)
+    r_threshold_km = valid.Param(valid.positivefloat, 0.1)
     rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})
@@ -1498,6 +1513,21 @@ class OqParam(valid.ParamSet):
     def check_gsim_lt(self):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
+        if self.calculation_mode == 'fdha_classical':
+            # the second logic tree is a PFD logic tree, not a GSIM one
+            fname = self.inputs.get('gsim_logic_tree')
+            if not fname:
+                self.raise_invalid('Missing gsim_logic_tree_file')
+            path = os.path.join(self.base_path, fname)
+            from openquake.hazardlib.pfd_lt import PFDLogicTree
+            PFDLogicTree(path)  # validate the logic tree
+            if not hasattr(self, 'maximum_distance'):
+                # default FDHA integration distance (km), as in oq-pfdha
+                self.maximum_distance = valid.IntegrationDistance.new('10')
+            self._trts = {'*'}
+            self.sec_imts
+            self.req_site_params = sorted(self.req_site_params)
+            return
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
                 self.raise_invalid('if `gsim_logic_tree_file` is set, there'
@@ -1553,6 +1583,7 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
+                and self.calculation_mode != 'fdha_classical'
                 and self.hazard_calculation_id is None):
             if ('multi_peril' not in self.inputs and
                     getattr(self, 'truncation_level', None) is None and
@@ -2426,7 +2457,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if 'gsim_logic_tree' not in self.inputs:
+        if (self.calculation_mode == 'fdha_classical' or
+                'gsim_logic_tree' not in self.inputs):
             return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
