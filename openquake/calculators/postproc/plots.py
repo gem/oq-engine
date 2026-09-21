@@ -577,9 +577,8 @@ def _overlay_basemap(ax, basemap_path, target_crs):
     Raster data is cached after the first load via _read_basemap().
     """
     if basemap_path is None:
-        # For impact reports, basemap_path is configured with
-        # directory.basemap_file in the OpenQuake configuration. If it is
-        # not configured, no raster overlay is drawn.
+        # Some plot callers do not use a raster basemap. Impact reports
+        # configure one before calling this function.
         return
     try:
         import rasterio  # noqa

@@ -28,7 +28,7 @@ from openquake.calculators.country_impact_report_builder import (
     CountryImpactReportBuilder)
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
-    EventContext, ReportOptions, LOSS_METADATA)
+    EventContext, ReportOptions, LOSS_METADATA, get_configured_path)
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries
 
@@ -141,8 +141,8 @@ def _open_dstore(dstore):
 
 
 def _get_basemap_path():
-    """Return the optional basemap configured for impact reports."""
-    return getattr(config.directory, 'basemap_file', None) or None
+    """Return the basemap configured for impact reports."""
+    return get_configured_path('basemap_file')
 
 
 def _is_no_uncertainty(oqparam):
