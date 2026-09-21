@@ -80,7 +80,7 @@ def _download_server_data(data_dir):
             archive.extractall(data_dir)
 
 
-def _configure_server_data(data_dir):
+def _configure_server_data(data_dir, basemap_path=None):
     """Configure the downloaded data for this process and its children."""
     fd, cfg_path = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.cfg')
     os.close(fd)
@@ -90,6 +90,8 @@ def _configure_server_data(data_dir):
         'admin1_boundaries_file': data_dir / 'World_Adm1_simplified.gpkg',
         'fonts_dir': data_dir / 'fonts',
     }
+    if basemap_path is not None:
+        paths['basemap_file'] = basemap_path
     with open(cfg_path, 'w') as cfg:
         cfg.write('[directory]\n')
         for name, path in paths.items():
@@ -110,7 +112,10 @@ def _prepare_server_data():
     data_dir = pathlib.Path(__file__).parent / 'data'
     data_dir.mkdir(exist_ok=True)
     _download_server_data(data_dir)
-    _server_cfg_path = _configure_server_data(data_dir)
+    basemap_path = None
+    if os.environ.get('OQ_APPLICATION_MODE', '').upper() == 'IMPACT':
+        basemap_path = data_dir / 'basemap.tif'
+    _server_cfg_path = _configure_server_data(data_dir, basemap_path)
     _server_old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
     os.environ['OQ_CONFIG_FILE'] = _server_cfg_path
 
