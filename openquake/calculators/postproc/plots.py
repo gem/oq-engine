@@ -562,10 +562,6 @@ def _build_legend_labels(classifier, legend_digits):
 
 @functools.lru_cache(maxsize=1)
 def _read_basemap(basemap_path):
-    # basemap_path must identify a georeferenced raster supported by
-    # rasterio (for example, a GeoTIFF). The raster can cover the whole
-    # world or just the area being plotted, but its CRS must match the
-    # vector data, as checked by _overlay_basemap().
     import rasterio
     with rasterio.open(basemap_path) as src:
         return src.read(), src.transform, src.crs
@@ -577,10 +573,6 @@ def _overlay_basemap(ax, basemap_path, target_crs):
     Raster data is cached after the first load via _read_basemap().
     """
     if basemap_path is None:
-        # For impact reports, basemap_path is configured with
-        # directory.basemap_file in the OpenQuake configuration. If it is
-        # not configured, no raster overlay is drawn.
-        # Currently CI tests do not download nor use any basemap.
         return
     try:
         import rasterio  # noqa

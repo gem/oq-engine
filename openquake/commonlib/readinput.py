@@ -995,7 +995,8 @@ def get_source_model_lt(oqparam):
     return smlt
 
 
-AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
+#TODO: add support for disagg
+AMP_LT_SUPPORTED_MODES = ('classical')
 
 
 def _expand_amp_lt(oqparam):

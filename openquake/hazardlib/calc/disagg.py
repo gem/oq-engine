@@ -202,7 +202,6 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, eps4, epsstar, gp,
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
     with mon1:
-        # Per-rupture, per-eps-bin rock exceedance PoE
         min_eps, max_eps, eps_bands, cum_bands = eps4
         U, E = len(ctx), len(eps_bands)
         M, P = iml2.shape
@@ -213,6 +212,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, eps4, epsstar, gp,
         # P - Number of PoEs
         # G - Number of gsims
         poes = numpy.zeros((U, E, M, P))
+        pnes = numpy.ones((U, E, M, P))
 
         # disaggregate by epsilon
         for (m, p), iml in numpy.ndenumerate(iml2):
@@ -232,111 +232,19 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, eps4, epsstar, gp,
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
     with mon2:
-        # Convert per-rupture PoEs into per-rupture no-exceedance probs
-        pnes = _compose_pnes(
-            ctx, poes, cmaker.investigation_time, infer_occur_rates)
+        time_span = cmaker.investigation_time
+        if not infer_occur_rates and any(len(po) for po in ctx.probs_occur):
+            # slow lane, case_65
+            for u, rec in enumerate(ctx):
+                pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
+                                    poes[u], time_span)
+        else:
+            # poissonian, fast lane
+            for e, m, p in itertools.product(range(E), range(M), range(P)):
+                pnes[:, e, m, p] *= numpy.exp(
+                    -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
 
     with mon3:
-        # Bin pnes over (dist, lon, lat, eps) and return the disagg matrix
-        bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-        return _build_disagg_matrix(bindata, bin_edges[1:])
-
-
-def _compose_pnes(ctx, poes, time_span, infer_occur_rates):
-    """
-    Compose per-rupture exceedance PoEs into per-rupture
-    no-exceedance probabilities
-    """
-    E, M, P = poes.shape[1:]
-    pnes = numpy.ones_like(poes)
-    if not infer_occur_rates and any(len(po) for po in ctx.probs_occur):
-        # slow lane, probs_occur ruptures (case_65)
-        for u, rec in enumerate(ctx):
-            pnes[u] *= get_pnes(rec.occurrence_rate, rec.probs_occur,
-                                poes[u], time_span)
-    else:
-        # poissonian, fast lane
-        for e, m, p in itertools.product(range(E), range(M), range(P)):
-            pnes[:, e, m, p] *= numpy.exp(
-                -ctx.occurrence_rate * poes[:, e, m, p] * time_span)
-    return pnes
-
-
-def _amp_poes_by_eps(mea_g, std_g, iml2, eps_edges, phi_b,
-                     amplifier, ampcode, imts):
-    """
-    Compute per-rupture, per-rock-eps-bin soil exceedance PoE of shape
-    """
-    U = mea_g.shape[-1]
-    M, P = iml2.shape
-    eps_l = eps_edges[:-1]
-    eps_u = eps_edges[1:]
-    E = len(eps_l)
-    # P(rock-eps in bin) under the truncated normal
-    pocc_rock_bin = truncnorm_sf(phi_b, eps_l) - truncnorm_sf(phi_b, eps_u)
-    eps_mid = 0.5 * (eps_l + eps_u)
-    poes = numpy.zeros((U, E, M, P))
-    for m, imt in enumerate(imts):
-        # Rock IML midpoint per rupture and eps bin, in log space
-        rock_mid_log = ( # (U, E)
-            mea_g[m][:, None] + eps_mid[None, :] * std_g[m][:, None]
-            )
-        a_flat, s_flat = amplifier._interp(
-            ampcode, str(imt), numpy.exp(rock_mid_log).ravel()
-            )
-        log_a = numpy.log(a_flat).reshape(U, E)
-        sigma = s_flat.reshape(U, E)
-        positive = sigma > 0
-        # Guard div by zero in norm.sf - sigma=0 cells overwritten below
-        safe_sigma = numpy.where(positive, sigma, 1.0)
-        for p in range(P):
-            iml_s = iml2[m, p]
-            if iml_s == -numpy.inf:
-                continue
-            logaf = iml_s - rock_mid_log
-            # P(amp * exp(rock_mid) > iml_soil) under lognormal AF
-            poex = scipy.stats.norm.sf((logaf - log_a) / safe_sigma)
-            # Deterministic amp at cells with sigma=0: soil > iml iff a>af
-            poex = numpy.where(
-                positive, poex, numpy.where(logaf < log_a, 1.0, 0.0))
-            poes[:, :, m, p] = poex * pocc_rock_bin[None, :]
-    return poes
-
-
-def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
-                      gp, infer_occur_rates, amplifier, ampcode,
-                      mon1, mon2, mon3):
-    """
-    Site amplification logic tree supporting version of _disaggregate
-
-    NOTE: epsilon_star is unsupported because it's inherently a rock-GMPE
-    residual, so this does not work with soil exceedance.
-
-    :param iml2: log soil IMLs of shape (M, P)
-    :param amplifier: an :class:`Amplifier` for the rlz's amp branch
-    :param ampcode: 2-letter code identifying the site's amplification entry
-    :returns: a disagg matrix (6D array)
-    """
-    if epsstar:
-        # Epsilon is binned on rock predictions, so with amplification the
-        # binning corresponds to pre-amp bedrock rather than post-amp soil;
-        # supporting epsilon_star here would misrepresent per-bin contribution
-        raise NotImplementedError(
-            'epsilon_star=true is not supported with amplification'
-            )
-    with mon1:
-        # Per-rupture, per-eps-bin soil exceedance PoE via amp integration
-        poes = gp * _amp_poes_by_eps(
-            mea[g], std[g], iml2, bin_edges[-1], cmaker.phi_b,
-            amplifier, ampcode, cmaker.imts)
-
-    with mon2:
-        # Convert per-rupture PoEs into per-rupture no-exceedance probs
-        pnes = _compose_pnes(
-            ctx, poes, cmaker.investigation_time, infer_occur_rates)
-
-    with mon3:
-        # Bin pnes over (dist, lon, lat, eps) and return disagg matrix
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
         return _build_disagg_matrix(bindata, bin_edges[1:])
 
@@ -480,9 +388,6 @@ class Disaggregator(object):
                 self.g_by_rlz[rlz] = g
 
         self.srcs_or_ctxs = srcs_or_ctxs
-        # Optional amp logic tree
-        self.amplifier = None
-        self.ampcode = b''
 
     def init(self, magi, src_mutex,
              mon0=Monitor('disagg mean_stds'),
@@ -536,7 +441,7 @@ class Disaggregator(object):
             return sum(self.weights)
         return 1.
 
-    def _disagg6D(self, imldic, g, rlz=None):
+    def _disagg6D(self, imldic, g):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
         # returns poes for src_mutex and rates otherwise
@@ -547,30 +452,12 @@ class Disaggregator(object):
             imlog2[m] = to_distribution_values(iml2[m], imt)
         mea, std = self.mea[self.magi], self.std[self.magi]
         gp = self.src_mutex.get('grp_probability', 1.)
-        amp = None
-        if self.amplifier is not None:
-            if self.src_mutex:
-                raise NotImplementedError(
-                    'Disaggregation with amplification and mutex sources')
-            if self.amplifier.rlz_ampl_ord is None:
-                amp = self.amplifier.amplifiers[0]
-            else:
-                amp = self.amplifier.amplifiers[
-                    self.amplifier.rlz_ampl_ord[rlz]]
         if not self.src_mutex:
-            if amp is not None:
-                poes = _disaggregate_amp(
-                    self.ctx, mea, std, self.cmaker, g, imlog2,
-                    self.bin_edges, self.epsstar, gp,
-                    self.cmaker.oq.infer_occur_rates,
-                    amp, self.ampcode,
-                    self.mon1, self.mon2, self.mon3)
-            else:
-                poes = _disaggregate(self.ctx, mea, std, self.cmaker,
-                                     g, imlog2, self.bin_edges, self.eps4,
-                                     self.epsstar, gp,
-                                     self.cmaker.oq.infer_occur_rates,
-                                     self.mon1, self.mon2, self.mon3)
+            poes = _disaggregate(self.ctx, mea, std, self.cmaker,
+                                 g, imlog2, self.bin_edges, self.eps4,
+                                 self.epsstar, gp,
+                                 self.cmaker.oq.infer_occur_rates,
+                                 self.mon1, self.mon2, self.mon3)
             return to_rates(poes)
 
         # else average on the src_mutex weights
@@ -614,7 +501,7 @@ class Disaggregator(object):
                     g = self.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                arr6D = self._disagg6D(imtls, g, rlz)
+                arr6D = self._disagg6D(imtls, g)
                 res[rlz] = to_rates(arr6D) if src_mutex else arr6D
                 if rwdic:  # compute mean rates (mean poes for src_mutex)
                     if 'mean' not in res:

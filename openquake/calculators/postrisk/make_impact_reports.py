@@ -21,6 +21,7 @@ import pathlib
 import tempfile
 import logging
 import traceback
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import pandas as pd
 from openquake.baselib import config, hdf5, sap
@@ -29,7 +30,7 @@ from openquake.calculators.country_impact_report_builder import (
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA)
-from openquake.commonlib import logs, datastore
+from openquake.commonlib import logs
 from openquake.commonlib.readinput import get_close_countries
 
 cd = pathlib.Path(__file__).parent
@@ -133,6 +134,7 @@ def _open_dstore(dstore):
     """
     if isinstance(dstore, (str, int)):
         # NOTE: called from the command line
+        from openquake.commonlib import datastore
         calc_id = int(dstore)
         dstore = datastore.read(calc_id, mode='r+')
     else:
@@ -240,6 +242,34 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
     return event_ctx, report_opts, losses_df, iso3_codes, time_of_calc
 
 
+@contextmanager
+def _job_log_handler(calc_id):
+    # Forward report logs to the database while preserving server logs
+    root = logging.getLogger()
+    handler = next(
+        (h for h in root.handlers
+         if isinstance(h, logs.LogDatabaseHandler)
+         and h.job_id == calc_id),
+        None,
+    )
+    added = handler is None
+    if added:
+        handler = logs.LogDatabaseHandler(calc_id)
+        root.addHandler(handler)
+    previous_handler_level = handler.level
+    handler.setLevel(logging.INFO)
+    previous_root_level = root.level
+    if previous_root_level > logging.INFO:
+        root.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        handler.setLevel(previous_handler_level)
+        if added:
+            root.removeHandler(handler)
+        root.setLevel(previous_root_level)
+
+
 def _log_report_error(message):
     # Log a report error, including its traceback
     logging.error("%s\n%s", message, traceback.format_exc())
@@ -310,7 +340,7 @@ def main(dstore, adm_level=1, threshold_deg=None):
     Create impact reports while logging to both server and job logs.
     """
     dstore, calc_id = _open_dstore(dstore)
-    with logs.init(dict(job_id=calc_id)):
+    with _job_log_handler(calc_id):
         _generate_reports(dstore, int(adm_level), threshold_deg, calc_id)
 
 

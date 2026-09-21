@@ -1563,13 +1563,3 @@ mohammadi_turkiye_2023
     :members:
     :undoc-members:
     :show-inheritance:
-
-banimahd_turkiye_2026
------------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.banimahd_turkiye_2026
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. _banimahd_turkiye_2026_reference:

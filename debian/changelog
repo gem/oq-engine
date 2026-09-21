@@ -1,6 +1,3 @@
-  [Amir Banimahd]
-  * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
-  
   [Marco Pagani]
   * Added the Novakovic et al. (2018) GMM for induced seismicity with
     verification against tables generated from author-provided files.

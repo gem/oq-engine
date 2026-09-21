@@ -51,46 +51,39 @@ def get_impact_rupture_data(post, user, rupture_path):
         del rupdic['warning_msg']
     return rupdic, 200
 
-
 CWD = os.path.dirname(__file__)
 KUBECTL = 'kubectl apply -f -'.split()
 ENGINE = 'python -m openquake.engine.engine'.split()
 
-
 def store(request_files, ini, calc_id):
-    """
-    Store the uploaded files in calc_dir and select the job file by looking
-    at the .ini extension.
-
-    :returns: full path of the ini file
-    """
+    """Store uploaded files and return the selected input file path."""
     calc_dir = parallel.calc_dir(calc_id)
     input_files = request_files.getlist('archive')
     named_files = [
-        (input_file, getattr(input_file, 'name', None) or
-         getattr(input_file, 'filename', ''))
-        for input_file in input_files]
+        (file, getattr(file, 'name', None) or getattr(file, 'filename', ''))
+        for file in input_files]
     zip_file = next(
-        (input_file for input_file, name in named_files
-         if name.endswith('.zip')), None)
+        (file for file, name in named_files if name.endswith('.zip')), None)
     if zip_file is None:
-        # move each file to calc_dir using the upload file names
         inifiles = []
         for input_file, name in named_files:
-            # input_file is a starlette.datastructures.UploadFile
-            # which contains a .file of kind tempfile.SpooledTemporaryFile
             new_path = os.path.join(calc_dir, name)
-            with open(new_path, 'wb') as target:
-                shutil.copyfileobj(input_file.file, target)
+            source = getattr(input_file, 'file', None)
+            if source is None:
+                shutil.copy2(input_file.temporary_file_path(), new_path)
+            else:
+                source.seek(0)
+                with open(new_path, 'wb') as target:
+                    shutil.copyfileobj(source, target)
             if name.endswith(ini):
                 inifiles.append(new_path)
-    else:  # extract the files from the archive into calc_dir
+    else:
         source = getattr(zip_file, 'file', zip_file)
+        source.seek(0)
         inifiles = readinput.extract_from_zip(source, ini, calc_dir)
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
-
 
 def save_pik(job, dirname):
     """Save a calculation job context for an external submit command."""
@@ -98,7 +91,6 @@ def save_pik(job, dirname):
     with open(path, 'wb') as fobj:
         pickle.dump([job], fobj)
     return path
-
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):
     """Create a calculation job and submit it without Django dependencies."""
@@ -145,7 +137,6 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
                 args=(job.calc_id, proc.pid,
                       int(config.webapi.calc_timeout))).start()
     return job.calc_id
-
 
 def get_papers_job_ctx(papers, rup_id, form):
     """Build a PAPERS job context using an injected papers adapter."""
@@ -205,8 +196,7 @@ def validate_aelo_data(post, form_labels, max_site_name_length):
     for name, check in checks:
         try:
             values[name] = check()
-            if (name == 'site_name'
-                    and len(values[name]) > max_site_name_length):
+            if name == 'site_name' and len(values[name]) > max_site_name_length:
                 raise ValueError(
                     'site name can not be longer than %s characters' %
                     max_site_name_length)
@@ -255,7 +245,6 @@ def validate_aelo_data(post, form_labels, max_site_name_length):
     return (values['lon'], values['lat'], values['site_name'],
             values['asce_version'], values['site_class'], values['vs30']), 200
 
-
 def run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
              username, job_owner_email, build_urls, callback,
              email_file_path):
@@ -291,3 +280,4 @@ def run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
     else:
         mp.Process(target=aelo.main, args=args).start()
     return response, 200
+

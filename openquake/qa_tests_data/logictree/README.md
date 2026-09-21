@@ -31,7 +31,6 @@
 | case\_28\_bis      | Test missing z1pt0                                                         |
 | case\_25           | BC Hydro NVA SSC LT source model LT                                        |
 | case\_26           | 3-branch amp LT with classical for full enumeration and sampling           |
-| case\_27           | 3-branch amp LT with disagg for full enumeration and sampling  |
 | case\_29           | Set hypo depth dist epistemic uncertainty                                  |
 | case\_30           | IMT-dependent weights, International Date Line                             |
 | case\_31           | Source Specific Logic Tree                                                 |

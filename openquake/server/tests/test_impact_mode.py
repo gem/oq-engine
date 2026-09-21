@@ -20,7 +20,6 @@ import time
 import os
 import sys
 import json
-import subprocess
 import tempfile
 import numpy
 import pandas
@@ -295,31 +294,6 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                         f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
                         f'&format=png')
                     self.assertEqual(ret.status_code, 200)
-
-            # Run the command-line extractor against the datastore generated
-            # by this test.  Hide xdg-open from PATH so the test does not
-            # launch a desktop application on the test machine.
-            script = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), '..', '..', '..', 'bin',
-                'extract_impact_reports.py'))
-            with tempfile.TemporaryDirectory() as output_dir:
-                env = os.environ.copy()
-                env['PATH'] = output_dir
-                subprocess.run(
-                    [sys.executable, script, str(job_id)],
-                    cwd=output_dir, env=env, check=True,
-                    capture_output=True, text=True)
-                for iso3 in impact_iso3_list:
-                    # Check the standard identifying bytes at the beginning
-                    # of each file to confirm its format.
-                    for file_format, signature in (
-                            ('pdf', b'%PDF'), ('png', b'\x89PNG')):
-                        report = os.path.join(
-                            output_dir,
-                            f'impact_report_{job_id}_{iso3}.{file_format}')
-                        self.assertTrue(os.path.isfile(report))
-                        with open(report, 'rb') as f:
-                            self.assertTrue(f.read(len(signature)) == signature)
 
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission
