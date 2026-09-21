@@ -99,7 +99,9 @@ a3 = 0.9
         """
         anchor = 0.01 # Treat PGA as SA(0.01)
 
-        # TEST 1: Check a GMM works correctly
+        # TEST 1: Check a GMM works correctly with this interpolation between
+        # PGA (as T=0.01 s) and a short period in a GMM with sufficiently low
+        # minimum period in its coefficient table
         table = AtkinsonBoore2006Modified2011().COEFFS_BC
         t_min = 0.025 # Min of GMM is 0.025 s (below 0.05 s)
         t_tar = 0.02  # Target T is 0.02
