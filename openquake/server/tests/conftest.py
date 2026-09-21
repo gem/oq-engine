@@ -79,31 +79,45 @@ def _configure_server_data(data_dir):
         'fonts_dir': data_dir / 'fonts',
     }
     with open(cfg_path, 'w') as cfg:
-        cfg.write('[directory]\\n')
+        cfg.write('[directory]\n')
         for name, path in paths.items():
-            cfg.write(f'{name} = {path}\\n')
+            cfg.write(f'{name} = {path}\n')
     for name, path in paths.items():
         config.directory[name] = str(path)
     return cfg_path
 
 
-@pytest.fixture(scope="session", autouse=True)
-def server_test_data():
-    """Make server test data available, downloading only missing files."""
+_server_cfg_path = None
+_server_old_cfg_path = None
+
+
+def _prepare_server_data():
+    global _server_cfg_path, _server_old_cfg_path
+    if _server_cfg_path is not None:
+        return
     data_dir = pathlib.Path(__file__).parent / 'data'
     data_dir.mkdir(exist_ok=True)
     _download_server_data(data_dir)
-    cfg_path = _configure_server_data(data_dir)
-    old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
-    os.environ['OQ_CONFIG_FILE'] = cfg_path
-    try:
-        yield
-    finally:
-        if old_cfg_path is None:
-            os.environ.pop('OQ_CONFIG_FILE', None)
-        else:
-            os.environ['OQ_CONFIG_FILE'] = old_cfg_path
-        pathlib.Path(cfg_path).unlink(missing_ok=True)
+    _server_cfg_path = _configure_server_data(data_dir)
+    _server_old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
+    os.environ['OQ_CONFIG_FILE'] = _server_cfg_path
+
+
+def pytest_configure(config):
+    """Prepare paths before unittest classes or worker processes start."""
+    _prepare_server_data()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def server_test_data():
+    """Make server test data available, downloading only missing files."""
+    _prepare_server_data()
+    yield
+    if _server_old_cfg_path is None:
+        os.environ.pop('OQ_CONFIG_FILE', None)
+    else:
+        os.environ['OQ_CONFIG_FILE'] = _server_old_cfg_path
+    pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
 
 
 @pytest.fixture(scope="session", autouse=True)
