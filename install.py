@@ -528,7 +528,7 @@ def _install_engine(pycmd, version, inst,
     subprocess.check_call(
         [pycmd, "-m", "pip", "install",
          "--force-reinstall", "--trusted-host", "wheelhouse.openquake.org",
-         "--trusted-host", "raw.githubusercontent.com", "-r", req])
+         "raw.githubusercontent.com", "-r", req])
     if inst in (devel, devel_server):
         subprocess.check_call([pycmd, "-m", "pip", "install", "-e", CDIR])
     elif version is None:
