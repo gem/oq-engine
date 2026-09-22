@@ -975,10 +975,11 @@ def get_rupture(oqparam):
     rupture_model = oqparam.inputs.get('rupture_model')
     rup = None
     if rupture_model and rupture_model.endswith('.json'):
-        # converting rupture_model from json to an oq-compatible xml
-        rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
+        # Convert to a temporary XML file without changing the input JSON.
+        rupture_xml = gettemp(prefix='rup_', suffix='.xml')
+        rupture_model = convert_to_oq_xml(rupture_model, rupture_xml)
         # NB: this is tested in aristotle_run
-    elif rupture_model and rupture_model.endswith('.xml'):
+    if rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
         conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
         rup = conv.convert_node(rup_node)

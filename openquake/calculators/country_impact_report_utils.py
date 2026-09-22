@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import functools
 import logging
 import pathlib
@@ -28,12 +27,45 @@ import geopandas as gpd
 from openquake.baselib import config
 
 
-cd = pathlib.Path(__file__).parent
+def get_configured_path(name, directory=False):
+    """
+    Return a configured path after checking that it exists.
+
+    :param name: name of the entry in ``config.directory``
+    :param directory: if true, require a directory; otherwise require a file
+    :returns: the configured path as a :class:`pathlib.Path`
+    :raises AttributeError: if the entry is missing or empty
+    :raises FileNotFoundError: if the configured path does not exist
+    """
+    try:
+        value = getattr(config.directory, name)
+    except AttributeError as exc:
+        raise AttributeError(
+            f'config.directory.{name} must be specified') from exc
+    if not value:
+        raise AttributeError(
+            f'config.directory.{name} must be specified')
+
+    path = pathlib.Path(value).expanduser()
+    exists = path.is_dir() if directory else path.is_file()
+    if not exists:
+        kind = 'directory' if directory else 'file'
+        raise FileNotFoundError(
+            f'Configured {kind} for config.directory.{name} '
+            f'does not exist: {path}')
+    return path
 
 
 @dataclass
 class EventContext:
-    """Metadata related to the seismic event."""
+    """
+    Metadata describing the seismic event used in an impact report.
+
+    :param name: human-readable name of the event
+    :param date: event date and time as a formatted string
+    :param hypocenter: event longitude and latitude
+    :param shakemap_version: optional version identifier of the ShakeMap
+    """
     name: str
     date: str
     hypocenter: tuple[float, float]
@@ -42,7 +74,15 @@ class EventContext:
 
 @dataclass
 class ReportOptions:
-    """Visual, text, and threshold configurations for the report."""
+    """
+    Visual, text, and threshold settings used to build an impact report.
+
+    :param disclaimer_txt: disclaimer text displayed in the report
+    :param basemap_path: path to the raster basemap used by the maps
+    :param threshold_deg: distance threshold used to select countries
+    :param no_uncertainty: whether to omit uncertainty ranges
+    :param loss_metric: name of the loss metric displayed in map titles
+    """
     disclaimer_txt: str
     basemap_path: str
     threshold_deg: float
@@ -77,6 +117,11 @@ LOSS_METADATA = {
 # are ever used within the same process.
 @functools.lru_cache(maxsize=1)
 def _read_admin_layer(fname):
+    """Read and repair an administrative-boundary layer.
+
+    :param fname: path to a vector file containing administrative boundaries
+    :returns: a GeoDataFrame with valid geometries
+    """
     gdf = gpd.read_file(fname)
     invalid = ~gdf.is_valid
     if invalid.any():
@@ -91,9 +136,13 @@ def _read_admin_layer(fname):
 @functools.lru_cache(maxsize=1)
 def _read_countries_info(countries_info_path):
     """
-    Load and cache the countries CSV keyed on the resolved file path.
-    Subsequent calls with the same path return the in-memory DataFrame
-    without any disk I/O.
+    Load and cache the country metadata CSV.
+
+    :param countries_info_path: path to the country metadata CSV
+    :returns: a cached DataFrame containing country metadata
+
+    The cache is keyed by the resolved path, so subsequent calls with the
+    same path avoid disk I/O.
     """
     return pd.read_csv(countries_info_path)
 
@@ -101,7 +150,14 @@ def _read_countries_info(countries_info_path):
 @functools.lru_cache(maxsize=1)
 def _read_world_cities(world_cities_path):
     """
-    Load and cache the world-cities CSV keyed on the resolved file path.
+    Load and cache the world-cities CSV.
+
+    :param world_cities_path: path to the world-cities CSV
+    :returns: a cached DataFrame containing city coordinates and metadata
+    :raises ValueError: if the CSV does not contain an ``lng`` column
+
+    The cache is keyed by the resolved path, so subsequent calls with the
+    same path avoid disk I/O.
     """
     df = pd.read_csv(world_cities_path)
     if 'lng' not in df.columns:
@@ -110,6 +166,14 @@ def _read_world_cities(world_cities_path):
 
 
 def build_classifiers(df, *, breaks):
+    """
+    Build loss classifiers for the report map categories.
+
+    :param df: DataFrame containing the labeled loss columns
+    :param breaks: upper bounds used by the user-defined classifiers
+    :returns: a mapping from loss label to a mapclassify classifier
+    :raises RuntimeError: if mapclassify is not installed
+    """
     try:
         import mapclassify
     except ImportError as exc:
@@ -124,27 +188,22 @@ def build_classifiers(df, *, breaks):
 
 def load_admin_boundaries(
         country_name, iso3, adm_level, crs="EPSG:4326"):
-    if adm_level == 1:
-        try:
-            fname = config.directory.admin1_boundaries_file
-        except AttributeError:
-            # checking if the file is present in the oq-engine directory
-            if not os.path.exists(
-                    fname := cd.parent.parent /
-                    'World_Adm1_updated.gpkg'):
-                raise AttributeError(
-                    'config.directory.admin1_boundaries_file is missing')
-    elif adm_level == 2:
-        try:
-            fname = config.directory.admin2_boundaries_file
-        except AttributeError as exc:
-            raise AttributeError(
-                'config.directory.admin2_boundaries_file is missing') from exc
-    else:
+    """
+    Load and normalize administrative boundaries for one country.
+
+    :param country_name: country name used in error messages
+    :param iso3: three-letter country code used to filter the layer
+    :param adm_level: administrative level, currently 1 or 2
+    :param crs: coordinate reference system for the returned geometries
+    :returns: a GeoDataFrame with ``region_id``, ``region_name``, and
+        ``country_iso3`` columns
+    :raises NotImplementedError: if the administrative level is unsupported
+    :raises ValueError: if no boundaries are found for the country
+    """
+    if adm_level not in (1, 2):
         raise NotImplementedError(f'Admin level {adm_level} not supported')
-    if not fname:
-        raise AttributeError(
-            f'config.directory.admin{adm_level}_boundaries_file is missing')
+    fname = get_configured_path(
+        f'admin{adm_level}_boundaries_file')
     # NOTE: be careful not mutating the cached object
     #       (in case we need to mutate it, we should make a copy
     #       right after reading)
@@ -179,6 +238,15 @@ def load_admin_boundaries(
 
 
 def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
+    """
+    Convert longitude and latitude columns into point geometries.
+
+    :param df: DataFrame containing point coordinates
+    :param lon_col: name of the longitude column
+    :param lat_col: name of the latitude column
+    :param crs: coordinate reference system assigned to the points
+    :returns: a GeoDataFrame retaining the input columns and adding geometry
+    """
     gdf = gpd.GeoDataFrame(
         df,
         geometry=gpd.points_from_xy(df[lon_col], df[lat_col]),
@@ -187,6 +255,17 @@ def points_to_gdf(df, lon_col="lon", lat_col="lat", crs=None):
 
 
 def aggregate_losses(points_gdf, admin_gdf, tags_agg):
+    """
+    Aggregate point losses by administrative region.
+
+    :param points_gdf: GeoDataFrame containing loss points and loss columns
+    :param admin_gdf: GeoDataFrame containing normalized region geometries
+    :param tags_agg: names of the loss columns to sum
+    :returns: administrative boundaries joined with summed loss columns
+
+    Points outside the administrative boundaries are excluded from the
+    aggregation.
+    """
     joined = gpd.sjoin(points_gdf, admin_gdf, how="inner", predicate="within")
     group_col = 'region_id'
     merge_args = dict(on=group_col)
@@ -196,6 +275,15 @@ def aggregate_losses(points_gdf, admin_gdf, tags_agg):
 
 
 def save_most_affected_regions(df, dstore, iso3, *, num_regions=5):
+    """
+    Save the regions with the highest number of fatalities.
+
+    :param df: aggregated regional losses with a fatalities column
+    :param dstore: datastore receiving the result
+    :param iso3: three-letter country code used in the datastore path
+    :param num_regions: maximum number of region names to save
+    :returns: ``None``; the names are written to the datastore
+    """
     fatalities_label = LOSS_METADATA["occupants"]["label"]
     regions = df.nlargest(
         num_regions, fatalities_label)['region_name'].dropna().tolist()
