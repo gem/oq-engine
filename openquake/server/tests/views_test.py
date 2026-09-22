@@ -24,7 +24,7 @@ import socket
 import string
 import secrets
 import random
-import threading
+import multiprocessing
 
 import django
 import requests
@@ -54,11 +54,11 @@ class UvicornClient:
     def _url(self, path):
         return path if path.startswith('http') else self.base_url + path
 
-    def get(self, path, data=None, **kwargs):
+    def get(self, path, data=None, headers=None, **kwargs):
         """Send a GET request to the Uvicorn server."""
-        return self.session.get(self._url(path), params=data)
+        return self.session.get(self._url(path), params=data, headers=headers)
 
-    def post(self, path, data=None, **kwargs):
+    def post(self, path, data=None, headers=None, **kwargs):
         """Send a POST request to the Uvicorn server."""
         if data is None and kwargs:
             data = kwargs
@@ -67,38 +67,55 @@ class UvicornClient:
                  if hasattr(value, 'read')}
         form = {key: value for key, value in data.items() if key not in files}
         return self.session.post(
-            self._url(path), data=form, files=files or None)
+            self._url(path), data=form, files=files or None, headers=headers)
 
     def head(self, path, **kwargs):
         """Send a HEAD request to the Uvicorn server."""
         return self.session.head(self._url(path))
 
 
+def _serve_uvicorn(port):
+    """Run the ASGI app in a separate process (see :func:`start_uvicorn`)."""
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE',
+                          'openquake.server.settings')
+    import django
+    django.setup()
+    uvicorn.Server(uvicorn.Config(
+        'openquake.server.asgi:app', host='127.0.0.1', port=port,
+        log_level='error')).run()
+
+
 def start_uvicorn():
-    """Start a temporary Uvicorn server for an integration test."""
+    """
+    Start a temporary Uvicorn server in a separate process for integration
+    tests.  Keeping the server out of the test process ensures the engine's
+    ``fork()`` calls do not interact with Playwright's greenlet-based event
+    loop, which would otherwise hang the test session.
+    """
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))
     port = sock.getsockname()[1]
     sock.close()
-    server = uvicorn.Server(uvicorn.Config(
-        'openquake.server.asgi:app', host='127.0.0.1', port=port,
-        log_level='error'))
+    proc = multiprocessing.get_context('spawn').Process(
+        target=_serve_uvicorn, args=(port,))
+    proc.start()
     client = UvicornClient('http://127.0.0.1:%d' % port)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    for _ in range(100):
-        if server.started:
-            return server, thread, client
+    for _ in range(200):
+        try:
+            client.get('/v1/calc/list')
+            return proc, None, client
+        except Exception:
+            if not proc.is_alive():
+                raise RuntimeError('Unable to start the Uvicorn test server')
         time.sleep(0.1)
-    server.should_exit = True
-    thread.join(timeout=10)
+    proc.terminate()
     raise RuntimeError('Unable to start the Uvicorn test server')
 
 
-def stop_uvicorn(server, thread):
-    """Stop a temporary Uvicorn server."""
-    server.should_exit = True
-    thread.join(timeout=10)
+def stop_uvicorn(proc, _thread):
+    """Stop the temporary Uvicorn server process."""
+    proc.terminate()
+    proc.join(timeout=10)
 
 
 def random_string(length=10):

@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Validation helpers for FDHA model parameters.
+Validation helpers for PFD model parameters.
 
 Every parameter that can appear in an ``uncertaintyModel`` logic-tree block
 is an explicit, stored, *validated* constructor argument of its model (see

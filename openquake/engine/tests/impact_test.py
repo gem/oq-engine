@@ -19,6 +19,7 @@
 import os
 import pathlib
 import unittest
+from unittest.mock import patch
 import pytest
 import numpy
 from openquake.qa_tests_data.scenario_risk import case_shakemap
@@ -77,36 +78,45 @@ def compare(dstore1, dstore2):
             aac(avg1[i], avg2[i], rtol=2e-2, atol=1e-3)
 
 
+# sample the assets to keep the test fast; the aggrisk_tags.org references of
+# impact1/2/3 were generated with this factor.  impact4 is not sampled since
+# its assetcol matches the taxonomy mapping only for a few taxonomies, which
+# the sampling would drop
+SAMPLE_ASSETS = '.05'
+
+
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
+    factor = '1' if n == 4 else SAMPLE_ASSETS
     if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
-    calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
-    with log:  # ensures clean worker shutdown for all n
-        if n == 1:
-            # test export_aggexp
-            fnames = export(('aggexp_tags', 'csv'), calc.datastore)
-            assert [strip(f) for f in fnames] == [
-                'aggexp_tags-ID_0.csv',
-                'aggexp_tags-ID_2.csv']
+    with patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': factor}):
+        calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
+        with log:  # ensures clean worker shutdown for all n
+            if n == 1:
+                # test export_aggexp
+                fnames = export(('aggexp_tags', 'csv'), calc.datastore)
+                assert [strip(f) for f in fnames] == [
+                    'aggexp_tags-ID_0.csv',
+                    'aggexp_tags-ID_2.csv']
 
-            # test export aggrisk-stats
-            fnames = export(('aggrisk-stats', 'csv'), calc.datastore)
-            assert [strip(f) for f in fnames] == [
-                'aggrisk-stats-ID_0.csv',
-                'aggrisk-stats-ID_2.csv']
+                # test export aggrisk-stats
+                fnames = export(('aggrisk-stats', 'csv'), calc.datastore)
+                assert [strip(f) for f in fnames] == [
+                    'aggrisk-stats-ID_0.csv',
+                    'aggrisk-stats-ID_2.csv']
 
-            # [job.ini, exposure.xml, rupture.csv, ...]
-            fnames = check_export_job_zip(calc.datastore)
+                # [job.ini, exposure.xml, rupture.csv, ...]
+                fnames = check_export_job_zip(calc.datastore)
 
-            # repeat the calculation starting from job.zip unzipped
-            calc2, log2 = check(fnames[0])
-            with log2:
-                expose_outputs(calc.datastore)
-                expose_outputs(calc2.datastore)
-                # TODO: restore the check
-                #  compare(calc.datastore, calc2.datastore)
+                # repeat the calculation starting from job.zip unzipped
+                calc2, log2 = check(fnames[0])
+                with log2:
+                    expose_outputs(calc.datastore)
+                    expose_outputs(calc2.datastore)
+                    # TODO: restore the check
+                    #  compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():

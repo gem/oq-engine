@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import pytest
 import glob
 import shutil
@@ -54,14 +55,27 @@ def migrate_before_tests():
            if appmode in ('AELO', 'IMPACT')
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
+    # the tests share the engine DB (there is no pytest-django test DB), so
+    # make sure it is migrated before the server process connects to it
+    subprocess.run([sys.executable, serverdir / 'manage.py', 'migrate'],
+                   check=True)
     if appmode in ['AELO', 'IMPACT']:
-        # run migrations if needed
-        subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
         # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
-        subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
+        subprocess.run([sys.executable, serverdir / 'manage.py', 'loaddata', js],
+                       check=True)
     yield
+
+
+@pytest.fixture(scope="session")
+def django_db_setup():
+    """
+    Use the engine DB directly (no pytest-django test DB): the server runs
+    in a separate process and must see the same users and sessions as the
+    test process.
+    """
+    pass
 
 
 @pytest.fixture
@@ -88,15 +102,19 @@ def test_credentials():
 
 
 @pytest.fixture
-def user(db, application_mode, test_credentials, request):
+def user(django_db_blocker, application_mode, test_credentials, request):
     level = request.param
 
+    # use the engine DB directly (no pytest-django test DB) so that the
+    # server process can see the user and the session
+    django_db_blocker.unblock()
     User = get_user_model()
-    user = User.objects.create_user(
+    user, _ = User.objects.get_or_create(
         username=test_credentials["username"],
-        email=test_credentials["email"],
-        password=test_credentials["password"],
-    )
+        defaults={"email": test_credentials["email"]})
+    user.set_password(test_credentials["password"])
+    user.email = test_credentials["email"]
+    user.save()
 
     profile = user.profile
     profile.level = level
@@ -106,8 +124,9 @@ def user(db, application_mode, test_credentials, request):
 
 
 @pytest.fixture
-def authenticated_session(transactional_db, user):
+def authenticated_session(django_db_blocker, user):
     from django.test import Client
+    django_db_blocker.unblock()
     client = Client()
     client.force_login(user)
     session = client.session
@@ -143,3 +162,34 @@ def ui_logged_in_page(
 
     page.wait_for_url(f"{live_server.url}/engine/")
     return page
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-abort-jobs",
+        action="store_true",
+        default=False,
+        help="Skip aborting jobs after test execution."
+    )
+    parser.addoption(
+        "--skip-remove-jobs",
+        action="store_true",
+        default=False,
+        help="Skip removing jobs after test execution."
+    )
+
+
+@pytest.fixture
+def should_abort_job(request):
+    """
+    Returns True by default, False if --skip-abort-jobs is passed.
+    """
+    return not request.config.getoption("--skip-abort-jobs")
+
+
+@pytest.fixture
+def should_remove_job(request):
+    """
+    Returns True by default, False if --skip-remove-jobs is passed.
+    """
+    return not request.config.getoption("--skip-remove-jobs")

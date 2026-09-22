@@ -243,16 +243,16 @@ def rate_split(utype, node, filename):
     return node.row.attrib
 
 
-# FDHA logic tree: the four model slots and the r_sigma calculation parameter.
-_FDHA_MODEL_UTYPES = (
+# PFD logic tree: the four model slots and the r_sigma calculation parameter.
+_PFD_MODEL_UTYPES = (
     'fdhaPrimarySRModel', 'fdhaPrimaryFDModel',
     'fdhaSecondarySRModel', 'fdhaSecondaryFDModel')
 
 
-@parse_uncertainty.add(*_FDHA_MODEL_UTYPES)
-def fdha_model(utype, node, filename):
+@parse_uncertainty.add(*_PFD_MODEL_UTYPES)
+def pfd_model(utype, node, filename):
     """
-    Parse an FDHA ``<uncertaintyModel>``: a bare model class name or an
+    Parse an PFD ``<uncertaintyModel>``: a bare model class name or an
     oq-engine style ``[ClassName]`` TOML block of constructor parameters.
 
     :returns: ``(class_name, params)``
@@ -261,7 +261,7 @@ def fdha_model(utype, node, filename):
     if not raw:
         raise LogicTreeError(node, filename, 'empty uncertaintyModel')
     if raw.startswith('[') and ']' in raw.splitlines()[0]:
-        return _parse_fdha_toml_block(node, filename)
+        return _parse_pfd_toml_block(node, filename)
     if '\n' in raw:
         # tolerate wrapped text; a bare name is a single token
         raw = ''.join(line.strip() for line in raw.splitlines()
@@ -269,7 +269,7 @@ def fdha_model(utype, node, filename):
     return raw, {}
 
 
-def _parse_fdha_toml_block(node, filename):
+def _parse_pfd_toml_block(node, filename):
     # NRML indents the block to the XML nesting depth, so strip every line
     # before handing it to configparser (values are single-line).
     lines = [ln.strip() for ln in (node.text or "").splitlines()
@@ -289,11 +289,11 @@ def _parse_fdha_toml_block(node, filename):
     params = {}
     if cp.has_section(class_name):
         for k, v in cp.items(class_name):
-            params[k] = _parse_fdha_value(v)
+            params[k] = _parse_pfd_value(v)
     return class_name, params
 
 
-def _parse_fdha_value(value):
+def _parse_pfd_value(value):
     s = value.strip()
     if s == '':
         return ''
@@ -304,7 +304,7 @@ def _parse_fdha_value(value):
 
 
 @parse_uncertainty.add('fdhaCalcRSigma')
-def fdha_r_sigma(utype, node, filename):
+def pfd_r_sigma(utype, node, filename):
     """
     Parse an ``fdhaCalcRSigma`` ``<uncertaintyModel>``: the two-sided
     mapping-accuracy sigma ``r_sigma_km`` -- a finite float ``>= 0`` (zero

@@ -248,13 +248,14 @@ def text_table(data, header=None, fmt=None, ext='rst'):
             lines.append(sepline)
     return '\n'.join(lines)
 
+
 @view.add('high_hazard')
 def view_high_hazard(token, dstore):
     """
     Returns the sites with hazard curve below max(poes)
     """
     oq = dstore['oqparam']
-    max_poe= max(oq.poes)
+    max_poe = max(oq.poes)
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
     # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
@@ -715,6 +716,7 @@ def view_required_params_per_trt(token, dstore):
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
 
+
 def discard_small(values):
     """
     Discard values 10x smaller than the mean
@@ -807,7 +809,6 @@ def view_task_eb(token, dstore):
     return msg
 
 
-
 def view_task(token, dstore, taskname):
     """
     Display info about a given task. Here are a few examples of usage::
@@ -818,7 +819,8 @@ def view_task(token, dstore, taskname):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()], taskname=taskname.encode('ascii'))
+    data = get_array(dstore['task_info'][()],
+                     taskname=taskname.encode('ascii'))
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
@@ -1488,8 +1490,9 @@ def view_branches(token, dstore):
             % gslt.filename)
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    if full_lt.amp_lt is not None:
-        for k, v in full_lt.amp_lt.shortener.items():
+    sh3 = full_lt.extra_lt.shortener if full_lt.extra_lt else None
+    if sh3 is not None:
+        for k, v in sh3.items():
             tbl.append((k, v, k))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
 
@@ -1529,10 +1532,10 @@ def view_branchsets(token, dstore):
     flt = dstore['full_lt']
     clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     rows = list(enumerate(map(repr, clt.branchsets)))
-    if flt.amp_lt is not None:
-        rows.append((len(rows),
-                     '<amplificationModel(%d)>' % flt.amp_lt.R_amp))
+    if flt.extra_lt is not None:
+        rows.append((len(rows), repr(flt.extra_lt)))
     return text_table(rows, header=['bsno', 'bset'], ext='org')
+
 
 @view.add('sm_rlzs')
 def view_sm_rlzs(token, dstore):
@@ -1548,10 +1551,12 @@ def view_sm_rlzs(token, dstore):
     else:
         sm_rlzs = dstore['full_lt'].sm_rlzs
     header = ['ordinal', 'lt_path', 'value', 'samples', 'weight']
+
     def row(rlz):
         value = ast.literal_eval(rlz.value.decode('utf8'))
         return (rlz.ordinal, '_'.join(rlz.lt_path),
                 value, rlz.samples, rlz.weight)
+
     return text_table(map(row, sm_rlzs), header, ext='org')
 
 
@@ -1918,6 +1923,7 @@ def view_long_ruptures(token, dstore):
                             ('maxmag', float), ('usd', float), ('lsd', float)])
     arr.sort(order='maxlen')
     return arr
+
 
 @view.add('msr')
 def view_msr(token, dstore):

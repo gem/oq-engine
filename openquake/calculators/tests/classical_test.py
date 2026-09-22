@@ -287,11 +287,17 @@ class ClassicalTestCase(CalculatorTestCase):
         # Test specification of reference z1pt4: the site_model.csv carries
         # values which must be overridden by reference z1pt4 in the job file
         self.assert_curves_ok(
-            ['hazard_curve-mean-PGA.csv',
-             'hazard_curve-mean-SA(0.5).csv'],
+            ['hazard_curve-mean-SA(0.5).csv'],
             case_13.__file__)
         sitecol = self.calc.datastore['sitecol']
         aac(sitecol.z1pt4, [50, 50, 50])
+
+        # Second check: -999 z1pt4 in the site_model triggers the MF13 Vs30
+        # based inference (GEM fitting of CY14-Japan form to NIED data)
+        self.run_calc(case_13.__file__, 'job_infer_z1pt4.ini')
+        [got] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-SA(0.5)_infer_z1pt4.csv', got)
 
     def test_case_18(self):  # GMPEtable, PointMSR, 3 hypodepths
         self.run_calc(case_18.__file__, 'job.ini',
@@ -767,14 +773,14 @@ class ClassicalTestCase(CalculatorTestCase):
         # test with amplification function == 2
         self.run_calc(case_55.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2.csv')
+                      amplification_file='amplification2.csv')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
 
         # test with amplification function == 2 and no levels
         self.run_calc(case_55.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2bis.csv')
+                      amplification_file='amplification2bis.csv')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 

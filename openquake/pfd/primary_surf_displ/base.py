@@ -66,7 +66,7 @@ class BasePrimarySurfDispl(metaclass=abc.ABCMeta):
     #: Reference-line treatment this model needs when the source has no
     #: continuous fault trace (multiFaultSource / kite sections); one of
     #: 'lcp', 'ecs', 'segments'. Declarative, mirroring hazardlib's
-    #: REQUIRES_DISTANCES pattern: the FDHA context maker computes the union
+    #: REQUIRES_DISTANCES pattern: the PFD context maker computes the union
     #: of declared requirements once per rupture. Irrelevant for single-strand
     #: sources, whose trace is used directly.
     MULTIFAULT_REFERENCE_LINE = "lcp"

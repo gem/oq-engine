@@ -46,6 +46,7 @@ from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
+from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
@@ -506,6 +507,12 @@ master_seed:
   Example: *master_seed = 1234*.
   Default: 123456789
 
+make_impact_reports:
+  Produce a one-page impact reports for each affected country,
+  as postrisk_func
+  Example: *make_impact_reports = true*.
+  Default: False
+
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
   Example: *max = true*.
@@ -599,6 +606,11 @@ mosaic_model:
   Used to restrict the ruptures to a given model
   Example: *mosaic_model = ZAF*
   Default: empty string
+
+notes:
+  Additional information about the job
+  Example: 'Lorem ipsum'
+  Default: None
 
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
@@ -763,6 +775,18 @@ rupture_mesh_spacing:
   Set the discretization parameter (in km) for rupture geometries.
   Example: *rupture_mesh_spacing = 2.0*.
   Default: 5.0
+
+r_threshold_km:
+  PFD only: half-width (km) of the on-trace principal-displacement zone
+  for the boxcar rupture-location weight (used when r_sigma_km == 0).
+  Example: *r_threshold_km = 0.1*.
+  Default: 0.1
+
+r_sigma_km:
+  PFD only: two-sided mapping-error sigma (km) for the Petersen Gaussian
+  rupture-location weight; 0 selects the boxcar/complementary split.
+  Example: *r_sigma_km = 0.5*.
+  Default: 0.0
 
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
@@ -971,6 +995,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
+                   'displacement',
                    'scenario_damage',
                    'workflow']
 
@@ -1062,11 +1087,13 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'pfd_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
+        'reqv_ignore_sources', 'amplification', 'ampl_logic_tree',
+        'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
@@ -1197,6 +1224,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
+    make_impact_reports = valid.Param(valid.boolean, False)
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)
@@ -1211,6 +1239,7 @@ class OqParam(valid.ParamSet):
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
+    notes = valid.Param(valid.utf8, None)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
@@ -1246,6 +1275,8 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
+    r_sigma_km = valid.Param(valid.positivefloat, 0.0)
+    r_threshold_km = valid.Param(valid.positivefloat, 0.1)
     rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})
@@ -1485,6 +1516,42 @@ class OqParam(valid.ParamSet):
     def check_gsim_lt(self):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
+        if ('amplification' in self.inputs and
+                'ampl_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'Cannot set both amplification_file and '
+                'ampl_logic_tree_file')
+        if (self.calculation_mode == 'displacement' and
+                'gsim_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'use pfd_logic_tree_file, not gsim_logic_tree_file, '
+                'in displacement calculations')
+        if (self.calculation_mode != 'displacement' and
+                'pfd_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'pfd_logic_tree_file is only allowed in displacement '
+                'calculations')
+        if self.calculation_mode == 'displacement':
+            # the second logic tree is a PFD logic tree, not a GSIM one
+            fname = self.inputs.get('pfd_logic_tree')
+            if not fname:
+                self.raise_invalid('Missing pfd_logic_tree_file')
+            path = os.path.join(self.base_path, fname)
+            PFDLogicTree(path)  # validate the logic tree
+            # the PFD kernel works per source and yields annual rates
+            if not self.use_rates:
+                self.raise_invalid(
+                    'use_rates = true is required for displacement')
+            if not self.disagg_by_src:
+                self.raise_invalid(
+                    'disagg_by_src = true is required for displacement')
+            if not hasattr(self, 'maximum_distance'):
+                # default PFD integration distance (km), as in oq-pfdha
+                self.maximum_distance = valid.IntegrationDistance.new('10')
+            self._trts = {'*'}
+            self.sec_imts
+            self.req_site_params = sorted(self.req_site_params)
+            return
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
                 self.raise_invalid('if `gsim_logic_tree_file` is set, there'
@@ -1508,10 +1575,18 @@ class OqParam(valid.ParamSet):
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
             self.raise_invalid('Missing gsim or gsim_logic_tree_file')
-        if 'amplification' in self.inputs:
+        if self.has_amplification:
             self.req_site_params.add('ampcode')
         self.sec_imts  # populate req_site_params
         self.req_site_params = sorted(self.req_site_params)
+
+    @property
+    def has_amplification(self):
+        """
+        :returns: True if an amplification file or logic tree is set
+        """
+        return ('amplification' in self.inputs or
+                'ampl_logic_tree' in self.inputs)
 
     def check_risk(self):
         # checks for risk
@@ -1540,6 +1615,7 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
+                and self.calculation_mode != 'displacement'
                 and self.hazard_calculation_id is None):
             if ('multi_peril' not in self.inputs and
                     getattr(self, 'truncation_level', None) is None and
@@ -1615,7 +1691,7 @@ class OqParam(valid.ParamSet):
                                'in event_based calculations')
 
         # check for amplification
-        if ('amplification' in self.inputs and self.imtls and
+        if (self.has_amplification and self.imtls and
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
@@ -1664,7 +1740,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses            
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
@@ -2413,7 +2489,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if 'gsim_logic_tree' not in self.inputs:
+        if (self.calculation_mode == 'displacement' or
+                'gsim_logic_tree' not in self.inputs):
             return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
@@ -2485,7 +2562,7 @@ class OqParam(valid.ParamSet):
         """
         classical = ('classical' in self.calculation_mode or
                      'disaggregation' in self.calculation_mode)
-        if (classical and 'amplification' in self.inputs and
+        if (classical and self.has_amplification and
                 self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:

@@ -23,7 +23,7 @@ import toml
 import scipy
 import numpy as np
 from openquake.baselib.general import RecordBuilder
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import from_string, PGA
 
 SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av', 'SD']
 
@@ -111,12 +111,18 @@ class CoeffsTable(object):
         ...
     KeyError: SA(0.9, 15)
 
-    Extrapolation is not possible:
+    Extrapolation is not possible, except below the smallest SA period
+    when the table contains PGA: coefficients are then interpolated
+    linearly in period between PGA (treated as period 0) and the smallest
+    tabulated SA period:
 
-    >>> ct[imt.SA(period=0.01, damping=5)]
+    >>> ct[imt.SA(period=20, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(0.01)
+    KeyError: SA(20.0)
+
+    >>> '%.5f' % ct[imt.SA(period=0.01, damping=5)]['a']
+    '1.90000'
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -258,6 +264,21 @@ class CoeffsTable(object):
                     if (max_below is None or
                            unscaled_imt.period > max_below.period):
                         max_below = unscaled_imt
+            # Fallback for SA periods below the smallest tabulated SA
+            # period: treat PGA as a period-0 anchor and interpolate
+            # linearly in period between PGA and min_above
+            if (imt.string.startswith('SA(')
+                    and max_below is None       # Target is below smallest SA
+                    and min_above is not None   # Have an SA anchor above
+                    and PGA() in self._coeffs   # Table has PGA (T~=0 anchor)
+                    ):
+                ratio = imt.period / min_above.period
+                below = self._coeffs[PGA()]
+                above = self.sa_coeffs[min_above]
+                lst = [(above[n] - below[n]) * ratio + below[n]
+                       for n in self.rb.names]
+                self._coeffs[imt] = c = self.rb(*lst)
+                return c
             if max_below is None or min_above is None:
                 raise KeyError(imt)
             if self.logratio:  # regular case

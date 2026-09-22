@@ -38,7 +38,7 @@ This module deliberately does NOT import ``openquake.hazardlib.stats``:
   collapses the WITHIN-model MC sample dimension (project policy: "mean" is
   the silent default reduction).
 
-``_to_sites_x_displ`` is FDHA-specific shape plumbing with no hazardlib
+``_to_sites_x_displ`` is PFD-specific shape plumbing with no hazardlib
 equivalent.
 """
 import numpy as np

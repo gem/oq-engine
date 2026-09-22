@@ -25,7 +25,7 @@ from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
 
 #: coefficient tuple ``log10(Y) = a + b*M`` with log10 standard deviation
-#: ``sigma``, used by the FDHA displacement relations (Wells & Coppersmith
+#: ``sigma``, used by the PFD displacement relations (Wells & Coppersmith
 #: 1994, Table 2B).
 Coeff = namedtuple("Coeff", "a b sigma")
 
@@ -403,7 +403,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             return 0.31
 
     # ------------------------------------------------------------------
-    # FDHA extension: displacement versus magnitude (Table 2B).
+    # PFD extension: displacement versus magnitude (Table 2B).
     #
     # Added for Probabilistic Fault Displacement Hazard Analysis (PR-2 of
     # the oq-engine integration plan).  Purely additive: the PSHA geometry
@@ -455,7 +455,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         """
         Return median surface rupture length (km) from magnitude.
 
-        Signature-compatible wrapper used by the FDHA models: ``style`` may
+        Signature-compatible wrapper used by the PFD models: ``style`` may
         be a faulting-style string (``"strike-slip"``, ``"reverse"``,
         ``"normal"``, ``"all"``) instead of a rake angle.
         """
@@ -471,7 +471,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         """
         Return median downdip rupture width (km) from magnitude.
 
-        Signature-compatible wrapper used by the FDHA models; see
+        Signature-compatible wrapper used by the PFD models; see
         :meth:`get_surface_rupture_length` for the ``style`` convention.
         """
         style = self._resolve_style(style, rake)
