@@ -260,7 +260,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param amplifier: an AmplificationModel or None
+    :param amplifier: an AmplificationLogicTree or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -271,8 +271,8 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         pgetter.init()
 
     if amplifier:
-        # AmplificationModel: single branch (plain CSV) or amp-LT branches;
-        # AmplificationModel.amplify() picks the right branch per rlz
+        # AmplificationLogicTree: single branch (plain CSV) or amp-LT branches;
+        # AmplificationLogicTree.amplify() picks the right branch per rlz
         # amplification is meant for few sites, i.e. no tiling
         with hdf5.File(pgetter.filenames[0], 'r') as f:
             ampcode = f['sitecol'].ampcode
