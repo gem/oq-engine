@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from openquake.baselib import hdf5
 from openquake.hazardlib.countries import REGIONS
 
-MODEL_PROVENANCE = 'model_provenance'
+MODEL_PROVENANCE_KEY = 'model_provenance'
 SCHEMA_VERSION = 1
 
 
@@ -120,10 +120,10 @@ def store_model_provenance(dstore, grm_dir):
     """Store model repository provenance in an HDF5 datastore."""
     summary = collect_model_provenance(grm_dir)
     text = _summary_text(summary)
-    if MODEL_PROVENANCE in dstore.hdf5:
-        del dstore.hdf5[MODEL_PROVENANCE]
+    if MODEL_PROVENANCE_KEY in dstore.hdf5:
+        del dstore.hdf5[MODEL_PROVENANCE_KEY]
     dataset = dstore.hdf5.create_dataset(
-        MODEL_PROVENANCE, shape=(), dtype=hdf5.vstr)
+        MODEL_PROVENANCE_KEY, shape=(), dtype=hdf5.vstr)
     dataset[()] = text
     dataset.attrs['format'] = 'json'
     dataset.attrs['schema_version'] = SCHEMA_VERSION
@@ -134,11 +134,11 @@ def copy_model_provenance(source_path, dstore):
     """Copy model provenance from an exposure HDF5 to a datastore."""
     try:
         with hdf5.File(source_path, 'r') as source:
-            if MODEL_PROVENANCE not in source:
+            if MODEL_PROVENANCE_KEY not in source:
                 return False
-            if MODEL_PROVENANCE in dstore.hdf5:
-                del dstore.hdf5[MODEL_PROVENANCE]
-            source.copy(MODEL_PROVENANCE, dstore.hdf5)
+            if MODEL_PROVENANCE_KEY in dstore.hdf5:
+                del dstore.hdf5[MODEL_PROVENANCE_KEY]
+            source.copy(MODEL_PROVENANCE_KEY, dstore.hdf5)
     except (OSError, KeyError) as exc:
         logging.warning('Could not copy model provenance from %s: %s',
                         source_path, exc)
@@ -149,7 +149,7 @@ def copy_model_provenance(source_path, dstore):
 def read_model_provenance(dstore):
     """Read model provenance from a datastore, or return ``None``."""
     try:
-        value = dstore.getitem(MODEL_PROVENANCE)[()]
+        value = dstore.getitem(MODEL_PROVENANCE_KEY)[()]
     except KeyError:
         return None
     if isinstance(value, bytes):
