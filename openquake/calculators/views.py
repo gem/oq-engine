@@ -1490,7 +1490,7 @@ def view_branches(token, dstore):
             % gslt.filename)
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    sh3 = getattr(full_lt.extra_lt, 'shortener', None)
+    sh3 = full_lt.extra_lt.shortener if full_lt.extra_lt else None
     if sh3 is not None:
         for k, v in sh3.items():
             tbl.append((k, v, k))

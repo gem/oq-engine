@@ -424,7 +424,7 @@ def reduce_full(full_lt, rlz_clusters):
         parts = decode(path).split('~')
         smrlz_clusters.append(parts[0])
         gsrlz_clusters.append(parts[1])
-        if extra_lt is not None:
+        if extra_lt:
             ampl_shorts.add(parts[2])
     f1, *p1 = reducible(full_lt.source_model_lt, smrlz_clusters)
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
@@ -433,7 +433,7 @@ def reduce_full(full_lt, rlz_clusters):
     result = {f1: dict(p1), f2: dict(p2)}
     # Amp LT reduces when every rlz in the rlz_cluster uses the same branch
     p3 = []
-    if extra_lt is not None and hasattr(extra_lt, 'shortener'):
+    if extra_lt:
         before *= extra_lt.get_num_paths()
         if len(ampl_shorts) == 1:
             short_to_name = {v: k for k, v in extra_lt.shortener.items()}
@@ -1323,7 +1323,7 @@ class FullLogicTree(object):
         """
         :returns: number of extra logic tree realizations (1 if none)
         """
-        return self.extra_lt.get_num_paths() if self.extra_lt is not None else 1
+        return self.extra_lt.get_num_paths() if self.extra_lt else 1
 
     def get_num_paths(self):
         """
@@ -1340,8 +1340,6 @@ class FullLogicTree(object):
         num_samples = self.source_model_lt.num_samples
         self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
         extra_lt = self.extra_lt
-        # only amplification-like extra trees contribute realizations
-        has_rlzs = extra_lt is not None and hasattr(extra_lt, 'get_realizations')
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
@@ -1351,7 +1349,7 @@ class FullLogicTree(object):
                 num_samples, self.seed + 1, self.sampling_method)
             ampl_rlzs = (extra_lt.sample(
                 num_samples, self.seed + 2, self.sampling_method
-                ) if has_rlzs else [None] * num_samples)
+                ) if extra_lt else [None] * num_samples)
             for k, (gsim_rlz, ampl_rlz) in enumerate(zip(gsim_rlzs, ampl_rlzs)):
                 w = sm_rlzs[k].weight * gsim_rlz.weight
                 if ampl_rlz is not None:
@@ -1362,7 +1360,7 @@ class FullLogicTree(object):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
-            ampl_rlzs = extra_lt.get_realizations() if has_rlzs else [None]
+            ampl_rlzs = extra_lt.get_realizations() if extra_lt else [None]
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(
@@ -1444,7 +1442,7 @@ class FullLogicTree(object):
                      trts=hdf5.array_of_vstr(self.gsim_lt.values),
                      oversampling=self.oversampling)
         alt = self.extra_lt
-        if alt is not None:
+        if alt:
             # AmplificationLogicTree or PFDLogicTree: both serialize themselves
             dic['extra_lt'] = alt
         return dic, attrs
@@ -1480,7 +1478,7 @@ class FullLogicTree(object):
         """
         sh1 = self.source_model_lt.shortener
         sh2 = self.gsim_lt.shortener
-        sh3 = getattr(self.extra_lt, 'shortener', None)
+        sh3 = self.extra_lt.shortener if self.extra_lt else None
         tups = []
         for r in self.get_realizations():
             sm_p = shorten(r.sm_lt_path, sh1, 'smlt')

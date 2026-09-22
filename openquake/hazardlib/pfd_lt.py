@@ -36,6 +36,7 @@ paths is ``count_paths(root_branchset.branches)``.  The
 import json
 from dataclasses import dataclass
 
+from openquake.baselib.general import BASE183
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
 from openquake.hazardlib.gsim_lt import bsnodes
@@ -158,18 +159,19 @@ class PFDLogicTree(object):
         rlzs = []
         for ordinal, (weight, branches) in enumerate(
                 self.root_branchset.enumerate_paths()):
-            selections = {}
-            chosen = []
-            for br in branches:
-                if br.is_dummy():
-                    continue
-                slot, choice = _choice(
-                    br.uncertainty_type, br.branch_id, br.value, br.weight)
-                selections[slot] = choice
-                chosen.append(br.branch_id)
+            chosen = [br.branch_id for br in branches if not br.is_dummy()]
             rlzs.append(lt.Realization(
-                selections, weight, ordinal, tuple(chosen)))
+                '~'.join(chosen), weight, ordinal, tuple(chosen)))
         return rlzs
+
+    @property
+    def shortener(self):
+        """
+        :returns: dict end-branch path -> two-char abbreviation, matching
+            the amplification shortener format
+        """
+        return {'~'.join(r.lt_path): BASE183[i] + '0'
+                for i, r in enumerate(self.get_realizations())}
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
