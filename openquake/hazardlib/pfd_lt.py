@@ -164,6 +164,30 @@ class PFDLogicTree(object):
                 '~'.join(chosen), weight, ordinal, tuple(chosen)))
         return rlzs
 
+    def selections_for(self, lt_path, source_id, style):
+        """
+        :param lt_path: tuple of end-branch IDs (a realization path)
+        :param source_id: the source id
+        :param style: the faulting style of the source
+        :returns: the selections applicable to the given source, i.e. the
+            global path filtered by ``applyToSources``/``applyToStyle``
+        """
+        branchdic = {br.branch_id: (bs, br)
+                     for bs in self.branchsets for br in bs.branches}
+        chosen_ids = set(lt_path)
+        selections = {}
+        for bid in lt_path:
+            pair = branchdic.get(bid)
+            if pair is None:
+                continue
+            bs, br = pair
+            if not self._applies(bs, source_id, style, chosen_ids):
+                continue
+            slot, choice = _choice(
+                bs.uncertainty_type, br.branch_id, br.value, br.weight)
+            selections[slot] = choice
+        return selections
+
     @property
     def shortener(self):
         """
