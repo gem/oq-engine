@@ -31,7 +31,7 @@ from openquake.commonlib.readinput import (
     get_gsim_lt)
 from openquake.hazardlib.calc.displacement import calc_rates
 from openquake.hazardlib.pfd_lt import PFDLogicTree
-from openquake.pfd.adapter import LegacyModelAdapter, style_from_rake
+from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.gsim import PFDGMPE, get_pfd_gsim_lt
 from openquake.pfd.registry import get_available
 from openquake.qa_tests_data.pfd import case_1
@@ -79,7 +79,7 @@ class EngineContextsTestCase(unittest.TestCase):
         adapters = {}
         for slot, choice in branch.selections.items():
             cls = get_available(slot)[choice.class_name]
-            ad = LegacyModelAdapter(cls(**choice.params), choice.params)
+            ad = PFDModelAdapter(cls(**choice.params), choice.params)
             adapters[ad.model_type] = ad
         self.assertEqual(sorted(adapters),
                          ['primary_fd', 'primary_sr',
