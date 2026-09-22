@@ -296,11 +296,17 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
             n = len(dstore['assets/' + name])
             assert n == num_assets, (name, n, num_assets)
 
-        # check readable using a hex6 that is present after sampling
+        # Check readability without sampling the selected slice again.
         slices = dstore['assets/slice_by_hex6']
         if len(slices):
             hex6 = slices[0]['hex6']
-            exp = Exposure.read_around(dstore.filename, hexes=[hex6])
+            sample_assets = os.environ.pop('OQ_SAMPLE_ASSETS', None)
+            try:
+                exp = Exposure.read_around(
+                    dstore.filename, hexes=[hex6])
+            finally:
+                if sample_assets is not None:
+                    os.environ['OQ_SAMPLE_ASSETS'] = sample_assets
             assert len(exp.assets), exp
 
 
