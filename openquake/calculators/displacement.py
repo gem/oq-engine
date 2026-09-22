@@ -61,12 +61,6 @@ GZIP = 'gzip'
 get_weight = operator.attrgetter('weight')
 
 
-class _WGet(object):
-    """Minimal IMTWeigher-like object for build_stat_curve"""
-    def __init__(self, weights):
-        self.weights = weights
-
-
 def get_adapters(selections, r_sigma):
     """
     Build the PFD model adapters for one realization.
@@ -244,7 +238,8 @@ class DisplacementCalculator(base.HazardCalculator):
         # and fine for the current use cases; for very large N x R it would
         # materialize the full (N, L, R) array in memory.
         getter = MapGetter([self.datastore.filename], 0, trt_rlzs, sids, R, oq)
-        wget = _WGet(self.datastore['weights'][:].reshape(-1, 1))
+        wget = self.full_lt.gsim_lt.wget
+        wget.weights = self.datastore['weights'][:].reshape(-1, 1)
         hstats = oq.hazard_stats()
         if store_rlzs:
             hcurves_rlzs = numpy.zeros((N, R, M, L1), F32)
