@@ -16,7 +16,7 @@
  */
 var refresh_calcs;
 var calc_page = 0;
-var calc_page_size = 20;
+var calc_page_size = 10;
 var calc_total = 0;
 
 var Calculation = Backbone.Model.extend({
