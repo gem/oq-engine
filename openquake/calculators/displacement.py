@@ -35,6 +35,8 @@ from openquake.baselib.general import humansize
 from openquake.hazardlib import valid
 from openquake.hazardlib.calc.displacement import (
     calc_rates, DEFAULT_RED_CFG)
+from openquake.hazardlib.calc.mean_rates import to_probs
+from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
 from openquake.pfd.adapter import LegacyModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
@@ -42,10 +44,6 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 F64 = numpy.float64
-
-
-def to_probs(rates, itime):
-    return 1. - numpy.exp(-rates * itime)
 
 
 @base.calculators.add('displacement')
@@ -133,7 +131,8 @@ class DisplacementCalculator(base.HazardCalculator):
         self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
         self.datastore.set_shape_descr(
             'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
-        self.datastore['hcurves-rlzs'][:] = to_probs(rates, itime)
+        hcurves = to_probs(rates, itime)
+        self.datastore['hcurves-rlzs'][:] = hcurves
         # statistics computed on the rates, like the use_rates=True path
         hstats = oq.hazard_stats()
         S = len(hstats)
@@ -142,13 +141,35 @@ class DisplacementCalculator(base.HazardCalculator):
             [rlz.weight[-1] for rlz in self.full_lt.get_realizations()], F64)
         for s, func in enumerate(hstats.values()):
             for m in range(M):
-                stat_rates = func(rates[:, :, m, :], weights)
+                stat_rates = func(
+                    rates[:, :, m, :].transpose(1, 0, 2), weights)
                 hcurves_stats[:, s, m, :] = to_probs(stat_rates, itime)
         self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
         self.datastore.set_shape_descr(
             'hcurves-stats', site_id=N, stat=list(hstats),
             imt=imts, lvl=numpy.arange(L1))
         self.datastore['hcurves-stats'][:] = hcurves_stats
+        if oq.poes:
+            P = len(oq.poes)
+            hmaps_rlzs = numpy.zeros((N, R, M, P), F32)
+            for r in range(R):
+                for m, imt in enumerate(imts):
+                    hmaps_rlzs[:, r, m, :] = compute_hazard_maps(
+                        hcurves[:, r, m, :], oq.imtls[imt], oq.poes)
+            self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+            self.datastore.set_shape_descr(
+                'hmaps-rlzs', site_id=N, rlz_id=R, imt=imts, poe=oq.poes)
+            self.datastore['hmaps-rlzs'][:] = hmaps_rlzs
+            hmaps_stats = numpy.zeros((N, S, M, P), F32)
+            for s in range(S):
+                for m, imt in enumerate(imts):
+                    hmaps_stats[:, s, m, :] = compute_hazard_maps(
+                        hcurves_stats[:, s, m, :], oq.imtls[imt], oq.poes)
+            self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
+            self.datastore.set_shape_descr(
+                'hmaps-stats', site_id=N, stat=list(hstats),
+                imt=imts, poe=oq.poes)
+            self.datastore['hmaps-stats'][:] = hmaps_stats
         if oq.disagg_by_src:
             self._store_mean_rates_by_src()
         logging.info('Stored %s of hazard curves',
