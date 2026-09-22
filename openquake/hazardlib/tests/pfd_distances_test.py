@@ -32,6 +32,8 @@ import numpy
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.calc.filters import get_dparam, get_distances
 from openquake.hazardlib.contexts import KNOWN_DISTANCES, ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
@@ -104,6 +106,39 @@ class RtorAndXlTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(rtor, surf.get_rtor(mesh))
         numpy.testing.assert_array_equal(x_l, surf.get_x_l_ratio(mesh)[0])
         self.assertEqual(l_km, surf.get_tor_length())
+
+
+class MultiSurfaceKiteTestCase(unittest.TestCase):
+    """The PFD 'segments' distances on a kite-based MultiSurface."""
+
+    def _kite(self, x0, y0):
+        # an almost-vertical kite surface dipping to the south
+        prfs = [
+            Line([Point(x0, y0, 0), Point(x0, y0 - 1e-5, 20.)]),
+            Line([Point(x0 + 0.15, y0, 0),
+                  Point(x0 + 0.15, y0 - 1e-5, 20.)]),
+            Line([Point(x0 + 0.3, y0, 0),
+                  Point(x0 + 0.3, y0 - 1e-5, 20.)])]
+        return KiteSurface.from_profiles(prfs, 1., 1.)
+
+    def test_segments_distances(self):
+        from openquake.fdha.calc.utils.rupture_distance import (
+            RuptureDistanceCalculator)
+        msrf = MultiSurface([self._kite(0.0, 0.0), self._kite(0.5, 0.1)])
+        mesh = Mesh(numpy.array([0.1, 0.4, 0.65, 0.9, 0.8]),
+                    numpy.array([0.0, 0.05, 0.1, 0.0, 0.1]))
+        calc = RuptureDistanceCalculator(
+            mesh, msrf, reference_line_method='segments')
+        # r is the min distance to the nearest section top trace
+        numpy.testing.assert_allclose(
+            msrf.get_rtor(mesh),
+            calc.calculate_site_to_trace_distances(), atol=1e-3)
+        # x/L and L use the raw segmentation (no gap bridging)
+        x_l, l_km = msrf.get_x_l_ratio(mesh)
+        ref_xl, ref_l = calc.calculate_x_l_ratios()
+        numpy.testing.assert_allclose(x_l, ref_xl, atol=1e-6)
+        self.assertAlmostEqual(l_km, ref_l, places=3)
+        self.assertAlmostEqual(msrf.get_tor_length(), l_km, places=6)
 
 
 class PFDKnownDistancesTestCase(unittest.TestCase):
