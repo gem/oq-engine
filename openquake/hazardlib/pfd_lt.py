@@ -44,7 +44,7 @@ from openquake.hazardlib.logictree import (
     branches_to_h5, check_branchset_weights, h5_to_branches)
 
 
-FDHA_SLOTS_BY_UTYPE = {
+PFD_SLOTS_BY_UTYPE = {
     "fdhaPrimarySRModel": "primary_surf_rup",
     "fdhaPrimaryFDModel": "primary_surf_displ",
     "fdhaSecondarySRModel": "secondary_surf_rup",
@@ -53,16 +53,16 @@ FDHA_SLOTS_BY_UTYPE = {
 CALC_SLOTS_BY_UTYPE = {"fdhaCalcRSigma": "calc_r_sigma"}
 CALC_R_SIGMA_SLOT = "calc_r_sigma"
 R_SIGMA_KM_KEY = "r_sigma_km"
-FDHA_UNCERTAINTY_TYPES = frozenset(FDHA_SLOTS_BY_UTYPE) | frozenset(
+PFD_UNCERTAINTY_TYPES = frozenset(PFD_SLOTS_BY_UTYPE) | frozenset(
     CALC_SLOTS_BY_UTYPE)
 
 
 def _noop(utype, source, value):
-    """The FDHA model choices never modify a source, like 'dummy'."""
+    """The PFD model choices never modify a source, like 'dummy'."""
 
 
-# tell lt.BranchSet that the FDHA uncertainty types are admissible
-for _utype in FDHA_UNCERTAINTY_TYPES:
+# tell lt.BranchSet that the PFD uncertainty types are admissible
+for _utype in PFD_UNCERTAINTY_TYPES:
     lt.apply_uncertainty[_utype] = _noop
 
 
@@ -78,7 +78,7 @@ class FdhaModelChoice:
 @dataclass
 class PFDBranch:
     """
-    A fully-enumerated FDHA realization for one source.
+    A fully-enumerated PFD realization for one source.
 
     ``selections`` maps each slot name (the four model slots plus, when
     present, ``calc_r_sigma``) to a :class:`FdhaModelChoice`.
@@ -101,14 +101,14 @@ def _choice(utype, branch_id, value, weight):
     if calc_slot is not None:
         return calc_slot, FdhaModelChoice(
             R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: value}, branch_id, weight)
-    slot = FDHA_SLOTS_BY_UTYPE[utype]
+    slot = PFD_SLOTS_BY_UTYPE[utype]
     class_name, params = value
     return slot, FdhaModelChoice(class_name, params, branch_id, weight)
 
 
 class PFDLogicTree(object):
     """
-    Reader and realization enumerator for FDHA-style logic trees.
+    Reader and realization enumerator for PFD-style logic trees.
 
     The XML schema is the oq-pfdha one (decision D5).  The
     ``<logicTreeBranchSet>`` elements may sit directly under ``<logicTree>``
@@ -188,11 +188,11 @@ class PFDLogicTree(object):
             # SourceModelLogicTree
             for branchset in bsnodes(self.filename, node):
                 utype = branchset['uncertaintyType']
-                if utype not in FDHA_UNCERTAINTY_TYPES:
+                if utype not in PFD_UNCERTAINTY_TYPES:
                     raise lt.LogicTreeError(
                         branchset, self.filename,
-                        'unknown FDHA uncertaintyType %r; expected one of %s'
-                        % (utype, sorted(FDHA_UNCERTAINTY_TYPES)))
+                        'unknown PFD uncertaintyType %r; expected one of %s'
+                        % (utype, sorted(PFD_UNCERTAINTY_TYPES)))
                 filters = {}
                 for key in ('applyToSources', 'applyToBranches'):
                     if key in branchset.attrib:

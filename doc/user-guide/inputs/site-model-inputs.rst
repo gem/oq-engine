@@ -133,7 +133,7 @@ unique identification of all potential sites across the globe.
 Amplification logic trees
 -------------------------
 
-Since engine v3.27, ``amplification_csv`` in job.ini can point at either a plain amplification CSV (unchanged
+Since engine v3.27, ``amplification_file`` in job.ini can point at either a plain amplification CSV (unchanged
 behaviour) or at a NRML XML file describing an *amplification logic tree*: a set of alternative amplification-function
 CSVs with weights summing to 1, representing epistemic uncertainty on the site-amplification function as a logic-tree
 branchset alongside the SSC and GMM logic trees.

@@ -773,14 +773,14 @@ class ClassicalTestCase(CalculatorTestCase):
         # test with amplification function == 2
         self.run_calc(case_55.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2.csv')
+                      amplification_file='amplification2.csv')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ampl_curve-PGA.csv', fname)
 
         # test with amplification function == 2 and no levels
         self.run_calc(case_55.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
-                      amplification_csv='amplification2bis.csv')
+                      amplification_file='amplification2bis.csv')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
