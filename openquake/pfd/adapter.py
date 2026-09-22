@@ -19,7 +19,7 @@
 """
 Legacy model adapter for PFD calculations.
 
-``LegacyModelAdapter`` bridges the hazard kernel's fixed calling convention
+``PFDModelAdapter`` bridges the hazard kernel's fixed calling convention
 to the heterogeneous model APIs: it inspects each model's signature to pass
 only the keyword arguments it accepts, assembles the model inputs from the
 the engine rupture/site context, reduces internal
@@ -82,7 +82,7 @@ def style_from_rake(rake):
     return 'strike-slip'
 
 
-class LegacyModelAdapter:
+class PFDModelAdapter:
     """
     Wraps legacy PFD models for use with FDHAContext.
 
@@ -91,7 +91,7 @@ class LegacyModelAdapter:
     extraction from context objects.
 
     Example:
-        adapter = LegacyModelAdapter(my_model, {'style': 'normal'})
+        adapter = PFDModelAdapter(my_model, {'style': 'normal'})
         P_sr = adapter.compute_primary_sr(ctx, red_cfg)
     """
 

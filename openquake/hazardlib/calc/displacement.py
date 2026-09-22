@@ -47,7 +47,7 @@ The calculator wraps the returned rate arrays into the engine's ``MapArray``
 and reuses all downstream stats/export machinery.
 
 The pure functions here take objects exposing the adapter protocol
-(:class:`openquake.pfd.adapter.LegacyModelAdapter`: ``compute_primary_sr``,
+(:class:`openquake.pfd.adapter.PFDModelAdapter`: ``compute_primary_sr``,
 ``compute_primary_fd``, ``compute_secondary_sr``, ``compute_secondary_fd``,
 each ``(ctx, ...) -> array``), keyed by the slot names
 ``primary_sr`` / ``primary_fd`` / ``secondary_sr`` / ``secondary_fd``. The

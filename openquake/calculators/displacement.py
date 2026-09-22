@@ -26,24 +26,81 @@ rates come from the FDHA kernel
 :func:`openquake.hazardlib.calc.displacement.calc_rates`.  The PFD logic
 tree is the ``extra_lt`` of the full logic tree, so ``hcurves-rlzs`` has
 the full cardinality ``R = sm_rlzs * gsim_paths * pfd_paths``.
+
+The calculation is parallelized with :class:`openquake.baselib.parallel.
+Starmap` over blocks of sources: each task returns the ``(N, R, M, L1)``
+rates of its block plus the per-source mean rates used by
+``mean_rates_by_src``.
 """
 import logging
+import operator
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import humansize
+from openquake.baselib import parallel, hdf5
+from openquake.baselib.general import humansize, block_splitter
 from openquake.hazardlib import valid
 from openquake.hazardlib.calc.displacement import (
     calc_rates, DEFAULT_RED_CFG)
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
-from openquake.pfd.adapter import LegacyModelAdapter, style_from_rake
+from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
 from openquake.calculators import base
 
 F32 = numpy.float32
 F64 = numpy.float64
+get_weight = operator.attrgetter('weight')
+
+
+def get_adapters(selections, r_sigma):
+    """
+    :param selections: slot -> FdhaModelChoice for one realization
+    :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
+    :returns: ``(adapters_by_model_type, r_sigma_km)``
+    """
+    adapters = {}
+    for slot, choice in selections.items():
+        if slot == CALC_R_SIGMA_SLOT:
+            r_sigma = choice.params[R_SIGMA_KM_KEY]
+            continue
+        cls = get_available(slot)[choice.class_name]
+        adapter = PFDModelAdapter(cls(**choice.params), choice.params)
+        adapters[adapter.model_type] = adapter
+    return adapters, r_sigma
+
+
+def displacement_task(srcs, cmaker, sitecol, pfd_lt, paths, weights, imls,
+                      r_threshold, r_sigma, N, R, monitor):
+    """
+    Compute the displacement rates of a block of sources for every
+    realization.
+
+    :returns: ``(rates, src_rates)`` where ``rates`` has shape
+        ``(N, R, M, L1)`` and ``src_rates`` maps source basename to the
+        mean over the realizations, shape ``(N, M, L1)``
+    """
+    cmaker.init_monitoring(monitor)
+    M, L1 = len(imls), len(imls[0])
+    rates = numpy.zeros((N, R, M, L1), F32)
+    src_rates = {}
+    active = next(iter(cmaker.gsims.values()))
+    for src in srcs:
+        sid = valid.basename(src)
+        style = style_from_rake(getattr(src, 'rake', 0.0))
+        ctxs = list(cmaker.get_ctxs(src, sitecol))
+        if not ctxs:
+            continue
+        base = src_rates.setdefault(sid, numpy.zeros((N, M, L1), F64))
+        for r in active:
+            selections = pfd_lt.selections_for(paths[r], sid, style)
+            adapters, rs = get_adapters(selections, r_sigma)
+            for m, il in enumerate(imls):
+                rr, _p, _d = calc_rates(
+                    ctxs, N, adapters, il, r_threshold, rs, DEFAULT_RED_CFG)
+                rates[:, r, m, :] += rr
+                base[:, m, :] += weights[r] * rr
+    return rates, src_rates
 
 
 @base.calculators.add('displacement')
@@ -55,60 +112,48 @@ class DisplacementCalculator(base.HazardCalculator):
         super().pre_execute()
         self.store_rlz_info({})
 
-    def _adapters(self, selections):
-        """
-        :param selections: slot -> FdhaModelChoice for one realization
-        :returns: ``(adapters_by_model_type, r_sigma_km)``
-        """
-        oq = self.oqparam
-        adapters = {}
-        r_sigma = oq.r_sigma_km
-        for slot, choice in selections.items():
-            if slot == CALC_R_SIGMA_SLOT:
-                r_sigma = choice.params[R_SIGMA_KM_KEY]
-                continue
-            cls = get_available(slot)[choice.class_name]
-            adapter = LegacyModelAdapter(cls(**choice.params), choice.params)
-            adapters[adapter.model_type] = adapter
-        return adapters, r_sigma
+    def agg(self, acc, result):
+        if result is None:
+            raise MemoryError('You ran out of memory!')
+        rates, src_rates = result
+        acc[0] += rates
+        for key, value in src_rates.items():
+            if key in acc[1]:
+                acc[1][key] += value
+            else:
+                acc[1][key] = value
+        return acc
 
     def execute(self):
         oq = self.oqparam
         N = len(self.sitecol)
         R = self.full_lt.get_num_paths()
-        imts = list(oq.imtls)
-        M = len(imts)
-        L1 = oq.imtls.size // M
-        rates = numpy.zeros((N, R, M, L1), F32)
-        basenames = self.csm.get_basenames()
-        src_rates = {b: numpy.zeros((N, M, L1), F64) for b in basenames}
-        weights = numpy.array(
-            [rlz.weight[-1] for rlz in self.full_lt.get_realizations()], F64)
+        imls = [oq.imtls[imt] for imt in oq.imtls]
         rlzs = self.full_lt.get_realizations()
+        paths = [rlz.ampl_rlz.lt_path for rlz in rlzs]
+        weights = numpy.array([rlz.weight[-1] for rlz in rlzs], F64)
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()
+        allargs = []
         for grp_id, src_group in enumerate(self.csm.src_groups):
             cmaker = cmakers[grp_id]
-            active = next(iter(cmaker.gsims.values()))
-            for src in src_group:
-                sid = valid.basename(src)
-                style = style_from_rake(getattr(src, 'rake', 0.0))
-                ctxs = list(cmaker.get_ctxs(src, self.sitecol))
-                if not ctxs:
-                    continue
-                for r in active:
-                    selections = pfd_lt.selections_for(
-                        rlzs[r].ampl_rlz.lt_path, sid, style)
-                    adapters, r_sigma = self._adapters(selections)
-                    for m, imt in enumerate(imts):
-                        rr, _p, _d = calc_rates(
-                            ctxs, N, adapters, oq.imtls[imt],
-                            oq.r_threshold_km, r_sigma, DEFAULT_RED_CFG)
-                        rates[:, r, m, :] += rr
-                        src_rates[sid][:, m, :] += weights[r] * rr
+            sources = list(src_group)
+            maxw = sum(s.weight for s in sources) / (
+                oq.concurrent_tasks or 1)
+            for block in block_splitter(
+                    sources, maxw, get_weight, sort=True):
+                allargs.append((
+                    block, cmaker, self.sitecol, pfd_lt, paths, weights, imls,
+                    oq.r_threshold_km, oq.r_sigma_km, N, R))
+        logging.info('Sending {:_d} tasks'.format(len(allargs)))
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(
+            displacement_task, allargs, h5=self.datastore.hdf5)
+        zeros = numpy.zeros((N, R, len(imls), len(imls[0])), F32)
+        rates, src_rates = smap.reduce(self.agg, [zeros, {}])
         if oq.disagg_by_src:
             self.src_rates = src_rates
-            self.basenames = basenames
+            self.basenames = self.csm.get_basenames()
         return rates
 
     def _store_mean_rates_by_src(self):
@@ -119,7 +164,8 @@ class DisplacementCalculator(base.HazardCalculator):
                    lvl=L1, src_id=numpy.array(self.basenames))
         arr = numpy.zeros((len(self.sitecol), M, L1, len(self.basenames)), F32)
         for b, s in enumerate(self.basenames):
-            arr[:, :, :, b] = self.src_rates[s]
+            arr[:, :, :, b] = self.src_rates.get(
+                s, numpy.zeros((len(self.sitecol), M, L1), F64))
         self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
     def post_execute(self, rates):
