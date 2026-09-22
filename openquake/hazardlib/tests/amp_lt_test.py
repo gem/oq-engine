@@ -192,7 +192,7 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
              )
         full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
         full_lt.source_model_lt = SourceModelLogicTree.fake()
-        full_lt.amp_lt = AmplificationModel(
+        full_lt.extra_lt = AmplificationModel(
             ['low', 'high'], [0.4, 0.6], [df, df],
             filenames=['amp_low.csv', 'amp_high.csv'],
             tree_filename='amp_lt.xml', branchset_id='bs_ampl'
@@ -211,7 +211,7 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
         # dstore info survives __toh5__/__fromh5__
         full_lt = self._build_lt()
         reloaded = self._roundtrip(full_lt)
-        amep = reloaded.amp_lt
+        amep = reloaded.extra_lt
         self.assertIsNotNone(amep)
         self.assertEqual(amep.names, ['low', 'high'])
         numpy.testing.assert_allclose(amep.weights, [0.4, 0.6])
@@ -233,7 +233,7 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt.source_model_lt = SourceModelLogicTree.fake()
         full_lt.source_model_lt.num_samples = num_samples
         full_lt.source_model_lt.sampling_method = sampling_method
-        full_lt.amp_lt = AmplificationModel(
+        full_lt.extra_lt = AmplificationModel(
             ['low', 'high'], [0.4, 0.6], [df, df])
         full_lt.init()
         return full_lt

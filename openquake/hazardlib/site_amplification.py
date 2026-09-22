@@ -437,7 +437,7 @@ class AmplificationModel(object):
         return True
 
     @property
-    def R_amp(self):
+    def xR(self):
         """
         :returns: number of amplification branches
         """
@@ -505,8 +505,8 @@ class AmplificationModel(object):
         self.branchset_id = attrs.get('branchset_id', 'bs_ampl')
 
     def __repr__(self):
-        return '<AmplificationModel R_amp=%d weights=%s>' % (
-            self.R_amp, self.weights.tolist())
+        return '<AmplificationModel xR=%d weights=%s>' % (
+            self.xR, self.weights.tolist())
 
 
 def get_poes_site(mean_std, cmaker, ctx):

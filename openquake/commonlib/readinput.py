@@ -1095,7 +1095,7 @@ def get_full_lt(oqparam):
     oversampling = oqparam.oversampling
     amep = get_amp_functions(oqparam)
     full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oversampling, amp_lt=amep)
+        source_model_lt, gsim_lt, oversampling, extra_lt=amep)
     if oqparam.calculation_mode == 'fdha_classical':
         # attach the PFD logic tree to be read by the FDHA calculator
         full_lt.pfd_lt = get_pfd_lt(oqparam)
