@@ -63,8 +63,10 @@ var CalculationTable = Backbone.View.extend({
         "click .btn-log": "show_log",
         "click .btn-file": "on_run_risk_clicked",
         "change .btn-file input": "on_run_risk_queued",
+        "click .calc-page-first": "first_page",
         "click .calc-page-prev": "previous_page",
-        "click .calc-page-next": "next_page"
+        "click .calc-page-next": "next_page",
+        "click .calc-page-last": "last_page"
     },
 
     /* When an input dialog is opened, it is very important to not re-render the table */
@@ -302,6 +304,14 @@ var CalculationTable = Backbone.View.extend({
         $('#diaerror_scroll_enabled_box').hide();
     },
 
+    first_page: function (e) {
+        e.preventDefault();
+        if (calc_page > 0) {
+            calc_page = 0;
+            fetch_calc_page();
+        }
+    },
+
     previous_page: function (e) {
         e.preventDefault();
         if (calc_page > 0) {
@@ -318,15 +328,31 @@ var CalculationTable = Backbone.View.extend({
         }
     },
 
+    last_page: function (e) {
+        e.preventDefault();
+        var last_page = Math.max(0, Math.ceil(
+            calc_total / calc_page_size) - 1);
+        if (calc_page < last_page) {
+            calc_page = last_page;
+            fetch_calc_page();
+        }
+    },
+
     render_pagination: function () {
         var pages = Math.max(1, Math.ceil(calc_total / calc_page_size));
+        var last_page = pages - 1;
         var html = '<div class="pagination">';
-        html += '<button class="btn calc-page-prev" ';
+        html += '<button class="btn calc-page-first" ';
+        html += calc_page == 0 ? 'disabled>First</button>' : '>First</button>';
+        html += ' <button class="btn calc-page-prev" ';
         html += calc_page == 0 ? 'disabled>Previous</button>' : '>Previous</button>';
         html += ' <span>Page ' + (calc_page + 1) + ' of ' + pages + '</span> ';
         html += '<button class="btn calc-page-next" ';
-        html += (calc_page + 1) * calc_page_size >= calc_total ?
+        html += calc_page >= last_page ?
             'disabled>Next</button>' : '>Next</button>';
+        html += ' <button class="btn calc-page-last" ';
+        html += calc_page >= last_page ?
+            'disabled>Last</button>' : '>Last</button>';
         html += '</div>';
         this.$el.append(html);
     },
