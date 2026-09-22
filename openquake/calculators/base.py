@@ -1157,36 +1157,35 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         # Store amplification functions if any
-        if 'amplification' in oq.inputs:
+        if 'ampl_logic_tree' in oq.inputs:
             amp_lt = readinput.get_amp_lt(oq)
-            if amp_lt is not None:
-                logging.info('Reading %d amplification branches from %s',
-                             amp_lt.get_num_paths(), amp_lt.filename)
-                # Each branch is validated on its own: ampcode coverage
-                # of the sitecol, then IMT coverage via Amplifier init
-                for df in amp_lt.dframes:
-                    check_amplification(df, self.sitecol)
-                # self.full_lt is set after _set_amplifier, so refetch here
-                full_lt = getattr(self, 'full_lt', None) or (
-                    readinput.get_full_lt(oq))
-                amp_lt.rlz_ampl_ord = numpy.array(
-                    [r.ampl_rlz.ordinal
-                     for r in full_lt.get_realizations()], numpy.uint32)
-                self.amplifier = amp_lt
-            else:
-                logging.info('Reading %s', oq.inputs['amplification'])
-                df = AmplificationFunction.read_df(oq.inputs['amplification'])
+            logging.info('Reading %d amplification branches from %s',
+                         amp_lt.get_num_paths(), amp_lt.filename)
+            # Each branch is validated on its own: ampcode coverage
+            # of the sitecol, then IMT coverage via Amplifier init
+            for df in amp_lt.dframes:
                 check_amplification(df, self.sitecol)
-                if oq.amplification_method == 'kernel': # Single branch, no LT
-                    # TODO: need to add additional checks on the main
-                    # calculation methodology since the kernel method is
-                    # currently tested only for classical PSHA
-                    self.af = AmplificationFunction.from_dframe(df)
-                else:  # Convolution: single branch, no LT
-                    self.amplifier = AmplificationLogicTree(
-                        names=['ampl'], weights=[1.0], dframes=[df],
-                        amplifiers=[Amplifier(
-                            oq.imtls, df, oq.soil_intensities)])
+            # self.full_lt is set after _set_amplifier, so refetch here
+            full_lt = getattr(self, 'full_lt', None) or (
+                readinput.get_full_lt(oq))
+            amp_lt.rlz_ampl_ord = numpy.array(
+                [r.ampl_rlz.ordinal
+                 for r in full_lt.get_realizations()], numpy.uint32)
+            self.amplifier = amp_lt
+        elif 'amplification' in oq.inputs:
+            logging.info('Reading %s', oq.inputs['amplification'])
+            df = AmplificationFunction.read_df(oq.inputs['amplification'])
+            check_amplification(df, self.sitecol)
+            if oq.amplification_method == 'kernel':  # Single branch, no LT
+                # TODO: need to add additional checks on the main
+                # calculation methodology since the kernel method is
+                # currently tested only for classical PSHA
+                self.af = AmplificationFunction.from_dframe(df)
+            else:  # Convolution: single branch, no LT
+                self.amplifier = AmplificationLogicTree(
+                    names=['ampl'], weights=[1.0], dframes=[df],
+                    amplifiers=[Amplifier(
+                        oq.imtls, df, oq.soil_intensities)])
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
@@ -1851,7 +1850,7 @@ def read_parent_sitecol(oq, dstore):
             haz_sitecol = parent['sitecol'].complete
         else:
             haz_sitecol = readinput.get_site_collection(oq, dstore.hdf5)
-        if ('amplification' in oq.inputs and
+        if (oq.has_amplification and
                 'ampcode' not in haz_sitecol.array.dtype.names):
             haz_sitecol.add_col('ampcode', site.ampcode_dt)
     return haz_sitecol

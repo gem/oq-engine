@@ -950,13 +950,13 @@ def get_pfd_lt(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         a :class:`openquake.hazardlib.pfd_lt.PFDLogicTree` instance
-        built from the ``gsim_logic_tree_file`` input
+        built from the ``pfd_logic_tree_file`` input
     """
-    if 'gsim_logic_tree' not in oqparam.inputs:
-        raise InvalidFile('%s: missing gsim_logic_tree_file'
+    if 'pfd_logic_tree' not in oqparam.inputs:
+        raise InvalidFile('%s: missing pfd_logic_tree_file'
                           % oqparam.inputs['job_ini'])
     fname = os.path.join(
-        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+        oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
     return pfd_lt.PFDLogicTree(
         fname, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples,
@@ -1027,18 +1027,15 @@ AMP_LT_SUPPORTED_MODES = ('classical')
 
 def _get_amp_lt_parser(oqparam):
     """
-    If oqparam.inputs['amplification'] points at an amp-LT XML, parse it,
-    cache the tree on oqparam._amp_lt, and rewrite the inputs entry to
-    the list of per-branch CSV file paths. Otherwise return None.
+    If oqparam.inputs['ampl_logic_tree'] is set, parse the amp-LT XML,
+    cache the tree on oqparam._amp_lt, and return it. Otherwise return None.
     """
     if getattr(oqparam, '_amp_lt', None) is not None:
         # Guard for if already parsed on a previous call
         return oqparam._amp_lt
-    fname = oqparam.inputs.get('amplification')
+    fname = oqparam.inputs.get('ampl_logic_tree')
     if not fname:
-        return None  # No amplification input
-    if not amp_lt.AmplificationLogicTreeParser.is_amp_lt(fname):
-        return None  # Regular amplification model (no logic tree)
+        return None  # No amplification logic tree
     if oqparam.calculation_mode not in AMP_LT_SUPPORTED_MODES:
         raise InvalidFile(
             '%s: amplification logic tree is only supported for %s'
@@ -1052,15 +1049,14 @@ def _get_amp_lt_parser(oqparam):
             % (fname, oqparam.amplification_method))
     tree = amp_lt.AmplificationLogicTreeParser(fname)
     oqparam._amp_lt = tree
-    oqparam.inputs['amplification'] = tree.filenames
     return tree
 
 
 def get_amp_lt(oqparam):
     """
     :returns: an :class:`AmplificationLogicTree` with Amplifier instances
-        built from the amp-LT branch CSVs, or None if the amplification
-        input is not an amp-LT XML
+        built from the ``ampl_logic_tree_file`` branch CSVs, or None if
+        the input is not set
     """
     tree = _get_amp_lt_parser(oqparam)
     if tree is None:
@@ -1880,10 +1876,15 @@ def get_input_files(oqparam):
         fname = oqparam.inputs[key]
         # collect .hdf5 tables for the GSIMs, if any
         if key == 'gsim_logic_tree':
-            if oqparam.calculation_mode != 'displacement':
-                # a displacement gsim_logic_tree_file is a PFD logic tree
-                fnames.update(gsim_lt.collect_files(fname))
+            fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
+        elif key == 'pfd_logic_tree':
+            fnames.add(fname)
+        elif key == 'ampl_logic_tree':
+            fnames.add(fname)
+            tree = _get_amp_lt_parser(oqparam)
+            if tree is not None:
+                fnames.update(tree.filenames)
         elif key == 'source_model':
             fnames.update(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
