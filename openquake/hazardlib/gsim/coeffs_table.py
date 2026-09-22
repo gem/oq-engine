@@ -123,11 +123,14 @@ class CoeffsTable(object):
         ...
     KeyError: SA(20.0)
 
+    Target periods below the PGA anchor at 0.01 s cannot use the fallback,
+    since PGA is treated as SA at 0.01 s and extrapolation below that point
+    is not supported:
+
     >>> ct[imt.SA(period=0.005, damping=5)]
     Traceback (most recent call last):
         ...
-    ValueError: Cannot interpolate SA(0.005): PGA-anchored fallback cannot
-    extrapolate below the PGA anchor at 0.01 s
+    ValueError: Cannot interpolate SA(0.005): PGA-anchored fallback cannot extrapolate below the PGA anchor at 0.01 s
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
