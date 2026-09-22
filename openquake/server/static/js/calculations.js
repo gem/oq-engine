@@ -120,7 +120,6 @@ var CalculationTable = Backbone.View.extend({
         var hide_or_back = (function (e) {
             this.conf_hide = $('#confirmDialog' + calc_id).hide();
             this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-            setTimer();
         })();
 
         var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/" + action,
@@ -371,6 +370,7 @@ $(document).on('errorDialog:hidden', function () {
 });
 
 function setTimer() {
+    closeTimer();
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
         fetch_calc_page();

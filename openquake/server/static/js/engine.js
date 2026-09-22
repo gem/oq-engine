@@ -80,11 +80,6 @@ else if (window.application_mode === 'IMPACT') {
                                     }});
                            });
 
-            $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
-                           function (e) {
-                               setTimer();
-                           });
-
             if (window.application_mode === 'AELO') {
                 $.ajax({
                     url:  "/v1/aelo_site_classes",
