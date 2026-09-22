@@ -166,9 +166,8 @@ class DisplacementCalculator(base.HazardCalculator):
             displacement_task, allargs, h5=self.datastore.hdf5)
         zeros = numpy.zeros((N, R, len(imls), len(imls[0])), F32)
         rates, src_rates = smap.reduce(self.agg, [zeros, {}])
-        if oq.disagg_by_src:
-            self.src_rates = src_rates
-            self.basenames = self.csm.get_basenames()
+        self.src_rates = src_rates
+        self.basenames = self.csm.get_basenames()
         return rates
 
     def _store_mean_rates_by_src(self):
@@ -231,7 +230,6 @@ class DisplacementCalculator(base.HazardCalculator):
                 'hmaps-stats', site_id=N, stat=list(hstats),
                 imt=imts, poe=oq.poes)
             self.datastore['hmaps-stats'][:] = hmaps_stats
-        if oq.disagg_by_src:
-            self._store_mean_rates_by_src()
+        self._store_mean_rates_by_src()
         logging.info('Stored %s of hazard curves',
                      humansize(hcurves_stats.nbytes))
