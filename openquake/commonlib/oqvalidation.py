@@ -1087,6 +1087,7 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'pfd_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
@@ -1520,11 +1521,21 @@ class OqParam(valid.ParamSet):
             self.raise_invalid(
                 'Cannot set both amplification_file and '
                 'ampl_logic_tree_file')
+        if (self.calculation_mode == 'displacement' and
+                'gsim_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'use pfd_logic_tree_file, not gsim_logic_tree_file, '
+                'in displacement calculations')
+        if (self.calculation_mode != 'displacement' and
+                'pfd_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'pfd_logic_tree_file is only allowed in displacement '
+                'calculations')
         if self.calculation_mode == 'displacement':
             # the second logic tree is a PFD logic tree, not a GSIM one
-            fname = self.inputs.get('gsim_logic_tree')
+            fname = self.inputs.get('pfd_logic_tree')
             if not fname:
-                self.raise_invalid('Missing gsim_logic_tree_file')
+                self.raise_invalid('Missing pfd_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
             # the PFD kernel works per source and yields annual rates

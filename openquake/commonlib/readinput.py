@@ -950,13 +950,13 @@ def get_pfd_lt(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         a :class:`openquake.hazardlib.pfd_lt.PFDLogicTree` instance
-        built from the ``gsim_logic_tree_file`` input
+        built from the ``pfd_logic_tree_file`` input
     """
-    if 'gsim_logic_tree' not in oqparam.inputs:
-        raise InvalidFile('%s: missing gsim_logic_tree_file'
+    if 'pfd_logic_tree' not in oqparam.inputs:
+        raise InvalidFile('%s: missing pfd_logic_tree_file'
                           % oqparam.inputs['job_ini'])
     fname = os.path.join(
-        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+        oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
     return pfd_lt.PFDLogicTree(
         fname, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples,
@@ -1876,9 +1876,9 @@ def get_input_files(oqparam):
         fname = oqparam.inputs[key]
         # collect .hdf5 tables for the GSIMs, if any
         if key == 'gsim_logic_tree':
-            if oqparam.calculation_mode != 'displacement':
-                # a 'displacement' gsim_logic_tree_file is a PFD logic tree
-                fnames.update(gsim_lt.collect_files(fname))
+            fnames.update(gsim_lt.collect_files(fname))
+            fnames.add(fname)
+        elif key == 'pfd_logic_tree':
             fnames.add(fname)
         elif key == 'ampl_logic_tree':
             fnames.add(fname)
