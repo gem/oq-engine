@@ -23,7 +23,7 @@ import numpy
 from openquake.calculators.export import export
 from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.pfd import case_1, case_2, case_3
+from openquake.qa_tests_data.pfd import case_1, case_2, case_3, case_4
 
 
 class DisplacementTestCase(CalculatorTestCase):
@@ -118,3 +118,28 @@ class DisplacementTestCase(CalculatorTestCase):
         self.assertEqual({r[0] for r in rows}, {'1', '2'})
         [fname2] = export(('hcurves/mean', 'csv'), dstore)
         self.assertTrue(os.path.exists(fname2))
+
+    def test_case_4(self):
+        # a multiFaultSource built from kite sections: the PFD distances
+        # come from the multi-surface 'segments' reference line
+        self.run_calc(case_4.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        hcurves = dstore['hcurves-rlzs'][:]
+        self.assertEqual(hcurves.shape, (1, 1, 1, 5))
+        self.assertTrue((hcurves > 0).all())
+        # 3 ruptures, but only the 2 surface-reaching ones are used
+        self.assertEqual(int(dstore['source_info'][0]['num_ctxs']), 2)
+        # the section trace runs E-W at lat 45.0; the site sits on it, so
+        # rtor ~ 0 while x/L is the GC2 position on the raw segmentation
+        csm = self.calc.csm
+        cmaker = csm.get_cmakers()[0]
+        [src] = list(csm.src_groups[0])
+        ctxs = list(cmaker.get_ctxs(src, self.calc.sitecol))
+        self.assertEqual(len(ctxs), 2)
+        single, multi = ctxs  # mag 5 (1 section), mag 6 (2 sections)
+        self.assertAlmostEqual(float(single.rtor[0]), 0.0303, places=3)
+        self.assertAlmostEqual(float(single.x_l[0]), 0.51728, places=4)
+        self.assertAlmostEqual(float(single.length[0]), 38.0, places=1)
+        # the 2-section rupture spans both kites (no gap bridging)
+        self.assertAlmostEqual(float(multi.x_l[0]), 0.25425, places=4)
+        self.assertAlmostEqual(float(multi.length[0]), 77.313, places=2)

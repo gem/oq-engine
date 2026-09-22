@@ -180,6 +180,8 @@ class DisplacementCalculator(base.HazardCalculator):
         # create source_info before the tasks, so store_source_info will
         # update the actual number of contexts (not the estimated one)
         source_reader.create_source_info(self.csm, self.datastore.hdf5)
+        # multiFaultSource sections need their .msparams before iter_ruptures
+        self.csm.set_msparams()
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()

@@ -235,14 +235,41 @@ class MultiSurface(BaseSurface):
         dists = [surf.get_rtor(mesh) for surf in self.surfaces]
         return np.min(dists, axis=0)
 
+    def _get_segments_u(self):
+        """
+        :returns: ``(u_min, u_max)`` of the section trace vertices in the
+            GC2 ``MultiLine`` frame, i.e. the along-strike span used as L
+        """
+        lons = np.concatenate([ln.coo[:, 0] for ln in self.tor.lines])
+        lats = np.concatenate([ln.coo[:, 1] for ln in self.tor.lines])
+        _t, u = self.tor.get_tu(lons, lats)
+        return float(np.min(u)), float(np.max(u))
+
     def get_x_l_ratio(self, mesh):
         """
-        x/L is defined per continuous trace and a MultiSurface has several,
-        so the multi-fault reference-line treatment is a later phase.
+        x/L for a multi-surface: the GC2 along-strike position on the raw
+        segmentation (the PFD 'segments' semantics - inter-section gaps are
+        not bridged), with L the along-strike span of the section vertices.
+
+        :returns: ``(x_over_l, l_km)`` like :meth:`BaseSurface.get_x_l_ratio`
         """
-        raise NotImplementedError(
-            'x_l is not defined for MultiSurface: multi-fault PFD '
-            'reference-line routing is not implemented yet')
+        u_min, u_max = self._get_segments_u()
+        l_km = u_max - u_min
+        n = len(np.asarray(mesh.lons).flatten())
+        if l_km <= 0.0:
+            return np.zeros(n), 0.0
+        _t, u = self.tor.get_tu(
+            np.asarray(mesh.lons).flatten(), np.asarray(mesh.lats).flatten())
+        xl = np.clip((np.asarray(u) - u_min) / l_km, 0.0, 1.0)
+        return xl, l_km
+
+    def get_tor_length(self):
+        """
+        :returns: the along-strike length (km) of the raw segmentation,
+            consistent with :meth:`get_x_l_ratio`
+        """
+        u_min, u_max = self._get_segments_u()
+        return u_max - u_min
 
     def get_top_edge_depth(self):
         """
