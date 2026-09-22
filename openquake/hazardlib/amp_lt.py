@@ -157,18 +157,11 @@ class AmplificationLogicTree(object):
     def __bool__(self):
         return True
 
-    @property
-    def xR(self):
-        """
-        :returns: number of amplification branches
-        """
-        return len(self.names)
-
     def get_num_paths(self):
         """
         :returns: the number of paths in the logic tree
         """
-        return self.xR
+        return len(self.names)
 
     @property
     def amplevels(self):
@@ -232,7 +225,7 @@ class AmplificationLogicTree(object):
         self.branchset_id = attrs.get('branchset_id', 'bs_ampl')
 
     def __repr__(self):
-        return '<AmplificationLogicTree xR=%d weights=%s>' % (
-            self.xR, self.weights.tolist())
+        return '<AmplificationLogicTree %d branches weights=%s>' % (
+            self.get_num_paths(), self.weights.tolist())
 
 

@@ -1161,7 +1161,7 @@ class HazardCalculator(BaseCalculator):
             amp_lt = readinput.get_amp_lt(oq)
             if amp_lt is not None:
                 logging.info('Reading %d amplification branches from %s',
-                             amp_lt.xR, amp_lt.filename)
+                             amp_lt.get_num_paths(), amp_lt.filename)
                 # Each branch is validated on its own: ampcode coverage
                 # of the sitecol, then IMT coverage via Amplifier init
                 for df in amp_lt.dframes:
