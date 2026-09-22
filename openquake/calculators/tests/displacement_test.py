@@ -18,9 +18,11 @@
 
 import os
 
+import numpy
+
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.pfd import case_1, case_2
+from openquake.qa_tests_data.pfd import case_1, case_2, case_3
 
 
 class DisplacementTestCase(CalculatorTestCase):
@@ -69,3 +71,28 @@ class DisplacementTestCase(CalculatorTestCase):
             header = f.readline()
         self.assertIn("kind='mean'", meta)
         self.assertTrue(header.startswith('lon,lat,Disp-'))
+
+    def test_case_3(self):
+        # two source-model realizations selecting different source models:
+        # R = 2 but each source group is active in a single realization
+        self.run_calc(case_3.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        self.assertEqual(self.calc.full_lt.get_num_paths(), 2)
+        cmakers = self.calc.csm.get_cmakers()
+        active = [len(next(iter(cm.gsims.values()))) for cm in cmakers]
+        self.assertEqual(active, [1, 1])  # only 1 of the 2 realizations
+        hcurves = dstore['hcurves-rlzs'][:]
+        self.assertEqual(hcurves.shape, (1, 2, 1, 5))
+        # the two sources have different aValues, so the curves differ
+        self.assertFalse(numpy.allclose(hcurves[0, 0], hcurves[0, 1]))
+        self.assertIn('mean_rates_by_src', dstore)
+        # both sources are exported, each scaled by its realization weight
+        [fname] = export(('mean_rates_by_src', 'csv'), dstore)
+        with open(fname) as f:
+            f.readline()  # metadata
+            f.readline()  # header
+            rows = [ln.split(',') for ln in f.read().splitlines()]
+        self.assertEqual(len(rows), 10)  # 2 sources x 5 displacement levels
+        self.assertEqual({r[0] for r in rows}, {'1', '2'})
+        [fname2] = export(('hcurves/mean', 'csv'), dstore)
+        self.assertTrue(os.path.exists(fname2))
