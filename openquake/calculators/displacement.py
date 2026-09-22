@@ -55,6 +55,21 @@ get_weight = operator.attrgetter('weight')
 
 def get_adapters(selections, r_sigma):
     """
+    Build the PFD model adapters for one realization.
+
+    The adapters are needed because the ~60 ported FDHA models do not
+    share a calling convention: ``get_prob`` takes different arguments
+    depending on the model (``d``/``mag``/``r``/``rx``/``X_L_ratio``/
+    ``pixel_size``/``version``/``percentile``/``vs30``/...), sometimes
+    returns Monte-Carlo samples or a different array orientation, and
+    some declare a near-field floor or a multi-fault reference line.
+    :class:`~openquake.pfd.adapter.PFDModelAdapter` hides all of this
+    behind the fixed ``compute_primary_sr``/``compute_primary_fd``/
+    ``compute_secondary_sr``/``compute_secondary_fd`` interface used by
+    the rate kernel, so the models can stay paper-faithful.  It is
+    scheduled for removal once the models expose a common vectorized
+    ``compute(ctx)`` interface (EngineIntegration.md sections 4.2 and 8).
+
     :param selections: slot -> FdhaModelChoice for one realization
     :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
     :returns: ``(adapters_by_model_type, r_sigma_km)``
