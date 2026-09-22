@@ -34,6 +34,8 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.baselib.general import decode
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
+from openquake.hazardlib.site_amplification import (
+    IMTL_GRID_SHRINK_FACTOR, IMTL_GRID_MIN_RATIO, IMTL_GRID_MAX_RATIO)
 from openquake.hazardlib.valid import corename
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -265,41 +267,78 @@ def _compose_pnes(ctx, poes, time_span, infer_occur_rates):
 def _amp_poes_by_eps(mea_g, std_g, iml2, eps_edges, phi_b,
                      amplifier, ampcode, imts):
     """
-    Compute per-rupture, per-rock-eps-bin soil exceedance PoE of shape
+    Compute per-rupture, per-rock-eps-bin soil exceedance PoE.
+
+    Uses the same fine log-spaced rock IMTL grid that
+    Amplifier.amplify_one uses in the classical convolution (levels
+    step by min_ratio ~1.05-1.1 across the rock imtls range),
+    decoupling the amp integration grid from the disagg eps output
+    binning. Contributions from each fine rock IMTL bin are scattered
+    into the eps bin that contains the bin midpoint's rock-eps value.
     """
+    # U ruptures, E disagg eps output bins, M IMTs, P soil PoE targets
     U = mea_g.shape[-1]
     M, P = iml2.shape
-    eps_l = eps_edges[:-1]
-    eps_u = eps_edges[1:]
-    E = len(eps_l)
-    # P(rock-eps in bin) under the truncated normal
-    pocc_rock_bin = truncnorm_sf(phi_b, eps_l) - truncnorm_sf(phi_b, eps_u)
-    eps_mid = 0.5 * (eps_l + eps_u)
+    E = len(eps_edges) - 1
     poes = numpy.zeros((U, E, M, P))
     for m, imt in enumerate(imts):
-        # Rock IML midpoint per rupture and eps bin, in log space
-        rock_mid_log = ( # (U, E)
-            mea_g[m][:, None] + eps_mid[None, :] * std_g[m][:, None]
+        # Log-spaced rock-IMTL grid matching Amplifier.amplify_one, fine
+        # enough to resolve the amp CDF (unlike the disagg eps output bins)
+        rock_imls = amplifier.imtls[imt.string]
+        min_gm = numpy.amin(rock_imls)
+        max_gm = numpy.amax(rock_imls)
+        amplevels = numpy.asarray(amplifier.amplevels)
+        min_ratio = (
+            numpy.amin(amplevels[1:] / amplevels[:-1]) * IMTL_GRID_SHRINK_FACTOR
             )
-        a_flat, s_flat = amplifier._interp(
-            ampcode, str(imt), numpy.exp(rock_mid_log).ravel()
-            )
-        log_a = numpy.log(a_flat).reshape(U, E)
-        sigma = s_flat.reshape(U, E)
-        positive = sigma > 0
-        # Guard div by zero in norm.sf - sigma=0 cells overwritten below
-        safe_sigma = numpy.where(positive, sigma, 1.0)
+        min_ratio = min(max(min_ratio, IMTL_GRID_MIN_RATIO), IMTL_GRID_MAX_RATIO)
+        allimls = [min_gm]
+        while allimls[-1] < max_gm:
+            allimls.append(allimls[-1] * min_ratio)
+        simls = numpy.array(allimls)  # shape (I,)
+
+        # Interpolate the amp function at each fine bin's midpoint
+        amplifier.levels = simls
+        amplifier._set_alpha_sigma(mag=None, dst=None)
+        midlevels = amplifier.midlevels  # linear midpoints, shape (I-1,)
+        log_mids = numpy.log(midlevels)
+        alphas = amplifier.ialphas[ampcode, imt.string]
+        sigmas = amplifier.isigmas[ampcode, imt.string]
+        log_a = numpy.log(alphas)
+
+        # Per rupture, P(rock IML in each fine bin) from truncated-normal
+        # survival at the bin edges in eps space
+        log_simls = numpy.log(simls)  # shape (I,)
+        eps_at = ((log_simls[None, :] - mea_g[m][:, None])
+                  / std_g[m][:, None])  # (U, I)
+        sf_at = truncnorm_sf(phi_b, eps_at)  # (U, I)
+        p_rock_bin = sf_at[:, :-1] - sf_at[:, 1:]  # (U, I-1)
+
+        # Map each fine bin to its disagg eps output bin by the eps of its
+        # midpoint; tails outside eps_edges fold into the boundary bins
+        eps_mid_ui = ((log_mids[None, :] - mea_g[m][:, None])
+                      / std_g[m][:, None])  # (U, I-1)
+        ebin = numpy.searchsorted(eps_edges, eps_mid_ui) - 1
+        ebin = numpy.clip(ebin, 0, E - 1)
+        u_idx = numpy.arange(U)[:, None]
+
+        # sigma=0 marks deterministic amp fine bins; handled explicitly below
+        positive = sigmas > 0
+        safe_sigmas = numpy.where(positive, sigmas, 1.0)
         for p in range(P):
             iml_s = iml2[m, p]
             if iml_s == -numpy.inf:
                 continue
-            logaf = iml_s - rock_mid_log
-            # P(amp * exp(rock_mid) > iml_soil) under lognormal AF
-            poex = scipy.stats.norm.sf((logaf - log_a) / safe_sigma)
-            # Deterministic amp at cells with sigma=0: soil > iml iff a>af
-            poex = numpy.where(
-                positive, poex, numpy.where(logaf < log_a, 1.0, 0.0))
-            poes[:, :, m, p] = poex * pocc_rock_bin[None, :]
+            # P(amp * midlevel > soil target) per fine bin; deterministic
+            # amp reduces to a step at soil = alpha * midlevel
+            logaf = iml_s - log_mids - log_a  # shape (I-1,)
+            amp_exc = scipy.stats.norm.sf(logaf / safe_sigmas)
+            amp_exc = numpy.where(
+                positive, amp_exc, numpy.where(logaf < 0, 1.0, 0.0))
+            # Accumulate P(rock in bin) * P(amp exceeds soil) into the
+            # eps output bin that each fine bin belongs to
+            contrib = p_rock_bin * amp_exc[None, :]  # (U, I-1)
+            numpy.add.at(poes[:, :, m, p], (u_idx, ebin), contrib)
     return poes
 
 
@@ -536,10 +575,11 @@ class Disaggregator(object):
             return sum(self.weights)
         return 1.
 
-    def _disagg6D(self, imldic, g, rlz=None):
+    def _disagg6D(self, imldic, g, rlz):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
         # returns poes for src_mutex and rates otherwise
+        # rlz selects the amp-LT branch when amplification is active
         imts = list(imldic)
         iml2 = numpy.array(list(imldic.values()))  # shape (M, P)
         imlog2 = numpy.zeros_like(iml2)
@@ -641,7 +681,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
+                mat5 = self._disagg6D(imtls, g, rlz)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
                 out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz] * mw
         return to_rates(out) if src_mutex else out
@@ -777,7 +817,7 @@ def disaggregation(
                 dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
                 continue
-            mat4 = dis._disagg6D({imt: [iml]}, 0)[..., 0, 0]
+            mat4 = dis._disagg6D({imt: [iml]}, 0, rlz=0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 

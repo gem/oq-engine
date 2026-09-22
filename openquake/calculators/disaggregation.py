@@ -276,7 +276,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
-            # NB: in case_27 src_mutex for grp_id=1 has the form
+            # NB: in classical/case_27 src_mutex for grp_id=1 has the form
             # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
             if rup_mutex:
                 raise NotImplementedError(
@@ -321,6 +321,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         cmakers = read_cmakers(dstore).to_array()
         if 'src_mutex' in dstore:
+            if self.amplifier is not None:
+                raise NotImplementedError(
+                    'Disaggregation with amplification and mutex sources')
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             gp = dict(dstore['grp_probability'])  # grp_id -> probability
             src_mutex_by_grp = {

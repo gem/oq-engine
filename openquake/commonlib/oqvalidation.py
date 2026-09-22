@@ -1698,6 +1698,11 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
+            if self.epsilon_star and self.has_amplification:
+                # epsilon is a rock-GMPE residual; a soil-target 'eps at
+                # exceedance' is not well-defined once amp is convolved
+                self.raise_invalid(
+                    'epsilon_star=true is not supported with amplification')
             if not self.poes_disagg and self.poes:
                 self.poes_disagg = self.poes
             elif not self.poes and self.poes_disagg:
