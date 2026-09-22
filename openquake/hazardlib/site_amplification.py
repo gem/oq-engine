@@ -26,6 +26,15 @@ from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.oqvalidation import check_same_levels
 
+# Log-spaced rock IMTL grid used in the amp convolution: the adjacent
+# ratio is shrunk from the tightest soil-amplevel ratio (safety margin
+# so the rock grid is strictly finer than any soil bin), then clamped
+# to [MIN, MAX]. Used by Amplifier.amplify_one and mirrored in
+# disagg._amp_poes_by_eps.
+IMTL_GRID_SHRINK_FACTOR = 0.9
+IMTL_GRID_MIN_RATIO = 1.05
+IMTL_GRID_MAX_RATIO = 1.1
+
 
 class AmplificationFunction():
     """
@@ -296,9 +305,11 @@ class Amplifier(object):
         min_gm = numpy.amin(self.imtls[imt])
         max_gm = numpy.amax(self.imtls[imt])
 
-        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
-                               numpy.array(self.amplevels[:-1]))*0.9
-        min_ratio = min(max(min_ratio, 1.05), 1.1)
+        min_ratio = numpy.amin(
+            numpy.array(self.amplevels[1:]) /
+            numpy.array(self.amplevels[:-1])) * IMTL_GRID_SHRINK_FACTOR
+        min_ratio = min(max(min_ratio, IMTL_GRID_MIN_RATIO),
+                        IMTL_GRID_MAX_RATIO)
         allimls = [min_gm]
         while allimls[-1] < max_gm:
             allimls.append(allimls[-1]*min_ratio)
