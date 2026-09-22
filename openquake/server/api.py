@@ -49,7 +49,7 @@ from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
 from openquake.commonlib import (
     dbapi, datastore, logs, oqvalidation, readinput)
-from openquake.commonlib.repo_status import read_repo_status
+from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
@@ -119,10 +119,10 @@ def calc_info(calc_id: int, x_api_key: str | None = Header(default=None)):
         raise HTTPException(status_code=404) from exc
 
 
-@app.get('/v0/calc/repo_status_summary/{calc_id}')
-def v0_repo_status_summary(
+@app.get('/v0/calc/model_provenance/{calc_id}')
+def v0_model_provenance(
         calc_id: int, x_api_key: str | None = Header(default=None)):
-    """Return repository provenance for an authenticated internal caller."""
+    """Return model provenance for an authenticated internal caller."""
     _check_api_key(x_api_key)
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
@@ -131,18 +131,18 @@ def v0_repo_status_summary(
     if not os.path.exists(path):
         return {
             'available': False,
-            'reason': 'Repository provenance metadata is not available',
+            'reason': 'Model provenance metadata is not available',
         }
     try:
         with datastore.read(path) as dstore:
-            summary = read_repo_status(dstore)
+            summary = read_model_provenance(dstore)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        logging.exception('Could not read repository provenance')
+        logging.exception('Could not read model provenance')
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     if summary is None:
         return {
             'available': False,
-            'reason': 'Repository provenance metadata is not available',
+            'reason': 'Model provenance metadata is not available',
         }
     return {'available': True, 'summary': summary}
 

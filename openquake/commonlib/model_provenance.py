@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Collect and store the status of the model-data repositories."""
+"""Collect and store model-data repository provenance."""
 
 import json
 import logging
@@ -27,12 +27,12 @@ from datetime import datetime, timezone
 from openquake.baselib import hdf5
 from openquake.hazardlib.countries import REGIONS
 
-REPO_STATUS_SUMMARY = 'repo_status_summary'
+MODEL_PROVENANCE = 'model_provenance'
 SCHEMA_VERSION = 1
 
 
-class RepoStatusError(Exception):
-    """Raised when the status of a Git repository cannot be read."""
+class ModelProvenanceError(Exception):
+    """Raised when repository provenance cannot be read."""
 
 
 def _git(path, *args, optional=False):
@@ -44,7 +44,7 @@ def _git(path, *args, optional=False):
         if optional:
             return None
         message = proc.stderr.strip() or 'git command failed'
-        raise RepoStatusError(f'{path}: {message}')
+        raise ModelProvenanceError(f'{path}: {message}')
     return proc.stdout.strip()
 
 
@@ -66,7 +66,7 @@ def _submodule_paths(path):
 
 
 def _repository_status(path, relative_path):
-    """Return the status of one repository."""
+    """Return the provenance of one repository."""
     status = {'path': relative_path}
     try:
         status['commit'] = _git(path, 'rev-parse', 'HEAD')
@@ -79,7 +79,7 @@ def _repository_status(path, relative_path):
         status['dirty'] = bool(
             _git(path, 'status', '--porcelain',
                  '--untracked-files=all'))
-    except (OSError, RepoStatusError) as exc:
+    except (OSError, ModelProvenanceError) as exc:
         status['status_error'] = str(exc)
     return status
 
@@ -96,8 +96,8 @@ def _repository_entry(path, relative_path):
     return entry
 
 
-def collect_repo_status(grm_dir):
-    """Collect status from the repositories used by the global model."""
+def collect_model_provenance(grm_dir):
+    """Collect provenance from the repositories used by the global model."""
     repositories = []
     paths = list(REGIONS) + ['site-models']
     for relative_path in paths:
@@ -116,40 +116,40 @@ def _summary_text(summary):
     return json.dumps(summary, indent=2, sort_keys=True) + '\n'
 
 
-def store_repo_status(dstore, grm_dir):
-    """Store the model repository status in an HDF5 datastore."""
-    summary = collect_repo_status(grm_dir)
+def store_model_provenance(dstore, grm_dir):
+    """Store model repository provenance in an HDF5 datastore."""
+    summary = collect_model_provenance(grm_dir)
     text = _summary_text(summary)
-    if REPO_STATUS_SUMMARY in dstore.hdf5:
-        del dstore.hdf5[REPO_STATUS_SUMMARY]
+    if MODEL_PROVENANCE in dstore.hdf5:
+        del dstore.hdf5[MODEL_PROVENANCE]
     dataset = dstore.hdf5.create_dataset(
-        REPO_STATUS_SUMMARY, shape=(), dtype=hdf5.vstr)
+        MODEL_PROVENANCE, shape=(), dtype=hdf5.vstr)
     dataset[()] = text
     dataset.attrs['format'] = 'json'
     dataset.attrs['schema_version'] = SCHEMA_VERSION
     return summary
 
 
-def copy_repo_status(source_path, dstore):
-    """Copy repository status from an exposure HDF5 to a datastore."""
+def copy_model_provenance(source_path, dstore):
+    """Copy model provenance from an exposure HDF5 to a datastore."""
     try:
         with hdf5.File(source_path, 'r') as source:
-            if REPO_STATUS_SUMMARY not in source:
+            if MODEL_PROVENANCE not in source:
                 return False
-            if REPO_STATUS_SUMMARY in dstore.hdf5:
-                del dstore.hdf5[REPO_STATUS_SUMMARY]
-            source.copy(REPO_STATUS_SUMMARY, dstore.hdf5)
+            if MODEL_PROVENANCE in dstore.hdf5:
+                del dstore.hdf5[MODEL_PROVENANCE]
+            source.copy(MODEL_PROVENANCE, dstore.hdf5)
     except (OSError, KeyError) as exc:
-        logging.warning('Could not copy repository status from %s: %s',
+        logging.warning('Could not copy model provenance from %s: %s',
                         source_path, exc)
         return False
     return True
 
 
-def read_repo_status(dstore):
-    """Read repository status from a datastore, or return ``None``."""
+def read_model_provenance(dstore):
+    """Read model provenance from a datastore, or return ``None``."""
     try:
-        value = dstore.getitem(REPO_STATUS_SUMMARY)[()]
+        value = dstore.getitem(MODEL_PROVENANCE)[()]
     except KeyError:
         return None
     if isinstance(value, bytes):

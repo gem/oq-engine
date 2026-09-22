@@ -23,13 +23,13 @@ import unittest
 from types import SimpleNamespace
 
 from openquake.baselib import hdf5
-from openquake.commonlib.repo_status import (
-    collect_repo_status, copy_repo_status, read_repo_status,
-    store_repo_status)
+from openquake.commonlib.model_provenance import (
+    collect_model_provenance, copy_model_provenance,
+    read_model_provenance, store_model_provenance)
 
 
-class RepoStatusTestCase(unittest.TestCase):
-    """Test repository status collection and HDF5 storage."""
+class ModelProvenanceTestCase(unittest.TestCase):
+    """Test model provenance collection and HDF5 storage."""
 
     def make_repository(self, root):
         """Create a small Git repository for testing."""
@@ -59,7 +59,7 @@ class RepoStatusTestCase(unittest.TestCase):
             with open(os.path.join(path, 'model.txt'), 'a') as stream:
                 stream.write(' changed')
 
-            summary = collect_repo_status(root)
+            summary = collect_model_provenance(root)
             [repository] = summary['repositories']
             self.assertTrue(repository['detached'])
             self.assertEqual(repository['detached_ref'], 'v1.0.0')
@@ -74,16 +74,17 @@ class RepoStatusTestCase(unittest.TestCase):
             target_path = os.path.join(root, 'target.hdf5')
             with hdf5.File(source_path, 'w') as source:
                 source_store = SimpleNamespace(hdf5=source)
-                expected = store_repo_status(source_store, root)
+                expected = store_model_provenance(source_store, root)
             with hdf5.File(source_path, 'r') as source, \
                     hdf5.File(target_path, 'w') as target:
                 target_store = SimpleNamespace(
                     hdf5=target, getitem=target.__getitem__)
-                self.assertTrue(copy_repo_status(source_path, target_store))
-                actual = read_repo_status(target_store)
+                self.assertTrue(
+                    copy_model_provenance(source_path, target_store))
+                actual = read_model_provenance(target_store)
                 self.assertEqual(actual, expected)
                 self.assertEqual(
-                    target['repo_status_summary'].attrs['format'], 'json')
+                    target['model_provenance'].attrs['format'], 'json')
 
 
 if __name__ == '__main__':

@@ -103,8 +103,8 @@ Response::
 	"start_time": "2017-06-05 12:01:26"}
 
 ***********************************************
-GET /v1/calc/:calc_id/repo_status_summary
-***********************************************
+GET /v1/calc/:calc_id/model_provenance
+**************************************
 
 Get the repository provenance snapshot stored in the calculation datastore.
 The snapshot identifies the regional model repositories, their submodules,
@@ -125,7 +125,7 @@ Response when provenance is available::
 For old datastores without provenance metadata, the endpoint returns::
 
 	{"available": false,
-	 "reason": "Repository provenance metadata is not available"}
+	 "reason": "Model provenance metadata is not available"}
 
 *******************************
 GET /v1/calc/:calc_id/traceback

@@ -32,7 +32,7 @@ from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5, readinput
-from openquake.commonlib.repo_status import store_repo_status
+from openquake.commonlib.model_provenance import store_model_provenance
 
 U16 = numpy.uint16
 F32 = numpy.float32
@@ -281,7 +281,7 @@ def main(grm_dir, wfp=False, action='build'):
     job, dstore = create_job_dstore(description=description)
     sample = os.environ.get('OQ_SAMPLE_ASSETS')
     with dstore, job:
-        store_repo_status(dstore, grm_dir)
+        store_model_provenance(dstore, grm_dir)
         with mon:
             n_sites = build_site_model_gsims(grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n_sites))

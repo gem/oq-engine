@@ -521,7 +521,6 @@ def download_png(request, calc_id, what):
 def _call_api(request, endpoint):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)
-    headers = {'X-API-Key': API_KEY} if endpoint.startswith('v0/') else {}
     try:
         response = requests.get(
             url, headers={'X-API-Key': API_KEY}, timeout=10)
@@ -1876,14 +1875,14 @@ def extract(request, calc_id, what):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def repo_status_summary(request, calc_id):
-    """Authenticate and proxy repository provenance to FastAPI."""
+def model_provenance(request, calc_id):
+    """Authenticate and proxy model provenance to FastAPI."""
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    return _call_api(request, f'v0/calc/repo_status_summary/{calc_id}')
+    return _call_api(request, f'v0/calc/model_provenance/{calc_id}')
 
 
 @cross_domain_ajax
