@@ -22,7 +22,7 @@ Probabilistic Fault Displacement (PFD) calculator (``displacement`` mode).
 Unlike the classical calculator there are no GSIMs: the ground-shaking
 machinery is used only to build the rupture/site contexts (through the
 no-op :class:`openquake.pfd.gsim.PFDGMPE`), while the annual exceedance
-rates come from the FDHA kernel
+rates come from the PFD kernel
 :func:`openquake.hazardlib.calc.displacement.calc_rates`.  The PFD logic
 tree is the ``extra_lt`` of the full logic tree, so ``hcurves-rlzs`` has
 the full cardinality ``R = sm_rlzs * gsim_paths * pfd_paths``.
@@ -57,7 +57,7 @@ def get_adapters(selections, r_sigma):
     """
     Build the PFD model adapters for one realization.
 
-    The adapters are needed because the ~60 ported FDHA models do not
+    The adapters are needed because the ~60 ported PFD models do not
     share a calling convention: ``get_prob`` takes different arguments
     depending on the model (``d``/``mag``/``r``/``rx``/``X_L_ratio``/
     ``pixel_size``/``version``/``percentile``/``vs30``/...), sometimes

@@ -84,11 +84,10 @@ def style_from_rake(rake):
 
 class PFDModelAdapter:
     """
-    Wraps legacy PFD models for use with FDHAContext.
+    Wraps the PFD models for use with the rate kernel.
 
-    Provides backward compatibility during migration to context-based
-    calculations. Automatically detects model type and handles parameter
-    extraction from context objects.
+    Automatically detects the model type and handles parameter extraction
+    from context objects.
 
     Example:
         adapter = PFDModelAdapter(my_model, {'style': 'normal'})
@@ -131,7 +130,7 @@ class PFDModelAdapter:
         """
         style = self.model_params.get('style')
         if style is None:
-            # FDHAContext exposes a derived `style` array; the engine's
+            # a PFD context may expose a derived `style` array; the engine's
             # RuptureContext carries `rake` instead (PR-4 wiring).
             style_arr = getattr(ctx, 'style', None)
             if style_arr is None:
@@ -215,8 +214,8 @@ class PFDModelAdapter:
         single-strand ruptures this is simply the canonical trace-based set.
 
         Three context shapes are supported, in priority order: an explicit
-        per-method ``ref_metrics`` mapping (multi-fault, PR-8), an
-        ``FDHAContext``-style ``metrics_for`` method, and finally the
+        per-method ``ref_metrics`` mapping (multi-fault, PR-8), a
+        ``metrics_for`` method, and finally the
         engine's :class:`~openquake.hazardlib.contexts.RuptureContext`
         distance/rupture-parameter fields added by PR-3 (``rtor``, ``x_l``,
         ``length``). Until multi-fault routing lands (PR-8) every method
