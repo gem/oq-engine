@@ -1169,7 +1169,7 @@ class HazardCalculator(BaseCalculator):
             full_lt = getattr(self, 'full_lt', None) or (
                 readinput.get_full_lt(oq))
             amp_lt.rlz_ampl_ord = numpy.array(
-                [r.ampl_rlz.ordinal
+                [r.extra_rlz.ordinal
                  for r in full_lt.get_realizations()], numpy.uint32)
             self.amplifier = amp_lt
         elif 'amplification' in oq.inputs:

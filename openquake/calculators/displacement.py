@@ -103,16 +103,16 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, N, R, monitor):
     rates = numpy.zeros((N, R, M, L1), F32)
     src_rates = {}
     for src in srcs:
-        sid = valid.basename(src)
+        basename = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
         ctxs = list(cmaker.get_ctxs(src, sitecol))
         if not ctxs:
             continue
-        base = src_rates.setdefault(sid, numpy.zeros((N, M, L1), F64))
+        base = src_rates.setdefault(basename, numpy.zeros((N, M, L1), F64))
         for rlz in rlzs:
             r = rlz.ordinal
             selections = pfd_lt.selections_for(
-                rlz.ampl_rlz.lt_path, sid, style)
+                rlz.extra_rlz.lt_path, basename, style)
             adapters, rs = get_adapters(selections, oq.r_sigma_km)
             for m, il in enumerate(imls):
                 rr, _p, _d = calc_rates(

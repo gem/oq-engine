@@ -1032,14 +1032,14 @@ class LtRealization(object):
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
     # saves little memory, from 95.3 GB down to 81.0 GB
-    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight', 'ampl_rlz']
+    __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight', 'extra_rlz']
 
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, ampl_rlz=None):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, extra_rlz=None):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
-        self.ampl_rlz = ampl_rlz  # Realization of the amp LT, or None
+        self.extra_rlz = extra_rlz  # Realization of the extra logic tree, or None
 
     def __repr__(self):
         return '<%d,w=%s>' % (self.ordinal, self.weight)
@@ -1347,33 +1347,33 @@ class FullLogicTree(object):
                 sm_rlzs.extend([sm_rlz] * sm_rlz.samples)
             gsim_rlzs = self.gsim_lt.sample(
                 num_samples, self.seed + 1, self.sampling_method)
-            ampl_rlzs = (extra_lt.sample(
+            extra_rlzs = (extra_lt.sample(
                 num_samples, self.seed + 2, self.sampling_method
                 ) if extra_lt else [None] * num_samples)
-            for k, (gsim_rlz, ampl_rlz) in enumerate(zip(gsim_rlzs, ampl_rlzs)):
+            for k, (gsim_rlz, extra_rlz) in enumerate(zip(gsim_rlzs, extra_rlzs)):
                 w = sm_rlzs[k].weight * gsim_rlz.weight
-                if ampl_rlz is not None:
-                    w = w * ampl_rlz.weight
+                if extra_rlz is not None:
+                    w = w * extra_rlz.weight
                 rlzs[k] = LtRealization(
-                    k, sm_rlzs[k].lt_path, gsim_rlz, w, ampl_rlz)
+                    k, sm_rlzs[k].lt_path, gsim_rlz, w, extra_rlz)
             if self.sampling_method.startswith('early_'):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
-            ampl_rlzs = extra_lt.get_realizations() if extra_lt else [None]
+            extra_rlzs = extra_lt.get_realizations() if extra_lt else [None]
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(
-                len(ws) * len(self.sm_rlzs) * len(ampl_rlzs), object)
+                len(ws) * len(self.sm_rlzs) * len(extra_rlzs), object)
             k = 0
             for sm_rlz in self.sm_rlzs:
                 smpath = sm_rlz.lt_path
                 for gsim_rlz, weight in zip(gsim_rlzs, sm_rlz.weight * ws):
-                    for ampl_rlz in ampl_rlzs:
-                        w = (weight if ampl_rlz is None
-                             else weight * ampl_rlz.weight)
+                    for extra_rlz in extra_rlzs:
+                        w = (weight if extra_rlz is None
+                             else weight * extra_rlz.weight)
                         rlzs[k] = LtRealization(
-                            k, smpath, gsim_rlz, w, ampl_rlz)
+                            k, smpath, gsim_rlz, w, extra_rlz)
                         k += 1
         # rescale the weights if not one, see case_52
         # and logictree/case_30 for IMT-dependent weights
@@ -1483,9 +1483,9 @@ class FullLogicTree(object):
         for r in self.get_realizations():
             sm_p = shorten(r.sm_lt_path, sh1, 'smlt')
             gs_p = shorten(r.gsim_rlz.lt_path, sh2, 'gslt')
-            if sh3 is not None and r.ampl_rlz is not None:
+            if sh3 is not None and r.extra_rlz is not None:
                 # Site amp LT present
-                al_p = sh3[r.ampl_rlz.value]
+                al_p = sh3[r.extra_rlz.value]
                 path = '%s~%s~%s' % (sm_p, gs_p, al_p)
             else:
                 path = '%s~%s' % (sm_p, gs_p)

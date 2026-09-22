@@ -243,7 +243,7 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt = self._build_lt(num_samples=0)
         rlzs = full_lt.get_realizations()
         self.assertEqual(len(rlzs), 2)
-        self.assertTrue(all(r.ampl_rlz is not None for r in rlzs))
+        self.assertTrue(all(r.extra_rlz is not None for r in rlzs))
         weights = sorted(float(r.weight[0]) for r in rlzs)
         numpy.testing.assert_allclose(weights, [0.4, 0.6], atol=1e-6)
         numpy.testing.assert_allclose(
@@ -260,7 +260,7 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt = self._build_lt(num_samples=4)
         rlzs = full_lt.get_realizations()
         self.assertEqual(len(rlzs), 4)
-        self.assertTrue(all(r.ampl_rlz is not None for r in rlzs))
+        self.assertTrue(all(r.extra_rlz is not None for r in rlzs))
         for r in rlzs:
             numpy.testing.assert_allclose(float(r.weight[0]), 1.0 / 4)
 

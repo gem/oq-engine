@@ -1519,8 +1519,8 @@ def view_rlz(token, dstore):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
-    if rlz.ampl_rlz is not None:
-        tbl.append(('amplificationModel', rlz.ampl_rlz.value))
+    if rlz.extra_rlz is not None:
+        tbl.append(('amplificationModel', rlz.extra_rlz.value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
 
