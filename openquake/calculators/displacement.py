@@ -85,21 +85,24 @@ def get_adapters(selections, r_sigma):
     return adapters, r_sigma
 
 
-def displacement_task(srcs, cmaker, sitecol, pfd_lt, paths, weights, imls,
-                      r_threshold, r_sigma, N, R, monitor):
+def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, N, R, monitor):
     """
-    Compute the displacement rates of a block of sources for every
-    realization.
+    Compute the displacement rates of a block of sources for the active
+    realizations of the source group.
 
+    :param rlzs: the :class:`~openquake.hazardlib.logictree.LtRealization`
+        objects active for the group
     :returns: ``(rates, src_rates)`` where ``rates`` has shape
         ``(N, R, M, L1)`` and ``src_rates`` maps source basename to the
         mean over the realizations, shape ``(N, M, L1)``
     """
     cmaker.init_monitoring(monitor)
-    M, L1 = len(imls), len(imls[0])
+    oq = cmaker.oq
+    imts = list(cmaker.imtls)
+    imls = [cmaker.imtls[imt] for imt in imts]
+    M, L1 = len(imts), cmaker.imtls.size // len(imts)
     rates = numpy.zeros((N, R, M, L1), F32)
     src_rates = {}
-    active = next(iter(cmaker.gsims.values()))
     for src in srcs:
         sid = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
@@ -107,14 +110,17 @@ def displacement_task(srcs, cmaker, sitecol, pfd_lt, paths, weights, imls,
         if not ctxs:
             continue
         base = src_rates.setdefault(sid, numpy.zeros((N, M, L1), F64))
-        for r in active:
-            selections = pfd_lt.selections_for(paths[r], sid, style)
-            adapters, rs = get_adapters(selections, r_sigma)
+        for rlz in rlzs:
+            r = rlz.ordinal
+            selections = pfd_lt.selections_for(
+                rlz.ampl_rlz.lt_path, sid, style)
+            adapters, rs = get_adapters(selections, oq.r_sigma_km)
             for m, il in enumerate(imls):
                 rr, _p, _d = calc_rates(
-                    ctxs, N, adapters, il, r_threshold, rs, DEFAULT_RED_CFG)
+                    ctxs, N, adapters, il, oq.r_threshold_km, rs,
+                    DEFAULT_RED_CFG)
                 rates[:, r, m, :] += rr
-                base[:, m, :] += weights[r] * rr
+                base[:, m, :] += rlz.weight[-1] * rr
     return rates, src_rates
 
 
@@ -143,28 +149,28 @@ class DisplacementCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         R = self.full_lt.get_num_paths()
-        imls = [oq.imtls[imt] for imt in oq.imtls]
+        M = len(oq.imtls)
+        L1 = oq.imtls.size // M
         rlzs = self.full_lt.get_realizations()
-        paths = [rlz.ampl_rlz.lt_path for rlz in rlzs]
-        weights = numpy.array([rlz.weight[-1] for rlz in rlzs], F64)
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()
         allargs = []
         for grp_id, src_group in enumerate(self.csm.src_groups):
             cmaker = cmakers[grp_id]
+            active = next(iter(cmaker.gsims.values()))
+            grp_rlzs = [rlzs[r] for r in active]
             sources = list(src_group)
             maxw = sum(s.weight for s in sources) / (
                 oq.concurrent_tasks or 1)
             for block in block_splitter(
                     sources, maxw, get_weight, sort=True):
                 allargs.append((
-                    block, cmaker, self.sitecol, pfd_lt, paths, weights, imls,
-                    oq.r_threshold_km, oq.r_sigma_km, N, R))
+                    block, cmaker, self.sitecol, pfd_lt, grp_rlzs, N, R))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
-            displacement_task, allargs, h5=self.datastore.hdf5)
-        zeros = numpy.zeros((N, R, len(imls), len(imls[0])), F32)
+            displacement, allargs, h5=self.datastore.hdf5)
+        zeros = numpy.zeros((N, R, M, L1), F32)
         rates, src_rates = smap.reduce(self.agg, [zeros, {}])
         self.src_rates = src_rates
         self.basenames = self.csm.get_basenames()
