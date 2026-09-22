@@ -147,3 +147,31 @@ a3 = 0.9
             str(cm.exception),
             "Cannot interpolate SA(0.005): PGA-anchored fallback cannot "
             "extrapolate below the PGA anchor at 0.01 s")
+
+        # TEST 5: Smallest SA exactly at the 0.05 s gate - fallback accepts
+        at_gate = CoeffsTable(sa_damping=5, table="""
+            imt   a
+            pga   1.0
+            0.05  5.0
+            1.0   9.0""")
+        ratio = np.log(0.02 / anchor) / np.log(0.05 / anchor)
+        np.testing.assert_allclose(
+            list(at_gate[SA(0.02)]), [1.0 + ratio * (5.0 - 1.0)])
+
+        # TEST 6: Target exactly at the PGA anchor (0.01 s) - returns PGA row
+        np.testing.assert_allclose(
+            list(at_gate[SA(anchor)]), list(at_gate[PGA()]))
+
+        # TEST 7: Smallest SA just above the 0.05 s gate - fallback rejects
+        just_over = CoeffsTable(sa_damping=5, table="""
+            imt   a
+            pga   1.0
+            0.051 5.0
+            1.0   9.0""")
+        with self.assertRaises(ValueError) as cm:
+            just_over[SA(0.02)]
+        self.assertEqual(
+            str(cm.exception),
+            "Cannot interpolate SA(0.02): PGA-anchored fallback requires "
+            "the smallest tabulated SA period to be <= 0.05 s, but this "
+            "GMM's smallest SA period is 0.051 s")

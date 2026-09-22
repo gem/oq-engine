@@ -304,6 +304,8 @@ class CoeffsTable(object):
         if self.opt == 0:
             max_below = min_above = None
             for unscaled_imt in self.sa_coeffs:
+                if unscaled_imt.name != imt.name:
+                    continue  # skip rows from a different IMT type
                 if unscaled_imt.damping != getattr(imt, 'damping', None):
                     pass
                 elif unscaled_imt.period > imt.period:
