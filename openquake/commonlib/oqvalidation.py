@@ -1087,11 +1087,13 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'pfd_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
+        'reqv_ignore_sources', 'amplification', 'ampl_logic_tree',
+        'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
@@ -1514,11 +1516,26 @@ class OqParam(valid.ParamSet):
     def check_gsim_lt(self):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
+        if ('amplification' in self.inputs and
+                'ampl_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'Cannot set both amplification_file and '
+                'ampl_logic_tree_file')
+        if (self.calculation_mode == 'displacement' and
+                'gsim_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'use pfd_logic_tree_file, not gsim_logic_tree_file, '
+                'in displacement calculations')
+        if (self.calculation_mode != 'displacement' and
+                'pfd_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'pfd_logic_tree_file is only allowed in displacement '
+                'calculations')
         if self.calculation_mode == 'displacement':
             # the second logic tree is a PFD logic tree, not a GSIM one
-            fname = self.inputs.get('gsim_logic_tree')
+            fname = self.inputs.get('pfd_logic_tree')
             if not fname:
-                self.raise_invalid('Missing gsim_logic_tree_file')
+                self.raise_invalid('Missing pfd_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
             # the PFD kernel works per source and yields annual rates
@@ -1558,10 +1575,18 @@ class OqParam(valid.ParamSet):
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
             self.raise_invalid('Missing gsim or gsim_logic_tree_file')
-        if 'amplification' in self.inputs:
+        if self.has_amplification:
             self.req_site_params.add('ampcode')
         self.sec_imts  # populate req_site_params
         self.req_site_params = sorted(self.req_site_params)
+
+    @property
+    def has_amplification(self):
+        """
+        :returns: True if an amplification file or logic tree is set
+        """
+        return ('amplification' in self.inputs or
+                'ampl_logic_tree' in self.inputs)
 
     def check_risk(self):
         # checks for risk
@@ -1666,7 +1691,7 @@ class OqParam(valid.ParamSet):
                                'in event_based calculations')
 
         # check for amplification
-        if ('amplification' in self.inputs and self.imtls and
+        if (self.has_amplification and self.imtls and
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
@@ -2537,7 +2562,7 @@ class OqParam(valid.ParamSet):
         """
         classical = ('classical' in self.calculation_mode or
                      'disaggregation' in self.calculation_mode)
-        if (classical and 'amplification' in self.inputs and
+        if (classical and self.has_amplification and
                 self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:

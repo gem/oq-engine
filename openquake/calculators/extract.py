@@ -1536,7 +1536,7 @@ def extract_disagg(dstore, what):
         # When amplification is inputted (i.e., amplification model(s) present)
         # the stored hcurves-stats are on soil_intensities, and otherwise they
         # are on oq.imtls
-        levels = (oq.soil_intensities if 'amplification' in oq.inputs
+        levels = (oq.soil_intensities if oq.has_amplification
                   else oq.imtls[imt])
         # using loglog interpolation like in compute_hazard_maps
         attrs['poe'] = numpy.exp(
