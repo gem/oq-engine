@@ -108,18 +108,19 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, N, R, monitor):
         ctxs = list(cmaker.get_ctxs(src, sitecol))
         if not ctxs:
             continue
-        base = src_rates.setdefault(basename, numpy.zeros((N, M, L1), F64))
+        src_rate = src_rates.setdefault(
+            basename, numpy.zeros((N, M, L1), F64))
         for rlz in rlzs:
-            r = rlz.ordinal
+            rlz_id = rlz.ordinal
             selections = pfd_lt.selections_for(
                 rlz.extra_rlz.lt_path, basename, style)
             adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
-            for m, il in enumerate(imls):
-                rr, _p, _d = calc_rates(
-                    ctxs, N, adapters, il, oq.r_threshold_km, r_sigma,
+            for imt_idx, levels in enumerate(imls):
+                rate, _principal, _distributed = calc_rates(
+                    ctxs, N, adapters, levels, oq.r_threshold_km, r_sigma,
                     DEFAULT_RED_CFG)
-                rates[:, r, m, :] += rr
-                base[:, m, :] += rlz.weight[-1] * rr
+                rates[:, rlz_id, imt_idx, :] += rate
+                src_rate[:, imt_idx, :] += rlz.weight[-1] * rate
     return rates, src_rates
 
 
