@@ -421,7 +421,7 @@ class PFDModelAdapter:
         kwargs = {
             'mag': float(ctx.mag[0]),
             'r': r_sel,
-            'rx': ctx.rx,
+            'rx': np.sign(ctx.rx) * r_sel,   # |rx| == r, like oq-pfdha
             's': r_sel * 1000.0,
             'style': style,
             **{k: v for k, v in self.model_params.items() if k != 'style'},
@@ -531,7 +531,7 @@ class PFDModelAdapter:
             'mag': float(ctx.mag[0]),
             'd': displacements,
             'r': r_sel,
-            'rx': ctx.rx,
+            'rx': np.sign(ctx.rx) * r_sel,   # |rx| == r, like oq-pfdha
             's': r_sel * 1000.0,
             'X_L_ratio': x_L_sel,
             'x_L': x_L_sel,
