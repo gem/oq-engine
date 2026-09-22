@@ -260,6 +260,21 @@ footer.footer .pull-left span {
      margin: 0px;
 }
 
+#extracted_html_table .sortable-table-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+#extracted_html_table .sortable-table-header:focus,
+#extracted_html_table .sortable-table-header:hover {
+    background-color: #e5e5e5;
+}
+
+#extracted_html_table .sort-indicator {
+    display: inline-block;
+    min-width: 1em;
+}
+
 .announcements-box {
     padding: 10px 20px 20px;
     background-color: #ff9800;
