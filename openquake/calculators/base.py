@@ -46,7 +46,8 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import (
-    Amplifier, AmplificationFunction, AmplificationModel)
+    Amplifier, AmplificationFunction)
+from openquake.hazardlib.amp_lt import AmplificationLogicTree
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -510,7 +511,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     af = None
-    amplifier = None  # None or AmplificationModel (single or LT branches)
+    amplifier = None  # None or AmplificationLogicTree (single or LT branches)
 
     def src_filter(self):
         """
@@ -1157,21 +1158,21 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         # Store amplification functions if any
         if 'amplification' in oq.inputs:
-            amep = readinput.get_amp_functions(oq)
-            if amep is not None:
+            amp_lt = readinput.get_amp_lt(oq)
+            if amp_lt is not None:
                 logging.info('Reading %d amplification branches from %s',
-                             amep.R_amp, amep.filename)
+                             amp_lt.get_num_paths(), amp_lt.filename)
                 # Each branch is validated on its own: ampcode coverage
                 # of the sitecol, then IMT coverage via Amplifier init
-                for df in amep.dframes:
+                for df in amp_lt.dframes:
                     check_amplification(df, self.sitecol)
                 # self.full_lt is set after _set_amplifier, so refetch here
                 full_lt = getattr(self, 'full_lt', None) or (
                     readinput.get_full_lt(oq))
-                amep.rlz_ampl_ord = numpy.array(
+                amp_lt.rlz_ampl_ord = numpy.array(
                     [r.ampl_rlz.ordinal
                      for r in full_lt.get_realizations()], numpy.uint32)
-                self.amplifier = amep
+                self.amplifier = amp_lt
             else:
                 logging.info('Reading %s', oq.inputs['amplification'])
                 df = AmplificationFunction.read_df(oq.inputs['amplification'])
@@ -1182,7 +1183,7 @@ class HazardCalculator(BaseCalculator):
                     # currently tested only for classical PSHA
                     self.af = AmplificationFunction.from_dframe(df)
                 else:  # Convolution: single branch, no LT
-                    self.amplifier = AmplificationModel(
+                    self.amplifier = AmplificationLogicTree(
                         names=['ampl'], weights=[1.0], dframes=[df],
                         amplifiers=[Amplifier(
                             oq.imtls, df, oq.soil_intensities)])
