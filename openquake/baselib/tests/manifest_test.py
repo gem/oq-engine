@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover
 ROOT = pathlib.Path(__file__).parents[3]
 
 # packages whose submodules are imported to trigger the import-time reads
-PACKAGES = ['openquake.hazardlib', 'openquake.pfd']
+PACKAGES = ['openquake.hazardlib', 'openquake.pfd', 'openquake.sep']
 
 # file extensions considered package data
 DATA_EXT = {'.csv', '.hdf5', '.onnx', '.gz', '.npz', '.npy', '.txt',
