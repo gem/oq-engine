@@ -239,7 +239,8 @@ PLATFORM = {
     "win32": ("win64",),
 }
 GITBRANCH = "https://github.com/gem/oq-engine/archive/%s.zip"
-URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
+# URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/engine-3.23/"
+URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 # demos are not included in engine-3.23 wheel so we must download them.
 DEMOS = "https://artifacts.openquake.org/travis/demos-engine-3.23.zip"
 
@@ -323,10 +324,16 @@ def install_or_postinstall_standalone(venv, is_install=True):
         pycmd = inst.VENV + "/bin/python3"
 
     STANDALONE_APP_INFO = [
-        {"pkg": "oq-platform-standalone", "name": None},
-        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt"},
-        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy"},
-        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy"},
+        # All engine Django app need oq-platform-standalone
+        {"pkg": "oq-platform-standalone", "name": None,
+         "ver": "~=2.16.4"},
+        # Django apps to install
+        {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
+         "ver": "~=1.21.0"},
+        {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
+         "ver": "~=1.2.0"},
+        {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
+         "ver": "~=1.4.4"},
     ]
 
     if is_install:
@@ -336,7 +343,7 @@ def install_or_postinstall_standalone(venv, is_install=True):
 
                 subprocess.check_call(
                     [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
-                     app['pkg']]
+                     app['pkg'] + app['ver']]
                 )
             except Exception as exc:
                 # for instance is somebody removed a wheel from the wheelhouse
