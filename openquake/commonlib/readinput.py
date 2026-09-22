@@ -905,7 +905,7 @@ def get_gsim_lt(oqparam, trts=()):
         tectonic region types.
     """
     if oqparam.calculation_mode == 'displacement':
-        # FDHA has no GSIMs: the GSIM logic tree is a trivial one-branch
+        # PFD has no GSIMs: the GSIM logic tree is a trivial one-branch
         # PFDGMPE tree, used only to drive ContextMaker (see
         # openquake/pfd/gsim.py); the PFD logic tree is read separately
         # by get_pfd_lt
@@ -950,7 +950,7 @@ def get_pfd_lt(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         a :class:`openquake.hazardlib.pfd_lt.PFDLogicTree` instance
-        built from the ``fdha_logic_tree_file`` input
+        built from the ``gsim_logic_tree_file`` input
     """
     if 'gsim_logic_tree' not in oqparam.inputs:
         raise InvalidFile('%s: missing gsim_logic_tree_file'
@@ -1881,7 +1881,7 @@ def get_input_files(oqparam):
         # collect .hdf5 tables for the GSIMs, if any
         if key == 'gsim_logic_tree':
             if oqparam.calculation_mode != 'displacement':
-                # an fdha gsim_logic_tree_file is a PFD logic tree
+                # a displacement gsim_logic_tree_file is a PFD logic tree
                 fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':

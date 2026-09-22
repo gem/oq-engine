@@ -17,19 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Plumbing to run FDHA inside the engine's context machinery.
+Plumbing to run PFD inside the engine's context machinery.
 
-FDHA has no ground-shaking intensity models: the displacement exceedance
+PFD has no ground-shaking intensity models: the displacement exceedance
 probabilities come from the ``openquake.pfd`` models evaluated by the
 :mod:`openquake.hazardlib.calc.displacement` rate kernel. The engine still
 needs a GSIM-like object to drive :class:`~openquake.hazardlib.contexts.
 ContextMaker`, which derives the required distances, site parameters and
 rupture parameters from the GSIMs. :class:`PFDGMPE` is that object: it
-declares the FDHA context requirements (``rtor``, ``x_l``, ``length``, ...)
+declares the PFD context requirements (``rtor``, ``x_l``, ``length``, ...)
 and is never actually computed. :func:`get_pfd_gsim_lt` builds the trivial
 one-dummy-per-TRT GSIM logic tree that lets
 :class:`~openquake.hazardlib.logictree.FullLogicTree` compose the
-source-model logic tree with the FDHA runs.
+source-model logic tree with the PFD runs.
 """
 from openquake.baselib.node import Node as N
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -38,9 +38,9 @@ from openquake.hazardlib.gsim.base import DummyGMPE
 
 class PFDGMPE(DummyGMPE):
     """
-    No-op GMPE declaring the FDHA context requirements. It is used only to
+    No-op GMPE declaring the PFD context requirements. It is used only to
     make ``ContextMaker`` build contexts with the ``rtor``/``x_l`` distances
-    and the ``length`` rupture parameter; the FDHA kernel reads those
+    and the ``length`` rupture parameter; the PFD kernel reads those
     contexts directly and never calls ``get_mean_and_stddevs``.
     """
     REQUIRES_DISTANCES = {'rtor', 'x_l', 'rx'}

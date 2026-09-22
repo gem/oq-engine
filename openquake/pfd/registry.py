@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Subclass-scan registries for the four FDHA model slots.
+Subclass-scan registries for the four PFD model slots.
 
 Mirrors :func:`openquake.hazardlib.scalerel._get_available_class`: model
 classes are discovered by walking the slot package and filtering subclasses
@@ -100,6 +100,6 @@ def get_available(slot):
     :returns: dict class_name -> class
     """
     if slot not in SLOTS:
-        raise KeyError('unknown FDHA model slot %r; expected one of %s'
+        raise KeyError('unknown PFD model slot %r; expected one of %s'
                        % (slot, ', '.join(sorted(SLOTS))))
     return _get_available_class(slot)

@@ -777,13 +777,13 @@ rupture_mesh_spacing:
   Default: 5.0
 
 r_threshold_km:
-  FDHA only: half-width (km) of the on-trace principal-displacement zone
+  PFD only: half-width (km) of the on-trace principal-displacement zone
   for the boxcar rupture-location weight (used when r_sigma_km == 0).
   Example: *r_threshold_km = 0.1*.
   Default: 0.1
 
 r_sigma_km:
-  FDHA only: two-sided mapping-error sigma (km) for the Petersen Gaussian
+  PFD only: two-sided mapping-error sigma (km) for the Petersen Gaussian
   rupture-location weight; 0 selects the boxcar/complementary split.
   Example: *r_sigma_km = 0.5*.
   Default: 0.0
@@ -1521,7 +1521,7 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('Missing gsim_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
-            # the FDHA kernel works per source and yields annual rates
+            # the PFD kernel works per source and yields annual rates
             if not self.use_rates:
                 self.raise_invalid(
                     'use_rates = true is required for displacement')
@@ -1529,7 +1529,7 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid(
                     'disagg_by_src = true is required for displacement')
             if not hasattr(self, 'maximum_distance'):
-                # default FDHA integration distance (km), as in oq-pfdha
+                # default PFD integration distance (km), as in oq-pfdha
                 self.maximum_distance = valid.IntegrationDistance.new('10')
             self._trts = {'*'}
             self.sec_imts

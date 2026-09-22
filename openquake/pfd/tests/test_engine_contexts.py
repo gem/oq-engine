@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Exercise the FDHA integration with the engine machinery: the PFD dummy
+Exercise the PFD integration with the engine machinery: the PFD dummy
 GSIM logic tree, ``get_full_lt`` composition with the source-model logic
 tree, context building and the displacement rate kernel.
 """
@@ -34,7 +34,7 @@ from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.pfd.adapter import LegacyModelAdapter, style_from_rake
 from openquake.pfd.gsim import PFDGMPE, get_pfd_gsim_lt
 from openquake.pfd.registry import get_available
-from openquake.qa_tests_data.fdha import case_1
+from openquake.qa_tests_data.pfd import case_1
 
 DATADIR = os.path.dirname(case_1.__file__)
 TRT = 'Active Shallow Crust'
@@ -43,7 +43,7 @@ TRT = 'Active Shallow Crust'
 class EngineContextsTestCase(unittest.TestCase):
 
     def test_pfd_gsim_lt(self):
-        # the FDHA "gsim" logic tree is one no-op PFDGMPE per TRT
+        # the PFD "gsim" logic tree is one no-op PFDGMPE per TRT
         glt = get_pfd_gsim_lt([TRT])
         self.assertEqual(glt.get_num_paths(), 1)
         [gsim] = list(glt.values[TRT])
@@ -65,7 +65,7 @@ class EngineContextsTestCase(unittest.TestCase):
         self.assertEqual(len(flt.extra_lt.branchsets), 4)
         [gsim] = list(flt.gsim_lt.values[TRT])
         self.assertIsInstance(gsim, PFDGMPE)
-        # the FDHA default maximum_distance is set
+        # the PFD default maximum_distance is set
         self.assertEqual(oq.maximum_distance['default'][0][1], 10)
 
     def test_rates(self):

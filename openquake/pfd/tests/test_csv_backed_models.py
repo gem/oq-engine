@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests that actually *use* the CSV-backed FDHA coefficient tables.
+Tests that actually *use* the CSV-backed PFD coefficient tables.
 
 Importing ``openquake.pfd.primary_surf_displ`` already reads every CSV at
 import time (class attributes / module-level loaders), but before this
