@@ -1877,6 +1877,8 @@ def extract(request, calc_id, what):
 @require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
     """Authenticate and proxy model provenance to FastAPI."""
+    if get_user_level(request) < 2:
+        return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
