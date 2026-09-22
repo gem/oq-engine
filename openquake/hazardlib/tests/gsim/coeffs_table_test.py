@@ -99,17 +99,16 @@ a3 = 0.9
         """
         anchor = 0.01 # Treat PGA as SA(0.01)
 
-        # TEST 1: Check a GMM works correctly with this interpolation between
-        # PGA (as T=0.01 s) and a short period in a GMM with sufficiently low
-        # minimum period in its coefficient table
+        # TEST 1: PGA-anchored fallback on a real GMM's coefficient table
         table = AtkinsonBoore2006Modified2011().COEFFS_BC
         t_min = 0.025 # Min of GMM is 0.025 s (below 0.05 s)
         t_tar = 0.02  # Target T is 0.02
         pga = np.array(list(table[PGA()]))
         row_min = np.array(list(table[SA(t_min)]))
         ratio = np.log(t_tar / anchor) / np.log(t_min / anchor)
-        np.testing.assert_allclose(
-            list(table[SA(t_tar)]), pga + ratio * (row_min - pga))
+        expected = pga + ratio * (row_min - pga)
+        result = table._pga_interp_fallback(SA(t_tar), SA(t_min))
+        np.testing.assert_allclose(list(result), expected)
 
         # TEST 2: Check a table with smallest SA period above 0.05 s does not
         # interpolate. The min SA here is 0.1 s, so SA(0.05) raises a ValueError
