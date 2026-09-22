@@ -181,13 +181,27 @@ def _infer_z1pt4_from_vs30(vs30, z1pt4, mask):
     to -999 in the job file).
 
     NOTE: This is GEM's own regression - the values look reasonable (always
-    deeper than those obtained using the original CY14 Japan basin term for
-    z1pt0), but the user should always check the values themselves returned
-    for a given Vs30, and decide for themselves if they seem acceptable.
+    deeper than those obtained using the original CY14 Japan Vs30 to for z1pt0),
+    but the user should always check the values themselves returned for a given
+    Vs30, and decide for themselves if they seem acceptable. A tabulation of
+    some select values is provided here for reference:
+
+    Vs30 (m/s)	"GEM" z1pt4 (m)	 CY14 z1pt0 Japan (m)
+    150	        535.76	         466.80
+    185	        497.52	         399.95
+    260	        406.40	         269.25
+    365	        281.95	         142.31
+    530	        139.77	         50.43
+    760	        47.45	         13.45
+    800	        39.27	         10.90
+    1080	    10.95	         2.94
+    1500	    2.03	         0.62
+    1700	    1.00	         0.34
     """
     # GEM coeffs fitted to NIED v2024 flatfile station data
-    A, C, D = -6.76, 712.0, 1700.0
-    z1pt4[mask] = (A / 2.0) * np.log((vs30[mask]**2 + C**2) / (D**2 + C**2))
+    A, C, D = -6.761, 712.0, 1700.0
+    z1pt4[mask] = np.exp(
+        (A / 2.0) * np.log((vs30[mask]**2 + C**2) / (D**2 + C**2)))
     return z1pt4
 
 
