@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <logicTree logicTreeID="lt_fdha_hazard_map_minimal">
+  <logicTree logicTreeID="lt_fdha_hazard_curve_minimal">
   <logicTreeBranchSet branchSetID="bs_1_primary_surf_rup" uncertaintyType="fdhaPrimarySRModel">
     <logicTreeBranch branchID="B1_PRIMARY_SURF_RUP">
       <uncertaintyModel>
         [Youngs2003PrimarySR]
-        style = "normal"
+        style = "all"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
@@ -14,7 +14,7 @@
     <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
       <uncertaintyModel>
         [Youngs2003PrimaryFD]
-        style = "normal"
+        style = "all"
         norm_disp_type = "AD"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -34,8 +34,7 @@
     <logicTreeBranch branchID="B4_SECONDARY_SURF_DISPL">
       <uncertaintyModel>
         [Youngs2003SecondaryFD]
-        style = "all"
-        percentile = 95
+        style = "normal"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>

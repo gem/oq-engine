@@ -139,6 +139,10 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
             # shape (numsites, 3)
             ctx['clon'] = m.lons
             ctx['clat'] = m.lats
+        elif param in ('rtor', 'x_l'):
+            # PFD metrics are not in msparam: use the surface methods, which
+            # for a MultiSurface implement the 'segments' semantics
+            setattr(ctx, param, get_distances(rup, r_sites, param))
 
 
 def round_dist(dst):

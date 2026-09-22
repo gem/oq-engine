@@ -228,6 +228,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             lower_seismogenic_depth=20.0,
             dip=45.0,
             mesh_spacing=self.rupture_mesh_spacing)
+        # the converter attaches the declared top edge to characteristic faults
+        surface.original_tor = numpy.array(
+            [[p.longitude, p.latitude] for p in fault_trace.points])
 
         char = source.CharacteristicFaultSource(
             source_id="5",
@@ -270,6 +273,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ])]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
             edges, self.complex_fault_mesh_spacing)
+        # the converter attaches the declared top edge to characteristic faults
+        complex_surface.original_tor = numpy.array(
+            [[p.longitude, p.latitude] for p in edges[0].points])
 
         char = source.CharacteristicFaultSource(
             source_id="6",
