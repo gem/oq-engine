@@ -938,6 +938,24 @@ class SourceConverter(RuptureConverter):
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
             temporal_occurrence_model=self.get_tom(node))
+        # retain the declared top edge: a characteristic rupture spans the
+        # whole surface, so its mesh top edge is a resampling that can
+        # corner-cut a wiggly trace (it would distort the PFD distances).
+        # A MultiSurface has no single trace and is left to the per-section
+        # reference-line routing (PR-8), like oq-pfdha
+        if hasattr(char.surface, 'surfaces'):
+            trace = None
+        else:
+            surface_node = node.surface[0]
+            if surface_node.tag.endswith('simpleFaultGeometry'):
+                trace = self.geo_line(surface_node)
+            elif surface_node.tag.endswith('complexFaultGeometry'):
+                [trace] = self.geo_lines(surface_node)[:1]
+            else:
+                trace = None
+        if trace is not None:
+            char.surface.original_tor = numpy.array(
+                [[p.longitude, p.latitude] for p in trace.points])
         return char
 
     def convert_nonParametricSeismicSource(self, node):

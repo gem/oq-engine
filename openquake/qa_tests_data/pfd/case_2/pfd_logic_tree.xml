@@ -5,7 +5,7 @@
     <logicTreeBranch branchID="B1_PRIMARY_SURF_RUP">
       <uncertaintyModel>
         [Youngs2003PrimarySR]
-        style = normal
+        style = "normal"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
@@ -14,8 +14,8 @@
     <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
       <uncertaintyModel>
         [Youngs2003PrimaryFD]
-        style = normal
-        norm_disp_type = AD
+        style = "normal"
+        norm_disp_type = "AD"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
@@ -25,7 +25,7 @@
       <uncertaintyModel>
         [Youngs2003SecondarySR]
         version = 3
-        style = all
+        style = "all"
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
@@ -34,7 +34,7 @@
     <logicTreeBranch branchID="B4_SECONDARY_SURF_DISPL">
       <uncertaintyModel>
         [Youngs2003SecondaryFD]
-        style = all
+        style = "all"
         percentile = 95
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>

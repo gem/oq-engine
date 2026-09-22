@@ -40,6 +40,14 @@ class DisplacementTestCase(CalculatorTestCase):
         self.assertTrue((stats > 0).all())
         # per-source mean rates are stored, since disagg_by_src is required
         self.assertIn('mean_rates_by_src', dstore)
+        # only the surface-reaching ruptures are used: 10 of 15 (the engine
+        # source has 5 buried down-dip floats, dropped by the surface-rupture
+        # depth tolerance), matching oq-pfdha
+        self.assertEqual(int(dstore['source_info'][0]['num_ctxs']), 10)
+        # simple faults keep the mesh top edge (no declared trace attached)
+        [src] = list(self.calc.csm.src_groups[0])
+        rup = next(iter(src.iter_ruptures()))
+        self.assertFalse(hasattr(rup.surface, 'original_tor'))
         # the mean curve can be exported as CSV
         [fname] = export(('hcurves/mean', 'csv'), dstore)
         self.assertTrue(os.path.exists(fname))
@@ -60,6 +68,11 @@ class DisplacementTestCase(CalculatorTestCase):
         # map mode: a region grid with a return period
         self.run_calc(case_2.__file__, 'job.ini')
         dstore = self.calc.datastore
+        # characteristic faults carry the declared top edge, so their PFD
+        # distances are not distorted by the resampled mesh top edge
+        for sg in self.calc.csm.src_groups:
+            for src in sg:
+                self.assertTrue(hasattr(src.surface, 'original_tor'))
         hmaps = dstore['hmaps-rlzs'][:]
         self.assertEqual(hmaps.shape, (44, 1, 1, 1))  # 44 sites, 1 poe
         self.assertTrue((hmaps > 0).any())

@@ -16,13 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
 import copy
 import math
 import pickle
-import operator
 import itertools
-import configparser
+import operator
+import toml
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183
@@ -270,37 +269,22 @@ def pfd_model(utype, node, filename):
 
 
 def _parse_pfd_toml_block(node, filename):
-    # NRML indents the block to the XML nesting depth, so strip every line
-    # before handing it to configparser (values are single-line).
-    lines = [ln.strip() for ln in (node.text or "").splitlines()
-             if ln.strip()]
-    if not lines:
+    # NRML indents the block to the XML nesting depth; toml.loads accepts
+    # leading whitespace, so the block can be parsed as is
+    text = (node.text or '').strip()
+    if not text:
         raise LogicTreeError(node, filename, 'empty TOML block')
-    header = lines[0]
-    if not (header.startswith('[') and header.endswith(']')):
-        raise LogicTreeError(
-            node, filename, 'TOML block must start with [ClassName]')
-    class_name = header[1:-1].strip()
-    if not class_name:
-        raise LogicTreeError(node, filename, 'empty class name in TOML header')
-    cp = configparser.RawConfigParser()
-    cp.optionxform = str
-    cp.read_string('\n'.join(lines))
-    params = {}
-    if cp.has_section(class_name):
-        for k, v in cp.items(class_name):
-            params[k] = _parse_pfd_value(v)
-    return class_name, params
-
-
-def _parse_pfd_value(value):
-    s = value.strip()
-    if s == '':
-        return ''
     try:
-        return ast.literal_eval(s)
-    except Exception:
-        return s
+        dic = toml.loads(text)
+    except Exception as exc:
+        raise LogicTreeError(node, filename, str(exc))
+    try:
+        [(class_name, params)] = dic.items()
+    except ValueError:
+        raise LogicTreeError(
+            node, filename,
+            'the TOML block must contain a single [ClassName] section')
+    return class_name, params
 
 
 @parse_uncertainty.add('fdhaCalcRSigma')

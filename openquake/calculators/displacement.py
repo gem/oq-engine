@@ -61,12 +61,6 @@ GZIP = 'gzip'
 get_weight = operator.attrgetter('weight')
 
 
-class _WGet(object):
-    """Minimal IMTWeigher-like object for build_stat_curve"""
-    def __init__(self, weights):
-        self.weights = weights
-
-
 def get_adapters(selections, r_sigma):
     """
     Build the PFD model adapters for one realization.
@@ -125,11 +119,15 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
     source_data = {k: [] for k in (
         'src_id', 'grp_id', 'nctxs', 'nrupts', 'weight', 'ctimes', 'taskno')}
     task_no = getattr(monitor, 'task_no', 0)
+    tolerance = oq.surface_rupture_depth_tolerance_km
     for src in srcs:
         t0 = time.time()
         basename = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
-        ctxs = list(cmaker.get_ctxs(src, sitecol))
+        # a rupture contributes only if its top edge reaches the surface
+        # (surface_rupture_depth_tolerance_km), like oq-pfdha
+        ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
+                if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
         if ctxs:
             src_rate = src_rates.setdefault(
                 basename, numpy.zeros((N, M, L1), F64))
@@ -244,7 +242,8 @@ class DisplacementCalculator(base.HazardCalculator):
         # and fine for the current use cases; for very large N x R it would
         # materialize the full (N, L, R) array in memory.
         getter = MapGetter([self.datastore.filename], 0, trt_rlzs, sids, R, oq)
-        wget = _WGet(self.datastore['weights'][:].reshape(-1, 1))
+        wget = self.full_lt.gsim_lt.wget
+        wget.weights = self.datastore['weights'][:].reshape(-1, 1)
         hstats = oq.hazard_stats()
         if store_rlzs:
             hcurves_rlzs = numpy.zeros((N, R, M, L1), F32)
