@@ -66,11 +66,10 @@ def get_adapters(selections, r_sigma):
     :class:`~openquake.pfd.adapter.PFDModelAdapter` hides all of this
     behind the fixed ``compute_primary_sr``/``compute_primary_fd``/
     ``compute_secondary_sr``/``compute_secondary_fd`` interface used by
-    the rate kernel, so the models can stay paper-faithful.  It is
-    scheduled for removal once the models expose a common vectorized
-    ``compute(ctx)`` interface (EngineIntegration.md sections 4.2 and 8).
+    the rate kernel, so the models can stay paper-faithful.  It would be
+    nice if the models exposed a common vectorized ``compute(ctx)`` interface.
 
-    :param selections: slot -> FdhaModelChoice for one realization
+    :param selections: slot -> PfdModelChoice for one realization
     :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
     :returns: ``(adapters_by_model_type, r_sigma_km)``
     """
@@ -162,8 +161,7 @@ class DisplacementCalculator(base.HazardCalculator):
             sources = list(src_group)
             maxw = sum(s.weight for s in sources) / (
                 oq.concurrent_tasks or 1)
-            for block in block_splitter(
-                    sources, maxw, get_weight, sort=True):
+            for block in block_splitter(sources, maxw, get_weight, sort=True):
                 allargs.append((
                     block, cmaker, self.sitecol, pfd_lt, grp_rlzs, N, R))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))

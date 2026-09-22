@@ -67,7 +67,7 @@ for _utype in PFD_UNCERTAINTY_TYPES:
 
 
 @dataclass
-class FdhaModelChoice:
+class PfdModelChoice:
     """One uncertaintyModel selection inside a PFD realization."""
     class_name: str
     params: dict
@@ -81,7 +81,7 @@ class PFDBranch:
     A fully-enumerated PFD realization for one source.
 
     ``selections`` maps each slot name (the four model slots plus, when
-    present, ``calc_r_sigma``) to a :class:`FdhaModelChoice`.
+    present, ``calc_r_sigma``) to a :class:`PfdModelChoice`.
     """
     source_id: str
     style: str
@@ -95,15 +95,15 @@ class PFDBranch:
 
 def _choice(utype, branch_id, value, weight):
     """
-    :returns: ``(slot, FdhaModelChoice)`` for an ``lt.Branch`` value
+    :returns: ``(slot, PfdModelChoice)`` for an ``lt.Branch`` value
     """
     calc_slot = CALC_SLOTS_BY_UTYPE.get(utype)
     if calc_slot is not None:
-        return calc_slot, FdhaModelChoice(
+        return calc_slot, PfdModelChoice(
             R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: value}, branch_id, weight)
     slot = PFD_SLOTS_BY_UTYPE[utype]
     class_name, params = value
-    return slot, FdhaModelChoice(class_name, params, branch_id, weight)
+    return slot, PfdModelChoice(class_name, params, branch_id, weight)
 
 
 class PFDLogicTree(object):
