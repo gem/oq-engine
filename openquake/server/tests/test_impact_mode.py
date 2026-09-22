@@ -319,7 +319,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                             f'impact_report_{job_id}_{iso3}.{file_format}')
                         self.assertTrue(os.path.isfile(report))
                         with open(report, 'rb') as f:
-                            self.assertTrue(f.read(len(signature)) == signature)
+                            self.assertEqual(f.read(len(signature)), signature)
 
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission

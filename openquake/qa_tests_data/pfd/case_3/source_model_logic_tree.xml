@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_sm_pfd_case_3">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs_sm">
+      <logicTreeBranch branchID="b_sm_a">
+        <uncertaintyModel>source_model_a.xml</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_sm_b">
+        <uncertaintyModel>source_model_b.xml</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

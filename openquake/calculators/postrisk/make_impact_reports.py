@@ -28,7 +28,8 @@ from openquake.calculators.country_impact_report_builder import (
     CountryImpactReportBuilder)
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
-    EventContext, ReportOptions, LOSS_METADATA)
+    EventContext, ReportOptions, LOSS_METADATA, get_configured_path,
+    points_to_gdf)
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries
 
@@ -90,10 +91,10 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
 
 def make_report_for_country(
         iso3, adm_level, event, options, losses_df, summary_data,
-        dstore, time_of_calc, oqparam):
+        dstore, time_of_calc, oqparam, points_gdf=None):
     builder = CountryImpactReportBuilder(
         iso3, adm_level, event, options, losses_df, summary_data,
-        dstore, time_of_calc, oqparam)
+        dstore, time_of_calc, oqparam, points_gdf)
     builder.build()
 
 
@@ -141,11 +142,8 @@ def _open_dstore(dstore):
 
 
 def _get_basemap_path():
-    try:
-        return config.directory.basemap_file
-    except AttributeError:
-        logging.error('config.directory.basemap_file is missing!')
-        return None
+    """Return the basemap configured for impact reports."""
+    return get_configured_path('basemap_file')
 
 
 def _is_no_uncertainty(oqparam):
@@ -283,15 +281,20 @@ def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
             "See the job log for details.")
         return
 
+    points_gdf = None
     failed_countries = []
     for iso3 in iso3_codes:
         try:
             summary_data = _get_impact_summary_data(
                 dstore, iso3, report_opts.no_uncertainty)
             if summary_data is not None:
+                if points_gdf is None:
+                    points_gdf = points_to_gdf(
+                        losses_df, crs='EPSG:4326')
                 make_report_for_country(
                     iso3, adm_level, event_ctx, report_opts,
-                    losses_df, summary_data, dstore, time_of_calc, oqparam)
+                    losses_df, summary_data, dstore, time_of_calc, oqparam,
+                    points_gdf)
         except Exception:
             _log_report_error(
                 f"Error while generating impact report for {iso3}")

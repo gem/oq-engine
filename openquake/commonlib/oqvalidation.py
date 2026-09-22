@@ -1468,6 +1468,7 @@ class OqParam(valid.ParamSet):
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
+        given = set(names_vals)
         super().__init__(**names_vals)
         self._set_truncation_levels(names_vals)
         self.check_siteid()
@@ -1503,7 +1504,7 @@ class OqParam(valid.ParamSet):
             self.maximum_distance.cut(self.minimum_magnitude)
 
         self.check_hazard()
-        self.check_gsim_lt()
+        self.check_gsim_lt(given)
         self.set_loss_types()
         self.check_risk()
 
@@ -1513,7 +1514,7 @@ class OqParam(valid.ParamSet):
         """
         raise InvalidFile('%s: %s' % (self.inputs['job_ini'], msg))
 
-    def check_gsim_lt(self):
+    def check_gsim_lt(self, given=()):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
         if ('amplification' in self.inputs and
@@ -1538,13 +1539,17 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('Missing pfd_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
-            # the PFD kernel works per source and yields annual rates
-            if not self.use_rates:
-                self.raise_invalid(
-                    'use_rates = true is required for displacement')
-            if not self.disagg_by_src:
-                self.raise_invalid(
-                    'disagg_by_src = true is required for displacement')
+            # the kernel works per source and yields annual rates
+            if 'use_rates' in given and not self.use_rates:
+                logging.warning(
+                    'use_rates is forced to true in displacement '
+                    'calculations')
+            self.use_rates = True
+            if 'disagg_by_src' in given and not self.disagg_by_src:
+                logging.warning(
+                    'disagg_by_src is forced to true in displacement '
+                    'calculations')
+            self.disagg_by_src = True
             if not hasattr(self, 'maximum_distance'):
                 # default PFD integration distance (km), as in oq-pfdha
                 self.maximum_distance = valid.IntegrationDistance.new('10')
@@ -1698,6 +1703,11 @@ class OqParam(valid.ParamSet):
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
+            if self.epsilon_star and self.has_amplification:
+                # epsilon is a rock-GMPE residual; a soil-target 'eps at
+                # exceedance' is not well-defined once amp is convolved
+                self.raise_invalid(
+                    'epsilon_star=true is not supported with amplification')
             if not self.poes_disagg and self.poes:
                 self.poes_disagg = self.poes
             elif not self.poes and self.poes_disagg:

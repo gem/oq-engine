@@ -1,3 +1,9 @@
+  [Christopher Brooks]
+  * Extended site amplification logic trees to work within a disaggregation
+    calculation. QA tested in logictree/case_27. Includes a sanity check
+    asserting that for each rlz/imt/poe-target, summing the disagg matrix
+    reproduces the original classical soil PoE
+
   [Amir Banimahd]
   * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
   
