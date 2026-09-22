@@ -232,7 +232,7 @@ class Thingbaijam2017(BaseMSRSigma, BaseASRSigma):
     models.  Added for PR-2 of the oq-engine integration plan; it is the
     canonical ``Thingbaijam2017`` name expected by the PFD logic tree and
     reproduces the width rows ``MSR = 2`` of Mammarella et al. (2024)
-    Table 1 (see ``openquake/hazardlib/tests/scalerel/fdha_scalerel_test``).
+    Table 1 (see ``openquake/hazardlib/tests/scalerel/pfd_scalerel_test``).
     """
 
     @staticmethod

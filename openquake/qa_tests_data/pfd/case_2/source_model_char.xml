@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Example Source Model Containing Characteristic Fault Source"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <characteristicFaultSource
+            id="1"
+            name="West_crati"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="6.700000E+00"
+                >
+                    <occurRates>
+                        6.9083e-05 9.1203e-05 0.00010774 0.0001139 0.00010774 9.1203e-05 6.9083e-05
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    -9.0000000E+01
+                </rake>
+                <surface>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                             <gml:posList> 16.171488 39.236966 16.168492 39.258164 16.166256 39.281391 16.170404 39.306996 16.169925 39.369333 16.166935 39.398338 16.173133 39.431294 16.171618 39.444618 16.170374 39.474111 16.169939 39.500058 16.168959 39.506469 16.166319 39.517614 16.164671 39.536161 16.15859 39.549867 16.153325 39.561423 </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            3.6000000E+01
+                        </dip>
+                        <upperSeismoDepth>
+                            0.0000000E+00
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            1.9000000E+01
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+
+            <characteristicFaultSource
+            id="2"
+            name="Alt-Mot"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <incrementalMFD
+                binWidth="1.0000000E-01"
+                minMag="6.20000E+00"
+                >
+                    <occurRates>
+                        4.196e-05 5.5395e-05 6.5442e-05 6.918e-05 6.5442e-05 5.5395e-05 4.196e-05
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    -9.0000000E+01
+                </rake>
+                <surface>
+                    <simpleFaultGeometry>
+                        <gml:LineString>
+                             <gml:posList> 16.04653 39.61442 16.05314 39.62295 16.05488 39.62643 16.05653 39.62793 16.06031 39.62891 16.06359 39.6301 16.06673 39.63217 16.06757 39.6336 16.06893 39.63396 16.07064 39.63665 16.07173 39.63836 16.07285 39.64033 16.07393 39.6436 16.07604 39.64586 16.07714 39.64657 16.08067 39.65289 16.08147 39.65566 16.08231 39.65692 16.0833 39.66782 16.08515 39.67151 16.08584 39.67356 16.09296 39.68268 16.09918 39.68649 16.10983 39.69107 16.11544 39.69468 16.12795 39.69936 16.13615 39.70071 16.1383 39.70241 16.14047 39.70492 16.14098 39.70618 16.14698 39.7113 16.14754 39.71338 16.14974 39.71618 16.15337 39.72172 16.15532 39.72406 16.15705 39.72665 16.15818 39.72892 16.15872 39.7314 16.15964 39.73476 16.16178 39.73703 16.1631 39.73912 16.16648 39.74199 16.17086 39.74507   </gml:posList>
+                        </gml:LineString>
+                        <dip>
+                            5.0000000E+01
+                        </dip>
+                        <upperSeismoDepth>
+                            0.0000000E+00
+                        </upperSeismoDepth>
+                        <lowerSeismoDepth>
+                            1.9000000E+01
+                        </lowerSeismoDepth>
+                    </simpleFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+
+        </sourceGroup>
+    </sourceModel>
+</nrml>
+

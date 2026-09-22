@@ -767,39 +767,12 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('There were slow tasks')
 
     def _create_hcurves_maps(self):
-        oq = self.oqparam
         N = len(self.sitecol)
         R = len(self.datastore['weights'])
-        hstats = oq.hazard_stats()
-        # initialize datasets
-        P = len(oq.poes)
-        M = self.M = len(oq.imtls)
-        imts = list(oq.imtls)
-        if oq.soil_intensities is not None:
-            L = M * len(oq.soil_intensities)
-        else:
-            L = oq.imtls.size
-        L1 = self.L1 = L // M
-        S = len(hstats)
-        if R == 1 or oq.individual_rlzs:
-            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-            self.datastore.set_shape_descr(
-                'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
-            if oq.poes:
-                self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-                self.datastore.set_shape_descr(
-                    'hmaps-rlzs', site_id=N, rlz_id=R,
-                    imt=list(oq.imtls), poe=oq.poes)
-        if hstats:
-            self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-            self.datastore.set_shape_descr(
-                'hcurves-stats', site_id=N, stat=list(hstats),
-                imt=imts, lvl=numpy.arange(L1))
-            if oq.poes:
-                self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-                self.datastore.set_shape_descr(
-                    'hmaps-stats', site_id=N, stat=list(hstats),
-                    imt=list(oq.imtls), poe=oq.poes)
+        S, M, P, L1 = base.create_hcurves_maps(
+            self.datastore, self.oqparam, N, R)
+        self.M = M
+        self.L1 = L1
         return N, S, M, P, L1
 
     # called by execute before post_execute
