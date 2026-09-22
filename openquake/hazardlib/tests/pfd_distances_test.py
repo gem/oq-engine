@@ -140,6 +140,31 @@ class MultiSurfaceKiteTestCase(unittest.TestCase):
         self.assertAlmostEqual(l_km, ref_l, places=3)
         self.assertAlmostEqual(msrf.get_tor_length(), l_km, places=6)
 
+    def test_dispatch_metrics(self):
+        # the multi-surface metrics flow through the engine dispatch layer
+        msrf = MultiSurface([self._kite(0.0, 0.0), self._kite(0.5, 0.1)])
+        mesh = Mesh(numpy.array([0.1, 0.65]), numpy.array([0.0, 0.1]))
+
+        class Rup(object):
+            pass
+        rup = Rup()
+        rup.surface = msrf
+        rup.mag = 7.0
+        numpy.testing.assert_array_equal(
+            get_distances(rup, mesh, 'rtor'), msrf.get_rtor(mesh))
+        numpy.testing.assert_array_equal(
+            get_distances(rup, mesh, 'x_l'), msrf.get_x_l_ratio(mesh)[0])
+        numpy.testing.assert_array_equal(
+            get_dparam(msrf, mesh, 'rtor'), msrf.get_rtor(mesh))
+        numpy.testing.assert_array_equal(
+            get_dparam(msrf, mesh, 'x_l'), msrf.get_x_l_ratio(mesh)[0])
+        cm = ContextMaker.__new__(ContextMaker)
+        cm.dparam = None
+        cm.REQUIRES_RUPTURE_PARAMETERS = {'mag', 'length'}
+        params = cm.get_rparams(rup)
+        self.assertAlmostEqual(params['length'], msrf.get_tor_length(),
+                               places=6)
+
 
 class PFDKnownDistancesTestCase(unittest.TestCase):
 
