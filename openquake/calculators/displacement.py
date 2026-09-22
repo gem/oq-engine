@@ -113,10 +113,10 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, N, R, monitor):
             r = rlz.ordinal
             selections = pfd_lt.selections_for(
                 rlz.extra_rlz.lt_path, basename, style)
-            adapters, rs = get_adapters(selections, oq.r_sigma_km)
+            adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
             for m, il in enumerate(imls):
                 rr, _p, _d = calc_rates(
-                    ctxs, N, adapters, il, oq.r_threshold_km, rs,
+                    ctxs, N, adapters, il, oq.r_threshold_km, r_sigma,
                     DEFAULT_RED_CFG)
                 rates[:, r, m, :] += rr
                 base[:, m, :] += rlz.weight[-1] * rr
