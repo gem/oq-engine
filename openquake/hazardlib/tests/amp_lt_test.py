@@ -176,8 +176,8 @@ class AmplificationLogicTreeTest(unittest.TestCase):
         df = self._build_amp_df(['A'], [0.01, 0.1], [2.0, 1.5], [0.1, 0.2])
         names = ['b%d' % i for i in range(30)] # 30 branch names
         weights = numpy.full(30, 1.0 / 30)
-        amep = AmplificationLogicTree(names, weights, [df] * 30)
-        chars = list(amep.shortener.values())
+        amp_lt = AmplificationLogicTree(names, weights, [df] * 30)
+        chars = list(amp_lt.shortener.values())
         self.assertEqual(len(chars), len(set(chars))) # Unique per branch
 
 
@@ -211,13 +211,13 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
         # dstore info survives __toh5__/__fromh5__
         full_lt = self._build_lt()
         reloaded = self._roundtrip(full_lt)
-        amep = reloaded.extra_lt
-        self.assertIsNotNone(amep)
-        self.assertEqual(amep.names, ['low', 'high'])
-        numpy.testing.assert_allclose(amep.weights, [0.4, 0.6])
-        self.assertEqual(amep.filenames, ['amp_low.csv', 'amp_high.csv'])
-        self.assertEqual(amep.filename, 'amp_lt.xml')
-        self.assertEqual(amep.branchset_id, 'bs_ampl')
+        amp_lt = reloaded.extra_lt
+        self.assertIsNotNone(amp_lt)
+        self.assertEqual(amp_lt.names, ['low', 'high'])
+        numpy.testing.assert_allclose(amp_lt.weights, [0.4, 0.6])
+        self.assertEqual(amp_lt.filenames, ['amp_low.csv', 'amp_high.csv'])
+        self.assertEqual(amp_lt.filename, 'amp_lt.xml')
+        self.assertEqual(amp_lt.branchset_id, 'bs_ampl')
 
 
 class GetRealizationsWithAmpLTTest(unittest.TestCase):
