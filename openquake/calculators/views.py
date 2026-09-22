@@ -1490,8 +1490,9 @@ def view_branches(token, dstore):
             % gslt.filename)
     for g, (k, v) in enumerate(gslt.shortener.items()):
         tbl.append((k, v, str(gsims[g]).replace('\n', r'\n')))
-    if full_lt.extra_lt is not None:
-        for k, v in full_lt.extra_lt.shortener.items():
+    sh3 = getattr(full_lt.extra_lt, 'shortener', None)
+    if sh3 is not None:
+        for k, v in sh3.items():
             tbl.append((k, v, k))
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
 
@@ -1532,8 +1533,7 @@ def view_branchsets(token, dstore):
     clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     rows = list(enumerate(map(repr, clt.branchsets)))
     if flt.extra_lt is not None:
-        rows.append((len(rows),
-                     '<amplificationModel(%d)>' % flt.extra_lt.xR))
+        rows.append((len(rows), repr(flt.extra_lt)))
     return text_table(rows, header=['bsno', 'bset'], ext='org')
 
 

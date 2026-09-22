@@ -433,8 +433,8 @@ def reduce_full(full_lt, rlz_clusters):
     result = {f1: dict(p1), f2: dict(p2)}
     # Amp LT reduces when every rlz in the rlz_cluster uses the same branch
     p3 = []
-    if extra_lt is not None:
-        before *= extra_lt.xR
+    if extra_lt is not None and hasattr(extra_lt, 'shortener'):
+        before *= extra_lt.get_num_paths()
         if len(ampl_shorts) == 1:
             short_to_name = {v: k for k, v in extra_lt.shortener.items()}
             surviving = short_to_name[ampl_shorts.pop()]
@@ -1321,9 +1321,9 @@ class FullLogicTree(object):
     @property
     def xR(self):
         """
-        :returns: number of extra logic tree realizations (1 if no extra LT)
+        :returns: number of extra logic tree realizations (1 if none)
         """
-        return self.extra_lt.xR if self.extra_lt is not None else 1
+        return self.extra_lt.get_num_paths() if self.extra_lt is not None else 1
 
     def get_num_paths(self):
         """
@@ -1340,6 +1340,8 @@ class FullLogicTree(object):
         num_samples = self.source_model_lt.num_samples
         self.gsim_lt.wget = IMTWeigher(self.gsim_lt, num_samples)
         extra_lt = self.extra_lt
+        # only amplification-like extra trees contribute realizations
+        has_rlzs = extra_lt is not None and hasattr(extra_lt, 'get_realizations')
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
             sm_rlzs = []
@@ -1349,7 +1351,7 @@ class FullLogicTree(object):
                 num_samples, self.seed + 1, self.sampling_method)
             ampl_rlzs = (extra_lt.sample(
                 num_samples, self.seed + 2, self.sampling_method
-                ) if extra_lt is not None else [None] * num_samples)
+                ) if has_rlzs else [None] * num_samples)
             for k, (gsim_rlz, ampl_rlz) in enumerate(zip(gsim_rlzs, ampl_rlzs)):
                 w = sm_rlzs[k].weight * gsim_rlz.weight
                 if ampl_rlz is not None:
@@ -1360,7 +1362,7 @@ class FullLogicTree(object):
                 for rlz in rlzs:
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
-            ampl_rlzs = extra_lt.get_realizations() if extra_lt is not None else [None]
+            ampl_rlzs = extra_lt.get_realizations() if has_rlzs else [None]
             gsim_rlzs = list(self.gsim_lt)
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(
@@ -1443,11 +1445,8 @@ class FullLogicTree(object):
                      oversampling=self.oversampling)
         alt = self.extra_lt
         if alt is not None:
-            from openquake.hazardlib.site_amplification import amp_lt_dt
-            dic['extra_lt'] = numpy.array(
-                list(zip(alt.names, alt.weights, alt.filenames)), amp_lt_dt)
-            attrs['ampl_tree_filename'] = alt.filename
-            attrs['ampl_branchset_id'] = alt.branchset_id
+            # AmplificationLogicTree or PFDLogicTree: both serialize themselves
+            dic['extra_lt'] = alt
         return dic, attrs
 
     # FullLogicTree
@@ -1455,7 +1454,6 @@ class FullLogicTree(object):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
         sd = dic.pop('source_data', numpy.zeros(0))  # empty for engine <= 3.16
-        extra_lt_arr = dic.pop('extra_lt', None)
         vars(self).update(attrs)
         self.source_model_lt = dic['source_model_lt']
         self.source_model_lt.source_data = sd[:]
@@ -1466,17 +1464,8 @@ class FullLogicTree(object):
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
-        self.extra_lt = None
-        if extra_lt_arr is not None and len(extra_lt_arr):
-            from openquake.hazardlib.site_amplification import AmplificationModel
-            # dframes + amplifiers are None post-restore because readinput
-            # reloads them from per-branch CSVs on demand in get_amp_functions
-            self.extra_lt = AmplificationModel(
-                names=[decode(r['name']) for r in extra_lt_arr],
-                weights=[r['weight'] for r in extra_lt_arr],
-                filenames=[decode(r['filename']) for r in extra_lt_arr],
-                tree_filename=attrs.get('ampl_tree_filename', ''),
-                branchset_id=attrs.get('ampl_branchset_id', 'bs_ampl'))
+        # AmplificationLogicTree or PFDLogicTree, depending on the calc mode
+        self.extra_lt = dic.get('extra_lt')
 
     def get_num_potential_paths(self):
         """
@@ -1491,7 +1480,7 @@ class FullLogicTree(object):
         """
         sh1 = self.source_model_lt.shortener
         sh2 = self.gsim_lt.shortener
-        sh3 = self.extra_lt.shortener if self.extra_lt is not None else None
+        sh3 = getattr(self.extra_lt, 'shortener', None)
         tups = []
         for r in self.get_realizations():
             sm_p = shorten(r.sm_lt_path, sh1, 'smlt')

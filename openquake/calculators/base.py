@@ -46,7 +46,8 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import (
-    Amplifier, AmplificationFunction, AmplificationModel)
+    Amplifier, AmplificationFunction)
+from openquake.hazardlib.amp_lt import AmplificationLogicTree
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -510,7 +511,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     af = None
-    amplifier = None  # None or AmplificationModel (single or LT branches)
+    amplifier = None  # None or AmplificationLogicTree (single or LT branches)
 
     def src_filter(self):
         """
@@ -1157,7 +1158,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         # Store amplification functions if any
         if 'amplification' in oq.inputs:
-            amep = readinput.get_amp_functions(oq)
+            amep = readinput.get_amp_lt(oq)
             if amep is not None:
                 logging.info('Reading %d amplification branches from %s',
                              amep.xR, amep.filename)
@@ -1182,7 +1183,7 @@ class HazardCalculator(BaseCalculator):
                     # currently tested only for classical PSHA
                     self.af = AmplificationFunction.from_dframe(df)
                 else:  # Convolution: single branch, no LT
-                    self.amplifier = AmplificationModel(
+                    self.amplifier = AmplificationLogicTree(
                         names=['ampl'], weights=[1.0], dframes=[df],
                         amplifiers=[Amplifier(
                             oq.imtls, df, oq.soil_intensities)])

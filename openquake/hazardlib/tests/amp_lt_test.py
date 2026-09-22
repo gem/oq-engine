@@ -22,8 +22,8 @@ import numpy
 import pandas as pd
 
 from openquake.baselib import InvalidFile, hdf5
-from openquake.hazardlib.amp_lt import AmplificationLogicTree
-from openquake.hazardlib.site_amplification import AmplificationModel
+from openquake.hazardlib.amp_lt import (
+    AmplificationLogicTree, AmplificationLogicTreeParser)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.logictree import SourceModelLogicTree, FullLogicTree
 
@@ -109,19 +109,19 @@ def _write(text):
     return path
 
 
-class AmplificationLogicTreeTest(unittest.TestCase):
+class AmplificationLogicTreeParserTest(unittest.TestCase):
 
     def _assert_rejects(self, xml, error_tail):
-        # Helper that writes xml to a temp file with AmplificationLogicTree
+        # Helper that writes xml to a temp file with AmplificationLogicTreeParser
         # expected to raise InvalidFile with msg of "<temp_path>: <error_tail>"
         path = _write(xml)
         with self.assertRaises(InvalidFile) as ctx:
-            AmplificationLogicTree(path)
+            AmplificationLogicTreeParser(path)
         self.assertEqual(str(ctx.exception), '%s: %s' % (path, error_tail))
 
     def test_parses_flat_layout(self):
         # Two branches with weights summing to 1.0
-        flat = AmplificationLogicTree(_write(FLAT_XML))
+        flat = AmplificationLogicTreeParser(_write(FLAT_XML))
         self.assertEqual(flat.branch_ids, ['low', 'high'])
         numpy.testing.assert_allclose(flat.weights, [0.4, 0.6])
 
@@ -148,14 +148,14 @@ class AmplificationLogicTreeTest(unittest.TestCase):
 
     def test_is_amp_lt_true(self):
         # Should load fine as valid amp LT
-        self.assertTrue(AmplificationLogicTree.is_amp_lt(_write(FLAT_XML)))
+        self.assertTrue(AmplificationLogicTreeParser.is_amp_lt(_write(FLAT_XML)))
 
     def test_is_amp_lt_false(self):
         # Should be rejected as valid amp LT
-        self.assertFalse(AmplificationLogicTree.is_amp_lt(_write(WRONG_UTYPE_XML)))     
+        self.assertFalse(AmplificationLogicTreeParser.is_amp_lt(_write(WRONG_UTYPE_XML)))     
 
 
-class AmplificationModelTest(unittest.TestCase):
+class AmplificationLogicTreeTest(unittest.TestCase):
 
     def _build_amp_df(self, ampcodes, levels, pga_vals, sigma_vals):
         # Build an amp DataFrame indexed by ampcode,
@@ -176,7 +176,7 @@ class AmplificationModelTest(unittest.TestCase):
         df = self._build_amp_df(['A'], [0.01, 0.1], [2.0, 1.5], [0.1, 0.2])
         names = ['b%d' % i for i in range(30)] # 30 branch names
         weights = numpy.full(30, 1.0 / 30)
-        amep = AmplificationModel(names, weights, [df] * 30)
+        amep = AmplificationLogicTree(names, weights, [df] * 30)
         chars = list(amep.shortener.values())
         self.assertEqual(len(chars), len(set(chars))) # Unique per branch
 
@@ -192,7 +192,7 @@ class FullLogicTreeRoundtripTest(unittest.TestCase):
              )
         full_lt = FullLogicTree.fake(GsimLogicTree.from_('[FromFile]'))
         full_lt.source_model_lt = SourceModelLogicTree.fake()
-        full_lt.extra_lt = AmplificationModel(
+        full_lt.extra_lt = AmplificationLogicTree(
             ['low', 'high'], [0.4, 0.6], [df, df],
             filenames=['amp_low.csv', 'amp_high.csv'],
             tree_filename='amp_lt.xml', branchset_id='bs_ampl'
@@ -233,7 +233,7 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt.source_model_lt = SourceModelLogicTree.fake()
         full_lt.source_model_lt.num_samples = num_samples
         full_lt.source_model_lt.sampling_method = sampling_method
-        full_lt.extra_lt = AmplificationModel(
+        full_lt.extra_lt = AmplificationLogicTree(
             ['low', 'high'], [0.4, 0.6], [df, df])
         full_lt.init()
         return full_lt

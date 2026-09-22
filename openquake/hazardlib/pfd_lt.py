@@ -125,6 +125,77 @@ class PFDLogicTree(object):
         self.sampling_method = sampling_method
         self._ltnode = nrml.read(fname).logicTree
         self.branchsets = self._parse()
+        self.set_num_paths()
+
+    def set_num_paths(self):
+        """
+        Count the end branches of the PFD logic tree, honoring
+        ``applyToBranches``.  ``applyToSources``/``applyToStyle`` are per
+        source and do not affect the global count.
+        """
+        self.num_paths = sum(1 for _ in self._iter_chains())
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else self.num_paths
+
+    def _iter_chains(self):
+        """
+        Yield ``(selections, chosen_ids, weight)`` for every end branch of
+        the tree, honoring ``applyToBranches``.  ``applyToSources`` and
+        ``applyToStyle`` are per source and are ignored here; use
+        :meth:`enumerate` for the per-source chains.
+        """
+        partials = [({}, set(), 1.0)]
+        for bs in self.branchsets:
+            nxt = []
+            for selections, chosen_ids, weight in partials:
+                if (bs.apply_to_branches is not None and
+                        not (chosen_ids & set(bs.apply_to_branches.split()))):
+                    nxt.append((selections, chosen_ids, weight))
+                    continue
+                slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
+                calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
+                for bid, value, raw_weight in bs.branches:
+                    try:
+                        w = float(raw_weight)
+                    except (TypeError, ValueError):
+                        w = float('nan')
+                    if calc_slot is not None:
+                        choice = FdhaModelChoice(
+                            R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: value}, bid, w)
+                        key = calc_slot
+                    else:
+                        class_name, params = value
+                        choice = FdhaModelChoice(class_name, params, bid, w)
+                        key = slot
+                    new_sel = dict(selections)
+                    new_sel[key] = choice
+                    nxt.append((new_sel, chosen_ids | {bid}, weight * w))
+            partials = nxt
+        return partials
+
+    def get_realizations(self):
+        """
+        :returns: the end branches as generic
+            :class:`openquake.hazardlib.lt.Realization` objects (used by
+            :class:`openquake.hazardlib.logictree.FullLogicTree`)
+        """
+        rlzs = []
+        for ordinal, (selections, chosen_ids, weight) in enumerate(
+                self._iter_chains()):
+            rlzs.append(lt.Realization(
+                selections, weight, ordinal, tuple(sorted(chosen_ids))))
+        return rlzs
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        :returns: n generic realizations sampled from the PFD branches
+        """
+        probs = lt.random(n, seed, sampling_method)
+        return lt.sample(self.get_realizations(), probs, sampling_method)
 
     def _parse(self):
         branchsets = []
@@ -317,6 +388,7 @@ class PFDLogicTree(object):
                 branches=tuple((bid, value, str(weight))
                                for bid, value, weight in grows)))
         self.branchsets = branchsets
+        self.set_num_paths()
 
     def check_r_sigma_conflict(self, r_sigma_km, realizations):
         """

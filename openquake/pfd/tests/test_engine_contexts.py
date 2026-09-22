@@ -61,8 +61,8 @@ class EngineContextsTestCase(unittest.TestCase):
         self.assertIsInstance(gsim, PFDGMPE)
         flt = get_full_lt(oq)
         self.assertEqual(flt.get_num_paths(), 1)
-        self.assertIsInstance(flt.pfd_lt, PFDLogicTree)
-        self.assertEqual(len(flt.pfd_lt.branchsets), 4)
+        self.assertIsInstance(flt.extra_lt, PFDLogicTree)
+        self.assertEqual(len(flt.extra_lt.branchsets), 4)
         [gsim] = list(flt.gsim_lt.values[TRT])
         self.assertIsInstance(gsim, PFDGMPE)
         # the FDHA default maximum_distance is set
@@ -74,7 +74,7 @@ class EngineContextsTestCase(unittest.TestCase):
         sitecol = get_site_collection(oq)
         cmakers = csm.get_cmakers()
         [src] = list(csm.src_groups[0])
-        [branch] = csm.full_lt.pfd_lt.enumerate(
+        [branch] = csm.full_lt.extra_lt.enumerate(
             [(src.source_id.split(';')[0], style_from_rake(src.rake))])
         adapters = {}
         for slot, choice in branch.selections.items():
