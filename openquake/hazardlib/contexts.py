@@ -100,8 +100,8 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
     if not dparam:
         # no multifault
         dists = get_distances(rup, r_sites, param)
-        if '_' in param:
-            p0, p1 = param.split('_')  # clon_clat
+        if param in ('clon_clat', 'rx_ry0'):
+            p0, p1 = param.split('_')  # paired attributes
             setattr(ctx, p0, dists[:, 0])
             setattr(ctx, p1, dists[:, 1])
         else:

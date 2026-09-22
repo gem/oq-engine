@@ -228,9 +228,9 @@ class Thingbaijam2017(BaseMSRSigma, BaseASRSigma):
 
     Style-dispatching facade over the crustal ``ThingbaijamStrikeSlip`` /
     ``ThingbaijamNormalFault`` / ``ThingbaijamReverseFault`` relations, with
-    the additional average-displacement (slip) relation used by the FDHA
+    the additional average-displacement (slip) relation used by the PFD
     models.  Added for PR-2 of the oq-engine integration plan; it is the
-    canonical ``Thingbaijam2017`` name expected by the FDHA logic tree and
+    canonical ``Thingbaijam2017`` name expected by the PFD logic tree and
     reproduces the width rows ``MSR = 2`` of Mammarella et al. (2024)
     Table 1 (see ``openquake/hazardlib/tests/scalerel/fdha_scalerel_test``).
     """

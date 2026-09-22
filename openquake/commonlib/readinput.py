@@ -62,15 +62,16 @@ from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt, amp_lt)
+    pmf, logictree, gsim_lt, pfd_lt, get_smlt, amp_lt)
 from openquake.hazardlib.site_amplification import (
-    AmplificationFunction, Amplifier, AmplificationModel)
+    AmplificationFunction, Amplifier)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
+from openquake.pfd.gsim import get_pfd_gsim_lt
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
@@ -903,6 +904,12 @@ def get_gsim_lt(oqparam, trts=()):
         a GsimLogicTree instance obtained by filtering on the provided
         tectonic region types.
     """
+    if oqparam.calculation_mode == 'displacement':
+        # PFD has no GSIMs: the GSIM logic tree is a trivial one-branch
+        # PFDGMPE tree, used only to drive ContextMaker (see
+        # openquake/pfd/gsim.py); the PFD logic tree is read separately
+        # by get_pfd_lt
+        return get_pfd_gsim_lt(trts or ['*'])
     if 'gsim_logic_tree' not in oqparam.inputs:
         return logictree.GsimLogicTree.from_(
             oqparam.gsim, oqparam.inputs['job_ini'])
@@ -935,6 +942,25 @@ def get_gsim_lt(oqparam, trts=()):
         logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     return gsim_lt
+
+
+def get_pfd_lt(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        a :class:`openquake.hazardlib.pfd_lt.PFDLogicTree` instance
+        built from the ``pfd_logic_tree_file`` input
+    """
+    if 'pfd_logic_tree' not in oqparam.inputs:
+        raise InvalidFile('%s: missing pfd_logic_tree_file'
+                          % oqparam.inputs['job_ini'])
+    fname = os.path.join(
+        oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
+    return pfd_lt.PFDLogicTree(
+        fname, seed=oqparam.random_seed,
+        num_samples=oqparam.number_of_logic_tree_samples,
+        sampling_method=oqparam.sampling_method)
 
 
 def get_rupture(oqparam):
@@ -998,20 +1024,17 @@ def get_source_model_lt(oqparam):
 AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
 
 
-def _expand_amp_lt(oqparam):
+def _get_amp_lt_parser(oqparam):
     """
-    If oqparam.inputs['amplification'] points at an amp-LT XML, parse it,
-    cache the tree on oqparam._amp_lt, and rewrite the inputs entry to
-    the list of per-branch CSV file paths. Otherwise return None.
+    If oqparam.inputs['ampl_logic_tree'] is set, parse the amp-LT XML,
+    cache the tree on oqparam._amp_lt, and return it. Otherwise return None.
     """
     if getattr(oqparam, '_amp_lt', None) is not None:
         # Guard for if already parsed on a previous call
         return oqparam._amp_lt
-    fname = oqparam.inputs.get('amplification')
+    fname = oqparam.inputs.get('ampl_logic_tree')
     if not fname:
-        return None  # No amplification input
-    if not amp_lt.AmplificationLogicTree.is_amp_lt(fname):
-        return None  # Regular amplification model (no logic tree)
+        return None  # No amplification logic tree
     if oqparam.calculation_mode not in AMP_LT_SUPPORTED_MODES:
         raise InvalidFile(
             '%s: amplification logic tree is only supported for %s'
@@ -1023,25 +1046,24 @@ def _expand_amp_lt(oqparam):
             '%s: amplification logic tree is only supported with'
             ' amplification_method="convolution", got %r'
             % (fname, oqparam.amplification_method))
-    tree = amp_lt.AmplificationLogicTree(fname)
+    tree = amp_lt.AmplificationLogicTreeParser(fname)
     oqparam._amp_lt = tree
-    oqparam.inputs['amplification'] = tree.filenames
     return tree
 
 
-def get_amp_functions(oqparam):
+def get_amp_lt(oqparam):
     """
-    :returns: an :class:`AmplificationModel` with Amplifier instances
-        built from the amp-LT branch CSVs, or None if the amplification
-        input is not an amp-LT XML
+    :returns: an :class:`AmplificationLogicTree` with Amplifier instances
+        built from the ``ampl_logic_tree_file`` branch CSVs, or None if
+        the input is not set
     """
-    tree = _expand_amp_lt(oqparam)
+    tree = _get_amp_lt_parser(oqparam)
     if tree is None:
         return None
     dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
     amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
                   for df in dframes]
-    return AmplificationModel(
+    return amp_lt.AmplificationLogicTree(
         tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
         filenames=tree.filenames, tree_filename=tree.filename,
         branchset_id=tree.branchset_id)
@@ -1066,9 +1088,13 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    amep = get_amp_functions(oqparam)
+    if oqparam.calculation_mode == 'displacement':
+        # amp_lt and pfd_lt are mutually exclusive
+        extra_lt = get_pfd_lt(oqparam)
+    else:
+        extra_lt = get_amp_lt(oqparam)
     full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oversampling, amp_lt=amep)
+        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
 
     if oqparam.number_of_logic_tree_samples:
@@ -1081,7 +1107,8 @@ def get_full_lt(oqparam):
         logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
-    elif 'classical' in oqparam.calculation_mode:  # full enumeration
+    elif ('classical' in oqparam.calculation_mode
+          and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -1850,6 +1877,13 @@ def get_input_files(oqparam):
         if key == 'gsim_logic_tree':
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
+        elif key == 'pfd_logic_tree':
+            fnames.add(fname)
+        elif key == 'ampl_logic_tree':
+            fnames.add(fname)
+            tree = _get_amp_lt_parser(oqparam)
+            if tree is not None:
+                fnames.update(tree.filenames)
         elif key == 'source_model':
             fnames.update(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list

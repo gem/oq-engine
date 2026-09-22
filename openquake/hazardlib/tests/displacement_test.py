@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tests for the FDHA rate kernel (PR-6)."""
+"""Tests for the PFD rate kernel (PR-6)."""
 import numpy as np
 import pytest
 

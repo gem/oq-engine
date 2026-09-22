@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-Legacy model adapter for FDHA calculations.
+Legacy model adapter for PFD calculations.
 
 ``LegacyModelAdapter`` bridges the hazard kernel's fixed calling convention
 to the heterogeneous model APIs: it inspects each model's signature to pass
@@ -50,7 +50,7 @@ NEAR_FIELD_FLOOR_KM = 0.0125
 def effective_displacement_definition(model):
     """Return a model's declared displacement definition (C4 contract).
 
-    FDHA displacement models declare their Sarmiento et al. (2025, Table 1)
+    PFD displacement models declare their Sarmiento et al. (2025, Table 1)
     displacement definition as the ``DISPLACEMENT_DEFINITION`` class
     attribute. The contract is STATIC -- the class choice IS the definition
     (papers publishing several definitions expose one class per definition,
@@ -72,7 +72,7 @@ def style_from_rake(rake):
 
     The thresholds match the oq-pfdha ``classify_style`` helper: the
     engine's :class:`~openquake.hazardlib.contexts.RuptureContext` carries
-    ``rake`` where the FDHA context exposes a derived ``style`` array.
+    ``rake`` where the PFD context exposes a derived ``style`` array.
     """
     rake = float(rake)
     if -150.0 <= rake <= -30.0:
@@ -84,7 +84,7 @@ def style_from_rake(rake):
 
 class LegacyModelAdapter:
     """
-    Wraps legacy FDHA models for use with FDHAContext.
+    Wraps legacy PFD models for use with FDHAContext.
 
     Provides backward compatibility during migration to context-based
     calculations. Automatically detects model type and handles parameter
@@ -208,7 +208,7 @@ class LegacyModelAdapter:
     def _ctx_metrics(self, ctx: 'Any'):
         """(r, x_L, L) arrays for this model's declared reference-line method.
 
-        Each FDHA model declares how multi-section (multiFaultSource)
+        Each PFD model declares how multi-section (multiFaultSource)
         rupture distances must be measured via its MULTIFAULT_REFERENCE_LINE
         class attribute (ecs | lcp | segments); the context carries one
         metric set per method required by the configured models. For
@@ -245,7 +245,7 @@ class LegacyModelAdapter:
         may include epistemic uncertainty (MC samples).
 
         Args:
-            ctx: FDHA context with rupture/site parameters
+            ctx: PFD context with rupture/site parameters
             red_cfg: MC reduction config {'method': 'median', 'q': 50}
 
         Returns:
@@ -314,7 +314,7 @@ class LegacyModelAdapter:
         Uses fully vectorized operations - no per-displacement fallback loops.
 
         Args:
-            ctx: FDHA context
+            ctx: PFD context
             displacements: Target displacement levels (m)
             red_cfg: MC reduction config
 
@@ -404,7 +404,7 @@ class LegacyModelAdapter:
         Uses fully vectorized operations - no per-site fallback loops.
 
         Args:
-            ctx: FDHA context
+            ctx: PFD context
             red_cfg: MC reduction config
 
         Returns:
@@ -488,7 +488,7 @@ class LegacyModelAdapter:
         Compute secondary fault displacement probability.
 
         Args:
-            ctx: FDHA context
+            ctx: PFD context
             displacements: Target displacement levels (m)
             red_cfg: MC reduction config
 

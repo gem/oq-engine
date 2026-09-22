@@ -125,7 +125,7 @@ def test_parse_r_sigma_rejects(text):
 def test_unknown_utype_rejected(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
-    with pytest.raises(LogicTreeError, match="unknown FDHA uncertaintyType"):
+    with pytest.raises(LogicTreeError, match="unknown PFD uncertaintyType"):
         PFDLogicTree(path)
 
 
@@ -166,6 +166,28 @@ def test_enumerate_two_branches_and_weights(tmp_path):
     assert [b.selections["primary_surf_rup"].branch_id for b in branches] == [
         "B1a", "B1b"]
     assert [b.weight for b in branches] == [0.7, 0.3]
+
+
+def test_get_num_paths(tmp_path):
+    assert PFDLogicTree(write(tmp_path, *full_chain())).get_num_paths() == 1
+    path = write(
+        tmp_path,
+        branchset("bs1", "fdhaPrimarySRModel", [
+            ("B1a", "MossRoss2011PrimarySR", 0.7),
+            ("B1b", "Takao2013PrimarySR", 0.3)]),
+        branchset("bs2", "fdhaPrimaryFDModel", [
+            ("B2", "MossRoss2011PrimaryFD", 1.0)],
+            applyToBranches="B1a B1b"))
+    lt = PFDLogicTree(path)
+    assert lt.get_num_paths() == 2
+    rlzs = lt.get_realizations()
+    assert [r.weight for r in rlzs] == [0.7, 0.3]
+
+
+def test_get_num_paths_with_sampling(tmp_path):
+    lt = PFDLogicTree(write(tmp_path, *full_chain()), num_samples=5)
+    assert lt.get_num_paths() == 5
+    assert len(lt.sample(5, seed=7)) == 5
 
 
 def test_apply_to_branches_filter(tmp_path):
