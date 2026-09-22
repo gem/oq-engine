@@ -10,8 +10,8 @@
 #
 # OpenQuake is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
@@ -26,9 +26,12 @@ parameter, with the ``<logicTreeBranchSet>`` elements directly under
 (both accepted through ``gsim_lt.bsnodes``).  Like
 :class:`openquake.hazardlib.logictree.SourceModelLogicTree` it is
 source-oriented (``applyToSources`` / ``applyToBranches`` /
-``applyToStyle``), so it lives in its own module rather than in
-:mod:`openquake.hazardlib.gsim_lt`; the ``<uncertaintyModel>`` values are
-parsed by :data:`openquake.hazardlib.lt.parse_uncertainty`.
+``applyToStyle``) and it is built on the generic
+:class:`openquake.hazardlib.lt.Branch`/:class:`~openquake.hazardlib.lt.
+BranchSet` structures, so it exposes a ``root_branchset`` and its number of
+paths is ``count_paths(root_branchset.branches)``.  The
+``<uncertaintyModel>`` values are parsed by
+:data:`openquake.hazardlib.lt.parse_uncertainty`.
 """
 import json
 from dataclasses import dataclass
@@ -51,6 +54,15 @@ CALC_R_SIGMA_SLOT = "calc_r_sigma"
 R_SIGMA_KM_KEY = "r_sigma_km"
 FDHA_UNCERTAINTY_TYPES = frozenset(FDHA_SLOTS_BY_UTYPE) | frozenset(
     CALC_SLOTS_BY_UTYPE)
+
+
+def _noop(utype, source, value):
+    """The FDHA model choices never modify a source, like 'dummy'."""
+
+
+# tell lt.BranchSet that the FDHA uncertainty types are admissible
+for _utype in FDHA_UNCERTAINTY_TYPES:
+    lt.apply_uncertainty[_utype] = _noop
 
 
 @dataclass
@@ -80,26 +92,17 @@ class PFDBranch:
         return tuple(sorted(self.selections))
 
 
-@dataclass
-class _FdhaBranchSet:
-    branch_set_id: str
-    uncertainty_type: str
-    apply_to_sources: str
-    apply_to_branches: str
-    apply_to_style: str
-    branches: tuple
-
-
-def _fdha_branchset_applies(bs, source_id, style, chosen_ids):
-    if bs.apply_to_style is not None and bs.apply_to_style != style:
-        return False
-    if bs.apply_to_sources is not None:
-        if source_id not in set(bs.apply_to_sources.split()):
-            return False
-    if bs.apply_to_branches is not None:
-        if not (chosen_ids & set(bs.apply_to_branches.split())):
-            return False
-    return True
+def _choice(utype, branch_id, value, weight):
+    """
+    :returns: ``(slot, FdhaModelChoice)`` for an ``lt.Branch`` value
+    """
+    calc_slot = CALC_SLOTS_BY_UTYPE.get(utype)
+    if calc_slot is not None:
+        return calc_slot, FdhaModelChoice(
+            R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: value}, branch_id, weight)
+    slot = FDHA_SLOTS_BY_UTYPE[utype]
+    class_name, params = value
+    return slot, FdhaModelChoice(class_name, params, branch_id, weight)
 
 
 class PFDLogicTree(object):
@@ -125,57 +128,26 @@ class PFDLogicTree(object):
         self.sampling_method = sampling_method
         self._ltnode = nrml.read(fname).logicTree
         self.branchsets = self._parse()
+        self.root_branchset = self.branchsets[0] if self.branchsets else None
+        if self.root_branchset is not None:
+            # attach the child branchsets to the branches via applyToBranches
+            lt.attach_branches(self)
         self.set_num_paths()
 
     def set_num_paths(self):
         """
-        Count the end branches of the PFD logic tree, honoring
-        ``applyToBranches``.  ``applyToSources``/``applyToStyle`` are per
-        source and do not affect the global count.
+        Count the end branches of the PFD logic tree with the shared
+        :func:`openquake.hazardlib.lt.count_paths`.  ``applyToSources`` and
+        ``applyToStyle`` are per source and do not affect the global count.
         """
-        self.num_paths = sum(1 for _ in self._iter_chains())
+        self.num_paths = (lt.count_paths(self.root_branchset.branches)
+                          if self.root_branchset is not None else 0)
 
     def get_num_paths(self):
         """
         :returns: the number of paths in the logic tree
         """
         return self.num_samples if self.num_samples else self.num_paths
-
-    def _iter_chains(self):
-        """
-        Yield ``(selections, chosen_ids, weight)`` for every end branch of
-        the tree, honoring ``applyToBranches``.  ``applyToSources`` and
-        ``applyToStyle`` are per source and are ignored here; use
-        :meth:`enumerate` for the per-source chains.
-        """
-        partials = [({}, set(), 1.0)]
-        for bs in self.branchsets:
-            nxt = []
-            for selections, chosen_ids, weight in partials:
-                if (bs.apply_to_branches is not None and
-                        not (chosen_ids & set(bs.apply_to_branches.split()))):
-                    nxt.append((selections, chosen_ids, weight))
-                    continue
-                slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                for bid, value, raw_weight in bs.branches:
-                    try:
-                        w = float(raw_weight)
-                    except (TypeError, ValueError):
-                        w = float('nan')
-                    if calc_slot is not None:
-                        choice = FdhaModelChoice(
-                            R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: value}, bid, w)
-                        key = calc_slot
-                    else:
-                        class_name, params = value
-                        choice = FdhaModelChoice(class_name, params, bid, w)
-                        key = slot
-                    new_sel = dict(selections)
-                    new_sel[key] = choice
-                    nxt.append((new_sel, chosen_ids | {bid}, weight * w))
-            partials = nxt
-        return partials
 
     def get_realizations(self):
         """
@@ -184,10 +156,19 @@ class PFDLogicTree(object):
             :class:`openquake.hazardlib.logictree.FullLogicTree`)
         """
         rlzs = []
-        for ordinal, (selections, chosen_ids, weight) in enumerate(
-                self._iter_chains()):
+        for ordinal, (weight, branches) in enumerate(
+                self.root_branchset.enumerate_paths()):
+            selections = {}
+            chosen = []
+            for br in branches:
+                if br.is_dummy():
+                    continue
+                slot, choice = _choice(
+                    br.uncertainty_type, br.branch_id, br.value, br.weight)
+                selections[slot] = choice
+                chosen.append(br.branch_id)
             rlzs.append(lt.Realization(
-                selections, weight, ordinal, tuple(sorted(chosen_ids))))
+                selections, weight, ordinal, tuple(chosen)))
         return rlzs
 
     def sample(self, n, seed, sampling_method='early_weights'):
@@ -199,7 +180,7 @@ class PFDLogicTree(object):
 
     def _parse(self):
         branchsets = []
-        for node in self._ltnode:
+        for bsno, node in enumerate(self._ltnode):
             # bsnodes accepts either a <logicTreeBranchSet> directly or
             # wrapped in a <logicTreeBranchingLevel>, like
             # SourceModelLogicTree
@@ -210,7 +191,15 @@ class PFDLogicTree(object):
                         branchset, self.filename,
                         'unknown FDHA uncertaintyType %r; expected one of %s'
                         % (utype, sorted(FDHA_UNCERTAINTY_TYPES)))
-                branches = []
+                filters = {}
+                for key in ('applyToSources', 'applyToBranches'):
+                    if key in branchset.attrib:
+                        filters[key] = branchset[key].split()
+                if 'applyToStyle' in branchset.attrib:
+                    filters['applyToStyle'] = branchset['applyToStyle']
+                bset = lt.BranchSet(utype, filters, ordinal=len(branchsets))
+                bset.id = branchset.get('branchSetID', '')
+                raw_branches = []
                 for branch in branchset:
                     with context(self.filename, branch):
                         try:
@@ -223,23 +212,30 @@ class PFDLogicTree(object):
                                 'uncertaintyWeight' % branch.get('branchID'))
                         value = lt.parse_uncertainty(
                             utype, model, self.filename)
-                    branches.append((branch.get('branchID', ''), value,
-                                     weight.text or ''))
-                bset = _FdhaBranchSet(
-                    branch_set_id=branchset.get('branchSetID', ''),
-                    uncertainty_type=utype,
-                    apply_to_sources=branchset.get('applyToSources'),
-                    apply_to_branches=branchset.get('applyToBranches'),
-                    apply_to_style=branchset.get('applyToStyle'),
-                    branches=tuple(branches))
-                self._check_weights(bset)
+                    raw_branches.append(
+                        (branch.get('branchID', ''), value, weight.text or ''))
+                check_branchset_weights(
+                    None, self.filename, bset.id,
+                    [raw for _bid, _value, raw in raw_branches])
+                for bid, value, raw_weight in raw_branches:
+                    br = lt.Branch(bid, value, float(raw_weight), bset.id)
+                    br.uncertainty_type = utype
+                    bset.branches.append(br)
                 branchsets.append(bset)
         return branchsets
 
-    def _check_weights(self, bs):
-        check_branchset_weights(
-            None, self.filename, bs.branch_set_id,
-            [w for _bid, _model, w in bs.branches])
+    def _applies(self, bs, source_id, style, chosen_ids):
+        filters = bs.filters
+        ats = filters.get('applyToSources')
+        if ats is not None and source_id not in ats:
+            return False
+        atb = filters.get('applyToBranches')
+        if atb is not None and not (chosen_ids & set(atb)):
+            return False
+        ats_style = filters.get('applyToStyle')
+        if ats_style is not None and ats_style != style:
+            return False
+        return True
 
     def enumerate(self, sources):
         """
@@ -273,21 +269,13 @@ class PFDLogicTree(object):
                 chosen_ids = set()
                 late_weight = 1.0
                 for b, bs in enumerate(self.branchsets):
-                    if not _fdha_branchset_applies(
-                            bs, source_id, style, chosen_ids):
+                    if not self._applies(bs, source_id, style, chosen_ids):
                         continue
-                    br = self._sample_branch(bs, float(probs[s, b]))
-                    key = (CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                           or FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type))
-                    if key == CALC_R_SIGMA_SLOT:
-                        choice = FdhaModelChoice(
-                            R_SIGMA_KM_KEY, {R_SIGMA_KM_KEY: br.value},
-                            br.branch_id, br.weight)
-                    else:
-                        class_name, params = br.value
-                        choice = FdhaModelChoice(
-                            class_name, params, br.branch_id, br.weight)
-                    selections[key] = choice
+                    [br] = lt.sample(bs.branches, [float(probs[s, b])],
+                                     self.sampling_method)
+                    slot, choice = _choice(
+                        bs.uncertainty_type, br.branch_id, br.value, br.weight)
+                    selections[slot] = choice
                     chosen_ids.add(br.branch_id)
                     late_weight *= br.weight
                 if self.sampling_method.startswith('early'):
@@ -298,13 +286,6 @@ class PFDLogicTree(object):
                     source_id, style, weight, selections))
         return realizations
 
-    def _sample_branch(self, bs, probability):
-        # reuse lt.sample on lt.Branch objects (it reads .weight)
-        branches = [lt.Branch(bid, value, float(w))
-                    for bid, value, w in bs.branches]
-        [branch] = lt.sample(branches, [probability], self.sampling_method)
-        return branch
-
     def _enumerate(self, sources):
         realizations = []
         for source_id, style in sources:
@@ -312,31 +293,17 @@ class PFDLogicTree(object):
             for bs in self.branchsets:
                 nxt = []
                 for selections, chosen_ids, weight in partials:
-                    if not _fdha_branchset_applies(
-                            bs, source_id, style, chosen_ids):
+                    if not self._applies(bs, source_id, style, chosen_ids):
                         nxt.append((selections, chosen_ids, weight))
                         continue
-                    slot = FDHA_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                    calc_slot = CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type)
-                    for bid, value, raw_weight in bs.branches:
-                        try:
-                            w = float(raw_weight)
-                        except (TypeError, ValueError):
-                            w = float('nan')
-                        if calc_slot is not None:
-                            choice = FdhaModelChoice(
-                                R_SIGMA_KM_KEY,
-                                {R_SIGMA_KM_KEY: value}, bid, w)
-                            key = calc_slot
-                        else:
-                            class_name, params = value
-                            choice = FdhaModelChoice(
-                                class_name, params, bid, w)
-                            key = slot
+                    for br in bs.branches:
+                        slot, choice = _choice(
+                            bs.uncertainty_type, br.branch_id, br.value,
+                            br.weight)
                         new_sel = dict(selections)
-                        new_sel[key] = choice
-                        nxt.append(
-                            (new_sel, chosen_ids | {bid}, weight * w))
+                        new_sel[slot] = choice
+                        nxt.append((new_sel, chosen_ids | {br.branch_id},
+                                    weight * br.weight))
                 partials = nxt
             for selections, _ids, weight in partials:
                 realizations.append(PFDBranch(
@@ -350,15 +317,15 @@ class PFDLogicTree(object):
         :class:`openquake.hazardlib.logictree.SourceModelLogicTree`).
         """
         bsetdict = {
-            bs.branch_set_id: dict(
+            bs.id: dict(
                 uncertaintyType=bs.uncertainty_type,
-                applyToSources=bs.apply_to_sources,
-                applyToBranches=bs.apply_to_branches,
-                applyToStyle=bs.apply_to_style)
+                applyToSources=bs.filters.get('applyToSources'),
+                applyToBranches=bs.filters.get('applyToBranches'),
+                applyToStyle=bs.filters.get('applyToStyle'))
             for bs in self.branchsets}
-        branches = [(bs.branch_set_id, bid, bs.uncertainty_type, value, weight)
-                    for bs in self.branchsets
-                    for bid, value, weight in bs.branches]
+        branches = [(bs.id, br.branch_id, bs.uncertainty_type,
+                     br.value, br.weight)
+                    for bs in self.branchsets for br in bs.branches]
         array, attrs = branches_to_h5(branches, bsetdict)
         attrs['filename'] = self.filename
         attrs['seed'] = self.seed
@@ -377,17 +344,25 @@ class PFDLogicTree(object):
         self.bsetdict = json.loads(attrs['bsetdict'])
         utypes, rows = h5_to_branches(array)
         branchsets = []
-        for bsid, grows in rows.items():
+        for bsno, (bsid, grows) in enumerate(rows.items()):
             dic = self.bsetdict[bsid]
-            branchsets.append(_FdhaBranchSet(
-                branch_set_id=bsid,
-                uncertainty_type=utypes[bsid],
-                apply_to_sources=dic.get('applyToSources'),
-                apply_to_branches=dic.get('applyToBranches'),
-                apply_to_style=dic.get('applyToStyle'),
-                branches=tuple((bid, value, str(weight))
-                               for bid, value, weight in grows)))
+            filters = {}
+            for key in ('applyToSources', 'applyToBranches'):
+                if dic.get(key) is not None:
+                    filters[key] = list(dic[key])
+            if dic.get('applyToStyle') is not None:
+                filters['applyToStyle'] = dic['applyToStyle']
+            bset = lt.BranchSet(utypes[bsid], filters, ordinal=bsno)
+            bset.id = bsid
+            for bid, value, weight in grows:
+                br = lt.Branch(bid, value, weight, bsid)
+                br.uncertainty_type = utypes[bsid]
+                bset.branches.append(br)
+            branchsets.append(bset)
         self.branchsets = branchsets
+        self.root_branchset = branchsets[0] if branchsets else None
+        if self.root_branchset is not None:
+            lt.attach_branches(self)
         self.set_num_paths()
 
     def check_r_sigma_conflict(self, r_sigma_km, realizations):
