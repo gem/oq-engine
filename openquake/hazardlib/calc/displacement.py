@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Fault Displacement Hazard Analysis (FDHA) rate kernel (PR-6 of the oq-engine
+Probabilistic Fault Displacement (PFD) rate kernel (PR-6 of the oq-engine
 integration plan, Workstream D).
 
 The kernel is the engine-idiomatic port of oq-pfdha's
@@ -42,7 +42,7 @@ contribution: ``lambda_total = rate * P_sr * P_fd_aggregate * W_p`` flows
 through the principal bucket and the distributed bucket stays zero.
 
 The kernel deliberately does NOT call ``get_mean_stds``/``get_poes``
-(decision D12): the FDHA models yield exceedance probabilities directly.
+(decision D12): the PFD models yield exceedance probabilities directly.
 The calculator wraps the returned rate arrays into the engine's ``MapArray``
 and reuses all downstream stats/export machinery.
 
@@ -182,7 +182,7 @@ def calc_rates(
         red_cfg: Optional[Dict[str, Any]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Accumulate the FDHA annual exceedance rates over a sequence of contexts.
+    Accumulate the PFD annual exceedance rates over a sequence of contexts.
 
     :returns: ``(rates, principal, distributed)``, each ``(n_sites, D)``;
         ``rates = principal + distributed``

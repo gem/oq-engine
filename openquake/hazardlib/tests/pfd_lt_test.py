@@ -125,7 +125,7 @@ def test_parse_r_sigma_rejects(text):
 def test_unknown_utype_rejected(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "gmpeModel", [("B1", "BooreAtkinson2008", 1.0)]))
-    with pytest.raises(LogicTreeError, match="unknown FDHA uncertaintyType"):
+    with pytest.raises(LogicTreeError, match="unknown PFD uncertaintyType"):
         PFDLogicTree(path)
 
 

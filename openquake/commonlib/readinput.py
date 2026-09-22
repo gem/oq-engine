@@ -904,8 +904,8 @@ def get_gsim_lt(oqparam, trts=()):
         a GsimLogicTree instance obtained by filtering on the provided
         tectonic region types.
     """
-    if oqparam.calculation_mode == 'fdha_classical':
-        # FDHA has no GSIMs: the GSIM logic tree is a trivial one-branch
+    if oqparam.calculation_mode == 'displacement':
+        # PFD has no GSIMs: the GSIM logic tree is a trivial one-branch
         # PFDGMPE tree, used only to drive ContextMaker (see
         # openquake/pfd/gsim.py); the PFD logic tree is read separately
         # by get_pfd_lt
@@ -950,7 +950,7 @@ def get_pfd_lt(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         a :class:`openquake.hazardlib.pfd_lt.PFDLogicTree` instance
-        built from the ``fdha_logic_tree_file`` input
+        built from the ``gsim_logic_tree_file`` input
     """
     if 'gsim_logic_tree' not in oqparam.inputs:
         raise InvalidFile('%s: missing gsim_logic_tree_file'
@@ -1093,7 +1093,7 @@ def get_full_lt(oqparam):
             logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     oversampling = oqparam.oversampling
-    if oqparam.calculation_mode == 'fdha_classical':
+    if oqparam.calculation_mode == 'displacement':
         # amp_lt and pfd_lt are mutually exclusive
         extra_lt = get_pfd_lt(oqparam)
     else:
@@ -1113,7 +1113,7 @@ def get_full_lt(oqparam):
                      ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
                                      len(unique)))
     elif ('classical' in oqparam.calculation_mode
-          and oqparam.calculation_mode != 'fdha_classical'):  # full enum
+          and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -1880,8 +1880,8 @@ def get_input_files(oqparam):
         fname = oqparam.inputs[key]
         # collect .hdf5 tables for the GSIMs, if any
         if key == 'gsim_logic_tree':
-            if oqparam.calculation_mode != 'fdha_classical':
-                # an fdha gsim_logic_tree_file is a PFD logic tree
+            if oqparam.calculation_mode != 'displacement':
+                # a displacement gsim_logic_tree_file is a PFD logic tree
                 fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':

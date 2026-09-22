@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests for the FDHA distance metrics added to hazardlib:
+Tests for the PFD distance metrics added to hazardlib:
 
 - ``rtor``: horizontal distance to the top rupture trace
 - ``x_l``:  normalized along-strike position (x/L)
@@ -106,7 +106,7 @@ class RtorAndXlTestCase(unittest.TestCase):
         self.assertEqual(l_km, surf.get_tor_length())
 
 
-class FDHAKnownDistancesTestCase(unittest.TestCase):
+class PFDKnownDistancesTestCase(unittest.TestCase):
 
     def test_known_distances_contains_metrics(self):
         self.assertIn('rtor', KNOWN_DISTANCES)
