@@ -995,7 +995,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
-                   'fdha_classical',
+                   'displacement',
                    'scenario_damage',
                    'workflow']
 
@@ -1514,13 +1514,20 @@ class OqParam(valid.ParamSet):
     def check_gsim_lt(self):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
-        if self.calculation_mode == 'fdha_classical':
+        if self.calculation_mode == 'displacement':
             # the second logic tree is a PFD logic tree, not a GSIM one
             fname = self.inputs.get('gsim_logic_tree')
             if not fname:
                 self.raise_invalid('Missing gsim_logic_tree_file')
             path = os.path.join(self.base_path, fname)
             PFDLogicTree(path)  # validate the logic tree
+            # the FDHA kernel works per source and yields annual rates
+            if not self.use_rates:
+                self.raise_invalid(
+                    'use_rates = true is required for displacement')
+            if not self.disagg_by_src:
+                self.raise_invalid(
+                    'disagg_by_src = true is required for displacement')
             if not hasattr(self, 'maximum_distance'):
                 # default FDHA integration distance (km), as in oq-pfdha
                 self.maximum_distance = valid.IntegrationDistance.new('10')
@@ -1583,7 +1590,7 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
-                and self.calculation_mode != 'fdha_classical'
+                and self.calculation_mode != 'displacement'
                 and self.hazard_calculation_id is None):
             if ('multi_peril' not in self.inputs and
                     getattr(self, 'truncation_level', None) is None and
@@ -2457,7 +2464,7 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if (self.calculation_mode == 'fdha_classical' or
+        if (self.calculation_mode == 'displacement' or
                 'gsim_logic_tree' not in self.inputs):
             return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts

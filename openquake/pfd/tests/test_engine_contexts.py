@@ -55,7 +55,7 @@ class EngineContextsTestCase(unittest.TestCase):
 
     def test_full_lt(self):
         oq = get_oqparam(os.path.join(DATADIR, 'job.ini'))
-        # get_gsim_lt returns the no-op PFDGMPE logic tree for fdha_classical
+        # get_gsim_lt returns the no-op PFDGMPE logic tree for displacement
         glt = get_gsim_lt(oq, [TRT])
         [gsim] = list(glt.values[TRT])
         self.assertIsInstance(gsim, PFDGMPE)
