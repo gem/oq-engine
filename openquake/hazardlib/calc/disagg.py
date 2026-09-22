@@ -342,7 +342,7 @@ def _amp_poes_by_eps(mea_g, std_g, iml2, eps_edges, phi_b,
     return poes
 
 
-def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
+def _disaggregate_amp(ctx, mea, std, cmaker, g, iml2, bin_edges,
                       gp, infer_occur_rates, amplifier, ampcode,
                       mon1, mon2, mon3):
     """
@@ -594,7 +594,7 @@ class Disaggregator(object):
             if amp is not None:
                 poes = _disaggregate_amp(
                     self.ctx, mea, std, self.cmaker, g, imlog2,
-                    self.bin_edges, self.epsstar, gp,
+                    self.bin_edges, gp,
                     self.cmaker.oq.infer_occur_rates,
                     amp, self.ampcode,
                     self.mon1, self.mon2, self.mon3)
