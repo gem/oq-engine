@@ -126,3 +126,25 @@ a3 = 0.9
             "Cannot interpolate SA(0.05): PGA-anchored fallback requires "
             "the smallest tabulated SA period to be <= 0.05 s, but this "
             "GMM's smallest SA period is 0.1 s")
+
+        # TEST 3: Table with no PGA row - fallback needs a PGA anchor row
+        no_pga = CoeffsTable(sa_damping=5, table="""
+            imt   a
+            0.02  5
+            0.1   10
+            1.0   3""")
+        with self.assertRaises(ValueError) as cm:
+            no_pga[SA(0.015)]
+        self.assertEqual(
+            str(cm.exception),
+            "Cannot interpolate SA(0.015): PGA-anchored fallback requires "
+            "a PGA row in the coefficient table, but none is present")
+
+        # TEST 4: Target period below the PGA anchor (0.01 s) - fallback
+        # cannot extrapolate below PGA
+        with self.assertRaises(ValueError) as cm:
+            table[SA(0.005)]
+        self.assertEqual(
+            str(cm.exception),
+            "Cannot interpolate SA(0.005): PGA-anchored fallback cannot "
+            "extrapolate below the PGA anchor at 0.01 s")

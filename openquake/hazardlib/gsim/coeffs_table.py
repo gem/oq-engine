@@ -123,10 +123,10 @@ class CoeffsTable(object):
         ...
     KeyError: SA(20.0)
 
-    >>> ct[imt.SA(period=0.005, damping=5)]
+    >>> ct[imt.SA(period=0.005, damping=5)]  # doctest: +ELLIPSIS
     Traceback (most recent call last):
         ...
-    KeyError: SA(0.005)
+    ValueError: Cannot interpolate SA(0.005): PGA-anchored fallback cannot extrapolate below...
 
     It is also possible to instantiate a table from a tuple of dictionaries,
     corresponding to the SA coefficients and non-SA coefficients:
@@ -252,6 +252,34 @@ class CoeffsTable(object):
         return [(above[n] - below[n]) * ratio + below[n]
                 for n in self.rb.names]
 
+    def _pga_interp_fallback(self, imt, min_above):
+        """
+        Interpolate SA below the smallest tabulated SA row, anchored on PGA.
+        """
+        pga_anchor = 0.01  # PGA ~= SA(0.01) per Bommer et al. 2011
+        min_sa_gate = 0.05  # Smallest tabulated SA must be <= this to anchor
+        if PGA() not in self._coeffs:
+            raise ValueError(
+                "Cannot interpolate %s: PGA-anchored fallback requires "
+                "a PGA row in the coefficient table, but none is "
+                "present" % (imt,))
+        if imt.period < pga_anchor:
+            raise ValueError(
+                "Cannot interpolate %s: PGA-anchored fallback cannot "
+                "extrapolate below the PGA anchor at %s s" %
+                (imt, pga_anchor))
+        if min_above.period > min_sa_gate:
+            raise ValueError(
+                "Cannot interpolate %s: PGA-anchored fallback requires "
+                "the smallest tabulated SA period to be <= %s s, but "
+                "this GMM's smallest SA period is %s s" %
+                (imt, min_sa_gate, min_above.period))
+        lst = self._interp_row(
+            imt.period, pga_anchor, min_above.period,
+            self._coeffs[PGA()], self.sa_coeffs[min_above])
+        self._coeffs[imt] = c = self.rb(*lst)
+        return c
+
     def __getitem__(self, imt):
         """
         Return a dictionary of coefficients corresponding to ``imt``
@@ -282,33 +310,14 @@ class CoeffsTable(object):
                     if (max_below is None or
                            unscaled_imt.period > max_below.period):
                         max_below = unscaled_imt
-            # Fallback for SA periods below the smallest tabulated SA row:
-            # treat PGA as SA at pga_anchor and interpolate in log-period
-            # (or linear-period if logratio is False) between PGA and min_above
-            pga_anchor = 0.01  # NOTE: PGA treated as SA at this period - this is
-                               # supported by Bommer et al. 2011 paper on approx
-                               # equivalencies between PGA and SA(0.01) overall
-            min_sa_gate = 0.05 # NOTE: Min period in coeff tab must be <= this
+            # PGA to lowest period SA interpolation
             if (imt.string.startswith('SA(')
-                    and max_below is None        # Target is below smallest SA
-                    and min_above is not None    # Have an SA anchor above
-                    and PGA() in self._coeffs    # Table has PGA (anchor row)
-                    and imt.period >= pga_anchor): # Target at/above anchor
-                if min_above.period > min_sa_gate:
-                    raise ValueError(
-                        "Cannot interpolate %s: PGA-anchored fallback "
-                        "requires the smallest tabulated SA period to be "
-                        "<= %s s, but this GMM's smallest SA period is "
-                        "%s s" % (imt, min_sa_gate, min_above.period))
-                lst = self._interp_row(
-                    imt.period, pga_anchor, min_above.period,
-                    self._coeffs[PGA()], self.sa_coeffs[min_above])
-                self._coeffs[imt] = c = self.rb(*lst)
-                return c
+                    and max_below is None
+                    and min_above is not None):
+                return self._pga_interp_fallback(imt, min_above)
             if max_below is None or min_above is None:
                 raise KeyError(imt)
-            # Standard SA-to-SA interpolation: target period sits between
-            # two tabulated SA rows
+            # Standard SA-to-SA interpolation
             lst = self._interp_row(
                 imt.period, max_below.period, min_above.period,
                 self.sa_coeffs[max_below], self.sa_coeffs[min_above])
