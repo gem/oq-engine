@@ -293,8 +293,13 @@ class CoeffsTable(object):
                     and max_below is None        # Target is below smallest SA
                     and min_above is not None    # Have an SA anchor above
                     and PGA() in self._coeffs    # Table has PGA (anchor row)
-                    and imt.period >= pga_anchor # Target at/above anchor
-                    and min_above.period <= min_sa_gate): # Smallest SA <= gate
+                    and imt.period >= pga_anchor): # Target at/above anchor
+                if min_above.period > min_sa_gate:
+                    raise ValueError(
+                        "Cannot interpolate %s: PGA-anchored fallback "
+                        "requires the smallest tabulated SA period to be "
+                        "<= %s s, but this GMM's smallest SA period is "
+                        "%s s" % (imt, min_sa_gate, min_above.period))
                 lst = self._interp_row(
                     imt.period, pga_anchor, min_above.period,
                     self._coeffs[PGA()], self.sa_coeffs[min_above])

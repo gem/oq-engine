@@ -112,11 +112,17 @@ a3 = 0.9
             list(table[SA(t_tar)]), pga + ratio * (row_min - pga))
 
         # TEST 2: Check a table with smallest SA period above 0.05 s does not
-        # interpolate. The min SA here is 0.1 s, so SA(0.05) raises an error
+        # interpolate. The min SA here is 0.1 s, so SA(0.05) raises a ValueError
+        # telling the user the gap is too wide for "safe" interpolation
         wide_gap = CoeffsTable(sa_damping=5, table="""
             imt   a
             pga   1
             0.1   10
             1.0   3""")
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError) as cm:
             wide_gap[SA(0.05)]
+        self.assertEqual(
+            str(cm.exception),
+            "Cannot interpolate SA(0.05): PGA-anchored fallback requires "
+            "the smallest tabulated SA period to be <= 0.05 s, but this "
+            "GMM's smallest SA period is 0.1 s")
