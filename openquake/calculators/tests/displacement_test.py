@@ -40,6 +40,10 @@ class DisplacementTestCase(CalculatorTestCase):
         self.assertTrue((stats > 0).all())
         # per-source mean rates are stored, since disagg_by_src is required
         self.assertIn('mean_rates_by_src', dstore)
+        # only the surface-reaching ruptures are used: 10 of 15 (the engine
+        # source has 5 buried down-dip floats, dropped by the surface-rupture
+        # depth tolerance), matching oq-pfdha
+        self.assertEqual(int(dstore['source_info'][0]['num_ctxs']), 10)
         # the mean curve can be exported as CSV
         [fname] = export(('hcurves/mean', 'csv'), dstore)
         self.assertTrue(os.path.exists(fname))

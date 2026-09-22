@@ -788,6 +788,13 @@ r_sigma_km:
   Example: *r_sigma_km = 0.5*.
   Default: 0.0
 
+surface_rupture_depth_tolerance_km:
+  PFD only: a rupture contributes surface-displacement hazard only if
+  its top edge reaches within this depth (km); deeper (buried) ruptures
+  are skipped.
+  Example: *surface_rupture_depth_tolerance_km = 0.01*.
+  Default: 0.01
+
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -1277,6 +1284,8 @@ class OqParam(valid.ParamSet):
     rlz_index = valid.Param(valid.positiveints, None)
     r_sigma_km = valid.Param(valid.positivefloat, 0.0)
     r_threshold_km = valid.Param(valid.positivefloat, 0.1)
+    surface_rupture_depth_tolerance_km = valid.Param(
+        valid.positivefloat, 0.01)
     rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})

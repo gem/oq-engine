@@ -119,11 +119,15 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
     source_data = {k: [] for k in (
         'src_id', 'grp_id', 'nctxs', 'nrupts', 'weight', 'ctimes', 'taskno')}
     task_no = getattr(monitor, 'task_no', 0)
+    tolerance = oq.surface_rupture_depth_tolerance_km
     for src in srcs:
         t0 = time.time()
         basename = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
-        ctxs = list(cmaker.get_ctxs(src, sitecol))
+        # a rupture contributes only if its top edge reaches the surface
+        # (surface_rupture_depth_tolerance_km), like oq-pfdha
+        ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
+                if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
         if ctxs:
             src_rate = src_rates.setdefault(
                 basename, numpy.zeros((N, M, L1), F64))
