@@ -21,6 +21,7 @@ import os
 import numpy
 
 from openquake.calculators.export import export
+from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.pfd import case_1, case_2, case_3
 
@@ -81,11 +82,19 @@ class DisplacementTestCase(CalculatorTestCase):
         cmakers = self.calc.csm.get_cmakers()
         active = [len(next(iter(cm.gsims.values()))) for cm in cmakers]
         self.assertEqual(active, [1, 1])  # only 1 of the 2 realizations
-        hcurves = dstore['hcurves-rlzs'][:]
-        self.assertEqual(hcurves.shape, (1, 2, 1, 5))
+        # with R > 1 and individual_rlzs=false only the stats are stored;
+        # the individual curves are recomputed from the sparse _rates table
+        self.assertIn('_rates', dstore)
+        self.assertNotIn('hcurves-rlzs', dstore)
+        self.assertIn('hcurves-stats', dstore)
+        R = 2
+        sids = self.calc.sitecol.sids
+        getter = MapGetter([dstore.filename], 0,
+                           [numpy.uint32([r]) for r in range(R)], sids, R,
+                           self.calc.oqparam)
+        hcurve = getter.get_hcurve(sids[0])  # (L, R) probabilities
         # the two sources have different aValues, so the curves differ
-        self.assertFalse(numpy.allclose(hcurves[0, 0], hcurves[0, 1]))
-        self.assertIn('mean_rates_by_src', dstore)
+        self.assertFalse(numpy.allclose(hcurve[:, 0], hcurve[:, 1]))
         # both sources are exported, each scaled by its realization weight
         [fname] = export(('mean_rates_by_src', 'csv'), dstore)
         with open(fname) as f:

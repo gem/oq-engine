@@ -22,42 +22,56 @@ Probabilistic Fault Displacement (PFD) calculator (``displacement`` mode).
 Unlike the classical calculator there are no GSIMs: the ground-shaking
 machinery is used only to build the rupture/site contexts (through the
 no-op :class:`openquake.pfd.gsim.PFDGMPE`), while the annual exceedance
-rates come from the PFD kernel
+rates come from the FDHA kernel
 :func:`openquake.hazardlib.calc.displacement.calc_rates`.  The PFD logic
-tree is the ``extra_lt`` of the full logic tree, so ``hcurves-rlzs`` has
-the full cardinality ``R = sm_rlzs * gsim_paths * pfd_paths``.
+tree is the ``extra_lt`` of the full logic tree, so the realizations are
+``R = sm_rlzs * gsim_paths * pfd_paths``.
 
-The calculation is parallelized with :class:`openquake.baselib.parallel.
-Starmap` over blocks of sources: each task returns the ``(N, R, M, L1)``
-rates of its block plus the per-source mean rates used by
-``mean_rates_by_src``.
+As in the classical calculator the rates are stored sparsely in the
+``_rates`` table (``sid, lid, gid, rate``) and the hazard curves are
+recomputed from them with
+:class:`openquake.calculators.getters.MapGetter`; here the ``gid`` is the
+full realization ordinal (``trt_rlzs = [[r] for r in range(R)]``), since
+the varying dimension is the extra (PFD) realization, not a GSIM one.
+``hcurves-rlzs`` is stored only when ``R == 1`` or ``individual_rlzs``.
 """
 import logging
 import operator
+import time
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import humansize, block_splitter
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, source_reader
 from openquake.hazardlib.calc.displacement import (
     calc_rates, DEFAULT_RED_CFG)
-from openquake.hazardlib.calc.mean_rates import to_probs
-from openquake.hazardlib.map_array import compute_hazard_maps
+from openquake.hazardlib.map_array import (
+    MapArray, compute_hazard_maps, rates_dt)
 from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
 from openquake.calculators import base
+from openquake.calculators.getters import MapGetter, build_stat_curve, slice_dt
 
 F32 = numpy.float32
 F64 = numpy.float64
+U32 = numpy.uint32
+GZIP = 'gzip'
 get_weight = operator.attrgetter('weight')
+
+
+class _WGet(object):
+    """Minimal IMTWeigher-like object for build_stat_curve"""
+    def __init__(self, weights):
+        self.weights = weights
 
 
 def get_adapters(selections, r_sigma):
     """
     Build the PFD model adapters for one realization.
 
-    The adapters are needed because the ~60 ported PFD models do not
+    The adapters are needed because the ~60 ported FDHA models do not
     share a calling convention: ``get_prob`` takes different arguments
     depending on the model (``d``/``mag``/``r``/``rx``/``X_L_ratio``/
     ``pixel_size``/``version``/``percentile``/``vs30``/...), sometimes
@@ -66,8 +80,9 @@ def get_adapters(selections, r_sigma):
     :class:`~openquake.pfd.adapter.PFDModelAdapter` hides all of this
     behind the fixed ``compute_primary_sr``/``compute_primary_fd``/
     ``compute_secondary_sr``/``compute_secondary_fd`` interface used by
-    the rate kernel, so the models can stay paper-faithful.  It would be
-    nice if the models exposed a common vectorized ``compute(ctx)`` interface.
+    the rate kernel, so the models can stay paper-faithful.  It is
+    scheduled for removal once the models expose a common vectorized
+    ``compute(ctx)`` interface (EngineIntegration.md sections 4.2 and 8).
 
     :param selections: slot -> PfdModelChoice for one realization
     :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
@@ -84,44 +99,58 @@ def get_adapters(selections, r_sigma):
     return adapters, r_sigma
 
 
-def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, N, R, monitor):
+def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
     """
     Compute the displacement rates of a block of sources for the active
     realizations of the source group.
 
     :param rlzs: the :class:`~openquake.hazardlib.logictree.LtRealization`
         objects active for the group
-    :returns: ``(rates, src_rates)`` where ``rates`` has shape
-        ``(N, R, M, L1)`` and ``src_rates`` maps source basename to the
-        mean over the realizations, shape ``(N, M, L1)``
+    :returns: ``(rmap, src_rates)`` where ``rmap`` is a rates
+        :class:`~openquake.hazardlib.map_array.MapArray` with ``gids`` set
+        to the realization ordinals, and ``src_rates`` maps source
+        basename to the mean over the realizations, shape ``(N, M, L1)``
     """
     cmaker.init_monitoring(monitor)
     oq = cmaker.oq
+    N = len(sitecol)
     imts = list(cmaker.imtls)
     imls = [cmaker.imtls[imt] for imt in imts]
     M, L1 = len(imts), cmaker.imtls.size // len(imts)
-    rates = numpy.zeros((N, R, M, L1), F32)
+    L = M * L1
+    gids = U32([rlz.ordinal for rlz in rlzs])
+    rmap = MapArray(sitecol.sids, L, len(gids), rates=True).fill(0.)
+    rmap.gids = gids
     src_rates = {}
+    source_data = {k: [] for k in (
+        'src_id', 'grp_id', 'nctxs', 'nrupts', 'weight', 'ctimes', 'taskno')}
+    task_no = getattr(monitor, 'task_no', 0)
     for src in srcs:
+        t0 = time.time()
         basename = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
         ctxs = list(cmaker.get_ctxs(src, sitecol))
-        if not ctxs:
-            continue
-        src_rate = src_rates.setdefault(
-            basename, numpy.zeros((N, M, L1), F64))
-        for rlz in rlzs:
-            rlz_id = rlz.ordinal
-            selections = pfd_lt.selections_for(
-                rlz.extra_rlz.lt_path, basename, style)
-            adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
-            for imt_idx, levels in enumerate(imls):
-                rate, _principal, _distributed = calc_rates(
-                    ctxs, N, adapters, levels, oq.r_threshold_km, r_sigma,
-                    DEFAULT_RED_CFG)
-                rates[:, rlz_id, imt_idx, :] += rate
-                src_rate[:, imt_idx, :] += rlz.weight[-1] * rate
-    return rates, src_rates
+        if ctxs:
+            src_rate = src_rates.setdefault(
+                basename, numpy.zeros((N, M, L1), F64))
+            for k, rlz in enumerate(rlzs):
+                selections = pfd_lt.selections_for(
+                    rlz.extra_rlz.lt_path, basename, style)
+                adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
+                for m, levels in enumerate(imls):
+                    rate, _principal, _distributed = calc_rates(
+                        ctxs, N, adapters, levels, oq.r_threshold_km,
+                        r_sigma, DEFAULT_RED_CFG)
+                    rmap.array[:, m*L1:(m+1)*L1, k] += rate
+                    src_rate[:, m, :] += rlz.weight[-1] * rate
+        source_data['src_id'].append(basename)
+        source_data['grp_id'].append(src.grp_id)
+        source_data['nctxs'].append(sum(len(ctx) for ctx in ctxs))
+        source_data['nrupts'].append(src.num_ruptures)
+        source_data['weight'].append(src.weight)
+        source_data['ctimes'].append(time.time() - t0)
+        source_data['taskno'].append(task_no)
+    return rmap, src_rates, source_data
 
 
 @base.calculators.add('displacement')
@@ -129,31 +158,37 @@ class DisplacementCalculator(base.HazardCalculator):
     """
     Calculator for the ``displacement`` calculation mode.
     """
-    def pre_execute(self):
-        super().pre_execute()
-        self.store_rlz_info({})
-
     def agg(self, acc, result):
         if result is None:
             raise MemoryError('You ran out of memory!')
-        rates, src_rates = result
-        acc[0] += rates
+        from openquake.calculators.classical import _store
+        rmap, src_rates, source_data = result
+        rates = rmap.to_array(rmap.gids)
+        if len(rates):
+            _store(rates, 1, self.datastore.hdf5)
         for key, value in src_rates.items():
-            if key in acc[1]:
-                acc[1][key] += value
+            if key in acc['src_rates']:
+                acc['src_rates'][key] += value
             else:
-                acc[1][key] = value
+                acc['src_rates'][key] = value
+        for key, values in source_data.items():
+            acc['source_data'].setdefault(key, []).extend(values)
         return acc
 
     def execute(self):
         oq = self.oqparam
         N = len(self.sitecol)
-        R = self.full_lt.get_num_paths()
-        M = len(oq.imtls)
-        L1 = oq.imtls.size // M
+        self.store_rlz_info({})
+        # create source_info before the tasks, so store_source_info will
+        # update the actual number of contexts (not the estimated one)
+        source_reader.create_source_info(self.csm, self.datastore.hdf5)
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()
+        # the sparse table from which the curves are recomputed
+        self.datastore.create_df(
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
+        self.datastore.create_dset('_rates/slice_by_idx', slice_dt)
         allargs = []
         for grp_id, src_group in enumerate(self.csm.src_groups):
             cmaker = cmakers[grp_id]
@@ -162,18 +197,20 @@ class DisplacementCalculator(base.HazardCalculator):
             sources = list(src_group)
             maxw = sum(s.weight for s in sources) / (
                 oq.concurrent_tasks or 1)
-            for block in block_splitter(sources, maxw, get_weight, sort=True):
+            for block in block_splitter(
+                    sources, maxw, get_weight, sort=True):
                 allargs.append((
-                    block, cmaker, self.sitecol, pfd_lt, grp_rlzs, N, R))
+                    block, cmaker, self.sitecol, pfd_lt, grp_rlzs))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             displacement, allargs, h5=self.datastore.hdf5)
-        zeros = numpy.zeros((N, R, M, L1), F32)
-        rates, src_rates = smap.reduce(self.agg, [zeros, {}])
-        self.src_rates = src_rates
-        self.basenames = self.csm.get_basenames()
-        return rates
+        acc = smap.reduce(self.agg, {'src_rates': {}, 'source_data': {}})
+        self.store_source_info(acc['source_data'])
+        df = pandas.DataFrame(acc['source_data'])
+        df['impact'] = df.nctxs / N
+        self.datastore.create_df('source_data', df)
+        return acc['src_rates']
 
     def _store_mean_rates_by_src(self):
         M = len(self.oqparam.imtls)
@@ -187,54 +224,64 @@ class DisplacementCalculator(base.HazardCalculator):
                 s, numpy.zeros((len(self.sitecol), M, L1), F64))
         self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
-    def post_execute(self, rates):
+    def post_execute(self, src_rates):
         oq = self.oqparam
-        N, R, M, L1 = rates.shape
-        itime = oq.investigation_time
+        self.src_rates = src_rates
+        self.basenames = self.csm.get_basenames()
+        N = len(self.sitecol)
+        R = self.full_lt.get_num_paths()
         imts = list(oq.imtls)
-        # individual hazard curves (converted to probabilities)
-        self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-        self.datastore.set_shape_descr(
-            'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
-        hcurves = to_probs(rates, itime)
-        self.datastore['hcurves-rlzs'][:] = hcurves
-        # statistics computed on the rates, like the use_rates=True path
+        # create the hcurves-*/hmaps-* datasets (shared with classical)
+        S, M, P, L1 = base.create_hcurves_maps(
+            self.datastore, oq, N, R)
+        store_rlzs = R == 1 or oq.individual_rlzs
+        sids = self.sitecol.sids
+        # the varying dimension is the extra (PFD) realization, so gid=rlz
+        trt_rlzs = [U32([r]) for r in range(R)]
+        # Unlike the classical calculator, which splits the sites in
+        # chunks via get_num_chunks/MapGetter tiles, here we read the whole
+        # _rates table with a single MapGetter (chunk 0).  This is simpler
+        # and fine for the current use cases; for very large N x R it would
+        # materialize the full (N, L, R) array in memory.
+        getter = MapGetter([self.datastore.filename], 0, trt_rlzs, sids, R, oq)
+        wget = _WGet(self.datastore['weights'][:].reshape(-1, 1))
         hstats = oq.hazard_stats()
-        S = len(hstats)
-        hcurves_stats = numpy.zeros((N, S, M, L1), F32)
-        weights = numpy.array(
-            [rlz.weight[-1] for rlz in self.full_lt.get_realizations()], F64)
-        for s, func in enumerate(hstats.values()):
-            for m in range(M):
-                stat_rates = func(
-                    rates[:, :, m, :].transpose(1, 0, 2), weights)
-                hcurves_stats[:, s, m, :] = to_probs(stat_rates, itime)
-        self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-        self.datastore.set_shape_descr(
-            'hcurves-stats', site_id=N, stat=list(hstats),
-            imt=imts, lvl=numpy.arange(L1))
-        self.datastore['hcurves-stats'][:] = hcurves_stats
-        if oq.poes:
-            P = len(oq.poes)
-            hmaps_rlzs = numpy.zeros((N, R, M, P), F32)
-            for r in range(R):
-                for m, imt in enumerate(imts):
-                    hmaps_rlzs[:, r, m, :] = compute_hazard_maps(
-                        hcurves[:, r, m, :], oq.imtls[imt], oq.poes)
-            self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-            self.datastore.set_shape_descr(
-                'hmaps-rlzs', site_id=N, rlz_id=R, imt=imts, poe=oq.poes)
-            self.datastore['hmaps-rlzs'][:] = hmaps_rlzs
-            hmaps_stats = numpy.zeros((N, S, M, P), F32)
-            for s in range(S):
-                for m, imt in enumerate(imts):
-                    hmaps_stats[:, s, m, :] = compute_hazard_maps(
-                        hcurves_stats[:, s, m, :], oq.imtls[imt], oq.poes)
-            self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-            self.datastore.set_shape_descr(
-                'hmaps-stats', site_id=N, stat=list(hstats),
-                imt=imts, poe=oq.poes)
-            self.datastore['hmaps-stats'][:] = hmaps_stats
+        if store_rlzs:
+            hcurves_rlzs = numpy.zeros((N, R, M, L1), F32)
+            if P:
+                hmaps_rlzs = numpy.zeros((N, R, M, P), F32)
+        if S:
+            hcurves_stats = numpy.zeros((N, S, M, L1), F32)
+            if P:
+                hmaps_stats = numpy.zeros((N, S, M, P), F32)
+        for idx, sid in enumerate(sids):
+            hcurve = getter.get_hcurve(sid)  # shape (L, R), probabilities
+            if store_rlzs:
+                for r in range(R):
+                    hcurves_rlzs[idx, r] = hcurve[:, r].reshape(M, L1)
+                    if P:
+                        for m, imt in enumerate(imts):
+                            slc = oq.imtls(imt)
+                            hmaps_rlzs[idx, r, m] = compute_hazard_maps(
+                                hcurve[slc, r].reshape(1, L1),
+                                oq.imtls[imt], oq.poes)
+            for s, stat in enumerate(hstats.values()):
+                arr = build_stat_curve(
+                    hcurve, oq.imtls, stat, wget, use_rates=True)
+                hcurves_stats[idx, s] = arr.reshape(M, L1)
+                if P:
+                    for m, imt in enumerate(imts):
+                        slc = oq.imtls(imt)
+                        hmaps_stats[idx, s, m] = compute_hazard_maps(
+                            arr[slc].reshape(1, L1), oq.imtls[imt], oq.poes)
+        if store_rlzs:
+            self.datastore['hcurves-rlzs'][:] = hcurves_rlzs
+            if P:
+                self.datastore['hmaps-rlzs'][:] = hmaps_rlzs
+        if S:
+            self.datastore['hcurves-stats'][:] = hcurves_stats
+            if P:
+                self.datastore['hmaps-stats'][:] = hmaps_stats
         self._store_mean_rates_by_src()
         logging.info('Stored %s of hazard curves',
-                     humansize(hcurves_stats.nbytes))
+                     humansize(self.datastore['hcurves-stats'].nbytes))

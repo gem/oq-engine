@@ -165,6 +165,44 @@ def get_weights(oq, dstore):
     return weights
 
 
+def create_hcurves_maps(dstore, oq, N, R):
+    """
+    Create the ``hcurves-*`` and ``hmaps-*`` datasets shared by the
+    classical and displacement calculators.
+
+    :returns: ``(S, M, P, L1)``
+    """
+    hstats = oq.hazard_stats()
+    P = len(oq.poes)
+    M = len(oq.imtls)
+    imts = list(oq.imtls)
+    if oq.soil_intensities is not None:
+        L = M * len(oq.soil_intensities)
+    else:
+        L = oq.imtls.size
+    L1 = L // M
+    S = len(hstats)
+    if R == 1 or oq.individual_rlzs:
+        dstore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
+        dstore.set_shape_descr(
+            'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
+        if P:
+            dstore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+            dstore.set_shape_descr(
+                'hmaps-rlzs', site_id=N, rlz_id=R, imt=imts, poe=oq.poes)
+    if hstats:
+        dstore.create_dset('hcurves-stats', F32, (N, S, M, L1))
+        dstore.set_shape_descr(
+            'hcurves-stats', site_id=N, stat=list(hstats),
+            imt=imts, lvl=numpy.arange(L1))
+        if P:
+            dstore.create_dset('hmaps-stats', F32, (N, S, M, P))
+            dstore.set_shape_descr(
+                'hmaps-stats', site_id=N, stat=list(hstats),
+                imt=imts, poe=oq.poes)
+    return S, M, P, L1
+
+
 class InvalidCalculationID(Exception):
     """
     Raised when running a post-calculation on top of an incompatible
