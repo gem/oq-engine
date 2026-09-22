@@ -296,9 +296,12 @@ def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
             n = len(dstore['assets/' + name])
             assert n == num_assets, (name, n, num_assets)
 
-        # check readable
-        exp = Exposure.read_around(dstore.filename, hexes=[b"836606"])
-        assert len(exp.assets), exp
+        # check readable using a hex6 that is present after sampling
+        slices = dstore['assets/slice_by_hex6']
+        if len(slices):
+            hex6 = slices[0]['hex6']
+            exp = Exposure.read_around(dstore.filename, hexes=[hex6])
+            assert len(exp.assets), exp
 
 
 def read_world_tmap(grm_dir):
