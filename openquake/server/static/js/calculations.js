@@ -15,6 +15,9 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 var refresh_calcs;
+var calc_page = 0;
+var calc_page_size = 20;
+var calc_total = 0;
 
 var Calculation = Backbone.Model.extend({
     defaults: {
@@ -59,7 +62,9 @@ var CalculationTable = Backbone.View.extend({
         "click .btn-traceback": "show_traceback",
         "click .btn-log": "show_log",
         "click .btn-file": "on_run_risk_clicked",
-        "change .btn-file input": "on_run_risk_queued"
+        "change .btn-file input": "on_run_risk_queued",
+        "click .calc-page-prev": "previous_page",
+        "click .calc-page-next": "next_page"
     },
 
     /* When an input dialog is opened, it is very important to not re-render the table */
@@ -131,7 +136,7 @@ var CalculationTable = Backbone.View.extend({
                                     if (action == 'abort') {
                                         view.calculations.remove([view.calculations.get(calc_id)]);
                                     }
-                                    calculations.fetch({reset: true});
+                                    fetch_calc_page();
                                 }
                             }});
     },
@@ -297,11 +302,41 @@ var CalculationTable = Backbone.View.extend({
         $('#diaerror_scroll_enabled_box').hide();
     },
 
+    previous_page: function (e) {
+        e.preventDefault();
+        if (calc_page > 0) {
+            calc_page--;
+            fetch_calc_page();
+        }
+    },
+
+    next_page: function (e) {
+        e.preventDefault();
+        if ((calc_page + 1) * calc_page_size < calc_total) {
+            calc_page++;
+            fetch_calc_page();
+        }
+    },
+
+    render_pagination: function () {
+        var pages = Math.max(1, Math.ceil(calc_total / calc_page_size));
+        var html = '<div class="pagination">';
+        html += '<button class="btn calc-page-prev" ';
+        html += calc_page == 0 ? 'disabled>Previous</button>' : '>Previous</button>';
+        html += ' <span>Page ' + (calc_page + 1) + ' of ' + pages + '</span> ';
+        html += '<button class="btn calc-page-next" ';
+        html += (calc_page + 1) * calc_page_size >= calc_total ?
+            'disabled>Next</button>' : '>Next</button>';
+        html += '</div>';
+        this.$el.append(html);
+    },
+
     render: function () {
         if (!this.can_be_rendered) return;
         this.$el.html(_.template($('#calculation-table-template').html(), {
             calculations: this.calculations.models
         }));
+        this.render_pagination();
     }
 });
 var calculation_table = new CalculationTable({ calculations: calculations });
@@ -312,7 +347,7 @@ $(document).on('errorDialog:hidden', function () {
 function setTimer() {
     refresh_calcs = setInterval(function () {
         refresh_tag_selector();
-        calculations.fetch({reset: true})
+        fetch_calc_page();
     }, 3000);
 }
 
@@ -320,21 +355,52 @@ function closeTimer() {
     refresh_calcs = clearInterval(refresh_calcs);
 }
 
-function set_calc_list_params() {
-    list_preferred_only = $('input#list_preferred_only').is(':checked');
-    filter_by_tag = $('select#tag_selector').val();
-    const base_url = gem_oq_server_url + "/v1/calc/list";
-    let params = {};
-    if (list_preferred_only) {
-        params['preferred_only'] = '1';
+function get_calc_list_params() {
+    var params = {
+        limit: calc_page_size,
+        offset: calc_page * calc_page_size,
+        relevant_only: '1'
+    };
+    if ($('input#list_preferred_only').is(':checked')) {
+        params.preferred_only = '1';
     }
+    var filter_by_tag = $('select#tag_selector').val();
     if (filter_by_tag) {
-        params['filter_by_tag'] = filter_by_tag;
+        params.filter_by_tag = filter_by_tag;
     }
-    const query = $.param(params);
-    const full_url = query ? `${base_url}?${query}` : base_url;
-    calculations.url = full_url;
+    return params;
+}
+
+function fetch_calc_count() {
+    var params = get_calc_list_params();
+    delete params.limit;
+    delete params.offset;
+    params.count_only = '1';
+    $.getJSON(gem_oq_server_url + "/v1/calc/list/count?" +
+              $.param(params), function (count) {
+        calc_total = count;
+        var last_page = Math.max(0, Math.ceil(
+            calc_total / calc_page_size) - 1);
+        if (calc_page > last_page) {
+            calc_page = last_page;
+            fetch_calc_page();
+        } else {
+            calculation_table.render();
+        }
+    });
+}
+
+function fetch_calc_page() {
+    var params = get_calc_list_params();
+    calculations.url = gem_oq_server_url + "/v1/calc/list?" +
+        $.param(params);
     calculations.fetch({reset: true});
+    fetch_calc_count();
+}
+
+function set_calc_list_params() {
+    calc_page = 0;
+    fetch_calc_page();
 }
 
 function refresh_tag_selector() {

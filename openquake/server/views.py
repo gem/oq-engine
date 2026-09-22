@@ -632,6 +632,21 @@ def calc_list(request, id=None):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def calc_count(request):
+    """Return the number of calculations matching the requested filters."""
+    params = dict(request.GET.items())
+    params['count_only'] = '1'
+    count = logs.dbcmd(
+        'get_calcs', params, utils.get_valid_users(request),
+        not utils.is_superuser(request), None)
+    # The count query is selected by this private parameter so the list
+    # endpoint remains backwards compatible and continues returning an array.
+    return HttpResponse(
+        content=json.dumps(count), content_type=JSON)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
