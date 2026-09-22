@@ -25,7 +25,9 @@ Tests for the PFD distance metrics added to hazardlib:
 
 Values are pinned against the oq-pfdha reference calculator
 (``openquake.fdha.calc.utils.rupture_distance``); the two implementations
-agree to sub-metre level on the shared Norcia trace.
+agree to sub-metre level on the shared Norcia trace. The expected values
+are hardcoded so that the engine test suite does not import
+``openquake.fdha``, which lives in a separate repository.
 """
 import unittest
 import numpy
@@ -122,22 +124,22 @@ class MultiSurfaceKiteTestCase(unittest.TestCase):
         return KiteSurface.from_profiles(prfs, 1., 1.)
 
     def test_segments_distances(self):
-        from openquake.fdha.calc.utils.rupture_distance import (
-            RuptureDistanceCalculator)
+        # pinned from the oq-pfdha RuptureDistanceCalculator
+        # (reference_line_method='segments')
         msrf = MultiSurface([self._kite(0.0, 0.0), self._kite(0.5, 0.1)])
         mesh = Mesh(numpy.array([0.1, 0.4, 0.65, 0.9, 0.8]),
                     numpy.array([0.0, 0.05, 0.1, 0.0, 0.1]))
-        calc = RuptureDistanceCalculator(
-            mesh, msrf, reference_line_method='segments')
         # r is the min distance to the nearest section top trace
         numpy.testing.assert_allclose(
             msrf.get_rtor(mesh),
-            calc.calculate_site_to_trace_distances(), atol=1e-3)
+            [1.8e-15, 12.43195401, 3.77e-05, 15.98056186, 0.35838542],
+            atol=1e-3)
         # x/L and L use the raw segmentation (no gap bridging)
         x_l, l_km = msrf.get_x_l_ratio(mesh)
-        ref_xl, ref_l = calc.calculate_x_l_ratios()
-        numpy.testing.assert_allclose(x_l, ref_xl, atol=1e-6)
-        self.assertAlmostEqual(l_km, ref_l, places=3)
+        numpy.testing.assert_allclose(
+            x_l, [0.12550563, 0.50202274, 0.81578696, 1.0, 1.0],
+            atol=1e-6)
+        self.assertAlmostEqual(l_km, 88.59742727, places=5)
         self.assertAlmostEqual(msrf.get_tor_length(), l_km, places=6)
 
     def test_dispatch_metrics(self):
