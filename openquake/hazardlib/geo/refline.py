@@ -54,6 +54,10 @@ TP_K = 10
 COST_FAULT = 1.0
 COST_BACKGROUND = 100.0
 PIXEL_SIZE_M = 100.0
+# Hard upper bound for one reference-line raster/path calculation. The graph
+# can require far more memory than the raster itself, so this is checked
+# before either the raster or the sparse graph is allowed to grow unchecked.
+REFERENCE_LINE_MEMORY_BUDGET = 1024**3
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +375,15 @@ def route_through_grid(cost, start_rc, stop_rc):
         if not (0 <= r < nr and 0 <= c < nc):
             raise ValueError(f'{name} cell {(r, c)} outside {cost.shape} grid')
     n = nr * nc
+    # The graph construction below temporarily keeps the raster, edge lists,
+    # COO/CSR storage, and Dijkstra work arrays alive at the same time. This
+    # conservative estimate keeps the total calculation within the hard 1 GB
+    # reference-line budget rather than checking only graph.nbytes.
+    estimated = n * 192
+    if estimated > REFERENCE_LINE_MEMORY_BUDGET:
+        raise MemoryError(
+            'reference-line grid needs about %.1f GiB; the hard limit is 1 GiB'
+            % (estimated / 2**30))
     passable = np.isfinite(cost)
     idx = np.arange(n).reshape(nr, nc)
     rows_l, cols_l, wts_l = [], [], []
@@ -449,6 +462,11 @@ def rasterize_traces_xy(traces_xy, pixel_size, start_xy, stop_xy,
     top = max(allv[:, 1].max(), start_xy[1], stop_xy[1]) + pixel_size
     nc = int((right - left) / pixel_size) + 1
     nr = int((top - bot) / pixel_size) + 1
+    raster_bytes = nr * nc * np.dtype(np.float32).itemsize
+    if raster_bytes > REFERENCE_LINE_MEMORY_BUDGET:
+        raise MemoryError(
+            'reference-line raster needs %.1f GiB; the hard limit is 1 GiB'
+            % (raster_bytes / 2**30))
     gt = GeoTransform(left, top, pixel_size, -pixel_size)
     # Costs are just small scalar weights; float32 halves raster memory.
     cost = np.full((nr, nc), cost_background, dtype=np.float32)
