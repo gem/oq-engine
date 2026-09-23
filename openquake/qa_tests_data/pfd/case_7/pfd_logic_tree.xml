@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_fdha_le_teil_principal_L23">
+  <logicTreeBranchSet branchSetID="bs_1" uncertaintyType="fdhaPrimarySRModel">
+    <logicTreeBranch branchID="B1_PSR">
+      <!-- NOT a published value. TECDOC-2092 only says the L23 team
+           "used the case-specific surface rupture probability" without
+           quoting it; 0.65 is back-calculated from their published
+           Le Teil curve (README.md, "L23" row). The Moss et al. (2013)
+           10%-at-Mw5.5 quote in the paper belongs to the M11 chain,
+           not this one. -->
+      <uncertaintyModel>
+        [FixedPrimarySR]
+        value = 0.65
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_2" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PSR">
+    <logicTreeBranch branchID="B2_PFD">
+      <uncertaintyModel>
+        [Lavrentiadis2023PrimaryFD_principal]
+        include_zero_slip = true
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_3" uncertaintyType="fdhaSecondarySRModel" applyToBranches="B2_PFD">
+    <logicTreeBranch branchID="B3_SSR">
+      <uncertaintyModel>
+        [FixedSecondarySR]
+        value = 0.0
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_4" uncertaintyType="fdhaSecondaryFDModel" applyToBranches="B3_SSR">
+    <logicTreeBranch branchID="B4_SFD">
+      <uncertaintyModel>
+        [Youngs2003SecondaryFD]
+        style = "all"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  </logicTree>
+</nrml>

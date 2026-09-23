@@ -61,7 +61,7 @@ GZIP = 'gzip'
 get_weight = operator.attrgetter('weight')
 
 
-def get_adapters(selections, r_sigma):
+def get_adapters(selections, r_sigma, near_far_threshold_km=0.2):
     """
     Build the PFD model adapters for one realization.
 
@@ -80,6 +80,7 @@ def get_adapters(selections, r_sigma):
 
     :param selections: slot -> PfdModelChoice for one realization
     :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
+    :param near_far_threshold_km: the Visini near/far regime threshold
     :returns: ``(adapters_by_model_type, r_sigma_km)``
     """
     adapters = {}
@@ -90,6 +91,24 @@ def get_adapters(selections, r_sigma):
         cls = get_available(slot)[choice.class_name]
         adapter = PFDModelAdapter(cls(**choice.params), choice.params)
         adapters[adapter.model_type] = adapter
+    # the Visini models need the combined secondary pipeline instead of the
+    # generic P(SR) x P(FD) product (they sum the A/B/C combinations)
+    sr = adapters.get('secondary_sr')
+    fd = adapters.get('secondary_fd')
+    pipeline = 'generic'
+    for adapter in (sr, fd):
+        if adapter is not None:
+            pipeline = getattr(adapter.model, 'SECONDARY_PIPELINE', 'generic')
+            if pipeline != 'generic':
+                break
+    if sr is not None and fd is not None and pipeline == 'visini':
+        from openquake.pfd.visini import VisiniSecondaryCalculator
+        case = (fd.model_params.get('case')
+                or sr.model_params.get('case') or 'case1')
+        adapters['secondary_combined'] = VisiniSecondaryCalculator(
+            sr.model, fd.model, case_label=case,
+            pixel_size=sr.model_params.get('pixel_size', 100),
+            near_far_threshold_km=near_far_threshold_km)
     return adapters, r_sigma
 
 
@@ -134,7 +153,8 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
             for k, rlz in enumerate(rlzs):
                 selections = pfd_lt.selections_for(
                     rlz.extra_rlz.lt_path, basename, style)
-                adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
+                adapters, r_sigma = get_adapters(
+                    selections, oq.r_sigma_km, oq.near_far_threshold_km)
                 for m, levels in enumerate(imls):
                     rate, _principal, _distributed = calc_rates(
                         ctxs, N, adapters, levels, oq.r_threshold_km,

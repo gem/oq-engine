@@ -788,6 +788,13 @@ r_sigma_km:
   Example: *r_sigma_km = 0.5*.
   Default: 0.0
 
+near_far_threshold_km:
+  PFD only: distance (km) below which a site is in the Visini et al.
+  (2025) distributed-faulting 'near' regime (else 'far'), used by the
+  combined secondary pipeline.
+  Example: *near_far_threshold_km = 0.2*.
+  Default: 0.2
+
 surface_rupture_depth_tolerance_km:
   PFD only: a rupture contributes surface-displacement hazard only if
   its top edge reaches within this depth (km); deeper (buried) ruptures
@@ -1284,6 +1291,7 @@ class OqParam(valid.ParamSet):
     rlz_index = valid.Param(valid.positiveints, None)
     r_sigma_km = valid.Param(valid.positivefloat, 0.0)
     r_threshold_km = valid.Param(valid.positivefloat, 0.1)
+    near_far_threshold_km = valid.Param(valid.positivefloat, 0.2)
     surface_rupture_depth_tolerance_km = valid.Param(
         valid.positivefloat, 0.01)
     rupture_id = valid.Param(valid.positiveint, None)

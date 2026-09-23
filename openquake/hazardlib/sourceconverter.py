@@ -949,6 +949,10 @@ class SourceConverter(RuptureConverter):
             surface_node = node.surface[0]
             if surface_node.tag.endswith('simpleFaultGeometry'):
                 trace = self.geo_line(surface_node)
+                # keep the declared dip: SimpleFaultSurface.get_dip()
+                # averages the apparent mesh-cell dips and drifts on a
+                # wiggly trace, but PFD models take dip as input
+                char.surface.original_dip = float(~surface_node.dip)
             elif surface_node.tag.endswith('complexFaultGeometry'):
                 [trace] = self.geo_lines(surface_node)[:1]
             else:
