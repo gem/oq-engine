@@ -788,6 +788,7 @@ r_sigma_km:
   Example: *r_sigma_km = 0.5*.
   Default: 0.0
 
+<<<<<<< HEAD
 near_far_threshold_km:
   PFD only: distance (km) below which a site is in the Visini et al.
   (2025) distributed-faulting 'near' regime (else 'far'), used by the
@@ -802,6 +803,8 @@ surface_rupture_depth_tolerance_km:
   Example: *surface_rupture_depth_tolerance_km = 0.01*.
   Default: 0.01
 
+=======
+>>>>>>> 1ad02dd561a29df0d1b01bfdcf29d2c25331cb91
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -830,6 +833,14 @@ ses_seed:
   Seed governing the generation of the ground motion field.
   Example: *ses_seed = 123*.
   Default: 42
+
+sequential_source_models:
+  Flag used in classical and disaggregation calculations to dispatch
+  tasks one top-level sourceModel branch at a time (one Starmap per
+  source model, run sequentially). Not compatible with source models
+  that share sources across top-level branches.
+  Example: *sequential_source_models = true*.
+  Default: false
 
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
@@ -1291,9 +1302,12 @@ class OqParam(valid.ParamSet):
     rlz_index = valid.Param(valid.positiveints, None)
     r_sigma_km = valid.Param(valid.positivefloat, 0.0)
     r_threshold_km = valid.Param(valid.positivefloat, 0.1)
+<<<<<<< HEAD
     near_far_threshold_km = valid.Param(valid.positivefloat, 0.2)
     surface_rupture_depth_tolerance_km = valid.Param(
         valid.positivefloat, 0.01)
+=======
+>>>>>>> 1ad02dd561a29df0d1b01bfdcf29d2c25331cb91
     rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})
@@ -1309,6 +1323,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
+    sequential_source_models = valid.Param(valid.boolean, False)
     shakemap_id = valid.Param(valid.nice_string, None)
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
@@ -2416,6 +2431,15 @@ class OqParam(valid.ParamSet):
         """
         if self.disagg_by_src:
             return self.ps_grid_spacing == 0
+        return True
+
+    def is_valid_sequential_source_models(self):
+        """
+        sequential_source_models is only useable in classical and
+        disaggregation calculations
+        """
+        if self.sequential_source_models:
+            return self.calculation_mode in ('classical', 'disaggregation')
         return True
 
     def is_valid_concurrent_tasks(self):
