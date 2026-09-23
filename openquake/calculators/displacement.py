@@ -25,7 +25,7 @@ no-op :class:`openquake.pfd.gsim.PFDGMPE`), while the annual exceedance
 rates come from the FDHA kernel
 :func:`openquake.hazardlib.calc.displacement.calc_rates`.  The PFD logic
 tree is the ``extra_lt`` of the full logic tree, so the realizations are
-``R = sm_rlzs * gsim_paths * pfd_paths``.
+``R = sm_rlzs * 1 * pfd_paths``.
 
 As in the classical calculator the rates are stored sparsely in the
 ``_rates`` table (``sid, lid, gid, rate``) and the hazard curves are
