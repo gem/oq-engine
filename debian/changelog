@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Fixed a bug which occurred when using `with_betw_ratio` in the job file
+    with GMMs which are already instances of `ModifiableGMPE`
+ 
   [Yen-Shin Chen, Michele Simionato]
   * Added a probabilistic fault displacement calculator using a library of 35
     models (primary/secondary rupture and diplacement) in openquake.pfd,
