@@ -41,6 +41,7 @@ along-strike probability depends only on those geometric parameters, and the
 per-site evaluation is vectorized.
 """
 
+import warnings
 import zlib
 from bisect import bisect_right
 
@@ -405,7 +406,6 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
         # Validate across_strike_width (should be in predefined bins, but find closest)
         closest_across = min(self._width_bins, key=lambda x: abs(x - across_strike_width))
         if across_strike_width not in self._width_bins:
-            import warnings
             warnings.warn(
                 f"across_strike_width={across_strike_width} not in {self._width_bins}, "
                 f"using closest value {closest_across} for F-ratio lookup"
