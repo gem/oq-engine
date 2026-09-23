@@ -1,3 +1,12 @@
+  [Yen-Shin Chen, Michele Simionato]
+  * Added a probabilistic fault displacement calculator using a library of 35
+    models (primary/secondary rupture and diplacement) in openquake.pfd,
+    plus support for PFD logic tree (~12,000 lines between code and tests,
+    and ~4000 lines of data)
+
+  [Michele Simionato]
+  Internal: making sure all imported CSV files are in MANIFEST.in
+
   [Christopher Brooks]
   * Extended site amplification logic trees to work within a disaggregation
     calculation. QA tested in logictree/case_27. Includes a sanity check
@@ -6,17 +15,17 @@
 
   [Amir Banimahd]
   * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
-  
+
   [Marco Pagani]
   * Added the Novakovic et al. (2018) GMM for induced seismicity with
     verification against tables generated from author-provided files.
-  
+
   [Christopher Brooks]
   * Add ability to estimate z1pt4 from Vs30 for sites with a sentinel
     z1pt4 of -999 when using MorikawaFujiwara2013 GMM with GEM's own
     correlation. QA tested in classical/case_13 and MF13 unit tests.
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
- 
+
   [Michele Simionato]
   * Introduced a uvicorn server replacing the DbServer with a REST API
     and serving also the Django (sub)applications; introduced a scientific

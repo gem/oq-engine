@@ -44,7 +44,7 @@ class PFDGMPE(DummyGMPE):
     contexts directly and never calls ``get_mean_and_stddevs``.
     """
     REQUIRES_DISTANCES = {'rtor', 'x_l', 'rx'}
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'dip', 'rake', 'length'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'dip', 'rake', 'length', 'ztor'}
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
 

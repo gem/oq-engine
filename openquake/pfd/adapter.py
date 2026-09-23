@@ -35,6 +35,8 @@ import inspect
 import logging
 from typing import Any, Dict
 
+from openquake.pfd.probability import _reduce_mc, _to_sites_x_displ
+
 logger = logging.getLogger(__name__)
 
 # Near-field displacement floor: the smallest across-strike distance (km) fed to
@@ -229,7 +231,13 @@ class PFDModelAdapter:
         metrics_for = getattr(ctx, 'metrics_for', None)
         if metrics_for is not None:
             return metrics_for(method)
-        # engine RuptureContext (hazardlib PR-3 fields)
+        # engine RuptureContext: use the model's reference-line method when
+        # the calculator precomputed it, else the canonical trace metrics
+        if method != 'segments':
+            names = getattr(getattr(ctx, 'dtype', None), 'names', ()) or ()
+            if 'rtor_' + method in names:
+                return (ctx['rtor_' + method], ctx['x_l_' + method],
+                        ctx['length_' + method])
         return ctx.rtor, ctx.x_l, ctx.length
 
     def compute_primary_sr(
@@ -250,7 +258,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N,); model errors propagate
         """
-        from openquake.pfd.probability import _reduce_mc
 
         N = len(ctx)
 
@@ -320,7 +327,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N, D); model errors propagate
         """
-        from openquake.pfd.probability import _to_sites_x_displ
 
         N = len(ctx)
         D = len(displacements)
@@ -409,7 +415,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N,)
         """
-        from openquake.pfd.probability import _reduce_mc
 
         N = len(ctx)
 
@@ -421,7 +426,7 @@ class PFDModelAdapter:
         kwargs = {
             'mag': float(ctx.mag[0]),
             'r': r_sel,
-            'rx': ctx.rx,
+            'rx': np.sign(ctx.rx) * r_sel,   # |rx| == r, like oq-pfdha
             's': r_sel * 1000.0,
             'style': style,
             **{k: v for k, v in self.model_params.items() if k != 'style'},
@@ -499,7 +504,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N, D)
         """
-        from openquake.pfd.probability import _to_sites_x_displ
 
         N = len(ctx)
         D = len(displacements)
@@ -531,7 +535,7 @@ class PFDModelAdapter:
             'mag': float(ctx.mag[0]),
             'd': displacements,
             'r': r_sel,
-            'rx': ctx.rx,
+            'rx': np.sign(ctx.rx) * r_sel,   # |rx| == r, like oq-pfdha
             's': r_sel * 1000.0,
             'X_L_ratio': x_L_sel,
             'x_L': x_L_sel,
