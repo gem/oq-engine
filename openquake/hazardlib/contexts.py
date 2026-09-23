@@ -933,7 +933,10 @@ class ContextMaker(object):
         elif param == 'strike':
             return msparam['strike'] if msparam else surface.get_strike()
         elif param == 'dip':
-            return msparam['dip'] if msparam else surface.get_dip()
+            if msparam:
+                return msparam['dip']
+            dip = getattr(surface, 'original_dip', None)
+            return dip if dip is not None else surface.get_dip()
         elif param == 'rake':
             return rup.rake
         elif param == 'ztor':

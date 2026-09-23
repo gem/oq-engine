@@ -24,6 +24,7 @@ from openquake.calculators.export import export
 from openquake.calculators.getters import MapGetter
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.pfd import case_1, case_2, case_3, case_4
+from openquake.qa_tests_data.pfd import case_5, case_6, case_7, case_8
 
 
 class DisplacementTestCase(CalculatorTestCase):
@@ -143,3 +144,80 @@ class DisplacementTestCase(CalculatorTestCase):
         # the 2-section rupture spans both kites (no gap bridging)
         self.assertAlmostEqual(float(multi.x_l[0]), 0.25425, places=4)
         self.assertAlmostEqual(float(multi.length[0]), 77.313, places=2)
+
+    def test_case_5(self):
+        # a heavy CSV-backed model (Kuehn2024PrimaryFD, aggregate definition)
+        # in the logic tree; the reference is oq-pfdha's `job_kuehn2024`
+        # demo, regenerated with the current oq-pfdha (the checked-in
+        # out/aggregate_hazard.csv was stale). The mean epistemic reduction
+        # reproduces it to a few 1e-5 relative.
+        self.run_calc(case_5.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        hcurves = dstore['hcurves-rlzs'][0, 0, 0, :]
+        self.assertEqual(hcurves.shape, (18,))
+        expected = numpy.array([
+            0.011072213972454593, 0.011070271216337666,
+            0.01106091761479565, 0.011046256358457199,
+            0.01102900767605022, 0.010966027581042233,
+            0.010864239079824886, 0.010719145882599649,
+            0.010561764070417123, 0.010227437275303472,
+            0.009197341447809022, 0.007933601570482441,
+            0.0066067101704247125, 0.005533482411750099,
+            0.0016196042822896285, 0.0005844579327410797,
+            0.00019667554911984074, 7.728637804974222e-05])
+        # hcurves store exceedance probabilities over investigation_time=1;
+        # oq-pfdha's csv reports annual rates, so compare in rate space
+        rates = -numpy.log1p(-hcurves)
+        numpy.testing.assert_allclose(rates, expected, rtol=1e-4)
+        self.assertTrue((hcurves > 0).all())
+
+    def test_case_6(self):
+        # IAEA Kumamoto: Chiou2025PrimaryFD x WC1993PrimarySR on a
+        # strike-slip characteristicFaultSource; pinned to oq-pfdha's IAEA
+        # computed curve
+        self.run_calc(case_6.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        rates = -numpy.log1p(-dstore['hcurves-rlzs'][0, 0, 0, :])
+        expected = numpy.array([
+            1.317754e-04, 1.315741e-04, 1.304114e-04, 1.287301e-04,
+            1.269146e-04, 1.210404e-04, 1.128484e-04, 1.028074e-04,
+            9.343359e-05, 7.719933e-05, 4.533372e-05, 2.469248e-05,
+            1.304857e-05, 7.570827e-06, 4.378482e-07, 7.455173e-08,
+            1.480967e-08, 4.191597e-09])
+        numpy.testing.assert_allclose(rates, expected, rtol=1e-3)
+
+    def test_case_7(self):
+        # IAEA Le Teil: Lavrentiadis2023PrimaryFD_principal with a fixed
+        # case-specific P_sr; the last levels underflow to 0 in the stored
+        # single-precision poes, hence the tiny atol
+        self.run_calc(case_7.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        rates = -numpy.log1p(-dstore['hcurves-rlzs'][0, 0, 0, :])
+        expected = numpy.array([
+            2.754624e-05, 2.747966e-05, 2.725665e-05, 2.697595e-05,
+            2.668124e-05, 2.572885e-05, 2.436464e-05, 2.260835e-05,
+            2.086963e-05, 1.760204e-05, 1.015664e-05, 4.751256e-06,
+            1.844652e-06, 7.297981e-07, 8.930973e-10, 2.613507e-12,
+            3.724419e-15, 9.250608e-18])
+        numpy.testing.assert_allclose(
+            rates, expected, rtol=1e-3, atol=1e-12)
+
+    def test_case_8(self):
+        # IAEA Norcia: the combined Visini et al. (2025) distributed
+        # pipeline (Takao2013PrimaryFD + Visini2025SecondarySR/FD, case3);
+        # the checked-in IAEA computed csv was stale, so the expected
+        # values come from a fresh oq-pfdha run of job_distributed_V24
+        self.run_calc(case_8.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        rates = -numpy.log1p(-dstore['hcurves-rlzs'][0, 0, 0, :])
+        expected = numpy.array([
+            5.266179186494684e-08, 5.266179186494684e-08,
+            5.19298383624369e-08, 4.925340140048624e-08,
+            4.5825476691286254e-08, 3.5788861736968006e-08,
+            2.592424026375021e-08, 1.8045927372692255e-08,
+            1.3086730752261963e-08, 7.538262169245839e-09,
+            2.1811511322876093e-09, 6.508022191776344e-10,
+            1.8156728523808872e-10, 4.976263365293209e-11,
+            0.0, 0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose(
+            rates, expected, rtol=1e-4, atol=1e-14)

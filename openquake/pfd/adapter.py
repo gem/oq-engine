@@ -35,6 +35,8 @@ import inspect
 import logging
 from typing import Any, Dict
 
+from openquake.pfd.probability import _reduce_mc, _to_sites_x_displ
+
 logger = logging.getLogger(__name__)
 
 # Near-field displacement floor: the smallest across-strike distance (km) fed to
@@ -250,7 +252,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N,); model errors propagate
         """
-        from openquake.pfd.probability import _reduce_mc
 
         N = len(ctx)
 
@@ -320,7 +321,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N, D); model errors propagate
         """
-        from openquake.pfd.probability import _to_sites_x_displ
 
         N = len(ctx)
         D = len(displacements)
@@ -409,7 +409,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N,)
         """
-        from openquake.pfd.probability import _reduce_mc
 
         N = len(ctx)
 
@@ -499,7 +498,6 @@ class PFDModelAdapter:
         Returns:
             Array of shape (N, D)
         """
-        from openquake.pfd.probability import _to_sites_x_displ
 
         N = len(ctx)
         D = len(displacements)

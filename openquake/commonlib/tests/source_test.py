@@ -231,6 +231,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         # the converter attaches the declared top edge to characteristic faults
         surface.original_tor = numpy.array(
             [[p.longitude, p.latitude] for p in fault_trace.points])
+        surface.original_dip = 45.0
 
         char = source.CharacteristicFaultSource(
             source_id="5",
