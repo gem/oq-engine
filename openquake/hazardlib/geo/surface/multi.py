@@ -27,6 +27,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.refline import reference_line
 
 F32 = np.float32
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
@@ -200,6 +201,7 @@ class MultiSurface(BaseSurface):
         else:
             self.msparam = msparam
         self.tor = geo.MultiLine([s.tor for s in self.surfaces])
+        self._reflines = {}  # method -> ReferenceLine cache
 
     def get_min_distance(self, mesh):
         """
@@ -235,14 +237,66 @@ class MultiSurface(BaseSurface):
         dists = [surf.get_rtor(mesh) for surf in self.surfaces]
         return np.min(dists, axis=0)
 
+    def _get_segments_u(self):
+        """
+        :returns: ``(u_min, u_max)`` of the section trace vertices in the
+            GC2 ``MultiLine`` frame, i.e. the along-strike span used as L
+        """
+        lons = np.concatenate([ln.coo[:, 0] for ln in self.tor.lines])
+        lats = np.concatenate([ln.coo[:, 1] for ln in self.tor.lines])
+        _t, u = self.tor.get_tu(lons, lats)
+        return float(np.min(u)), float(np.max(u))
+
     def get_x_l_ratio(self, mesh):
         """
-        x/L is defined per continuous trace and a MultiSurface has several,
-        so the multi-fault reference-line treatment is a later phase.
+        x/L for a multi-surface: the GC2 along-strike position on the raw
+        segmentation (the PFD 'segments' semantics - inter-section gaps are
+        not bridged), with L the along-strike span of the section vertices.
+
+        :returns: ``(x_over_l, l_km)`` like :meth:`BaseSurface.get_x_l_ratio`
         """
-        raise NotImplementedError(
-            'x_l is not defined for MultiSurface: multi-fault PFD '
-            'reference-line routing is not implemented yet')
+        u_min, u_max = self._get_segments_u()
+        l_km = u_max - u_min
+        n = len(np.asarray(mesh.lons).flatten())
+        if l_km <= 0.0:
+            return np.zeros(n), 0.0
+        _t, u = self.tor.get_tu(
+            np.asarray(mesh.lons).flatten(), np.asarray(mesh.lats).flatten())
+        xl = np.clip((np.asarray(u) - u_min) / l_km, 0.0, 1.0)
+        return xl, l_km
+
+    def get_tor_length(self):
+        """
+        :returns: the along-strike length (km) of the raw segmentation,
+            consistent with :meth:`get_x_l_ratio`
+        """
+        u_min, u_max = self._get_segments_u()
+        return u_max - u_min
+
+    def get_ref_metrics(self, method, mesh):
+        """
+        PFD distances for the model-declared multi-fault reference line.
+
+        :param method: 'segments' | 'ecs' | 'lcp' (a model's
+            ``MULTIFAULT_REFERENCE_LINE``); see
+            :func:`openquake.hazardlib.geo.refline.reference_line`
+        :param mesh: a site mesh
+        :returns: ``(r_km, x_l, l_km)``, the reference line built once per
+            method and cached on the surface
+        """
+        if method == 'segments':
+            x_l, l_km = self.get_x_l_ratio(mesh)
+            return self.get_rtor(mesh), x_l, l_km
+        # ECS/LCP construction is deliberately lazy: in particular, LCP
+        # rasterization is expensive in both CPU time and memory because it
+        # builds a graph with one node per raster pixel.
+        ref = self._reflines.get(method)
+        if ref is None:
+            traces = [ln.coo[:, :2] for ln in self.tor.lines]
+            ref = reference_line(traces, method)
+            self._reflines[method] = ref
+        x_l, l_km = ref.x_l(mesh.lons, mesh.lats)
+        return ref.r_km(mesh.lons, mesh.lats), x_l, l_km
 
     def get_top_edge_depth(self):
         """

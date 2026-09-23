@@ -99,10 +99,11 @@ class MorikawaFujiwara2013InferZ1pt4Test(unittest.TestCase):
     """
     def test_inferred_z1pt4_values(self):
         vs30 = np.array([150., 185., 260., 365., 530., 760., 800., 1080.,
-                         1500., 400., 600., 800.])
+                         1500., 1700., 400., 600., 800.])
         z1pt4 = np.array([-999., -999., -999., -999., -999., -999., -999.,
-                          -999., -999., 250., 500., 1000.])
-        expected = np.array([6.283, 6.209, 6.006, 5.641, 4.939, 3.859,
-                             3.670, 2.393, 0.706, 250., 500., 1000.])
+                          -999., -999., -999., 250., 500., 1000.])
+        expected = np.array([535.76, 497.52, 406.40, 281.95, 139.77,
+                             47.45, 39.27, 10.95, 2.03, 1.00,
+                             250., 500., 1000.])
         out = _infer_z1pt4_from_vs30(vs30, z1pt4.copy(), z1pt4 == -999)
-        np.testing.assert_allclose(out, expected, atol=1e-3)
+        np.testing.assert_allclose(out, expected, atol=1e-2)

@@ -85,6 +85,7 @@ weights satisfying the condition.
 import numpy as np
 from scipy.stats import norm, truncnorm
 
+from openquake.hazardlib import valid
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
@@ -185,7 +186,6 @@ def _resolve_width_model(width_model):
     if width_model is None:
         return None
     if isinstance(width_model, str):
-        from openquake.hazardlib import valid
         width_model = valid.mag_scale_rel(width_model)
     for meth in ("get_median_width", "get_std_dev_width"):
         if not hasattr(width_model, meth):

@@ -58,8 +58,12 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-#: default Monte-Carlo / epistemic reduction
-DEFAULT_RED_CFG = {'method': 'median', 'q': 50}
+#: default Monte-Carlo / epistemic reduction; the mean is oq-pfdha's
+#: default and is exact inside the rate sum (expectation is linear), so
+#: the engine reproduces oq-pfdha's mean hazard curve. The median is a
+#: legacy central-estimate heuristic that deviates at high displacement
+#: levels.
+DEFAULT_RED_CFG = {'method': 'mean'}
 
 
 def location_weight(r, r_threshold_km: float, r_sigma_km: float,
@@ -146,21 +150,28 @@ def calc_rupture_contribution(
                      * wp[:, np.newaxis])
         return principal, np.zeros((n_ctx, n_displ), dtype=np.float64)
 
-    if 'secondary_sr' in adapters:
-        p_sr_sec = np.asarray(
-            adapters['secondary_sr'].compute_secondary_sr(ctx, red_cfg),
+    if 'secondary_combined' in adapters:
+        # combined distributed pipeline (Visini et al. 2025 A/B/C)
+        p_dist = np.asarray(
+            adapters['secondary_combined'].compute(ctx, imls, red_cfg),
             dtype=np.float64)
     else:
-        p_sr_sec = np.zeros(n_ctx, dtype=np.float64)
+        if 'secondary_sr' in adapters:
+            p_sr_sec = np.asarray(
+                adapters['secondary_sr'].compute_secondary_sr(ctx, red_cfg),
+                dtype=np.float64)
+        else:
+            p_sr_sec = np.zeros(n_ctx, dtype=np.float64)
 
-    if 'secondary_fd' in adapters:
-        p_fd_sec = np.asarray(
-            adapters['secondary_fd'].compute_secondary_fd(ctx, imls, red_cfg),
-            dtype=np.float64)
-    else:
-        p_fd_sec = np.zeros((n_ctx, n_displ), dtype=np.float64)
+        if 'secondary_fd' in adapters:
+            p_fd_sec = np.asarray(
+                adapters['secondary_fd'].compute_secondary_fd(
+                    ctx, imls, red_cfg),
+                dtype=np.float64)
+        else:
+            p_fd_sec = np.zeros((n_ctx, n_displ), dtype=np.float64)
 
-    p_dist = p_sr_sec[:, np.newaxis] * p_fd_sec
+        p_dist = p_sr_sec[:, np.newaxis] * p_fd_sec
 
     if float(r_sigma_km) == 0.0:
         g = 1.0 - wp           # complementary (legacy boxcar split)

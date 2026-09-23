@@ -139,6 +139,10 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
             # shape (numsites, 3)
             ctx['clon'] = m.lons
             ctx['clat'] = m.lats
+        elif param in ('rtor', 'x_l'):
+            # PFD metrics are not in msparam: use the surface methods, which
+            # for a MultiSurface implement the 'segments' semantics
+            setattr(ctx, param, get_distances(rup, r_sites, param))
 
 
 def round_dist(dst):
@@ -929,7 +933,10 @@ class ContextMaker(object):
         elif param == 'strike':
             return msparam['strike'] if msparam else surface.get_strike()
         elif param == 'dip':
-            return msparam['dip'] if msparam else surface.get_dip()
+            if msparam:
+                return msparam['dip']
+            dip = getattr(surface, 'original_dip', None)
+            return dip if dip is not None else surface.get_dip()
         elif param == 'rake':
             return rup.rake
         elif param == 'ztor':
@@ -1035,6 +1042,22 @@ class ContextMaker(object):
                 tu = None
             for param in params - {'clon', 'clat'}:
                 set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+
+            # PFD multi-fault reference-line metrics: fill only the methods
+            # the configured PFD models declare (cmaker.pfd_methods); single
+            # surfaces fall back to the canonical trace-based metrics
+            for method in getattr(self, 'pfd_methods', ()):
+                if method == 'segments':
+                    continue
+                if rup.surface is not None and hasattr(
+                        rup.surface, 'get_ref_metrics'):
+                    r_km, x_l, l_km = rup.surface.get_ref_metrics(
+                        method, r_sites)
+                else:
+                    r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
+                ctx['rtor_' + method] = r_km
+                ctx['x_l_' + method] = x_l
+                ctx['length_' + method] = l_km
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)

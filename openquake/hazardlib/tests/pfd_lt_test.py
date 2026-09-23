@@ -38,8 +38,13 @@ def parse_sigma(text):
 
 
 def toml_block(cls, **params):
-    body = "\n".join(f"            {k} = {v}" for k, v in params.items())
+    body = "\n".join(
+        f'            {k} = {_toml_value(v)}' for k, v in params.items())
     return f"\n            [{cls}]\n{body}\n          "
+
+
+def _toml_value(value):
+    return f'"{value}"' if isinstance(value, str) else str(value)
 
 
 def branchset(bsid, utype, branches, **attrs):
