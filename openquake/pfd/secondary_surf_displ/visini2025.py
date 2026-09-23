@@ -27,6 +27,8 @@ Visini, F., Boncio, P., Valentini, A., Scotti, O., Nurminen, F., Baize, S.,
 earthquakes. Earthquake Spectra, 41(4), 2968-3001.
 https://doi.org/10.1177/87552930241308860
 """
+import warnings
+
 import numpy as np
 from scipy.stats import norm
 from openquake.pfd.params import check_choice, check_style
@@ -213,7 +215,6 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
             # DIAGNOSTIC: Check for invalid X_L_ratio values
             xlr_min, xlr_max = float(np.min(xlr_b)), float(np.max(xlr_b))
             if xlr_min < 0.0 or xlr_max > 1.0:
-                import warnings
                 n_invalid = int(np.sum((xlr_b < 0.0) | (xlr_b > 1.0)))
                 warnings.warn(
                     f"Visini2025SecondaryFD.get_prob: X_L_ratio has {n_invalid} values outside [0, 1]. "
@@ -413,7 +414,6 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
             r = min(r, 0.5)
             # DIAGNOSTIC: Check for NaN r (could happen if L_km is NaN)
             if np.isnan(r):
-                import warnings
                 warnings.warn(
                     f"Visini2025SecondaryFD: r is NaN! L_km={L_km}, distance={distance}. "
                     f"Check scaling relation {model} for this magnitude.",
@@ -435,7 +435,6 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
         # Sample or smooth around norm_pos
         # DIAGNOSTIC: Check for invalid norm_pos values and warn (not silently clamp)
         if norm_pos < 0.0 or norm_pos > 1.0:
-            import warnings
             warnings.warn(
                 f"Visini2025SecondaryFD: norm_pos={norm_pos:.6f} is outside [0, 1]. "
                 f"This indicates upstream X_L_ratio computation is incorrect. "

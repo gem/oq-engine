@@ -53,6 +53,7 @@ from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
 from openquake.pfd.visini import VisiniSecondaryCalculator
 from openquake.calculators import base
+from openquake.calculators.classical import _store
 from openquake.calculators.getters import MapGetter, build_stat_curve, slice_dt
 
 F32 = numpy.float32
@@ -179,7 +180,6 @@ class DisplacementCalculator(base.HazardCalculator):
     def agg(self, acc, result):
         if result is None:
             raise MemoryError('You ran out of memory!')
-        from openquake.calculators.classical import _store
         rmap, src_rates, source_data = result
         rates = rmap.to_array(rmap.gids)
         if len(rates):
