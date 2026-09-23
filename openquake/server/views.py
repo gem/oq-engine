@@ -2593,13 +2593,12 @@ def extract_html_table(request, calc_id, name):
     for raw_row in table_contents:
         display_row = decode(raw_row)
         cells = []
-        for index, (header, item) in enumerate(
+        for index, (header, display_value) in enumerate(
                 zip(table_header, display_row)):
             sort_type = column_sort_types[index]
             sort_value = decode(raw_row[index])
             cells.append({
-                'header': header,
-                'item': item,
+                'display_value': display_value,
                 'is_string': (sort_type == 'string'
                               or header in string_columns),
                 'sort_type': sort_type,

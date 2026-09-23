@@ -36,18 +36,18 @@
                 {% for cell in row %}
                     {% if forloop.first %}
                     <td data-sort-type="{{ cell.sort_type }}"
-                        data-sort-value="{{ cell.sort_value }}">{{ cell.item|stringformat:"s"|linebreaksbr }}</td>
+                        data-sort-value="{{ cell.sort_value }}">{{ cell.display_value|stringformat:"s"|linebreaksbr }}</td>
                     {% elif cell.is_string %}
                     <td data-sort-type="{{ cell.sort_type }}"
-                        data-sort-value="{{ cell.sort_value }}">{{ cell.item|stringformat:"s"|linebreaksbr }}</td>
+                        data-sort-value="{{ cell.sort_value }}">{{ cell.display_value|stringformat:"s"|linebreaksbr }}</td>
                     {% else %}
-                    {% if cell.item|stringformat:"s"|floatformat %}
+                    {% if cell.display_value|stringformat:"s"|floatformat %}
                       <td style="text-align: right;"
                           data-sort-type="{{ cell.sort_type }}"
-                          data-sort-value="{{ cell.sort_value }}">{{ cell.item|humanize_number }}</td>
+                          data-sort-value="{{ cell.sort_value }}">{{ cell.display_value|humanize_number }}</td>
                     {% else %}
                       <td data-sort-type="{{ cell.sort_type }}"
-                          data-sort-value="{{ cell.sort_value }}">{{ cell.item|stringformat:"s"|linebreaksbr }}</td>
+                          data-sort-value="{{ cell.sort_value }}">{{ cell.display_value|stringformat:"s"|linebreaksbr }}</td>
                     {% endif %}
                     {% endif %}
                 {% endfor %}
