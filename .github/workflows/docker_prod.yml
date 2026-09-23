@@ -11,6 +11,8 @@ on:
         description: Git Ref
         default: master
         required: true
+  schedule:
+    - cron: "45 23 * * *"
 
 jobs:
   docker:

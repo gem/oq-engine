@@ -12,7 +12,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "30 23 * * *"
+    - cron: "30 05 * * *"
 
 jobs:
   docker:
