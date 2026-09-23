@@ -48,7 +48,8 @@ from openquake.hazardlib.calc.displacement import (
     calc_rates, DEFAULT_RED_CFG)
 from openquake.hazardlib.map_array import (
     MapArray, compute_hazard_maps, rates_dt)
-from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
+from openquake.hazardlib.pfd_lt import (
+    CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY, PFD_SLOTS_BY_UTYPE)
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
 from openquake.pfd.visini import VisiniSecondaryCalculator
@@ -111,6 +112,51 @@ def get_adapters(selections, r_sigma, near_far_threshold_km=0.2):
             pixel_size=sr.model_params.get('pixel_size', 100),
             near_far_threshold_km=near_far_threshold_km)
     return adapters, r_sigma
+
+
+def pfd_methods(pfd_lt):
+    """
+    :param pfd_lt: a :class:`~openquake.hazardlib.pfd_lt.PFDLogicTree`
+    :returns: the union of ``MULTIFAULT_REFERENCE_LINE`` methods declared by
+        the PFD models in the logic tree (the FDHA analogue of collecting
+        the union of the GMPEs' ``REQUIRES_DISTANCES``)
+    """
+    # Raw sections are always available and are the safe default.  Only an
+    # explicit model declaration requests an expensive smoothed line; the
+    # base-class default must not turn every multi-fault rupture into an LCP
+    # raster calculation.
+    methods = {'segments'}
+    for branchset in pfd_lt.branchsets:
+        slot = PFD_SLOTS_BY_UTYPE.get(branchset.uncertainty_type)
+        if slot is None:
+            continue
+        available = get_available(slot)
+        for branch in branchset.branches:
+            if not isinstance(branch.value, tuple):
+                continue  # dummy/pseudo branch
+            cls = available.get(branch.value[0])
+            if cls is not None:
+                method = cls.__dict__.get('MULTIFAULT_REFERENCE_LINE')
+                if method is not None:
+                    methods.add(method)
+    return methods
+
+
+def set_pfd_methods(cmakers, methods):
+    """
+    Attach the multi-fault reference-line union to the cmakers and add the
+    matching context fields (one ``(r, x_L, L)`` set per non-'segments'
+    method; 'segments' reuses the canonical ``rtor``/``x_l``/``length``).
+    """
+    extra = set()
+    for method in methods:
+        if method != 'segments':
+            extra.update((f'rtor_{method}', f'x_l_{method}',
+                          f'length_{method}'))
+    for cmaker in cmakers:
+        cmaker.pfd_methods = methods
+        for name in extra:
+            cmaker.defaultdict[name] = F64(0.)
 
 
 def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
@@ -205,6 +251,8 @@ class DisplacementCalculator(base.HazardCalculator):
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()
+        # only the reference-line methods the PFD models actually declare
+        set_pfd_methods(cmakers, pfd_methods(pfd_lt))
         # the sparse table from which the curves are recomputed
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)

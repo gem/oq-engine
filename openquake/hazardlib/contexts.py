@@ -1043,6 +1043,22 @@ class ContextMaker(object):
             for param in params - {'clon', 'clat'}:
                 set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
 
+            # PFD multi-fault reference-line metrics: fill only the methods
+            # the configured PFD models declare (cmaker.pfd_methods); single
+            # surfaces fall back to the canonical trace-based metrics
+            for method in getattr(self, 'pfd_methods', ()):
+                if method == 'segments':
+                    continue
+                if rup.surface is not None and hasattr(
+                        rup.surface, 'get_ref_metrics'):
+                    r_km, x_l, l_km = rup.surface.get_ref_metrics(
+                        method, r_sites)
+                else:
+                    r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
+                ctx['rtor_' + method] = r_km
+                ctx['x_l_' + method] = x_l
+                ctx['length_' + method] = l_km
+
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
             if reqv_obj and not rup.surface:  # PointRuptures have no surface

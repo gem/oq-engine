@@ -231,7 +231,13 @@ class PFDModelAdapter:
         metrics_for = getattr(ctx, 'metrics_for', None)
         if metrics_for is not None:
             return metrics_for(method)
-        # engine RuptureContext (hazardlib PR-3 fields)
+        # engine RuptureContext: use the model's reference-line method when
+        # the calculator precomputed it, else the canonical trace metrics
+        if method != 'segments':
+            names = getattr(getattr(ctx, 'dtype', None), 'names', ()) or ()
+            if 'rtor_' + method in names:
+                return (ctx['rtor_' + method], ctx['x_l_' + method],
+                        ctx['length_' + method])
         return ctx.rtor, ctx.x_l, ctx.length
 
     def compute_primary_sr(
