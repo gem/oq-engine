@@ -386,6 +386,8 @@ def route_through_grid(cost, start_rc, stop_rc):
         rows_l.append(a[ok].ravel())
         cols_l.append(b[ok].ravel())
         wts_l.append(w[ok].ravel())
+    # TODO: an implicit-grid A* / Dijkstra would avoid materializing this
+    # full graph and is the next major memory optimization.
     graph = coo_matrix(
         (np.concatenate(wts_l),
          (np.concatenate(rows_l), np.concatenate(cols_l))),
@@ -412,6 +414,31 @@ def route_through_raster(cost, gt, start_xy, stop_xy):
     return np.column_stack([x, y]), path_rc, total
 
 
+def _burn_segment(cost, gt, start, stop, value):
+    """Burn one segment with integer grid traversal and no temp arrays."""
+    col0 = int((start[0] - gt.origin_x) / gt.pixel_dx)
+    row0 = int((start[1] - gt.origin_y) / gt.pixel_dy)
+    col1 = int((stop[0] - gt.origin_x) / gt.pixel_dx)
+    row1 = int((stop[1] - gt.origin_y) / gt.pixel_dy)
+    dc = abs(col1 - col0)
+    dr = abs(row1 - row0)
+    step_c = 1 if col0 < col1 else -1
+    step_r = 1 if row0 < row1 else -1
+    error = dc - dr
+    while True:
+        if 0 <= row0 < cost.shape[0] and 0 <= col0 < cost.shape[1]:
+            cost[row0, col0] = value
+        if col0 == col1 and row0 == row1:
+            break
+        twice = 2 * error
+        if twice > -dr:
+            error -= dr
+            col0 += step_c
+        if twice < dc:
+            error += dc
+            row0 += step_r
+
+
 def rasterize_traces_xy(traces_xy, pixel_size, start_xy, stop_xy,
                         cost_fault=COST_FAULT, cost_background=COST_BACKGROUND):
     """Burn projected polyline traces into a cost raster."""
@@ -423,20 +450,12 @@ def rasterize_traces_xy(traces_xy, pixel_size, start_xy, stop_xy,
     nc = int((right - left) / pixel_size) + 1
     nr = int((top - bot) / pixel_size) + 1
     gt = GeoTransform(left, top, pixel_size, -pixel_size)
-    cost = np.full((nr, nc), cost_background, dtype=float)
-    step = 0.5 * pixel_size
-    for t in traces_xy:
-        t = np.asarray(t, float)
-        for i in range(len(t) - 1):
-            seg = t[i + 1] - t[i]
-            n_s = max(int(np.ceil(np.hypot(*seg) / step)), 1)
-            frac = np.linspace(0.0, 1.0, n_s + 1)
-            xs = t[i, 0] + frac * seg[0]
-            ys = t[i, 1] + frac * seg[1]
-            cols = ((xs - gt.origin_x) / gt.pixel_dx).astype(int)
-            rows = ((ys - gt.origin_y) / gt.pixel_dy).astype(int)
-            ok = (rows >= 0) & (rows < nr) & (cols >= 0) & (cols < nc)
-            cost[rows[ok], cols[ok]] = cost_fault
+    # Costs are just small scalar weights; float32 halves raster memory.
+    cost = np.full((nr, nc), cost_background, dtype=np.float32)
+    for trace in traces_xy:
+        trace = np.asarray(trace, float)
+        for start, stop in zip(trace[:-1], trace[1:]):
+            _burn_segment(cost, gt, start, stop, cost_fault)
     return cost, gt
 
 
