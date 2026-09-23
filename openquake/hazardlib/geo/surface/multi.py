@@ -27,6 +27,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.refline import reference_line
 
 F32 = np.float32
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
@@ -200,6 +201,7 @@ class MultiSurface(BaseSurface):
         else:
             self.msparam = msparam
         self.tor = geo.MultiLine([s.tor for s in self.surfaces])
+        self._reflines = {}  # method -> ReferenceLine cache
 
     def get_min_distance(self, mesh):
         """
@@ -270,6 +272,31 @@ class MultiSurface(BaseSurface):
         """
         u_min, u_max = self._get_segments_u()
         return u_max - u_min
+
+    def get_ref_metrics(self, method, mesh):
+        """
+        PFD distances for the model-declared multi-fault reference line.
+
+        :param method: 'segments' | 'ecs' | 'lcp' (a model's
+            ``MULTIFAULT_REFERENCE_LINE``); see
+            :func:`openquake.hazardlib.geo.refline.reference_line`
+        :param mesh: a site mesh
+        :returns: ``(r_km, x_l, l_km)``, the reference line built once per
+            method and cached on the surface
+        """
+        if method == 'segments':
+            x_l, l_km = self.get_x_l_ratio(mesh)
+            return self.get_rtor(mesh), x_l, l_km
+        # ECS/LCP construction is deliberately lazy: in particular, LCP
+        # rasterization is expensive in both CPU time and memory because it
+        # builds a graph with one node per raster pixel.
+        ref = self._reflines.get(method)
+        if ref is None:
+            traces = [ln.coo[:, :2] for ln in self.tor.lines]
+            ref = reference_line(traces, method)
+            self._reflines[method] = ref
+        x_l, l_km = ref.x_l(mesh.lons, mesh.lats)
+        return ref.r_km(mesh.lons, mesh.lats), x_l, l_km
 
     def get_top_edge_depth(self):
         """
