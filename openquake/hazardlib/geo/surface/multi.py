@@ -27,6 +27,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.geo.refline import reference_line
 
 F32 = np.float32
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
@@ -291,7 +292,6 @@ class MultiSurface(BaseSurface):
         # builds a graph with one node per raster pixel.
         ref = self._reflines.get(method)
         if ref is None:
-            from openquake.hazardlib.geo.refline import reference_line
             traces = [ln.coo[:, :2] for ln in self.tor.lines]
             ref = reference_line(traces, method)
             self._reflines[method] = ref
