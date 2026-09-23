@@ -37,9 +37,21 @@ jobs:
         shell: bash
         run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
         id: extract_tags
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Build image engine with tag ${{ github.event.inputs.version }}
         id: docker_engine
-        run: docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
+        run: |
+          if [ ${{ github.event.inputs.version }} != '' ]; then
+            echo "Is manual run"
+            docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
+          else
+            echo "Is scheduled run"
+            DOCKER_TAG=nightly
+            REPO_REF=master
+            docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.engine docker
+          fi
       - name: List Image
         run: |
           docker image ls
@@ -61,10 +73,19 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
+          if [ ${{ github.event.inputs.version }} != '' ]; then
           release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
-          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
-          echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
-          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
+            echo "Is manual run"
+            time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+            echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
+            echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
+            docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
+          else
+            echo "Is scheduled run"
+            DOCKER_TAG=nightly
+            REPO_REF=master
+            time docker run openquake/engine:$DOCKER_TAG oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+          fi
           sleep 180
           docker logs openquake -t
           echo "Waiting WEBUI up on port 8800...."
@@ -94,9 +115,24 @@ jobs:
           time docker exec -t openquake oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
           sleep 2
           echo "test run of a calcs on new created container"
-          time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
-
+          if [ ${{ github.event.inputs.version }} != '' ]; then
+            echo "Is manual run"
+            time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+          else
+            echo "Is scheduled run"
+            DOCKER_TAG=nightly
+            REPO_REF=master
+            time docker run openquake/engine:$DOCKER_TAG oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+          fi
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         run: |
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          docker push openquake/engine --all-tags
+          if [ ${{ github.event.inputs.version }} != '' ]; then
+            echo "Is manual run"
+            docker push openquake/engine --all-tags
+          else
+            echo "Is scheduled run"
+            DOCKER_TAG=nightly
+            REPO_REF=master
+            docker push openquake/engine:$DOCKER_TAG
+          fi
