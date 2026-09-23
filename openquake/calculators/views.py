@@ -1510,6 +1510,7 @@ def view_rlz(token, dstore):
     rlz = full_lt.get_realizations()[int(rlz_id)]
     smlt = full_lt.source_model_lt
     gslt = full_lt.gsim_lt
+    xlt = full_lt.extra_lt
     tbl = []
     bset = smlt.branchsets[0]
     for brid in rlz.sm_lt_path:
@@ -1519,8 +1520,11 @@ def view_rlz(token, dstore):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
-    if rlz.extra_rlz is not None:
-        tbl.append(('amplificationModel', rlz.extra_rlz.value))
+    if hasattr(xlt, 'branchset_id'):  # ampl_logic_tree
+        tbl.append((xlt.branchset_id, rlz.extra_rlz.value))
+    elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
+        for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
+            tbl.append((bset.id, path))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
 

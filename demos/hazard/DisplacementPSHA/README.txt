@@ -13,7 +13,6 @@ job.ini
     region: a 10 km grid over 15.9-16.3 E, 39.2-39.8 N
     intensity_measure_types_and_levels: the "Disp" IMT (metres)
     r_threshold_km: half-width of the on-trace principal zone
-    use_rates/disagg_by_src are forced to true by the mode
 source_model.xml
     two characteristic fault sources (West_crati, Alt-Mot)
 source_model_logic_tree.xml
@@ -28,4 +27,4 @@ Run it with:
 
 The main outputs are the hazard maps (`hazard_map-mean-...csv`) and the
 mean hazard curves (`hazard_curve-mean-Disp.csv`).  `mean_rates_by_src.csv`
-gives the per-source contribution, since `disagg_by_src` is enabled.
+gives the per-source contribution.
