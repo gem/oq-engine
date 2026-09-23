@@ -51,6 +51,7 @@ from openquake.hazardlib.map_array import (
 from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
+from openquake.pfd.visini import VisiniSecondaryCalculator
 from openquake.calculators import base
 from openquake.calculators.getters import MapGetter, build_stat_curve, slice_dt
 
@@ -102,7 +103,6 @@ def get_adapters(selections, r_sigma, near_far_threshold_km=0.2):
             if pipeline != 'generic':
                 break
     if sr is not None and fd is not None and pipeline == 'visini':
-        from openquake.pfd.visini import VisiniSecondaryCalculator
         case = (fd.model_params.get('case')
                 or sr.model_params.get('case') or 'case1')
         adapters['secondary_combined'] = VisiniSecondaryCalculator(

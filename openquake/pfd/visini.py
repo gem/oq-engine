@@ -34,6 +34,8 @@ from typing import List
 
 import numpy as np
 
+from openquake.baselib.general import agg_probs
+from openquake.pfd.adapter import style_from_rake
 from openquake.pfd.probability import _to_sites_x_displ
 
 
@@ -48,18 +50,6 @@ def choose_combinations(case: str) -> List[str]:
     if c not in table:
         raise ValueError(f'Unknown Visini case: {case}')
     return table[c]
-
-
-def combine_probabilities(probs: List[np.ndarray]) -> np.ndarray:
-    """
-    Element-wise ``P = 1 - prod_i (1 - P_i)`` over ``(n_sites, n_displ)``.
-    """
-    if not probs:
-        raise ValueError('No probability matrices provided.')
-    out = probs[0]
-    for p in probs[1:]:
-        out = 1.0 - (1.0 - out) * (1.0 - p)
-    return out
 
 
 class VisiniSecondaryCalculator(object):
@@ -96,7 +86,6 @@ class VisiniSecondaryCalculator(object):
         style_arr = getattr(ctx, 'style', None)
         if style_arr is not None:
             return style_arr[0]
-        from openquake.pfd.adapter import style_from_rake
         return style_from_rake(ctx.rake[0])
 
     def compute(self, ctx, imls, red_cfg):
@@ -150,4 +139,4 @@ class VisiniSecondaryCalculator(object):
                 combination=comb, **fd_kwargs)
             fd_mat = _to_sites_x_displ(fd, n_sites, n_displ, red_cfg)
             probs.append(p_sr.reshape(n_sites, 1) * fd_mat)
-        return combine_probabilities(probs)
+        return agg_probs(*probs)
