@@ -1974,7 +1974,7 @@ def calc_zip(request, job_id):
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
-    params = {}
+    params = {'calc_list_page_size': settings.CALC_LIST_PAGE_SIZE}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
