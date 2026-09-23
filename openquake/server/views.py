@@ -518,12 +518,15 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_api(request, endpoint):
+def _call_api(request, endpoint, params=None, headers=None):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)
+    request_headers = {'X-API-Key': API_KEY}
+    if headers:
+        request_headers.update(headers)
     try:
         response = requests.get(
-            url, headers={'X-API-Key': API_KEY}, timeout=10)
+            url, params=params, headers=request_headers, timeout=10)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:
@@ -636,15 +639,13 @@ def calc_list(request, id=None):
 @cross_domain_ajax
 def calc_count(request):
     """Return the number of calculations matching the requested filters."""
-    params = dict(request.GET.items())
-    params['count_only'] = '1'
-    count = logs.dbcmd(
-        'get_calcs', params, utils.get_valid_users(request),
-        not utils.is_superuser(request), None)
-    # The count query is selected by this private parameter so the list
-    # endpoint remains backwards compatible and continues returning an array.
-    return HttpResponse(
-        content=json.dumps(count), content_type=JSON)
+    headers = {
+        'X-Valid-Users': json.dumps(utils.get_valid_users(request)),
+        'X-User-ACL-On': str(not utils.is_superuser(request)),
+    }
+    return _call_api(
+        request, 'v1/calc_list/count',
+        params=dict(request.GET.items()), headers=headers)
 
 
 @csrf_exempt
