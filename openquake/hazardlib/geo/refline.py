@@ -359,7 +359,12 @@ class GeoTransform(object):
 
 
 def route_through_grid(cost, start_rc, stop_rc):
-    """Least-cost 8-connected path across a cost grid (scipy dijkstra)."""
+    """Least-cost path across a cost grid using scipy dijkstra.
+
+    This is expensive in both CPU time and memory: the raster is expanded
+    into a graph with one node per pixel. Keep the raster resolution and
+    extent bounded before calling this function.
+    """
     cost = np.asarray(cost, dtype=float)
     nr, nc = cost.shape
     for name, (r, c) in (('start', start_rc), ('stop', stop_rc)):
@@ -466,7 +471,12 @@ def _decimate_collinear(path_rc):
 
 def lcp_from_traces(traces, pixel_size=PIXEL_SIZE_M, cost_fault=COST_FAULT,
                     cost_background=COST_BACKGROUND, smooth=False):
-    """Build an LCP reference line from a rupture's section top-edge traces."""
+    """Build an LCP reference line from section top-edge traces.
+
+    LCP construction is expensive, especially in memory, since it creates a
+    raster and a graph covering the complete trace extent. It should only be
+    requested by models that explicitly require the LCP reference line.
+    """
     traces = [(np.asarray(lo, float), np.asarray(la, float))
               for lo, la in traces]
     traces = [(lo, la) for lo, la in traces if len(lo) >= 2]

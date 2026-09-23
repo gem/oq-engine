@@ -122,9 +122,9 @@ def pfd_methods(pfd_lt):
         the union of the GMPEs' ``REQUIRES_DISTANCES``)
     """
     # Raw sections are always available and are the safe default.  Only an
-    # explicit model declaration requests an expensive smoothed line; the
-    # base-class default must not turn every multi-fault rupture into an LCP
-    # raster calculation.
+    # explicit model declaration requests an expensive smoothed line. ECS/LCP
+    # can consume substantial CPU and memory, especially for long traces; the
+    # base-class default must not turn every rupture into an LCP calculation.
     methods = {'segments'}
     for branchset in pfd_lt.branchsets:
         slot = PFD_SLOTS_BY_UTYPE.get(branchset.uncertainty_type)

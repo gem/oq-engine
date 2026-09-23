@@ -286,6 +286,9 @@ class MultiSurface(BaseSurface):
         if method == 'segments':
             x_l, l_km = self.get_x_l_ratio(mesh)
             return self.get_rtor(mesh), x_l, l_km
+        # ECS/LCP construction is deliberately lazy: in particular, LCP
+        # rasterization is expensive in both CPU time and memory because it
+        # builds a graph with one node per raster pixel.
         ref = self._reflines.get(method)
         if ref is None:
             from openquake.hazardlib.geo.refline import reference_line
