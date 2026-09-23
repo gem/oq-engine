@@ -1,3 +1,9 @@
+  [Yen-Shin Chen, Michele Simionato]
+  * Added a probabilistic fault displacement calculator using a library of 35
+    models (primary/secondary rupture and diplacement) in openquake.pfd,
+    plus support for PFD logic tree (~12,000 lines between code and tests,
+    and ~4000 lines of data)
+
   [Michele Simionato]
   Internal: making sure all imported CSV files are in MANIFEST.in
 
