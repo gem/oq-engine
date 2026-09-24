@@ -2489,6 +2489,10 @@ def extract_html_table(request, calc_id, name):
         col for col in table.columns
         if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
     }
+    column_sort_types = [
+        'string' if col in string_short_names else 'number'
+        for col in table.columns
+    ]
 
     table_header = []
     for short_name in table.columns:
@@ -2523,6 +2527,7 @@ def extract_html_table(request, calc_id, name):
         # keep only rows with '*total*' and discard first and last 2 columns
         # (ID_0, ID and NAME)
         table_header = table_header[1:-2]
+        column_sort_types = column_sort_types[1:-2]
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
@@ -2597,11 +2602,25 @@ def extract_html_table(request, calc_id, name):
             for key, explanation in explanations.items()
         ]
 
-    # Decode byte strings to plain str
-    table_rows = [
-        list(zip(table_header, decode(row)))
-        for row in table_contents
-    ]
+    # Decode byte strings to plain str, while preserving the original values
+    # for client-side sorting. In particular, numbers can be humanized in the
+    # template, so sorting the displayed text would give incorrect results.
+    table_rows = []
+    for raw_row in table_contents:
+        display_row = decode(raw_row)
+        cells = []
+        for index, (header, display_value) in enumerate(
+                zip(table_header, display_row)):
+            sort_type = column_sort_types[index]
+            sort_value = decode(raw_row[index])
+            cells.append({
+                'display_value': display_value,
+                'is_string': (sort_type == 'string'
+                              or header in string_columns),
+                'sort_type': sort_type,
+                'sort_value': sort_value,
+            })
+        table_rows.append(cells)
 
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,
