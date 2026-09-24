@@ -433,6 +433,26 @@ async def v0_impact_get_rupture_data(
     return JSONResponse(content=response_data, status_code=status)
 
 
+@app.get('/v1/calc_list/count')
+def calc_list_count(
+        request: Request,
+        x_api_key: str | None = Header(default=None),
+        x_valid_users: str | None = Header(default=None),
+        x_user_acl_on: str | None = Header(default=None)):
+    """Count calculations matching filters from the Django list view."""
+    _check_api_key(x_api_key)
+    try:
+        valid_users = json.loads(x_valid_users or '[]')
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail='Invalid user context') from exc
+    params = dict(request.query_params)
+    params['count_only'] = '1'
+    return logs.dbcmd(
+        'get_calcs', params, valid_users,
+        valid.boolean(x_user_acl_on or '1'))
+
+
 @app.get('/v1/calc/list_tags')
 def calc_list_tags():
     """Return all calculation tags."""

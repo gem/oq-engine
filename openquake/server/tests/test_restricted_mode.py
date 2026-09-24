@@ -321,6 +321,9 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         ret = self.get('list', limit=-1)
         self.assertEqual(ret.status_code, 200)
         all_jobs = ret.json()
+        count_ret = self.get('list/count', limit=-1)
+        self.assertEqual(count_ret.status_code, 200)
+        self.assertEqual(count_ret.json(), len(all_jobs))
         job_ids = {j['id'] for j in all_jobs}
         self.assertIn(job1.calc_id, job_ids)
         self.assertIn(job2.calc_id, job_ids)

@@ -518,12 +518,15 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_api(request, endpoint):
+def _call_api(request, endpoint, params=None, headers=None):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)
+    request_headers = {'X-API-Key': API_KEY}
+    if headers:
+        request_headers.update(headers)
     try:
         response = requests.get(
-            url, headers={'X-API-Key': API_KEY}, timeout=10)
+            url, params=params, headers=request_headers, timeout=10)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:
@@ -630,6 +633,19 @@ def calc_list(request, id=None):
         [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def calc_count(request):
+    """Return the number of calculations matching the requested filters."""
+    headers = {
+        'X-Valid-Users': json.dumps(utils.get_valid_users(request)),
+        'X-User-ACL-On': str(not utils.is_superuser(request)),
+    }
+    return _call_api(
+        request, 'v1/calc_list/count',
+        params=dict(request.GET.items()), headers=headers)
 
 
 @csrf_exempt
@@ -1959,7 +1975,7 @@ def calc_zip(request, job_id):
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
-    params = {}
+    params = {'calc_list_page_size': settings.CALC_LIST_PAGE_SIZE}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS

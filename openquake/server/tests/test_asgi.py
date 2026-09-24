@@ -54,3 +54,9 @@ def test_static_files_are_served(uvicorn_client):
         assert response.status_code == 200, path
         if path.endswith('.css'):
             assert response.headers['content-type'].startswith('text/css')
+
+
+def test_calc_count_requires_internal_api_key(uvicorn_client):
+    """Keep the internal calculation-count route protected."""
+    response = uvicorn_client.get('/v1/calc_list/count')
+    assert response.status_code == 403
