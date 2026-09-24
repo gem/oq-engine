@@ -1,64 +1,109 @@
----
 name: Build Image Production for Docker
 on:
   workflow_dispatch:
     inputs:
       tags:
-        description: Comma-separated list of tags
-        default: latest
+        description: "Comma-separated list of tags (e.g. v3.23,latest)"
+        default: "nightly"
         required: true
       git-ref:
-        description: Git Ref
-        default: master
+        description: "Git Ref"
+        default: "master"
         required: true
+  push:
+    branches:
+      - docker-action
+    paths:
+      - 'docker/**'
+      - '.github/workflows/**'
   schedule:
     - cron: "45 23 * * *"
 
+env:
+  IMAGE: openquake/engine
+
 jobs:
   docker:
-    name: Build image and push after successfull calculation
+    name: Build, test, push
     runs-on: ubuntu-latest
     env:
       DOCKER_USERNAME: ${{ secrets.docker_username }}
       DOCKER_PASSWORD: ${{ secrets.docker_password }}
-      REPO_REF: ${{ github.event.inputs.git-ref }}
-      DOCKER_TAG: ${{ github.event.inputs.version }}
+
     steps:
-  # This Checkout is necessary when using a context in docker/build-push-action
-      - name: Clone Repository (Latest)
+      # ── 1. Resolve variabili ──────────────────────────────────
+      - id: vars
+        name: Resolve variables
+        run: |
+          case "${{ github.event_name }}" in
+            workflow_dispatch)
+              echo "▶ Manual run"
+              REF="${{ github.event.inputs.git-ref }}"
+              TAGS="${{ github.event.inputs.tags }}"
+              ;;
+            push)
+              echo "▶ Push to ${{ github.ref_name }}"
+              REF="${{ github.ref_name }}"
+              TAGS="dev"
+              ;;
+            *)
+              echo "▶ Scheduled run"
+              REF="master"
+              TAGS="nightly"
+              ;;
+          esac
+
+          PRIMARY=$(echo "$TAGS" | cut -f1 -d, | tr -d '[:space:]')
+          TAG_ARGS=""
+          for tag in $(echo "$TAGS" | tr ',' '\n'); do
+            TAG_ARGS="$TAG_ARGS -t $IMAGE:$tag"
+          done
+          {
+            echo "REPO_REF=$REF"
+            echo "TAGS=$TAGS"
+            echo "PRIMARY=$PRIMARY"
+            echo "TAG_ARGS=$TAG_ARGS"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "---"
+          echo "REPO_REF = $REF"
+          echo "TAGS     = $TAGS"
+            echo "PRIMARY  = $PRIMARY"
+          echo "TAG_ARGS = $TAG_ARGS"
+
+      # ── 2. Checkout ───────────────────────────────────────────
+      - name: Clone repository
         uses: actions/checkout@v6
-        if: github.event.inputs.git-ref == ''
-      - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v6
-        if: github.event.inputs.git-ref != ''
         with:
-          ref: ${{ github.event.inputs.git-ref }}
-      - name: Extract tag names
-        shell: bash
-        run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
-        id: extract_tags
-        if: github.event.inputs.git-ref != ''
-        with:
-          ref: ${{ github.event.inputs.git-ref }}
-      - name: Build image engine with tag ${{ github.event.inputs.version }}
-        id: docker_engine
+          ref: ${{ steps.vars.outputs.REPO_REF }}
+
+      # ── 3. Build ──────────────────────────────────────────────
+      - name: Docker build ${{ steps.vars.outputs.TAGS }}
         run: |
-          if [ ${{ github.event.inputs.version }} != '' ]; then
-            echo "Is manual run"
-            docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
-          else
-            echo "Is scheduled run"
-            DOCKER_TAG=nightly
-            REPO_REF=master
-            docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.engine docker
-          fi
-      - name: List Image
+          docker build \
+            --build-arg oq_branch=${{ steps.vars.outputs.REPO_REF }} \
+            ${{ steps.vars.outputs.TAG_ARGS }} \
+            -f docker/Dockerfile.engine \
+            docker
+
+      - name: List images
+        run: docker image ls "$IMAGE"
+
+      # ── 4. Test ───────────────────────────────────────────────
+      - name: Run tests
         run: |
-          docker image ls
-      - name: Test Auth mode and run calcs on single docker
-        run: |
-          # Test authentication on WebUI headless
-          echo "Test WEBUI HEADLESS"
+          set -e
+          IMG="$IMAGE:${{ steps.vars.outputs.PRIMARY }}"
+
+          # 4a – Single-shot calc
+          echo "▶ Single-shot calc"
+          time docker run "$IMG" \
+            oq engine --run \
+            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+
+          # 4b – WebUI container
+          echo "▶ Starting WebUI"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
           OQ_ADMIN_USERNAME=user
@@ -73,66 +118,63 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
-          if [ ${{ github.event.inputs.version }} != '' ]; then
-          release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
-            echo "Is manual run"
-            time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
-            echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
-            echo "Starting docker at: `date +"%Y-%m-%dT%H:%M:%S"`"
-            docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
-          else
-            echo "Is scheduled run"
-            DOCKER_TAG=nightly
-            REPO_REF=master
-            time docker run openquake/engine:$DOCKER_TAG oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
-          fi
-          sleep 180
-          docker logs openquake -t
-          echo "Waiting WEBUI up on port 8800...."
-          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
-           echo "Still waiting WEBUI account login up on port 8800...."
-           sleep 5 # wait for 5 seconds before check again
+
+          docker run --name openquake -d --env-file=./.env \
+            -p 127.0.0.1:8800:8800 "$IMG"
+
+          # 4c – Wait for WebUI
+          echo "▶ Waiting for WebUI on :8800"
+          sleep 30
+          while [[ "$(curl -s -o /dev/null -w '%{http_code}' \
+            http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+            echo "  … waiting"
+            sleep 5
           done
-          sleep 1
-          echo -n "TEST DJANGO LOGIN "
-          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-          YOUR_USER='user'
-          YOUR_PASS='login'
+          echo "  WebUI up!"
+
+          # 4d – Django login
+          echo "▶ Django login"
+          LOGIN_URL="http://127.0.0.1:8800/accounts/login/"
           COOKIES=cookies.txt
-          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
-          echo -n "Django Auth: get csrftoken ..."
-          $CURL_BIN $LOGIN_URL > /dev/null
-          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
-          echo " perform login ..."
-          $CURL_BIN \
-              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-              -X POST $LOGIN_URL > /dev/null
+          curl -s -c "$COOKIES" -b "$COOKIES" -e "$LOGIN_URL" "$LOGIN_URL" > /dev/null
+          CSRF="csrfmiddlewaretoken=$(grep csrftoken "$COOKIES" | sed 's/^.*csrftoken\s*//')"
+          curl -s -c "$COOKIES" -b "$COOKIES" -e "$LOGIN_URL" \
+            -d "${CSRF}&username=user&password=login" \
+            -X POST "$LOGIN_URL" > /dev/null
           docker logs -t -n 5 openquake
-          # Run calcs
-          echo "test run of calc on running container "
+
+          # 4e – Calcs via exec
+          echo "▶ Exec – hazard"
           sleep 3
-          time docker exec -t openquake oq engine --run /opt/openquake/demos/hazard/AreaSourceClassicalPSHA/job.ini
-          time docker exec -t openquake oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+          time docker exec -t openquake \
+            oq engine --run \
+            /opt/openquake/demos/hazard/AreaSourceClassicalPSHA/job.ini
+
+          echo "▶ Exec – risk"
+          time docker exec -t openquake \
+            oq engine --run \
+            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+
+          # 4f – Fresh container
+          echo "▶ Fresh container"
           sleep 2
-          echo "test run of a calcs on new created container"
-          if [ ${{ github.event.inputs.version }} != '' ]; then
-            echo "Is manual run"
-            time docker run openquake/engine:${release_tag} oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
-          else
-            echo "Is scheduled run"
-            DOCKER_TAG=nightly
-            REPO_REF=master
-            time docker run openquake/engine:$DOCKER_TAG oq engine --run /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
-          fi
-      - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
+          time docker run "$IMG" \
+            oq engine --run \
+            /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
+            /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
+
+          # Cleanup
+          docker stop openquake 2>/dev/null || true
+          docker rm   openquake 2>/dev/null || true
+
+      # ── 5. Push ───────────────────────────────────────────────
+      - name: Login to Docker Hub
+        run: docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+
+      - name: Push ${{ steps.vars.outputs.TAGS }}
         run: |
-          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          if [ ${{ github.event.inputs.version }} != '' ]; then
-            echo "Is manual run"
-            docker push openquake/engine --all-tags
-          else
-            echo "Is scheduled run"
-            DOCKER_TAG=nightly
-            REPO_REF=master
-            docker push openquake/engine:$DOCKER_TAG
-          fi
+          for tag in $(echo "${{ steps.vars.outputs.TAGS }}" | tr ',' '\n'); do
+            echo "→ push $IMAGE:$tag"
+            docker push "$IMAGE:$tag"
+          done
