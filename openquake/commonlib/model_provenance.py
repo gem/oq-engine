@@ -21,31 +21,14 @@
 import json
 import logging
 import os
-import subprocess
 from datetime import datetime, timezone
 
 from openquake.baselib import hdf5
+from openquake.baselib.gitwrapper import git
 from openquake.hazardlib.countries import REGIONS
 
 MODEL_PROVENANCE_KEY = 'model_provenance'
 SCHEMA_VERSION = 1
-
-
-class ModelProvenanceError(Exception):
-    """Raised when repository provenance cannot be read."""
-
-
-def _git(path, *args, optional=False):
-    """Run Git in *path* and return its stripped standard output."""
-    proc = subprocess.run(
-        ['git', *args], cwd=path, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if proc.returncode:
-        if optional:
-            return None
-        message = proc.stderr.strip() or 'git command failed'
-        raise ModelProvenanceError(f'{path}: {message}')
-    return proc.stdout.strip()
 
 
 def _submodule_paths(path):
@@ -53,9 +36,13 @@ def _submodule_paths(path):
     gitmodules = os.path.join(path, '.gitmodules')
     if not os.path.exists(gitmodules):
         return []
-    output = _git(
-        path, 'config', '--file', '.gitmodules', '--get-regexp',
-        r'^submodule\..*\.path$', optional=True)
+    try:
+        output = git(
+            path, ['config', '--file', '.gitmodules', '--get-regexp',
+                   r'^submodule\..*\.path$'])
+    except SystemExit:
+        return []
+    output = output.strip()
     if not output:
         return []
     paths = []
@@ -69,17 +56,18 @@ def _repository_status(path, relative_path):
     """Return the provenance of one repository."""
     status = {'path': relative_path}
     try:
-        status['commit'] = _git(path, 'rev-parse', 'HEAD')
-        ref = _git(path, 'rev-parse', '--abbrev-ref', 'HEAD')
+        status['commit'] = git(path, ['rev-parse', 'HEAD']).strip()
+        ref = git(path, ['rev-parse', '--abbrev-ref', 'HEAD']).strip()
         status['detached'] = ref == 'HEAD'
         status['branch'] = None if status['detached'] else ref
+        description = git(
+            path, ['describe', '--tags', '--always', 'HEAD']).strip()
         status['detached_ref'] = (
-            _git(path, 'describe', '--tags', '--exact-match', 'HEAD',
-                 optional=True) if status['detached'] else None)
-        status['dirty'] = bool(
-            _git(path, 'status', '--porcelain',
-                 '--untracked-files=all'))
-    except (OSError, ModelProvenanceError) as exc:
+            description if status['detached'] and
+            not status['commit'].startswith(description) else None)
+        status['dirty'] = bool(git(
+            path, ['status', '--porcelain', '--untracked-files=all']).strip())
+    except (OSError, SystemExit) as exc:
         status['status_error'] = str(exc)
     return status
 
@@ -112,7 +100,15 @@ def collect_model_provenance(grm_dir):
 
 
 def _summary_text(summary):
-    """Serialize a summary in a stable, human-readable form."""
+    """Serialize the model provenance as stable, human-readable JSON.
+
+    The document contains a schema version, its UTC generation timestamp,
+    and a ``repositories`` list. Each repository entry contains its path,
+    full commit SHA, branch, detached-head state, detached reference, and
+    dirty-working-tree flag. Regional repositories also contain a
+    ``submodules`` list with the same information. If a repository cannot
+    be inspected, the entry contains ``status_error`` instead.
+    """
     return json.dumps(summary, indent=2, sort_keys=True) + '\n'
 
 
