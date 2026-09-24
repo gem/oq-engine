@@ -1,20 +1,18 @@
 ---
-name: Build Image Nightly for Docker
+name: Build Image devel for Docker
 on:
   workflow_dispatch:
     inputs:
       version:
         description: Image Tag
-        default: nightly
+        default: devel
         required: true
       git-ref:
         description: Git Ref
         default: master
         required: true
   schedule:
-    - cron: "30 23 * * *"
- #push:
-    #branches: [ ci ]
+    - cron: "30 05 * * *"
 
 jobs:
   docker:
@@ -42,7 +40,7 @@ jobs:
             echo "Is manual run"
           else
             echo "Is scheduled run"
-            DOCKER_TAG=nightly
+            DOCKER_TAG=devel
             REPO_REF=master
           fi
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
@@ -102,7 +100,7 @@ jobs:
             echo "Is manual run"
           else
             echo "Is scheduled run"
-            DOCKER_TAG=nightly
+            DOCKER_TAG=devel
             REPO_REF=master
           fi
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
