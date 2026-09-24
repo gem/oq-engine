@@ -72,6 +72,14 @@ lt
     :undoc-members:
     :show-inheritance:
 
+pfd_lt
+------------------------------
+
+.. automodule:: openquake.hazardlib.pfd_lt
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 amp_lt
 ------------------------------
 

@@ -32,11 +32,8 @@ class FixedPrimarySR(BasePrimarySurfRup):
     This is useful when the user wants to assume surface rupture is
     certain (P(SR) = 1.0) or set to any other fixed probability.
 
-    Parameters
-    ----------
-    value : float, optional
-        The fixed probability value to return. Must be between 0 and 1.
-        Default is 1.0.
+    :param value: The fixed probability value to return (float, optional).
+        Must be between 0 and 1. Default is 1.0.
     """
 
     def __init__(self, value=1.0):
