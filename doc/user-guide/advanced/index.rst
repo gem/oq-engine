@@ -45,7 +45,8 @@ It is a good idea to read the section about :ref:`Common mistakes <common-mistak
 .. toctree::
    :maxdepth: 1
 
-   advanced-calculations
-   special-features
+advanced-calculations
+    probabilistic-fault-displacement
+    special-features
    useful-oq-commands
    working-with-the-dstore
