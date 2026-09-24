@@ -44,7 +44,7 @@ jobs:
             push)
               echo "▶ Push to ${{ github.ref_name }}"
               REF="${{ github.ref_name }}"
-              TAGS="dev"
+              TAGS="devel"
               ;;
             *)
               echo "▶ Scheduled run"
