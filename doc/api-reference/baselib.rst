@@ -22,7 +22,7 @@ Installation
 installed simply with
 
 ```
-$ pip install openquake.engine
+$ pip install openquake.engine~=3.23.0
 ```
 
 or in several other ways, see

@@ -208,7 +208,7 @@ copy of the Engine::
 
 	$ python3 -m venv </path/to/myvenv>
 	$ . /path/to/myvenv/bin/activate
-	$ pip3 install openquake.engine
+	$ pip3 install openquake.engine~=3.23.0
 
 
 ##########################################################
