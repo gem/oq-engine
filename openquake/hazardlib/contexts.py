@@ -328,9 +328,8 @@ def simple_cmaker(gsims, imts, **params):
 
 # generator of quintets (rup_index, mag, planar_array, sites)
 # called first in preclassical with a reduced sitecol and then in classical
-def _quintets(cmaker, src, sitecol):
-    magrates = src.get_annual_occurrence_rates()
-    magdist = {mag: cmaker.maximum_distance(mag) for mag, rate in magrates}
+def _quintets(cmaker, src, sitecol, magrates):
+    magdist = {mag: cmaker.maximum_distance(mag) for mag in magrates}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
     maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
     maxdist = magdist[maxmag]
@@ -477,7 +476,8 @@ def genctxs_Pp(src, sitecol, cmaker):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    for magi, mag,  magdist, planars, sites in _quintets(
+            cmaker, src, sitecol, mrate):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
