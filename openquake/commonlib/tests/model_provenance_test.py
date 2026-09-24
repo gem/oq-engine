@@ -17,12 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import subprocess
 import tempfile
 import unittest
 from types import SimpleNamespace
 
 from openquake.baselib import hdf5
+from openquake.baselib.gitwrapper import git
 from openquake.commonlib.model_provenance import (
     collect_model_provenance, copy_model_provenance,
     read_model_provenance, store_model_provenance)
@@ -35,27 +35,20 @@ class ModelProvenanceTestCase(unittest.TestCase):
         """Create a small Git repository for testing."""
         path = os.path.join(root, 'Africa')
         os.mkdir(path)
-        self.git(path, 'init', '-q')
-        self.git(path, 'config', 'user.email', 'test@example.com')
-        self.git(path, 'config', 'user.name', 'Test User')
+        git(path, ['init', '-q'])
+        git(path, ['config', 'user.email', 'test@example.com'])
+        git(path, ['config', 'user.name', 'Test User'])
         with open(os.path.join(path, 'model.txt'), 'w') as stream:
             stream.write('model')
-        self.git(path, 'add', 'model.txt')
-        self.git(path, 'commit', '-qm', 'initial commit')
+        git(path, ['add', 'model.txt'])
+        git(path, ['commit', '-qm', 'initial commit'])
         return path
-
-    @staticmethod
-    def git(path, *args):
-        """Run Git in a test repository."""
-        return subprocess.run(
-            ['git', *args], cwd=path, check=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     def test_detached_and_dirty(self):
         with tempfile.TemporaryDirectory() as root:
             path = self.make_repository(root)
-            self.git(path, 'tag', 'v1.0.0')
-            self.git(path, 'checkout', '-q', 'v1.0.0')
+            git(path, ['tag', 'v1.0.0'])
+            git(path, ['checkout', '-q', 'v1.0.0'])
             with open(os.path.join(path, 'model.txt'), 'a') as stream:
                 stream.write(' changed')
 
