@@ -34,7 +34,6 @@ class Takao2013PrimarySR(BasePrimarySurfRup):
     function of magnitude (their Equation 4, z = -32.03 + 4.90*Mw),
     regressed on Japanese reverse- and strike-slip-faulting earthquakes.
 
-    
     Takao, M., Tsuchiyama, J., Annaka, T., & Kurita, T. (2013). Application of
     probabilistic fault displacement hazard analysis in Japan. Journal of Japan
     Association for Earthquake Engineering, 13(1), 17-36.

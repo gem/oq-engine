@@ -40,7 +40,6 @@ class Lavrentiadis2023PrimaryFD_aggregate(BasePrimarySurfDispl):
     normalized along-strike position, and faulting style, run in the
     principal (primary_surf_displ) slot.
 
-    
     Lavrentiadis, G., and Abrahamson, N.A. (2023). Fault-displacement models
     for aggregate and principal displacements. Earthquake Spectra, 41(4),
     2806-2837. https://doi.org/10.1177/87552930231201531

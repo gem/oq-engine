@@ -41,7 +41,6 @@ class Youngs2003PrimarySR(BasePrimarySurfRup):
     Both coefficient pairs are tabulated in the Appendix of Youngs et al.
     (2003) ("Coefficients for Equation 4 shown on Figure 4").
 
-    
     Youngs, R.R., et al. (2003). A methodology for probabilistic fault
     displacement hazard analysis (PFDHA). Earthquake Spectra, 19(1), 191-219.
     https://doi.org/10.1193/1.1542891

@@ -31,7 +31,6 @@ class WC1993PrimarySR(BasePrimarySurfRup):
     Logistic model of the probability of principal surface rupture as a
     function of magnitude, applicable to all faulting styles.
 
-    
     Wells, D.L., and Coppersmith, K.J. (1993). Likelihood of surface rupture
     as a function of magnitude (abstract). Seismological Research Letters,
     64(1), 54. Coefficients as reported by Youngs et al. (2003), Earthquake

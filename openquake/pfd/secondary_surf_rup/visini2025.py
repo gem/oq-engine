@@ -59,7 +59,6 @@ class Visini2025SecondarySR(BaseSecondarySurfRup):
     distance from the principal trace, hanging-wall/footwall position, and
     analysis cell (slice) width.
 
-    
     Visini, F., Boncio, P., Valentini, A., Scotti, O., Nurminen, F., Baize,
     S., & Pace, B. (2025). Empirical regressions for distributed faulting of
     dip-slip earthquakes. Earthquake Spectra, 41(4), 2968-3001.
