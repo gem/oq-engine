@@ -30,8 +30,7 @@ from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
 class Youngs2003SecondaryFD(BaseSecondarySurfDispl):
     """Distributed fault-displacement model of Youngs et al. (2003).
 
-    References
-    ----------
+    
     Youngs, R.R., et al. (2003). A methodology for probabilistic fault
     displacement hazard analysis (PFDHA). Earthquake Spectra, 19(1), 191-219.
 

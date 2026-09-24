@@ -28,8 +28,7 @@ from openquake.pfd.secondary_surf_rup.base import BaseSecondarySurfRup
 class Youngs2003SecondarySR(BaseSecondarySurfRup):
     """Distributed surface-rupture probability model of Youngs et al. (2003).
 
-    References
-    ----------
+    
     Youngs, R.R., et al. (2003). A methodology for probabilistic fault
     displacement hazard analysis (PFDHA). Earthquake Spectra, 19(1), 191-219.
     """

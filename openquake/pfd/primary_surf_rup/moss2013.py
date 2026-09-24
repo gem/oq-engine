@@ -31,8 +31,7 @@ class Moss2013PrimarySR(BasePrimarySurfRup):
     Logistic model of the probability of principal surface rupture as a
     function of magnitude, faulting style, and site Vs30.
 
-    References
-    ----------
+    
     Moss, R. E. S., Stanton, K. V., & Buelna, M. I. (2013). The impact of
     material stiffness on the likelihood of fault rupture propagating to the
     ground surface. Seismological Research Letters, 84(3), 485-488.

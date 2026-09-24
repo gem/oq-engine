@@ -32,8 +32,7 @@ class Pizza2023PrimarySR(BasePrimarySurfRup):
     function of magnitude, with coefficients for the ``all``, ``normal``,
     ``reverse``, and ``strike-slip`` faulting styles.
 
-    References
-    ----------
+    
     Pizza, M., Ferrario, M.F., Thomas, F., Tringali, G., & Livio, F. (2023).
     Likelihood of primary surface faulting: updating of empirical regressions.
     Bulletin of the Seismological Society of America, 113(5), 2106-2118.

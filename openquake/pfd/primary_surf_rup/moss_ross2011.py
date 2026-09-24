@@ -32,8 +32,7 @@ class MossRoss2011PrimarySR(BasePrimarySurfRup):
     Logistic model of the probability of principal surface rupture for
     reverse-faulting events as a function of magnitude.
 
-    References
-    ----------
+    
     Moss, R.E.S., and Ross, Z.E. (2011). Probabilistic fault displacement
     hazard analysis for reverse faults. Bulletin of the Seismological
     Society of America, 101(4), 1542-1553.
