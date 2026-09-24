@@ -276,7 +276,8 @@ displacement definition follows the taxonomy of Sarmiento et al.
 strand, *sum-of-principal* is the slip summed over the principal
 strands within a measurement aperture, *aggregate* is the total
 displacement including distributed faulting, and *distributed* is
-the off-trace displacement.
+the off-trace displacement. For class-level implementation details
+and parameters, see the :ref:`PFD model API reference <openquake-pfd-api>`.
 
 fdhaPrimarySRModel
 ******************

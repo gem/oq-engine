@@ -21,11 +21,19 @@ from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean)
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import gsim, InvalidFile
+from openquake.pfd.registry import SLOTS, get_available
 
 GSIM_PATH = gsim.__path__[0]
 SUMMARY = os.path.normpath(
     os.path.join(
         GSIM_PATH, '../../../doc/api-reference/openquake.hazardlib.gsim.rst'))
+PFD_SUMMARY = os.path.normpath(os.path.join(
+    GSIM_PATH, '../../../doc/user-guide/advanced/'
+    'probabilistic-fault-displacement.rst'))
+PFD_API_SUMMARY = os.path.normpath(os.path.join(
+    GSIM_PATH, '../../../doc/api-reference/openquake.pfd.rst'))
+PFD_API_DIR = os.path.normpath(os.path.join(
+    GSIM_PATH, '../../../doc/api-reference/pfd-models'))
 
 
 class MblgToMwTestCase(unittest.TestCase):
@@ -76,7 +84,7 @@ class ClipMeanTestCase(unittest.TestCase):
 
 
 class DocumentationTestCase(unittest.TestCase):
-    """Make sure each GSIM module is listed in openquake.hazardlib.gsim.rst"""
+    """Check that GSIM modules and PFD models are documented."""
     def test_documented(self):
         txt = open(SUMMARY).read()
         for name in os.listdir(GSIM_PATH):
@@ -84,3 +92,27 @@ class DocumentationTestCase(unittest.TestCase):
                 if name[:-3] not in txt:
                     raise InvalidFile('%s: %s is not documented' %
                                       (SUMMARY, name))
+
+    def test_pfd_models_documented(self):
+        txt = open(PFD_SUMMARY).read()
+        names = sorted({name for slot in SLOTS
+                        for name in get_available(slot)})
+        missing = [name for name in names if name not in txt]
+        if missing:
+            raise InvalidFile('%s: PFD models are not documented: %s' %
+                              (PFD_SUMMARY, ', '.join(missing)))
+
+    def test_pfd_models_in_api_reference(self):
+        index = open(PFD_API_SUMMARY).read()
+        missing = []
+        for slot in SLOTS:
+            for name, cls in get_available(slot).items():
+                relative = os.path.join(slot, name)
+                page = os.path.join(PFD_API_DIR, relative + '.rst')
+                directive = '.. autoclass:: %s.%s' % (cls.__module__, name)
+                if (relative not in index or not os.path.isfile(page)
+                        or directive not in open(page).read()):
+                    missing.append(name)
+        if missing:
+            raise InvalidFile('%s: PFD models are not documented: %s' %
+                              (PFD_API_SUMMARY, ', '.join(missing)))
