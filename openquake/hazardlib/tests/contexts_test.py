@@ -18,6 +18,7 @@
 
 import os
 import unittest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
@@ -27,6 +28,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.calc.filters import magdepdist
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -318,6 +320,41 @@ class FastRatesTestCase(unittest.TestCase):
         print(mon)
         aac(self.rmap.array[:, :, 0], rmaps[0].array[:, :, 0])
         aac(self.rmap.array[:, :, 99], rmaps[99].array[:, :, 0])
+
+
+class LazyPointPlanarTestCase(unittest.TestCase):
+    def run_case(self, lon, expect_detailed):
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        mfd = ArbitraryMFD([5.0], [1.0])
+        npd = PMF([(0.5, NodalPlane(0., 90., 0.)),
+                   (0.5, NodalPlane(90., 90., 0.))])
+        src = PointSource(
+            'ps', 'pointsource', trt, mfd, 2.5, WC1994(), 1.0, tom,
+            0., 20., Point(0., 0.), npd, PMF([(1., 10.)]))
+        sites = SiteCollection([Site(
+            Point(lon, 0., 0.), vs30=760, vs30measured=False,
+            z1pt0=20, z2pt5=30)])
+        param = dict(
+            imtls={'PGA': [0.01]},
+            maximum_distance=magdepdist([(4., 500), (8., 500)]),
+            pointsource_distance={'default': 1.})
+        cmaker = ContextMaker(trt, [valid.gsim('Atkinson2015')], param)
+        original = PointSource.get_planar
+        calls = []
+
+        def spy(source, shift_hypo=False, iruptures=False):
+            calls.append(iruptures)
+            return original(source, shift_hypo, iruptures)
+
+        with mock.patch.object(PointSource, 'get_planar', spy):
+            list(cmaker.get_ctxs(src, sites))
+        self.assertEqual(any(not flag for flag in calls), expect_detailed)
+
+    def test_far_sites_skip_detailed_planars(self):
+        self.run_case(3., False)
+
+    def test_close_sites_build_detailed_planars(self):
+        self.run_case(.02, True)
 
 
 class PlanarDistancesTestCase(unittest.TestCase):

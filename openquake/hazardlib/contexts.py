@@ -329,11 +329,8 @@ def simple_cmaker(gsims, imts, **params):
 # generator of quintets (rup_index, mag, planar_array, sites)
 # called first in preclassical with a reduced sitecol and then in classical
 def _quintets(cmaker, src, sitecol):
-    with cmaker.ir_mon:
-        # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
-    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
+    magrates = src.get_annual_occurrence_rates()
+    magdist = {mag: cmaker.maximum_distance(mag) for mag, rate in magrates}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
     maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
     maxdist = magdist[maxmag]
@@ -346,38 +343,50 @@ def _quintets(cmaker, src, sitecol):
 
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
-    # splitting by magnitude
-    if src.count_nphc() == 1:
+    nphc = src.count_nphc()
+    if nphc == 1:
         # one rupture per magnitude
+        with cmaker.ir_mon:
+            planardict = src.get_planar(cmaker.shift_hypo)
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
                 yield m, mag, magdist[mag], pla, sites
-    else:
-        for m, rup in enumerate(src.iruptures()):
-            mag = rup.mag
-            if mag > maxmag or mag < minmag:
-                continue
-            mdist = magdist[mag]
-            arr = [rup.surface.array.reshape(-1, 3)]  # planar
-            pla = planardict[mag]
-            # NB: having a good psdist is essential for performance!
-            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
-            close = sites.filter(cdist[mask] <= psdist)
-            far = sites.filter(cdist[mask] > psdist)
-            if cmaker.fewsites:
-                if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sites
-                else:  # something is close
-                    yield m, mag, mdist, pla, sites
-            else:  # many sites
-                if close is None:  # all is far
-                    yield m, mag, mdist, arr, far
-                elif far is None:  # all is close
-                    yield m, mag, mdist, pla, close
-                else:  # some sites are far, some are close
-                    yield m, mag, mdist, arr, far
-                    yield m, mag, mdist, pla, close
+        return
+
+    # Detailed geometries are only needed for close sites. Far sites use
+    # average ruptures from src.iruptures().
+    planardict = None
+    for m, rup in enumerate(src.iruptures()):
+        mag = rup.mag
+        if mag > maxmag or mag < minmag:
+            continue
+        mdist = magdist[mag]
+        arr = [rup.surface.array.reshape(-1, 3)]  # planar
+        # NB: having a good psdist is essential for performance!
+        psdist = src.get_psdist(m, mag, cmaker.pointsource_distance, magdist)
+        close = sites.filter(cdist[mask] <= psdist)
+        far = sites.filter(cdist[mask] > psdist)
+        if cmaker.fewsites:
+            if close is None:  # all is far, common for small mag
+                yield m, mag, mdist, arr, sites
+            else:  # something is close
+                if planardict is None:
+                    with cmaker.ir_mon:
+                        planardict = src.get_planar(cmaker.shift_hypo)
+                yield m, mag, mdist, planardict[mag], sites
+        elif close is None:  # all are far
+            yield m, mag, mdist, arr, far
+        elif far is None:  # all is close
+            if planardict is None:
+                with cmaker.ir_mon:
+                    planardict = src.get_planar(cmaker.shift_hypo)
+            yield m, mag, mdist, planardict[mag], close
+        else:  # some sites are far, some are close
+            yield m, mag, mdist, arr, far
+            if planardict is None:
+                with cmaker.ir_mon:
+                    planardict = src.get_planar(cmaker.shift_hypo)
+            yield m, mag, mdist, planardict[mag], close
 
 
 # helper used to populate contexts for planar ruptures
