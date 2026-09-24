@@ -29,6 +29,7 @@
 # @author 1 has been funded by this project
 
 from dataclasses import dataclass
+import copy
 import pandas as pd
 import numpy as np
 try:
@@ -36,6 +37,8 @@ try:
 except ImportError:
     nx = None
 import logging
+
+from openquake.baselib import parallel
 
 
 @dataclass
@@ -189,7 +192,7 @@ def create_original_graph(exposure_df, g_type):
 
 
 def get_damage_df(dstore, exposure_df):
-    # Extractung the damage data from component level analysis
+    # Extracting the damage data from component level analysis
     agg_keys = pd.DataFrame({"id": [key.decode()
                                     for key in dstore["agg_keys"][:]]})
     damage_df = (
@@ -213,7 +216,7 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
     taz_nodes_analysis_results = {}
     o = ELWCLPCLloss_TAZ(
         exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type,
-        oq.max_nodes_network)
+        oq.max_nodes_network, oq.concurrent_tasks, dstore.hdf5)
     sum_connectivity_loss_pcl = o.event_connectivity_loss_pcl['PCL'].sum()
     sum_connectivity_loss_wcl = o.event_connectivity_loss_wcl['WCL'].sum()
     if N <= oq.max_nodes_network:
@@ -236,20 +239,20 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
             o.node_el["EL"] /= eff_inv_time
         else:
             o.node_el["EL"] = np.nan
-  
+
     elif oq.calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
         o.avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
         o.avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-        o.avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events      
+        o.avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
         o.cl["PCL_node"] /= num_events
         o.cl["WCL_node"] /= num_events
-   
+
         if N <= oq.max_nodes_network:
             o.node_el["EL"] /= num_events
         else:
             o.node_el["EL"] = np.nan
-            
+
     o.cl.drop(columns=['ordinal'], inplace=True)
     o.node_el.drop(columns=['ordinal'], inplace=True)
 
@@ -273,15 +276,16 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
     N = len(G_original)
     o = ELWCLPCLCCL_demand(
         exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
-        damage_df, g_type, oq.max_nodes_network)
-    
+        damage_df, g_type, oq.max_nodes_network, oq.concurrent_tasks,
+        dstore.hdf5)
+
     sum_connectivity_loss_ccl = o.event_connectivity_loss_ccl['CCL'].sum()
     sum_connectivity_loss_pcl = o.event_connectivity_loss_pcl['PCL'].sum()
     sum_connectivity_loss_wcl = o.event_connectivity_loss_wcl['WCL'].sum()
     if N <= oq.max_nodes_network:
         sum_connectivity_loss_eff = o.event_connectivity_loss_eff['EL'].sum()
-    else: 
-        sum_connectivity_loss_eff = np.nan   
+    else:
+        sum_connectivity_loss_eff = np.nan
 
     if calculation_mode == "event_based_damage":
         inv_time = oq.investigation_time
@@ -339,14 +343,14 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     generic_nodes_analysis_results = {}
     N = len(G_original)
     node_el, event_connectivity_loss_eff = EL_node(
-        exposure_df,G_original, eff_nodes, damage_df, g_type,
-        oq.max_nodes_network)
-    
+        exposure_df, G_original, eff_nodes, damage_df, g_type,
+        oq.max_nodes_network, oq.concurrent_tasks, dstore.hdf5)
+
     if N <= oq.max_nodes_network:
         sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
     else:
         sum_connectivity_loss_eff = np.nan
-        
+
     if oq.calculation_mode == "event_based_damage":
         inv_time = oq.investigation_time
         ses_per_ltp = oq.ses_per_logic_tree_path
@@ -356,7 +360,7 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
         if N <= oq.max_nodes_network:
             node_el["EL"] /= eff_inv_time
         else:
-            node_el["EL"] = np.nan 
+            node_el["EL"] = np.nan
 
     elif oq.calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
@@ -364,7 +368,7 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
         if N <= oq.max_nodes_network:
             node_el["EL"] /= num_events
         else:
-            node_el["EL"] = np.nan 
+            node_el["EL"] = np.nan
 
     node_el.drop(columns=['ordinal'], inplace=True)
 
@@ -380,7 +384,6 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
 def cleanup_graph(G_original, event_damage_df, g_type):
     # Making a copy of original graph for each event for the analysis
     G = G_original.copy()
-
     nodes_damage_df = event_damage_df.loc[
         event_damage_df.type.str.lower() == "node"].droplevel(level=0)
     edges_damage_df = event_damage_df.loc[
@@ -392,82 +395,79 @@ def cleanup_graph(G_original, event_damage_df, g_type):
     nonfunctional_nodes_df = nodes_damage_df.loc[
         ~nodes_damage_df.is_functional]
 
-    # This is done to handle the the multi graph where more that one edge
-    # is possible between two nodes.
-    # If it is a multi graph then every edge has a key value
+    nonfunctional_edge_ids = set(nonfunctional_edges_df.index)
+    nonfunctional_node_ids = list(nonfunctional_nodes_df.index)
 
+    # This is done to handle multigraphs, where more than one edge can exist
+    # between the same two nodes and each edge has a key value.
     if g_type in ["MultiGraph", "MultiDiGraph"]:
         edges_to_remove = [
             (u, v, key)
             for (u, v, key, data) in G.edges(keys=True, data=True)
-            if data['id'] in nonfunctional_edges_df.index.to_list()]
+            if data['id'] in nonfunctional_edge_ids]
     else:
         edges_to_remove = [
-            (u, v) for (u, v, data) in G.edges(data=True)
-            if data['id'] in nonfunctional_edges_df.index.to_list()]
+            (u, v)
+            for (u, v, data) in G.edges(data=True)
+            if data['id'] in nonfunctional_edge_ids]
 
     G.remove_edges_from(edges_to_remove)
-    G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
-
+    G.remove_nodes_from(nonfunctional_node_ids)
     return G
 
 
 def calc_weighted_connectivity_loss(
         graph, att, nodes_from, nodes_to, wcl_table, pcl_table, ws, ns):
     # For calculating weighted connectivity loss
-    # Important: if the weight is not provided, then the weight of each edges
-    # is considered to be one.
-    for i in nodes_to:
-        if not att:
-            path_lengths = [
-                nx.shortest_path_length(graph, j, i)
-                for j in nodes_from if nx.has_path(graph, j, i)]
-            countw = sum(
-                [1/path_length for path_length in path_lengths
-                 if path_length != 0])
-        else:
-            path_lengths = [
-                nx.shortest_path_length(graph, j, i, weight='weight')
-                for j in nodes_from if nx.has_path(graph, j, i)]
-            countw = sum(
-                [1/path_length for path_length in path_lengths
-                 if path_length != 0])
-        wcl_table.at[i, ws] = countw * pcl_table.at[i, ns]
+    nodes_to = list(nodes_to)
+    _, reciprocal_distance_sum, _ = _source_target_metrics(
+        graph, att, nodes_from, nodes_to)
+
+    for target in nodes_to:
+        wcl_table.at[target, ws] = (
+            reciprocal_distance_sum[target] * pcl_table.at[target, ns])
+
     return wcl_table
 
 
-def calc_efficiency(graph, N, att, eff_table, eff, max_nodes_network):
+
+def calc_efficiency(graph, N, att, eff_table, eff, max_nodes_network,
+                    precomputed=None):
     # For calculating efficiency
-    # Important: If the weight is not provided, then the weight of each edges
+    # Important: If the weight is not provided, then the weight of each edge
     # is considered to be one.
     if N > max_nodes_network:
         eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]],
                                  columns=['Eff0', 'Eff', 'EL'])
         eff_table.index.names = ['id']
     else:
+        if precomputed is None:
+            precomputed = {}
+
         for node in graph:
-            if not att:
+            if node in precomputed:
+                # Reuse the shortest-path traversal already performed while
+                # calculating CCL/PCL/WCL for this source node.
+                eff_node = precomputed[node]
+            elif not att:
                 lengths = nx.single_source_shortest_path_length(graph, node)
                 inv = [1/x for x in lengths.values() if x != 0]
-                eff_node = (sum(inv))/(N-1)
+                eff_node = sum(inv) / (N - 1)
             else:
                 lengths = nx.single_source_dijkstra_path_length(
-                    graph, node, weight="weight")
+                    graph, node, weight='weight')
                 inv = [1/x for x in lengths.values() if x != 0]
-                eff_node = (sum(inv))/(N-1)
+                eff_node = sum(inv) / (N - 1)
+
             eff_table.at[node, eff] = eff_node
+
         if eff == 'Eff':
-            if N > max_nodes_network:
-                eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]],
-                                         columns=['Eff0', 'Eff', 'EL'])
-                eff_table.index.names = ['id']
-            else:
-            # This is done so that if the initial graph has a node disconnected,
-            # will raise an error when calculating the efficiency loss
-                eff_table['EL'] = (eff_table.Eff0 - eff_table.Eff) / \
-                    eff_table.Eff0.replace({0: np.nan})
-                eff_table['EL'] = eff_table['EL'].fillna(0)
-    
+            # This is done so that if the initial graph has a disconnected
+            # node, the efficiency-loss calculation does not divide by zero.
+            eff_table['EL'] = (eff_table.Eff0 - eff_table.Eff) / \
+                eff_table.Eff0.replace({0: np.nan})
+            eff_table['EL'] = eff_table['EL'].fillna(0)
+
     return eff_table
 
 
@@ -519,109 +519,121 @@ def analysis(dstore):
 
 
 def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
-                       source_nodes, damage_df, g_type, max_nodes_network):
-    # Classic one where particular nodes are divided as supply or demand and
-    # the main interest is to check the serviceability of supply to demand
-    # nodes. This calculates, complete connectivity loss (CCL), weighted
-    # connectivity loss (WCL), partial connectivity loss(PCL) considering the
-    # demand and supply nodes provided at nodal and global level. Additionly,
-    # efficiency loss globally and for each node is also calculated
-
-    # To store the information of the performance indicators at connectivity
-    # level
+                       source_nodes, damage_df, g_type, max_nodes_network,
+                       concurrent_tasks=None, h5=None):
+    # Classic case where particular nodes are divided as supply or demand.
     o = Out.new(expo_df, demand_nodes, eff_nodes, 'demand')
 
-    # To check the the values for each node before the earthquake event
-
-    # For calculating complete connectivity Loss
-    o.ccl_table.loc[demand_nodes, 'CNO'] = [
-        1 if any(nx.has_path(G_original, j, i) for j in source_nodes) else 0
-        for i in demand_nodes]
-
-    # For calculating partial connectivity loss
-    o.pcl_table.loc[demand_nodes, 'NS0'] = [
-        sum(nx.has_path(G_original, j, i) for j in source_nodes)
-        for i in demand_nodes]
-
-    att = nx.get_edge_attributes(G_original, 'weight')
-    o.wcl_table = calc_weighted_connectivity_loss(
-        G_original, att, source_nodes, demand_nodes, o.wcl_table, o.pcl_table,
-        'WS0', 'NS0')
-
-    
     att = nx.get_edge_attributes(G_original, 'weight')
     N = len(G_original)
-    o.eff_table = calc_efficiency(G_original, N, att, o.eff_table, 'Eff0',
-                                  max_nodes_network)
+
+    # One shortest-path tree per source supplies CNO, NS0 and WS0 together.
+    # When efficiency is enabled, also reuse those same trees for Eff0.
+    eff_N = N if N <= max_nodes_network else None
+    ns0, invdist0, source_eff0 = _source_target_metrics(
+        G_original, att, source_nodes, demand_nodes, N=eff_N)
+
+    for node in demand_nodes:
+        o.ccl_table.at[node, 'CNO'] = 1 if ns0[node] else 0
+        o.pcl_table.at[node, 'NS0'] = ns0[node]
+        o.wcl_table.at[node, 'WS0'] = invdist0[node] * ns0[node]
+
+    o.eff_table = calc_efficiency(
+        G_original, N, att, o.eff_table, 'Eff0', max_nodes_network,
+        precomputed=source_eff0)
 
     logging.info('Checking for every event after earthquake')
-    for event_id, event_damage_df in damage_df.groupby("event_id"):
-        update_demand(o, event_id, event_damage_df, G_original, g_type,
-                      source_nodes, demand_nodes, eff_nodes, N, att,
-                      max_nodes_network)
-    return o
+    events = list(damage_df.groupby('event_id'))
+
+    # concurrent_tasks=0 to disable parallelism.
+    # Also avoid creating a nested Starmap if this code is already executing
+    # inside an OQ worker.
+    if concurrent_tasks == 0 or parallel.Starmap.on or len(events) <= 1:
+        for event_id, event_damage_df in events:
+            update_demand(
+                o, event_id, event_damage_df, G_original, g_type,
+                source_nodes, demand_nodes, eff_nodes, N, att,
+                max_nodes_network)
+        return o
+
+    weighted = bool(att)
+    smap = parallel.Starmap.apply(
+        process_demand_events,
+        (events, o, G_original, g_type, source_nodes, demand_nodes,
+         eff_nodes, N, weighted, max_nodes_network),
+        concurrent_tasks=concurrent_tasks, h5=h5)
+    return _merge_demand_results(o, list(smap), N <= max_nodes_network)
 
 
 def update_demand(o, event_id, event_damage_df, G_original, g_type,
-                  source_nodes, demand_nodes, eff_nodes, N, att, max_nodes_network):
+                  source_nodes, demand_nodes, eff_nodes, N, att,
+                  max_nodes_network):
     G = cleanup_graph(G_original, event_damage_df, g_type)
-    # Checking if there is a path between any souce to each demand node.
-    # Some demand nodes and source nodes may have been eliminated from
-    # the network due to damage, so we do not need to check their 
-    # functionalities
-    
-    extant_source_nodes = set(source_nodes) & set(G.nodes)
-    extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
-    extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
-    # If demand nodes are damaged itself (Example, building collapsed where
-    # demand node is considered)
-    o.ccl_table.loc[~o.ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
-    o.pcl_table.loc[~o.pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
-    o.wcl_table.loc[~o.wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
-    o.eff_table.loc[~o.eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
 
-    # To check the the values for each node after the earthquake event
-    # Complete connectivity loss
-    o.ccl_table.loc[extant_demand_nodes, 'CNS'] = [
-        1 if any(nx.has_path(G, j, i) for j in extant_source_nodes) else 0
-        for i in extant_demand_nodes]
+    # Some demand/source nodes may have been removed by the damage state.
+    graph_nodes = set(G.nodes)
+    extant_source_nodes = set(source_nodes) & graph_nodes
+    extant_demand_nodes = sorted(set(demand_nodes) & graph_nodes)
+    extant_eff_nodes = sorted(set(eff_nodes) & graph_nodes)
 
-    # Partial Connectivity Loss
-    o.pcl_table.loc[extant_demand_nodes, 'NS'] = [
-        sum(nx.has_path(G, j, i) for j in extant_source_nodes)
-        for i in extant_demand_nodes]
-    o.wcl_table = calc_weighted_connectivity_loss(
-        G, att, extant_source_nodes, extant_demand_nodes, o.wcl_table,
-        o.pcl_table, 'WS', 'NS')
-    o.eff_table = calc_efficiency(G, N, att, o.eff_table, 'Eff', max_nodes_network)
+    # Nodes removed from the damaged graph have zero post-event connectivity.
+    o.ccl_table.loc[
+        ~o.ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
+    o.pcl_table.loc[
+        ~o.pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
+    o.wcl_table.loc[
+        ~o.wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
+    o.eff_table.loc[
+        ~o.eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
+
+    # Calculate CNS, NS and WS from the same set of single-source shortest
+    # paths. Reuse source efficiencies in calc_efficiency when applicable.
+    eff_N = N if N <= max_nodes_network else None
+    ns_values, invdist, source_eff = _source_target_metrics(
+        G, att, extant_source_nodes, extant_demand_nodes, N=eff_N)
+
+    for node in extant_demand_nodes:
+        ns = ns_values[node]
+        o.ccl_table.at[node, 'CNS'] = 1 if ns else 0
+        o.pcl_table.at[node, 'NS'] = ns
+        o.wcl_table.at[node, 'WS'] = invdist[node] * ns
+
+    o.eff_table = calc_efficiency(
+        G, N, att, o.eff_table, 'Eff', max_nodes_network,
+        precomputed=source_eff)
 
     # Connectivity Loss for each node
-    o.pcl_table['PCL_node'] = 1 - (o.pcl_table['NS']/o.pcl_table['NS0'])
-    o.wcl_table['WCL_node'] = 1 - (o.wcl_table['WS']/o.wcl_table['WS0'])
-    
+    o.pcl_table['PCL_node'] = 1 - (o.pcl_table['NS'] / o.pcl_table['NS0'])
+    o.wcl_table['WCL_node'] = 1 - (o.wcl_table['WS'] / o.wcl_table['WS0'])
+
     # Computing the mean of the connectivity loss to consider the overall
     # performance of the area (at global level)
-    CCL_per_event = 1 - ((o.ccl_table['CNS'].sum())/
-                         o.ccl_table['CNO'].sum())
+    CCL_per_event = 1 - (
+        o.ccl_table['CNS'].sum() / o.ccl_table['CNO'].sum())
     PCL_mean_per_event = o.pcl_table['PCL_node'].mean()
     WCL_mean_per_event = o.wcl_table['WCL_node'].mean()
+
     if N > max_nodes_network:
-        Glo_eff0_per_event = Glo_eff_per_event = Glo_effloss_per_event = np.nan
+        Glo_eff0_per_event = np.nan
+        Glo_eff_per_event = np.nan
+        Glo_effloss_per_event = np.nan
     else:
         Glo_eff0_per_event = o.eff_table['Eff0'].mean()
         Glo_eff_per_event = o.eff_table['Eff'].mean()
-        # Calculation of Efficiency loss
         Glo_effloss_per_event = (
             Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
 
-    event = Inp(event_id, CCL_per_event, PCL_mean_per_event,
-                WCL_mean_per_event, Glo_effloss_per_event)
+    event = Inp(
+        event_id, CCL_per_event, PCL_mean_per_event,
+        WCL_mean_per_event, Glo_effloss_per_event)
     _update_demand(o, event)
-        
+
     if N <= max_nodes_network:
         eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
-        o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
-            'id', as_index=False).sum()
+        o.node_el = pd.concat(
+            (o.node_el, eff_table1.reset_index())
+        ).groupby('id', as_index=False).sum()
+
 
 
 def _update_demand(o, event):
@@ -662,12 +674,13 @@ def update_taz(o, event_id, event_damage_df, G_original, g_type,
                TAZ_nodes, eff_nodes, N, att, max_nodes_network):
     G = cleanup_graph(G_original, event_damage_df, g_type)
 
-    # Checking if there is a path between any souce to each demand node.
+    # Checking if there is a path between any source to each demand node.
     # Some demand nodes and source nodes may have been eliminated from
     # the network due to damage, so we do not need to check their
     # functionalities
-    extant_TAZ_nodes = sorted(set(TAZ_nodes) & set(G.nodes))
-    extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
+    graph_nodes = set(G.nodes)
+    extant_TAZ_nodes = sorted(set(TAZ_nodes) & graph_nodes)
+    extant_eff_nodes = sorted(set(eff_nodes) & graph_nodes)
 
     # If demand nodes are damaged itself (Example, building collapsed where
     # demand node is considered)
@@ -675,19 +688,21 @@ def update_taz(o, event_id, event_damage_df, G_original, g_type,
     o.wcl_table.loc[~o.wcl_table.index.isin(extant_TAZ_nodes), 'WS'] = 0
     o.eff_table.loc[~o.eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
 
-    for i in extant_TAZ_nodes:
-        count = 0
-        for j in extant_TAZ_nodes:
-            if i != j:
-                if nx.has_path(G, j, i):
-                    count = count + 1
-        o.pcl_table.at[i, 'NS'] = count
-
-    o.wcl_table = calc_weighted_connectivity_loss(
+    # In TAZ mode a node is not counted as connected to itself in NS/NS0.
+    eff_N = N if N <= max_nodes_network else None
+    ns_values, invdist, source_eff = _source_target_metrics(
         G, att, extant_TAZ_nodes, extant_TAZ_nodes,
-        o.wcl_table, o.pcl_table, 'WS', 'NS')
-    o.eff_table = calc_efficiency(G, N, att, o.eff_table, 'Eff', max_nodes_network)
-    
+        exclude_self=True, N=eff_N)
+
+    for node in extant_TAZ_nodes:
+        ns = ns_values[node]
+        o.pcl_table.at[node, 'NS'] = ns
+        o.wcl_table.at[node, 'WS'] = invdist[node] * ns
+
+    o.eff_table = calc_efficiency(
+        G, N, att, o.eff_table, 'Eff', max_nodes_network,
+        precomputed=source_eff)
+
     # Connectivity Loss for each node
     o.pcl_table['PCL_node'] = 1 - (o.pcl_table['NS'] / o.pcl_table['NS0'])
     o.wcl_table['WCL_node'] = 1 - (o.wcl_table['WS'] / o.wcl_table['WS0'])
@@ -696,15 +711,16 @@ def update_taz(o, event_id, event_damage_df, G_original, g_type,
     # performance of the area (at global level)
     PCL_mean_per_event = o.pcl_table['PCL_node'].mean()
     WCL_mean_per_event = o.wcl_table['WCL_node'].mean()
-    #max_nodes_network = float(10)
+
     if N > max_nodes_network:
-        Glo_eff0_per_event = Glo_eff_per_event = Glo_effloss_per_event = np.nan
- 
+        Glo_eff0_per_event = np.nan
+        Glo_eff_per_event = np.nan
+        Glo_effloss_per_event = np.nan
     else:
         Glo_eff0_per_event = o.eff_table['Eff0'].mean()
         Glo_eff_per_event = o.eff_table['Eff'].mean()
         Glo_effloss_per_event = (
-            Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
+            Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
 
     # Storing the value of performance indicators for each event
     o.event_connectivity_loss_pcl = pd.concat(
@@ -715,7 +731,6 @@ def update_taz(o, event_id, event_damage_df, G_original, g_type,
         [o.event_connectivity_loss_wcl, pd.DataFrame.from_records(
             [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
         ignore_index=True)
- 
     o.event_connectivity_loss_eff = pd.concat(
         [o.event_connectivity_loss_eff, pd.DataFrame.from_records(
             [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
@@ -726,120 +741,344 @@ def update_taz(o, event_id, event_damage_df, G_original, g_type,
     pcl_table1 = o.pcl_table.drop(columns=['NS0', 'NS'])
     o.cl = pd.concat((o.cl, pcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
-
     wcl_table1 = o.wcl_table.drop(columns=['WS0', 'WS'])
     o.cl = pd.concat((o.cl, wcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
-    
+
     if N <= max_nodes_network:
         eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
-        o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
-            'id', as_index=False).sum()
-        
+        o.node_el = pd.concat(
+            (o.node_el, eff_table1.reset_index())
+        ).groupby('id', as_index=False).sum()
     
 
-
 def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
-                     eff_nodes, damage_df, g_type, max_nodes_network):
-    # When the nodes acts as both demand and supply.
-    # For example, traffic analysis zone in transportation network. This
-    # calculates, efficiency loss (EL),
-    # weighted connectivity loss (WCL),partial connectivity loss(PCL).
+                     eff_nodes, damage_df, g_type, max_nodes_network,
+                     concurrent_tasks=None, h5=None):
+    # When the nodes act as both demand and supply, for example traffic
+    # analysis zones in a transportation network.
 
     # To store the information of the performance indicators at connectivity
     # level
     o = Out.new(expo_df, TAZ_nodes, eff_nodes, 'taz')
 
-    # To check the the values for each node before the earthquake event
-
-    # For calculating partial connectivity loss
-    for i in TAZ_nodes:
-        count = 0
-        for j in TAZ_nodes:
-            if i != j:
-                if nx.has_path(G_original, j, i):
-                    count = count + 1
-        o.pcl_table.at[i, 'NS0'] = count
-
     att = nx.get_edge_attributes(G_original, 'weight')
-    o.wcl_table = calc_weighted_connectivity_loss(
-        G_original, att, TAZ_nodes, TAZ_nodes, o.wcl_table, o.pcl_table, 'WS0',
-        'NS0')
-
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weight')
-    o.eff_table = calc_efficiency(G_original, N, att, o.eff_table, 'Eff0',
-                                  max_nodes_network)
+
+    eff_N = N if N <= max_nodes_network else None
+    ns0, invdist0, source_eff0 = _source_target_metrics(
+        G_original, att, TAZ_nodes, TAZ_nodes,
+        exclude_self=True, N=eff_N)
+
+    for node in TAZ_nodes:
+        o.pcl_table.at[node, 'NS0'] = ns0[node]
+        o.wcl_table.at[node, 'WS0'] = invdist0[node] * ns0[node]
+
+    o.eff_table = calc_efficiency(
+        G_original, N, att, o.eff_table, 'Eff0', max_nodes_network,
+        precomputed=source_eff0)
 
     logging.info('Checking for every event after earthquake')
-    for event_id, event_damage_df in damage_df.groupby("event_id"):
-        update_taz(o, event_id, event_damage_df, G_original, g_type,
-                   TAZ_nodes, eff_nodes, N, att, max_nodes_network)
-    return o
+    events = list(damage_df.groupby('event_id'))
+    if concurrent_tasks == 0 or parallel.Starmap.on or len(events) <= 1:
+        for event_id, event_damage_df in events:
+            update_taz(
+                o, event_id, event_damage_df, G_original, g_type,
+                TAZ_nodes, eff_nodes, N, att, max_nodes_network)
+        return o
 
+    weighted = bool(att)
+    smap = parallel.Starmap.apply(
+        process_taz_events,
+        (events, o, G_original, g_type, TAZ_nodes, eff_nodes, N,
+         weighted, max_nodes_network),
+        concurrent_tasks=concurrent_tasks, h5=h5)
+    return _merge_taz_results(o, list(smap), N <= max_nodes_network)
 
-def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type, max_nodes_network):
+def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type,
+            max_nodes_network, concurrent_tasks=None, h5=None):
     # when no information about supply or demand is given or known,
-
     # only efficiency loss is calculated for all nodes
 
-    # To store the information of the performance indicators at connectivity
-    # level
     node_el = expo_df[expo_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     eff_table = pd.DataFrame({'id': eff_nodes})
     eff_table.set_index("id", inplace=True)
 
-    # Create an empty dataframe with columns "event_id" and "EL"
     event_connectivity_loss_eff = pd.DataFrame(
         {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
 
-    # To check the the values for each node before the earthquake event
-
     N = len(G_original)
     att = nx.get_edge_attributes(G_original, 'weight')
-    eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0',
-                                max_nodes_network)
+    eff_table = calc_efficiency(
+        G_original, N, att, eff_table, 'Eff0', max_nodes_network)
 
     logging.info('Checking for every event after earthquake')
-    for event_id, event_damage_df in damage_df.groupby("event_id"):
-        G = cleanup_graph(G_original, event_damage_df, g_type)
+    events = list(damage_df.groupby('event_id'))
+    if concurrent_tasks == 0 or parallel.Starmap.on or len(events) <= 1:
+        for event_id, event_damage_df in events:
+            node_el, event_connectivity_loss_eff, eff_table = update_generic(
+                node_el, event_connectivity_loss_eff, eff_table,
+                event_id, event_damage_df, G_original, g_type, eff_nodes,
+                N, att, max_nodes_network)
+        return node_el, event_connectivity_loss_eff
 
-        # Checking if there is a path between any souce to each demand node.
-        # Some demand nodes and source nodes may have been eliminated from
-        # the network due to damage, so we do not need to check their
-        # functionalities
-        extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
+    weighted = bool(att)
+    smap = parallel.Starmap.apply(
+        process_generic_events,
+        (events, eff_table, node_el, G_original, g_type, eff_nodes, N,
+         weighted, max_nodes_network),
+        concurrent_tasks=concurrent_tasks, h5=h5)
+    return _merge_generic_results(
+        node_el, list(smap), N <= max_nodes_network)
 
-        # If demand nodes are damaged itself (Example, building collapsed where
-        # demand node is considered)
-        eff_table.loc[~eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
 
-        # To check the the values for each node after the earthquake event
-        eff_table = calc_efficiency(G, N, att, eff_table, 'Eff', max_nodes_network)
 
-        # Computing the mean of the connectivity loss to consider the overall
-        # performance of the area (at global level)
-        if N > max_nodes_network:
-            Glo_eff0_per_event = Glo_eff_per_event = Glo_effloss_per_event = np.nan
+def _event_frames(results, key, columns):
+    """Concatenate and order per-event results returned by Starmap tasks."""
+    frames = [res[key] for res in results if len(res[key])]
+    if not frames:
+        return pd.DataFrame({
+            col: pd.Series(dtype=int if col == 'event_id' else float)
+            for col in columns})
+    return (pd.concat(frames, ignore_index=True)[columns]
+            .sort_values('event_id', kind='stable')
+            .reset_index(drop=True))
+
+
+def _sum_node_frames(results, key):
+    """Sum nodal event losses produced independently by each task."""
+    frames = [res[key] for res in results
+              if res.get(key) is not None and len(res[key])]
+    if not frames:
+        return None
+    frame = pd.concat(frames, ignore_index=True)
+    value_cols = [col for col in frame.columns
+                  if col not in ('id', 'ordinal')]
+    if not value_cols:
+        return None
+    return frame[['id'] + value_cols].groupby('id', as_index=False).sum()
+
+
+def process_demand_events(
+        event_block, o_template, G_original, g_type, source_nodes,
+        demand_nodes, eff_nodes, N, weighted, max_nodes_network, monitor):
+    """Process one Starmap block of damage events for demand/source mode."""
+    o = copy.deepcopy(o_template)
+    for event_id, event_damage_df in event_block:
+        update_demand(
+            o, event_id, event_damage_df, G_original, g_type,
+            source_nodes, demand_nodes, eff_nodes, N, weighted,
+            max_nodes_network)
+
+    node_el = None
+    if N <= max_nodes_network:
+        node_el = o.node_el.drop(columns=['ordinal'], errors='ignore')
+
+    return {
+        'event_ccl': o.event_connectivity_loss_ccl,
+        'event_pcl': o.event_connectivity_loss_pcl,
+        'event_wcl': o.event_connectivity_loss_wcl,
+        'event_eff': o.event_connectivity_loss_eff,
+        'cl': o.cl.drop(columns=['ordinal'], errors='ignore'),
+        'node_el': node_el,
+    }
+
+
+def _merge_demand_results(o, results, efficiency_enabled):
+    """Merge independent demand/source task outputs in the master process."""
+    o.event_connectivity_loss_ccl = _event_frames(
+        results, 'event_ccl', ['event_id', 'CCL'])
+    o.event_connectivity_loss_pcl = _event_frames(
+        results, 'event_pcl', ['event_id', 'PCL'])
+    o.event_connectivity_loss_wcl = _event_frames(
+        results, 'event_wcl', ['event_id', 'WCL'])
+    o.event_connectivity_loss_eff = _event_frames(
+        results, 'event_eff', ['event_id', 'EL'])
+
+    cl = _sum_node_frames(results, 'cl')
+    if cl is not None:
+        cl['ordinal'] = 0
+        o.cl = cl
+
+    if efficiency_enabled:
+        node_el = _sum_node_frames(results, 'node_el')
+        if node_el is not None:
+            node_el['ordinal'] = 0
+            o.node_el = node_el
+    return o
+
+
+def process_taz_events(
+        event_block, o_template, G_original, g_type, TAZ_nodes, eff_nodes,
+        N, weighted, max_nodes_network, monitor):
+    """Process one Starmap block of damage events for TAZ mode."""
+    o = copy.deepcopy(o_template)
+    for event_id, event_damage_df in event_block:
+        update_taz(
+            o, event_id, event_damage_df, G_original, g_type,
+            TAZ_nodes, eff_nodes, N, weighted, max_nodes_network)
+
+    node_el = None
+    if N <= max_nodes_network:
+        node_el = o.node_el.drop(columns=['ordinal'], errors='ignore')
+
+    return {
+        'event_pcl': o.event_connectivity_loss_pcl,
+        'event_wcl': o.event_connectivity_loss_wcl,
+        'event_eff': o.event_connectivity_loss_eff,
+        'cl': o.cl.drop(columns=['ordinal'], errors='ignore'),
+        'node_el': node_el,
+    }
+
+
+def _merge_taz_results(o, results, efficiency_enabled):
+    """Merge independent TAZ task outputs in the master process."""
+    o.event_connectivity_loss_pcl = _event_frames(
+        results, 'event_pcl', ['event_id', 'PCL'])
+    o.event_connectivity_loss_wcl = _event_frames(
+        results, 'event_wcl', ['event_id', 'WCL'])
+    o.event_connectivity_loss_eff = _event_frames(
+        results, 'event_eff', ['event_id', 'EL'])
+
+    cl = _sum_node_frames(results, 'cl')
+    if cl is not None:
+        cl['ordinal'] = 0
+        o.cl = cl
+
+    if efficiency_enabled:
+        node_el = _sum_node_frames(results, 'node_el')
+        if node_el is not None:
+            node_el['ordinal'] = 0
+            o.node_el = node_el
+    return o
+
+
+def update_generic(node_el, event_connectivity_loss_eff, eff_table,
+                   event_id, event_damage_df, G_original, g_type, eff_nodes,
+                   N, att, max_nodes_network):
+    """Calculate generic-node efficiency loss for a single damage event."""
+    G = cleanup_graph(G_original, event_damage_df, g_type)
+    extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
+
+    eff_table.loc[~eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
+    eff_table = calc_efficiency(
+        G, N, att, eff_table, 'Eff', max_nodes_network)
+
+    if N > max_nodes_network:
+        Glo_effloss_per_event = np.nan
+    else:
+        Glo_eff0_per_event = eff_table['Eff0'].mean()
+        Glo_eff_per_event = eff_table['Eff'].mean()
+        Glo_effloss_per_event = (
+            Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
+
+    event_connectivity_loss_eff = pd.concat(
+        [event_connectivity_loss_eff, pd.DataFrame.from_records(
+            [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
+        ignore_index=True)
+
+    if N <= max_nodes_network:
+        eff_table1 = eff_table.drop(columns=['Eff0', 'Eff']).reset_index()
+        node_el = pd.concat((node_el, eff_table1)).groupby(
+            'id', as_index=False).sum()
+
+    return node_el, event_connectivity_loss_eff, eff_table
+
+
+def process_generic_events(
+        event_block, eff_table_template, node_el_template, G_original,
+        g_type, eff_nodes, N, weighted, max_nodes_network, monitor):
+    """Process one Starmap block for generic-node efficiency analysis."""
+    eff_table = copy.deepcopy(eff_table_template)
+    node_el = copy.deepcopy(node_el_template)
+    event_eff = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
+
+    for event_id, event_damage_df in event_block:
+        node_el, event_eff, eff_table = update_generic(
+            node_el, event_eff, eff_table, event_id, event_damage_df,
+            G_original, g_type, eff_nodes, N, weighted, max_nodes_network)
+
+    node_result = None
+    if N <= max_nodes_network:
+        node_result = node_el.drop(columns=['ordinal'], errors='ignore')
+    return {'event_eff': event_eff, 'node_el': node_result}
+
+
+def _merge_generic_results(node_el, results, efficiency_enabled):
+    """Merge generic-node task outputs in the master process."""
+    event_eff = _event_frames(results, 'event_eff', ['event_id', 'EL'])
+    if efficiency_enabled:
+        merged = _sum_node_frames(results, 'node_el')
+        if merged is not None:
+            merged['ordinal'] = 0
+            node_el = merged
+    return node_el, event_eff
+
+def _source_target_metrics(graph, att, nodes_from, nodes_to,
+                           exclude_self=False, N=None):
+    """
+    Compute all source-to-target quantities with one shortest-path traversal
+    per source node.
+
+    :param graph:
+        NetworkX graph.
+    :param att:
+        Edge-weight attribute dictionary. An empty
+        dictionary means an unweighted analysis; otherwise ``weight`` is used.
+    :param nodes_from:
+        Source nodes.
+    :param nodes_to:
+        Target nodes.
+    :param exclude_self:
+        If True, do not count source == target in the reachable-source count.
+        This preserves the existing TAZ definition of NS/NS0.
+    :param N:
+        If provided, also calculate nodal efficiency for each source using the
+        same shortest-path tree. This lets calc_efficiency reuse work already
+        done here.
+    :returns:
+        ``(reachable_count, reciprocal_distance_sum, source_efficiency)``.
+
+    ``reachable_count[target]`` is the number of source nodes that can reach
+    the target.
+
+    ``reciprocal_distance_sum[target]`` is the sum of 1 / shortest-path length
+    from every reachable source to the target, excluding zero-length paths.
+
+    ``source_efficiency[source]`` is calculated only when N is provided.
+    """
+    nodes_to = list(nodes_to)
+    reachable_count = {node: 0 for node in nodes_to}
+    reciprocal_distance_sum = {node: 0.0 for node in nodes_to}
+    source_efficiency = {}
+
+    weighted = bool(att)
+
+    for source in nodes_from:
+        if weighted:
+            lengths = nx.single_source_dijkstra_path_length(
+                graph, source, weight='weight')
         else:
-            Glo_eff0_per_event = eff_table['Eff0'].mean()
-            Glo_eff_per_event = eff_table['Eff'].mean()
-            Glo_effloss_per_event = (
-                Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
+            lengths = nx.single_source_shortest_path_length(graph, source)
 
-        # Storing the value of performance indicators for each event
-        event_connectivity_loss_eff = pd.concat(
-            [event_connectivity_loss_eff, pd.DataFrame.from_records(
-                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
-            ignore_index=True)
+        # calc_efficiency needs exactly the same single-source shortest-path
+        # tree, so reuse it instead of traversing the graph again later.
+        if N is not None:
+            inv = [1 / distance for distance in lengths.values()
+                   if distance != 0]
+            source_efficiency[source] = sum(inv) / (N - 1)
 
-        # To store the sum of performance indicator at nodal level to calulate
-        # the average afterwards
-        if N <= max_nodes_network:
-            eff_table1 = eff_table.drop(columns=['Eff0', 'Eff'])
-            eff_table1 = eff_table1.reset_index()
-            node_el = pd.concat(
-                (node_el, eff_table1)).groupby('id', as_index=False).sum()
+        for target in nodes_to:
+            if target not in lengths:
+                continue
 
-    return node_el, event_connectivity_loss_eff
+            if not (exclude_self and source == target):
+                reachable_count[target] += 1
+
+            distance = lengths[target]
+            if distance != 0:
+                reciprocal_distance_sum[target] += 1 / distance
+
+    return reachable_count, reciprocal_distance_sum, source_efficiency
