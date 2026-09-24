@@ -106,12 +106,14 @@ class DocumentationTestCase(unittest.TestCase):
         index = open(PFD_API_SUMMARY).read()
         missing = []
         for slot in SLOTS:
+            page = os.path.join(PFD_API_DIR, slot + '.rst')
+            if slot not in index or not os.path.isfile(page):
+                missing.extend(get_available(slot))
+                continue
+            slot_txt = open(page).read()
             for name, cls in get_available(slot).items():
-                relative = os.path.join(slot, name)
-                page = os.path.join(PFD_API_DIR, relative + '.rst')
                 directive = '.. autoclass:: %s.%s' % (cls.__module__, name)
-                if (relative not in index or not os.path.isfile(page)
-                        or directive not in open(page).read()):
+                if directive not in slot_txt:
                     missing.append(name)
         if missing:
             raise InvalidFile('%s: PFD models are not documented: %s' %
