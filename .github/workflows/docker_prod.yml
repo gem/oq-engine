@@ -29,7 +29,6 @@ jobs:
     env:
       DOCKER_USERNAME: ${{ secrets.docker_username }}
       DOCKER_PASSWORD: ${{ secrets.docker_password }}
-
     steps:
       # ── 1. Resolve variabili ──────────────────────────────────
       - id: vars
@@ -44,7 +43,7 @@ jobs:
             push)
               echo "▶ Push to ${{ github.ref_name }}"
               REF="${{ github.ref_name }}"
-              TAGS="devel"
+              TAGS="dev"
               ;;
             *)
               echo "▶ Scheduled run"
@@ -54,10 +53,12 @@ jobs:
           esac
 
           PRIMARY=$(echo "$TAGS" | cut -f1 -d, | tr -d '[:space:]')
+
           TAG_ARGS=""
           for tag in $(echo "$TAGS" | tr ',' '\n'); do
             TAG_ARGS="$TAG_ARGS -t $IMAGE:$tag"
           done
+
           {
             echo "REPO_REF=$REF"
             echo "TAGS=$TAGS"
@@ -68,16 +69,16 @@ jobs:
           echo "---"
           echo "REPO_REF = $REF"
           echo "TAGS     = $TAGS"
-            echo "PRIMARY  = $PRIMARY"
+          echo "PRIMARY  = $PRIMARY"
           echo "TAG_ARGS = $TAG_ARGS"
 
       # ── 2. Checkout ───────────────────────────────────────────
       - name: Clone repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: ${{ steps.vars.outputs.REPO_REF }}
 
-      # ── 3. Build ──────────────────────────────────────────────
+      # ── 2. Build ──────────────────────────────────────────────
       - name: Docker build ${{ steps.vars.outputs.TAGS }}
         run: |
           docker build \
@@ -95,14 +96,12 @@ jobs:
           set -e
           IMG="$IMAGE:${{ steps.vars.outputs.PRIMARY }}"
 
-          # 4a – Single-shot calc
           echo "▶ Single-shot calc"
           time docker run "$IMG" \
             oq engine --run \
             /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
             /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
-          # 4b – WebUI container
           echo "▶ Starting WebUI"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
@@ -122,7 +121,6 @@ jobs:
           docker run --name openquake -d --env-file=./.env \
             -p 127.0.0.1:8800:8800 "$IMG"
 
-          # 4c – Wait for WebUI
           echo "▶ Waiting for WebUI on :8800"
           sleep 30
           while [[ "$(curl -s -o /dev/null -w '%{http_code}' \
@@ -132,7 +130,6 @@ jobs:
           done
           echo "  WebUI up!"
 
-          # 4d – Django login
           echo "▶ Django login"
           LOGIN_URL="http://127.0.0.1:8800/accounts/login/"
           COOKIES=cookies.txt
@@ -143,7 +140,6 @@ jobs:
             -X POST "$LOGIN_URL" > /dev/null
           docker logs -t -n 5 openquake
 
-          # 4e – Calcs via exec
           echo "▶ Exec – hazard"
           sleep 3
           time docker exec -t openquake \
@@ -156,7 +152,6 @@ jobs:
             /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
             /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
-          # 4f – Fresh container
           echo "▶ Fresh container"
           sleep 2
           time docker run "$IMG" \
@@ -164,7 +159,6 @@ jobs:
             /opt/openquake/demos/risk/ScenarioDamage/job_hazard.ini \
             /opt/openquake/demos/risk/ScenarioDamage/job_risk.ini
 
-          # Cleanup
           docker stop openquake 2>/dev/null || true
           docker rm   openquake 2>/dev/null || true
 
@@ -172,7 +166,7 @@ jobs:
       - name: Login to Docker Hub
         run: docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
-      - name: Push ${{ steps.vars.outputs.TAGS }}
+      - name: Push to Docker Hub
         run: |
           for tag in $(echo "${{ steps.vars.outputs.TAGS }}" | tr ',' '\n'); do
             echo "→ push $IMAGE:$tag"
