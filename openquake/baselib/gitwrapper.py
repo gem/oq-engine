@@ -40,7 +40,8 @@ def git(repodir, cmd):
             rc = proc.returncode
         if rc:
             sys.exit(f'Error {proc.stderr} in {repodir}: git {" ".join(cmd)}')
-    print(proc.stdout)
+    else:
+        print(proc.stdout)
     return proc.stdout
 
 git.repodir = 'git repository'
