@@ -11,16 +11,14 @@ on:
         description: Branch of gem/oq-engine repository
         default: master
         required: true
-      pypi-prod:
-        type: boolean
-        description: Publish PyPI
-        default: false
+      pypi-type:
+        description: PyPI Publishing Target
         required: true
-      pypi-test:
-        type: boolean
-        description: Publish TestPyPI
-        default: false
-        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
   schedule:
     - cron: "30 6 * * 1"
 
@@ -56,8 +54,7 @@ jobs:
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
       if: >-
         ${{ github.event_name == 'workflow_dispatch' &&
-            inputs.pypi-test &&
-            !inputs.pypi-prod ||
+            inputs.pypi-type == 'test' ||
             github.event_name == 'schedule' }}
     - name: Install pypa/build
       run: |
@@ -77,7 +74,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }} || ${{ github.event_name == 'schedule' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test' }} || ${{ github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -99,7 +96,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to PyPI
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-prod }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'production' }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
