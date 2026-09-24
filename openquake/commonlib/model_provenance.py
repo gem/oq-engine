@@ -16,7 +16,67 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Collect and store model-data repository provenance."""
+"""Collect and store model-data repository provenance.
+
+The stored JSON has the following structure (with other regions and
+submodules omitted):
+
+    {
+      "schema_version": 1,
+      "generated_at": "2026-09-24T08:12:03+00:00",
+      "repositories": [
+        {
+          "path": "South_America",
+          "branch": "v2026.0.0",
+          "commit": "d2d1a490fb7c84655120c9ea248ca7c43003181d",
+          "detached": false,
+          "detached_ref": null,
+          "dirty": true,
+          "submodules": [
+            {
+              "path": "South_America/Exposure",
+              "branch": null,
+              "commit": "2939c61b885f915199dc915ddf3b6f0825b30242",
+              "detached": true,
+              "detached_ref": "v2026.0.0",
+              "dirty": false
+            },
+            {
+              "path": "South_America/Hazard/SAM",
+              "branch": "v2026_updates",
+              "commit": "8fc4892a514903688207d58fc6135505d3771848",
+              "detached": false,
+              "detached_ref": null,
+              "dirty": false
+            },
+            {
+              "path": "South_America/Vulnerability",
+              "branch": null,
+              "commit": "f707a91aacc575312a4be729882791f58829ce9c",
+              "detached": true,
+              "detached_ref": "v2026.0.0",
+              "dirty": false
+            }
+          ]
+        },
+        {
+          "path": "site-models",
+          "branch": "master",
+          "commit": "c7990624c64dc721b0bfdc1319eba06e11b6b415",
+          "detached": false,
+          "detached_ref": null,
+          "dirty": false,
+          "submodules": []
+        },
+        ...
+      ]
+    }
+
+The ``dirty`` flag records whether the repository had local changes when
+this snapshot was collected. A detached repository is valid; its commit
+SHA is authoritative and ``detached_ref`` contains a tag or other readable
+reference when one is available.
+"""
 
 import json
 import logging
