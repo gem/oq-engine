@@ -46,6 +46,7 @@ It is a good idea to read the section about :ref:`Common mistakes <common-mistak
    :maxdepth: 1
 
    advanced-calculations
+   probabilistic-fault-displacement
    special-features
    useful-oq-commands
    working-with-the-dstore

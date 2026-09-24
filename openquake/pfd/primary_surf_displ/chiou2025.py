@@ -72,26 +72,20 @@ class Chiou2025PrimaryFD(BasePrimarySurfDispl):
     Chiou et al. (2025) primary surface displacement exceedance model
     for sum-of-principal displacement on strike-slip faults.
 
-    Parameters
-    ----------
-    d : float | array-like
-        Target displacement threshold(s) in meters.
-    X_L_ratio : float | array-like
-        Normalized position x/L in [0, 1]. Supports vectorization over sites.
-    mag : float
-        Moment magnitude Mw. Recommended range is (6.0, 8.3); outside this
-        range a warning is logged and the computation proceeds.
-    style : str, optional
-        Must be "strike-slip" (case-insensitive). If not, a ValueError is raised.
-    version : str, optional
-        Model formulation. One of {"model7", "model8.1", "model8.2", "model8.3"}.
-        Defaults to "model7".
-
-    Returns
-    -------
-    np.ndarray
-        Exceedance probability(s). Shape follows broadcasting of (n_sites, n_displacements)
-        when X_L_ratio is a vector and d is a vector; otherwise reduced appropriately.
+    :param d: Target displacement threshold(s) in meters (float or
+        array-like).
+    :param X_L_ratio: Normalized position x/L in [0, 1] (float or
+        array-like). Supports vectorization over sites.
+    :param mag: Moment magnitude Mw (float). Recommended range is (6.0,
+        8.3); outside this range a warning is logged and the computation
+        proceeds.
+    :param style: Must be "strike-slip" (case-insensitive), optional. If
+        not, a ValueError is raised.
+    :param version: Model formulation, optional. One of {"model7",
+        "model8.1", "model8.2", "model8.3"}. Defaults to "model7".
+    :returns: Exceedance probability(s) as an ndarray. Shape follows
+        broadcasting of (n_sites, n_displacements) when X_L_ratio is a
+        vector and d is a vector; otherwise reduced appropriately.
 
     Model contract: DISPLACEMENT_DEFINITION = "sum-of-principal",
     DISPLACEMENT_COMPONENT = "net" -- Chiou et al. (2025, Earthquake

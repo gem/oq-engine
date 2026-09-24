@@ -29,7 +29,7 @@ else if (window.application_mode === 'IMPACT') {
     $(document).ready(
         function () {
             refresh_tag_selector();
-            calculations.fetch({reset: true});
+            set_calc_list_params();
             setTimer();
 
             if (!disable_version_warning) {
@@ -78,11 +78,6 @@ else if (window.application_mode === 'IMPACT') {
                                         }
                                         diaerror.show(false, "Calculation not accepted: traceback", out);
                                     }});
-                           });
-
-            $(document).on('hidden.bs.modal', 'div[id^=traceback-]',
-                           function (e) {
-                               setTimer();
                            });
 
             if (window.application_mode === 'AELO') {
