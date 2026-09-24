@@ -1,3 +1,6 @@
+  [Catarina Costa]
+  * Optimized and parallelized network calculations in connectivity.py.
+	
   [Christopher Brooks]
   * Extended site amplification logic trees to work within a disaggregation
     calculation. QA tested in logictree/case_27. Includes a sanity check

@@ -23,6 +23,8 @@
 
 # @author 2 . Anirudh Rao
 
+# @author 3 . Catarina Costa
+
 # The present work has been done in the framework of grant agreement No. 813137
 # funded by the European Commission ITN-Marie Sklodowska-Curie project
 # “New Challenges for Urban Engineering Seismology (URBASIS-EU)”.
