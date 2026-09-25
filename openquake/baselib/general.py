@@ -1091,17 +1091,22 @@ def get_bins(values, nbins, key=None, minval=None, maxval=None):
     :returns: an array of N bin indices plus an array of B bins
     """
     assert len(values)
+    assert nbins > 0, nbins
     if key is not None:
         values = numpy.array([key(val) for val in values])
     if minval is None:
         minval = values.min()
     if maxval is None:
         maxval = values.max()
-    if minval == maxval:
-        bins = [minval] * nbins
+    if minval == maxval:  # degenerate case, a single bin
+        idx = numpy.zeros_like(values, dtype=numpy.int64)
+        bins = numpy.full(nbins, minval)
     else:
-        bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
-    return numpy.searchsorted(bins, values, side='right'), bins
+        edges = numpy.linspace(minval, maxval, nbins + 1)
+        idx = numpy.searchsorted(edges, values, side='right') - 1
+        idx = numpy.clip(idx, 0, nbins - 1)  # max value -> last bin
+        bins = edges[:-1]
+    return idx, bins
 
 
 def groupby_grid(xs, ys, deltax, deltay):
@@ -1118,23 +1123,26 @@ def groupby_grid(xs, ys, deltax, deltay):
     assert lx > 1, lx
     assert deltax > 0, deltax
     assert deltay > 0, deltay
-    xmin = xs.min()
-    xmax = xs.max()
-    ymin = ys.min()
-    ymax = ys.max()
-    nx = numpy.ceil((xmax - xmin) / deltax)
-    ny = numpy.ceil((ymax - ymin) / deltay)
-    assert nx > 0, nx
-    assert ny > 0, ny
+    xmin, xmax = xs.min(), xs.max()
+    ymin, ymax = ys.min(), ys.max()
+    # at least 1 bin along each axis, even for degenerate data
+    nx = max(1, int(numpy.ceil((xmax - xmin) / deltax)))
+    ny = max(1, int(numpy.ceil((ymax - ymin) / deltay)))
     xbins = get_bins(xs, nx, None, xmin, xmax)[0]
     ybins = get_bins(ys, ny, None, ymin, ymax)[0]
-    acc = AccumDict(accum=[])
-    for k, ij in enumerate(zip(xbins, ybins)):
-        acc[ij].append(k)
+    keys = xbins * ny + ybins
+    order = numpy.argsort(keys, kind='stable')
+    ks = keys[order]
+    changes = numpy.flatnonzero(ks[1:] != ks[:-1]) + 1
+    starts = numpy.r_[0, changes, len(ks)]
+    sizes = numpy.diff(starts)
+    sums = (numpy.add.reduceat(xs[order], starts[:-1]),
+            numpy.add.reduceat(ys[order], starts[:-1]))
+    # order the groups by first occurrence, as before
     dic = {}
-    for ks in acc.values():
-        ks = numpy.array(ks)
-        dic[xs[ks].mean(), ys[ks].mean()] = ks
+    for i in numpy.argsort(order[starts[:-1]]):
+        idxs = order[starts[i]:starts[i + 1]]
+        dic[sums[0][i] / sizes[i], sums[1][i] / sizes[i]] = idxs
     return dic
 
 

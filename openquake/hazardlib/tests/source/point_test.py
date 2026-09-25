@@ -16,7 +16,8 @@
 import unittest
 import numpy
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
+from openquake.hazardlib.source.point import (
+    PointSource, CollapsedPointSource, grid_point_sources)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -498,3 +499,37 @@ class PointSourceModifyLSDTestCase(unittest.TestCase):
         self.assertEqual([d for _, d in data], [4.0, 8.0])
         self.assertAlmostEqual(data[0][0], 0.2 / 0.7)
         self.assertEqual(src.hypo_dip_fracs, (0.5, 0.6))
+
+
+class GridPointSourcesTestCase(unittest.TestCase):
+    def test_no_spacing(self):
+        srcs = [make_point_source(lon=10., lat=20.),
+                make_point_source(lon=10.1, lat=20.1)]
+        for ps in srcs:
+            ps.grp_id = 0
+        self.assertIs(grid_point_sources(srcs, 0), srcs)
+
+    def test_degenerate(self):
+        ps0 = make_point_source(lon=10., lat=20.)
+        ps1 = make_point_source(lon=10., lat=21.)
+        ps2 = make_point_source(lon=10., lat=22.)
+        for ps in (ps0, ps1, ps2):
+            ps.grp_id = 0
+        out = grid_point_sources([ps0, ps1, ps2], 50.)
+        self.assertEqual(out, [ps0, ps1, ps2])
+
+    def test_collapse(self):
+        ps0 = make_point_source(lon=10., lat=20.)
+        ps1 = make_point_source(lon=10.2, lat=20.1)
+        ps2 = make_point_source(lon=30., lat=20.5)
+        for ps in (ps0, ps1, ps2):
+            ps.grp_id = 0
+        out = grid_point_sources([ps0, ps1, ps2], 50.)
+        self.assertEqual(len(out), 2)
+        cps, other = out
+        self.assertIsInstance(cps, CollapsedPointSource)
+        self.assertNotIsInstance(other, CollapsedPointSource)
+        aac(cps.location.x, 10.1)
+        aac(cps.location.y, 20.05)
+        self.assertEqual(len(cps.pointsources), 2)
+        self.assertEqual(other, ps2)

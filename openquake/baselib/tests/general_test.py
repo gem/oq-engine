@@ -27,7 +27,8 @@ from collections import namedtuple
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, assert_close, rmsdiff,
     deprecated, DeprecationWarning, cached_property,
-    compress, decompress, random_choice, get_duplicates, check_dependencies)
+    compress, decompress, random_choice, get_duplicates,
+    check_dependencies, get_bins, groupby_grid)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -237,3 +238,86 @@ def test_get_duplicates():
 
 def test_check_dependencies():
     check_dependencies()
+
+
+class GetBinsTestCase(unittest.TestCase):
+    def test_regular(self):
+        values = numpy.arange(10)
+        idx, bins = get_bins(values, 3)
+        self.assertEqual([int(i) for i in idx],
+                         [0, 0, 0, 1, 1, 1, 2, 2, 2, 2])
+        numpy.testing.assert_allclose(bins, [0., 3., 6.])
+
+    def test_max_goes_in_last_bin(self):
+        values = numpy.array([0., 0.9, 1.8])
+        idx, bins = get_bins(values, 2)
+        self.assertEqual([int(i) for i in idx], [0, 1, 1])
+        numpy.testing.assert_allclose(bins, [0., 0.9])
+
+    def test_degenerate(self):
+        values = numpy.array([3., 3., 3.])
+        idx, bins = get_bins(values, 5)
+        self.assertEqual([int(i) for i in idx], [0, 0, 0])
+        numpy.testing.assert_allclose(bins, [3.] * 5)
+
+
+class GroupbyGridTestCase(unittest.TestCase):
+    def test_two_cells(self):
+        xs = numpy.array([0., 0.5, 0.9, 1.8])
+        ys = numpy.array([0., 0.1, 0.2, 0.3])
+        dic = groupby_grid(xs, ys, 1., 1.)
+        keys = numpy.array(list(dic))
+        numpy.testing.assert_allclose(keys, [[0.25, 0.05],
+                                             [1.35, 0.25]])
+        self.assertEqual([list(v) for v in dic.values()],
+                         [[0, 1], [2, 3]])
+
+    def test_first_occurrence_order(self):
+        # point 0 is in the last cell and point 1 in the first
+        # one, the dict must keep the first-occurrence order and
+        # not the sorted order of the cells
+        xs = numpy.array([1.8, 0.])
+        ys = numpy.array([0.3, 0.])
+        dic = groupby_grid(xs, ys, 1., 1.)
+        keys = numpy.array(list(dic))
+        numpy.testing.assert_allclose(keys, [[1.8, 0.3], [0., 0.]])
+        self.assertEqual([list(v) for v in dic.values()], [[0], [1]])
+
+    def test_degenerate_row(self):
+        # all the points on the same row: used to raise an
+        # assertion error, now the flat axis has a single bin
+        xs = numpy.array([0., 2.])
+        ys = numpy.zeros(2)
+        dic = groupby_grid(xs, ys, 1., 1.)
+        self.assertEqual(len(dic), 2)
+        self.assertEqual([list(v) for v in dic.values()], [[0], [1]])
+
+    def test_matches_reference(self):
+        # the vectorized grouping must give the same cells as the
+        # original implementation with numpy.arange bins
+        rng = numpy.random.default_rng(7)
+        for _ in range(20):
+            N = int(rng.integers(2, 300))
+            xs = rng.uniform(0, 20, N)
+            ys = rng.uniform(30, 40, N)
+            dic = groupby_grid(xs, ys, 1., 1.)
+
+            def old_bins(values, nbins):
+                vmin, vmax = values.min(), values.max()
+                if vmin == vmax:
+                    edges = [vmin] * nbins
+                else:
+                    edges = numpy.arange(vmin, vmax,
+                                         (vmax - vmin) / nbins)
+                return numpy.searchsorted(edges, values, side='right')
+
+            nx = max(1, int(numpy.ceil(xs.max() - xs.min())))
+            ny = max(1, int(numpy.ceil(ys.max() - ys.min())))
+            xb = old_bins(xs, nx)
+            yb = old_bins(ys, ny)
+            ref = {}
+            for k in range(N):
+                ref.setdefault((int(xb[k]), int(yb[k])), []).append(k)
+            got = {tuple(int(k) for k in v) for v in dic.values()}
+            exp = {tuple(v) for v in ref.values()}
+            self.assertEqual(got, exp)
