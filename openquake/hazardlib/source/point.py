@@ -55,16 +55,19 @@ def calc_average(pointsources):
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[], hypo_dip_frac=[])
     trt = pointsources[0].tectonic_region_type
+    multiple = len(pointsources) > 1
     for src in pointsources:
         assert src.tectonic_region_type == trt
+        rate = sum(r for m, r in src.get_annual_occurrence_rates())
+        factor = rate if multiple else 1.
         ws, ds = zip(*src.nodal_plane_distribution.data)
         acc['strike'].extend([np.strike for np in ds])
         acc['dip'].extend([np.dip for np in ds])
         acc['rake'].extend([np.rake for np in ds])
-        node_w.extend(ws)
+        node_w.extend(factor * prob for prob in ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
         acc['dep'].extend(deps)
-        dep_w.extend(ws)
+        dep_w.extend(factor * prob for prob in ws)
         if src.hypo_dip_fracs is None:
             # Default OQ behaviour of using rup centroid
             acc['hypo_dip_frac'].extend([0.5] * len(deps))
@@ -77,7 +80,7 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+        rate_w.append(rate)
     for key in acc:
         if key in ('dip', 'strike', 'rake'):
             acc[key] = numpy.average(acc[key], weights=node_w)

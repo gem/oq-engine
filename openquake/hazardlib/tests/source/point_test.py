@@ -16,7 +16,8 @@
 import unittest
 import numpy
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
+from openquake.hazardlib.source.point import (
+    PointSource, CollapsedPointSource, calc_average)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -475,6 +476,17 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac([block.wlr[0, 2] for block in blocks], [.25, .75])
         rate = dict(cps.get_annual_occurrence_rates())[5]
         aac([rate * block.wlr[0, 2] for block in blocks], [1., 3.])
+
+    def test_rate_weights_nodal_plane_average(self):
+        kwargs = dict(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(0, 90, 0))]))
+        ps1 = make_point_source(**kwargs)
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [3]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(180, 90, 0))]))
+        average = calc_average([ps1, ps2])
+        self.assertAlmostEqual(average['strike'], 135.)
 
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
