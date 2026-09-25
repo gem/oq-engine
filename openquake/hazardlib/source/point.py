@@ -31,7 +31,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
-    get_bounding_box, angular_distance, angular_mean_weighted)
+    get_bounding_box, angular_distance, angular_mean)
 
 
 def msr_name(src):
@@ -43,18 +43,6 @@ def msr_name(src):
         return str(src.magnitude_scaling_relationship)
     except AttributeError:   # no MSR for nonparametric sources
         return 'Undefined'
-
-
-def _angular_average(values, weights):
-    values = numpy.asarray(values, dtype=float)
-    weights = numpy.asarray(weights, dtype=float)
-    radians = numpy.radians(values)
-    sin = numpy.sum(numpy.sin(radians) * weights)
-    cos = numpy.sum(numpy.cos(radians) * weights)
-    if numpy.hypot(sin, cos) <= 1e-8 * weights.sum():
-        # The circular mean is undefined for opposite angles.
-        return numpy.average(values, weights=weights)
-    return angular_mean_weighted(values, weights)
 
 
 def calc_average(pointsources):
@@ -96,7 +84,18 @@ def calc_average(pointsources):
         rate_w.append(rate)
     for key in acc:
         if key in ('strike', 'rake'):
-            mean = _angular_average(acc[key], node_w)
+            values = numpy.asarray(acc[key], dtype=float)
+            weights = numpy.asarray(node_w, dtype=float)
+            total = weights.sum()
+            radians = numpy.radians(values)
+            sin = numpy.sum(numpy.sin(radians) * weights)
+            cos = numpy.sum(numpy.cos(radians) * weights)
+            if numpy.hypot(sin, cos) <= 1e-8 * total:
+                # The circular mean is undefined for opposite angles.
+                mean = numpy.average(values, weights=weights)
+            else:
+                angle = angular_mean(values, weights / total)
+                mean = numpy.asarray(angle).item()
             if key == 'strike':
                 mean %= 360
                 acc[key] = 0. if mean >= 360 else mean
