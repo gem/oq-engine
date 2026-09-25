@@ -572,6 +572,47 @@ class CollapsedPointSource(PointSource):
                    for src in pdata_to_psources(self.pdata))
 
 
+def _cps_key(src):
+    msr = src.magnitude_scaling_relationship
+    aratio = src.rupture_aspect_ratio
+    if isinstance(aratio, MagDepAspectRatio):
+        aratio = ('magdep', aratio.func_type,
+                  tuple((float(mag), float(value))
+                        for mag, value in aratio.mag_points))
+    else:
+        aratio = 'scalar'
+    # TOMs are already grouped by source_reader; keep incompatible MSRs
+    # and aspect-ratio representations in separate collapsed blocks.
+    return type(msr), msr_name(src), aratio
+
+
+def _grid_points(points, ps_grid_spacing, grp_id, cnt):
+    if len(points) < 2:  # nothing to collapse
+        return list(points), cnt
+    coords = numpy.array([(p.location.x, p.location.y, p.location.z)
+                          for p in points])
+    if (len(numpy.unique(coords[:, 0])) == 1 or
+            len(numpy.unique(coords[:, 1])) == 1):
+        # degenerated rectangle, there is no grid, do not collapse
+        return list(points), cnt
+    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
+    deltay = angular_distance(ps_grid_spacing)
+    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    out = []
+    for idxs in grid.values():
+        if len(idxs) > 1:
+            cnt += 1
+            name = 'cps-%03d-%04d' % (grp_id, cnt)
+            cps = CollapsedPointSource(name, points[idxs])  # slow part
+            cps.grp_id = points[0].grp_id
+            cps.sampling = points[0].sampling
+            cps.ps_grid_spacing = ps_grid_spacing
+            out.append(cps)
+        else:  # there is a single source
+            out.append(points[idxs[0]])
+    return out, cnt
+
+
 def grid_point_sources(sources, ps_grid_spacing):
     """
     :param sources:
@@ -579,7 +620,7 @@ def grid_point_sources(sources, ps_grid_spacing):
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
-        a dict grp_id -> list of non-point sources and collapsed point sources
+        a list of non-point sources and collapsed point sources
     """
     grp_id = sources[0].grp_id
     for src in sources[1:]:
@@ -590,30 +631,13 @@ def grid_point_sources(sources, ps_grid_spacing):
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
         return out + list(ps)
-    coords = numpy.zeros((len(ps), 3))
-    for p, psource in enumerate(ps):
-        coords[p, 0] = psource.location.x
-        coords[p, 1] = psource.location.y
-        coords[p, 2] = psource.location.z
-    if (len(numpy.unique(coords[:, 0])) == 1 or
-            len(numpy.unique(coords[:, 1])) == 1):
-        # degenerated rectangle, there is no grid, do not collapse
-        return out + list(ps)
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
-    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    groups = {}
+    for index, src in enumerate(ps):
+        groups.setdefault(_cps_key(src), []).append(index)
     cnt = 0
-    for idxs in grid.values():
-        if len(idxs) > 1:
-            cnt += 1
-            name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])  # slow part
-            cps.grp_id = ps[0].grp_id
-            cps.sampling = ps[0].sampling
-            cps.ps_grid_spacing = ps_grid_spacing
-            out.append(cps)
-        else:  # there is a single source
-            out.append(ps[idxs[0]])
+    for indices in groups.values():
+        block, cnt = _grid_points(ps[indices], ps_grid_spacing, grp_id, cnt)
+        out.extend(block)
     return out
 
 

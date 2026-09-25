@@ -17,7 +17,7 @@ import unittest
 import numpy
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.point import (
-    PointSource, CollapsedPointSource, calc_average)
+    PointSource, CollapsedPointSource, calc_average, grid_point_sources)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -504,6 +504,27 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
                 (.5, NodalPlane(190, 90, 0))]))
         average = calc_average([ps])
         self.assertAlmostEqual(average['strike'], 100.)
+
+    def test_does_not_mix_msrs_when_gridding(self):
+        ps1 = make_point_source(
+            lon=0, lat=0, magnitude_scaling_relationship=PeerMSR())
+        ps2 = make_point_source(
+            lon=.01, lat=.01,
+            magnitude_scaling_relationship=WC1994())
+        ps1.grp_id = ps2.grp_id = 0
+        out = grid_point_sources([ps1, ps2], 50)
+        self.assertEqual(len(out), 2)
+        self.assertTrue(all(src.code == b'P' for src in out))
+
+    def test_gridding_keeps_scalar_aspect_ratios_together(self):
+        ps1 = make_point_source(
+            lon=0, lat=0, rupture_aspect_ratio=1.)
+        ps2 = make_point_source(
+            lon=.01, lat=.01, rupture_aspect_ratio=2.)
+        ps1.grp_id = ps2.grp_id = 0
+        out = grid_point_sources([ps1, ps2], 50)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].code, b'p')
 
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
