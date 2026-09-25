@@ -107,6 +107,16 @@ class OqParamTestCase(unittest.TestCase):
                 inputs=fakeinputs_risk, maximum_distance='10', sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
 
+    def test_pointsource_distance(self):
+        args = dict(
+            calculation_mode='classical', inputs=fakeinputs,
+            truncation_level='3', sites='0.1 0.2', maximum_distance='10',
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            reference_vs30_value='200')
+        with self.assertRaises(ValueError):
+            OqParam(pointsource_distance='0', **args).validate()
+        OqParam(pointsource_distance='.001', **args).validate()
+
     def test_site_model(self):
         # if the site_model_file is missing, reference_vs30_type and
         # the other site model parameters cannot be None

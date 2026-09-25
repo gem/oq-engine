@@ -2512,6 +2512,13 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
+    def is_valid_pointsource_distance(self):
+        """
+        pointsource_distance must be >= .001
+        """
+        return all(float(dist) >= .001
+                   for dist in self.pointsource_distance.values())
+
     def is_valid_maximum_distance(self):
         """
         Invalid maximum_distance={maximum_distance}: {error}
