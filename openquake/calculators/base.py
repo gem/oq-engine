@@ -1366,7 +1366,6 @@ class RiskCalculator(HazardCalculator):
             riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
-        self.acc = None
         return riskinputs
 
     # used only for classical_risk and classical_damage
@@ -1402,15 +1401,7 @@ class RiskCalculator(HazardCalculator):
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             smap.submit((block, self.oqparam))
-        return smap.reduce(self.combine, self.acc)
-
-    def combine(self, acc, res):
-        """
-        Combine the outputs assuming acc and res are dictionaries
-        """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
-        return acc + res
+        return smap.reduce()
 
 
 def longname(name, columns):
