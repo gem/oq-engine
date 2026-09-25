@@ -2026,7 +2026,7 @@ def read_mosaic_df(mosaic_dir=''):
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
-    codes = set(df.code.unique())
+    codes = {ALIASES.get(c, c) for c in df.code.unique()}
     extra = codes - set(MODELS)
     if extra:
         logging.warning(f'{mosaic_boundaries_file} '
