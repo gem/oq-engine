@@ -74,7 +74,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test' }} || ${{ github.event_name == 'schedule' }}
+    if: (github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test') || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     environment:
       name: testpypi
