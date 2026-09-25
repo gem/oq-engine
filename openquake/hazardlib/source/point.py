@@ -30,7 +30,8 @@ from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
-from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
+from openquake.hazardlib.geo.utils import (
+    get_bounding_box, angular_distance, angular_mean_weighted)
 
 
 def msr_name(src):
@@ -42,6 +43,18 @@ def msr_name(src):
         return str(src.magnitude_scaling_relationship)
     except AttributeError:   # no MSR for nonparametric sources
         return 'Undefined'
+
+
+def _angular_average(values, weights):
+    values = numpy.asarray(values, dtype=float)
+    weights = numpy.asarray(weights, dtype=float)
+    radians = numpy.radians(values)
+    sin = numpy.sum(numpy.sin(radians) * weights)
+    cos = numpy.sum(numpy.cos(radians) * weights)
+    if numpy.hypot(sin, cos) <= 1e-8 * weights.sum():
+        # The circular mean is undefined for opposite angles.
+        return numpy.average(values, weights=weights)
+    return angular_mean_weighted(values, weights)
 
 
 def calc_average(pointsources):
@@ -82,7 +95,14 @@ def calc_average(pointsources):
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
         rate_w.append(rate)
     for key in acc:
-        if key in ('dip', 'strike', 'rake'):
+        if key in ('strike', 'rake'):
+            mean = _angular_average(acc[key], node_w)
+            if key == 'strike':
+                mean %= 360
+                acc[key] = 0. if mean >= 360 else mean
+            else:
+                acc[key] = mean
+        elif key == 'dip':
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key in ('dep', 'hypo_dip_frac'):
             # Same entry in hypoDepthDist so share weight

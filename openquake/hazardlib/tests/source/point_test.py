@@ -478,15 +478,32 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac([rate * block.wlr[0, 2] for block in blocks], [1., 3.])
 
     def test_rate_weights_nodal_plane_average(self):
-        kwargs = dict(
+        ps1 = make_point_source(
             mfd=EvenlyDiscretizedMFD(5, 1, [1]),
-            nodal_plane_distribution=PMF([(1, NodalPlane(0, 90, 0))]))
-        ps1 = make_point_source(**kwargs)
+            nodal_plane_distribution=PMF([(1, NodalPlane(350, 90, 0))]))
         ps2 = make_point_source(
             mfd=EvenlyDiscretizedMFD(5, 1, [3]),
-            nodal_plane_distribution=PMF([(1, NodalPlane(180, 90, 0))]))
+            nodal_plane_distribution=PMF([(1, NodalPlane(10, 90, 0))]))
         average = calc_average([ps1, ps2])
-        self.assertAlmostEqual(average['strike'], 135.)
+        self.assertAlmostEqual(average['strike'], 5., delta=.1)
+
+    def test_circular_strike_average(self):
+        ps1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(359, 90, 0))]))
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(1, 90, 0))]))
+        average = calc_average([ps1, ps2])
+        self.assertAlmostEqual(average['strike'], 0.)
+
+    def test_ambiguous_strike_average(self):
+        ps = make_point_source(
+            nodal_plane_distribution=PMF([
+                (.5, NodalPlane(10, 90, 0)),
+                (.5, NodalPlane(190, 90, 0))]))
+        average = calc_average([ps])
+        self.assertAlmostEqual(average['strike'], 100.)
 
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
