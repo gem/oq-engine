@@ -307,9 +307,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        # Estimate a magnitude-dependent far-field threshold from the
-        # rate-weighted GMM curves. The mapping is stored in oqparam so
-        # the classical phase reconstructs the same thresholds.
+        # This rate-weighted estimator runs only in preclassical; the
+        # mapping is stored in oqparam for the classical phase to reuse.
         if (sites is not None and oq.ps_grid_spacing and
                 getattr(oq, 'pointsource_distance', 0) and
                 len(getattr(oq, 'poes', ()))):
