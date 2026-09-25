@@ -34,6 +34,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import MINPSDIST
 from openquake.calculators import base
 
 MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
@@ -44,6 +45,12 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+
+
+def _psdist_enabled(value):
+    if isinstance(value, (list, tuple, numpy.ndarray)):
+        return any(float(dist) >= MINPSDIST for _, dist in value)
+    return float(value) >= MINPSDIST
 
 
 def source_data(sources):
@@ -308,7 +315,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         has_psdist = any(
-            getdefault(oq.pointsource_distance, cmaker.trt) > 0
+            _psdist_enabled(getdefault(oq.pointsource_distance, cmaker.trt))
             for cmaker in self.cmakers)
         if (sites is not None and oq.ps_grid_spacing and
                 has_psdist and len(oq.poes)):
@@ -325,7 +332,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             mapping = {}
             t0 = time.perf_counter()
             for cmaker in self.cmakers:
-                if getdefault(oq.pointsource_distance, cmaker.trt) <= 0:
+                if not _psdist_enabled(
+                        getdefault(oq.pointsource_distance, cmaker.trt)):
                     continue
                 caps = cmaker.get_pointsource_distance_by_mag(
                     rates.get(cmaker.trt, {}), site)

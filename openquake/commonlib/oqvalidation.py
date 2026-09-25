@@ -987,6 +987,16 @@ with_betw_ratio:
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
+MINPSDIST = 1E-3
+
+
+def _min_pointsource_distance(value):
+    if isinstance(value, (list, tuple, numpy.ndarray)):
+        return [(mag, max(float(dist), MINPSDIST))
+                for mag, dist in value]
+    return max(float(value), MINPSDIST)
+
+
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
 U16 = numpy.uint16
@@ -1487,6 +1497,9 @@ class OqParam(valid.ParamSet):
         self.fix_legacy_names(names_vals)
         given = set(names_vals)
         super().__init__(**names_vals)
+        self.pointsource_distance = {
+            trt: _min_pointsource_distance(dist)
+            for trt, dist in self.pointsource_distance.items()}
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
@@ -2514,10 +2527,15 @@ class OqParam(valid.ParamSet):
 
     def is_valid_pointsource_distance(self):
         """
-        pointsource_distance must be >= .001
+        pointsource_distance is normalized to the minimum distance
         """
-        return all(float(dist) >= .001
-                   for dist in self.pointsource_distance.values())
+        for value in self.pointsource_distance.values():
+            if isinstance(value, (list, tuple, numpy.ndarray)):
+                if any(float(dist) < MINPSDIST for _, dist in value):
+                    return False
+            elif float(value) < MINPSDIST:
+                return False
+        return True
 
     def is_valid_maximum_distance(self):
         """

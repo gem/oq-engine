@@ -620,11 +620,15 @@ class ContextMaker(object):
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
         if 'pointsource_distance' not in param:
-            self.pointsource_distance = float(
-                config.performance.pointsource_distance)
+            psdist = float(config.performance.pointsource_distance)
         else:
-            self.pointsource_distance = getdefault(
-                param['pointsource_distance'], self.trt)
+            psdist = getdefault(param['pointsource_distance'], self.trt)
+        if callable(psdist):
+            self.pointsource_distance = psdist
+        elif isinstance(psdist, (list, tuple, numpy.ndarray)):
+            self.pointsource_distance = magdepdist(psdist)
+        else:
+            self.pointsource_distance = float(psdist)
         self.pointsource_distance_by_mag = {}
         magdist = param.get('pointsource_distance_by_mag', {})
         if magdist:
@@ -1200,10 +1204,14 @@ class ContextMaker(object):
         """
         :returns: the effective pointsource distance for a magnitude
         """
+        if callable(self.pointsource_distance):
+            base = float(self.pointsource_distance(mag))
+        else:
+            base = self.pointsource_distance
         if self.pointsource_distance_by_mag:
             return self.pointsource_distance_by_mag.get(
-                round(float(mag), 2), self.pointsource_distance)
-        return self.pointsource_distance
+                round(float(mag), 2), base)
+        return base
 
     # This rate-weighted estimator runs only in preclassical; the
     # classical phase reuses the mapping stored in oqparam.
