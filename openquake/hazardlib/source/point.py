@@ -237,6 +237,8 @@ class PointSource(ParametricSeismicSource):
             arr['rake'] = np.rake
         return planin
 
+    # A full cell-displacement calculation was benchmarked without a
+    # material precision gain, so keep the inexpensive half diagonal.
     def max_radius(self, maxdist):
         """
         :returns: max radius + ps_grid_spacing * sqrt(2)/2
