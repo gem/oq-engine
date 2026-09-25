@@ -1,6 +1,29 @@
   [Catarina Costa]
   * Optimized and parallelized network calculations in connectivity.py.
 	
+  [Paolo Tormene]
+  * Added a summary of the provenance of the scientific model repositories
+    used to build the global exposure HDF5, propagating that information into
+    impact calculation datastores. Authorized users can use a new API endpoint
+    to extract that summary.
+  * Added pagination to WebUI calculation list, showing 10 items by default,
+    configurable via the CALC_LIST_PAGE_SIZE setting.
+  * Added client-side sorting by clicking on the headers of tables presented
+    via the extract_html_table endpoint (e.g. impact tables).
+
+  [Christopher Brooks]
+  * Fixed a bug which occurred when using `with_betw_ratio` in the job file
+    with GMMs which are already instances of `ModifiableGMPE`
+
+  [Yen-Shin Chen, Michele Simionato]
+  * Added a probabilistic fault displacement calculator using a library of 35
+    models (primary/secondary rupture and diplacement) in openquake.pfd,
+    plus support for PFD logic tree (~12,000 lines between code and tests,
+    and ~4000 lines of data)
+
+  [Michele Simionato]
+  Internal: making sure all imported CSV files are in MANIFEST.in
+
   [Christopher Brooks]
   * Extended site amplification logic trees to work within a disaggregation
     calculation. QA tested in logictree/case_27. Includes a sanity check
@@ -9,17 +32,17 @@
 
   [Amir Banimahd]
   * Added Banimahd2026Turkiye ANN-based GSIM for Turkiye.
-  
+
   [Marco Pagani]
   * Added the Novakovic et al. (2018) GMM for induced seismicity with
     verification against tables generated from author-provided files.
-  
+
   [Christopher Brooks]
   * Add ability to estimate z1pt4 from Vs30 for sites with a sentinel
     z1pt4 of -999 when using MorikawaFujiwara2013 GMM with GEM's own
     correlation. QA tested in classical/case_13 and MF13 unit tests.
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
- 
+
   [Michele Simionato]
   * Introduced a uvicorn server replacing the DbServer with a REST API
     and serving also the Django (sub)applications; introduced a scientific

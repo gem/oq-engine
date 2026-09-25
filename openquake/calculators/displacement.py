@@ -25,7 +25,7 @@ no-op :class:`openquake.pfd.gsim.PFDGMPE`), while the annual exceedance
 rates come from the FDHA kernel
 :func:`openquake.hazardlib.calc.displacement.calc_rates`.  The PFD logic
 tree is the ``extra_lt`` of the full logic tree, so the realizations are
-``R = sm_rlzs * gsim_paths * pfd_paths``.
+``R = sm_rlzs * 1 * pfd_paths``.
 
 As in the classical calculator the rates are stored sparsely in the
 ``_rates`` table (``sid, lid, gid, rate``) and the hazard curves are
@@ -48,10 +48,13 @@ from openquake.hazardlib.calc.displacement import (
     calc_rates, DEFAULT_RED_CFG)
 from openquake.hazardlib.map_array import (
     MapArray, compute_hazard_maps, rates_dt)
-from openquake.hazardlib.pfd_lt import CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY
+from openquake.hazardlib.pfd_lt import (
+    CALC_R_SIGMA_SLOT, R_SIGMA_KM_KEY, PFD_SLOTS_BY_UTYPE)
 from openquake.pfd.adapter import PFDModelAdapter, style_from_rake
 from openquake.pfd.registry import get_available
+from openquake.pfd.visini import VisiniSecondaryCalculator
 from openquake.calculators import base
+from openquake.calculators.classical import _store
 from openquake.calculators.getters import MapGetter, build_stat_curve, slice_dt
 
 F32 = numpy.float32
@@ -61,13 +64,7 @@ GZIP = 'gzip'
 get_weight = operator.attrgetter('weight')
 
 
-class _WGet(object):
-    """Minimal IMTWeigher-like object for build_stat_curve"""
-    def __init__(self, weights):
-        self.weights = weights
-
-
-def get_adapters(selections, r_sigma):
+def get_adapters(selections, r_sigma, near_far_threshold_km=0.2):
     """
     Build the PFD model adapters for one realization.
 
@@ -86,6 +83,7 @@ def get_adapters(selections, r_sigma):
 
     :param selections: slot -> PfdModelChoice for one realization
     :param r_sigma: the scalar ``r_sigma_km`` (used when not overridden)
+    :param near_far_threshold_km: the Visini near/far regime threshold
     :returns: ``(adapters_by_model_type, r_sigma_km)``
     """
     adapters = {}
@@ -96,7 +94,69 @@ def get_adapters(selections, r_sigma):
         cls = get_available(slot)[choice.class_name]
         adapter = PFDModelAdapter(cls(**choice.params), choice.params)
         adapters[adapter.model_type] = adapter
+    # the Visini models need the combined secondary pipeline instead of the
+    # generic P(SR) x P(FD) product (they sum the A/B/C combinations)
+    sr = adapters.get('secondary_sr')
+    fd = adapters.get('secondary_fd')
+    pipeline = 'generic'
+    for adapter in (sr, fd):
+        if adapter is not None:
+            pipeline = getattr(adapter.model, 'SECONDARY_PIPELINE', 'generic')
+            if pipeline != 'generic':
+                break
+    if sr is not None and fd is not None and pipeline == 'visini':
+        case = (fd.model_params.get('case')
+                or sr.model_params.get('case') or 'case1')
+        adapters['secondary_combined'] = VisiniSecondaryCalculator(
+            sr.model, fd.model, case_label=case,
+            pixel_size=sr.model_params.get('pixel_size', 100),
+            near_far_threshold_km=near_far_threshold_km)
     return adapters, r_sigma
+
+
+def pfd_methods(pfd_lt):
+    """
+    :param pfd_lt: a :class:`~openquake.hazardlib.pfd_lt.PFDLogicTree`
+    :returns: the union of ``MULTIFAULT_REFERENCE_LINE`` methods declared by
+        the PFD models in the logic tree (the FDHA analogue of collecting
+        the union of the GMPEs' ``REQUIRES_DISTANCES``)
+    """
+    # Raw sections are always available and are the safe default.  Only an
+    # explicit model declaration requests an expensive smoothed line. ECS/LCP
+    # can consume substantial CPU and memory, especially for long traces; the
+    # base-class default must not turn every rupture into an LCP calculation.
+    methods = {'segments'}
+    for branchset in pfd_lt.branchsets:
+        slot = PFD_SLOTS_BY_UTYPE.get(branchset.uncertainty_type)
+        if slot is None:
+            continue
+        available = get_available(slot)
+        for branch in branchset.branches:
+            if not isinstance(branch.value, tuple):
+                continue  # dummy/pseudo branch
+            cls = available.get(branch.value[0])
+            if cls is not None:
+                method = cls.__dict__.get('MULTIFAULT_REFERENCE_LINE')
+                if method is not None:
+                    methods.add(method)
+    return methods
+
+
+def set_pfd_methods(cmakers, methods):
+    """
+    Attach the multi-fault reference-line union to the cmakers and add the
+    matching context fields (one ``(r, x_L, L)`` set per non-'segments'
+    method; 'segments' reuses the canonical ``rtor``/``x_l``/``length``).
+    """
+    extra = set()
+    for method in methods:
+        if method != 'segments':
+            extra.update((f'rtor_{method}', f'x_l_{method}',
+                          f'length_{method}'))
+    for cmaker in cmakers:
+        cmaker.pfd_methods = methods
+        for name in extra:
+            cmaker.defaultdict[name] = F64(0.)
 
 
 def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
@@ -125,18 +185,23 @@ def displacement(srcs, cmaker, sitecol, pfd_lt, rlzs, monitor):
     source_data = {k: [] for k in (
         'src_id', 'grp_id', 'nctxs', 'nrupts', 'weight', 'ctimes', 'taskno')}
     task_no = getattr(monitor, 'task_no', 0)
+    tolerance = oq.surface_rupture_depth_tolerance_km
     for src in srcs:
         t0 = time.time()
         basename = valid.basename(src)
         style = style_from_rake(getattr(src, 'rake', 0.0))
-        ctxs = list(cmaker.get_ctxs(src, sitecol))
+        # a rupture contributes only if its top edge reaches the surface
+        # (surface_rupture_depth_tolerance_km), like oq-pfdha
+        ctxs = [ctx for ctx in cmaker.get_ctxs(src, sitecol)
+                if float(numpy.asarray(ctx.ztor).flat[0]) <= tolerance]
         if ctxs:
             src_rate = src_rates.setdefault(
                 basename, numpy.zeros((N, M, L1), F64))
             for k, rlz in enumerate(rlzs):
                 selections = pfd_lt.selections_for(
                     rlz.extra_rlz.lt_path, basename, style)
-                adapters, r_sigma = get_adapters(selections, oq.r_sigma_km)
+                adapters, r_sigma = get_adapters(
+                    selections, oq.r_sigma_km, oq.near_far_threshold_km)
                 for m, levels in enumerate(imls):
                     rate, _principal, _distributed = calc_rates(
                         ctxs, N, adapters, levels, oq.r_threshold_km,
@@ -161,7 +226,6 @@ class DisplacementCalculator(base.HazardCalculator):
     def agg(self, acc, result):
         if result is None:
             raise MemoryError('You ran out of memory!')
-        from openquake.calculators.classical import _store
         rmap, src_rates, source_data = result
         rates = rmap.to_array(rmap.gids)
         if len(rates):
@@ -182,9 +246,13 @@ class DisplacementCalculator(base.HazardCalculator):
         # create source_info before the tasks, so store_source_info will
         # update the actual number of contexts (not the estimated one)
         source_reader.create_source_info(self.csm, self.datastore.hdf5)
+        # multiFaultSource sections need their .msparams before iter_ruptures
+        self.csm.set_msparams()
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
         cmakers = self.csm.get_cmakers()
+        # only the reference-line methods the PFD models actually declare
+        set_pfd_methods(cmakers, pfd_methods(pfd_lt))
         # the sparse table from which the curves are recomputed
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
@@ -244,7 +312,8 @@ class DisplacementCalculator(base.HazardCalculator):
         # and fine for the current use cases; for very large N x R it would
         # materialize the full (N, L, R) array in memory.
         getter = MapGetter([self.datastore.filename], 0, trt_rlzs, sids, R, oq)
-        wget = _WGet(self.datastore['weights'][:].reshape(-1, 1))
+        wget = self.full_lt.gsim_lt.wget
+        wget.weights = self.datastore['weights'][:].reshape(-1, 1)
         hstats = oq.hazard_stats()
         if store_rlzs:
             hcurves_rlzs = numpy.zeros((N, R, M, L1), F32)

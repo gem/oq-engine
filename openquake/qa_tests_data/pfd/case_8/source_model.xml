@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="IAEA Norcia Mount Vettore fault">
+    <sourceGroup name="IAEA Norcia Mount Vettore fault" tectonicRegion="Active Shallow Crust">
+      <characteristicFaultSource id="MVFS" name="Mount Vettore Fault" tectonicRegion="Active Shallow Crust">
+        <incrementalMFD binWidth="0.1" minMag="6.4">
+          <occurRates>4.2864e-05 5.6589e-05 6.6852e-05 7.0671e-05 6.6852e-05 5.6589e-05 4.2864e-05</occurRates>
+        </incrementalMFD>
+        <rake>-90.0</rake>
+        <surface>
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>
+                13.10150 43.01310
+                13.13320 42.99310
+                13.15230 42.97660
+                13.16850 42.95440
+                13.16270 42.93940
+                13.17500 42.92010
+                13.19700 42.90970
+                13.22640 42.88460
+                13.24760 42.84490
+                13.24820 42.82110
+                13.26160 42.80940
+                13.27250 42.78650
+                13.28130 42.75500
+              </gml:posList>
+            </gml:LineString>
+            <dip>47</dip>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>11.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+        </surface>
+      </characteristicFaultSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>

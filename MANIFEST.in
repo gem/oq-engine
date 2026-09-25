@@ -19,6 +19,8 @@ include openquake/hmtk/strain/regionalisation/kreemer_polygons_area.txt
 # Hazardlib data
 recursive-include openquake/hazardlib/gsim *.csv *.hdf5 *.onnx *.onnx.gz
 recursive-include openquake/hazardlib/correlation_models *.csv
+# PFD (probabilistic fault displacement) data
+recursive-include openquake/pfd *.csv
 # Secondary perils data
 recursive-include openquake/sep *.onnx.gz
 # NRML sample data

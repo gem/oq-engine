@@ -25,13 +25,17 @@ Tests for the PFD distance metrics added to hazardlib:
 
 Values are pinned against the oq-pfdha reference calculator
 (``openquake.fdha.calc.utils.rupture_distance``); the two implementations
-agree to sub-metre level on the shared Norcia trace.
+agree to sub-metre level on the shared Norcia trace. The expected values
+are hardcoded so that the engine test suite does not import
+``openquake.fdha``, which lives in a separate repository.
 """
 import unittest
 import numpy
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
+from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.calc.filters import get_dparam, get_distances
 from openquake.hazardlib.contexts import KNOWN_DISTANCES, ContextMaker
 from openquake.hazardlib.contexts import RuptureContext
@@ -104,6 +108,64 @@ class RtorAndXlTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(rtor, surf.get_rtor(mesh))
         numpy.testing.assert_array_equal(x_l, surf.get_x_l_ratio(mesh)[0])
         self.assertEqual(l_km, surf.get_tor_length())
+
+
+class MultiSurfaceKiteTestCase(unittest.TestCase):
+    """The PFD 'segments' distances on a kite-based MultiSurface."""
+
+    def _kite(self, x0, y0):
+        # an almost-vertical kite surface dipping to the south
+        prfs = [
+            Line([Point(x0, y0, 0), Point(x0, y0 - 1e-5, 20.)]),
+            Line([Point(x0 + 0.15, y0, 0),
+                  Point(x0 + 0.15, y0 - 1e-5, 20.)]),
+            Line([Point(x0 + 0.3, y0, 0),
+                  Point(x0 + 0.3, y0 - 1e-5, 20.)])]
+        return KiteSurface.from_profiles(prfs, 1., 1.)
+
+    def test_segments_distances(self):
+        # pinned from the oq-pfdha RuptureDistanceCalculator
+        # (reference_line_method='segments')
+        msrf = MultiSurface([self._kite(0.0, 0.0), self._kite(0.5, 0.1)])
+        mesh = Mesh(numpy.array([0.1, 0.4, 0.65, 0.9, 0.8]),
+                    numpy.array([0.0, 0.05, 0.1, 0.0, 0.1]))
+        # r is the min distance to the nearest section top trace
+        numpy.testing.assert_allclose(
+            msrf.get_rtor(mesh),
+            [1.8e-15, 12.43195401, 3.77e-05, 15.98056186, 0.35838542],
+            atol=1e-3)
+        # x/L and L use the raw segmentation (no gap bridging)
+        x_l, l_km = msrf.get_x_l_ratio(mesh)
+        numpy.testing.assert_allclose(
+            x_l, [0.12550563, 0.50202274, 0.81578696, 1.0, 1.0],
+            atol=1e-6)
+        self.assertAlmostEqual(l_km, 88.59742727, places=5)
+        self.assertAlmostEqual(msrf.get_tor_length(), l_km, places=6)
+
+    def test_dispatch_metrics(self):
+        # the multi-surface metrics flow through the engine dispatch layer
+        msrf = MultiSurface([self._kite(0.0, 0.0), self._kite(0.5, 0.1)])
+        mesh = Mesh(numpy.array([0.1, 0.65]), numpy.array([0.0, 0.1]))
+
+        class Rup(object):
+            pass
+        rup = Rup()
+        rup.surface = msrf
+        rup.mag = 7.0
+        numpy.testing.assert_array_equal(
+            get_distances(rup, mesh, 'rtor'), msrf.get_rtor(mesh))
+        numpy.testing.assert_array_equal(
+            get_distances(rup, mesh, 'x_l'), msrf.get_x_l_ratio(mesh)[0])
+        numpy.testing.assert_array_equal(
+            get_dparam(msrf, mesh, 'rtor'), msrf.get_rtor(mesh))
+        numpy.testing.assert_array_equal(
+            get_dparam(msrf, mesh, 'x_l'), msrf.get_x_l_ratio(mesh)[0])
+        cm = ContextMaker.__new__(ContextMaker)
+        cm.dparam = None
+        cm.REQUIRES_RUPTURE_PARAMETERS = {'mag', 'length'}
+        params = cm.get_rparams(rup)
+        self.assertAlmostEqual(params['length'], msrf.get_tor_length(),
+                               places=6)
 
 
 class PFDKnownDistancesTestCase(unittest.TestCase):

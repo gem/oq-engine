@@ -333,6 +333,9 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'{job_id}/extract/assetcol', expected_status_code=403)
+        # Model provenance is restricted to level 2 users.
+        ret = self.get(f'{job_id}/model_provenance',
+                       expected_status_code=403)
 
         # level 1 users with the can_view_exposure permission can see
         # the exposure
@@ -362,6 +365,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         # they can also download the hdf5 datastore and the job.zip
         ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
+        ret = self.get(f'{job_id}/model_provenance')
 
         # level 0 users without the can_view_exposure permission can't
         # see the exposure
