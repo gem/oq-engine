@@ -645,6 +645,11 @@ def _sum_block_metric(block_results, key, size):
     return total
 
 
+def _sort_node_output(df):
+    """Preserve the node ordering produced by the previous implementation."""
+    return df.sort_values('id', kind='stable').reset_index(drop=True)
+
+
 def _validate_baseline_connectivity(ns0, nodes, mode):
     """Ensure every analysed node has a valid connectivity baseline."""
     disconnected = [node for node in nodes if ns0[node] == 0]
@@ -832,7 +837,7 @@ def _merge_demand_blocks(
     o.event_connectivity_loss_eff = pd.DataFrame({
         'event_id': event_ids, 'EL': metrics['EL']})
 
-    o.cl = pd.DataFrame({
+    o.cl = _sort_node_output(pd.DataFrame({
         'id': demand_nodes,
         'ordinal': np.zeros(len(demand_nodes), dtype=int),
         'Isolation_node': _sum_block_metric(
@@ -845,7 +850,7 @@ def _merge_demand_blocks(
 
     if efficiency_enabled:
         eff_ids = baseline['eff_ids']
-        o.node_el = pd.DataFrame({
+        o.node_el = _sort_node_output(pd.DataFrame({
             'id': eff_ids,
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
@@ -1002,7 +1007,7 @@ def _merge_taz_blocks(
     o.event_connectivity_loss_eff = pd.DataFrame({
         'event_id': event_ids, 'EL': metrics['EL']})
 
-    o.cl = pd.DataFrame({
+    o.cl = _sort_node_output(pd.DataFrame({
         'id': TAZ_nodes,
         'ordinal': np.zeros(len(TAZ_nodes), dtype=int),
         'PCL_node': _sum_block_metric(
@@ -1013,7 +1018,7 @@ def _merge_taz_blocks(
 
     if efficiency_enabled:
         eff_ids = baseline['eff_ids']
-        o.node_el = pd.DataFrame({
+        o.node_el = _sort_node_output(pd.DataFrame({
             'id': eff_ids,
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
@@ -1066,7 +1071,7 @@ def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type,
 
     if efficiency_enabled:
         eff_ids = baseline['eff_ids']
-        node_el = pd.DataFrame({
+        node_el = _sort_node_output(pd.DataFrame({
             'id': eff_ids,
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
@@ -1186,3 +1191,4 @@ def _source_target_metrics(graph, att, nodes_from, nodes_to,
                 reciprocal_distance_sum[target] += 1 / distance
 
     return reachable_count, reciprocal_distance_sum, source_efficiency
+
