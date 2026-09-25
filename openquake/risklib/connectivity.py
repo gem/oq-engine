@@ -846,7 +846,7 @@ def _merge_demand_blocks(
             block_results, 'PCL_node', len(demand_nodes)),
         'WCL_node': _sum_block_metric(
             block_results, 'WCL_node', len(demand_nodes)),
-    })
+    }))
 
     if efficiency_enabled:
         eff_ids = baseline['eff_ids']
@@ -855,7 +855,7 @@ def _merge_demand_blocks(
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
                 block_results, 'EL_node', len(eff_ids)),
-        })
+        }))
     return o
 
 
@@ -1014,7 +1014,7 @@ def _merge_taz_blocks(
             block_results, 'PCL_node', len(TAZ_nodes)),
         'WCL_node': _sum_block_metric(
             block_results, 'WCL_node', len(TAZ_nodes)),
-    })
+    }))
 
     if efficiency_enabled:
         eff_ids = baseline['eff_ids']
@@ -1023,7 +1023,7 @@ def _merge_taz_blocks(
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
                 block_results, 'EL_node', len(eff_ids)),
-        })
+        }))
     return o
 
 
@@ -1076,7 +1076,7 @@ def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type,
             'ordinal': np.zeros(len(eff_ids), dtype=int),
             'EL': _sum_block_metric(
                 block_results, 'EL_node', len(eff_ids)),
-        })
+        }))
 
     return node_el, event_eff
 
