@@ -456,6 +456,26 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac(ps2.num_ruptures, 4)
         aac(cps.num_ruptures, 6)
 
+    def test_preserves_scaling_rate(self):
+        ps1 = make_point_source()
+        ps2 = make_point_source(lon=1.3)
+        ps1.scaling_rate = 2
+        ps2.scaling_rate = 3
+        cps = CollapsedPointSource('1', [ps1, ps2])
+        aac(cps.get_annual_occurrence_rates(),
+            [(3.5, 4.95e-05), (4.5, 4.95e-07)])
+
+    def test_close_blocks_keep_individual_rates(self):
+        ps1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]))
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [3]))
+        cps = CollapsedPointSource('1', [ps1, ps2])
+        blocks = cps.get_planar()[5]
+        aac([block.wlr[0, 2] for block in blocks], [.25, .75])
+        rate = dict(cps.get_annual_occurrence_rates())[5]
+        aac([rate * block.wlr[0, 2] for block in blocks], [1., 3.])
+
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
 

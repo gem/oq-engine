@@ -262,8 +262,14 @@ class PointSource(ParametricSeismicSource):
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
+            total_rates = dict(self.get_annual_occurrence_rates())
             for src in self.pointsources:
-                out += src.get_planar(shift_hypo)
+                src_rates = dict(src.get_annual_occurrence_rates())
+                for mag, [pla] in src.get_planar(shift_hypo).items():
+                    # The context builder applies the aggregate magnitude
+                    # rate. Normalize each source block by its own rate.
+                    pla.wlr[:, 2] *= src_rates[mag] / total_rates[mag]
+                    out += {mag: [pla]}
             return out
 
         hdd = numpy.array(self.hypocenter_distribution.data)
@@ -425,7 +431,10 @@ def psources_to_pdata(pointsources, name):
                                   for ps in pointsources]),
                  mfd=Deduplicate([ps.mfd for ps in pointsources]),
                  msr=Deduplicate([ps.magnitude_scaling_relationship
-                                  for ps in pointsources]))
+                                  for ps in pointsources]),
+                 scaling_rate=numpy.array([
+                     getattr(ps, 'scaling_rate', 1.)
+                     for ps in pointsources]))
     return pdata
 
 
@@ -443,10 +452,11 @@ def pdata_to_psources(pdata):
     rms = pdata['rms']
     mfd = pdata['mfd']
     msr = pdata['msr']
+    scaling_rate = pdata.get('scaling_rate')
     out = []
     for i, rec in enumerate(pdata['array']):
         hcd[i].hypo_dip_fracs = hdf[i]
-        out.append(PointSource(
+        ps = PointSource(
             source_id=f'{name}:{i}',
             name=name,
             tectonic_region_type=trt,
@@ -459,7 +469,10 @@ def pdata_to_psources(pdata):
             location=Point(rec['lon'], rec['lat']),
             nodal_plane_distribution=npd[i],
             hypocenter_distribution=hcd[i],
-            temporal_occurrence_model=tom))
+            temporal_occurrence_model=tom)
+        ps.scaling_rate = (1. if scaling_rate is None
+                           else float(scaling_rate[i]))
+        out.append(ps)
     return out
 
 
