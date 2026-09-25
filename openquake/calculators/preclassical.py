@@ -309,7 +309,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         if (sites is not None and oq.ps_grid_spacing and
                 oq.pointsource_distance and
-                len(getattr(oq, 'poes', ()))):
+                len(oq.poes)):
             rates = {}
             for src in csm.get_sources():
                 if not hasattr(src, 'get_annual_occurrence_rates'):
