@@ -1372,7 +1372,7 @@ class RiskCalculator(HazardCalculator):
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        getterdict = getters.CurveGetter.build(dstore)
+        getterdict = getters.CurveGetter.build(dstore, self.full_lt)
         for sid, assets in asset_df.groupby(asset_df.index):
             getter = getterdict[sid]
             # hcurves, shape (R, N)

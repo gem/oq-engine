@@ -44,6 +44,7 @@ def classical_damage(riskinputs, param, monitor):
     R = riskinputs[0].hazard_getter.R
     D = len(crmodel.damage_states)
     result = AccumDict(accum=numpy.zeros((R, L, D), F32))
+    # for instance for Italy there can be 458,712 riskinputs, one per asset
     for ri in riskinputs:
         with mon:
             haz = ri.hazard_getter.get_hazard()
