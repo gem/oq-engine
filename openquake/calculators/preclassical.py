@@ -308,7 +308,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         if (sites is not None and oq.ps_grid_spacing and
-                getattr(oq, 'pointsource_distance', 0) and
+                oq.pointsource_distance and
                 len(getattr(oq, 'poes', ()))):
             rates = {}
             for src in csm.get_sources():
