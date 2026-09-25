@@ -16,7 +16,8 @@
 import unittest
 import numpy
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
+from openquake.hazardlib.source.point import (
+    PointSource, CollapsedPointSource, calc_average, grid_point_sources)
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -455,6 +456,75 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac(ps1.num_ruptures, 2)
         aac(ps2.num_ruptures, 4)
         aac(cps.num_ruptures, 6)
+
+    def test_preserves_scaling_rate(self):
+        ps1 = make_point_source()
+        ps2 = make_point_source(lon=1.3)
+        ps1.scaling_rate = 2
+        ps2.scaling_rate = 3
+        cps = CollapsedPointSource('1', [ps1, ps2])
+        aac(cps.get_annual_occurrence_rates(),
+            [(3.5, 4.95e-05), (4.5, 4.95e-07)])
+
+    def test_close_blocks_keep_individual_rates(self):
+        ps1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]))
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [3]))
+        cps = CollapsedPointSource('1', [ps1, ps2])
+        blocks = cps.get_planar()[5]
+        aac([block.wlr[0, 2] for block in blocks], [.25, .75])
+        rate = dict(cps.get_annual_occurrence_rates())[5]
+        aac([rate * block.wlr[0, 2] for block in blocks], [1., 3.])
+
+    def test_rate_weights_nodal_plane_average(self):
+        ps1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(350, 90, 0))]))
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [3]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(10, 90, 0))]))
+        average = calc_average([ps1, ps2])
+        self.assertAlmostEqual(average['strike'], 5., delta=.1)
+
+    def test_circular_strike_average(self):
+        ps1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(359, 90, 0))]))
+        ps2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(5, 1, [1]),
+            nodal_plane_distribution=PMF([(1, NodalPlane(1, 90, 0))]))
+        average = calc_average([ps1, ps2])
+        self.assertAlmostEqual(average['strike'], 0.)
+
+    def test_ambiguous_strike_average(self):
+        ps = make_point_source(
+            nodal_plane_distribution=PMF([
+                (.5, NodalPlane(10, 90, 0)),
+                (.5, NodalPlane(190, 90, 0))]))
+        average = calc_average([ps])
+        self.assertAlmostEqual(average['strike'], 100.)
+
+    def test_does_not_mix_msrs_when_gridding(self):
+        ps1 = make_point_source(
+            lon=0, lat=0, magnitude_scaling_relationship=PeerMSR())
+        ps2 = make_point_source(
+            lon=.01, lat=.01,
+            magnitude_scaling_relationship=WC1994())
+        ps1.grp_id = ps2.grp_id = 0
+        out = grid_point_sources([ps1, ps2], 50)
+        self.assertEqual(len(out), 2)
+        self.assertTrue(all(src.code == b'P' for src in out))
+
+    def test_gridding_keeps_scalar_aspect_ratios_together(self):
+        ps1 = make_point_source(
+            lon=0, lat=0, rupture_aspect_ratio=1.)
+        ps2 = make_point_source(
+            lon=.01, lat=.01, rupture_aspect_ratio=2.)
+        ps1.grp_id = ps2.grp_id = 0
+        out = grid_point_sources([ps1, ps2], 50)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].code, b'p')
 
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
