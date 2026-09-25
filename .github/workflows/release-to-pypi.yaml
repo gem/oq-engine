@@ -52,10 +52,7 @@ jobs:
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
-      if: >-
-        ${{ github.event_name == 'workflow_dispatch' &&
-            inputs.pypi-type == 'test' ||
-            github.event_name == 'schedule' }}
+      if: (github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test') || github.event_name == 'schedule'
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
