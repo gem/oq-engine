@@ -307,9 +307,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
+        has_psdist = any(
+            getdefault(oq.pointsource_distance, cmaker.trt) > 0
+            for cmaker in self.cmakers)
         if (sites is not None and oq.ps_grid_spacing and
-                oq.pointsource_distance and
-                len(oq.poes)):
+                has_psdist and len(oq.poes)):
             rates = {}
             for src in csm.get_sources():
                 if not hasattr(src, 'get_annual_occurrence_rates'):
@@ -323,6 +325,8 @@ class PreClassicalCalculator(base.HazardCalculator):
             mapping = {}
             t0 = time.perf_counter()
             for cmaker in self.cmakers:
+                if getdefault(oq.pointsource_distance, cmaker.trt) <= 0:
+                    continue
                 caps = cmaker.get_pointsource_distance_by_mag(
                     rates.get(cmaker.trt, {}), site)
                 trt_map = mapping.setdefault(cmaker.trt, {})
