@@ -465,6 +465,12 @@ class BaseSurface(metaclass=abc.ABCMeta):
             numpy.ndarray of shape (N, 2) with columns [longitude, latitude]
             representing the ordered vertices of the top rupture trace.
         """
+        # characteristic faults carry the exact declared top edge: their
+        # ruptures span the whole geometry, so the resampled mesh top edge
+        # would corner-cut wiggly traces (see the PFD distances)
+        original = getattr(self, 'original_tor', None)
+        if original is not None:
+            return original
         top_edge = self.mesh[0:1]
         lons = top_edge.lons[0, :]
         lats = top_edge.lats[0, :]

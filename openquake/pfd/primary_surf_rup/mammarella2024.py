@@ -85,6 +85,7 @@ weights satisfying the condition.
 import numpy as np
 from scipy.stats import norm, truncnorm
 
+from openquake.hazardlib import valid
 from openquake.pfd.primary_surf_rup.base import BasePrimarySurfRup
 
 
@@ -185,7 +186,6 @@ def _resolve_width_model(width_model):
     if width_model is None:
         return None
     if isinstance(width_model, str):
-        from openquake.hazardlib import valid
         width_model = valid.mag_scale_rel(width_model)
     for meth in ("get_median_width", "get_std_dev_width"):
         if not hasattr(width_model, meth):
@@ -198,41 +198,32 @@ class Mammarella2024PrimarySR(BasePrimarySurfRup):
     """
     Probability of principal surface rupture after Mammarella et al. (2024).
 
-    Parameters
-    ----------
-    mag : float or array-like
-        Moment magnitude Mw. Scalar input returns a scalar, a vector returns an array.
-    rake : float
-        Rake in degrees. Style-of-faulting is inferred: normal (3) for (-120,-60),
-        reverse (4) for (60,120), strike-slip (5) otherwise.
-    seismothickness : float
-        Seismogenic thickness Zs_mu (km).
-    MSR : int
-        Magnitude scaling relation code in {0, 1, 2}.
-    width_model : scalerel instance or str, optional
-        Explicit hazardlib width scaling relation replacing the integer
-        ``MSR`` code.  Accepts a scalerel instance (exposing
+    :param mag: Moment magnitude Mw (float or array-like). Scalar input
+        returns a scalar, a vector returns an array.
+    :param rake: Rake in degrees (float). Style-of-faulting is inferred:
+        normal (3) for (-120,-60), reverse (4) for (60,120), strike-slip
+        (5) otherwise.
+    :param seismothickness: Seismogenic thickness Zs_mu (float, km).
+    :param MSR: Magnitude scaling relation code (int) in {0, 1, 2}.
+    :param width_model: Explicit hazardlib width scaling relation
+        replacing the integer ``MSR`` code (scalerel instance or str,
+        optional). Accepts a scalerel instance (exposing
         ``get_median_width`` / ``get_std_dev_width``) or a registered name
         resolved through :func:`openquake.hazardlib.valid.mag_scale_rel`
         (e.g. ``"Leonard2014_Interplate"``); when given, ``MSR`` is not
         required.
-    HDD_str : str
-        Hypocentral depth distribution label; must be a key of TAB2.
-    dip_mu : float
-        Mean dip (degrees).
-    dip_sigma : float
-        Standard deviation of dip (degrees).
-    t_d : float
-        Truncation factor for dip distribution (in sigma units).
-    Zs_sigma : float
-        Standard deviation of seismogenic thickness (km).
-    t_z : float
-        Truncation factor for Zs distribution (in sigma units).
-
-    Returns
-    -------
-    float or np.ndarray
-        Probability in [0, 1]. Scalar if mag is scalar, else shape (n_mw,).
+    :param HDD_str: Hypocentral depth distribution label (str); must be a
+        key of TAB2.
+    :param dip_mu: Mean dip (float, degrees).
+    :param dip_sigma: Standard deviation of dip (float, degrees).
+    :param t_d: Truncation factor for dip distribution (float, in sigma
+        units).
+    :param Zs_sigma: Standard deviation of seismogenic thickness (float,
+        km).
+    :param t_z: Truncation factor for Zs distribution (float, in sigma
+        units).
+    :returns: Probability in [0, 1] (float or np.ndarray). Scalar if mag
+        is scalar, else shape (n_mw,).
     """
 
     def __init__(self, MSR=None, HDD_str=None, dip_mu=None, dip_sigma=None,

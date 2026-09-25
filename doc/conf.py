@@ -13,6 +13,14 @@ sys.path.insert(0, os.path.abspath('..'))
 
 from openquake import engine
 
+# The Django setup below requires the OpenQuake database (oq db) to be
+# available, which is not needed (and often not present) when building the
+# documentation, so it is commented out.
+# os.environ.setdefault(
+#     "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
+# import django
+# django.setup()
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -32,7 +40,7 @@ try:
         it_is_master = True
 
     # vcs_branch = 'engine-3.15'
-    if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
+    if re.compile(r'engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
         branch = ''
     else:
         if vcs_branch == '':

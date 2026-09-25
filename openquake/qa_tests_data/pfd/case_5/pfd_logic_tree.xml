@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_fdha_case_5_kuehn2024">
+  <logicTreeBranchSet branchSetID="bs_1_primary_surf_rup" uncertaintyType="fdhaPrimarySRModel">
+    <logicTreeBranch branchID="B1_PRIMARY_SURF_RUP">
+      <uncertaintyModel>
+        [Youngs2003PrimarySR]
+        style = "all"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_2_primary_surf_displ" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PRIMARY_SURF_RUP">
+    <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
+      <uncertaintyModel>
+        [Kuehn2024PrimaryFD]
+        style = "normal"
+        epistemic_uncertainty = true
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  </logicTree>
+</nrml>

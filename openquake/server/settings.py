@@ -212,6 +212,7 @@ SERVER_NAME = socket.gethostname()
 # displayed with or without the host name
 # (either 'username@hostname' or just 'username')
 DISPLAY_USER_HOST = False
+CALC_LIST_PAGE_SIZE = 10
 
 APPLICATION_MODES = [
     'PUBLIC',      # The default behavior without authentication

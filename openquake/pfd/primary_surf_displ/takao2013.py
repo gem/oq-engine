@@ -34,8 +34,6 @@ class Takao2013PrimaryFD(BasePrimarySurfDispl):
     Model of principal (reverse-faulting) fault displacement as a function of
     magnitude and normalized along-strike position.
 
-    References
-    ----------
     Takao, M., et al. (2013). Application of probabilistic fault displacement
     hazard analysis in Japan.
 

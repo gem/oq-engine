@@ -47,7 +47,9 @@ from openquake.engine import engine
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
-from openquake.commonlib import dbapi, logs, oqvalidation, readinput
+from openquake.commonlib import (
+    dbapi, datastore, logs, oqvalidation, readinput)
+from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
@@ -115,6 +117,34 @@ def calc_info(calc_id: int, x_api_key: str | None = Header(default=None)):
         return logs.dbcmd('calc_info', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.get('/v0/calc/model_provenance/{calc_id}')
+def v0_model_provenance(
+        calc_id: int, x_api_key: str | None = Header(default=None)):
+    """Return model provenance for an authenticated internal caller."""
+    _check_api_key(x_api_key)
+    job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        raise HTTPException(status_code=404)
+    path = job.ds_calc_dir + '.hdf5'
+    if not os.path.exists(path):
+        return {
+            'available': False,
+            'reason': 'Model provenance metadata is not available',
+        }
+    try:
+        with datastore.read(path) as dstore:
+            summary = read_model_provenance(dstore)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        logging.exception('Could not read model provenance')
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if summary is None:
+        return {
+            'available': False,
+            'reason': 'Model provenance metadata is not available',
+        }
+    return {'available': True, 'summary': summary}
 
 
 def _json_value(value):
@@ -431,6 +461,26 @@ async def v0_impact_get_rupture_data(
     response_data, status = await run_in_threadpool(
         get_impact_rupture_data, post, user, rupture_path)
     return JSONResponse(content=response_data, status_code=status)
+
+
+@app.get('/v1/calc_list/count')
+def calc_list_count(
+        request: Request,
+        x_api_key: str | None = Header(default=None),
+        x_valid_users: str | None = Header(default=None),
+        x_user_acl_on: str | None = Header(default=None)):
+    """Count calculations matching filters from the Django list view."""
+    _check_api_key(x_api_key)
+    try:
+        valid_users = json.loads(x_valid_users or '[]')
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail='Invalid user context') from exc
+    params = dict(request.query_params)
+    params['count_only'] = '1'
+    return logs.dbcmd(
+        'get_calcs', params, valid_users,
+        valid.boolean(x_user_acl_on or '1'))
 
 
 @app.get('/v1/calc/list_tags')

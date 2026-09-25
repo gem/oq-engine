@@ -12,6 +12,14 @@ Disaggregation (disagg)
     :undoc-members:
     :show-inheritance:
 
+Fault Displacement (displacement)
+--------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.calc.displacement
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Filters (filters)
 -------------------------------------------------
 

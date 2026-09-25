@@ -609,6 +609,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
+    count_only = valid.boolean(request_get_dict.get('count_only', 0))
+    relevant_only = valid.boolean(request_get_dict.get('relevant_only', 0))
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
     allowed_sort_fields = [
@@ -625,6 +627,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if include_shared:
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
+    if relevant_only:
+        where_clause += " AND j.relevant != 0"
     if preferred_only:
         where_clause += (
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
@@ -640,6 +644,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
 
     # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
     # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
+
+    if count_only:
+        query = f"SELECT COUNT(DISTINCT j.id) FROM job AS j WHERE {where_clause}"
+        return db(query, *query_params, scalar=True)
 
     query = f"""
 SELECT j.*, {tags_query}
@@ -657,7 +665,7 @@ LEFT JOIN (
 ) jt ON jt.job_id = j.id
 WHERE {where_clause}
 GROUP BY j.id
-ORDER BY {order_by} {order_dir}
+ORDER BY {order_by} {order_dir}, j.id {order_dir}
 LIMIT {limit} OFFSET {offset}
     """
 

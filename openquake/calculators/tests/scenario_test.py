@@ -25,7 +25,7 @@ from openquake.qa_tests_data.scenario import (
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35, case_36)
+    case_34, case_35, case_36, case_37)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
@@ -440,5 +440,12 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_36(self):
         # Conditional gmm
         self.run_calc(case_36.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_37(self):
+        # Test mgmpe wrapped around another mgmpe enacted from job file
+        # (with_betw_ratio capability)
+        self.run_calc(case_37.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

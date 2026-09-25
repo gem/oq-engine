@@ -1325,8 +1325,8 @@ taherian_2024_inland
     :show-inheritance:
 
 taherian_2024_offshore
-
 -----------------------------------------------
+
 .. automodule:: openquake.hazardlib.gsim.taherian_2024_offshore
     :members:
     :undoc-members:
