@@ -68,7 +68,7 @@ jobs:
         path: dist/
 
   publish-to-testpypi:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    name: "TestPyPI: Publish Python 🐍 distribution 📦"
     needs:
     - build
     if: (github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test') || github.event_name == 'schedule'
@@ -90,7 +90,7 @@ jobs:
         repository-url: https://test.pypi.org/legacy/
 
   publish-to-pypi:
-    name: Publish Python 🐍 distribution 📦 to PyPI
+    name: "PyPI: Publish Python 🐍 distribution 📦"
     needs:
     - build
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'production' }}
