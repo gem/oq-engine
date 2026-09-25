@@ -361,8 +361,8 @@ def _quintets(cmaker, src, sitecol):
             arr = [rup.surface.array.reshape(-1, 3)]  # planar
             pla = planardict[mag]
             # NB: having a good psdist is essential for performance!
-            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
+            psdist = src.get_psdist(
+                m, mag, cmaker.get_pointsource_distance(mag), magdist)
             close = sites.filter(cdist[mask] <= psdist)
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
@@ -625,6 +625,12 @@ class ContextMaker(object):
         else:
             self.pointsource_distance = getdefault(
                 param['pointsource_distance'], self.trt)
+        self.pointsource_distance_by_mag = {}
+        magdist = param.get('pointsource_distance_by_mag', {})
+        if magdist:
+            self.pointsource_distance_by_mag = {
+                float(mag): float(dist)
+                for mag, dist in magdist.get(self.trt, {}).items()}
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -1189,6 +1195,67 @@ class ContextMaker(object):
         else:
             probs = [rec.probs_occur[0] for rec in ctxt]
             return -numpy.log(probs) / self.investigation_time
+
+    def get_pointsource_distance(self, mag):
+        """
+        :returns: the effective pointsource distance for a magnitude
+        """
+        if self.pointsource_distance_by_mag:
+            return self.pointsource_distance_by_mag.get(
+                round(float(mag), 2), self.pointsource_distance)
+        return self.pointsource_distance
+
+    def get_pointsource_distance_by_mag(self, rates, site, tail=1E-3):
+        """
+        :returns: a magnitude -> distance dictionary estimated from
+            rate-weighted exceedance probabilities
+        """
+        if not rates or not len(getattr(self, 'poes', ())):
+            return {}
+        target = float(self.poes[0])
+        maxdist = float(self.maximum_distance.y[-1])
+        dists = numpy.linspace(.01, maxdist, 51)
+        caps = {}
+        for gsim in self.gsims:
+            cm = ContextMaker(self.trt, [gsim], self.oq)
+            for mag, rate in sorted(rates.items()):
+                ctx = RuptureContext()
+                for par in cm.REQUIRES_RUPTURE_PARAMETERS:
+                    setattr(ctx, par, 0.)
+                for dst in cm.REQUIRES_DISTANCES:
+                    setattr(ctx, dst, numpy.array(dists))
+                for par in cm.REQUIRES_SITES_PARAMETERS:
+                    setattr(ctx, par, numpy.full(
+                        len(dists), getattr(site, par)))
+                ctx.sids = numpy.full(len(dists), site.sids[0])
+                ctx.mag = mag
+                ctx.width = .01
+                try:
+                    rec = cm.recarray([ctx])
+                    ms = cm.get_mean_stds([rec], split_by_mag=False)
+                except ValueError:  # unsupported magnitude for this GSIM
+                    continue
+                mean = ms[0, 0]
+                std = ms[1, 0]
+                levels = cm.loglevels.array
+                vals = ((levels[:, :, None] - mean[:, None, :]) /
+                        std[:, None, :])
+                poes = numpy.empty_like(vals)
+                for imt_i in range(vals.shape[0]):
+                    poes[imt_i] = truncnorm_sf(cm.phi_b, vals[imt_i])
+                contrib = numpy.zeros(len(dists))
+                for imt_i in range(poes.shape[0]):
+                    idx = numpy.abs(poes[imt_i, :, 0] - target).argmin()
+                    contrib += rate * poes[imt_i, idx, :]
+                if not numpy.isfinite(contrib).all() or not contrib[0]:
+                    continue
+                ratio = contrib / contrib[0]
+                suffix = numpy.minimum.accumulate(ratio[::-1])[::-1]
+                ok = (ratio <= tail) & (suffix <= tail)
+                first = int(numpy.where(ok)[0][0]) if ok.any() else 0
+                dist = float(dists[first])
+                caps[mag] = min(caps.get(mag, dist), dist)
+        return caps
 
     # not used by the engine, it is meant for notebooks
     def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},

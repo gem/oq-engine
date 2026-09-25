@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import time
 import logging
 import operator
 import psutil
@@ -305,6 +306,40 @@ class PreClassicalCalculator(base.HazardCalculator):
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
+
+        # Estimate a magnitude-dependent far-field threshold from the
+        # rate-weighted GMM curves. The mapping is stored in oqparam so
+        # the classical phase reconstructs the same thresholds.
+        if (sites is not None and oq.ps_grid_spacing and
+                getattr(oq, 'pointsource_distance', 0) and
+                len(getattr(oq, 'poes', ()))):
+            rates = {}
+            for src in csm.get_sources():
+                if not hasattr(src, 'get_annual_occurrence_rates'):
+                    continue
+                trt = src.tectonic_region_type
+                trt_rates = rates.setdefault(trt, {})
+                for mag, rate in src.get_annual_occurrence_rates():
+                    key = round(float(mag), 2)
+                    trt_rates[key] = trt_rates.get(key, 0.) + float(rate)
+            site = sites.one()
+            mapping = {}
+            t0 = time.perf_counter()
+            for cmaker in self.cmakers:
+                caps = cmaker.get_pointsource_distance_by_mag(
+                    rates.get(cmaker.trt, {}), site)
+                trt_map = mapping.setdefault(cmaker.trt, {})
+                for mag, dist in caps.items():
+                    trt_map[mag] = min(trt_map.get(mag, dist), dist)
+            if mapping:
+                oq.pointsource_distance_by_mag = mapping
+                self.datastore['oqparam'] = oq
+                for cmaker in self.cmakers:
+                    cmaker.pointsource_distance_by_mag = mapping.get(
+                        cmaker.trt, {})
+                logging.info(
+                    'Using magnitude-dependent pointsource_distance '
+                    '(computed in %.3fs)', time.perf_counter() - t0)
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
