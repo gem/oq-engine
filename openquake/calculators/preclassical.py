@@ -307,8 +307,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        # This rate-weighted estimator runs only in preclassical; the
-        # mapping is stored in oqparam for the classical phase to reuse.
         if (sites is not None and oq.ps_grid_spacing and
                 getattr(oq, 'pointsource_distance', 0) and
                 len(getattr(oq, 'poes', ()))):

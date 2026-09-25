@@ -1205,6 +1205,8 @@ class ContextMaker(object):
                 round(float(mag), 2), self.pointsource_distance)
         return self.pointsource_distance
 
+    # This rate-weighted estimator runs only in preclassical; the
+    # classical phase reuses the mapping stored in oqparam.
     def get_pointsource_distance_by_mag(self, rates, site, tail=1E-3):
         """
         :returns: a magnitude -> distance dictionary estimated from
