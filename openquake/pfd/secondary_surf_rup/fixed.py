@@ -32,11 +32,8 @@ class FixedSecondarySR(BaseSecondarySurfRup):
     or other parameters. This is useful when the user wants to set
     the secondary surface rupture probability to a fixed value.
 
-    Parameters
-    ----------
-    value : float, optional
-        The fixed probability value to return. Must be between 0 and 1.
-        Default is 1.0.
+    :param value: The fixed probability value to return (float, optional).
+        Must be between 0 and 1. Default is 1.0.
     """
 
     def __init__(self, value=1.0):

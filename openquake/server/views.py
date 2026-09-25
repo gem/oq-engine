@@ -518,12 +518,15 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_api(request, endpoint):
+def _call_api(request, endpoint, params=None, headers=None):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)
+    request_headers = {'X-API-Key': API_KEY}
+    if headers:
+        request_headers.update(headers)
     try:
         response = requests.get(
-            url, headers={'X-API-Key': API_KEY}, timeout=10)
+            url, params=params, headers=request_headers, timeout=10)
     except requests.RequestException:
         return HttpResponse(status=503)
     if response.status_code == 404:
@@ -630,6 +633,19 @@ def calc_list(request, id=None):
         [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def calc_count(request):
+    """Return the number of calculations matching the requested filters."""
+    headers = {
+        'X-Valid-Users': json.dumps(utils.get_valid_users(request)),
+        'X-User-ACL-On': str(not utils.is_superuser(request)),
+    }
+    return _call_api(
+        request, 'v1/calc_list/count',
+        params=dict(request.GET.items()), headers=headers)
 
 
 @csrf_exempt
@@ -1973,7 +1989,7 @@ def calc_zip(request, job_id):
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
-    params = {}
+    params = {'calc_list_page_size': settings.CALC_LIST_PAGE_SIZE}
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
@@ -2487,6 +2503,10 @@ def extract_html_table(request, calc_id, name):
         col for col in table.columns
         if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
     }
+    column_sort_types = [
+        'string' if col in string_short_names else 'number'
+        for col in table.columns
+    ]
 
     table_header = []
     for short_name in table.columns:
@@ -2521,6 +2541,7 @@ def extract_html_table(request, calc_id, name):
         # keep only rows with '*total*' and discard first and last 2 columns
         # (ID_0, ID and NAME)
         table_header = table_header[1:-2]
+        column_sort_types = column_sort_types[1:-2]
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
@@ -2595,11 +2616,25 @@ def extract_html_table(request, calc_id, name):
             for key, explanation in explanations.items()
         ]
 
-    # Decode byte strings to plain str
-    table_rows = [
-        list(zip(table_header, decode(row)))
-        for row in table_contents
-    ]
+    # Decode byte strings to plain str, while preserving the original values
+    # for client-side sorting. In particular, numbers can be humanized in the
+    # template, so sorting the displayed text would give incorrect results.
+    table_rows = []
+    for raw_row in table_contents:
+        display_row = decode(raw_row)
+        cells = []
+        for index, (header, display_value) in enumerate(
+                zip(table_header, display_row)):
+            sort_type = column_sort_types[index]
+            sort_value = decode(raw_row[index])
+            cells.append({
+                'display_value': display_value,
+                'is_string': (sort_type == 'string'
+                              or header in string_columns),
+                'sort_type': sort_type,
+                'sort_value': sort_value,
+            })
+        table_rows.append(cells)
 
     return render(request, 'engine/show_table.html',
                   {'calc_id': calc_id,

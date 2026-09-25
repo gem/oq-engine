@@ -30,8 +30,6 @@ from openquake.pfd.primary_surf_displ.base import BaseSecondarySurfDispl
 class Petersen2011SecondaryFD(BaseSecondarySurfDispl):
     """Distributed fault-displacement model of Petersen et al. (2011) for strike-slip faults.
 
-    References
-    ----------
     Petersen, M.D., et al. (2011). Fault displacement hazard for strike-slip
     faults. Bulletin of the Seismological Society of America, 101(2), 805-825.
 

@@ -188,11 +188,12 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     n = get_num_chunks(dstore, full_lt)
 
     # full_lt is None in classical_risk, classical_damage
-    full_lt = full_lt or dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt']
+    if getattr(full_lt, 'weights', None) is None:  # not initialized
+        full_lt.init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs, trt_smrs = get_rmap_gb(dstore, full_lt)
     attrs = vars(full_lt)
-    full_lt.init()
     if oq.fastmean:
         gweights = [full_lt.g_weights(trt_smrs)]
     else:
@@ -247,12 +248,12 @@ class CurveGetter(object):
     :param rates: array of shape (L, G) for the given site
     """
     @classmethod
-    def build(cls, dstore):
+    def build(cls, dstore, full_lt):
         """
         :returns: a dictionary sid -> CurveGetter
         """
         rates = {}
-        for mgetter in map_getters(dstore):
+        for mgetter in map_getters(dstore, full_lt):
             array = mgetter.init()
             for sid, idx in mgetter.sid2idx.items():
                 rates[sid] = array[idx]  # shape (L, G)
