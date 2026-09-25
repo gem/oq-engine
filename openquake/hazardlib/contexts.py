@@ -471,7 +471,7 @@ def genctxs_Pp(src, sitecol, cmaker):
     for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
         if not planars:
             continue
-        elif len(planars) > 1:  # when using ps_grid_spacing
+        elif len(planars) > 1:  # when using ps_grid_spacing, case_43
             pla = numpy.concatenate(planars).view(numpy.recarray)
             pla.wlr[:, 2] /= len(planars)  # average rate
         else:
