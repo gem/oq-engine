@@ -397,6 +397,9 @@ def main(what, report=False):
                 for bset in ltree.branchsets:
                     pprint(bset)
                 lt.print_tree(ltree.branchsets[0])
+                if 'pfd_logic_tree' in oq.inputs:
+                    [br] = readinput.get_pfd_lt(oq).branchsets[0].branches
+                    lt.print_tree(br)
         if mon.duration > 1:
             print(mon)
     elif what:

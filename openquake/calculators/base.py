@@ -55,6 +55,7 @@ from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib.model_provenance import copy_model_provenance
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters, postproc
 
@@ -308,6 +309,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         vars(mon).update(kw)
         return mon
 
+    def _copy_model_provenance(self):
+        """Copy exposure model provenance to the calculation datastore."""
+        try:
+            exposure_path = self.oqparam.inputs['exposure'][0]
+        except (KeyError, IndexError):
+            return
+        copy_model_provenance(exposure_path, self.datastore)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -378,6 +387,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.export(kw.get('exports', ''))
                 return self.exported
             try:
+                if oq.impact:
+                    self._copy_model_provenance()
                 if pre_execute:
                     self.pre_execute()
                 if os.environ.get('OQ_CHECK_INPUT'):
@@ -1366,14 +1377,13 @@ class RiskCalculator(HazardCalculator):
             riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
-        self.acc = None
         return riskinputs
 
     # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        getterdict = getters.CurveGetter.build(dstore)
+        getterdict = getters.CurveGetter.build(dstore, self.full_lt)
         for sid, assets in asset_df.groupby(asset_df.index):
             getter = getterdict[sid]
             # hcurves, shape (R, N)
@@ -1402,15 +1412,7 @@ class RiskCalculator(HazardCalculator):
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             smap.submit((block, self.oqparam))
-        return smap.reduce(self.combine, self.acc)
-
-    def combine(self, acc, res):
-        """
-        Combine the outputs assuming acc and res are dictionaries
-        """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
-        return acc + res
+        return smap.reduce()
 
 
 def longname(name, columns):

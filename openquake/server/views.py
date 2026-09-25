@@ -1890,6 +1890,20 @@ def extract(request, calc_id, what):
 
 
 @cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def model_provenance(request, calc_id):
+    """Authenticate and proxy model provenance to FastAPI."""
+    if get_user_level(request) < 2:
+        return HttpResponseForbidden()
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    return _call_api(request, f'v0/calc/model_provenance/{calc_id}')
+
+
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def calc_datastore(request, job_id):
     """
