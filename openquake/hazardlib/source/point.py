@@ -83,9 +83,7 @@ def calc_average(pointsources):
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
         rate_w.append(rate)
     for key in acc:
-        # Keep the legacy single-source arithmetic average; circular
-        # averages are only needed when collapsing multiple point sources.
-        if key in ('strike', 'rake') and multiple:
+        if key in ('strike', 'rake'):
             values = numpy.asarray(acc[key], dtype=float)
             weights = numpy.asarray(node_w, dtype=float)
             total = weights.sum()
@@ -103,7 +101,7 @@ def calc_average(pointsources):
                 acc[key] = 0. if mean >= 360 else mean
             else:
                 acc[key] = mean
-        elif key in ('strike', 'rake', 'dip'):
+        elif key == 'dip':
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key in ('dep', 'hypo_dip_frac'):
             # Same entry in hypoDepthDist so share weight
