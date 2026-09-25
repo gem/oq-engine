@@ -328,15 +328,14 @@ class PreClassicalCalculator(base.HazardCalculator):
                 trt_map = mapping.setdefault(cmaker.trt, {})
                 for mag, dist in caps.items():
                     trt_map[mag] = min(trt_map.get(mag, dist), dist)
-            if mapping:
-                oq.pointsource_distance_by_mag = mapping
-                self.datastore['oqparam'] = oq
-                for cmaker in self.cmakers:
-                    cmaker.pointsource_distance_by_mag = mapping.get(
-                        cmaker.trt, {})
-                logging.info(
-                    'Using magnitude-dependent pointsource_distance '
-                    '(computed in %.3fs)', time.perf_counter() - t0)
+            oq.pointsource_distance_by_mag = mapping
+            self.datastore['oqparam'] = oq
+            for cmaker in self.cmakers:
+                cmaker.pointsource_distance_by_mag = mapping.get(
+                    cmaker.trt, {})
+            logging.info(
+                'Using magnitude-dependent pointsource_distance '
+                '(computed in %.3fs)', time.perf_counter() - t0)
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
