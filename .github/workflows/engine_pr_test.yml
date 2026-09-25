@@ -237,5 +237,6 @@ jobs:
       engine_repository: ${{ github.event.pull_request.head.repo.full_name }}
       engine_ref: ${{ github.event.pull_request.head.sha }}
       irmt_ref: master
+      integration_only: true
     permissions:
       contents: read
