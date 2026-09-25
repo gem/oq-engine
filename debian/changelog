@@ -1,3 +1,13 @@
+  [Paolo Tormene]
+  * Added a summary of the provenance of the scientific model repositories
+    used to build the global exposure HDF5, propagating that information into
+    impact calculation datastores. Authorized users can use a new API endpoint
+    to extract that summary.
+  * Added pagination to WebUI calculation list, showing 10 items by default,
+    configurable via the CALC_LIST_PAGE_SIZE setting.
+  * Added client-side sorting by clicking on the headers of tables presented
+    via the extract_html_table endpoint (e.g. impact tables).
+
   [Christopher Brooks]
   * Fixed a bug which occurred when using `with_betw_ratio` in the job file
     with GMMs which are already instances of `ModifiableGMPE`
