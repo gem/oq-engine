@@ -55,6 +55,7 @@ from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib.model_provenance import copy_model_provenance
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters, postproc
 
@@ -308,6 +309,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         vars(mon).update(kw)
         return mon
 
+    def _copy_model_provenance(self):
+        """Copy exposure model provenance to the calculation datastore."""
+        try:
+            exposure_path = self.oqparam.inputs['exposure'][0]
+        except (KeyError, IndexError):
+            return
+        copy_model_provenance(exposure_path, self.datastore)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -378,6 +387,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.export(kw.get('exports', ''))
                 return self.exported
             try:
+                if oq.impact:
+                    self._copy_model_provenance()
                 if pre_execute:
                     self.pre_execute()
                 if os.environ.get('OQ_CHECK_INPUT'):

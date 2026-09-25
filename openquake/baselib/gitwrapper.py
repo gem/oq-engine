@@ -24,6 +24,8 @@ def git(repodir, cmd):
     """
     A thin wrapper over git. It has plenty of limitations but it is
     enough for the purpose of fetching and checking out specific tags.
+
+    :returns: the command standard output
     """
     print(f"{repodir}: git {' '.join(cmd)}")
     proc = subprocess.run(['git'] + cmd, cwd=repodir,
@@ -40,6 +42,7 @@ def git(repodir, cmd):
             sys.exit(f'Error {proc.stderr} in {repodir}: git {" ".join(cmd)}')
     else:
         print(proc.stdout)
+    return proc.stdout
 
 git.repodir = 'git repository'
 git.cmd = dict(help='git subcommand', nargs='+')
