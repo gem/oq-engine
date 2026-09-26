@@ -219,6 +219,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
     nctxs = 1  # updated in estimate_weight
+    nocontexts = False  # set in estimate_weight; nctxs cannot be used
+    # since it is a denominator in RmapMaker._make_src_indep
     offset = 0  # set in fix_src_offset
     _num_ruptures = 0  # set by the engine
     seed = None  # set by the engine

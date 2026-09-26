@@ -552,10 +552,14 @@ class CompositeSourceModel:
             # crucial to avoid OOM in CEA or USA due to the dparam cache
             splits = N / 2_500  # use tiles with at max 2500 sites
         hint = sg.weight / max_weight
-        if not any(src.nsites for src in sg.sources):
-            # no source is within the integration distance of any site, so the
-            # group was discarded by the prefiltering in preclassical and it
-            # cannot produce any rate: no tile and therefore no task needed.
+        if all(src.nocontexts for src in sg.sources):
+            # no source produced any context: either it was discarded by the
+            # prefiltering in preclassical or no site is within the
+            # per-magnitude integration distances; in both cases the group
+            # cannot contribute any rate, so no tile and no task are needed.
+            # NB: nocontexts is set in estimate_weight, with a False class
+            # default, so sources that were never weighted (or weighted with
+            # no sitecol, see estimate_weight returning EPS) stay alive
             blocks = [sg.grp_id]
             tilegetters = []
         elif sg.atomic or tiling:

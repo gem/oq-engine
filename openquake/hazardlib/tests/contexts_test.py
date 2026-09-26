@@ -26,7 +26,9 @@ from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    Effect, ContextMaker, get_distances, EPS)
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -390,3 +392,68 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class EstimateWeightTestCase(unittest.TestCase):
+    """
+    estimate_weight must flag nocontexts when a source has no contexts
+    """
+    def setUp(self):
+        self.trt = TRT.ACTIVE_SHALLOW_CRUST
+        # a point source of magnitude 5, half a degree (~55 km) away
+        self.src = PointSource(
+            'ps', 'ps', self.trt, ArbitraryMFD([5.0], [1e-4]), 2.5, WC1994(),
+            1.0, PoissonTOM(50.), 0.0, 20.0, Point(0.0, 0.0),
+            PMF([(1.0, NodalPlane(0., 90., 0.))]), PMF([(1.0, 10.)]))
+        self.src.ps_grid_spacing = 0.
+        self.sites = SiteCollection([Site(Point(0.5, 0.0, 0.0))])
+
+    def _estimate(self, idist, reduce=1):
+        # NB: as in preclassical, the SourceFilter and the ContextMaker get
+        # the same integration distance, i.e. a magnitude dependent table
+        sf = SourceFilter(self.sites, {self.trt: idist})
+        if reduce > 1:  # as in populate_csm for a many-sites calculation
+            sf = sf.reduce(reduce)
+        cmaker = ContextMaker(self.trt, [valid.gsim('GulerceEtAl2017')],
+                              dict(imtls={'PGA': [0.01]}, truncation_level=3.,
+                                   maximum_distance={self.trt: idist},
+                                   investigation_time=50.))
+        return cmaker.estimate_weight(self.src, sf)
+
+    def test_within_range(self):
+        self.src.nsites = 1  # as set by preclassical.filter_weight
+        w = self._estimate([(5., 200.), (6., 200.)])
+        self.assertGreater(self.src.nsites, 0)
+        self.assertGreater(self.src.nctxs, 0)
+        self.assertFalse(self.src.nocontexts)
+        self.assertGreater(w, 0)
+
+    def test_discarded_by_prefiltering(self):
+        self.src.nsites = 0  # as set by preclassical.filter_weight
+        w = self._estimate([(5., 10.), (6., 10.)])
+        self.assertTrue(self.src.nocontexts)
+        self.assertEqual(w, EPS)
+        # NB: nctxs is a denominator in RmapMaker._make_src_indep, so it
+        # keeps a positive value even for a source with no contexts
+        self.assertGreater(self.src.nctxs, 0)
+
+    def test_no_context_but_kept_alive(self):
+        # the source survives the geometric prefiltering but generates no
+        # context (the integration distance of its only magnitude is tiny);
+        # this is not a safe basis for discarding the source, so it is kept
+        # alive: see test_case_65, where a multiFaultSource generating no
+        # context in preclassical does produce rates in the classical phase
+        self.src.nsites = 1
+        w = self._estimate([(5., 1.), (6., 300.)])
+        self.assertGreater(self.src.nsites, 0)  # not discarded
+        self.assertEqual(w, EPS)
+        self.assertFalse(self.src.nocontexts)  # but kept alive
+
+    def test_reduced_sitecol_is_not_trusted(self):
+        # with a reduced sitecol the verdict is unreliable, since a source
+        # discarded here may still affect sites in the full collection
+        # (see populate_csm), so nocontexts must stay False
+        self.src.nsites = 0
+        w = self._estimate([(5., 10.), (6., 10.)], reduce=5)
+        self.assertFalse(self.src.nocontexts)
+        self.assertEqual(w, EPS)

@@ -1486,11 +1486,20 @@ class ContextMaker(object):
         :returns: (weight, estimate_sites)
         """
         t0 = time.time()
-        if src.nsites == 0:  # was discarded by the prefiltering
+        # NB: only the geometric verdict (nsites == 0) is used to flag a
+        # source as not contributing, and only if the sitecol is not reduced;
+        # C == 0 is not a safe criterion, since preclassical can generate no
+        # context for reasons which do not apply in the classical phase, see
+        # test_case_65 (a multiFaultSource) generating rates anyway
+        if src.nsites == 0 and srcfilter.multiplier == 1:
+            # discarded by the prefiltering, i.e. no site within
+            # maximum_distance + radius
+            src.nocontexts = True
             return EPS
         sites = srcfilter.get_close_sites(src)
         if sites is None:
-            # may happen for CollapsedPointSources
+            # may happen for CollapsedPointSources; NB: this is ambiguous,
+            # so we do not set nocontexts here and we keep the source alive
             return EPS
         src.nsites = len(sites)
         step = 1 if src.code in b'pP' else 20 if src.num_ruptures >= 400 else 4
