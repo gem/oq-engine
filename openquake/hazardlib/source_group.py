@@ -552,15 +552,10 @@ class CompositeSourceModel:
             # crucial to avoid OOM in CEA or USA due to the dparam cache
             splits = N / 2_500  # use tiles with at max 2500 sites
         hint = sg.weight / max_weight
-        if N > oq.max_sites_disagg and not any(src.nsites for src in sg.sources):
+        if not any(src.nsites for src in sg.sources):
             # no source is within the integration distance of any site, so the
             # group was discarded by the prefiltering in preclassical and it
             # cannot produce any rate: no tile and therefore no task needed.
-            # NB: for few sites (N <= max_sites_disagg) the tile is kept on
-            # purpose, since ClassicalCalculator._execute asserts that each
-            # group has exactly one tile in that case, see the assertion
-            # "disagg_by_src has no tiles" in classical.py; the discarded
-            # task is instantaneous anyway, as in logictree/case_08
             blocks = [sg.grp_id]
             tilegetters = []
         elif sg.atomic or tiling:
