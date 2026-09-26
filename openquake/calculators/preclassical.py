@@ -140,8 +140,10 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             src.nsites = (distances <= maxdist +
                           src.max_radius(maxdist)).sum()
         elif sf.sitecol:
-            # NB: this is approximate, since the sites are sampled
+            # NB: this is approximate, since the sites are sampled, so we
+            # do not set nocontexts even if no site is close
             src.nsites = len(sf.close_sids(src))  # can be 0
+            src.nocontexts = False
             # print(f'{src.source_id=}, {src.nsites=}')
         else:
             src.nsites = 1

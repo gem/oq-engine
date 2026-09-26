@@ -450,9 +450,9 @@ class EstimateWeightTestCase(unittest.TestCase):
         self.assertFalse(self.src.nocontexts)  # but kept alive
 
     def test_reduced_sitecol_is_not_trusted(self):
-        # with a reduced sitecol the verdict is unreliable, since a source
-        # discarded here may still affect sites in the full collection
-        # (see populate_csm), so nocontexts must stay False
+        # with a reduced sitecol a source discarded by the prefiltering may
+        # still be relevant, and re-checking it on the full sitecol is
+        # prohibitively expensive, so nocontexts is not set
         self.src.nsites = 0
         w = self._estimate([(5., 10.), (6., 10.)], reduce=5)
         self.assertFalse(self.src.nocontexts)

@@ -1469,10 +1469,13 @@ class ContextMaker(object):
         """
         t0 = time.time()
         # NB: only the geometric verdict (nsites == 0) is used to flag a
-        # source as not contributing, and only if the sitecol is not reduced;
-        # C == 0 is not a safe criterion, since preclassical can generate no
-        # context for reasons which do not apply in the classical phase, see
-        # test_case_65 (a multiFaultSource) generating rates anyway
+        # source as not contributing, and only if the sitecol is not reduced:
+        # a reduced sitecol can discard a source which is still relevant, and
+        # checking it again on the full sitecol is prohibitively expensive
+        # (~10 ms per source with 500k sites, i.e. minutes for a big model).
+        # C == 0 is not a safe criterion either, since preclassical can
+        # generate no context for reasons which do not apply in the classical
+        # phase, see test_case_65 (a multiFaultSource) generating rates
         if src.nsites == 0 and srcfilter.multiplier == 1:
             # discarded by the prefiltering, i.e. no site within
             # maximum_distance + radius
