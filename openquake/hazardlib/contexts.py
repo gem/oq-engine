@@ -1215,6 +1215,31 @@ class ContextMaker(object):
 
     # This rate-weighted estimator runs only in preclassical; the
     # classical phase reuses the mapping stored in oqparam.
+    #
+    # Performance note (measured on the PHL model, point-like sources only,
+    # against an exact pointsource_distance=1000 reference, 3717 of 18510
+    # sites; (ps_grid_spacing, tail) -> wall time, mean |dlog10| error):
+    #
+    #     25, 1e-3 -> 102s, 0.0217        50, 1e-3 -> 130s, 0.0193
+    #     25, 1e-5 -> 165s, 0.0185        50, 1e-5 -> 312s, 0.0157
+    #    100, 1e-3 -> 535s, 0.0160       100, 1e-5 -> 880s, 0.0120
+    #                                 exact -> 588s, 0.0000
+    #
+    # Two things are easy to get wrong here. First, `tail` and
+    # ps_grid_spacing are not independent: both add to the same truncation
+    # radius, psdist = eff_radius + ps_grid_spacing*.707 + psdist(tail), so
+    # raising one to buy accuracy must be paid for by the other. Second,
+    # the cost is far more sensitive to the site sample than the accuracy
+    # is: at 1% of the sites every combination above fits in 34-49s, which
+    # makes `tail` look free when it is in fact 2.4x at a realistic site
+    # density. Never tune this on a sparse sample.
+    #
+    # Within that, ps_grid_spacing is the cheaper knob per unit of accuracy
+    # up to ~50, and beyond that the grid term grows faster than coarser
+    # gridding removes sources, so (100, 1e-3) and (100, 1e-2) are both
+    # dominated by (50, 1e-5). The error is also one-sided (it always
+    # under-predicts), and the mean hides a period split: a smaller
+    # ps_grid_spacing is better at long periods and worse at short ones.
     def get_pointsource_distance_by_mag(self, rates, site, tail=1E-3):
         """
         :returns: a magnitude -> distance dictionary estimated from
