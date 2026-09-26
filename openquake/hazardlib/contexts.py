@@ -502,6 +502,55 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 # ############################ ContextMaker ############################### #
 
 
+class MagDependentDistance(object):
+    """
+    A magnitude dependent distance; it must be picklable, since the
+    cmakers are sent to the workers in the Starmap
+    """
+    def __init__(self, mags, dists, bounds):
+        self.mags = None if mags is None else [float(m) for m in mags]
+        self.dists = [float(d) for d in dists]
+        self.bounds = bounds
+        self.fct = None  # built on the fly, it cannot be pickled
+
+    def __call__(self, mag):
+        if self.mags is None:  # a constant distance
+            return self.dists[0]
+        if self.fct is None:
+            self.fct = interp1d(self.mags, self.dists, bounds_error=False,
+                                fill_value=self.bounds)
+        return float(self.fct(mag))
+
+    def __getstate__(self):
+        # NB: the interpolator contains a compiled function, keep it out
+        return self.mags, self.dists, self.bounds
+
+    def __setstate__(self, state):
+        self.mags, self.dists, self.bounds = state
+        self.fct = None
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.dists)
+
+
+def _psdist_fct(value):
+    # NB: a {mag: dist} mapping is extrapolated with constant values, i.e.
+    # the first/last distance are used outside the range of magnitudes; a
+    # [(mag, dist), ...] list is interpolated with 0 outside the range, as
+    # in magdepdist, since there 0 means "no integration distance"
+    if callable(value):
+        return value
+    if isinstance(value, dict):
+        mags, dists = zip(*sorted(value.items()))
+        bounds = (float(dists[0]), float(dists[-1]))
+    elif isinstance(value, (list, tuple, numpy.ndarray)):
+        mags, dists = zip(*value)
+        bounds = 0.
+    else:
+        return MagDependentDistance(None, [float(value)], 0.)
+    return MagDependentDistance(mags, dists, bounds)
+
+
 def _fix(gsimdict, betw):
     if betw:
         out = {}
@@ -623,18 +672,7 @@ class ContextMaker(object):
             psdist = float(config.performance.pointsource_distance)
         else:
             psdist = getdefault(param['pointsource_distance'], self.trt)
-        if callable(psdist):
-            self.pointsource_distance = psdist
-        elif isinstance(psdist, (list, tuple, numpy.ndarray)):
-            self.pointsource_distance = magdepdist(psdist)
-        else:
-            self.pointsource_distance = float(psdist)
-        self.pointsource_distance_by_mag = {}
-        magdist = param.get('pointsource_distance_by_mag', {})
-        if magdist:
-            self.pointsource_distance_by_mag = {
-                float(mag): float(dist)
-                for mag, dist in magdist.get(self.trt, {}).items()}
+        self.pointsource_distance = _psdist_fct(psdist)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -1204,14 +1242,7 @@ class ContextMaker(object):
         """
         :returns: the effective pointsource distance for a magnitude
         """
-        if callable(self.pointsource_distance):
-            base = float(self.pointsource_distance(mag))
-        else:
-            base = self.pointsource_distance
-        if self.pointsource_distance_by_mag:
-            return self.pointsource_distance_by_mag.get(
-                round(float(mag), 2), base)
-        return base
+        return float(self.pointsource_distance(mag))
 
     # This rate-weighted estimator runs only in preclassical; the
     # classical phase reuses the mapping stored in oqparam.

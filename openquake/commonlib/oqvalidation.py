@@ -652,8 +652,12 @@ poes_disagg:
    Alias for poes.
 
 pointsource_distance:
-  Used in classical calculations to collapse the point sources. Can also be
-  used in conjunction with *ps_grid_spacing*.
+  Distance beyond which the point sources are collapsed into an average
+  rupture, i.e. a weighted mean of the nodal plane and hypocenter
+  distributions; closer sites keep all the original ruptures. Can be given
+  as a scalar, as a dictionary TRT -> scalar, as dictionary TRT -> [(mag,
+  dist), ...] or as dictionary TRT -> {mag: dist}. A value of 0 removes the
+  nodal plane/hypocenter distributions altogether.
   Example: *pointsource_distance = 50*.
   Default: {'default': 100}
 
@@ -681,8 +685,9 @@ prefer_global_site_params:
   INTERNAL. Automatically set by the engine.
 
 ps_grid_spacing:
-  Used in classical calculations to grid the point sources. Requires the
-  *pointsource_distance* to be set too.
+  Used in classical calculations to grid the point sources. If set, the
+  *pointsource_distance* is automatically calibrated on the softest site and
+  stored as a magnitude dependent value; setting it to 0 means no grid.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
@@ -1357,9 +1362,22 @@ class OqParam(valid.ParamSet):
     @property
     def no_pointsource_distance(self):
         """
-        :returns: True if the pointsource_distance is 1000 km
+        :returns: True if no site is collapsed into an average rupture,
+            i.e. all the pointsource_distance values are huge (1000 km)
         """
-        return set(self.pointsource_distance.values()) == {1000}
+        for value in self.pointsource_distance.values():
+            # NB: the value can be a scalar, a [(mag, dist), ...] list or a
+            # {mag: dist} dict, the latter written by preclassical when
+            # ps_grid_spacing is set
+            if isinstance(value, dict):
+                dists = list(value.values())
+            elif isinstance(value, (list, tuple, numpy.ndarray)):
+                dists = [dist for _, dist in value]
+            else:
+                dists = [value]
+            if not dists or min(float(d) for d in dists) < 1000:
+                return False
+        return True
 
     @property
     def risk_files(self):

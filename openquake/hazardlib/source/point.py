@@ -238,20 +238,22 @@ class PointSource(ParametricSeismicSource):
 
     # A full cell-displacement calculation was benchmarked without a
     # material precision gain, so keep the inexpensive half diagonal.
-    def max_radius(self, maxdist):
+    def max_radius(self, maxdist, m=-1):
         """
+        :param m: the index of the magnitude, -1 meaning the largest radius
         :returns: max radius + ps_grid_spacing * sqrt(2)/2
         """
         self._get_max_rupture_projection_radius()
-        eff_radius = min(self.radius[-1], maxdist / 2)
+        eff_radius = min(self.radius[m], maxdist / 2)
         return eff_radius + self.ps_grid_spacing * .707
 
     def get_psdist(self, m, mag, psdist, magdist):
         """
         :returns: the effective pointsource distance for the given magnitude
         """
-        eff_radius = min(self.radius[m], magdist[mag] / 2)
-        return eff_radius + self.ps_grid_spacing * .707 + psdist
+        # NB: sites farther than this are collapsed into an average rupture,
+        # closer ones keep all the original ruptures; see max_radius
+        return self.max_radius(magdist[mag], m) + psdist
 
     def _get_max_rupture_projection_radius(self):
         """
