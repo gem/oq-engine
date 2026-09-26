@@ -612,7 +612,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 grp_id = int(grp_keys[0].split('-')[0])
                 self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
-                assert len(tilegetters) == 1, "disagg_by_src has no tiles"
+                # NB: a group discarded by the prefiltering has no tiles
+                # at all, which is fine since it produces no rate; however
+                # two or more tiles would silently corrupt disagg_by_src
+                assert len(tilegetters) <= 1, (
+                    'disagg_by_src has %d tiles for group %s'
+                    % (len(tilegetters), grp_keys))
             for tgetter in tilegetters:
                 if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
                     # can happen for some ilabel
