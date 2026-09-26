@@ -332,14 +332,17 @@ class PreClassicalCalculator(base.HazardCalculator):
             mapping = {}
             t0 = time.perf_counter()
             for cmaker in self.cmakers:
-                if not _psdist_enabled(
-                        getdefault(oq.pointsource_distance, cmaker.trt)):
+                configured = getdefault(oq.pointsource_distance, cmaker.trt)
+                if not _psdist_enabled(configured):
                     continue
                 caps = cmaker.get_pointsource_distance_by_mag(
                     rates.get(cmaker.trt, {}), site)
                 trt_map = mapping.setdefault(cmaker.trt, {})
                 for mag, dist in caps.items():
-                    trt_map[mag] = min(trt_map.get(mag, dist), dist)
+                    # pointsource_distance is a lower bound: the per-magnitude
+                    # value can only enlarge the exact region, never shrink it
+                    dist = max(float(dist), float(configured))
+                    trt_map[mag] = max(trt_map.get(mag, dist), dist)
             oq.pointsource_distance_by_mag = mapping
             self.datastore['oqparam'] = oq
             for cmaker in self.cmakers:
