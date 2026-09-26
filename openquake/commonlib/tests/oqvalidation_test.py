@@ -25,7 +25,7 @@ from openquake.qa_tests_data import event_based
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib import readinput
-from openquake.commonlib.oqvalidation import MINPSDIST, OqParam
+from openquake.commonlib.oqvalidation import OqParam
 
 TMP = tempfile.gettempdir()
 
@@ -115,14 +115,13 @@ class OqParamTestCase(unittest.TestCase):
             reference_vs30_value='200')
         oq = OqParam(pointsource_distance='0', **args)
         oq.validate()
-        self.assertEqual(oq.pointsource_distance, {'default': MINPSDIST})
+        self.assertEqual(oq.pointsource_distance, {'default': 0})
         oq = OqParam(
             pointsource_distance="{'default': [(5., 0.), (6., 2.)]}",
             **args)
         oq.validate()
-        self.assertEqual(oq.pointsource_distance['default'][0],
-                         (5., MINPSDIST))
-        OqParam(pointsource_distance='.001', **args).validate()
+        self.assertEqual(oq.pointsource_distance['default'],
+                         [(5., 0.), (6., 2.)])
 
     def test_site_model(self):
         # if the site_model_file is missing, reference_vs30_type and
