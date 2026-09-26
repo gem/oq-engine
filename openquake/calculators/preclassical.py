@@ -34,6 +34,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter, magdepdist)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
+from openquake.hazardlib.site import cell_radius
 from openquake.calculators import base
 
 MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
@@ -137,15 +138,24 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             # in contexts._quintets, so that the weighting is consistent with
             # the mask actually used to generate the contexts
             distances = sf.sitecol.get_cdist(src.location)
-            src.nsites = (distances <= maxdist +
-                          src.max_radius(maxdist)).sum()
+            reach = maxdist + src.max_radius(maxdist)
+            src.nsites = (distances <= reach).sum()
+            # NB: with a reduced sitecol a source discarded by the
+            # prefiltering can still be relevant, since the sites in a cell
+            # are up to cell_radius away from its centre; a source farther
+            # than reach + cell_radius from every reduced point cannot
+            # affect any site, so it is safe to set nocontexts
+            if not src.nsites:
+                shell = reach + sf.cell_radius if sf.cell_radius else reach
+                src.nocontexts = not (distances <= shell).any()
+            else:
+                src.nocontexts = False
         elif sf.sitecol:
             # NB: this is approximate, since the sites are sampled, so we
             # do not set nocontexts even if no site is close
             src.nsites = len(sf.close_sids(src))  # can be 0
             src.nocontexts = False
-            # print(f'{src.source_id=}, {src.nsites=}')
-        else:
+            # print(f'{src.source_id=}, {src.nsites=}')        else:
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
@@ -331,6 +341,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
             sf = SourceFilter(lowres, oq.maximum_distance)
             sf.multiplier = len(sites) / len(lowres)
+            sf.cell_radius = cell_radius(4)
             logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
         elif sites:
             sf = SourceFilter(sites, oq.maximum_distance)

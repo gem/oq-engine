@@ -343,6 +343,22 @@ def add(string, suffix, maxlen):
     return string + suffix[:maxlen-n]
 
 
+def cell_radius(res=4):
+    """
+    :param res: the H3 resolution used in SiteCollection.lower_res
+    :returns: an upper bound in km for the distance between a point and the
+        centre of the cell containing it, i.e. the circumradius of the
+        hexagon, which is equal to its average edge length; the 10% is a
+        safety margin, since the hexagons are not exactly regular (28.7 km
+        for res=4, vs a measured maximum of 28.2 km)
+    """
+    try:
+        from h3 import average_hexagon_edge_length
+    except ImportError:  # old version, only geo_to_h3
+        return 29.
+    return 1.1 * average_hexagon_edge_length(res, unit='km')
+
+
 class SiteCollection(object):
     """\
     A collection of :class:`sites <Site>`.

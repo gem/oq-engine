@@ -429,9 +429,11 @@ class EstimateWeightTestCase(unittest.TestCase):
         self.assertGreater(w, 0)
 
     def test_discarded_by_prefiltering(self):
+        # NB: nocontexts is set in preclassical.filter_weight, not here;
+        # estimate_weight just returns EPS for a discarded source
         self.src.nsites = 0  # as set by preclassical.filter_weight
         w = self._estimate([(5., 10.), (6., 10.)])
-        self.assertTrue(self.src.nocontexts)
+        self.assertFalse(self.src.nocontexts)
         self.assertEqual(w, EPS)
         # NB: nctxs is a denominator in RmapMaker._make_src_indep, so it
         # keeps a positive value even for a source with no contexts
@@ -452,8 +454,8 @@ class EstimateWeightTestCase(unittest.TestCase):
     def test_reduced_sitecol_is_not_trusted(self):
         # with a reduced sitecol a source discarded by the prefiltering may
         # still be relevant, and re-checking it on the full sitecol is
-        # prohibitively expensive, so nocontexts is not set
+        # prohibitively expensive, so nocontexts is set in filter_weight
+        # only if the source is also far from the cell centres
         self.src.nsites = 0
         w = self._estimate([(5., 10.), (6., 10.)], reduce=5)
-        self.assertFalse(self.src.nocontexts)
         self.assertEqual(w, EPS)

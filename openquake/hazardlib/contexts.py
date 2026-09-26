@@ -1468,18 +1468,14 @@ class ContextMaker(object):
         :returns: (weight, estimate_sites)
         """
         t0 = time.time()
-        # NB: only the geometric verdict (nsites == 0) is used to flag a
-        # source as not contributing, and only if the sitecol is not reduced:
-        # a reduced sitecol can discard a source which is still relevant, and
-        # checking it again on the full sitecol is prohibitively expensive
-        # (~10 ms per source with 500k sites, i.e. minutes for a big model).
-        # C == 0 is not a safe criterion either, since preclassical can
-        # generate no context for reasons which do not apply in the classical
-        # phase, see test_case_65 (a multiFaultSource) generating rates
-        if src.nsites == 0 and srcfilter.multiplier == 1:
-            # discarded by the prefiltering, i.e. no site within
-            # maximum_distance + radius
-            src.nocontexts = True
+        # NB: the flag nocontexts is set in preclassical.filter_weight, where
+        # the geometry of the source is known and, for a reduced sitecol, a
+        # source is flagged only if it is far from every cell centre. Here we
+        # just return EPS, and NB: C == 0 is not a safe criterion to discard
+        # a source, since preclassical can generate no context for reasons
+        # which do not apply in the classical phase, see test_case_65 (a
+        # multiFaultSource) generating rates anyway
+        if src.nsites == 0:  # was discarded by the prefiltering
             return EPS
         sites = srcfilter.get_close_sites(src)
         if sites is None:

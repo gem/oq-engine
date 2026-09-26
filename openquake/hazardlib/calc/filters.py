@@ -470,6 +470,7 @@ class SourceFilter(object):
     based on numpy.
     """
     multiplier = 1  # not reduce
+    cell_radius = 0  # set when the sitecol is reduced in cells
 
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
