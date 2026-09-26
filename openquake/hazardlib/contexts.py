@@ -362,7 +362,7 @@ def _quintets(cmaker, src, sitecol):
             pla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(
-                m, mag, cmaker.get_pointsource_distance(mag), magdist)
+                m, mag, float(cmaker.pointsource_distance(mag)), magdist)
             close = sites.filter(cdist[mask] <= psdist)
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
@@ -502,27 +502,6 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 # ############################ ContextMaker ############################### #
 
 
-def _psdist_fct(value):
-    # NB: a {mag: dist} mapping is extrapolated with constant values, i.e.
-    # the first/last distance are used outside the range of magnitudes; a
-    # [(mag, dist), ...] list is interpolated with 0 outside the range, as
-    # in magdepdist. There 0 means "collapse everything", see the manual
-    if callable(value):
-        return value
-    if isinstance(value, dict):
-        mags, dists = zip(*sorted(value.items()))
-        bounds = (float(dists[0]), float(dists[-1]))
-    elif isinstance(value, (list, tuple, numpy.ndarray)):
-        mags, dists = zip(*value)
-        bounds = 0.
-    else:  # a constant distance, as in IntegrationDistance.new
-        mags, dists = [MINMAG, MAXMAG], [float(value)] * 2
-        bounds = 0.
-    # NB: the returned interp1d must be picklable, since the cmakers are
-    # sent to the workers in the Starmap
-    return interp1d(mags, dists, bounds_error=False, fill_value=bounds)
-
-
 def _fix(gsimdict, betw):
     if betw:
         out = {}
@@ -644,7 +623,13 @@ class ContextMaker(object):
             psdist = float(config.performance.pointsource_distance)
         else:
             psdist = getdefault(param['pointsource_distance'], self.trt)
-        self.pointsource_distance = _psdist_fct(psdist)
+        # NB: as in IntegrationDistance.new, a scalar becomes a constant
+        # magnitude dependent distance, and a {mag: dist} mapping is sorted
+        if isinstance(psdist, dict):
+            psdist = sorted(psdist.items())
+        elif not isinstance(psdist, (list, tuple, numpy.ndarray)):
+            psdist = [(MINMAG, float(psdist)), (MAXMAG, float(psdist))]
+        self.pointsource_distance = magdepdist(psdist)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -1209,12 +1194,6 @@ class ContextMaker(object):
         else:
             probs = [rec.probs_occur[0] for rec in ctxt]
             return -numpy.log(probs) / self.investigation_time
-
-    def get_pointsource_distance(self, mag):
-        """
-        :returns: the effective pointsource distance for a magnitude
-        """
-        return float(self.pointsource_distance(mag))
 
     # This rate-weighted estimator runs only in preclassical; the
     # classical phase reuses the mapping stored in oqparam.

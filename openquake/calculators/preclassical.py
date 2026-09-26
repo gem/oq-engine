@@ -25,13 +25,13 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import get_cmakers, _psdist_fct
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
-    getdefault, split_source, SourceFilter)
+    getdefault, split_source, SourceFilter, magdepdist)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
@@ -118,7 +118,11 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     sf.integration_distance = cmaker.maximum_distance
-    maxdist = cmaker.maximum_distance.y[-1]
+    # NB: maxdist must be an upper bound of the distances used in
+    # contexts._quintets, which is the largest one for the magnitudes of
+    # each source; taking the last entry instead would be wrong for a
+    # decreasing table like [(5., 300.), (7., 20.)]
+    maxdist = cmaker.maximum_distance.y.max()
     N = len(sf.sitecol) if sf.sitecol else 0
     splits = []
     for src in srcs:
@@ -392,26 +396,17 @@ class PreClassicalCalculator(base.HazardCalculator):
         site = sites.one()
         t0 = time.perf_counter()
         for cmaker in self.cmakers:
-            configured = getdefault(oq.pointsource_distance, cmaker.trt)
-            if isinstance(configured, (list, tuple, numpy.ndarray, dict)):
-                # a per-magnitude lower bound: use the smallest one, since
-                # pointsource_distance can only enlarge the exact region
-                pairs = list(configured.items()) if isinstance(
-                    configured, dict) else list(configured)
-                configured = min(float(d) for _, d in pairs)
             caps = cmaker.get_pointsource_distance_by_mag(
                 rates.get(cmaker.trt, {}), site)
             # pointsource_distance is a lower bound: the per-magnitude value
             # can only enlarge the exact region, never shrink it
-            mapping = {mag: max(float(dist), float(configured))
-                       for mag, dist in caps.items()}
-            if not mapping:
-                continue
-            oq.pointsource_distance[cmaker.trt] = sorted(mapping.items())
+            pairs = sorted((mag, max(float(dist), float(
+                cmaker.pointsource_distance(mag)))) for mag, dist
+                in caps.items())
+            if pairs:
+                oq.pointsource_distance[cmaker.trt] = pairs
+                cmaker.pointsource_distance = magdepdist(pairs)
         self.datastore['oqparam'] = oq
-        for cmaker in self.cmakers:
-            cmaker.pointsource_distance = _psdist_fct(
-                getdefault(oq.pointsource_distance, cmaker.trt))
         logging.info('Using magnitude-dependent pointsource_distance '
                      '(computed in %.3fs)', time.perf_counter() - t0)
 
