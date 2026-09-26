@@ -307,49 +307,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        if (sites is not None and oq.ps_grid_spacing and len(oq.poes)):
-            rates = {}
-            for src in csm.get_sources():
-                if not hasattr(src, 'get_annual_occurrence_rates'):
-                    continue
-                trt = src.tectonic_region_type
-                trt_rates = rates.setdefault(trt, {})
-                for mag, rate in src.get_annual_occurrence_rates():
-                    key = round(float(mag), 2)
-                    trt_rates[key] = trt_rates.get(key, 0.) + float(rate)
-            # NB: sites.one() returns the site with the minimal vs30, i.e.
-            # the softest soil, and that is the right site to calibrate on,
-            # not an arbitrary extreme: soft soil amplifies the most, so the
-            # `tail` criterion in get_pointsource_distance_by_mag is reached
-            # at the largest distance, giving a conservative bound for the
-            # whole collection (verified against max() over 8 anchors
-            # spanning the vs30 range: bit-identical mapping).
-            site = sites.one()
-            mapping = {}
-            t0 = time.perf_counter()
-            for cmaker in self.cmakers:
-                configured = getdefault(oq.pointsource_distance, cmaker.trt)
-                if isinstance(configured, (list, tuple, numpy.ndarray)):
-                    # a per-magnitude lower bound: use the smallest one,
-                    # since pointsource_distance can only enlarge the exact
-                    # region, never shrink it
-                    configured = min(float(d) for _, d in configured)
-                caps = cmaker.get_pointsource_distance_by_mag(
-                    rates.get(cmaker.trt, {}), site)
-                trt_map = mapping.setdefault(cmaker.trt, {})
-                for mag, dist in caps.items():
-                    # pointsource_distance is a lower bound: the per-magnitude
-                    # value can only enlarge the exact region, never shrink it
-                    dist = max(float(dist), float(configured))
-                    trt_map[mag] = max(trt_map.get(mag, dist), dist)
-            oq.pointsource_distance_by_mag = mapping
-            self.datastore['oqparam'] = oq
-            for cmaker in self.cmakers:
-                cmaker.pointsource_distance_by_mag = mapping.get(
-                    cmaker.trt, {})
-            logging.info(
-                'Using magnitude-dependent pointsource_distance '
-                '(computed in %.3fs)', time.perf_counter() - t0)
+        if sites and oq.ps_grid_spacing and len(oq.poes):
+            self.set_pointsource_distance_by_mag(csm, sites)
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
@@ -406,6 +365,53 @@ class PreClassicalCalculator(base.HazardCalculator):
         self._process(atomic_sources, normal_sources, sf, secparams)
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
+
+    def set_pointsource_distance_by_mag(self, csm, sites):
+        """
+        Calibrate pointsource_distance on the site `sites.one()` and store
+        the magnitude-dependent mapping in oqparam; called only when the
+        point sources are collapsed in grids (ps_grid_spacing).
+        """
+        oq = self.oqparam
+        rates = {}
+        for src in csm.get_sources():
+            if not hasattr(src, 'get_annual_occurrence_rates'):
+                continue
+            trt = src.tectonic_region_type
+            trt_rates = rates.setdefault(trt, {})
+            for mag, rate in src.get_annual_occurrence_rates():
+                key = round(float(mag), 2)
+                trt_rates[key] = trt_rates.get(key, 0.) + float(rate)
+        # NB: sites.one() returns the site with the minimal vs30, i.e.
+        # the softest soil, and that is the right site to calibrate on,
+        # not an arbitrary extreme: soft soil amplifies the most, so the
+        # `tail` criterion in get_pointsource_distance_by_mag is reached
+        # at the largest distance, giving a conservative bound for the
+        # whole collection (verified against max() over 8 anchors
+        # spanning the vs30 range: bit-identical mapping).
+        site = sites.one()
+        mapping = {}
+        t0 = time.perf_counter()
+        for cmaker in self.cmakers:
+            configured = getdefault(oq.pointsource_distance, cmaker.trt)
+            if isinstance(configured, (list, tuple, numpy.ndarray)):
+                # a per-magnitude lower bound: use the smallest one, since
+                # pointsource_distance can only enlarge the exact region
+                configured = min(float(d) for _, d in configured)
+            caps = cmaker.get_pointsource_distance_by_mag(
+                rates.get(cmaker.trt, {}), site)
+            trt_map = mapping.setdefault(cmaker.trt, {})
+            for mag, dist in caps.items():
+                # pointsource_distance is a lower bound: the per-magnitude
+                # value can only enlarge the exact region, never shrink it
+                dist = max(float(dist), float(configured))
+                trt_map[mag] = max(trt_map.get(mag, dist), dist)
+        oq.pointsource_distance_by_mag = mapping
+        self.datastore['oqparam'] = oq
+        for cmaker in self.cmakers:
+            cmaker.pointsource_distance_by_mag = mapping.get(cmaker.trt, {})
+        logging.info('Using magnitude-dependent pointsource_distance '
+                     '(computed in %.3fs)', time.perf_counter() - t0)
 
     def _process(self, atomic_sources, normal_sources, sf, secparams):
         # run preclassical in parallel for non-atomic sources
