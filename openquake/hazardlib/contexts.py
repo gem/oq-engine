@@ -1264,7 +1264,14 @@ class ContextMaker(object):
                 ok = (ratio <= tail) & (suffix <= tail)
                 first = int(numpy.where(ok)[0][0]) if ok.any() else 0
                 dist = float(dists[first])
-                caps[mag] = min(caps.get(mag, dist), dist)
+                # `dist` is a truncation radius: sites within it are treated
+                # with the exact nodal geometry, sites outside with the
+                # collapsed planar approximation. Taking the min across GSIMs
+                # would keep the radius required by the GSIM that needs the
+                # least, under-treating the others and silently dropping tail
+                # contributions. Use max, consistently with the lower-bound
+                # composition of pointsource_distance.
+                caps[mag] = max(caps.get(mag, dist), dist)
         return caps
 
     # not used by the engine, it is meant for notebooks

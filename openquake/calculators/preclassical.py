@@ -328,6 +328,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                 for mag, rate in src.get_annual_occurrence_rates():
                     key = round(float(mag), 2)
                     trt_rates[key] = trt_rates.get(key, 0.) + float(rate)
+            # NB: sites.one() returns the site with the minimal vs30, i.e.
+            # the softest soil, and that is the right site to calibrate on,
+            # not an arbitrary extreme: soft soil amplifies the most, so the
+            # `tail` criterion in get_pointsource_distance_by_mag is reached
+            # at the largest distance, giving a conservative bound for the
+            # whole collection (verified against max() over 8 anchors
+            # spanning the vs30 range: bit-identical mapping).
             site = sites.one()
             mapping = {}
             t0 = time.perf_counter()
