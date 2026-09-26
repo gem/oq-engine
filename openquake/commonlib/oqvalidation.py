@@ -2525,18 +2525,6 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_pointsource_distance(self):
-        """
-        pointsource_distance is normalized to the minimum distance
-        """
-        for value in self.pointsource_distance.values():
-            if isinstance(value, (list, tuple, numpy.ndarray)):
-                if any(float(dist) < MINPSDIST for _, dist in value):
-                    return False
-            elif float(value) < MINPSDIST:
-                return False
-        return True
-
     def is_valid_maximum_distance(self):
         """
         Invalid maximum_distance={maximum_distance}: {error}

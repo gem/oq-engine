@@ -34,7 +34,6 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.commonlib.oqvalidation import MINPSDIST
 from openquake.calculators import base
 
 MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
@@ -45,12 +44,6 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-
-
-def _psdist_enabled(value):
-    if isinstance(value, (list, tuple, numpy.ndarray)):
-        return any(float(dist) >= MINPSDIST for _, dist in value)
-    return float(value) >= MINPSDIST
 
 
 def source_data(sources):
@@ -314,11 +307,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        has_psdist = any(
-            _psdist_enabled(getdefault(oq.pointsource_distance, cmaker.trt))
-            for cmaker in self.cmakers)
-        if (sites is not None and oq.ps_grid_spacing and
-                has_psdist and len(oq.poes)):
+        if (sites is not None and oq.ps_grid_spacing and len(oq.poes)):
             rates = {}
             for src in csm.get_sources():
                 if not hasattr(src, 'get_annual_occurrence_rates'):
@@ -340,8 +329,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             t0 = time.perf_counter()
             for cmaker in self.cmakers:
                 configured = getdefault(oq.pointsource_distance, cmaker.trt)
-                if not _psdist_enabled(configured):
-                    continue
+                if isinstance(configured, (list, tuple, numpy.ndarray)):
+                    # a per-magnitude lower bound: use the smallest one,
+                    # since pointsource_distance can only enlarge the exact
+                    # region, never shrink it
+                    configured = min(float(d) for _, d in configured)
                 caps = cmaker.get_pointsource_distance_by_mag(
                     rates.get(cmaker.trt, {}), site)
                 trt_map = mapping.setdefault(cmaker.trt, {})
