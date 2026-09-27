@@ -509,8 +509,10 @@ def _psdist_interp(param, trt):
         from param['pointsource_distance'], which can be a distance, a
         callable, a [(mag, dist), ...] list or a {mag: dist} dict. NB: as
         in IntegrationDistance.new a scalar becomes a constant magnitude
-        dependent distance, so that the result is always an interpolator
-        and therefore picklable, since the cmakers are sent to the workers
+        dependent distance; outside the range of magnitudes the first/last
+        distance is returned, i.e. the mapping is clamped, since 0 would
+        mean "collapse everything". The result is an interpolator and
+        therefore picklable, since the cmakers are sent to the workers
     """
     try:
         psdist = param['pointsource_distance']
@@ -524,7 +526,9 @@ def _psdist_interp(param, trt):
         psdist = sorted(psdist.items())
     elif not isinstance(psdist, (list, tuple, numpy.ndarray)):
         psdist = [(MINMAG, float(psdist)), (MAXMAG, float(psdist))]
-    return magdepdist(psdist)
+    mags, dists = zip(*psdist)
+    return interp1d(mags, dists, bounds_error=False,
+                    fill_value=(float(dists[0]), float(dists[-1])))
 
 
 def _fix(gsimdict, betw):
@@ -1218,10 +1222,9 @@ class ContextMaker(object):
     # returns eff_radius + ps_grid_spacing*.707 + pointsource_distance, so a
     # larger radius means more sites treated as close. The cost is dominated
     # by ps_grid_spacing, not by the radius.
-    def get_pointsource_distance_by_mag(self, rates, site, sigma=2.):
+    def get_pointsource_distance_by_mag(self, mags, site, sigma=2.):
         """
-        :param rates: a magnitude -> annual occurrence rate dictionary
-            (only the magnitudes are used)
+        :param mags: the magnitudes occurring in the model
         :param site: the anchor site, i.e. the softest one
         :param sigma: how many standard deviations of the log ground motion
             the median is allowed to fall between the closest site and the
@@ -1236,14 +1239,14 @@ class ContextMaker(object):
             returned, so that the radius is the one required by the GSIM
             decaying the slowest
         """
-        if not rates:
+        if not len(mags):
             return {}
-        maxdist = float(self.maximum_distance.y[-1])
+        maxdist = float(self.maximum_distance.y.max())
         dists = numpy.linspace(.01, maxdist, 51)
         caps = {}
         for gsim in self.gsims:
             cm = ContextMaker(self.trt, [gsim], self.oq)
-            for mag in sorted(rates):
+            for mag in sorted(mags):
                 ctx = RuptureContext()
                 for par in cm.REQUIRES_RUPTURE_PARAMETERS:
                     setattr(ctx, par, 0.)

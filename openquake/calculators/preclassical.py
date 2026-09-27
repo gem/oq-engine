@@ -398,15 +398,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         # rates[trt][mag] = annual occurrence rate of the model at that
         # magnitude, i.e. the input of the rate weighted estimation in
         # Cmaker.get_pointsource_distance_by_mag
-        rates = {}
+        mags = {}
         for src in csm.get_sources():
             if not hasattr(src, 'get_annual_occurrence_rates'):
                 continue
-            trt = src.tectonic_region_type
-            trt_rates = rates.setdefault(trt, {})
-            for mag, rate in src.get_annual_occurrence_rates():
-                key = round(float(mag), 2)
-                trt_rates[key] = trt_rates.get(key, 0.) + float(rate)
+            mags.setdefault(src.tectonic_region_type, set()).update(
+                round(float(mag), 2)
+                for mag, _ in src.get_annual_occurrence_rates())
         # NB: sites.one() returns the site with the minimal vs30, i.e.
         # the softest soil, and that is the right site to calibrate on,
         # not an arbitrary extreme: soft soil amplifies the most, so the
@@ -418,9 +416,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         t0 = time.perf_counter()
         for cmaker in self.cmakers:
             # NB: a TRT with only nonparametric or multiFault sources has
-            # no entry in rates, and then there is nothing to calibrate
+            # no entry in mags, and then there is nothing to calibrate
             caps = cmaker.get_pointsource_distance_by_mag(
-                rates.get(cmaker.trt, {}), site)
+                mags.get(cmaker.trt, ()), site)
             # NB: the estimate is used as is, with no floor: a distance
             # given by the user skips the calibration altogether, and an
             # unspecified one has no lower bound to respect. E.g. on case_43
