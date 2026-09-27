@@ -412,6 +412,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         site = sites.one()
         t0 = time.perf_counter()
         for cmaker in self.cmakers:
+            # NB: a TRT with only nonparametric or multiFault sources has
+            # no entry in rates, and then there is nothing to calibrate
             caps = cmaker.get_pointsource_distance_by_mag(
                 rates.get(cmaker.trt, {}), site)
             # pointsource_distance is a lower bound: the per-magnitude value
