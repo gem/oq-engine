@@ -642,13 +642,17 @@ def dumps(dic):
             if isinstance(v[0], INT):
                 new[k] = [int(x) for x in v]
             elif isinstance(v[0], FLOAT):
-                new[k] = [float(x) for x in v]
+                # NB: serialise, since the value is interpolated as a string
+                # below and str(inf) is `inf`, not valid json
+                new[k] = json.dumps([float(x) for x in v])
             elif isinstance(v[0], numpy.bytes_):
                 new[k] = json.dumps(decode(v))
             else:
                 new[k] = json.dumps(v)
         elif isinstance(v, FLOAT):
-            new[k] = float(v)
+            # NB: serialise, since the value is interpolated as a string
+            # below and str(inf) is `inf`, not valid json
+            new[k] = json.dumps(float(v))
         elif isinstance(v, INT):
             new[k] = int(v)
         elif hasattr(v, 'tolist'):

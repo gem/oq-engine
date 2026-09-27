@@ -17,7 +17,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import json
 import numpy
+from openquake.baselib import general
 from openquake.baselib.hdf5 import dumps, obj_to_json, json_to_obj
 
 
@@ -28,6 +30,26 @@ class DumpsTestCase(unittest.TestCase):
 
         dic = dict(base_path=r"C:\Users\test")
         self.assertEqual(dumps(dic), '{\n"base_path": "C:\\\\Users\\\\test"}')
+
+    def test_non_finite_floats(self):
+        # the values are interpolated as strings, so a bare str(inf) would
+        # be invalid json; they must be serialised as Infinity/NaN
+        dic = dict(a=numpy.float64(numpy.inf), b=-numpy.inf,
+                   c=float('nan'), d=dict(default=numpy.inf),
+                   e=[1.5, numpy.inf])
+        txt = dumps(dic)
+        self.assertIn('"a": Infinity', txt)
+        self.assertIn('"b": -Infinity', txt)
+        self.assertIn('"c": NaN', txt)
+        self.assertIn('"default": Infinity', txt)
+        self.assertIn('[1.5, Infinity]', txt)
+        # and it must be readable back, as OqParam.__fromh5__ does
+        back = json.loads(general.decode(txt))
+        self.assertEqual(back['a'], numpy.inf)
+        self.assertEqual(back['b'], -numpy.inf)
+        self.assertTrue(numpy.isnan(back['c']))
+        self.assertEqual(back['d'], dict(default=numpy.inf))
+        self.assertEqual(back['e'][1], numpy.inf)
 
 
 class Obj:
