@@ -1215,30 +1215,37 @@ class ContextMaker(object):
             return -numpy.log(probs) / self.investigation_time
 
     # This estimator runs only in preclassical; the classical phase reuses
-    # the mapping stored in oqparam. Two things are easy to get wrong: the
-    # error is one-sided (the radius is always underestimated, so a smaller
-    # `sigma` is the conservative direction) and the radius is not free, since
-    # it adds to the reach of the source, i.e. PointSource.get_psdist
-    # returns eff_radius + ps_grid_spacing*.707 + pointsource_distance, so a
-    # larger radius means more sites treated as close. The cost is dominated
-    # by ps_grid_spacing, not by the radius.
-    def get_pointsource_distance_by_mag(self, mags, site, sigma=2.):
+    # the mapping stored in oqparam.
+    #
+    # Two things are easy to get wrong. The error is one-sided: the radius is
+    # always *under*estimated, so it is the truncation that biases the hazard
+    # low, and a smaller `sigma` makes that bias worse.
+    #
+    # The radius is not free, and the previous note here said the opposite
+    # ("the cost is dominated by ps_grid_spacing, not by the radius"). On
+    # performance.zip, raising sigma 2 -> 3 grows the radii from 36-162 km to
+    # 60-288 km and costs 88s -> 129s, i.e. +47% wall for +14% of that, while
+    # the mean error against an exact reference moves only -2.01% -> -2.00%.
+    # The accuracy of the approximation is controlled by ps_grid_spacing, which
+    # re-grids the split point sources (1000 nodes -> 216/80/34 points at
+    # spacing 25/50/100); buying accuracy there costs 88s -> 100s for
+    # -2.01% -> +0.16%. So: spend the budget on ps_grid_spacing, not on sigma.
+    def get_pointsource_distance_by_mag(self, mags, site):
         """
         :param mags: the magnitudes occurring in the model
         :param site: the anchor site, i.e. the softest one
-        :param sigma: how many standard deviations of the log ground motion
-            the median is allowed to fall between the closest site and the
-            returned distance
         :returns: a magnitude -> distance dictionary, the distance beyond
             which a source of that magnitude does not contribute
             appreciably to the anchor site. The median ground motion and its
             standard deviation are computed on a synthetic context at 51
             distances and the distance is the first one where the median has
-            fallen by `sigma` standard deviations, the standard deviation at
-            the closest site being the reference. The max over the GSIMs is
+            fallen by 2 standard deviations, the standard deviation at the
+            closest site being the reference. The max over the GSIMs is
             returned, so that the radius is the one required by the GSIM
             decaying the slowest
         """
+        # NB: fixed rather than tunable, see the note above
+        sigma = 2.
         if not len(mags):
             return {}
         maxdist = float(self.maximum_distance.y.max())
@@ -1271,8 +1278,17 @@ class ContextMaker(object):
                     continue
                 # the distance at which the median ground motion is `sigma`
                 # standard deviations below its value at the closest site
+                # NB: mean is raveled over (n_imt, n_dist) while dists has
+                # n_dist entries, so the flat index must be taken modulo the
+                # number of distances; without this it raises IndexError as
+                # soon as the first crossing lands beyond the first IMT, which
+                # is what happened for sigma=4. NB: taking the first crossing
+                # in C order is effectively the min over the IMTs; taking the
+                # max over IMTs would be the conservative choice, but it
+                # enlarges the radius and so costs time, hence left alone.
                 lost = numpy.where((mean[0] - mean) >= sigma * std[0])[0]
-                dist = float(dists[lost[0]]) if lost.size else maxdist
+                dist = (float(dists[lost[0] % len(dists)])
+                        if lost.size else maxdist)
                 caps[mag] = max(caps.get(mag, 0.), dist)
         return caps
 
