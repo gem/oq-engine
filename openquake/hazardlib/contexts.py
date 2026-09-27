@@ -1195,90 +1195,67 @@ class ContextMaker(object):
             probs = [rec.probs_occur[0] for rec in ctxt]
             return -numpy.log(probs) / self.investigation_time
 
-    # This rate-weighted estimator runs only in preclassical; the
-    # classical phase reuses the mapping stored in oqparam.
-    #
-    # Performance note (measured on the PHL model, point-like sources only,
-    # against an exact pointsource_distance=1000 reference, 3717 of 18510
-    # sites; (ps_grid_spacing, tail) -> wall time, mean |dlog10| error):
-    #
-    #     25, 1e-3 -> 102s, 0.0217        50, 1e-3 -> 130s, 0.0193
-    #     25, 1e-5 -> 165s, 0.0185        50, 1e-5 -> 312s, 0.0157
-    #    100, 1e-3 -> 535s, 0.0160       100, 1e-5 -> 880s, 0.0120
-    #                                 exact -> 588s, 0.0000
-    #
-    # Two things are easy to get wrong here. First, `tail` and
-    # ps_grid_spacing are not independent: both add to the same truncation
-    # radius, psdist = eff_radius + ps_grid_spacing*.707 + psdist(tail), so
-    # raising one to buy accuracy must be paid for by the other. Second,
-    # the cost is far more sensitive to the site sample than the accuracy
-    # is: at 1% of the sites every combination above fits in 34-49s, which
-    # makes `tail` look free when it is in fact 2.4x at a realistic site
-    # density. Never tune this on a sparse sample.
-    #
-    # Within that, ps_grid_spacing is the cheaper knob per unit of accuracy
-    # up to ~50, and beyond that the grid term grows faster than coarser
-    # gridding removes sources, so (100, 1e-3) and (100, 1e-2) are both
-    # dominated by (50, 1e-5). The error is also one-sided (it always
-    # under-predicts), and the mean hides a period split: a smaller
-    # ps_grid_spacing is better at long periods and worse at short ones.
-    def get_pointsource_distance_by_mag(self, rates, site, tail=1E-3):
+    # This estimator runs only in preclassical; the classical phase reuses
+    # the mapping stored in oqparam. Two things are easy to get wrong: the
+    # error is one-sided (the radius is always underestimated, so a smaller
+    # `sigma` is the conservative direction) and the radius is not free, since
+    # it adds to the reach of the source, i.e. PointSource.get_psdist
+    # returns eff_radius + ps_grid_spacing*.707 + pointsource_distance, so a
+    # larger radius means more sites treated as close. The cost is dominated
+    # by ps_grid_spacing, not by the radius.
+    def get_pointsource_distance_by_mag(self, rates, site, sigma=3.):
         """
-        :returns: a magnitude -> distance dictionary estimated from
-            rate-weighted exceedance probabilities
+        :param rates: a magnitude -> annual occurrence rate dictionary
+            (only the magnitudes are used)
+        :param site: the anchor site, i.e. the softest one
+        :param sigma: how many standard deviations of the log ground motion
+            the median is allowed to fall between the closest site and the
+            returned distance
+        :returns: a magnitude -> distance dictionary, the distance beyond
+            which a source of that magnitude does not contribute
+            appreciably to the anchor site. The median ground motion and its
+            standard deviation are computed on a synthetic context at 51
+            distances and the distance is the first one where the median has
+            fallen by `sigma` standard deviations, the standard deviation at
+            the closest site being the reference. The max over the GSIMs is
+            returned, so that the radius is the one required by the GSIM
+            decaying the slowest
         """
-        if not rates or not len(getattr(self, 'poes', ())):
+        if not rates:
             return {}
-        target = float(self.poes[0])
         maxdist = float(self.maximum_distance.y[-1])
         dists = numpy.linspace(.01, maxdist, 51)
         caps = {}
         for gsim in self.gsims:
             cm = ContextMaker(self.trt, [gsim], self.oq)
-            for mag, rate in sorted(rates.items()):
+            for mag in sorted(rates):
                 ctx = RuptureContext()
                 for par in cm.REQUIRES_RUPTURE_PARAMETERS:
                     setattr(ctx, par, 0.)
                 for dst in cm.REQUIRES_DISTANCES:
-                    setattr(ctx, dst, numpy.array(dists))
+                    setattr(ctx, dst, dists)
                 for par in cm.REQUIRES_SITES_PARAMETERS:
                     setattr(ctx, par, numpy.full(
                         len(dists), getattr(site, par)))
                 ctx.sids = numpy.full(len(dists), site.sids[0])
                 ctx.mag = mag
+                # 10 meters, i.e. 0.01 in the units of the surface API (km):
+                # pointlike, and large enough to avoid warnings in
+                # abrahamson_2014, as in max_intensity
                 ctx.width = .01
                 try:
                     rec = cm.recarray([ctx])
+                    # mean and std have shape (ndist,), the last axis being
+                    # the distance one; ravel is robust to the leading axes
                     ms = cm.get_mean_stds([rec], split_by_mag=False)
+                    mean, std = ms[0].ravel(), ms[1].ravel()
                 except ValueError:  # unsupported magnitude for this GSIM
                     continue
-                mean = ms[0, 0]
-                std = ms[1, 0]
-                levels = cm.loglevels.array
-                vals = ((levels[:, :, None] - mean[:, None, :]) /
-                        std[:, None, :])
-                poes = numpy.empty_like(vals)
-                for imt_i in range(vals.shape[0]):
-                    poes[imt_i] = truncnorm_sf(cm.phi_b, vals[imt_i])
-                contrib = numpy.zeros(len(dists))
-                for imt_i in range(poes.shape[0]):
-                    idx = numpy.abs(poes[imt_i, :, 0] - target).argmin()
-                    contrib += rate * poes[imt_i, idx, :]
-                if not numpy.isfinite(contrib).all() or not contrib[0]:
-                    continue
-                ratio = contrib / contrib[0]
-                suffix = numpy.minimum.accumulate(ratio[::-1])[::-1]
-                ok = (ratio <= tail) & (suffix <= tail)
-                first = int(numpy.where(ok)[0][0]) if ok.any() else 0
-                dist = float(dists[first])
-                # `dist` is a truncation radius: sites within it are treated
-                # with the exact nodal geometry, sites outside with the
-                # collapsed planar approximation. Taking the min across GSIMs
-                # would keep the radius required by the GSIM that needs the
-                # least, under-treating the others and silently dropping tail
-                # contributions. Use max, consistently with the lower-bound
-                # composition of pointsource_distance.
-                caps[mag] = max(caps.get(mag, dist), dist)
+                # the distance at which the median ground motion is `sigma`
+                # standard deviations below its value at the closest site
+                lost = numpy.where((mean[0] - mean) >= sigma * std[0])[0]
+                dist = float(dists[lost[0]]) if lost.size else maxdist
+                caps[mag] = max(caps.get(mag, 0.), dist)
         return caps
 
     # not used by the engine, it is meant for notebooks
