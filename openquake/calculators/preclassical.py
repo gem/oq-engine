@@ -428,7 +428,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             # 0.72% p99 difference in the hazard maps
             pairs = sorted((mag, float(dist)) for mag, dist in caps.items())
             if pairs:
-                oq.pointsource_distance[cmaker.trt] = pairs
+                # NB: rebind instead of writing in place. OqParam attributes
+                # with a mutable default are copied on read, so an in-place
+                # write would be silently discarded, and before that fix it
+                # corrupted the class-level default shared by every instance
+                psd = dict(oq.pointsource_distance)
+                psd[cmaker.trt] = pairs
+                oq.pointsource_distance = psd
                 cmaker.pointsource_distance = magdepdist(pairs)
         self.datastore['oqparam'] = oq
         logging.info('Using magnitude-dependent pointsource_distance '

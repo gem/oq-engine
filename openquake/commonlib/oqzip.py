@@ -87,8 +87,10 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
         oqr = readinput.get_oqparam(
             risk_ini, kw=dict(hazard_calculation_id=-1), validate=False)
         del oqr.inputs['job_ini']
-        oq.inputs.update(oqr.inputs)
-        oq.shakemap_uri.update(oqr.shakemap_uri)
+        # NB: rebind, do not update in place: OqParam attributes with a
+        # mutable default are copied on read
+        oq.inputs = dict(oq.inputs, **oqr.inputs)
+        oq.shakemap_uri = dict(oq.shakemap_uri, **oqr.shakemap_uri)
     files = readinput.get_input_files(oq)
     if risk_ini:
         files = [risk_ini] + files

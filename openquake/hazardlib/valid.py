@@ -23,6 +23,7 @@ Validation library for the engine, the desktop tools, and anything else
 import os
 import re
 import ast
+import copy
 import json
 import string
 import toml
@@ -1394,6 +1395,8 @@ class Param(object):
     :param default: the default value
     """
     NODEFAULT = object()
+    # defaults of these types are copied on read, see __get__
+    MUTABLE = (dict, list, set, bytearray)
 
     def __init__(self, validator, default=NODEFAULT, name=None):
         if not callable(validator):
@@ -1413,6 +1416,16 @@ class Param(object):
         if obj is not None:
             if self.default is self.NODEFAULT:
                 raise AttributeError(self.name)
+            if isinstance(self.default, self.MUTABLE):
+                # NB: this descriptor is not a data descriptor (there is no
+                # __set__), so a value assigned on the instance is found in
+                # the instance __dict__ and __get__ is not called at all.
+                # Here we are returning the *class* default, which must not
+                # be shared: an in-place write like `oq.minimum_magnitude[
+                # 'default'] = 5` would otherwise corrupt the class default
+                # and every other instance, and would not even be recorded
+                # on this instance. Callers must rebind instead.
+                return copy.copy(self.default)
             return self.default
         return self
 
