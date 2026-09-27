@@ -390,6 +390,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         point sources are collapsed in grids (ps_grid_spacing).
         """
         oq = self.oqparam
+        # rates[trt][mag] = annual occurrence rate of the model at that
+        # magnitude, i.e. the input of the rate weighted estimation in
+        # Cmaker.get_pointsource_distance_by_mag
         rates = {}
         for src in csm.get_sources():
             if not hasattr(src, 'get_annual_occurrence_rates'):
