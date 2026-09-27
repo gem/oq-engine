@@ -502,6 +502,31 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 # ############################ ContextMaker ############################### #
 
 
+def _psdist_interp(param, trt):
+    """
+    :param param: a dictionary of calculation parameters
+    :returns: a function from a magnitude to a pointsource distance, built
+        from param['pointsource_distance'], which can be a distance, a
+        callable, a [(mag, dist), ...] list or a {mag: dist} dict. NB: as
+        in IntegrationDistance.new a scalar becomes a constant magnitude
+        dependent distance, so that the result is always an interpolator
+        and therefore picklable, since the cmakers are sent to the workers
+    """
+    try:
+        psdist = param['pointsource_distance']
+    except KeyError:  # the configured default
+        psdist = float(config.performance.pointsource_distance)
+    if callable(psdist):
+        return psdist
+    if isinstance(psdist, dict):
+        psdist = getdefault(psdist, trt)
+    if isinstance(psdist, dict):  # a {mag: dist} mapping
+        psdist = sorted(psdist.items())
+    elif not isinstance(psdist, (list, tuple, numpy.ndarray)):
+        psdist = [(MINMAG, float(psdist)), (MAXMAG, float(psdist))]
+    return magdepdist(psdist)
+
+
 def _fix(gsimdict, betw):
     if betw:
         out = {}
@@ -619,17 +644,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
-        if 'pointsource_distance' not in param:
-            psdist = float(config.performance.pointsource_distance)
-        else:
-            psdist = getdefault(param['pointsource_distance'], self.trt)
-        # NB: as in IntegrationDistance.new, a scalar becomes a constant
-        # magnitude dependent distance, and a {mag: dist} mapping is sorted
-        if isinstance(psdist, dict):
-            psdist = sorted(psdist.items())
-        elif not isinstance(psdist, (list, tuple, numpy.ndarray)):
-            psdist = [(MINMAG, float(psdist)), (MAXMAG, float(psdist))]
-        self.pointsource_distance = magdepdist(psdist)
+        self.pointsource_distance = _psdist_interp(param, self.trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -1203,7 +1218,7 @@ class ContextMaker(object):
     # returns eff_radius + ps_grid_spacing*.707 + pointsource_distance, so a
     # larger radius means more sites treated as close. The cost is dominated
     # by ps_grid_spacing, not by the radius.
-    def get_pointsource_distance_by_mag(self, rates, site, sigma=3.):
+    def get_pointsource_distance_by_mag(self, rates, site, sigma=2.):
         """
         :param rates: a magnitude -> annual occurrence rate dictionary
             (only the magnitudes are used)

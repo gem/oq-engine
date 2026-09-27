@@ -469,6 +469,13 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
         trt_smrs = self.datastore['trt_smrs'][:]
+        # NB: the preclassical phase may have calibrated the
+        # pointsource_distance, which is stored in the oqparam of this same
+        # file, while oq here is the in-memory copy parsed from the job.ini;
+        # taking the stored value makes the cmakers use the calibration and
+        # keeps the oqparam saved at the end consistent with it
+        oq.pointsource_distance = \
+            self.datastore['oqparam'].pointsource_distance
         self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
                        for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock

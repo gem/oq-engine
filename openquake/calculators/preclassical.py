@@ -34,6 +34,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter, magdepdist)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import PSDIST
 from openquake.hazardlib.site import cell_radius
 from openquake.calculators import base
 
@@ -323,7 +324,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        if sites and oq.ps_grid_spacing and len(oq.poes):
+        # NB: the distance is calibrated when it is left at the configured
+        # default, i.e. when the user did not ask for a distance
+        # (but ps_grid_spacing is set)
+        if sites and oq.ps_grid_spacing and oq.pointsource_distance == {
+                'default': PSDIST}:
             self.set_pointsource_distance_by_mag(csm, sites)
 
         L = oq.imtls.size
@@ -405,7 +410,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         # NB: sites.one() returns the site with the minimal vs30, i.e.
         # the softest soil, and that is the right site to calibrate on,
         # not an arbitrary extreme: soft soil amplifies the most, so the
-        # `tail` criterion in get_pointsource_distance_by_mag is reached
+        # `sigma` criterion in get_pointsource_distance_by_mag is reached
         # at the largest distance, giving a conservative bound for the
         # whole collection (verified against max() over 8 anchors
         # spanning the vs30 range: bit-identical mapping).
@@ -416,15 +421,14 @@ class PreClassicalCalculator(base.HazardCalculator):
             # no entry in rates, and then there is nothing to calibrate
             caps = cmaker.get_pointsource_distance_by_mag(
                 rates.get(cmaker.trt, {}), site)
-            # NB: pointsource_distance is a lower bound, i.e. the calibrated
-            # value can only enlarge the exact region, never shrink it, so
-            # we take the max of the two; in case_43 (ps_grid_spacing=50,
-            # psdist=40 km) the calibration returns 12 km at mag 6.8 and
-            # 18 km at mag 8.2, i.e. a ratio dist/psdist of 0.30 and 0.45,
-            # so the floor binds and the mapping stays flat at 40 km
-            pairs = sorted((mag, max(float(dist), float(
-                cmaker.pointsource_distance(mag)))) for mag, dist
-                in caps.items())
+            # NB: the estimate is used as is, with no floor: a distance
+            # given by the user skips the calibration altogether, and an
+            # unspecified one has no lower bound to respect. E.g. on case_43
+            # (ps_grid_spacing=50) the estimate at sigma=2 is 36-48 km, and on
+            # performance.zip (ps_grid_spacing=30) it is 36-190 km, which is
+            # 0.87x the contexts of the 100 km default and 0.088% mean /
+            # 0.72% p99 difference in the hazard maps
+            pairs = sorted((mag, float(dist)) for mag, dist in caps.items())
             if pairs:
                 oq.pointsource_distance[cmaker.trt] = pairs
                 cmaker.pointsource_distance = magdepdist(pairs)
