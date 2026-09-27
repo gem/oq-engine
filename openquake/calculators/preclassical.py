@@ -25,13 +25,13 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.contexts import get_cmakers, psdist_interp
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.calc.filters import (
-    getdefault, split_source, SourceFilter, magdepdist)
+    getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.commonlib.oqvalidation import PSDIST
@@ -156,7 +156,8 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             # do not set nocontexts even if no site is close
             src.nsites = len(sf.close_sids(src))  # can be 0
             src.nocontexts = False
-            # print(f'{src.source_id=}, {src.nsites=}')        else:
+            # print(f'{src.source_id=}, {src.nsites=}')
+        else:
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
@@ -395,8 +396,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         point sources are collapsed in grids (ps_grid_spacing).
         """
         oq = self.oqparam
-        # rates[trt][mag] = annual occurrence rate of the model at that
-        # magnitude, i.e. the input of the rate weighted estimation in
+        # mags[trt] = set of magnitudes occurring in the model for that TRT,
+        # i.e. the input of the estimation in
         # Cmaker.get_pointsource_distance_by_mag
         mags = {}
         for src in csm.get_sources():
@@ -435,7 +436,11 @@ class PreClassicalCalculator(base.HazardCalculator):
                 psd = dict(oq.pointsource_distance)
                 psd[cmaker.trt] = pairs
                 oq.pointsource_distance = psd
-                cmaker.pointsource_distance = magdepdist(pairs)
+                # NB: same clamped interpolator as in the classical phase,
+                # not magdepdist (whose fill_value=0 would collapse
+                # everything outside the magnitude range)
+                cmaker.pointsource_distance = psdist_interp(
+                    vars(oq), cmaker.trt)
         self.datastore['oqparam'] = oq
         logging.info('Using magnitude-dependent pointsource_distance '
                      '(computed in %.3fs)', time.perf_counter() - t0)

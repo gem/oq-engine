@@ -502,7 +502,7 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 # ############################ ContextMaker ############################### #
 
 
-def _psdist_interp(param, trt):
+def psdist_interp(param, trt):
     """
     :param param: a dictionary of calculation parameters
     :returns: a function from a magnitude to a pointsource distance, built
@@ -648,7 +648,7 @@ class ContextMaker(object):
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
-        self.pointsource_distance = _psdist_interp(param, self.trt)
+        self.pointsource_distance = psdist_interp(param, self.trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
