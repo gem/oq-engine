@@ -416,8 +416,12 @@ class PreClassicalCalculator(base.HazardCalculator):
             # no entry in rates, and then there is nothing to calibrate
             caps = cmaker.get_pointsource_distance_by_mag(
                 rates.get(cmaker.trt, {}), site)
-            # pointsource_distance is a lower bound: the per-magnitude value
-            # can only enlarge the exact region, never shrink it
+            # NB: pointsource_distance is a lower bound, i.e. the calibrated
+            # value can only enlarge the exact region, never shrink it, so
+            # we take the max of the two; in case_43 (ps_grid_spacing=50,
+            # psdist=40 km) the calibration returns 12 km at mag 6.8 and
+            # 18 km at mag 8.2, i.e. a ratio dist/psdist of 0.30 and 0.45,
+            # so the floor binds and the mapping stays flat at 40 km
             pairs = sorted((mag, max(float(dist), float(
                 cmaker.pointsource_distance(mag)))) for mag, dist
                 in caps.items())
