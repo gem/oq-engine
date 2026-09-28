@@ -35,6 +35,7 @@ import numpy
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib.codes import SOURCE_CODES
 from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
@@ -532,14 +533,11 @@ def sourcecodes(value):
     ...
     ValueError: Invalid source code 'Z' in 'PAZ', valid codes are ACFKMNPSXp
     """
-    # NB: the import is local, since the source classes import this module
-    from openquake.hazardlib.source.base import get_code2cls
-    validcodes = {code.decode('ascii') for code in get_code2cls()}
     for code in value:
-        if code not in validcodes:
+        if code not in SOURCE_CODES:
             raise ValueError('Invalid source code %r in %r, valid codes'
                              ' are %s' % (code, value,
-                                          ''.join(sorted(validcodes))))
+                                          ''.join(sorted(SOURCE_CODES))))
     return value
 
 

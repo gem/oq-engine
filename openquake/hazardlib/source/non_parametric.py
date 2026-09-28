@@ -19,6 +19,7 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 """
 import numpy
 from openquake.baselib.general import block_splitter
+from openquake.hazardlib.codes import NON_PARAMETRIC
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -52,7 +53,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         rupture to occur N times (the PMF must be defined from a minimum number
         of occurrences equal to 0)
     """
-    code = b'N'
+    code = NON_PARAMETRIC
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data,

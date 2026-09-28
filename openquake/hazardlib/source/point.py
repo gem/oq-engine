@@ -21,6 +21,7 @@ import copy
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
+from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt, get_rupdims)
@@ -151,7 +152,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    code = b'P'
+    code = POINT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',
@@ -507,7 +508,7 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'p'
+    code = COLLAPSED_POINT
     MODIFICATIONS = set()
 
     def __init__(self, source_id, pointsources):
