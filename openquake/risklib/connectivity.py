@@ -713,8 +713,7 @@ def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
         'event_id').unique().to_numpy()
     num_events = events.ngroups
 
-    # For the serial/nested-worker path process all events as a single block.
-    if concurrent_tasks == 0 or parallel.Starmap.on or num_events <= 1:
+    if concurrent_tasks == 0 or num_events <= 1:
         block_results = [_process_demand_block(
             events, G_original, g_type, source_nodes, demand_nodes, N,
             weighted, max_nodes_network, baseline)]
@@ -897,7 +896,7 @@ def ELWCLPCLloss_TAZ(expo_df, G_original, TAZ_nodes,
         'event_id').unique().to_numpy()
     num_events = events.ngroups
 
-    if concurrent_tasks == 0 or parallel.Starmap.on or num_events <= 1:
+    if concurrent_tasks == 0 or num_events <= 1:
         block_results = [_process_taz_block(
             events, G_original, g_type, TAZ_nodes, N, weighted,
             max_nodes_network, baseline)]
@@ -1051,7 +1050,7 @@ def EL_node(expo_df, G_original, eff_nodes, damage_df, g_type,
         'event_id').unique().to_numpy()
     num_events = events.ngroups
 
-    if concurrent_tasks == 0 or parallel.Starmap.on or num_events <= 1:
+    if concurrent_tasks == 0 or num_events <= 1:
         block_results = [_process_generic_block(
             events, G_original, g_type, N, weighted,
             max_nodes_network, baseline)]
