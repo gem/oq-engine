@@ -34,7 +34,7 @@ from openquake.commonlib.readinput import (
     get_close_mosaic_models, get_close_countries)
 from openquake.qa_tests_data.logictree import (
     case_02, case_15, case_21, case_25)
-from openquake.qa_tests_data.classical import case_34, case_65
+from openquake.qa_tests_data.classical import case_34, case_36, case_65
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_02 as ebr2, case_caracas)
@@ -487,6 +487,34 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertEqual(
             list(ssclt.source_model_lt.source_data[0]),
             ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
+
+    def test_filter_sourcecodes(self):
+        # case_36 has a simple, a complex, a point and an area source
+        oq = readinput.get_oqparam('job.ini', case_36)
+        csm = readinput.get_composite_source_model(oq)
+        self.assertEqual([src.code for src in csm.get_sources()],
+                         [b'S', b'C', b'P', b'A'])
+
+        # keep only the point-like sources
+        oq = readinput.get_oqparam('job.ini', case_36,
+                                   {'filter_sourcecodes': 'pPAM'})
+        csm = readinput.get_composite_source_model(oq)
+        self.assertEqual([src.code for src in csm.get_sources()], [b'P', b'A'])
+
+        # discard everything
+        oq = readinput.get_oqparam('job.ini', case_36,
+                                   {'filter_sourcecodes': 'K'})
+        with self.assertRaises(RuntimeError) as ctx:
+            readinput.get_composite_source_model(oq)
+        self.assertIn(
+            'No sources left after filtering by filter_sourcecodes=K',
+            str(ctx.exception))
+
+    def test_invalid_filter_sourcecodes(self):
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_oqparam('job.ini', case_36,
+                                  {'filter_sourcecodes': 'PAZ'})
+        self.assertIn("Invalid source code 'Z' in 'PAZ'", str(ctx.exception))
 
     def test_no_uncertainties(self):
         oq = readinput.get_oqparam('job.ini', case_25)

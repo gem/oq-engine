@@ -19,8 +19,9 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 import copy
 import numpy
-from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
+from openquake.baselib.general import AccumDict, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
+from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt, get_rupdims)
@@ -31,7 +32,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
-    get_bounding_box, angular_distance, angular_mean)
+    get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
 
 
 def msr_name(src):
@@ -151,7 +152,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    code = b'P'
+    code = POINT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',
@@ -236,22 +237,21 @@ class PointSource(ParametricSeismicSource):
             arr['rake'] = np.rake
         return planin
 
-    # A full cell-displacement calculation was benchmarked without a
-    # material precision gain, so keep the inexpensive half diagonal.
+    # used in the source filtering
     def max_radius(self, maxdist):
         """
-        :returns: max radius + ps_grid_spacing * sqrt(2)/2
+        :returns: max radius, without the ps_grid_spacing half diagonal
         """
         self._get_max_rupture_projection_radius()
         eff_radius = min(self.radius[-1], maxdist / 2)
-        return eff_radius + self.ps_grid_spacing * .707
+        return eff_radius
 
     def get_psdist(self, m, mag, psdist, magdist):
         """
         :returns: the effective pointsource distance for the given magnitude
         """
         eff_radius = min(self.radius[m], magdist[mag] / 2)
-        return eff_radius + self.ps_grid_spacing * .707 + psdist
+        return psdist + eff_radius
 
     def _get_max_rupture_projection_radius(self):
         """
@@ -507,7 +507,7 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'p'
+    code = COLLAPSED_POINT
     MODIFICATIONS = set()
 
     def __init__(self, source_id, pointsources):
@@ -586,6 +586,25 @@ def _cps_key(src):
     return type(msr), msr_name(src), aratio
 
 
+# the grid is plotted in https://github.com/gem/oq-engine/pull/11832
+def _cell_indices(lons, lats, spacing):
+    """
+    :param lons: an array of longitudes in degrees
+    :param lats: an array of latitudes in degrees
+    :param spacing: the grid spacing in km
+    :returns: a list of P pairs of cell indices
+
+    The cells are the squares of a global grid of the given spacing in km
+    anchored at the (0, 0) point; therefore the cell of a point depends
+    only on the position of the point.
+    """
+    kmperdeg = 1. / KM_TO_DEGREES  # ~111 km per degree of latitude
+    xkm = lons * kmperdeg * numpy.cos(lats * DEGREES_TO_RAD)
+    ykm = lats * kmperdeg
+    return list(zip(numpy.floor(xkm / spacing).astype(int),
+                    numpy.floor(ykm / spacing).astype(int)))
+
+
 def _grid_points(points, ps_grid_spacing, grp_id, cnt):
     if len(points) < 2:  # nothing to collapse
         return list(points), cnt
@@ -595,9 +614,13 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
             len(numpy.unique(coords[:, 1])) == 1):
         # degenerated rectangle, there is no grid, do not collapse
         return list(points), cnt
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
-    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    # NB: the grid is global, i.e. it is not anchored in the bounding box
+    # of the points: otherwise the collapsing of a region would change
+    # when adding or removing sources far away (i.e. padding sources)
+    grid = AccumDict(accum=[])
+    for k, ij in enumerate(_cell_indices(coords[:, 0], coords[:, 1],
+                                         ps_grid_spacing)):
+        grid[ij].append(k)
     out = []
     for idxs in grid.values():
         if len(idxs) > 1:
