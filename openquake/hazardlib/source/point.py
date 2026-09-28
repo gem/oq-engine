@@ -586,6 +586,7 @@ def _cps_key(src):
     return type(msr), msr_name(src), aratio
 
 
+# the grid is plotted in https://github.com/gem/oq-engine/pull/11832
 def _cell_indices(lons, lats, spacing):
     """
     :param lons: an array of longitudes in degrees
