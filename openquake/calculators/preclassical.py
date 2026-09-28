@@ -131,6 +131,8 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             # special case, compute distances
             distances = sf.sitecol.get_cdist(src.location)
             radius = src._get_max_rupture_projection_radius()
+            # The raw projection radius excludes the collapsed-cell offset.
+            radius += src.ps_grid_spacing * .707
             src.nsites = (distances <= maxdist + radius).sum()
         elif sf.sitecol:
             # NB: this is approximate, since the sites are sampled

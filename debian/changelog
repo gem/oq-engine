@@ -1,6 +1,10 @@
   [Catarina Costa]
   * Optimized and parallelized network calculations in connectivity.py.
 	
+  [Michele Simionato]
+  * Improved the precision of the pointsource_distance ps_grid_spacing approximations
+    by using circular averages for the angles
+
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories
     used to build the global exposure HDF5, propagating that information into

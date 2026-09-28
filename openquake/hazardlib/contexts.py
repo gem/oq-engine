@@ -472,8 +472,9 @@ def genctxs_Pp(src, sitecol, cmaker):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing, case_43
+            # CollapsedPointSource.get_planar() has already normalized each
+            # source block by its own magnitude rate.
             pla = numpy.concatenate(planars).view(numpy.recarray)
-            pla.wlr[:, 2] /= len(planars)  # average rate
         else:
             pla = planars[0]
         # building contexts
