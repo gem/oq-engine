@@ -640,8 +640,6 @@ def extract_dependencies(lines):
             pkg = 'osgeo.gdal'
         elif pkg == 'Django':
             pkg = 'django'
-        elif pkg == 'pyshp':
-            pkg = 'shapefile'
         elif pkg == 'django_appconf':
             pkg = 'appconf'
         yield pkg, version
