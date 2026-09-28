@@ -1,3 +1,6 @@
+  [Catarina Costa]
+  * Optimized and parallelized network calculations in connectivity.py.
+	
   [Michele Simionato]
   * Improved the precision of the ps_grid_spacing approximation at the cost of a
     minor slow down (~20%)
