@@ -652,8 +652,8 @@ poes_disagg:
    Alias for poes.
 
 pointsource_distance:
-  Used in classical calculations to collapse the point sources. Can also be
-  used in conjunction with *ps_grid_spacing*.
+  Used in classical calculations to collapse the point sources. Don't set
+  it when using *ps_grid_spacing*, since it will be set automatically.
   Example: *pointsource_distance = 50*.
   Default: {'default': 100}
 
@@ -1510,10 +1510,8 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if ('ps_grid_spacing' in names_vals and
-                float(names_vals['ps_grid_spacing']) and
-                'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=40.)
+        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
+            self.pointsource_distance = dict(default=50+self.ps_grid_spacing)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
