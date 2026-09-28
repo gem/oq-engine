@@ -1510,10 +1510,8 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if ('ps_grid_spacing' in names_vals and
-                float(names_vals['ps_grid_spacing']) and
-                'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=40.)
+        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
+            self.pointsource_distance = dict(default=50+self.ps_grid_spacing)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
