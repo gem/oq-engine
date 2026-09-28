@@ -236,7 +236,7 @@ class Input(object):
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)
         hparams.setdefault('source_nodes', '')
-        hparams.setdefault('filter_sourcecode', '')
+        hparams.setdefault('filter_sourcecodes', '')
         hparams.setdefault('infer_occur_rates', False)
         hparams.setdefault('rlz_index', None)
         hparams.setdefault('disagg_bin_edges', {})
@@ -259,7 +259,7 @@ class Input(object):
             hparams['floating_y_step'],
             hparams['source_nodes'],
             hparams['infer_occur_rates'],
-            filter_sourcecode=hparams['filter_sourcecode'],
+            filter_sourcecodes=hparams['filter_sourcecodes'],
         )
         if read_all:
             self.groups, self.cmakers = self.get_groups_cmakers()

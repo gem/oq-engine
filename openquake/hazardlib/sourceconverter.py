@@ -453,7 +453,7 @@ class SourceConverter(RuptureConverter):
                  source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
-                 infer_occur_rates=False, filter_sourcecode=''):
+                 infer_occur_rates=False, filter_sourcecodes=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -466,7 +466,7 @@ class SourceConverter(RuptureConverter):
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
         self.infer_occur_rates = infer_occur_rates
-        self.filter_sourcecode = filter_sourcecode
+        self.filter_sourcecodes = filter_sourcecodes
         # a dictionary node code, e.g. pointSource -> b'P'; the NRML node
         # tags are the class names with a lowercase initial letter
         self.node_codes = {cls.__name__[0].lower() + cls.__name__[1:]: code
@@ -491,11 +491,11 @@ class SourceConverter(RuptureConverter):
             elif self.source_nodes and name not in self.source_nodes:
                 # if source_nodes is set, discard all other source nodes
                 return
-            elif self.filter_sourcecode:
-                # if filter_sourcecode is set, discard the sources whose
+            elif self.filter_sourcecodes:
+                # if filter_sourcecodes is set, discard the sources whose
                 # code is not in it (i.e. keep only the point-like ones)
                 code = self.node_codes.get(name, b'')
-                if code.decode('ascii') not in self.filter_sourcecode:
+                if code.decode('ascii') not in self.filter_sourcecodes:
                     return
         obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):

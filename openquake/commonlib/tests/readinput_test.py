@@ -488,7 +488,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             list(ssclt.source_model_lt.source_data[0]),
             ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
 
-    def test_filter_sourcecode(self):
+    def test_filter_sourcecodes(self):
         # case_36 has a simple, a complex, a point and an area source
         oq = readinput.get_oqparam('job.ini', case_36)
         csm = readinput.get_composite_source_model(oq)
@@ -497,22 +497,23 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
         # keep only the point-like sources
         oq = readinput.get_oqparam('job.ini', case_36,
-                                   {'filter_sourcecode': 'pPAM'})
+                                   {'filter_sourcecodes': 'pPAM'})
         csm = readinput.get_composite_source_model(oq)
         self.assertEqual([src.code for src in csm.get_sources()], [b'P', b'A'])
 
         # discard everything
         oq = readinput.get_oqparam('job.ini', case_36,
-                                   {'filter_sourcecode': 'K'})
+                                   {'filter_sourcecodes': 'K'})
         with self.assertRaises(RuntimeError) as ctx:
             readinput.get_composite_source_model(oq)
-        self.assertIn('No sources left after filtering by filter_sourcecode=K',
-                      str(ctx.exception))
+        self.assertIn(
+            'No sources left after filtering by filter_sourcecodes=K',
+            str(ctx.exception))
 
-    def test_invalid_filter_sourcecode(self):
+    def test_invalid_filter_sourcecodes(self):
         with self.assertRaises(ValueError) as ctx:
             readinput.get_oqparam('job.ini', case_36,
-                                  {'filter_sourcecode': 'PAZ'})
+                                  {'filter_sourcecodes': 'PAZ'})
         self.assertIn("Invalid source code 'Z' in 'PAZ'", str(ctx.exception))
 
     def test_no_uncertainties(self):
