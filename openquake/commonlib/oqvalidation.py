@@ -652,8 +652,8 @@ poes_disagg:
    Alias for poes.
 
 pointsource_distance:
-  Used in classical calculations to collapse the point sources. Can also be
-  used in conjunction with *ps_grid_spacing*.
+  Used in classical calculations to collapse the point sources. Don't set
+  it when using *ps_grid_spacing*, since it will be set automatically.
   Example: *pointsource_distance = 50*.
   Default: {'default': 100}
 
