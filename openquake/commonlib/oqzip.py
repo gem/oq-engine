@@ -86,9 +86,11 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
         oqr = readinput.get_oqparam(
             risk_ini, kw=dict(hazard_calculation_id=-1), validate=False)
-        del oqr.inputs['job_ini']
-        oq.inputs.update(oqr.inputs)
-        oq.shakemap_uri.update(oqr.shakemap_uri)
+        # use new instance dicts instead of mutating the class defaults
+        oqr_inputs = {k: v for k, v in oqr.inputs.items()
+                      if k != 'job_ini'}
+        oq.inputs = {**oq.inputs, **oqr_inputs}
+        oq.shakemap_uri = {**oq.shakemap_uri, **oqr.shakemap_uri}
     files = readinput.get_input_files(oq)
     if risk_ini:
         files = [risk_ini] + files
