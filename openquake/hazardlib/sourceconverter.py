@@ -30,6 +30,7 @@ from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.aspect_ratio import (
     MagDepAspectRatio, get_aspect_ratio)
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.hazardlib.source.base import get_code2cls
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -452,7 +453,7 @@ class SourceConverter(RuptureConverter):
                  source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
-                 infer_occur_rates=False):
+                 infer_occur_rates=False, filter_sourcecodes=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -465,6 +466,11 @@ class SourceConverter(RuptureConverter):
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
         self.infer_occur_rates = infer_occur_rates
+        self.filter_sourcecodes = filter_sourcecodes
+        # a dictionary node code, e.g. pointSource -> b'P'; the NRML node
+        # tags are the class names with a lowercase initial letter
+        self.node_codes = {cls.__name__[0].lower() + cls.__name__[1:]: code
+                           for code, cls in get_code2cls().items()}
 
     def convert_node(self, node):
         """
@@ -485,6 +491,12 @@ class SourceConverter(RuptureConverter):
             elif self.source_nodes and name not in self.source_nodes:
                 # if source_nodes is set, discard all other source nodes
                 return
+            elif self.filter_sourcecodes:
+                # if filter_sourcecodes is set, discard the sources whose
+                # code is not in it (i.e. keep only the point-like ones)
+                code = self.node_codes.get(name, b'')
+                if code.decode('ascii') not in self.filter_sourcecodes:
+                    return
         obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)

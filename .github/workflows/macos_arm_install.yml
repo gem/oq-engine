@@ -86,7 +86,7 @@ jobs:
             python install.py devel
           fi
           source ~/openquake/bin/activate
-          pip3 install pytest pyshp flake8
+          pip3 install pytest flake8
           oq engine --upgrade-db
           sleep 5
       

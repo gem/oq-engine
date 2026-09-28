@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.codes import MULTI_POINT
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.geo import utils, NodalPlane
 from openquake.hazardlib.geo.mesh import Mesh
@@ -47,7 +48,7 @@ class MultiPointSource(ParametricSeismicSource):
     An optional hypo_dip_fracs attribute on the hypocenter_distribution PMF
     propagates to each yielded PointSource.
     """
-    code = b'M'
+    code = MULTI_POINT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',

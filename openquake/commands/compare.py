@@ -158,7 +158,9 @@ class Comparator(object):
         if len(diff_idxs) == 0:
             print('There are no differences within the tolerances '
                   'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
-            return (), ()
+            if what == 'uhs':
+                return (), ()
+            return ((),)
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             # each array has shape (C, L)
@@ -245,8 +247,8 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
     Compare the hazard maps of two or more calculations.
     """
     c = Comparator(calc_ids)
-    arrays = c.compare('hmaps', imt, files, samplesites, atol, rtol)
-    if len(arrays) and len(calc_ids) == 2:
+    arrays = c.compare('hmaps', imt, files, samplesites, rtol, atol)
+    if len(arrays) > 1 and len(calc_ids) == 2:
         ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
@@ -261,7 +263,7 @@ def compare_hcurves(imt, calc_ids: int, files=False, *,
     Compare the hazard curves of two or more calculations.
     """
     c = Comparator(calc_ids)
-    c.compare('hcurves', imt, files, samplesites, atol, rtol)
+    c.compare('hcurves', imt, files, samplesites, rtol, atol)
 
 
 def compare_avg_gmf(imt, calc_ids: int, files=False, *,
@@ -271,7 +273,7 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
     """
     c = Comparator(calc_ids)
     arrays = c.compare('avg_gmf', imt, files, samplesites, rtol, atol)
-    if len(calc_ids) == 2:  # print rms-diff
+    if len(arrays) > 1 and len(calc_ids) == 2:  # print rms-diff
         gmf1, gmf2 = arrays
         if len(gmf1):
             sigma = numpy.sqrt(numpy.average((gmf1 - gmf2)**2))

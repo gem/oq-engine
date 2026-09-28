@@ -35,6 +35,7 @@ import numpy
 from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib.codes import SOURCE_CODES
 from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
@@ -518,6 +519,26 @@ def namelists(value):
                 raise ValueError('Invalid name: %s' % n)
         lists.append(names)
     return lists
+
+
+def sourcecodes(value):
+    """
+    :param value: input string
+    :returns: a string of source codes, e.g. 'pPAM'
+
+    >>> sourcecodes('pPAM')
+    'pPAM'
+    >>> sourcecodes('PAZ')
+    Traceback (most recent call last):
+    ...
+    ValueError: Invalid source code 'Z' in 'PAZ', valid codes are ACFKMNPSXp
+    """
+    for code in value:
+        if code not in SOURCE_CODES:
+            raise ValueError('Invalid source code %r in %r, valid codes'
+                             ' are %s' % (code, value,
+                                          ''.join(sorted(SOURCE_CODES))))
+    return value
 
 
 def float_(value):

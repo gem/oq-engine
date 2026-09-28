@@ -23,6 +23,7 @@ from collections import namedtuple
 import numpy
 from openquake.baselib.general import round
 from openquake.hazardlib import mfd
+from openquake.hazardlib.codes import SIMPLE_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -110,7 +111,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         invalid and if rupture mesh spacing is too high for the lowest
         magnitude value.
     """
-    code = b'S'
+    code = SIMPLE_FAULT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'adjust_dip',
