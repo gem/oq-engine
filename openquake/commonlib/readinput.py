@@ -1148,6 +1148,10 @@ def _check_csm(csm, oqparam, h5):
     csm.gsim_lt.check_imts(oqparam.imtls)
 
     srcs = csm.get_sources()
+    if oqparam.filter_sourcecode and not srcs:
+        raise RuntimeError(
+            'No sources left after filtering by filter_sourcecode=%s'
+            % oqparam.filter_sourcecode)
     check_min_mag(srcs, oqparam.minimum_magnitude)
 
     if h5 and 'sitecol' in h5:

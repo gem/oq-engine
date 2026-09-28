@@ -296,6 +296,15 @@ extreme_gmv:
   Example: *extreme_gmv = 5.0*
   Default: {'default': numpy.inf} i.e. no values are extreme
 
+filter_sourcecode:
+  Used for debugging purposes. When given, keeps only the sources with
+  the given codes, discarding the others. The valid codes are
+  A=area, p=collapsed point, P=point, M=multiPoint, S=simple fault,
+  K=kite fault, C=complex fault, X=characteristic fault,
+  N=nonParametric, F=multiFault.
+  Example: *filter_sourcecode = pPAM* (i.e. only point-like sources).
+  Default: empty string, meaning all sources are kept
+
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
@@ -1199,6 +1208,7 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
+    filter_sourcecode = valid.Param(valid.sourcecodes, '')
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
     total_residual_correlation_model = valid.Param(
         valid.NoneOr(valid.utf8_not_empty), None)

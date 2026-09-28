@@ -520,6 +520,28 @@ def namelists(value):
     return lists
 
 
+def sourcecodes(value):
+    """
+    :param value: input string
+    :returns: a string of source codes, e.g. 'pPAM'
+
+    >>> sourcecodes('pPAM')
+    'pPAM'
+    >>> sourcecodes('PAZ')
+    Traceback (most recent call last):
+    ...
+    ValueError: Invalid source code 'Z' in 'PAZ', valid codes are ACFKMNPSXp
+    """
+    from openquake.hazardlib.source.base import get_code2cls
+    validcodes = {code.decode('ascii') for code in get_code2cls()}
+    for code in value:
+        if code not in validcodes:
+            raise ValueError('Invalid source code %r in %r, valid codes'
+                             ' are %s' % (code, value,
+                                          ''.join(sorted(validcodes))))
+    return value
+
+
 def float_(value):
     """
     :param value: input string
