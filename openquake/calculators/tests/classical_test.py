@@ -41,7 +41,8 @@ from openquake.qa_tests_data.classical import (
     case_61, case_62, case_63, case_64, case_65, case_66, case_67, case_68,
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
-    case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94)
+    case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
+    case_95)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -633,7 +634,7 @@ class ClassicalTestCase(CalculatorTestCase):
         info = self.calc.datastore.read_df('source_info')
         source_ids = decode(list(info.source_id))
         num_cps = sum(1 for s in source_ids if s.startswith('cps-'))
-        self.assertEqual(num_cps, 163)
+        self.assertEqual(num_cps, 158)
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -1214,4 +1215,20 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(0.5).csv'],
             case_94.__file__)
+
+    def test_case_95(self):
+        # Check that the tectonic region type of a padding source 800 km
+        # far from the site does not change the hazard: the collapsing of
+        # the point sources on a grid (ps_grid_spacing) must depend on
+        # the position of the sources only, not on the other sources in
+        # the same group
+        self.run_calc(case_95.__file__, 'job_asc.ini')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+        hcurves1 = self.calc.datastore['hcurves-stats'][:]
+
+        # the padding source is in a different TRT, hence in another group
+        self.run_calc(case_95.__file__, 'job_sea.ini')
+        hcurves2 = self.calc.datastore['hcurves-stats'][:]
+        aac(hcurves1, hcurves2, rtol=1E-6)
 

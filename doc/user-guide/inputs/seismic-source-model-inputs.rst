@@ -896,6 +896,11 @@ The idea is two use two kinds of point sources: the original ones and a set of �
 ``CollapsedPointSource``) that essentially are the original sources averaged on a larger grid, determined by the parameter 
 ``ps_grid_spacing``.
 
+The grid is global, i.e. it is anchored in the (0, 0) point and not in the bounding box of the sources; therefore 
+the cell a source belongs to – and thus its collapsing – depends on the position of the source only. This is 
+important, since otherwise adding or removing a source far away (i.e. a padding source added to avoid truncation 
+effects) would change the collapsing of the nearby sources and hence the hazard at all the sites.
+
 The plot below should give the idea, the points being the original sources and the squares with ~25 sources each being 
 associated to the collapsed sources:
 

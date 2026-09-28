@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 import copy
 import numpy
-from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
+from openquake.baselib.general import AccumDict, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -32,7 +32,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
-    get_bounding_box, angular_distance, angular_mean)
+    get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
 
 
 def msr_name(src):
@@ -586,6 +586,24 @@ def _cps_key(src):
     return type(msr), msr_name(src), aratio
 
 
+def _cell_indices(lons, lats, spacing):
+    """
+    :param lons: an array of longitudes in degrees
+    :param lats: an array of latitudes in degrees
+    :param spacing: the grid spacing in km
+    :returns: a list of P pairs of cell indices
+
+    The cells are the squares of a global grid of the given spacing in km
+    anchored at the (0, 0) point; therefore the cell of a point depends
+    only on the position of the point.
+    """
+    kmperdeg = 1. / KM_TO_DEGREES  # ~111 km per degree of latitude
+    xkm = lons * kmperdeg * numpy.cos(lats * DEGREES_TO_RAD)
+    ykm = lats * kmperdeg
+    return list(zip(numpy.floor(xkm / spacing).astype(int),
+                    numpy.floor(ykm / spacing).astype(int)))
+
+
 def _grid_points(points, ps_grid_spacing, grp_id, cnt):
     if len(points) < 2:  # nothing to collapse
         return list(points), cnt
@@ -595,9 +613,13 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
             len(numpy.unique(coords[:, 1])) == 1):
         # degenerated rectangle, there is no grid, do not collapse
         return list(points), cnt
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
-    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    # NB: the grid is global, i.e. it is not anchored in the bounding box
+    # of the points: otherwise the collapsing of a region would change
+    # when adding or removing sources far away (i.e. padding sources)
+    grid = AccumDict(accum=[])
+    for k, ij in enumerate(_cell_indices(coords[:, 0], coords[:, 1],
+                                         ps_grid_spacing)):
+        grid[ij].append(k)
     out = []
     for idxs in grid.values():
         if len(idxs) > 1:
