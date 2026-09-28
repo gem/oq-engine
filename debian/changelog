@@ -2,6 +2,11 @@
   * Optimized and parallelized network calculations in connectivity.py.
 	
   [Michele Simionato]
+  * Fixed a bug in the ps_grid_spacing approximation: the grid used to collapse
+    the point sources was anchored in the bounding box of the sources in the
+    group, so adding (or removing) a source far away, i.e. a padding source,
+    was changing the collapsing of the nearby sources and thus the hazard at
+    all the sites. Now the grid is global and anchored in the (0, 0) point
   * Improved the precision of the ps_grid_spacing approximation at the cost of a
     minor slow down (~20%)
   * Fixed a subtle bug affecting the logic tree reduction in the Taiwan model for AELO

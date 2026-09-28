@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Padding SEA"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust SEA"
+        >
+            <multiPointSource
+            id="pad"
+            name="pad"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+117.7000 3.7000 117.7000 3.8500 117.7000 4.0000 117.7000 4.1500
+117.7000 4.3000 117.7000 4.4500 117.8500 3.7000 117.8500 3.8500
+117.8500 4.0000 117.8500 4.1500 117.8500 4.3000 117.8500 4.4500
+118.0000 3.7000 118.0000 3.8500 118.0000 4.0000 118.0000 4.1500
+118.0000 4.3000 118.0000 4.4500 118.1500 3.7000 118.1500 3.8500
+118.1500 4.0000 118.1500 4.1500 118.1500 4.3000 118.1500 4.4500
+118.3000 3.7000 118.3000 3.8500 118.3000 4.0000 118.3000 4.1500
+118.3000 4.3000 118.3000 4.4500 118.4500 3.7000 118.4500 3.8500
+118.4500 4.0000 118.4500 4.1500 118.4500 4.3000 118.4500 4.4500
+                    </gml:posList>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>30.0</lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.0</ruptAspectRatio>
+                <multiMFD
+                kind="incrementalMFD"
+                size="36"
+                >
+                    <min_mag>6.0</min_mag>
+                    <bin_width>0.5</bin_width>
+                    <lengths>2</lengths>
+                    <occurRates>
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005 0.002 0.0005
+                    </occurRates>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="70.0" probability="0.34" rake="-172.0" strike="59.0"/>
+                    <nodalPlane dip="37.0" probability="0.33" rake="-88.0" strike="91.0"/>
+                    <nodalPlane dip="79.0" probability="0.33" rake="4.0" strike="94.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="20.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
