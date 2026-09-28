@@ -920,10 +920,12 @@ def _get_gsim_lt(dstore, oq, inputs):
         if not oq.shakemap_uri:
             oq.shakemap_uri = {'kind': 'usgs_id',
                                'id': oq.rupture_dict['usgs_id']}
-            oq.rupture_dict.pop('rupture_file', None)
-            oq.rupture_dict.pop('mmi_file', None)
-            oq.inputs.pop('rupture', None)
-            oq.inputs.pop('mmi', None)
+            oq.rupture_dict = {
+                k: v for k, v in oq.rupture_dict.items()
+                if k not in ('rupture_file', 'mmi_file')}
+            oq.inputs = {
+                k: v for k, v in oq.inputs.items()
+                if k not in ('rupture', 'mmi')}
         return None  # from shakemap
     elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
         model = dstore['ruptures'][0]['model'].decode('ascii')
@@ -1009,11 +1011,13 @@ def export_job_zip(ekey, dstore):
         inputs.update(export_vulnerability_xml(dstore))
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
+        toremove = set()
         for peril, ltype_by_path in ddic.items():
             inputs[f'{peril}_fragility'] = ltype_by_path
-            for ltype in ltype_by_path:
-                # needed for PAPERS
-                oq.inputs.pop(f'{ltype}_fragility', None)
+            toremove.update(f'{ltype}_fragility' for ltype in ltype_by_path)
+        # needed for PAPERS: use a new instance dict
+        oq.inputs = {k: v for k, v in oq.inputs.items()
+                     if k not in toremove}
 
     _export_taxmap_and_consequences(dstore, oq, ddic, inputs)
 
