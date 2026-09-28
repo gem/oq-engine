@@ -526,6 +526,26 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].code, b'p')
 
+    def test_far_away_source_does_not_change_the_collapsing(self):
+        # the cells of the grid must depend on the position of the points
+        # only, otherwise adding a padding source far away would change
+        # the collapsing of the nearby points
+        srcs = [make_point_source(source_id='ps%d' % i, lon=13.4 + .1 * i,
+                                  lat=8. + .1 * i) for i in range(8)]
+        for src in srcs:
+            src.grp_id = 0
+        out1 = grid_point_sources(srcs, 50)
+        # a padding source 800 km away, in the same group
+        far = make_point_source(source_id='padding', lon=4.1, lat=3.4)
+        far.grp_id = 0
+        out2 = grid_point_sources(srcs + [far], 50)
+        self.assertEqual(len(out2), len(out1) + 1)
+        for src1, src2 in zip(out1, out2):
+            self.assertEqual(src1.source_id, src2.source_id)
+            self.assertEqual(src1.code, src2.code)
+            self.assertAlmostEqual(src1.location.x, src2.location.x)
+            self.assertAlmostEqual(src1.location.y, src2.location.y)
+
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
 
