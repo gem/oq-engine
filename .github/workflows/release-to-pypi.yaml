@@ -20,7 +20,7 @@ on:
           - test
           - production
   schedule:
-    - cron: "30 6 * * 1"
+    - cron: "30 10 * * 1"
 
 jobs:
   build:
@@ -43,7 +43,7 @@ jobs:
     - name: Setup debugging session
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 35
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      if: github.event_name == 'workflow_dispatch' && inputs.debug_enabled
     # Append a devXY (where XY is the Jenkins build ID if destination is the testing repo
     # to make testing possible even if a same release version (i.e. 2.2.0)is already
     # on the test repo. Whe use devXY to be compliant with PEP440 (i.e. no git has allowed)
@@ -51,11 +51,8 @@ jobs:
       env:
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
-        sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
-      if: >-
-        ${{ github.event_name == 'workflow_dispatch' &&
-            inputs.pypi-type == 'test' ||
-            github.event_name == 'schedule' }}
+        sed -i -E "s/(__version__\s*=\s*['\"][0-9]+(\.[0-9]+)+)(['\"])/\1.dev${BUILD_NUMBER}\3/" openquake/baselib/__init__.py
+      if: (github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test') || github.event_name == 'schedule'
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
@@ -71,10 +68,10 @@ jobs:
         path: dist/
 
   publish-to-testpypi:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    name: "TestPyPI: Publish Python 🐍 distribution 📦"
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'test' }} || ${{ github.event_name == 'schedule' }}
+    if: (github.event_name == 'workflow_dispatch' && inputs['pypi-type'] == 'test') || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -87,16 +84,16 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
-    - name: Publish distribution 📦 to TestPyPI
+    - name: "TestPyPI: Publish distribution 📦"
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         repository-url: https://test.pypi.org/legacy/
 
   publish-to-pypi:
-    name: Publish Python 🐍 distribution 📦 to PyPI
+    name: "PyPI: Publish Python 🐍 distribution 📦"
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-type == 'production' }}
+    if: github.event_name == 'workflow_dispatch' && inputs['pypi-type'] == 'production'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -109,7 +106,7 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
-    - name: Publish distribution 📦 to PyPI
+    - name: "PyPI: Publish distribution 📦"
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         verbose: true
