@@ -140,6 +140,8 @@ def test_impact_ui_level_2_build_rupture(
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
     expect(page.rupture_identifier()).to_be_visible()
+    expect(authenticated_page.locator(
+        'div#shakemap_version_grp')).to_be_visible()
     page.set_rupture_identifier('usp0001ccb')
     page.select_shakemap_version(
         value="urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087")

@@ -45,7 +45,7 @@ window.initImpactForm = function() {
         'use_finite_fault_model_from_usgs'
     ];
 
-    // The ShakeMap version is needed to download stations accordingly
+    // The ShakeMap version is needed to download stations accordingly.
     const approaches_requiring_shakemap_version = approaches_requiring_usgs_id
 
     const retrieve_data_btn_txt_map = {
@@ -525,7 +525,10 @@ window.initImpactForm = function() {
         var formData = new FormData();
         const usgs_id = $.trim($("#usgs_id").val());
         formData.append('usgs_id', usgs_id);
-        formData.append('shakemap_version', $("#shakemap_version").val());
+        const shakemap_version = $("#shakemap_version").val();
+        if (shakemap_version) {
+            formData.append('shakemap_version', shakemap_version);
+        }
         $.ajax({
             type: "POST",
             url: gem_oq_server_url + "/v1/impact_get_stations_from_usgs",

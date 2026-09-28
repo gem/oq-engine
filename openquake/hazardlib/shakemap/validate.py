@@ -385,10 +385,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
-    if 'shakemap_version' in POST:
-        shakemap_version = POST['shakemap_version']
-    else:
-        shakemap_version = 'usgs_preferred'
+    shakemap_version = POST.get('shakemap_version') or 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(
         inputdic, user, use_shakemap, shakemap_version, rupture_file, monitor)
