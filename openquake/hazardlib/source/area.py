@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
 from openquake.hazardlib import geo, mfd
+from openquake.hazardlib.codes import AREA
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -40,7 +41,7 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    code = b'A'
+    code = AREA
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',

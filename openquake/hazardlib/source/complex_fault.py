@@ -22,6 +22,7 @@ import numpy
 
 from scipy.stats import truncnorm
 from openquake.hazardlib import mfd
+from openquake.hazardlib.codes import COMPLEX_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -145,7 +146,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
         fails or if rake value is invalid.
     """
-    code = b'C'
+    code = COMPLEX_FAULT
     # a slice of the rupture_slices, thus splitting the source
     MODIFICATIONS = {
         'adjust_aspect_ratio',
