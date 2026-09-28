@@ -1157,11 +1157,22 @@ def attach_branches(ltree, override=False):
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = [brid for brid in bset.filters.get('applyToBranches', [])
-                   if brid in branchdic]
+        atb = bset.filters.get('applyToBranches', [])
+        app2brs = [brid for brid in atb if brid in branchdic]
         dummies = []
         next_previous = []
-        if app2brs and app2brs != prev_ids:
+        if atb and not app2brs:
+            # None of the branches in applyToBranches survived, which can
+            # happen only in a logic tree reduced to a single source (see
+            # SourceModelLogicTree.reduce). The branchset does not apply
+            # to the surviving branches, so a dummy branchset is attached
+            # to each of them, exactly as for a partial match below; this
+            # also keeps them leaves, so that the branchsets applied later
+            # on can be attached to them
+            for br in previous_branches:
+                br.bset = dummy = dummy_branchset(br.branch_id)
+                dummies.append(dummy.branches[0])
+        elif app2brs and app2brs != prev_ids:
             bset.applied = app2brs
             target_bs_ids = {
                 branchdic[brid].bs_id for brid in app2brs
@@ -1184,6 +1195,8 @@ def attach_branches(ltree, override=False):
                     else:
                         next_previous.append(br)
         else:
+            # no applyToBranches, i.e. the branchset becomes the child of
+            # all the branches of the previous level
             for br in previous_branches:
                 br.bset = bset
         set_short_id(bset.branches, BASE183[brno:])
