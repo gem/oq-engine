@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Improved the precision of the pointsource_distance ps_grid_spacing approximations
+  * Fixed a subtle bug affecting the logic tree reduction in the Taiwan model for AELO
+  * Improved the precision of the pointsource_distance/ps_grid_spacing approximations
     by using circular averages for the angles
 
   [Paolo Tormene]
