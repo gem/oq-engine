@@ -104,7 +104,7 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install pyshp pytest flake8 ruff
+          pip install pytest flake8 ruff
           pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           ruff check openquake
