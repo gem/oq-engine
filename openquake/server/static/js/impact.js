@@ -584,7 +584,7 @@ window.initImpactForm = function() {
         const selected_approach = get_selected_approach();
         formData.append('approach', selected_approach);
         if (selected_approach == 'build_rup_from_usgs') {
-            const nodal_plane = $('#nodal_plane').val();
+            const nodal_plane = $('select#nodal_plane').val();
             if (nodal_plane) {
                 formData.append('nodal_plane', nodal_plane);
             }
