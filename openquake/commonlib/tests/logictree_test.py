@@ -21,6 +21,7 @@ import pprint
 import codecs
 import unittest
 import collections
+from tempfile import TemporaryDirectory
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 import numpy
@@ -84,6 +85,37 @@ def _make_nrml(content):
           xmlns="http://openquake.org/xmlns/nrml/0.4">\
         %s
     </nrml>""" % content)
+
+
+def _point_source_model(src_id):
+    # a source model with a single point source, used to test the reduction
+    # of a logic tree to a single source
+    return _make_nrml("""\
+    <sourceModel>
+        <pointSource id="%s" name="%s"
+                     tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point><gml:pos>0.0 0.0</gml:pos></gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
+    """ % (src_id, src_id))
 
 
 def _whatever_sourcemodel():
@@ -2225,6 +2257,112 @@ class SerializeSmltTestCase(unittest.TestCase):
             ba = smlta.branches[brid]
             bb = smltb.branches[brid]
             self.assertEqual(repr(ba), repr(bb))
+
+
+class ReduceSmltTestCase(unittest.TestCase):
+    """
+    Reduction of a source model logic tree to a single source
+    """
+    # the branchset sm2 has 4 branches (b02, b03, b04, b05) and there are
+    # two "child" branchsets, each one applied to a pair of branches; this
+    # is the structure of the ssmLT of the Taiwan model, see the sources
+    # NP2, NP3, NP4, NP5 in the file TEM/in/ssmLT.xml
+    smlt = """\
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchSet uncertaintyType="sourceModel"
+                            branchSetID="sm1">
+            <logicTreeBranch branchID="b01">
+                <uncertaintyModel>area.xml</uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet uncertaintyType="extendModel"
+                            branchSetID="sm2">
+            <logicTreeBranch branchID="b02">
+                <uncertaintyModel>fault1.xml</uncertaintyModel>
+                <uncertaintyWeight>0.1</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b03">
+                <uncertaintyModel>fault2.xml</uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b04">
+                <uncertaintyModel>fault3.xml</uncertaintyModel>
+                <uncertaintyWeight>0.3</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b05">
+                <uncertaintyModel>fault4.xml</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet uncertaintyType="extendModel"
+                            applyToBranches="b02 b04" branchSetID="ex1">
+            <logicTreeBranch branchID="e1_1">
+                <uncertaintyModel>extra1.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="e1_2">
+                <uncertaintyModel>extra2.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet uncertaintyType="extendModel"
+                            applyToBranches="b03 b05" branchSetID="ex2">
+            <logicTreeBranch branchID="e2_1">
+                <uncertaintyModel>extra3.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="e2_2">
+                <uncertaintyModel>extra4.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>"""
+
+    def setUp(self):
+        # the source is in the first branchset only, so reducing to it
+        # removes all the branches of the second branchset
+        self.tmp = TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        for fname, src_id in zip(
+                ['area.xml', 'fault1.xml', 'fault2.xml', 'fault3.xml',
+                 'fault4.xml', 'extra1.xml', 'extra2.xml', 'extra3.xml',
+                 'extra4.xml'],
+                ['area', 'f1', 'f2', 'f3', 'f4', 'x1', 'x2', 'x3', 'x4']):
+            with open(os.path.join(self.tmp.name, fname), 'w') as f:
+                f.write(_point_source_model(src_id))
+        with open(os.path.join(self.tmp.name, 'ssmLT.xml'), 'w') as f:
+            f.write(_make_nrml(self.smlt))
+        self.smlt_path = os.path.join(self.tmp.name, 'ssmLT.xml')
+
+    def test_full_enumeration(self):
+        # 4 branches in sm2, each one with 2 branches in ex1 or ex2
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        self.assertEqual(smlt.num_paths, 8)
+
+    def test_reduce_to_branch(self):
+        # the source 'f2' is in the branch b03, so only ex2 applies; the
+        # collapsed branches b02, b04, b05 (weight .8) are still there
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        red = smlt.reduce('f2', num_samples=0)
+        self.assertEqual(red.num_paths, 2)
+        [rlz] = [r for r in red if r.lt_path[1] == 'b03']
+        self.assertEqual(rlz.lt_path, ('b01', 'b03', 'e2_2'))
+        self.assertEqual(rlz.value, ['', 'fault2.xml', ''])
+        self.assertEqual(rlz.weight, .2)
+
+    def test_reduce_removed_branches(self):
+        # reducing to 'area', contained in b01, removes the branches
+        # b02, b03, b04, b05, which are collapsed into a branch with ID
+        # b05; both ex1 and ex2 are applied to branches that do not exist
+        # anymore, so the reduced logic tree has a single path and must
+        # not raise "branch 'b05' already has child branchset"
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        red = smlt.reduce('area', num_samples=0)
+        self.assertEqual(red.num_paths, 1)
+        [rlz] = list(red)
+        self.assertEqual(rlz.value, ['area.xml', '', ''])
+        self.assertEqual(rlz.weight, 1.0)
 
 
 class ReduceLtTestCase(unittest.TestCase):
