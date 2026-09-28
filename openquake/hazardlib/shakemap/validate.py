@@ -25,7 +25,8 @@ from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commonlib.readinput import get_close_mosaic_models
-from openquake.hazardlib.shakemap.parsers import get_rup_dic
+from openquake.hazardlib.shakemap.parsers import (
+    get_nodal_planes_and_product, get_rup_dic)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -240,6 +241,7 @@ msr_choices = [msr.__class__.__name__
 
 validators = {
     'approach': valid.Choice(*IMPACT_APPROACHES),
+    'nodal_plane': valid.Choice('NP1', 'NP2'),
     'usgs_id': valid.simple_id,
     'lon': nrml_validators['lon'],
     'lat': nrml_validators['lat'],
@@ -272,8 +274,8 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     inputdic = dict(
-        approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-        mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+        approach=None, nodal_plane=None, usgs_id=None, lon=None, lat=None,
+        dep=None, mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
         strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
@@ -333,6 +335,30 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
+def _apply_nodal_plane(inputdic, user, monitor):
+    """Add selected USGS plane geometry and product provenance."""
+    nodal_plane = inputdic.get('nodal_plane')
+    if not nodal_plane:
+        return {}
+    if inputdic['approach'] != 'build_rup_from_usgs':
+        return {'status': 'failed', 'error_msg':
+                'A nodal plane requires approach=build_rup_from_usgs'}
+    planes, info, product, err = get_nodal_planes_and_product(
+        inputdic['usgs_id'], user, monitor)
+    if err:
+        return err
+    if nodal_plane not in planes:
+        return {'status': 'failed', 'error_msg':
+                f'{nodal_plane} is not available for {inputdic["usgs_id"]}'}
+    for key, value in info.items():
+        if inputdic.get(key) is None:
+            inputdic[key] = float(value)
+    inputdic.update(planes[nodal_plane])
+    inputdic['aspect_ratio'] = inputdic.get('aspect_ratio') or 2.0
+    inputdic['mechanism_product'] = product
+    return {}
+
+
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                     monitor=performance.Monitor()):
     """
@@ -353,6 +379,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         inputdic['approach'] = 'use_shakemap_from_usgs'
     else:
         inputdic['approach'] = POST['approach']
+    err = _apply_nodal_plane(inputdic, user, monitor)
+    if err:
+        return None, inputdic, params, err
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'

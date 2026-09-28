@@ -580,6 +580,12 @@ window.initImpactForm = function() {
         var formData = new FormData();
         const selected_approach = get_selected_approach();
         formData.append('approach', selected_approach);
+        if (selected_approach == 'build_rup_from_usgs') {
+            const nodal_plane = $('#nodal_plane').val();
+            if (nodal_plane) {
+                formData.append('nodal_plane', nodal_plane);
+            }
+        }
         formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
         formData.append('rupture_was_loaded', $('#rupture_was_loaded').val() == 'Loaded');
         formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
