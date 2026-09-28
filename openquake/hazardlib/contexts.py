@@ -326,7 +326,7 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-# generator of quintets (rup_index, mag, planar_array, sites)
+# generator of quintets (rup_index, mag, magdist, planars, sites)
 # called first in preclassical with a reduced sitecol and then in classical
 def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
@@ -358,8 +358,10 @@ def _quintets(cmaker, src, sitecol):
             if mag > maxmag or mag < minmag:
                 continue
             mdist = magdist[mag]
-            arr = [rup.surface.array.reshape(-1, 3)]  # planar
-            pla = planardict[mag]
+            # far sites use the mean rupture from src.iruptures(),
+            # close sites use all the nodal planes/hypocenters
+            meanpla = [rup.surface.array.reshape(-1, 3)]
+            allpla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
                                     magdist)
@@ -367,17 +369,17 @@ def _quintets(cmaker, src, sitecol):
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sites
+                    yield m, mag, mdist, meanpla, sites
                 else:  # something is close
-                    yield m, mag, mdist, pla, sites
+                    yield m, mag, mdist, allpla, sites
             else:  # many sites
                 if close is None:  # all is far
-                    yield m, mag, mdist, arr, far
+                    yield m, mag, mdist, meanpla, far
                 elif far is None:  # all is close
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, mdist, allpla, close
                 else:  # some sites are far, some are close
-                    yield m, mag, mdist, arr, far
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, mdist, meanpla, far
+                    yield m, mag, mdist, allpla, close
 
 
 # helper used to populate contexts for planar ruptures
