@@ -532,6 +532,7 @@ def sourcecodes(value):
     ...
     ValueError: Invalid source code 'Z' in 'PAZ', valid codes are ACFKMNPSXp
     """
+    # NB: the import is local, since the source classes import this module
     from openquake.hazardlib.source.base import get_code2cls
     validcodes = {code.decode('ascii') for code in get_code2cls()}
     for code in value:
