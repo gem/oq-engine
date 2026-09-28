@@ -21,6 +21,7 @@ import copy
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
+from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt, get_rupdims)
@@ -151,7 +152,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    code = b'P'
+    code = POINT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',
@@ -236,22 +237,21 @@ class PointSource(ParametricSeismicSource):
             arr['rake'] = np.rake
         return planin
 
-    # A full cell-displacement calculation was benchmarked without a
-    # material precision gain, so keep the inexpensive half diagonal.
+    # used in the source filtering
     def max_radius(self, maxdist):
         """
-        :returns: max radius + ps_grid_spacing * sqrt(2)/2
+        :returns: max radius, without the ps_grid_spacing half diagonal
         """
         self._get_max_rupture_projection_radius()
         eff_radius = min(self.radius[-1], maxdist / 2)
-        return eff_radius + self.ps_grid_spacing * .707
+        return eff_radius
 
     def get_psdist(self, m, mag, psdist, magdist):
         """
         :returns: the effective pointsource distance for the given magnitude
         """
         eff_radius = min(self.radius[m], magdist[mag] / 2)
-        return eff_radius + self.ps_grid_spacing * .707 + psdist
+        return psdist + eff_radius
 
     def _get_max_rupture_projection_radius(self):
         """
@@ -507,7 +507,7 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'p'
+    code = COLLAPSED_POINT
     MODIFICATIONS = set()
 
     def __init__(self, source_id, pointsources):

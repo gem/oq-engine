@@ -1,6 +1,9 @@
   [Michele Simionato]
-  * Improved the precision of the pointsource_distance ps_grid_spacing approximations
-    by using circular averages for the angles
+  * Improved the precision of the ps_grid_spacing approximation at the cost of a
+    minor slow down (~20%)
+  * Fixed a subtle bug affecting the logic tree reduction in the Taiwan model for AELO
+  * Improved the precision of the pointsource_distance approximations by using circular
+    averages for the angles and weighted averages for the rates
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories

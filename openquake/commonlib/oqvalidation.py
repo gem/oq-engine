@@ -296,6 +296,15 @@ extreme_gmv:
   Example: *extreme_gmv = 5.0*
   Default: {'default': numpy.inf} i.e. no values are extreme
 
+filter_sourcecodes:
+  Used for debugging purposes. When given, keeps only the sources with
+  the given codes, discarding the others. The valid codes are
+  A=area, p=collapsed point, P=point, M=multiPoint, S=simple fault,
+  K=kite fault, C=complex fault, X=characteristic fault,
+  N=nonParametric, F=multiFault.
+  Example: *filter_sourcecodes = pPAM* (i.e. only point-like sources).
+  Default: empty string, meaning all sources are kept
+
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
@@ -652,8 +661,8 @@ poes_disagg:
    Alias for poes.
 
 pointsource_distance:
-  Used in classical calculations to collapse the point sources. Can also be
-  used in conjunction with *ps_grid_spacing*.
+  Used in classical calculations to collapse the point sources. Don't set
+  it when using *ps_grid_spacing*, since it will be set automatically.
   Example: *pointsource_distance = 50*.
   Default: {'default': 100}
 
@@ -1207,6 +1216,7 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
+    filter_sourcecodes = valid.Param(valid.sourcecodes, '')
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
     total_residual_correlation_model = valid.Param(
         valid.NoneOr(valid.utf8_not_empty), None)
@@ -1519,10 +1529,8 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if ('ps_grid_spacing' in names_vals and
-                float(names_vals['ps_grid_spacing']) and
-                'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=40.)
+        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
+            self.pointsource_distance = dict(default=50+self.ps_grid_spacing)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
