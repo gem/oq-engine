@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="extend_lt">
+        <!-- the source 1 is ambiguous, i.e. it is defined in two branches
+             b1 and b2 with different parameters, so it becomes 1!b1, 1!b2 -->
+        <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+            <logicTreeBranch branchID="b1">
+                <uncertaintyModel>ssm/gk.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b2">
+                <uncertaintyModel>ssm/uh.xml</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <!-- the sources 2 and 3 are not in the logic tree of the source 1,
+             so the branches e1 and e2 are collapsed when reducing -->
+        <logicTreeBranchSet uncertaintyType="extendModel" branchSetID="bs2">
+            <logicTreeBranch branchID="e1">
+                <uncertaintyModel>ssm/extra1.xml</uncertaintyModel>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="e2">
+                <uncertaintyModel>ssm/extra2.xml</uncertaintyModel>
+                <uncertaintyWeight>0.4</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <!-- the uncertainty is not applied to the source 1, since the source
+             IDs are 1!b1 and 1!b2 and not 1; however the branchset survives
+             the reduction to the source 1, so the reduced logic tree has a
+             number of realizations different from the original one -->
+        <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs3"
+                           applyToBranches="e1 e2" applyToSources="1">
+            <logicTreeBranch branchID="m_m0.2">
+                <uncertaintyModel>+0.2</uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="m_e0.0">
+                <uncertaintyModel>0.0</uncertaintyModel>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="m_p0.2">
+                <uncertaintyModel>-0.2</uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

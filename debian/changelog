@@ -12,6 +12,10 @@
   * Fixed a subtle bug affecting the logic tree reduction in the Taiwan model for AELO
   * Improved the precision of the pointsource_distance approximations by using circular
     averages for the angles and weighted averages for the rates
+  * Fixed a crash in the ASCE7 postprocessors (i.e. compute_rtgm) occurring when
+    a source belongs to a different number of logic tree realizations in the
+    original and in the reduced logic tree: the trt_smrs of the source were
+    assigned to a sampling array of incompatible length
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories

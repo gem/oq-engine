@@ -28,7 +28,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
+    case_master)
 
 aae = numpy.testing.assert_almost_equal
 ae = numpy.testing.assert_equal
@@ -264,6 +265,17 @@ class DisaggregationTestCase(CalculatorTestCase):
         # from the K20 GSIM object (test just checks execution not correctness
         # of values)
         self.run_calc(case_16.__file__, 'job_dsg.ini')
+
+    def test_case_17(self):
+        # source model logic tree with extendModel branches and an ambiguous
+        # source: the logic tree reduced to a single source has a number of
+        # realizations different from the original one, so the trt_smrs of
+        # the sources must be recomputed (see FullLogicTree.set_sampling)
+        self.run_calc(case_17.__file__, 'job.ini')
+        # the disaggregation by relevant sources returned one row per IMT
+        self.assertEqual(len(self.calc.datastore['mag_dst_eps_sig/0']), 3)
+        # the MCE is governed by the deterministic lower limits
+        aae(self.calc.datastore.read_df('mce').MCE, [0.5, 1.5, 0.6], 3)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
