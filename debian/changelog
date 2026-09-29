@@ -16,6 +16,14 @@
     a source belongs to a different number of logic tree realizations in the
     original and in the reduced logic tree: the trt_smrs of the source were
     assigned to a sampling array of incompatible length
+  * The ASCE7 postprocessors do not reduce the logic tree anymore: they use
+    the trt_smrs stored in the sources and the GSIM weights computed by the
+    full logic tree. This removes a few corner cases and fixes the weighted
+    sigmas in the deterministic MCE, which were wrong (too large by a factor
+    of 1.5-3) when the source model logic tree spanned multiple tectonic
+    region types, as in the AELO models
+  * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
+    source, i.e. when there is no deterministic scenario for that IMT
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories

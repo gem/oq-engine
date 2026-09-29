@@ -1,23 +1,77 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
   <sourceModel name="gk.xml" investigation_time="50.0">
-    <sourceGroup tectonicRegion="Active Shallow Crust" name="group 1">
-      <pointSource id="1" name="point 1" tectonicRegion="Active Shallow Crust">
-        <pointGeometry>
-          <gml:Point><gml:pos>67.30 44.85</gml:pos></gml:Point>
-          <upperSeismoDepth>0.0</upperSeismoDepth>
-          <lowerSeismoDepth>20.0</lowerSeismoDepth>
-        </pointGeometry>
-        <magScaleRel>WC1994</magScaleRel>
-        <ruptAspectRatio>1.0</ruptAspectRatio>
-        <truncGutenbergRichterMFD aValue="4.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
-        <nodalPlaneDist>
-          <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
-        </nodalPlaneDist>
-        <hypoDepthDist>
-          <hypoDepth probability="1.0" depth="10.0"/>
-        </hypoDepthDist>
-      </pointSource>
-    </sourceGroup>
+  <sourceGroup tectonicRegion="TECTONIC_REGION_1" name="group 1">
+    <pointSource id="1" name="point 1" tectonicRegion="TECTONIC_REGION_1">
+      <pointGeometry>
+        <gml:Point><gml:pos>67.30 44.85</gml:pos></gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="5.4" bValue="1.0" minMag="5.5" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceGroup>
+  <sourceGroup tectonicRegion="TECTONIC_REGION_2" name="group 10">
+    <pointSource id="10" name="point 10" tectonicRegion="TECTONIC_REGION_2">
+      <pointGeometry>
+        <gml:Point><gml:pos>67.50 44.95</gml:pos></gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="5.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceGroup>
+  <sourceGroup tectonicRegion="TECTONIC_REGION_3" name="group 11">
+    <pointSource id="11" name="point 11" tectonicRegion="TECTONIC_REGION_3">
+      <pointGeometry>
+        <gml:Point><gml:pos>66.90 44.70</gml:pos></gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="5.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceGroup>
+  <sourceGroup tectonicRegion="TECTONIC_REGION_4" name="group 12">
+    <pointSource id="12" name="point 12" tectonicRegion="TECTONIC_REGION_4">
+      <pointGeometry>
+        <gml:Point><gml:pos>67.80 45.10</gml:pos></gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="5.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceGroup>
   </sourceModel>
 </nrml>
