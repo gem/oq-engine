@@ -658,12 +658,17 @@ class Disaggregator(object):
                 res['mean'] = to_rates(res['mean'])
             yield res
 
-    def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
+    def disagg_mag_dist_eps(self, imldic, weights, src_mutex={}):
         """
         :param imldic: a dictionary imt->iml
+        :param weights: an array of G weights, one per gsim of the cmaker
         :param src_mutex: a dictionary with keys src_id, weight or empty
-        :param rlz_weights: an array with the realization weights
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
+
+        The rates depend on the realization only through the GSIM, hence
+        the loop is over the G gsims and not over the logic tree
+        realizations; the weights are the sums of the realization weights
+        associated to each GSIM, see `FullLogicTree.g_weights`.
         """
         M = len(imldic)
         imtls = {imt: [iml] for imt, iml in imldic.items()}
@@ -673,11 +678,38 @@ class Disaggregator(object):
                 mw = self.init(magi, src_mutex)  # mutex weight or 1
             except FarAwayRupture:
                 continue
-            for rlz, g in self.g_by_rlz.items():
-                mat5 = self._disagg6D(imtls, g, rlz)[..., 0]  # p = 0
+            for g, w in enumerate(weights):
+                if not w:  # GSIM not affecting the source
+                    continue
+                # NB: the realization index is irrelevant without an
+                # amplification logic tree, see self._disagg6D
+                mat5 = self._disagg6D(imtls, g, 0)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
-                out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz] * mw
+                out[magi] += mat5.sum(axis=(1, 2)) * w * mw
         return to_rates(out) if src_mutex else out
+
+    def std_by_dist(self, weights):
+        """
+        Average the sigmas of the ruptures in the same (mag, dist) bin,
+        weighting the GSIMs with the given weights.
+
+        :param weights: an array of G weights, one per gsim of the cmaker
+        :returns: an array of shape (Ma, D, M), zero in the bins not
+                  covered by any rupture
+        """
+        M = len(self.cmaker.oq.imtls)  # same M axis as self.std
+        out = numpy.zeros((self.Ma, self.D, M))
+        for magi, std in self.std.items():
+            # self.std[magi] has shape (G, M, U), collapse the G axis
+            sig = numpy.einsum('g,gmu->mu', weights, std)  # shape (M, U)
+            idx = numpy.clip(self.dist_idx[magi], 0, self.D - 1)
+            sums = numpy.zeros((self.D, M))
+            numpy.add.at(sums, idx, sig.T)  # sums over the ruptures
+            counts = numpy.bincount(idx, minlength=self.D)
+            nonzero = counts > 0
+            sums[nonzero] /= counts[nonzero, None]
+            out[magi, nonzero] = sums[nonzero]
+        return out
 
     def __repr__(self):
         source_id, sid = self.source_id, self.sid
@@ -817,37 +849,21 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs, Ma, D, M, G):
+def fill_gaps(sig, M):
     """
-    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
-    :returns: an array of shape (Ma, D, M, G)
-    """
-    assert len(disaggs)
-    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
-    cnt = collections.Counter()  # (magi, dsti)
-    for dis in disaggs:
-        for magi in dis['std']:
-            for g, std in enumerate(dis['std'][magi]):
-                for dsti, val in zip(dis['dist_idx'][magi], std.T):
-                    if (magi, dsti) in acc:
-                        acc[magi, dsti][g] += val  # shape M
-                    else:
-                        acc[magi, dsti][g] = val.copy()
-                    cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((Ma, D, M, G))
-    for (magi, dsti), v in acc.items():
-        sig[magi, dsti] = v.T / cnt[magi, dsti]
+    Fill the (mag, dist) bins not covered by any rupture with the value
+    of the first covered bin, since the sigmas are artificially zero there.
 
-    # the sigmas are artificially zero for not covered (magi, disti) bins
-    # in that case we copy the value of the first covered bin
+    :param sig: an array of shape (Ma, D, M)
+    :returns: the filled array
+    """
     # NB: this is tested in test_rtgm
     for m in range(M):
-        for g in range(G):
-            zeros = sig[:, :, m, g] == 0
-            if zeros.any():
-                magi, dsti = numpy.where(~zeros)
-                if len(magi) and len(dsti):
-                    sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+        zeros = sig[:, :, m] == 0
+        if zeros.any():
+            magi, dsti = numpy.where(~zeros)
+            if len(magi) and len(dsti):
+                sig[zeros, m] = sig[magi[0], dsti[0], m]
     return sig
 
 
@@ -861,24 +877,24 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
+def gen_disagg_source(groups, site, edges_shapedic, oq, full_lt):
     """
-    Compute disaggregation for the given source. Assume oq.imtls has a
+    Compute disaggregation for the given sources. Assume oq.imtls has a
     single level for each IMT.
 
-    :param groups: groups containing a single source ID
+    NB: there is no need to reduce the logic tree, since the sources
+    already store the trt_smrs of the logic tree realizations they belong
+    to, i.e. `src.sampling['trt_smr']`.
+
+    :param groups: groups containing sources with a single base ID
     :param site: a Site object
-    :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
-    :param monitor: a Monitor instance
-    :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
+    :param full_lt: a FullLogicTree instance
+    :returns: generators of (Disaggregator, src_mutex) pairs, one per group
     """
     sitecol = SiteCollection([site])
-    if not hasattr(reduced_lt, 'trt_rlzs'):
-        reduced_lt.init()
     edges, s = edges_shapedic
-    ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -888,14 +904,25 @@ def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     else:
         src_mutex = {}
     all_trt_smrs = [sg[0].trt_smrs for sg in groups]
-    cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     for group, cmaker in zip(groups, cmakers.to_array()):
         dis = Disaggregator(group, sitecol, cmaker, edges)
-        yield dis, src_mutex, ws
+        yield dis, src_mutex
 
 
-def disagg_source(dis, src_mutex, ws, monitor):
+def disagg_source(dis, src_mutex, monitor):
+    """
+    Compute the rates and the sigmas for a group of sources, weighted by
+    the logic tree realizations of the group (i.e. by the GSIM weights
+    returned by `FullLogicTree.g_weights`).
+
+    :returns: a dictionary with keys source_id, sid, rates (Ma, D, E, M),
+              std (Ma, D, M), weight
+    """
     imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
-    rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-    return dict(source_id=dis.source_id, sid=dis.sid,
-                rates4D=rates4D, std=dis.std, dist_idx=dis.dist_idx)
+    # normalize the weights, i.e. condition on the source being active
+    wei = dis.cmaker.wei / dis.cmaker.wei.sum()
+    rates4D = dis.disagg_mag_dist_eps(imldic, wei, src_mutex)
+    std4D = dis.std_by_dist(wei)
+    return dict(source_id=dis.source_id, sid=dis.sid, rates4D=rates4D,
+                std4D=std4D, weight=dis.cmaker.wei.sum())

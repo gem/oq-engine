@@ -1061,13 +1061,6 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-def _get_smr(source_id):
-    # 'src1;0.0' => 0
-    suffix = source_id.split(';')[1]
-    smr = suffix.split('.')[0]
-    return int(smr)
-
-
 def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
     # returns a double dictionary trt_smr -> gsim -> rlzs
     acc = AccumDict(accum=AccumDict(accum=[]))
@@ -1082,6 +1075,9 @@ def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
     return acc
 
 
+# NB: the logic tree is reduced by SourceModelLogicTree.reduce *before*
+# building the sources, so that each source stores the trt_smrs of the
+# logic tree realizations it belongs to (see src.sampling)
 class FullLogicTree(object):
     """
     The full logic tree as composition of
@@ -1260,70 +1256,6 @@ class FullLogicTree(object):
         return tuple(trti * TWO24 + sm_rlz.ordinal
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
-
-    @staticmethod
-    def set_sampling(src, trt_smrs):
-        """
-        Set the trt_smrs in the sampling array of the source, resizing
-        the array if necessary. This is needed in the postprocessors, where
-        the sources are taken from a CompositeSourceModel built with a
-        different (typically larger) logic tree than the reduced one.
-        """
-        if len(src.sampling) != len(trt_smrs):
-            src.sampling = numpy.zeros(len(trt_smrs), src.sampling.dtype)
-            src.sampling['samples'] = 1  # one sample per realization
-        src.sampling['trt_smr'] = trt_smrs
-
-    # NB: called by reduce_groups with source_id
-    def set_trt_smr(self, srcs, source_id):
-        """
-        :param srcs: source objects
-        :param source_id: base source ID
-        :returns: list of sources with the same base source ID
-        """
-        if not self.trti:  # empty gsim_lt
-            return srcs
-        sd = self.sd
-        out = []
-        for src in srcs:
-            srcid = valid.corename(src)
-            if source_id and srcid != source_id:
-                continue  # filter
-            trti = self.trti[src.tectonic_region_type]
-            if ';' in src.source_id:
-                # assume <base_id>;<smr> like in logictree/case_05
-                smr = _get_smr(src.source_id)
-                self.set_sampling(src, (trti * TWO24 + smr,))
-            else:  # regular case
-                srcid = valid.basename(src.source_id, '@:.')
-                try:
-                    # check if ambiguous source ID
-                    srcid, brid = srcid.rsplit('!')
-                except ValueError:
-                    # non-ambiguous source ID
-                    brids = set(sd[srcid]['branch'])
-                else:
-                    brids = {brid}
-                tup = tuple(trti * TWO24 + sm_rlz.ordinal
-                            for sm_rlz in self.sm_rlzs
-                            if set(sm_rlz.lt_path) & brids)
-                self.set_sampling(src, tup)  # realizations impacted
-            out.append(src)
-        return out
-
-    def reduce_groups(self, src_groups):
-        """
-        Filter the sources and set the tuple .trt_smr
-        """
-        groups = []
-        source_id = self.source_model_lt.source_id
-        for sg in src_groups:
-            ok = self.set_trt_smr(sg, source_id)
-            if ok:
-                grp = copy.copy(sg)
-                grp.sources = ok
-                groups.append(grp)
-        return groups
 
     def gsim_by_trt(self, rlz):
         """
