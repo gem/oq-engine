@@ -1261,6 +1261,19 @@ class FullLogicTree(object):
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
 
+    @staticmethod
+    def set_sampling(src, trt_smrs):
+        """
+        Set the trt_smrs in the sampling array of the source, resizing
+        the array if necessary. This is needed in the postprocessors, where
+        the sources are taken from a CompositeSourceModel built with a
+        different (typically larger) logic tree than the reduced one.
+        """
+        if len(src.sampling) != len(trt_smrs):
+            src.sampling = numpy.zeros(len(trt_smrs), src.sampling.dtype)
+            src.sampling['samples'] = 1  # one sample per realization
+        src.sampling['trt_smr'] = trt_smrs
+
     # NB: called by reduce_groups with source_id
     def set_trt_smr(self, srcs, source_id):
         """
@@ -1280,7 +1293,7 @@ class FullLogicTree(object):
             if ';' in src.source_id:
                 # assume <base_id>;<smr> like in logictree/case_05
                 smr = _get_smr(src.source_id)
-                src.sampling['trt_smr'] = trti * TWO24 + smr
+                self.set_sampling(src, (trti * TWO24 + smr,))
             else:  # regular case
                 srcid = valid.basename(src.source_id, '@:.')
                 try:
@@ -1294,7 +1307,7 @@ class FullLogicTree(object):
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
-                src.sampling['trt_smr'] = tup  # realizations impacted
+                self.set_sampling(src, tup)  # realizations impacted
             out.append(src)
         return out
 

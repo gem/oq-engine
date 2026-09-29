@@ -21,7 +21,8 @@ import unittest
 import csv
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
-    get_shakemap_versions, get_nodal_planes_and_info)
+    get_shakemap_versions, get_nodal_planes_and_info,
+    get_nodal_planes_and_product)
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
@@ -170,6 +171,15 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(nodal_planes, expected_nodal_planes)
         self.assertEqual(info, expected_info)
 
+    def test_7_product_provenance(self):
+        _planes, _info, product, err = get_nodal_planes_and_product(
+            'us6000jllz', user=user)
+        self.assertEqual(err, {})
+        self.assertEqual(product['type'], 'moment-tensor')
+        self.assertTrue(product['id'])
+        self.assertTrue(product['source'])
+        self.assertTrue(product['update_time'])
+
     def test_7b(self):
         # Case reading nodal planes first from the moment-tensor (not found)
         # then falling back to reading them from the focal-mechanism
@@ -180,10 +190,12 @@ class ShakemapParsersTestCase(unittest.TestCase):
         }
         expected_info = {
             'lon': '22.934', 'lat': '38.222', 'dep': '33', 'mag': '6.7'}
-        nodal_planes, info, _err = get_nodal_planes_and_info(
+        nodal_planes, info, product, _err = get_nodal_planes_and_product(
             usgs_id, user=user)
         self.assertEqual(nodal_planes, expected_nodal_planes)
         self.assertEqual(info, expected_info)
+        self.assertEqual(product['type'], 'focal-mechanism')
+        self.assertTrue(product['id'])
 
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,

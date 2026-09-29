@@ -2307,6 +2307,9 @@ def format_oqparam(oqparam):
         ret_dict[IMPACT_FORM_LABELS['lat']] = rupdic['lat']
         ret_dict[IMPACT_FORM_LABELS['dep']] = rupdic['dep']
         ret_dict[IMPACT_FORM_LABELS['mag']] = rupdic['mag']
+        if 'nodal_plane' in rupdic:
+            ret_dict[IMPACT_FORM_LABELS['nodal_plane']] = \
+                rupdic['nodal_plane']
         ret_dict[IMPACT_FORM_LABELS['msr']] = rupdic['msr']
         ret_dict[IMPACT_FORM_LABELS['aspect_ratio']] = rupdic['aspect_ratio']
         ret_dict[IMPACT_FORM_LABELS['rake']] = rupdic['rake']
