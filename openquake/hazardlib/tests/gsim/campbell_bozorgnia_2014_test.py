@@ -43,12 +43,12 @@ class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
 
 
 coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
-params = [(cls, name, SJ)
-          for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]
-          for cls in [CampbellBozorgnia2014TestCase]]
-@pytest.mark.parametrize('cls, name, SJ', params)
-def test_all(cls, name, SJ):
-    self = cls()
+params = [(name, SJ) for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]]
+
+
+@pytest.mark.parametrize('name, SJ', params)
+def test_all(name, SJ):
+    self = CampbellBozorgnia2014TestCase()
     tag = name + ('_JAPAN' if SJ else '')
     self.check(self.MEAN_FILE % tag,
                self.STD_INTRA_FILE % tag,
