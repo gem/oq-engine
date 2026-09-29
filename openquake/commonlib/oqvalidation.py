@@ -1135,6 +1135,7 @@ class OqParam(valid.ParamSet):
         'tsunami_fragility',
         'tsunami_vulnerability',
         'post_loss_amplification',
+        'interdependencies',
     } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
