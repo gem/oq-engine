@@ -62,7 +62,7 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     child_ini = os.path.join(oq.base_path, 'child.ini')
     with open(child_ini, 'w') as f:
         f.write(ini)
-    run_calc(child_ini)
+    run_calc(child_ini, hazard_calculation_id=dstore.calc_id)
 
 
 if __name__ == '__main__':

@@ -245,9 +245,17 @@ class DamageCalculator(EventBasedRiskCalculator):
 
         # put the interdependencies logic here
         if 'interdependencies' in oq.inputs:  # we are in the child
-            bdg_df = self.datastore.parent.read_df('risk_by_event', 'agg_id')
+            asset2id = {a.decode('ascii'): i for i, a in enumerate(
+                self.datastore.parent['assetcol']['id'])}
+            state2column = dict(zip(self.crmodel.damage_states[1:],
+                                    self.crmodel.get_dmg_csq()))
+            self.interdep_df['col'] = [state2column[s] for s in self.interdep_df.source_damage_state]
+            self.interdep_df['id'] = [asset2id[a] for a in self.interdep_df.source_asset_id]
+            bdg_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
+            road_df = self.datastore.read_df('risk_by_event', 'event_id')
             # for building
             print(bdg_df)
+            print(road_df)
             breakpoint()
 
         if oq.infrastructure_connectivity_analysis:
