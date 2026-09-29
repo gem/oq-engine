@@ -45,7 +45,7 @@ window.initImpactForm = function() {
         'use_finite_fault_model_from_usgs'
     ];
 
-    // The ShakeMap version is needed to download stations accordingly
+    // The ShakeMap version is needed to download stations accordingly.
     const approaches_requiring_shakemap_version = approaches_requiring_usgs_id
 
     const retrieve_data_btn_txt_map = {
@@ -525,7 +525,10 @@ window.initImpactForm = function() {
         var formData = new FormData();
         const usgs_id = $.trim($("#usgs_id").val());
         formData.append('usgs_id', usgs_id);
-        formData.append('shakemap_version', $("#shakemap_version").val());
+        const shakemap_version = $("#shakemap_version").val();
+        if (shakemap_version) {
+            formData.append('shakemap_version', shakemap_version);
+        }
         $.ajax({
             type: "POST",
             url: gem_oq_server_url + "/v1/impact_get_stations_from_usgs",
@@ -580,6 +583,12 @@ window.initImpactForm = function() {
         var formData = new FormData();
         const selected_approach = get_selected_approach();
         formData.append('approach', selected_approach);
+        if (selected_approach == 'build_rup_from_usgs') {
+            const nodal_plane = $('select#nodal_plane').val();
+            if (nodal_plane) {
+                formData.append('nodal_plane', nodal_plane);
+            }
+        }
         formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
         formData.append('rupture_was_loaded', $('#rupture_was_loaded').val() == 'Loaded');
         formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);

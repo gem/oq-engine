@@ -1041,19 +1041,33 @@ def get_nodal_planes_and_info(usgs_id, user=User(),
                               monitor=performance.Monitor()):
     """
     Retrieve the nodal planes and a dict with lon, lat, dep and mag,
-    for the given USGS id
+    for the given USGS id.
 
-    :param usgs_id: ShakeMap ID
-    :returns (a dictionary with nodal planes information,
-              a dictionary with lon, lat, dep and mag,
-              error dictionary or {})
+    :param usgs_id: USGS event ID
+    :returns: nodal plane dictionary, origin information, error dictionary
+    """
+    planes, info, _product, err = get_nodal_planes_and_product(
+        usgs_id, user, monitor)
+    return planes, info, err
+
+
+def get_nodal_planes_and_product(usgs_id, user=User(),
+                                 monitor=performance.Monitor()):
+    """
+    Retrieve nodal planes, origin information and the selected mechanism
+    product's identifying metadata for the given USGS event ID.
+
+    :returns: nodal plane dictionary, origin information, product metadata,
+              error dictionary
     """
     properties, err = _get_properties(usgs_id, user, monitor)
     if err:
-        return None, err
-    nodal_planes, err = _get_nodal_planes_from_properties(properties)
+        return None, None, None, err
+    planes, product, err = _get_nodal_planes_from_properties(properties)
+    if err:
+        return None, None, None, err
     info = _get_earthquake_info_from_properties(properties)
-    return nodal_planes, info, err
+    return planes, info, product, {}
 
 
 def _get_earthquake_info_from_properties(properties):
@@ -1067,21 +1081,28 @@ def _get_earthquake_info_from_properties(properties):
 def _get_nodal_planes_from_properties(properties):
     # in parsers_test
     nodal_planes = {}
+    product_type = None
+    product = None
+    products = properties['products']
     # try reading from the moment tensor, if available. If nodal planes can not
     # be collected, fallback attempting to read them from the focal mechanism
-    if 'moment-tensor' in properties['products']:
-        moment_tensor = _get_usgs_preferred_item(
-            properties['products']['moment-tensor'])
-        nodal_planes = _get_nodal_planes_from_product(moment_tensor)
-    if not nodal_planes and 'focal-mechanism' in properties['products']:
-        focal_mechanism = _get_usgs_preferred_item(
-            properties['products']['focal-mechanism'])
-        nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
+    if 'moment-tensor' in products:
+        product_type = 'moment-tensor'
+        product = _get_usgs_preferred_item(products[product_type])
+        nodal_planes = _get_nodal_planes_from_product(product)
+    if not nodal_planes and 'focal-mechanism' in products:
+        product_type = 'focal-mechanism'
+        product = _get_usgs_preferred_item(products[product_type])
+        nodal_planes = _get_nodal_planes_from_product(product)
     if not nodal_planes:
         err = {'status': 'failed', 'error_msg':
                'Unable to retrieve information about the nodal options'}
-        return None, err
-    return nodal_planes, {}
+        return None, None, err
+    metadata = {'type': product_type, 'id': product.get('id'),
+                'source': product.get('source'),
+                'update_time': product.get('updateTime'),
+                'preferred_weight': product.get('preferredWeight')}
+    return nodal_planes, metadata, {}
 
 
 def _get_nodal_planes_from_product(product):

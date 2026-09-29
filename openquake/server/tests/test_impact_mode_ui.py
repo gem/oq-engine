@@ -140,6 +140,8 @@ def test_impact_ui_level_2_build_rupture(
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
     expect(page.rupture_identifier()).to_be_visible()
+    expect(authenticated_page.locator(
+        'div#shakemap_version_grp')).to_be_visible()
     page.set_rupture_identifier('usp0001ccb')
     page.select_shakemap_version(
         value="urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087")
@@ -151,7 +153,12 @@ def test_impact_ui_level_2_build_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-    page.run_impact_calc()
+    authenticated_page.locator('select#nodal_plane').select_option('NP2')
+    with authenticated_page.expect_request(
+            lambda req: req.url.endswith('/v1/calc/impact_run')) as request:
+        page.run_impact_calc()
+    assert 'name="nodal_plane"' in request.value.post_data
+    assert 'NP2' in request.value.post_data
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()
         if should_abort_job:
