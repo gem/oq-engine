@@ -794,7 +794,7 @@ class HazardCalculator(BaseCalculator):
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
                 'max_weight amplifier policy_df treaty_df '
-                'full_lt exported trt_rlzs gids'
+                'full_lt exported trt_rlzs gids interdep_df'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -1141,6 +1141,10 @@ class HazardCalculator(BaseCalculator):
                     len(self.crmodel.riskids), len(risk_ids))
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
+
+            # read interpendencies if any
+            if 'interdependencies' in oq.inputs:
+                self.interdep_df = readinput.get_interdependencies(oq)
 
     def _read_risk3(self):
         oq = self.oqparam

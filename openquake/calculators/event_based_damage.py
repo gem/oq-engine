@@ -242,6 +242,14 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.hdf5.create_dataset('damages-stats', data=data)
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=['mean'])
+
+        # put the interdependencies logic here
+        if 'interdependencies' in oq.inputs:  # we are in the child
+            bdg_df = self.datastore.parent.read_df('risk_by_event', 'agg_id')
+            # for building
+            print(bdg_df)
+            breakpoint()
+
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
             results = connectivity.analysis(self.datastore)
