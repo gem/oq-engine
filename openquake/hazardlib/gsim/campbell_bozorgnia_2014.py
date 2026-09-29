@@ -27,7 +27,7 @@ from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
+from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
@@ -473,7 +473,7 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA, IA, CAV}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`

@@ -21,6 +21,7 @@ Campbell & Bozorgnia (2019) ground-motion model.
 import numpy as np
 
 from openquake.hazardlib import const
+from openquake.hazardlib.imt import IA, CAV
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014, coeffs_high, coeffs_low)
@@ -39,6 +40,9 @@ class CampbellBozorgnia2019(CampbellBozorgnia2014):
     """
     # Defomed fpr geometric mean so overwrite this on CB14 base class
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
+
+    # Only supports CAV and AI
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, CAV}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         super().compute(ctx, imts, mean, sig, tau, phi)
