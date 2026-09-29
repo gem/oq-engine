@@ -35,6 +35,7 @@ from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
+from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
     get_or_create_user, start_uvicorn, stop_uvicorn)
 
@@ -42,8 +43,6 @@ CALC_RUN_TIMEOUT = 60
 
 
 def test_format_oqparam_displays_selected_nodal_plane():
-    from openquake.server.views import format_oqparam
-
     oqparam = SimpleNamespace(
         rupture_dict={
             'approach': 'build_rup_from_usgs', 'usgs_id': 'us7000n7n8',
