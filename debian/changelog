@@ -24,6 +24,14 @@
     region types, as in the AELO models
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
     source, i.e. when there is no deterministic scenario for that IMT
+  * The reduction of a source model logic tree to a single source (i.e. the
+    `source_id` parameter and the `reduce_smlt` command) is now performed on
+    the already parsed logic tree instead of re-reading the XML files: this
+    removes a few corner cases, in particular the source IDs were matched by
+    prefix, so that reducing to the source 13 in a model with the sources
+    1, 13, 14 was also including the sources 13 and 14 in other tectonic
+    region types. The uncertainties which cannot be applied to the source
+    at all are now replaced by a single empty branch
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories
