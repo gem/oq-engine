@@ -38,10 +38,10 @@ class CampbellBozorgnia2019(CampbellBozorgnia2014):
     Arias intensity (AI) and cumulative absolute velocity (CAV) using the
     NGA-West2 database" (Earthquake Spectra, 35(3), 1289-1310, 2019).
     """
-    # Defomed fpr geometric mean so overwrite this on CB14 base class
+    # Defined for geometric mean so overwrite this on CB14 base class
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
-    # Only supports CAV and AI
+    # Only supports CAV and AI so overwrite this too on the base class
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, CAV}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
