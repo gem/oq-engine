@@ -30,7 +30,7 @@ https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
 """
 import pytest
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014, CampbellBozorgnia2019, coeffs_high, coeffs_low)
+    CampbellBozorgnia2014, coeffs_high, coeffs_low)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -42,18 +42,10 @@ class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
     STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
 
 
-class CampbellBozorgnia2019TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CampbellBozorgnia2019
-    MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
-
-
 coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
 params = [(cls, name, SJ)
           for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]
-          for cls in [CampbellBozorgnia2014TestCase, CampbellBozorgnia2019TestCase]]
+          for cls in [CampbellBozorgnia2014TestCase]]
 @pytest.mark.parametrize('cls, name, SJ', params)
 def test_all(cls, name, SJ):
     self = cls()
