@@ -796,7 +796,7 @@ class HazardCalculator(BaseCalculator):
                 'max_weight amplifier policy_df treaty_df '
                 'full_lt exported trt_rlzs gids interdep_df'
             ).split():
-                if hasattr(calc, name):
+                if hasattr(calc, name) and not hasattr(self, name):
                     setattr(self, name, getattr(calc, name))
         else:
             with self.monitor('importing inputs', measuremem=True):
@@ -1145,6 +1145,13 @@ class HazardCalculator(BaseCalculator):
             # read interpendencies if any
             if 'interdependencies' in oq.inputs:
                 self.interdep_df = readinput.get_interdependencies(oq)
+                interdep_states = self.interdep_df.source_damage_state.unique()
+                for state in interdep_states:
+                    if state not in self.crmodel.damage_states:
+                        raise InvalidFile(
+                            f'{oq.inputs["interdependencies"]}\n'
+                            f'source_damage_state={state!r} not in the fragili'
+                            f'ty functions {self.crmodel.damage_states}')
 
     def _read_risk3(self):
         oq = self.oqparam
