@@ -765,7 +765,7 @@ class ClassicalCalculator(base.HazardCalculator):
             ser = info.loc[b'classical']
         except KeyError:  # classical_disagg
             return
-        slow_tasks = ser['std'] / ser['mean'] > .2
+        slow_tasks = ser['std'] / ser['mean'] > .3
         if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:
