@@ -228,3 +228,15 @@ jobs:
           name: playwright-artifacts-python${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.browser }}
           path: test-results
           retention-days: 7
+
+  irmt_qgis:
+    name: IRMT QGIS integration tests
+    # Replace 'integrate' -> 'master' after merging
+    uses: gem/oq-irmt-qgis/.github/workflows/test_push.yml@integrate
+    with:
+      engine_repository: ${{ github.event.pull_request.head.repo.full_name }}
+      engine_ref: ${{ github.event.pull_request.head.sha }}
+      irmt_ref: master
+      integration_only: true
+    permissions:
+      contents: read
