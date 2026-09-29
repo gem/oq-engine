@@ -36,7 +36,6 @@ class CampbellBozorgnia2019(CampbellBozorgnia2014):
     Published as "Ground motion models for the horizontal components of
     Arias intensity (AI) and cumulative absolute velocity (CAV) using the
     NGA-West2 database" (Earthquake Spectra, 35(3), 1289-1310, 2019).
-    Arias intensity (IA) is in m/s; CAV is in g-sec.
     """
     # Defomed fpr geometric mean so overwrite this on CB14 base class
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
@@ -45,7 +44,7 @@ class CampbellBozorgnia2019(CampbellBozorgnia2014):
         super().compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
             if imt.name == 'CAV':
-                # Convert from m/s to g-sec
+                # Convert CAV from m/s to g-sec
                 mean[m] -= np.log(G_UNIT)
 
 
