@@ -1,0 +1,7 @@
+﻿risk_id,consequence,peril,slight,moderate,extensive,collapse
+bridge,non_operational,groundshaking,0,0,1,1
+road,non_operational,groundshaking,0,0,1,1
+connection,non_operational,groundshaking,0,0,1,1
+TAZ,non_operational,groundshaking,0,0,1,1
+bdg_1,non_operational,groundshaking,0,0,1,1
+bdg_2,non_operational,groundshaking,0,0,1,1
