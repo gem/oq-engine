@@ -499,6 +499,7 @@ class MeshedRuptureTestCase(unittest.TestCase):
         [rup_node] = nrml.read(rup_xml)
         conv = RuptureConverter(5.0)
         rup = conv.convert_node(rup_node)
+        self.assertEqual(type(rup.surface).__name__, 'SimpleFaultSurface')
 
     def test_load_regular_rupture_area(self):
         datadir = os.path.join(os.path.dirname(__file__), 'data', 'surfaces')
@@ -507,3 +508,4 @@ class MeshedRuptureTestCase(unittest.TestCase):
         [rup_node] = nrml.read(rup_xml)
         conv = RuptureConverter(5.0)
         rup = conv.convert_node(rup_node)
+        self.assertEqual(type(rup.surface).__name__, 'PlanarSurface')
