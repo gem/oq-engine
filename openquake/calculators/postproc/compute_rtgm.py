@@ -409,22 +409,24 @@ class MCEGetter:
         mce = {}
         prob_mce_out = {}
 
-        for i, imt in enumerate(det_imt):
-            if low_haz:
+        # NB: some IMTs can have no relevant source, i.e. no deterministic
+        # scenario; for them the probabilistic MCE governs, as in low_haz
+        for i, imt in enumerate(job_imts):
+            prob_mce_out[imt] = prob_mce[i]
+            if low_haz or imt not in det_imt:
                 det_mce[imt] = np.nan
                 det_imt[imt] = np.nan
                 mce[imt] = prob_mce[i]
             else:
                 det_mce[imt] = max(det_imt[imt], DLLs[i])
                 mce[imt] = min(prob_mce[i], det_mce[imt])
-            prob_mce_out[imt] = prob_mce[i]
 
         dic_mce = {
             'IMT': job_imts,
             'DLL': DLLs,
             'ProbMCE': prob_mce,
-            'DetMCE': det_mce.values(),
-            'MCE': mce.values(),
+            'DetMCE': [det_mce[imt] for imt in job_imts],
+            'MCE': [mce[imt] for imt in job_imts],
             'sid': [sid] * len(job_imts),
             'custom_site_id': [custom_id]*len(job_imts)
         }

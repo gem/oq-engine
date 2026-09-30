@@ -17,12 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import copy
+import collections
 import numpy
 import pandas
 from openquake.baselib import sap, hdf5, general, parallel
 from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
-from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
@@ -104,8 +106,13 @@ def middle(arr):
 def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     rel_ids_by_imt = general.AccumDict(accum={})
-    src2idx = {}  # sid, src_id -> src
-    weights = {}  # sid, src_id -> weights
+    src2idx = {}  # sid, src_id -> idx
+    # NB: the keys are the same used in mean_rates_by_src, see
+    # CompositeSourceModel.get_basenames
+    groups_by_bname = collections.defaultdict(list)  # bname -> [(grp, src)]
+    for grp in csm.src_groups:
+        for src in grp:
+            groups_by_bname[valid.corename(src)].append((grp, src))
     for site in sites:
         sid = site.id
         lon = site.location.x
@@ -121,24 +128,28 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
         oq.hazard_imtls = {imt: [iml] for imt, iml in imldic.items()}
         for idx, source_id in enumerate(rel_ids):
             src2idx[source_id, sid] = idx
-            smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
-            gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-            weights[source_id, sid] = [rlz.weight[-1] for rlz in gslt]
-            relt = FullLogicTree(smlt, gslt)
-            Z = relt.get_num_paths()
-            assert Z, relt  # sanity check
-            groups = relt.reduce_groups(csm.src_groups)
+            # NB: no logic tree reduction is needed, since the sources
+            # already store the trt_smrs of the realizations they belong
+            # to; a source can be in more than one group, i.e. in more
+            # than one realization, since the csm groups are split by trt_smrs
+            groups = []
+            for pairs in general.groupby(
+                    groups_by_bname[source_id],
+                    lambda pair: id(pair[0])).values():
+                grp = copy.copy(pairs[0][0])
+                grp.sources = [src for _grp, src in pairs]
+                groups.append(grp)
             assert groups, 'No groups for %s' % source_id
-            rupts = sum(src.num_ruptures for g in groups for src in g)
-            logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
-                         lon, lat, source_id, Z, rupts)
+            rupts = sum(src.num_ruptures for group in groups for src in group)
+            logging.info('(%.1f,%.1f) source %s (%d groups, %d rupts)',
+                         lon, lat, source_id, len(groups), rupts)
             for args in disagg.gen_disagg_source(
-                    groups, site, relt, (edges, shp), oq):
+                    groups, site, (edges, shp), oq, csm.full_lt):
                 smap.submit(args)
-    return smap, rel_ids_by_imt, src2idx, weights
+    return smap, rel_ids_by_imt, src2idx
 
 
-def collect_results(smap, src2idx, weights, edges, shp,
+def collect_results(smap, src2idx, edges, shp,
                     rel_ids_by_imt, imts, imls_by_imt):
     """
     :returns: sid -> (mean_disagg_by_src, sigma_by_src)
@@ -167,12 +178,18 @@ def collect_results(smap, src2idx, weights, edges, shp,
     for (source_id, sid), dics in disaggs.items():
         idx = src2idx[source_id, sid]
         mean_disagg_by_src, sigma_by_src = out[sid]
+        # NB: a source can be in more than one group (i.e. it can be in
+        # more than one logic tree realization); the groups are combined
+        # with the logic tree weights, i.e. the probabilities of the groups
+        W = sum(dic['weight'] for dic in dics)
         for dic in dics:
-            mean_disagg_by_src[idx] += dic['rates4D']
-        G = len(weights[source_id, sid])  # gsim weights
-        std4D = disagg.collect_std(dics, shp['mag'], shp['dist'], M, G)
-        sigma_by_src[idx] += std4D @ weights[source_id, sid]
-        # the dot product change the shape from (Ma, D, M, G) -> (Ma, D, M)
+            w = dic['weight'] / W
+            mean_disagg_by_src[idx] += w * dic['rates4D']
+            sigma_by_src[idx] += w * dic['std4D']
+    for mean_disagg_by_src, sigma_by_src in out.values():
+        # the sigmas are zero in the (mag, dist) bins with no ruptures
+        for arr in sigma_by_src.array:  # one (Ma, D, M) array per source
+            disagg.fill_gaps(arr, len(imts))
     return out
 
 
@@ -200,10 +217,10 @@ def main(dstore, csm, imts, imls_by_sid):
     sites = [site for site in sitecol if site.id in imls_by_sid]
     src_mutex = [sg.src_interdep == 'mutex' for sg in csm.src_groups]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    smap, rel_ids_by_imt, src2idx, weights = submit_sources(
+    smap, rel_ids_by_imt, src2idx = submit_sources(
         dstore, csm, edges, shp, imts, imls_by_sid, oq, sites)
     out = collect_results(
-        smap, src2idx, weights, edges, shp, rel_ids_by_imt, imts, imls_by_sid)
+        smap, src2idx, edges, shp, rel_ids_by_imt, imts, imls_by_sid)
     dstore.close()
     dstore.open('r+')
     # replace mean_disagg_by_src with mag_dist_eps in the output

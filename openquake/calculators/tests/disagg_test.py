@@ -28,7 +28,8 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
+    case_master)
 
 aae = numpy.testing.assert_almost_equal
 ae = numpy.testing.assert_equal
@@ -264,6 +265,22 @@ class DisaggregationTestCase(CalculatorTestCase):
         # from the K20 GSIM object (test just checks execution not correctness
         # of values)
         self.run_calc(case_16.__file__, 'job_dsg.ini')
+
+    def test_case_17(self):
+        # source model logic tree with extendModel branches, an ambiguous
+        # source and 4 tectonic region types with 2 GSIMs each (the sources
+        # 1, 10, 11, 12 share the prefix "1"): the postprocessor must use
+        # the trt_smrs stored in the sources and the corresponding GSIM
+        # weights, instead of reducing the logic tree
+        self.run_calc(case_17.__file__, 'job.ini')
+        dstore = self.calc.datastore
+        # the disaggregation by relevant sources returned one row per IMT
+        self.assertEqual(len(dstore['mag_dst_eps_sig/0']), 3)
+        # the sigmas are weighted averages over the GSIMs
+        sigs = [row['sig'] for row in dstore['mag_dst_eps_sig/0'][:]]
+        aae(sigs, [0.5433, 0.5071, 0.6395], 4)
+        # the SA(0.2) MCE is governed by the deterministic scenario
+        aae(dstore.read_df("mce").MCE, [0.46, 1.6212, 1.51], 4)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
