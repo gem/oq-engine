@@ -1,3 +1,9 @@
+  [Christopher Brooks]
+  * Split the Campbell and Bozorgnia 2019 GSIM for CAV and IA into its
+    own dedicated GSIM module and fix a units error reported by Ozan
+    Bilal and Kyle Smith (CAV needed to be in g-sec not m/s for engine
+    unit consistency).
+
   [Catarina Costa]
   * Optimized and parallelized network calculations in connectivity.py.
 	
