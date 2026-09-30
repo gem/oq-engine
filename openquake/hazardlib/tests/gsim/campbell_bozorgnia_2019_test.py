@@ -16,30 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Implements the comprehensive test suite for the Campbell & Bozorgnia (2014)
-NGA-West2 GMPE
-Test data generated using the Excel file published as supplementary material
-with the V/H Earthquake Spectra paper from the same authors:
-https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
+Tests for the Campbell & Bozorgnia (2019) ground-motion model.
 
-# Take note of the following bug in the 'HOR Spectrum (PSA)' Sheet of
-# the supplemental Excel file:
-#   * Formula error in cell A62 and Column L, i.e. the formula for f_sed
-#     (Basin Response Term) should refer to the Sj flag instead of the Sji flag
-#   * A1100 should refer to Z2.5 (VS30=1100) in Cell B48, not constant in A48.
+Expected results are for IA in m/s and CAV in g-sec.
 """
 import pytest
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    CampbellBozorgnia2014, coeffs_high, coeffs_low)
+
+from openquake.hazardlib.gsim.campbell_bozorgnia_2019 import (
+    CampbellBozorgnia2019, coeffs_high, coeffs_low)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class CampbellBozorgnia2014TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = CampbellBozorgnia2014
-    MEAN_FILE = 'CB14/CB2014%s_MEAN.csv'
-    STD_INTRA_FILE = 'CB14/CB2014%s_STD_INTRA.csv'
-    STD_INTER_FILE = 'CB14/CB2014%s_STD_INTER.csv'
-    STD_TOTAL_FILE = 'CB14/CB2014%s_STD_TOTAL.csv'
+class CampbellBozorgnia2019TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = CampbellBozorgnia2019
+    MEAN_FILE = 'CB19/CB2019%s_MEAN.csv'
+    STD_INTRA_FILE = 'CB19/CB2019%s_STD_INTRA.csv'
+    STD_INTER_FILE = 'CB19/CB2019%s_STD_INTER.csv'
+    STD_TOTAL_FILE = 'CB19/CB2019%s_STD_TOTAL.csv'
 
 
 coeffs = {'': None, '_HIGHQ': coeffs_high, '_LOWQ': coeffs_low}
@@ -48,7 +41,7 @@ params = [(name, SJ) for name in ['', '_HIGHQ', '_LOWQ'] for SJ in [0, 1]]
 
 @pytest.mark.parametrize('name, SJ', params)
 def test_all(name, SJ):
-    self = CampbellBozorgnia2014TestCase()
+    self = CampbellBozorgnia2019TestCase()
     tag = name + ('_JAPAN' if SJ else '')
     self.check(self.MEAN_FILE % tag,
                self.STD_INTRA_FILE % tag,
