@@ -32,10 +32,6 @@
     1, 13, 14 was also including the sources 13 and 14 in other tectonic
     region types. The uncertainties which cannot be applied to the source
     at all are now replaced by a single empty branch
-  * Empty `<uncertaintyModel />` nodes in a source model logic tree are not
-    allowed anymore; they were used only in logictree/case_04, by a
-    branchset adding no source model file, i.e. doubling the number of
-    equivalent logic tree realizations for no reason
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories

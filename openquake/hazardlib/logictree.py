@@ -317,9 +317,9 @@ def applies_to(bset, srcid, brids):
 def prune_files(bset, files):
     """
     Keep in the branchset only the files defining the given sources; the
-    branches left without files are merged into a single branch with the
-    sum of the weights, preserving the probability of the source *not*
-    being defined.
+    branches left without files are merged into a single branch with an
+    *empty value* and the sum of the weights, preserving the probability
+    of the source *not* being defined.
 
     :param bset: a sourceModel/extendModel BranchSet
     :param files: a dictionary branch ID -> list of files
@@ -335,6 +335,8 @@ def prune_files(bset, files):
             zeros.append(br)
             weight += br.weight
     if zeros:
+        # NB: the empty value is generated on purpose, it means "the source
+        # is not defined in this branch" with probability `weight`
         last = zeros[-1]
         keep.append(Branch(last.branch_id, '', weight, last.bs_id))
     bset.branches = keep
@@ -630,7 +632,10 @@ class SourceModelLogicTree(object):
                 # narrow the filter, since filter_source expects a single ID
                 if 'applyToSources' in bset.filters:
                     bset.filters['applyToSources'] = [srcid]
-            else:  # the branchset cannot be applied: keep a single branch
+            else:
+                # the branchset cannot be applied to the source, i.e. it is
+                # a no-op: keep a single branch with an empty value, since
+                # the weights of the original branches add up to one
                 br = bset.branches[0]
                 bset.branches = [Branch(br.branch_id, '', 1., br.bs_id)]
         self.keep_files(rows)
@@ -786,13 +791,6 @@ class SourceModelLogicTree(object):
             else:
                 value = parse_uncertainty(branchset.uncertainty_type,
                                           value_node, self.filename)
-            if not (value_node.text or '').strip() and not len(value_node):
-                # NB: the empty values generated internally by branchID
-                # reduction and by SourceModelLogicTree.prune are fine,
-                # but an empty uncertaintyModel in the input is a bug
-                raise LogicTreeError(
-                    value_node, self.filename,
-                    'empty uncertaintyModel node not allowed')
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 # read the source model file and collect the sources in it
                 try:
@@ -812,7 +810,9 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             if value == '':
-                # with branchID reduction a branch can be empty
+                # empty branches are generated on purpose by the branchID
+                # reduction and by SourceModelLogicTree.prune, but they can
+                # also be present in the input files, see case_04
                 zero_id = branch_id
                 zeros.append(weight)
             else:
