@@ -103,33 +103,16 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def get_groups_by_bname(csm):
-    # NB: the keys are the same used in mean_rates_by_src, see
-    # CompositeSourceModel.get_basenames
-    dic = collections.defaultdict(list)  # bname -> [(group, source)]
-    for grp in csm.src_groups:
-        for src in grp:
-            dic[valid.corename(src)].append((grp, src))
-    return dic
-
-
-def split_by_bname(pairs):
-    # (group, source) pairs -> a list of groups, each containing only the
-    # sources with the same base name; the csm groups are already split by
-    # trt_smrs, so a source can appear in more than one group
-    out = []
-    for pairs in general.groupby(pairs, lambda pair: id(pair[0])).values():
-        grp = copy.copy(pairs[0][0])
-        grp.sources = [src for _grp, src in pairs]
-        out.append(grp)
-    return out
-
-
 def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     rel_ids_by_imt = general.AccumDict(accum={})
     src2idx = {}  # sid, src_id -> idx
-    groups_by_bname = get_groups_by_bname(csm)
+    # NB: the keys are the same used in mean_rates_by_src, see
+    # CompositeSourceModel.get_basenames
+    groups_by_bname = collections.defaultdict(list)  # bname -> [(grp, src)]
+    for grp in csm.src_groups:
+        for src in grp:
+            groups_by_bname[valid.corename(src)].append((grp, src))
     for site in sites:
         sid = site.id
         lon = site.location.x
@@ -146,10 +129,18 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
         for idx, source_id in enumerate(rel_ids):
             src2idx[source_id, sid] = idx
             # NB: no logic tree reduction is needed, since the sources
-            # already store the trt_smrs of the realizations they belong to
-            groups = split_by_bname(groups_by_bname[source_id])
+            # already store the trt_smrs of the realizations they belong
+            # to; a source can be in more than one group, i.e. in more
+            # than one realization, since the csm groups are split by trt_smrs
+            groups = []
+            for pairs in general.groupby(
+                    groups_by_bname[source_id],
+                    lambda pair: id(pair[0])).values():
+                grp = copy.copy(pairs[0][0])
+                grp.sources = [src for _grp, src in pairs]
+                groups.append(grp)
             assert groups, 'No groups for %s' % source_id
-            rupts = sum(src.num_ruptures for grp in groups for src in grp)
+            rupts = sum(src.num_ruptures for group in groups for src in group)
             logging.info('(%.1f,%.1f) source %s (%d groups, %d rupts)',
                          lon, lat, source_id, len(groups), rupts)
             for args in disagg.gen_disagg_source(
