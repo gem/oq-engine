@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+   xmlns="http://openquake.org/xmlns/nrml/0.5">
+   <regularRupture>
+      <magnitude>5.55</magnitude>
+      <rake>0.00</rake>
+      <hypocenter depth="5.00" lat="0.110068" lon="0.039594"/>
+      <regularGridSurface
+            surface_type="ParametricProbabilisticRupture"
+            rupture_type="PlanarSurface"
+            shape="3 1 4">
+         <gml:posList>
+            0.039594 0.082501 1.934721 0.039594 0.137635 1.934721 0.039594 0.082501 8.065279 0.039594 0.137635 8.065279 
+         </gml:posList>
+      </regularGridSurface>
+   </regularRupture>
+</nrml>

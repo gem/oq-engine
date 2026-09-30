@@ -309,6 +309,24 @@ class RuptureConverter(object):
                 coords = split_coords_3d(~surface_node.posList)
             points = [geo.Point(*p) for p in coords]
             surface = geo.GriddedSurface.from_points_list(points)
+        elif surface_node.tag.endswith('regularGridSurface'):
+
+            srfcs = ['SimpleFaultSurface', 'ComplexFaultSource']
+            if surface_node.attrib['rupture_type'] in srfcs:
+                coo = numpy.array(split_coords_3d(~surface_node.posList))
+                tmp = surface_node.attrib['shape']
+                shape = numpy.fromstring(tmp, dtype=int, sep=' ')
+                coo = numpy.reshape(coo.T, shape)
+                surface = geo.SimpleFaultSurface(
+                        geo.mesh.RectangularMesh(F32(coo[0]),
+                                                 F32(coo[1]),
+                                                 F32(coo[2])))
+            elif surface_node.attrib['rupture_type'] in ['PlanarSurface']:
+                coo = numpy.array(split_coords_3d(~surface_node.posList))
+                surface = geo.PlanarSurface.from_array(coo.T)
+            else:
+                raise ValueError("Unsupported rupture surface type")
+
         elif surface_node.tag.endswith('kiteSurface'):
             # single or multiple kite surfaces
             profs = [self.geo_lines(node) for node in surface_nodes]
@@ -402,6 +420,24 @@ class RuptureConverter(object):
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces))
         return rupt
+
+
+    def convert_regularRupture(self, node):
+        """
+        Convert a regularRupture node.
+
+        :param node: the rupture node
+        """
+        mag, rake, hypocenter = self.get_mag_rake_hypo(node)
+        with context(self.fname, node):
+            surfaces = [node.regularGridSurface]
+        rupt = source.rupture.BaseRupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=hypocenter,
+            surface=self.convert_surfaces(surfaces))
+        return rupt
+
 
     def convert_griddedRupture(self, node):
         """

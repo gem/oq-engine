@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.sourceconverter import update_source_model, \
-    SourceConverter
+    SourceConverter, RuptureConverter
 
 testdir = os.path.join(os.path.dirname(__file__), 'source_model')
 
@@ -488,3 +488,22 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         self.assertEqual(expected[1], sec['s2'].profiles[0].points[1])
         ssm = nrml.to_python(src_xml, conv)
         self.assertIsInstance(ssm, nrml.SourceModel)
+
+
+class MeshedRuptureTestCase(unittest.TestCase):
+
+    def test_load_regular_rupture_simplefault(self):
+        datadir = os.path.join(os.path.dirname(__file__), 'data', 'surfaces')
+        rup_xml = os.path.join(datadir, 'meshed_surface.xml')
+        # rup_xml = os.path.join(datadir, 'gridded_surface.xml')
+        [rup_node] = nrml.read(rup_xml)
+        conv = RuptureConverter(5.0)
+        rup = conv.convert_node(rup_node)
+
+    def test_load_regular_rupture_area(self):
+        datadir = os.path.join(os.path.dirname(__file__), 'data', 'surfaces')
+        rup_xml = os.path.join(datadir, 'planar_surface.xml')
+        # rup_xml = os.path.join(datadir, 'gridded_surface.xml')
+        [rup_node] = nrml.read(rup_xml)
+        conv = RuptureConverter(5.0)
+        rup = conv.convert_node(rup_node)
