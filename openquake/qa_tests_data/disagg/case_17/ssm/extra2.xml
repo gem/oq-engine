@@ -1,23 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
   <sourceModel name="extra2.xml" investigation_time="50.0">
-    <sourceGroup tectonicRegion="Active Shallow Crust" name="group 3">
-      <pointSource id="3" name="point 3" tectonicRegion="Active Shallow Crust">
-        <pointGeometry>
-          <gml:Point><gml:pos>66.90 44.70</gml:pos></gml:Point>
-          <upperSeismoDepth>0.0</upperSeismoDepth>
-          <lowerSeismoDepth>20.0</lowerSeismoDepth>
-        </pointGeometry>
-        <magScaleRel>WC1994</magScaleRel>
-        <ruptAspectRatio>1.0</ruptAspectRatio>
-        <truncGutenbergRichterMFD aValue="4.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
-        <nodalPlaneDist>
-          <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
-        </nodalPlaneDist>
-        <hypoDepthDist>
-          <hypoDepth probability="1.0" depth="10.0"/>
-        </hypoDepthDist>
-      </pointSource>
-    </sourceGroup>
+  <sourceGroup tectonicRegion="TECTONIC_REGION_1" name="group 3">
+    <pointSource id="3" name="point 3" tectonicRegion="TECTONIC_REGION_1">
+      <pointGeometry>
+        <gml:Point><gml:pos>66.70 44.40</gml:pos></gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>20.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="5.2" bValue="1.0" minMag="5.5" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceGroup>
   </sourceModel>
 </nrml>

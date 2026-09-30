@@ -267,15 +267,20 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_16.__file__, 'job_dsg.ini')
 
     def test_case_17(self):
-        # source model logic tree with extendModel branches and an ambiguous
-        # source: the logic tree reduced to a single source has a number of
-        # realizations different from the original one, so the trt_smrs of
-        # the sources must be recomputed (see FullLogicTree.set_sampling)
+        # source model logic tree with extendModel branches, an ambiguous
+        # source and 4 tectonic region types with 2 GSIMs each (the sources
+        # 1, 10, 11, 12 share the prefix "1"): the postprocessor must use
+        # the trt_smrs stored in the sources and the corresponding GSIM
+        # weights, instead of reducing the logic tree
         self.run_calc(case_17.__file__, 'job.ini')
+        dstore = self.calc.datastore
         # the disaggregation by relevant sources returned one row per IMT
-        self.assertEqual(len(self.calc.datastore['mag_dst_eps_sig/0']), 3)
-        # the MCE is governed by the deterministic lower limits
-        aae(self.calc.datastore.read_df('mce').MCE, [0.5, 1.5, 0.6], 3)
+        self.assertEqual(len(dstore['mag_dst_eps_sig/0']), 3)
+        # the sigmas are weighted averages over the GSIMs
+        sigs = [row['sig'] for row in dstore['mag_dst_eps_sig/0'][:]]
+        aae(sigs, [0.5433, 0.5071, 0.6395], 4)
+        # the SA(0.2) MCE is governed by the deterministic scenario
+        aae(dstore.read_df("mce").MCE, [0.46, 1.6212, 1.51], 4)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

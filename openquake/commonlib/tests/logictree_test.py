@@ -2364,6 +2364,31 @@ class ReduceSmltTestCase(unittest.TestCase):
         self.assertEqual(rlz.value, ['area.xml', '', ''])
         self.assertEqual(rlz.weight, 1.0)
 
+    def test_reduce_ignores_unapplicable_uncertainties(self):
+        # ex1 is applied to b02, b04, which do not define f2, so the
+        # branchset is replaced by a single empty branch; the source model
+        # file is the only one defining f2
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        red = smlt.reduce('f2', num_samples=0)
+        [bset] = [b for b in red.branchsets if b.id == 'ex1']
+        [br] = bset.branches
+        self.assertEqual((br.branch_id, br.value, br.weight), ('e1_2', '', 1.))
+        self.assertEqual([os.path.basename(p) for p in red.info.smpaths],
+                         ['fault2.xml'])
+
+    def test_reduce_with_branch_id(self):
+        # the branch can be specified explicitly, i.e. reduce to f2 in b03
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        red = smlt.reduce('f2!b03', num_samples=0)
+        self.assertEqual(red.num_paths, 2)
+        self.assertEqual([rlz.value[1] for rlz in red], ['fault2.xml', ''])
+
+    def test_reduce_requires_the_exact_id(self):
+        # reducing to a prefix of the source IDs is an error
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        with self.assertRaises(NameError):
+            smlt.reduce('f')
+
 
 class ReduceLtTestCase(unittest.TestCase):
     def test(self):
