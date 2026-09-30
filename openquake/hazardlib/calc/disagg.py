@@ -690,8 +690,10 @@ class Disaggregator(object):
 
     def std_by_dist(self, weights):
         """
-        Average the sigmas of the ruptures in the same (mag, dist) bin,
-        weighting the GSIMs with the given weights.
+        Combine the sigmas of the ruptures falling in the same (mag, dist)
+        bin, weighting the GSIMs with the given weights. Since the sigmas
+        are dispersions, the combination is done in the variance domain,
+        i.e. in quadrature.
 
         :param weights: an array of G weights, one per gsim of the cmaker
         :returns: an array of shape (Ma, D, M), zero in the bins not
@@ -700,15 +702,19 @@ class Disaggregator(object):
         M = len(self.cmaker.oq.imtls)  # same M axis as self.std
         out = numpy.zeros((self.Ma, self.D, M))
         for magi, std in self.std.items():
-            # self.std[magi] has shape (G, M, U), collapse the G axis
-            sig = numpy.einsum('g,gmu->mu', weights, std)  # shape (M, U)
+            # self.std[magi] has shape (G, M, U); sum the squared sigmas
+            # over the ruptures falling in the same distance bin
             idx = numpy.clip(self.dist_idx[magi], 0, self.D - 1)
-            sums = numpy.zeros((self.D, M))
-            numpy.add.at(sums, idx, sig.T)  # sums over the ruptures
+            var = numpy.zeros((len(std), self.D, M))  # (G, D, M)
+            for g, sigma in enumerate(std):  # (M, U)
+                numpy.add.at(var[g], idx, (sigma**2).T)
             counts = numpy.bincount(idx, minlength=self.D)
             nonzero = counts > 0
-            sums[nonzero] /= counts[nonzero, None]
-            out[magi, nonzero] = sums[nonzero]
+            var = var[:, nonzero] / counts[nonzero][None, :, None]  # G,D,M
+            # the sigmas are dispersions, hence they are combined in the
+            # variance domain, i.e. in quadrature, and not linearly
+            out[magi, nonzero] = numpy.sqrt(
+                numpy.einsum('g,gdm->dm', weights, var))
         return out
 
     def __repr__(self):

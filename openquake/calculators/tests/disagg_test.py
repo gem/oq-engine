@@ -278,9 +278,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(dstore['mag_dst_eps_sig/0']), 3)
         # the sigmas are weighted averages over the GSIMs
         sigs = [row['sig'] for row in dstore['mag_dst_eps_sig/0'][:]]
-        aae(sigs, [0.5432, 0.5029, 0.6388], 4)
+        aae(sigs, [0.5433, 0.5071, 0.6395], 4)
         # the SA(0.2) MCE is governed by the deterministic scenario
-        aae(dstore.read_df("mce").MCE, [0.46, 1.6328, 1.51], 4)
+        aae(dstore.read_df("mce").MCE, [0.46, 1.6212, 1.51], 4)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
