@@ -227,6 +227,12 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._get_mean_stds(["SA(0.005)"])
 
+    def test_non_sa_imt_interpolation_raises(self):
+        # Non-SA IMTs (e.g. PGV) can't be log-period interpolated; if
+        # they aren't stored in the HDF5, requesting them must raise.
+        with self.assertRaisesRegex(ValueError, "only SA IMTs"):
+            self._get_mean_stds(["PGV"])
+
     def test_error_non_random_effects_base_gsim(self):
         # Cannot apply tau/phi adjustments through a non-random-effects GMM
         with self.assertRaises(ValueError):

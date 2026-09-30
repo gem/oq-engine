@@ -120,19 +120,28 @@ def _build_scalar_sig_ct(sig_scalars, term):
     return CoeffsTable.fromdict(rows) if rows else None
 
 
-### Helpers for compute-time interpolation of missing IMTs ###
+### Helpers for interpolation of missing IMTs ###
 def _check_in_range(imt, stored_imt_strs, term):
     """
     Raise ValueError if the target IMT period is outside the range in
     which CoeffsTable can actually interpolate for this term.
-    
+
     PGA counts as SA at PGA_ANCHOR_PERIOD only when the smallest stored
     SA period is <= PGA_ANCHOR_MAX_SA (which is when CoeffsTable's
-    PGA-anchored fallback kicks in). Otherwise otherwise the lower bound
-    is the smallest stored SA period.
+    PGA-anchored fallback kicks in). Otherwise the lower bound is the
+    smallest stored SA period.
+
+    PGA and other non-SA IMTs (PGV, PGD, IA, CAV...) cannot be
+    produced by log-period interpolation and must be stored directly.
+    PGA is only used as the low-period anchor for SA interpolation,
+    not interpolated itself; the other non-SA IMTs have no meaningful
+    period axis.
     """
-    if imt.string == "PGA":
-        return
+    if not imt.string.startswith("SA("):
+        raise ValueError(
+            f"Cannot interpolate {imt} for term '{term}': only SA IMTs "
+            f"can be filled in by log-period interpolation; PGA and "
+            f"other non-SA IMTs must be provided directly in the HDF5.")
 
     has_pga = "PGA" in stored_imt_strs
     sa_periods = sorted(
@@ -146,41 +155,43 @@ def _check_in_range(imt, stored_imt_strs, term):
                 f"period {p}s above stored SA range "
                 f"(max {sa_periods[-1]}s).")
         if p >= sa_periods[0]:
-            return  # Target sits inside the stored SA range.
+            return  # Target must sit inside the stored SA range
 
-    # Target is below the smallest stored SA period (or there are no SAs
-    # at all). Only the PGA-anchored fallback can rescue that, and it
-    # only kicks in when the smallest SA is <= PGA_ANCHOR_MAX_SA and the
-    # target is >= PGA_ANCHOR_PERIOD.
+    # Target sits below the smallest stored SA. PGA can anchor the interp
+    # by standing in for SA(0.01), but only when PGA is stored, target >=
+    # 0.01s, and the smallest stored SA is <= 0.05s (else the gap is too
+    # wide to interpolate through) - this is same lgic as in CoeffsTable
     fallback_ok = (has_pga and p >= PGA_ANCHOR_PERIOD
-                   and (not sa_periods or sa_periods[0] <= PGA_ANCHOR_MAX_SA))
+                   and sa_periods and sa_periods[0] <= PGA_ANCHOR_MAX_SA)
     if not fallback_ok:
         raise ValueError(
             f"Cannot interpolate {imt} for term '{term}': target period "
-            f"{p}s below the interpolable range (need SA at <= "
-            f"{PGA_ANCHOR_MAX_SA}s or a stored SA period at <= {p}s).")
+            f"{p}s below the interpolable range (need PGA plus a stored "
+            f"SA period at <= {PGA_ANCHOR_MAX_SA}s to anchor against).")
 
 
-def _ensure_imt_available(grid_data, imt, imt_str):
+def _ensure_imt_available(grid_data, imt):
     """
     Populate any missing per-term entries for given IMT by log-period
     interpolation of the CoeffsTable objects built at load time.
-    
+
     Extrapolation raises a value-error.
     """
-    # e.g. term = 'dL2L', cfg = {'location': 'hypo', 
+    imt_str = imt.string
+
+    # e.g. term = 'dL2L', cfg = {'location': 'hypo',
     #                            'sig_comp_modified': 'tau',
-    #                            'sig_adjustment': 'sub'}  
+    #                            'sig_adjustment': 'sub'}
     for term, cfg in grid_data["res_terms"].items():
 
         # Get the IMTs the HDF5 provided adjustments for
-        stored = grid_data["stored_periods"].get(term, [])
+        stored = grid_data["stored_periods"][term]
         if not stored or imt_str in stored:
             continue
 
         # The IMT is not present in the loaded HDF5 so
         # check it is within interpolable range
-        _check_in_range(imt, stored, term) #TODO review
+        _check_in_range(imt, stored, term)
 
         if cfg["location"] == "path":
             grid_data["raytrace_grids"][term][imt_str] = _interp_path(
@@ -387,11 +398,9 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     for a single target IMT. Raises ValueError on extrapolation.
     """
     # If this IMT isn't in the HDF5, fill it in by log-period interpolation
-    # of the CoeffsTable objects built at load time for each term's cells (nb
-    # we have per grid cell a CoeffTable by considering values it contains over
-    # all the IMT-based adjustments available within it)
-    _ensure_imt_available(grid_data, imt, str(imt))
-    imt_str = str(imt)
+    # of the per-cell CoeffsTables built at load time.
+    _ensure_imt_available(grid_data, imt)
+    imt_str = imt.string
     for term, cfg in grid_data["res_terms"].items():
         _apply_one_term(
             grid_data, term, cfg, imt_str, ctx, mean, sig, tau, phi)
@@ -407,17 +416,14 @@ def _validate_res_terms(res_terms, defined_stddev_types):
     needs_random_effects = False
     for cfg in res_terms.values():
         if cfg["location"] not in valid_targets:
-            # Check it is hypocentre, site or path-based adjustment
             raise ValueError(
                 f"Invalid location {cfg['location']!r}; must be one "
                 f"of {valid_targets}.")
         if (cfg.get("sig_adjustment", "none") != "none"
                 and cfg.get("sig_comp_modified") in ("tau", "phi")):
-            # If sigma adjstment to tau/phi then set this True
             needs_random_effects = True
 
     if needs_random_effects:
-        # If here we are adjusting tau/phi so check GMM has them 
         required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
         if not required.issubset(defined_stddev_types):
             raise ValueError(
@@ -431,15 +437,12 @@ def _extend_required_parameters(res_terms, current_rup, current_site):
     modification of the underlying GMM based on which location lookups
     the "res_terms" use.
     """
-    # Get the target types in the config
     locations = {cfg["location"] for cfg in res_terms.values()}
-    rup = current_rup # Existing rup params in GMM
-    site = current_site # Existing site params in GMM
+    rup = current_rup
+    site = current_site
     if locations & {"hypo", "path"}:
-        # Add them for hypo-based or path-based
         rup = frozenset(rup | {"hypo_lat", "hypo_lon"})
     if locations & {"site", "path"}:
-        # Add them for site-based or path based
         site = frozenset(site | {"lat", "lon"})
 
     return rup, site
@@ -521,10 +524,7 @@ def _load_one_term_per_imt(grp, term, imt_str, cfg,
     See "load_residuals_grids" docstring for description of each argument
     inputted into this function.
     """
-    # Get location-type
     location = cfg["location"]
-
-    # Get sigma adjustment
     sig_action = cfg.get("sig_adjustment", "none")
 
     # Cell IDs and mean values must/should always be present; collect the
@@ -535,13 +535,12 @@ def _load_one_term_per_imt(grp, term, imt_str, cfg,
 
     # Path terms need OQ polygons ready for ray-tracing; hypo/site terms
     # just need a {cell_id -> mean} dict for the point-in-cell h3 lookup
-    grids.setdefault(imt_str, {})
-    sig_scalars.setdefault(imt_str, {})
     if location == "path":
         raytrace_grids.setdefault(term, {})[imt_str] = _build_raytrace_grid(
             cell_ids, mean_vals)
     else:
-        grids[imt_str][term] = {"mean": dict(zip(cell_ids, mean_vals))}
+        grids.setdefault(imt_str, {})[term] = {
+            "mean": dict(zip(cell_ids, mean_vals))}
 
     if sig_action != "none":
         # Need the sigma adjustments too then
@@ -581,7 +580,7 @@ def _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars):
         if val < 0:
             raise ValueError(
                 f"Negative sigma for term '{term}', IMT '{imt_str}'.")
-        sig_scalars[imt_str][term] = val
+        sig_scalars.setdefault(imt_str, {})[term] = val
         # If it's scalar sigma (not per cell) then finish here
         return
 
@@ -621,8 +620,6 @@ class GridAdjustedGMPE(GMPE):
     (which in theory is your backbone model used to compute these residual
     terms).
 
-    NOTE: This class/capability is highly experimental.
-
     The HDF5 file has a root-level attribute "res_terms" that configures each
     corrective term (e.g. "dL2L", "dS2S, "att_per_km").
     
@@ -660,7 +657,7 @@ class GridAdjustedGMPE(GMPE):
     * "sig_comp_modified" (required when "sig_adjustment" != "none") is the
       std-dev component to modify ("tau", "phi" or "sig").
 
-    NOTE
+    Useful info:
 
     * The set of terms is not fixed - the user is free to include only
       the ones they need (and thus include only those in the HDF5 they
@@ -693,6 +690,7 @@ class GridAdjustedGMPE(GMPE):
 
     :param gmpe_name:
         Underlying GMM to which the grid-based adjustments are applied.
+
     :param grid_hdf5_file:
         Path to the HDF5 file with the gridded adjustments.
     """
@@ -706,7 +704,7 @@ class GridAdjustedGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    experimental = True  # not extensively tested yet
+    experimental = True  # GridAdjustedGMPE is not extensively tested yet
 
     def __init__(self, gmpe_name, grid_hdf5_file, **kwargs):
         # Wrap the underlying GMM and copy its declared parameters
