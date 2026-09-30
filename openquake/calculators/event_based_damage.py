@@ -245,18 +245,42 @@ class DamageCalculator(EventBasedRiskCalculator):
 
         # put the interdependencies logic here
         if 'interdependencies' in oq.inputs:  # we are in the child
-            asset2id = {a.decode('ascii'): i for i, a in enumerate(
+            asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
                 self.datastore.parent['assetcol']['id'])}
+            asset2id_child = {a.decode('ascii'): i for i, a in enumerate(
+                self.assetcol['id'])}
+
             state2column = dict(zip(self.crmodel.damage_states[1:],
                                     self.crmodel.get_dmg_csq()))
             self.interdep_df['col'] = [state2column[s] for s in self.interdep_df.source_damage_state]
-            self.interdep_df['id'] = [asset2id[a] for a in self.interdep_df.source_asset_id]
+            self.interdep_df['parent_id'] = [asset2id_parent[a] for a in self.interdep_df.source_asset_id]
+            self.interdep_df['child_id'] = [asset2id_child[a] for a in self.interdep_df.target_asset_id]
             bdg_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
             road_df = self.datastore.read_df('risk_by_event', 'event_id')
             # for building
             print(bdg_df)
             print(road_df)
+            road_df = road_df.rename(columns={'non_operational': 'non_operational_orig'})
+            road_df['non_operational_inter'] = 0
+            road_dfs = []
+            
+            for i, row in self.interdep_df.iterrows():
+                bdf_df = bdg_df[bdg_df.agg_id==row['parent_id']]
+                rdf_df = road_df[road_df.agg_id==row['child_id']]
+                rdf_df['non_operational_inter'] = (bdf_df[row['col']].to_numpy()==1).astype(numpy.float32)
+                road_dfs.append(rdf_df)
+            
+            rdf = pandas.concat(road_dfs)
+            rdf['non_operational'] = numpy.maximum(rdf['non_operational_orig'].to_numpy(), rdf['non_operational_inter'].to_numpy())
+
+            # Storing new columns in the dstore
+            # del self.datastore['risk_by_event/non_operational']
+            self.datastore['risk_by_event/non_operational'][:] = rdf['non_operational']
+            self.datastore['risk_by_event/non_operational_orig'] = rdf['non_operational_orig']
+            self.datastore['risk_by_event/non_operational_inter'] = rdf['non_operational_inter']
+            
             breakpoint()
+
 
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
