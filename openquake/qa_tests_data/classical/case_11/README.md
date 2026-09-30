@@ -1,7 +1,14 @@
 ## Overview
 
-Classical PSHA calculation for four sites using `GridAdjustedGMPE` with
-`AkkarEtAlRjb2014` as the underlying GMM to be adjusted. Three h3-gridded
+Classical PSHA calculation for four sites deliberately placed to
+exercise the H3 spatial fallback: site 1 falls in the finest (res-4)
+stored cell, site 2 in only the res-3 cell (falls back to coarser),
+site 3 in only the res-2 cell (falls back further), and site 4 sits
+outside every stored `dL2L`/`dS2S` cell entirely (correction defaults
+to zero, matching what happens for events or sites outside the region
+of the fitted grid in a real PSHA). All sites still sit inside a path
+cell for `att_per_km` so the raytraced correction applies. Underlying
+GMM is `AkkarEtAlRjb2014`. Three h3-gridded
 residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) to
 both the mean predicted ground-motion and the mapped sigma component
 (can be total, tau or phi). The HDF5 stores adjustments at four IMTs
@@ -64,8 +71,8 @@ exists for this GMM sigma correction too in the hdf5):
 
 Yellow star = hypocentre; triangles = the four sites in the site model,
 labelled site 1 through site 4 and colour-coded consistently with the
-UHRS plot below (site 1 blue, site 2 green, site 3 purple, site 4
-teal).
+UHRS plot below (site 1 green, site 2 blue, site 3 magenta, site 4
+black).
 
 ## Additional Information
 
