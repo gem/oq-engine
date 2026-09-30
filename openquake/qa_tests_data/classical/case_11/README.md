@@ -1,6 +1,6 @@
 ## Overview
 
-Classical PSHA calculation for five sites using `GridAdjustedGMPE` with
+Classical PSHA calculation for four sites using `GridAdjustedGMPE` with
 `AkkarEtAlRjb2014` as the underlying GMM to be adjusted. Three h3-gridded
 residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) to
 both the mean predicted ground-motion and the mapped sigma component
@@ -23,6 +23,19 @@ the QA test evaluates by log-period interpolation of the per-cell
 CoeffsTables.
 
 ![Per-cell adjustment spectra](grid_adjustments_spectra.png)
+
+### Uniform hazard response spectra at the test sites
+
+The plot below shows the 475-year return period UHRS at each of the
+four test sites (annual PoE = 1/475 ≈ 0.002105). IMLs are found by
+log-log interpolation of each mean hazard curve at the target PoE.
+Directly stored IMTs (PGA, SA(1.0)) are filled circles; log-period
+interpolated IMTs (SA(0.025), SA(0.75)) are open squares. Axes are
+linear-linear; the spectrum is smooth across period despite two of the
+four IMTs being synthesised by log-period interpolation of the per-cell
+adjustments.
+
+![UHRS at case_11 sites](uhrs_at_sites.png)
 
 The hdf5 containing the corrections used in this simple test case is called
 `grid_adjustments.hdf5`.
