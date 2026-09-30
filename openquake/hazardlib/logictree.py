@@ -786,6 +786,13 @@ class SourceModelLogicTree(object):
             else:
                 value = parse_uncertainty(branchset.uncertainty_type,
                                           value_node, self.filename)
+            if not (value_node.text or '').strip() and not len(value_node):
+                # NB: the empty values generated internally by branchID
+                # reduction and by SourceModelLogicTree.prune are fine,
+                # but an empty uncertaintyModel in the input is a bug
+                raise LogicTreeError(
+                    value_node, self.filename,
+                    'empty uncertaintyModel node not allowed')
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 # read the source model file and collect the sources in it
                 try:

@@ -41,33 +41,5 @@ xmlns:gml="http://www.opengis.net/gml"
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
-        <!-- NB: the uncertaintyModel nodes below are intentionally empty:
-             even empty branches affect the random sampling, since the
-             number of branchsets changes the shape of the random matrix
-             used by CompositeLogicTree.sample_paths. This test is meant
-             to check that empty branches still count during sampling. -->
-        <logicTreeBranchSet
-        branchSetID="bs01"
-        uncertaintyType="extendModel"
-        >
-            <logicTreeBranch
-            branchID="k1_b1_s1"
-            >
-                <uncertaintyModel>
-                </uncertaintyModel>
-                <uncertaintyWeight>
-                    .5
-                </uncertaintyWeight>
-            </logicTreeBranch>
-            <logicTreeBranch
-            branchID="k1_b1_s2"
-            >
-                <uncertaintyModel>
-                </uncertaintyModel>
-                <uncertaintyWeight>
-                    .5
-                </uncertaintyWeight>
-            </logicTreeBranch>
-        </logicTreeBranchSet>
     </logicTree>
 </nrml>

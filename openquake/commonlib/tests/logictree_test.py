@@ -2389,6 +2389,23 @@ class ReduceSmltTestCase(unittest.TestCase):
         with self.assertRaises(NameError):
             smlt.reduce('f')
 
+    def test_empty_uncertainty_model_not_allowed(self):
+        # an empty uncertaintyModel node in the input is not allowed, see
+        # the removed branchset in logictree/case_04; the empty values
+        # generated internally (by the branchID reduction or by prune) are
+        # fine instead
+        fname = os.path.join(self.tmp.name, 'empty_ssmLT.xml')
+        with open(fname, 'w') as f:
+            f.write(_make_nrml(self.smlt.replace(
+                '<uncertaintyModel>extra1.xml</uncertaintyModel>',
+                '<uncertaintyModel> </uncertaintyModel>')))
+        with self.assertRaises(logictree.LogicTreeError) as ctx:
+            logictree.SourceModelLogicTree(fname)
+        self.assertIn('empty uncertaintyModel', str(ctx.exception))
+        smlt = logictree.SourceModelLogicTree(self.smlt_path)
+        # the empty values generated internally are fine instead
+        self.assertEqual(smlt.reduce('x1').num_paths, 1)
+
 
 class ReduceLtTestCase(unittest.TestCase):
     def test(self):
