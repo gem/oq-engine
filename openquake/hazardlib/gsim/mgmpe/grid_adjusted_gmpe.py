@@ -28,7 +28,11 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
-from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.imt import from_string as imt_from_string
+
+# CoeffsTable treats PGA as SA at this period for log-period interpolation
+PGA_ANCHOR_PERIOD = 0.01
 
 
 def load_sigma_for_term(
@@ -179,11 +183,136 @@ def load_residual_grids(hdf5_path):
                         sig_action, cell_ids, grids, sig_scalars
                         )
 
+    # Build CoeffsTable stores backing log-period interpolation across
+    # stored IMTs, plus the per-term stored-IMT list used to gate
+    # extrapolation.
+    cell_tables, path_tables, scalar_sig_tables, stored_periods = (
+        _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms))
+
     return {"grids": grids,
             "raytrace_grids": raytrace_grids, # Cells are OQ pgns instead of h3
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
-            "res_terms": res_terms}
+            "res_terms": res_terms,
+            "cell_tables": cell_tables,
+            "path_tables": path_tables,
+            "scalar_sig_tables": scalar_sig_tables,
+            "stored_periods": stored_periods}
+
+
+def _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms):
+    """
+    Assemble the four per-term stores used at compute time to interpolate
+    across IMTs: per-cell CoeffsTables for hypo/site terms (with "mean"
+    and, when configured, "sig" columns), per-cell CoeffsTables for path
+    terms alongside their polygons, per-term CoeffsTables of scalar
+    sigmas, and the sorted list of IMTs at which each term is stored.
+    """
+    cell_tables, path_tables, scalar_sig_tables, stored_periods = (
+        {}, {}, {}, {})
+
+    for term, cfg in res_terms.items():
+        if cfg["location"] == "path":
+            per_cell = {}
+            for imt_str, cell_dict in raytrace_grids.get(term, {}).items():
+                imt_obj = imt_from_string(imt_str)
+                for cell_id, (pgn, val) in cell_dict.items():
+                    per_cell.setdefault(cell_id, (pgn, {}))[1][imt_obj] = {
+                        "mean": float(val)}
+            path_tables[term] = {
+                cid: (pgn, CoeffsTable.fromdict(ddic))
+                for cid, (pgn, ddic) in per_cell.items()}
+            imt_strs = list(raytrace_grids.get(term, {}))
+        else:
+            per_cell = {}
+            for imt_str, term_dict in grids.items():
+                if term not in term_dict:
+                    continue
+                imt_obj = imt_from_string(imt_str)
+                mean_dict = term_dict[term]["mean"]
+                sig_dict = term_dict[term].get("sig") or {}
+                for cell_id, mval in mean_dict.items():
+                    row = {"mean": float(mval)}
+                    if cell_id in sig_dict:
+                        row["sig"] = float(sig_dict[cell_id])
+                    per_cell.setdefault(cell_id, {})[imt_obj] = row
+            cell_tables[term] = {
+                cid: CoeffsTable.fromdict(ddic)
+                for cid, ddic in per_cell.items()}
+            imt_strs = [s for s, td in grids.items() if term in td]
+
+        per_imt_sig = {
+            imt_from_string(s): {"sig": float(sig_scalars[s][term])}
+            for s in sig_scalars if term in sig_scalars[s]}
+        if per_imt_sig:
+            scalar_sig_tables[term] = CoeffsTable.fromdict(per_imt_sig)
+
+        stored_periods[term] = sorted(
+            imt_strs, key=lambda s: imt_from_string(s).period)
+
+    return cell_tables, path_tables, scalar_sig_tables, stored_periods
+
+
+def _check_in_range(imt, stored_imt_strs, term):
+    """
+    Raise ValueError if the target IMT period sits outside the stored
+    range for this term. PGA is treated as SA at PGA_ANCHOR_PERIOD for
+    the lower bound; CoeffsTable's PGA-anchored fallback (smallest SA
+    <= 0.05 s) handles the in-range short-period cases directly.
+    """
+    if imt.string == "PGA":
+        return
+    periods = sorted(
+        PGA_ANCHOR_PERIOD if s == "PGA" else imt_from_string(s).period
+        for s in stored_imt_strs)
+    if imt.period < periods[0] or imt.period > periods[-1]:
+        raise ValueError(
+            f"Cannot interpolate {imt} for term '{term}': target period "
+            f"{imt.period}s outside stored range "
+            f"[{periods[0]}s, {periods[-1]}s].")
+
+
+def _ensure_imt_available(grid_data, imt, imt_str):
+    """
+    Populate any missing per-term entries at imt_str in place by
+    log-period interpolation of the CoeffsTables built at load time.
+    Idempotent. Raises ValueError on extrapolation.
+    """
+    for term, cfg in grid_data["res_terms"].items():
+        stored = grid_data["stored_periods"].get(term, [])
+        if not stored or imt_str in stored:
+            continue
+
+        _check_in_range(imt, stored, term)
+
+        if cfg["location"] == "path":
+            synth = {}
+            for cell_id, (pgn, ct) in grid_data["path_tables"][term].items():
+                try:
+                    synth[cell_id] = (pgn, float(ct[imt]["mean"]))
+                except (KeyError, ValueError):
+                    continue  # Cell can't bracket; drift-fallback drops it
+            grid_data["raytrace_grids"].setdefault(term, {})[imt_str] = synth
+        else:
+            cells = grid_data["cell_tables"][term]
+            has_sig = "sig" in next(iter(cells.values())).rb.names
+            means, sigs = {}, ({} if has_sig else None)
+            for cell_id, ct in cells.items():
+                try:
+                    rec = ct[imt]
+                except (KeyError, ValueError):
+                    continue
+                means[cell_id] = float(rec["mean"])
+                if has_sig:
+                    sigs[cell_id] = float(rec["sig"])
+            entry = {"mean": means}
+            if has_sig:
+                entry["sig"] = sigs
+            grid_data["grids"].setdefault(imt_str, {})[term] = entry
+
+        if term in grid_data["scalar_sig_tables"]:
+            grid_data["sig_scalars"].setdefault(imt_str, {})[term] = float(
+                grid_data["scalar_sig_tables"][term][imt]["sig"])
 
 
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
@@ -342,7 +471,9 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
     Look up and apply corrections defined in the hdf5. The mean
-    adjustment is always added.
+    adjustment is always added. If the target IMT is not stored, values
+    are synthesized in place by log-period interpolation of CoeffsTables
+    built at load time; extrapolation raises ValueError.
 
     :param grid_data:
         Dict returned by load_residual_grids
@@ -359,13 +490,19 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     :param phi:
         Phi (standard 1d numpy array from compute)
     """
+    # Synthesize per-term interpolated entries in place if the target IMT
+    # is not stored (idempotent; existing entries are left untouched).
+    _ensure_imt_available(grid_data, imt, str(imt))
+
+    imt_str = str(imt)
+
     # Get adjustment data for given imt
-    entry = grid_data["grids"].get(imt)
-    
+    entry = grid_data["grids"].get(imt_str)
+
     # Check if no data
     if entry is None:
-        return 
-    
+        return
+
     # Apply each correction
     for term, cfg in grid_data["res_terms"].items():
         # Example of (term, cfg):
@@ -380,13 +517,13 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             
             # Travel path based (ray-tracing)
             if (term not in grid_data["raytrace_grids"] or
-                imt not in grid_data["raytrace_grids"][term]):
+                imt_str not in grid_data["raytrace_grids"][term]):
                 # Skip if this term has no data for the given IMT
                 continue
 
             # Get raytraced mean adjustment
             mean_adj = raytrace_path_adj(
-                grid_data["raytrace_grids"][term][imt], # Grid of OQ pgns + adjs
+                grid_data["raytrace_grids"][term][imt_str], # Grid of OQ pgns + adjs
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
@@ -414,7 +551,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             continue
 
         # Apply sigma adjustment to required component
-        adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi)
+        adjust_sigma(
+            grid_data, imt_str, term, cfg, ctx, sig_action, sig, tau, phi)
 
 
 class GridAdjustedGMPE(GMPE):
@@ -477,15 +615,27 @@ class GridAdjustedGMPE(GMPE):
     NOTE: The corrective terms (each key in the res_terms dict) are not
     fixed - the user can specify as they wish (e.g. only include dS2S).
     
-    NOTE: Corrections are stored per term per IMT in the HDF5. If an IMT
-    group is missing for a given term, no correction is applied for that
-    IMT (no error is raised).
+    NOTE: Corrections are stored per term per IMT in the HDF5. When the
+    target IMT is not stored for a given term, the mean and sigma
+    corrections are synthesized on the fly by log-period interpolation of
+    :class:`CoeffsTable` objects built at load time (per-cell for
+    hypo/site/path means and per-cell sigmas, per-term for scalar
+    sigmas). Extrapolation beyond the stored period range raises
+    ValueError; the target IMT must sit inside the stored SA range for
+    each term whose adjustment is required. PGA is treated as SA at 0.01
+    s for the lower bound when the smallest stored SA period is <= 0.05 s
+    (per :class:`CoeffsTable`'s PGA-anchored fallback). If a term has no
+    stored data at any IMT it is silently skipped for every target IMT.
 
     NOTE: The h3 grid cell resolution can vary (i.e., densify) or be constant.
 
-    NOTE: The h3 cell IDs (i.e. the grids) are looked-up on an IMT-by-IMT
-    basis because the availability of data used to derive the corrections
-    might vary with period.
+    NOTE: The h3 cell IDs (i.e. the grids) can vary IMT-by-IMT because
+    the data used to derive the corrections might vary with period. On
+    interpolation, cells whose per-cell CoeffsTable cannot bracket the
+    target IMT (e.g. the cell only exists on one side of the target
+    period) are dropped from the synthesized grid at that IMT; the
+    coarsest-to-finest spatial fallback then resolves each site through
+    a coarser cell when available.
 
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
@@ -564,5 +714,5 @@ class GridAdjustedGMPE(GMPE):
         
         # Apply grid-based corrections
         for m, imt in enumerate(imts):
-            _apply_grid_corrections(self.grid_data, ctx, str(imt),
+            _apply_grid_corrections(self.grid_data, ctx, imt,
                                     mean[m], sig[m], tau[m], phi[m])

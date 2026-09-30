@@ -2,13 +2,27 @@
 
 Classical PSHA calculation for five sites using `GridAdjustedGMPE` with
 `AkkarEtAlRjb2014` as the underlying GMM to be adjusted. Three h3-gridded
-residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) for
-PGA and SA(0.5) to both the mean predicted ground-motion and the mapped
-sigma component (can be total, tau or phi). SA(1.0) has no grid data and
-therefore receives no adjustment intentionally. The visualisation of the
-hdf5 clearly shows that the h3 grids can vary in density - this is
-intentional, with the `GridAdjustedGMPE` supporting either constant or
-varying density h3 grid cells.
+residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) to
+both the mean predicted ground-motion and the mapped sigma component
+(can be total, tau or phi). The HDF5 stores adjustments at four IMTs
+(PGA, SA(0.05), SA(0.3), SA(1.0)); the job runs at those two stored
+endpoint IMTs (PGA, SA(1.0)) plus two IMTs synthesized by log-period
+interpolation of the per-cell CoeffsTables built at load time
+(SA(0.025), SA(0.75)). Extrapolation beyond the stored SA range would
+raise `ValueError`. The visualisation of the hdf5 clearly shows that the
+h3 grids can vary in density - this is intentional, with the
+`GridAdjustedGMPE` supporting either constant or varying density h3 grid
+cells.
+
+### Per-cell adjustment spectra
+
+The plot below shows the mean adjustment per h3 cell for each of the
+three terms as a function of period. Filled circles mark the four
+stored IMTs; open squares mark the two IMTs (SA(0.025), SA(0.75)) that
+the QA test evaluates by log-period interpolation of the per-cell
+CoeffsTables.
+
+![Per-cell adjustment spectra](grid_adjustments_spectra.png)
 
 The hdf5 containing the corrections used in this simple test case is called
 `grid_adjustments.hdf5`.
