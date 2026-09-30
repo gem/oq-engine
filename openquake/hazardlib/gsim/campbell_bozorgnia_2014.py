@@ -20,9 +20,6 @@
 Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2014HighQ`
                :class:`CampbellBozorgnia2014LowQ`
-               :class:`CampbellBozorgnia2019`
-               :class:`CampbellBozorgnia2019HighQ`
-               :class:`CampbellBozorgnia2019LowQ`
 """
 import numpy as np
 
@@ -30,7 +27,7 @@ from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA, IA, CAV
+from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
@@ -476,7 +473,7 @@ class CampbellBozorgnia2014(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA, IA, CAV}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.GMRotI50`
@@ -640,10 +637,6 @@ IA.Dc20 = -0.0051
 ''').to_dict()
 
 
-class CampbellBozorgnia2019(CampbellBozorgnia2014):
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-
-
 add_alias('CampbellBozorgnia2014HighQ', CampbellBozorgnia2014,
           coeffs=coeffs_high)
 add_alias('CampbellBozorgnia2014LowQ', CampbellBozorgnia2014,
@@ -655,13 +648,3 @@ add_alias('CampbellBozorgnia2014HighQJapanSite', CampbellBozorgnia2014,
 add_alias('CampbellBozorgnia2014LowQJapanSite', CampbellBozorgnia2014,
           coeffs=coeffs_low, SJ=True)
 
-add_alias('CampbellBozorgnia2019HighQ', CampbellBozorgnia2019,
-          coeffs=coeffs_high)
-add_alias('CampbellBozorgnia2019LowQ', CampbellBozorgnia2019,
-          coeffs=coeffs_low)
-add_alias('CampbellBozorgnia2019JapanSite', CampbellBozorgnia2019,
-          SJ=True)
-add_alias('CampbellBozorgnia2019HighQJapanSite', CampbellBozorgnia2019,
-          coeffs=coeffs_high, SJ=True)
-add_alias('CampbellBozorgnia2019LowQJapanSite', CampbellBozorgnia2019,
-          coeffs=coeffs_low, SJ=True)
