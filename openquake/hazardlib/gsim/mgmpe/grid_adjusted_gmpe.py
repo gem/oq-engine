@@ -38,7 +38,7 @@ from openquake.hazardlib.imt import from_string as imt_from_string
 # no larger than PGA_ANCHOR_MAX_SA.
 PGA_ANCHOR_PERIOD = 0.01
 PGA_ANCHOR_MAX_SA = 0.05
-VALID_LOCATIONS = ("hypo", "site", "path")
+VALID_TARGETS = ("hypo", "site", "path")
 
 
 ### Helpers for loading HDF5 ###
@@ -46,45 +46,50 @@ VALID_LOCATIONS = ("hypo", "site", "path")
 def load_residual_grids(hdf5_path):
     """
     Read the HDF5 of gridded adjustments and return the dict that
-    :class:`GridAdjustedGMPE` consumes at compute time.
+    :class:`GridAdjustedGMPE` uses during call to compute method.
 
     Keys in the returned dict:
 
-    * ``grids``            - {imt_str: {term: {"mean": {cell_id: val},
-                                               "sig":  {cell_id: val}}}}
-                            for hypo/site terms; ``sig`` present only when
-                            per-cell sigma is configured.
-    * ``raytrace_grids``  - {term: {imt_str: {cell_id: (Polygon, val)}}}
-                            for path terms.
-    * ``sig_scalars``     - {imt_str: {term: float}} scalar per-IMT sigmas.
-    * ``h3_res``          - sorted list of h3 resolutions found across all
-                            stored cells (coarsest first).
-    * ``res_terms``       - the JSON config from the HDF5 root attribute.
-    * ``cell_tables``     - per-cell CoeffsTables for hypo/site terms, used
-                            at compute time to interpolate across IMTs.
-    * ``path_tables``     - (Polygon, CoeffsTable) per path cell.
-    * ``scalar_sig_tables`` - one CoeffsTable per term for the scalar
-                              per-IMT sigmas.
-    * ``stored_periods``  - {term: sorted list of IMT strings at which the
-                            term is stored}, used to gate extrapolation.
+    * "grids"             - {imt_str: {term: {"mean": {cell_id: val},
+                                              "sig":  {cell_id: val}}}}
+                            for hypo/site terms; "sig" present only when
+                            per-cell sigma is configured
 
-    :param hdf5_path:
-        Path to the hdf5 containing the grid-based adjustments.
+    * "raytrace_grids"    - {term: {imt_str: {cell_id: (Polygon, val)}}}
+                            for path adjustments
+                            
+    * "sig_scalars"       - {imt_str: {term: float}} scalar per-IMT sigmas
+
+    * "h3_res"            - sorted list of h3 resolutions found across all
+                            stored cells (coarsest first)
+
+    * "res_terms"         - the JSON config from the HDF5 root attribute
+
+    * "cell_tables"       - per-cell CoeffsTables for hypo/site terms, used
+                            at compute time to interpolate across IMTs
+
+    * "path_tables"       - (Polygon, CoeffsTable) per path cell
+
+    * "scalar_sig_tables" - one CoeffsTable per term for the scalar per-IMT
+                            sigmas
+
+    * "stored_periods"    - {term: sorted list of IMT strings at which the
+                            term is stored}, used to prevent extrapolation
     """
     grids = {}
     raytrace_grids = {}
     sig_scalars = {}
     resolutions = set()
 
-    # Read every (term, IMT) group off disk into the plain per-cell dicts
-    # used by the direct-lookup code paths.
+    # Read every (term, IMT) group in the hdf5 file into the plain per-cell dicts
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
         for term, cfg in res_terms.items():
             for imt_str in hf[term]:
                 _load_one_term_imt(
                     hf[term][imt_str], term, imt_str, cfg,
-                    grids, raytrace_grids, sig_scalars, resolutions)
+                    grids, raytrace_grids, sig_scalars, resolutions
+                    )
 
     # Build CoeffsTables so a compute-time query for a target IMT that is
     # not in the HDF5 can be answered by log-period interpolation.
@@ -109,18 +114,24 @@ def _load_one_term_imt(grp, term, imt_str, cfg,
     """
     Load the mean adjustment (and optional sigma) stored in one HDF5
     group into the caller-provided dicts.
+
+    See "load_residuals_grids" docstring for description of each argument
+    inputted into this.
     """
+    # Get location-type
     location = cfg["location"]
+
+    # Get sigma adjustment
     sig_action = cfg.get("sig_adjustment", "none")
 
-    # Cell IDs and mean values are always present; collect the h3
-    # resolution of every stored cell for the spatial fallback.
+    # Cell IDs and mean values must/should always be present; collect the
+    # h3 resolution of every stored cell for the spatial fallback
     cell_ids = grp["cell_id"][:].astype(str)
     mean_vals = grp[term][:]
     resolutions.update(h3.get_resolution(c) for c in cell_ids)
 
     # Path terms need OQ polygons ready for ray-tracing; hypo/site terms
-    # just need a {cell_id -> mean} dict for the point-in-cell lookup.
+    # just need a {cell_id -> mean} dict for the point-in-cell h3 lookup
     grids.setdefault(imt_str, {})
     sig_scalars.setdefault(imt_str, {})
     if location == "path":
@@ -130,45 +141,58 @@ def _load_one_term_imt(grp, term, imt_str, cfg,
         grids[imt_str][term] = {"mean": dict(zip(cell_ids, mean_vals))}
 
     if sig_action != "none":
-        _load_sigma(grp, term, imt_str, location,
-                    cell_ids, grids, sig_scalars)
+        # Need the sigma adjustments too then
+        _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars)
 
 
 def _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars):
     """
     Read the sigma adjustment for one (term, IMT). Sigma is stored either
     as a scalar HDF5 group attribute or as a per-cell dataset - never
-    both, and per-cell is not supported for path terms.
+    both, and for path terms the per-cell option is NOT supported.
     """
+    # Check present sigma adjustments
     sig_key = f"{term}_sig"
-    has_attr = sig_key in grp.attrs
-    has_dataset = sig_key in grp
+    scalar_sig = sig_key in grp.attrs
+    per_cell_sig = sig_key in grp
 
-    if has_attr and has_dataset:
+    # Cannot have both per-cell and single scalar sigma adjustment for
+    # a given term
+    if scalar_sig and per_cell_sig:
         raise ValueError(
             f"Both scalar attribute and dataset '{sig_key}' found for "
             f"term '{term}', IMT '{imt_str}'; provide exactly one.")
-    if not (has_attr or has_dataset):
+
+    # And need to make sure sigma adjustment is available for given IMT too
+    if not (scalar_sig or per_cell_sig):
         raise ValueError(
             f"Sigma adjustment requested for term '{term}' but "
-            f"'{sig_key}' is missing for IMT '{imt_str}'.")
+            f"'{sig_key}' is missing for this IMT '{imt_str}'.")
 
-    if has_attr:
+    # If scalar sigma adjustment check not negative and update adjustment dict
+    if scalar_sig:
         val = float(grp.attrs[sig_key])
         if val < 0:
             raise ValueError(
                 f"Negative sigma for term '{term}', IMT '{imt_str}'.")
         sig_scalars[imt_str][term] = val
+        # If it's scalar sigma (not per cell) then finish here
         return
 
+    # Make sure no per-cell sigma requested for path-based adjustment 
     if location == "path":
+        # By this point can only be per-cell adjustment so raise error
         raise ValueError(
             f"Per-cell sigma is not supported for path terms "
-            f"(term '{term}'); use a scalar attribute instead.")
+            f"(term '{term}'); use a scalar attribute instead."
+            )
+
+    # Make sure no negative sigma adjustment values over all cells
     vals = grp[sig_key][:]
     if np.any(vals < 0):
         raise ValueError(
             f"Negative sigma value for term '{term}', IMT '{imt_str}'.")
+    
     grids[imt_str][term]["sig"] = dict(zip(cell_ids, vals))
 
 
@@ -265,15 +289,15 @@ def _build_scalar_sig_ct(sig_scalars, term):
 
 
 ### Helpers for compute-time interpolation of missing IMTs ###
-
 def _check_in_range(imt, stored_imt_strs, term):
     """
     Raise ValueError if the target IMT period is outside the range in
-    which CoeffsTable can actually interpolate for this term. PGA
-    counts as SA at PGA_ANCHOR_PERIOD only when the smallest stored SA
-    period is <= PGA_ANCHOR_MAX_SA (which is when CoeffsTable's
-    PGA-anchored fallback kicks in); otherwise the lower bound is the
-    smallest stored SA period.
+    which CoeffsTable can actually interpolate for this term.
+    
+    PGA counts as SA at PGA_ANCHOR_PERIOD only when the smallest stored
+    SA period is <= PGA_ANCHOR_MAX_SA (which is when CoeffsTable's
+    PGA-anchored fallback kicks in). Otherwise otherwise the lower bound
+    is the smallest stored SA period.
     """
     if imt.string == "PGA":
         return
@@ -307,10 +331,10 @@ def _check_in_range(imt, stored_imt_strs, term):
 
 def _ensure_imt_available(grid_data, imt, imt_str):
     """
-    Populate any missing per-term entries at ``imt_str`` by log-period
-    interpolation of the CoeffsTables built at load time. Extrapolation
-    raises ValueError. Safe to call repeatedly for the same IMT: entries
-    already present are left untouched.
+    Populate any missing per-term entries for given IMT by log-period
+    interpolation of the CoeffsTable objects built at load time.
+    
+    Extrapolation raises a value-error.
     """
     for term, cfg in grid_data["res_terms"].items():
         stored = grid_data["stored_periods"].get(term, [])
@@ -521,7 +545,9 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     for a single target IMT. Raises ValueError on extrapolation.
     """
     # If this IMT isn't in the HDF5, fill it in by log-period interpolation
-    # of the CoeffsTables built at load time.
+    # of the CoeffsTable objects built at load time for each term's cells (nb
+    # we have per grid cell a CoeffTable by considering values it contains over
+    # all the IMT-based adjustments available within it)
     _ensure_imt_available(grid_data, imt, str(imt))
     imt_str = str(imt)
     for term, cfg in grid_data["res_terms"].items():
@@ -529,104 +555,118 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             grid_data, term, cfg, imt_str, ctx, mean, sig, tau, phi)
 
 
-### Helpers for the GSIM class ###
-
+### Helpers for checking/ensuring GMM can be adjusted ###
 def _validate_res_terms(res_terms, defined_stddev_types):
     """
-    Sanity-check the ``res_terms`` config. Rejects invalid locations
-    and refuses to modify tau/phi through a GMM that doesn't expose
-    random-effects residuals.
+    Rejects invalid location target types for the adjustment and refuse
+    to modify tau/phi for a GMM that lacks tau and phi sigma components.
     """
     needs_random_effects = False
     for cfg in res_terms.values():
-        if cfg["location"] not in VALID_LOCATIONS:
+        if cfg["location"] not in VALID_TARGETS:
+            # Check it is hypocentre, site or path-based adjustment
             raise ValueError(
                 f"Invalid location {cfg['location']!r}; must be one "
-                f"of {VALID_LOCATIONS}.")
+                f"of {VALID_TARGETS}.")
         if (cfg.get("sig_adjustment", "none") != "none"
                 and cfg.get("sig_comp_modified") in ("tau", "phi")):
+            # If sigma adjstment to tau/phi then set this True
             needs_random_effects = True
 
     if needs_random_effects:
+        # If here we are adjusting tau/phi so check GMM has them 
         required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
         if not required.issubset(defined_stddev_types):
             raise ValueError(
                 "Adjustments to tau and/or phi were configured but the "
-                "underlying GSIM does not expose random-effects residuals.")
+                "underlying GSIM does not have tau/phi sigma components.")
 
 
 def _extend_required_parameters(res_terms, current_rup, current_site):
     """
-    Extend the required rupture / site parameter sets based on which
-    location lookups the res_terms use. Returns the new (rupture, site)
-    parameter frozensets.
+    Extend the required rupture / site parameter sets required for the
+    modification of the underlying GMM based on which location lookups
+    the "res_terms" use.
     """
+    # Get the target types in the config
     locations = {cfg["location"] for cfg in res_terms.values()}
-    rup = current_rup
-    site = current_site
+    rup = current_rup # Existing rup params in GMM
+    site = current_site # Existing site params in GMM
     if locations & {"hypo", "path"}:
+        # Add them for hypo-based or path-based
         rup = frozenset(rup | {"hypo_lat", "hypo_lon"})
     if locations & {"site", "path"}:
+        # Add them for site-based or path based
         site = frozenset(site | {"lat", "lon"})
+
     return rup, site
 
-
-### GSIM class ###
 
 class GridAdjustedGMPE(GMPE):
     """
     A GSIM class that adds spatially-varying corrections stored in a
-    HDF5 file of h3-gridded residual terms on top of any underlying GMM.
+    HDF5 file of h3-gridded residual terms on top of any underlying GMM
+    (which in theory is your backbone model used to compute these residual
+    terms).
 
-    The HDF5 file has a root-level attribute ``res_terms`` (JSON) that
-    configures each corrective term (e.g. ``dL2L``, ``dS2S``,
-    ``att_per_km``). Every term specifies:
+    NOTE: This class/capability is highly experimental.
 
-    * ``location`` (required): how to resolve the correction spatially.
-      The lookup starts at the finest h3 resolution and falls back to
-      coarser resolutions; locations outside all cells receive zero.
+    The HDF5 file has a root-level attribute "res_terms" that configures each
+    corrective term (e.g. "dL2L", "dS2S, "att_per_km").
+    
+    Every term specifies:
 
-        * ``hypo`` = use the rupture hypocentre (``ctx.hypo_lat``, ``ctx.hypo_lon``)
-        * ``site`` = use the site location (``ctx.lat``, ``ctx.lon``)
-        * ``path`` = ray-trace from hypocentre to site through the stored
-          cells, accumulating a per-km adjustment along the way
+    * "location" (required): how to resolve the correction spatially. The
+      lookup starts at the finest h3 resolution and falls back to coarser
+      resolutions; locations outside all cells receive zero:
 
-    * ``sig_adjustment`` (optional, default ``none``): what to do to the
-      sigma component. When not ``none``, sigma must be provided for
-      each IMT group of that term as either:
+        * "hypo" = use the rupture hypocentre ("ctx.hypo_lat", "ctx.hypo_lon")
+        * "site" = use the site location ("ctx.lat", "ctx.lon")
+        * "path" = ray-trace from hypocentre to site through the stored cells,
+           accumulating a per-km adjustment along the way
 
-        * a scalar HDF5 group attribute ``{term}_sig``; or
-        * an HDF5 dataset ``{term}_sig`` giving one value per h3 cell
-          (looked up spatially the same way as the mean). Per-cell sigma
-          is not supported for path terms.
+    * "sig_adjustment" (optional, default "none"): what to do to the sigma
+      component. When not "none", sigma must be provided for each IMT group
+      of that term as either:
 
-      Actions:
+        * a scalar HDF5 group attribute keyed by "{term}_sig"
+        
+        OR
+        
+        * a HDF5 dataset (also keyed by "{term}_sig") giving one value per h3
+          cell (looked up spatially the same way as the mean) 
+        
+          NOTE: Per-cell sigma is not supported for path terms
 
-        * ``none``    = skip sigma adjustment (mean-only correction)
-        * ``sub``     = subtract variance from the chosen component
-        * ``add``     = add variance to the chosen component
-        * ``replace`` = overwrite the chosen component with the value
+        Actions:
 
-    * ``sig_comp_modified`` (required when ``sig_adjustment`` != ``none``):
-      which std-dev component to modify - ``tau``, ``phi`` or ``sig``.
+            * "none" = skip sigma adjustment (mean-only correction)
+            * "sub" = subtract variance from the chosen component
+            * "add" = add variance to the chosen component
+            * "replace" = overwrite the chosen component with the value
 
-    NOTES
+    * "sig_comp_modified" (required when "sig_adjustment" != "none") is the
+      std-dev component to modify ("tau", "phi" or "sig").
+
+    NOTE
 
     * The set of terms is not fixed - the user is free to include only
-      the ones they need.
+      the ones they need (and thus include only those in the HDF5 they
+      provide).
 
     * Corrections are stored per term per IMT. When the target IMT is
       not stored, the mean and sigma corrections are filled in on the
       fly by log-period interpolation of :class:`CoeffsTable` objects
-      built at load time. Extrapolation beyond the stored period range
-      raises ``ValueError``. PGA counts as SA at 0.01 s for the lower
-      bound only when the smallest stored SA period is <= 0.05 s (per
-      :class:`CoeffsTable`'s PGA-anchored fallback); otherwise a target
-      IMT below the smallest stored SA period is rejected. If a term
-      has no stored data at all it is silently skipped for every target
-      IMT.
+      built at load time.
+      
+    * Extrapolation beyond the stored period range raises a value-error.
+      PGA counts as SA at 0.01 s for the lower bound only when the smallest
+      stored SA period is <= 0.05 s (same as :class:`CoeffsTable`'s PGA
+      anchored fallback); otherwise a target IMT below the smallest stored
+      SA period is rejected. TODO: If a term has no stored data at all it is
+      silently skipped for every target IMT.
 
-    * The h3 grid cell resolution can vary per IMT because the
+    * The h3 grid cell resolution can vary over IMT because the
       calibration data may vary with period. When interpolating across
       IMTs, cells whose per-cell CoeffsTable cannot bracket the target
       IMT are dropped from the resulting grid at that IMT; the coarsest
@@ -657,17 +697,18 @@ class GridAdjustedGMPE(GMPE):
     experimental = True  # not extensively tested yet
 
     def __init__(self, gmpe_name, grid_hdf5_file, **kwargs):
-        # Wrap the underlying GMM and copy its declared parameters.
+        # Wrap the underlying GMM and copy its declared parameters
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
-        # Load the HDF5 once at construction time.
+        # Load the HDF5 once at construction time
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
-        # Validate the config and extend the required parameters.
+        # Validate the config and extend the required parameters
         _validate_res_terms(
             self.grid_data["res_terms"],
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
+        
         self.REQUIRES_RUPTURE_PARAMETERS, self.REQUIRES_SITES_PARAMETERS = (
             _extend_required_parameters(
                 self.grid_data["res_terms"],
@@ -680,9 +721,10 @@ class GridAdjustedGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>` for the input and
         result-value spec.
         """
-        # Get the base-GMM outputs, then add the grid corrections on top
-        # for each requested IMT.
+        # Get the base-GMM outputs, then add the grid
+        # corrections on top for each requested IMT
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
-            _apply_grid_corrections(self.grid_data, ctx, imt,
-                                    mean[m], sig[m], tau[m], phi[m])
+            _apply_grid_corrections(
+                self.grid_data, ctx, imt, mean[m], sig[m], tau[m], phi[m]
+                )
