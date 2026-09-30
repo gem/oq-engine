@@ -1,82 +1,88 @@
 ## Overview
 
-Classical PSHA calculation for four sites deliberately placed to
-exercise the H3 spatial fallback: site 1 falls in the finest (res-4)
-stored cell, site 2 in only the res-3 cell (falls back to coarser),
-site 3 in only the res-2 cell (falls back further), and site 4 sits
-outside every stored `dL2L`/`dS2S` cell entirely (correction defaults
-to zero, matching what happens for events or sites outside the region
-of the fitted grid in a real PSHA). All sites still sit inside a path
-cell for `att_per_km` so the raytraced correction applies. Underlying
-GMM is `AkkarEtAlRjb2014`. Three h3-gridded
-residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) to
-both the mean predicted ground-motion and the mapped sigma component
-(can be total, tau or phi). The HDF5 stores adjustments at four IMTs
-(PGA, SA(0.05), SA(0.3), SA(1.0)); the job runs at three of the
-stored IMTs (PGA, SA(0.3), SA(1.0)) plus two IMTs synthesized by
-log-period interpolation of the per-cell CoeffsTables built at load
-time (SA(0.025), SA(0.75)). Extrapolation beyond the stored SA range would
-raise `ValueError`. The visualisation of the hdf5 clearly shows that the
-h3 grids can vary in density - this is intentional, with the
-`GridAdjustedGMPE` supporting either constant or varying density h3 grid
-cells.
+Classical PSHA calculation that exercises `GridAdjustedGMPE` on top of
+`AkkarEtAlRjb2014`. Three h3-gridded correction terms are applied to
+both the mean and one sigma component of the base GMM:
 
-### Per-cell adjustment spectra
+| Term         | Location | Sigma adjustment | Sigma component | Sigma storage |
+|--------------|----------|------------------|-----------------|---------------|
+| `dL2L`       | hypo     | `sub`            | `tau`           | scalar (per-IMT attr) |
+| `dS2S`       | site     | `sub`            | `phi`           | per-cell dataset |
+| `att_per_km` | path     | `sub`            | `phi`           | scalar (per-IMT attr) |
 
-The plot below shows the mean adjustment per h3 cell for each of the
-three terms as a function of period. Filled circles mark the four
-stored IMTs; open squares mark the two IMTs (SA(0.025), SA(0.75)) that
-the QA test evaluates by log-period interpolation of the per-cell
-CoeffsTables.
+## Test intent
 
-![Per-cell adjustment spectra](grid_adjustments_spectra.png)
+The four sites and the mixed-resolution grids in `grid_adjustments.hdf5`
+are chosen to cover the paths through the code that matter:
 
-### Uniform hazard response spectra at the test sites
+* **Site 1 (green)** falls inside the finest res-4 hypo/site cell:
+  direct-lookup at full resolution.
+* **Site 2 (blue)** falls only inside the res-3 cell: the finest -> coarsest
+  spatial fallback drops one level.
+* **Site 3 (magenta)** falls only inside the res-2 cell: the fallback
+  drops two levels.
+* **Site 4 (black)** falls outside every stored `dL2L`/`dS2S` cell:
+  the correction is zero (same behaviour a real PSHA sees for a source
+  or site outside the fitted-grid region).
 
-The plot below shows the 475-year return period UHRS at each of the
-four test sites (annual PoE = 1/475 ≈ 0.002105). IMLs are found by
-log-log interpolation of each mean hazard curve at the target PoE.
-Directly stored IMTs (PGA, SA(0.3), SA(1.0)) are open circles;
-log-period interpolated IMTs (SA(0.025), SA(0.75)) are crosses. Axes are
-linear-linear; the spectrum is smooth across period despite two of the
-four IMTs being synthesised by log-period interpolation of the per-cell
-adjustments.
+Ray-tracing for `att_per_km` is exercised by a deliberately mixed-
+resolution path grid (four res-4 cells plus one res-3):
 
-![UHRS at case_11 sites](uhrs_at_sites.png)
+* Site 1's ray sits entirely inside a single fine cell.
+* Site 2's ray crosses two fine cells.
+* Site 3's ray crosses two fine cells and then the coarser res-3 cell.
+* Site 4's ray crosses two fine cells and then leaves the grid entirely
+  for the last few km (zero contribution over that segment).
+* One stored path cell is deliberately placed off every ray, testing
+  that a cell present in the grid but not on any ray contributes zero.
 
-The hdf5 containing the corrections used in this simple test case is called
-`grid_adjustments.hdf5`.
+## IMT coverage and log-period interpolation
 
-If the user inspects the hdf5 file, you will notice that in the case of
-`dL2L` and `att_per_km`, we have specified a scalar sigma adjustment for
-each IMT (as an attribute in the associated groups), whereas for `dS2S`
-we have specified a per-cell adjustment  (additional dataset in the group
-itself). This option is to provide flexibility to the user. For path-based
-adjustments, currently the use of a per-cell adjustment is not supported
-(an error will be raised by `GridAdjustedGMPE`).
+The HDF5 stores adjustments at four IMTs (PGA, SA(0.05), SA(0.3),
+SA(1.0)). The job asks for those two endpoint IMTs (PGA, SA(1.0)) plus
+two additional IMTs (SA(0.025), SA(0.75)) that require log-period
+interpolation of the per-cell `CoeffsTable` objects built at load time.
+Extrapolation beyond the stored SA range raises `ValueError`.
 
-## A Visualisation of the Grid in the HDF5
+## Sigma storage flexibility
+
+`dL2L` and `att_per_km` store sigma as a scalar per-IMT attribute
+(`{term}_sig`); `dS2S` stores sigma as a per-cell dataset of the same
+name. Either form is accepted; per-cell sigma is not supported for
+path terms.
+
+## Grid visualisation
 
 ![Grid adjustments overview](grid_adjustments_overview.png)
 
-The figure shows the 3 mean adjustments for PGA (note that because for
-`dS2S` we have specified a per-cell reduction to phi that a similar grid
-exists for this GMM sigma correction too in the hdf5):
+Yellow star = hypocentre; triangles = the four sites in the site
+model, colour-coded (site 1 green, site 2 blue, site 3 magenta, site 4
+black). Each hexagon is labelled with its term name and 1-based index
+(same numbering as in the per-cell spectra plot below).
 
-| Panel | Content |
-|---|---|
-| left | `dL2L`-based mean ground-motion correction per h3 cell (hypocentre lookup) |
-| centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup) |
-| right | `att_per_km`-based mean ground-motion correction per travel path (raytracing) |
+## Per-cell adjustment spectra
 
-Yellow star = hypocentre; triangles = the four sites in the site model,
-labelled site 1 through site 4 and colour-coded consistently with the
-UHRS plot below (site 1 green, site 2 blue, site 3 magenta, site 4
-black).
+![Per-cell adjustment spectra](grid_adjustments_spectra.png)
 
-## Additional Information
+For each term, the mean adjustment per h3 cell is plotted against
+period. Filled circles are the four stored IMTs; open squares mark the
+two IMTs (SA(0.025), SA(0.75)) that the QA test evaluates by log-period
+interpolation.
 
-It's advisable to consult the `GridAdjustedGMPE` GSIM module to fully understand this feature
-if you plan to use it (`oq-engine/openquake/hazardlib/gsim/mgmpe/grid_adjusted_gmpe.py`).
+## Uniform hazard response spectra at the four sites
 
-Also, please note that the correction values provided in this test are arbitrary.
+![UHRS at case_11 sites](uhrs_at_sites.png)
+
+475-year return period UHRS at each site (annual PoE = 1/475). IMLs
+come from log-log interpolation of the mean hazard curve at the target
+PoE. Open circles are the directly stored IMTs (PGA, SA(0.3), SA(1.0));
+crosses are the interpolated IMTs (SA(0.025), SA(0.75)). The spectrum
+stays smooth across period despite two of the five IMTs being filled
+in by log-period interpolation of the per-cell adjustments.
+
+## Additional notes
+
+The correction values in `grid_adjustments.hdf5` are arbitrary and are
+generated from smooth log-period formulas so the interpolation results
+are exactly predictable. See `grid_adjusted_gmpe.py` for the full
+`GridAdjustedGMPE` documentation.
