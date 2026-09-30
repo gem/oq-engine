@@ -29,7 +29,7 @@ CoeffsTables.
 The plot below shows the 475-year return period UHRS at each of the
 four test sites (annual PoE = 1/475 ≈ 0.002105). IMLs are found by
 log-log interpolation of each mean hazard curve at the target PoE.
-Directly stored IMTs (PGA, SA(0.3), SA(1.0)) are filled circles;
+Directly stored IMTs (PGA, SA(0.3), SA(1.0)) are open circles;
 log-period interpolated IMTs (SA(0.025), SA(0.75)) are crosses. Axes are
 linear-linear; the spectrum is smooth across period despite two of the
 four IMTs being synthesised by log-period interpolation of the per-cell
@@ -62,7 +62,10 @@ exists for this GMM sigma correction too in the hdf5):
 | centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup) |
 | right | `att_per_km`-based mean ground-motion correction per travel path (raytracing) |
 
-Red star = hypocentre; green triangles = sites in the site model.
+Yellow star = hypocentre; triangles = the four sites in the site model,
+labelled site 1 through site 4 and colour-coded consistently with the
+UHRS plot below (site 1 blue, site 2 green, site 3 purple, site 4
+teal).
 
 ## Additional Information
 
