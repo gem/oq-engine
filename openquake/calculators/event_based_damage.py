@@ -252,32 +252,72 @@ class DamageCalculator(EventBasedRiskCalculator):
 
             state2column = dict(zip(self.crmodel.damage_states[1:],
                                     self.crmodel.get_dmg_csq()))
+            # Allow non_operational as source state too
+            state2column['non_operational'] = 'non_operational'
+            
             self.interdep_df['col'] = [state2column[s] for s in self.interdep_df.source_damage_state]
             self.interdep_df['parent_id'] = [asset2id_parent[a] for a in self.interdep_df.source_asset_id]
             self.interdep_df['child_id'] = [asset2id_child[a] for a in self.interdep_df.target_asset_id]
-            bdg_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
-            road_df = self.datastore.read_df('risk_by_event', 'event_id')
-            # for building
-            print(bdg_df)
-            print(road_df)
-            road_df = road_df.rename(columns={'non_operational': 'non_operational_orig'})
-            road_df['non_operational_inter'] = 0
-            road_dfs = []
+            parent_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
+            child_df = self.datastore.read_df('risk_by_event', 'event_id')
+
+            print(parent_df)
+            print(child_df)
+            
+            child_df = child_df.rename(columns={'non_operational': 'non_operational_orig'})
+            child_df['non_operational_inter'] = 0
             
             for i, row in self.interdep_df.iterrows():
-                bdf_df = bdg_df[bdg_df.agg_id==row['parent_id']]
-                rdf_df = road_df[road_df.agg_id==row['child_id']]
-                rdf_df['non_operational_inter'] = (bdf_df[row['col']].to_numpy()==1).astype(numpy.float32)
-                road_dfs.append(rdf_df)
-            
-            rdf = pandas.concat(road_dfs)
-            rdf['non_operational'] = numpy.maximum(rdf['non_operational_orig'].to_numpy(), rdf['non_operational_inter'].to_numpy())
+                # Find events where the source assets in in the 
+                # triggering damage/functionality state
+                source_mask = (
+                    (parent_df.agg_id == row.parent_id) &
+                    (parent_df[row.col] == 1)
+                    )
+                selected_events = parent_df.index[source_mask].unique()
+                
+                # Set the target asset as non-operational for those events
+                target_mask = (
+                    (child_df.agg_id == row.child_id) &
+                    child_df.index.isin(selected_events)
+                    )
+                child_df.loc[target_mask, 'non_operational_inter'] = 1
+
+            child_df['non_operational'] = numpy.maximum(
+                child_df['non_operational_orig'].to_numpy(), 
+                child_df['non_operational_inter'].to_numpy())
+
+            # Correct the total values per event
+            total_agg_id = child_df.agg_id.max()
+            asset_mask = child_df.agg_id != total_agg_id
+            total_mask = child_df.agg_id == total_agg_id
+
+            inter_totals = (
+                child_df.loc[asset_mask]
+                .groupby(level='event_id')['non_operational_inter']
+                .sum()
+            )
+            nonop_totals = (
+                child_df.loc[asset_mask]
+                .groupby(level='event_id')['non_operational']
+                .sum()
+            )
+
+            child_df.loc[total_mask, 'non_operational_inter'] = (
+                child_df.loc[total_mask].index.map(inter_totals)
+            )
+
+            child_df.loc[total_mask, 'non_operational'] = (
+                child_df.loc[total_mask].index.map(nonop_totals)
+            )
 
             # Storing new columns in the dstore
-            # del self.datastore['risk_by_event/non_operational']
-            self.datastore['risk_by_event/non_operational'][:] = rdf['non_operational']
-            self.datastore['risk_by_event/non_operational_orig'] = rdf['non_operational_orig']
-            self.datastore['risk_by_event/non_operational_inter'] = rdf['non_operational_inter']
+            self.datastore['risk_by_event/non_operational'][:] = (
+                child_df['non_operational'])
+            self.datastore['risk_by_event/non_operational_orig'] = (
+                child_df['non_operational_orig'])
+            self.datastore['risk_by_event/non_operational_inter'] = (
+                child_df['non_operational_inter'])
             
             breakpoint()
 
