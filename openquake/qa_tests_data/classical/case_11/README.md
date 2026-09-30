@@ -5,10 +5,10 @@ Classical PSHA calculation for four sites using `GridAdjustedGMPE` with
 residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) to
 both the mean predicted ground-motion and the mapped sigma component
 (can be total, tau or phi). The HDF5 stores adjustments at four IMTs
-(PGA, SA(0.05), SA(0.3), SA(1.0)); the job runs at those two stored
-endpoint IMTs (PGA, SA(1.0)) plus two IMTs synthesized by log-period
-interpolation of the per-cell CoeffsTables built at load time
-(SA(0.025), SA(0.75)). Extrapolation beyond the stored SA range would
+(PGA, SA(0.05), SA(0.3), SA(1.0)); the job runs at three of the
+stored IMTs (PGA, SA(0.3), SA(1.0)) plus two IMTs synthesized by
+log-period interpolation of the per-cell CoeffsTables built at load
+time (SA(0.025), SA(0.75)). Extrapolation beyond the stored SA range would
 raise `ValueError`. The visualisation of the hdf5 clearly shows that the
 h3 grids can vary in density - this is intentional, with the
 `GridAdjustedGMPE` supporting either constant or varying density h3 grid
@@ -29,8 +29,8 @@ CoeffsTables.
 The plot below shows the 475-year return period UHRS at each of the
 four test sites (annual PoE = 1/475 ≈ 0.002105). IMLs are found by
 log-log interpolation of each mean hazard curve at the target PoE.
-Directly stored IMTs (PGA, SA(1.0)) are filled circles; log-period
-interpolated IMTs (SA(0.025), SA(0.75)) are open squares. Axes are
+Directly stored IMTs (PGA, SA(0.3), SA(1.0)) are filled circles;
+log-period interpolated IMTs (SA(0.025), SA(0.75)) are crosses. Axes are
 linear-linear; the spectrum is smooth across period despite two of the
 four IMTs being synthesised by log-period interpolation of the per-cell
 adjustments.

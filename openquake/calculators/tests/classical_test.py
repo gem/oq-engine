@@ -270,12 +270,13 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(hcurves1, hcurves2)
 
     def test_case_11(self):
-        # Check GridAdjustedGMPE at directly-stored IMTs (PGA, SA(1.0))
-        # and at IMTs requring log-period interpolation of the stored
-        # per-cell CoeffsTables - SA(0.025) and SA(0.75)
+        # Check GridAdjustedGMPE at directly-stored IMTs (PGA, SA(0.3),
+        # SA(1.0)) and at IMTs requring log-period interpolation of the
+        # stored per-cell CoeffsTables - SA(0.025) and SA(0.75)
         self.assert_curves_ok(
             ['hazard_curve-mean-PGA.csv',
              'hazard_curve-mean-SA(0.025).csv', # Interpolated
+             'hazard_curve-mean-SA(0.3).csv',
              'hazard_curve-mean-SA(0.75).csv',  # Interpolated
              'hazard_curve-mean-SA(1.0).csv'],
              case_11.__file__)
