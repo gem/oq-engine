@@ -52,7 +52,7 @@ def _handle_interp_failure(term, imt, reason, **context):
         f"{imt}: {reason}" + (f" [{details}]" if details else ""))
 
 
-def _site_covered_at_any_period(grids, term, key, lat, lon,
+def _loc_covered_at_any_period(grids, term, key, lat, lon,
                                 h3_res, stored_periods):
     """
     True if ("lat", "lon") sits inside a stored cell for "term" /
@@ -221,7 +221,7 @@ def grid_lookup(grid_dict, lats, lons, h3_res, default=0.0):
     vals = np.full(n, default, dtype=float)
     found = np.zeros(n, dtype=bool)
 
-    # Finest-first: once resolved at a finer resolution the site stays there
+    # Finest-first: once resolved at a finer resolution the location stays there
     for res in reversed(h3_res):
         if found.all():
             break
@@ -274,13 +274,13 @@ def _hypo_site_coords(cfg, ctx):
     return ctx.lat, ctx.lon
 
 
-def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
-                         h3_res, stored_periods, periods_sec):
+def _per_loc_log_interp(grids, term, key, target_imt, lats, lons,
+                        h3_res, stored_periods, periods_sec):
     """
-    Per-site log-period interp over per-period finest-cell lookups;
+    Per-location log-period interp over per-period finest-cell lookups;
     uniform misses stay 0, partial-coverage bracket fails raise
     """
-    # Per stored period: per-site value with NaN meaning "no cell here"
+    # Per stored period: per-location value with NaN meaning "no cell here"
     per_period_vals = {}
     for p_str in stored_periods:
         term_at_p = grids.get(p_str, {}).get(term, {})
@@ -291,13 +291,13 @@ def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
 
     target_period = target_imt.period
 
-    # Per site: assemble local (period, value) pairs and interp at target IMT
+    # Per location: assemble local (period, value) pairs and interp at target IMT
     n = len(lats)
     out = np.zeros(n)
     for i in range(n):
         pairs = _ctx_row_pairs(per_period_vals, periods_sec, i)
         if not pairs:
-            continue  # uniformly uncovered site: 0 is the right answer
+            continue  # uniformly uncovered location: 0 is the right answer
         val = _log_period_interp(target_period, pairs)
         if val is None:
             _handle_interp_failure(
@@ -356,7 +356,7 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
     vals = grid_lookup(direct_grid, lats, lons, h3_res, default=np.nan)
     missing = np.where(np.isnan(vals))[0]
     for i in missing:
-        if _site_covered_at_any_period(
+        if _loc_covered_at_any_period(
                 grids, term, key, lats[i], lons[i],
                 h3_res, stored_periods):
             _handle_interp_failure(
@@ -372,7 +372,7 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
 
 def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
-    Per-site mean adjustment for one hypo/site term at target IMT
+    Per-location mean adjustment for one hypo/site term at target IMT
     """
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
@@ -384,8 +384,8 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
         return _direct_lookup_or_fail(
             direct, lats, lons, h3_res, term, imt, "mean",
             grid_data["grids"], stored_periods)
-    # Interp path: per-site log-period interp over per-period lookups
-    return _per_site_log_interp(
+    # Interp path: per-location log-period interp over per-period lookups
+    return _per_loc_log_interp(
         grid_data["grids"], term, "mean", imt,
         lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"])
 
@@ -430,7 +430,7 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
             grid_data["grids"], stored_periods
             )
     
-    return _per_site_log_interp(
+    return _per_loc_log_interp(
         grid_data["grids"], term, "sig", imt,
         lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"]
         )
@@ -463,7 +463,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     if imt.string not in stored_periods:
         _check_in_range(imt, grid_data["periods_hdf5"][term], term)
 
-    # Path uses per-ray interp, hypo/site uses per-site
+    # Path uses per-ray interp, hypo/site uses per-location
     if cfg["location"] == "path":
         mean += _path_mean_adj(grid_data, term, imt, ctx, stored_periods)
     else:
