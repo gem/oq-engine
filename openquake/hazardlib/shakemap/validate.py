@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
+import os
+import threading
 from dataclasses import dataclass
 import numpy
 
@@ -32,6 +33,20 @@ from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.nrml import validators as nrml_validators
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
+
+# The API runs validation in a threadpool. Serialize HDF5 reads per process;
+# independent worker processes can still read the file concurrently.
+_HDF5_READ_LOCK = threading.RLock()
+
+
+def _reset_hdf5_read_lock():
+    """Replace the lock in a forked child process."""
+    global _HDF5_READ_LOCK
+    _HDF5_READ_LOCK = threading.RLock()
+
+
+if hasattr(os, 'register_at_fork'):
+    os.register_at_fork(after_in_child=_reset_hdf5_read_lock)
 
 
 @dataclass
@@ -117,8 +132,10 @@ class ImpactParam:
                     f' ({rupdic["lat"]}, {rupdic["lon"]})')
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
-        _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
-            oq, h5={'performance_data': hdf5.FakeDataset()})
+        with _HDF5_READ_LOCK:
+            _sitecol, assetcol, _discarded, _exp = (
+                readinput.get_sitecol_assetcol(
+                    oq, h5={'performance_data': hdf5.FakeDataset()}))
         id0s = numpy.unique(assetcol['ID_0'])
         countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
         tmap_keys = get_tmap_keys(self.exposure_hdf5, countries)
@@ -314,9 +331,10 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     """
     :returns: list of TRTs for the given mosaic model
     """
-    with hdf5.File(exposure_hdf5) as f:
-        df = f.read_df('model_trt_gsim_weight',
-                       sel={'model': mosaic_model.encode()})
+    with _HDF5_READ_LOCK:
+        with hdf5.File(exposure_hdf5) as f:
+            df = f.read_df('model_trt_gsim_weight',
+                           sel={'model': mosaic_model.encode()})
     trts = [trt.decode('utf8') for trt in df.trt.unique()]
     return trts
 
@@ -326,10 +344,11 @@ def get_tmap_keys(exposure_hdf5, countries):
     :returns: list of taxonomy mappings as keys in the the "tmap" data group
     """
     keys = []
-    with hdf5.File(exposure_hdf5, 'r') as exp:
-        for key in exp['tmap']:
-            if set(key.split('_')) & countries:
-                keys.append(key)
+    with _HDF5_READ_LOCK:
+        with hdf5.File(exposure_hdf5, 'r') as exp:
+            for key in exp['tmap']:
+                if set(key.split('_')) & countries:
+                    keys.append(key)
     return keys
 
 
