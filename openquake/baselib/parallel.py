@@ -506,6 +506,30 @@ def sendback(res, zsocket):
     return nbytes
 
 
+def task_weight(arg):
+    """
+    :param arg: the first argument of a task
+    :returns: the weight of the argument, used in the task_info dataset
+
+    The weight of a task is the estimated cost of the work it performs,
+    so it is the sum of the weights of the items it will process. The
+    argument is however often a plain list of identifiers (see the
+    classical tasks, which receive the keys of the source groups) and
+    then the weight has to be set by the task itself (see
+    `openquake.calculators.classical.classical`).
+    """
+    try:
+        return arg.weight  # for instance a SourceGroup
+    except AttributeError:
+        pass
+    if isinstance(arg, (list, tuple)) and arg:
+        try:
+            return sum(item.weight for item in arg)
+        except AttributeError:
+            pass
+    return 1.
+
+
 def safely_call(func, args, task_no, mon):
     """
     Call the given function with the given arguments safely, i.e.
@@ -529,7 +553,7 @@ def safely_call(func, args, task_no, mon):
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
-    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.weight = task_weight(args[0])  # used in task_info
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
@@ -939,7 +963,7 @@ class Starmap(object):
                 task.result(timeout=0)
 
     def _loop(self):
-        self.busytime = AccumDict(accum=[])  # pid -> time
+        self.busytime = AccumDict()  # name -> pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -980,14 +1004,22 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        if len(self.busytime) > 1:
-            times = numpy.array(list(self.busytime.values()))
-            if self.h5.mode != 'r':
-                self.monitor.save_starmap_info(self.h5, self.name, times)
+        # NB: a Starmap can generate tasks with different names, as
+        # preclassical -> filter_weight, or classical -> baseclassical
+        # when the tasks are split for being too slow (see the comment
+        # in classical.py); there is one row per task name, so that the
+        # tasks of different kinds are not mixed together
+        for name, dic in self.busytime.items():
+            if len(dic) > 1:  # no statistics with a single core
+                times = numpy.array(list(dic.values()))
+                if self.h5.mode != 'r':
+                    self.monitor.save_starmap_info(self.h5, name, times)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
-        self.busytime += {res.workerid: res.mon.duration}
+        name = res.mon.operation[6:]  # strip 'total '
+        dic = self.busytime.setdefault(name, AccumDict(accum=0.))
+        dic += {res.workerid: res.mon.duration}
         del self.tasks[res.mon.task_no]
         self._submit_many(1)
         todo = set(range(self.task_no)) - finished
@@ -998,7 +1030,6 @@ class Starmap(object):
         if self.h5.mode != 'r':
             del self.h5['task_sent']
             self.h5['task_sent'] = str(task_sent)
-        name = res.mon.operation[6:]  # strip 'total '
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:

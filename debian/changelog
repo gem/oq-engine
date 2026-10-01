@@ -28,6 +28,9 @@
     sigmas in the deterministic MCE, which were wrong (too large by a factor
     of 1.5-3) when the source model logic tree spanned multiple tectonic
     region types, as in the AELO models
+  * The export of the calculation results (i.e. GET /v1/calc/result/:id) is
+    now performed by FastAPI and proxied by Django, like many other
+    endpoints; the export logic lives in openquake/server/services.py
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
     source, i.e. when there is no deterministic scenario for that IMT
   * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are

@@ -292,8 +292,13 @@ class LogContext:
                 user_name, None if isinstance(hc_id, str) else hc_id,
                 host)
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
-            if os.path.exists(path):  # sanity check on the calculation ID
-                raise RuntimeError('There is a pre-existing file %s' % path)
+            if os.path.exists(path):
+                if use_server():
+                    raise RuntimeError('There is a pre-existing file %s' % path)
+                else:
+                    # single user installation with pre-existing calculation
+                    logging.warning(f'Overwriting {path}')
+                    os.remove(path)                    
         else:
             # assume the calc_id was alreay created in the db
             self.new = False
