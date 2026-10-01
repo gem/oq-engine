@@ -65,10 +65,11 @@ def stress_reads(operation, iterations, progress_every, concurrency):
             print(f'Completed {completed_rounds} concurrent call rounds',
                   flush=True)
 
+    start_barrier = Barrier(concurrency)
     barrier = Barrier(concurrency, action=report_progress)
 
     def reader(_):
-        barrier.wait()  # synchronize the start of the first round
+        start_barrier.wait()  # synchronize the first round
         for _ in range(iterations):
             timed_operation()
             barrier.wait()

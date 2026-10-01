@@ -32,13 +32,29 @@ def parse_headers(header_args):
     return headers
 
 
-def get_hcurves_export_url(base_url, job_id, headers, timeout):
+def login(session, base_url, username, password, timeout):
+    """Log in to the engine API when credentials were supplied."""
+    if not username:
+        return
+    endpoint = urljoin(base_url.rstrip('/') + '/', 'accounts/ajax_login/')
+    response = session.post(endpoint, data=dict(
+        username=username, password=password), timeout=timeout)
+    response.raise_for_status()
+    if response.text.strip() != 'Successful login':
+        raise RuntimeError(f'Engine API login failed: {response.text}')
+
+
+def get_hcurves_export_url(base_url, job_id, headers, timeout,
+                           username, password):
     """Find the API URL for the job's hcurves result export."""
     endpoint = urljoin(base_url.rstrip('/') + '/',
                        f'v1/calc/{job_id}/results')
-    response = requests.get(endpoint, headers=headers, timeout=timeout)
-    response.raise_for_status()
-    results = response.json()
+    with requests.Session() as session:
+        session.headers.update(headers)
+        login(session, base_url, username, password, timeout)
+        response = session.get(endpoint, timeout=timeout)
+        response.raise_for_status()
+        results = response.json()
     matches = [result for result in results if result['type'] == 'hcurves']
     if not matches:
         raise RuntimeError(f'Job {job_id} has no exportable hcurves result')
@@ -46,12 +62,13 @@ def get_hcurves_export_url(base_url, job_id, headers, timeout):
                    f"v1/calc/result/{matches[0]['id']}")
 
 
-def stress_requests(url, headers, timeout, iterations, progress_every,
-                    concurrency):
+def stress_requests(url, base_url, headers, username, password, timeout,
+                    iterations, progress_every, concurrency):
     """Issue synchronized requests and return average latency and bytes."""
     timing_lock = threading.Lock()
     completed_rounds = 0
-    elapsed_total = 0.0
+    elapsed_samples = []
+    header_samples = []
     bytes_total = 0
     content_type = ''
 
@@ -62,19 +79,27 @@ def stress_requests(url, headers, timeout, iterations, progress_every,
             print(f'Completed {completed_rounds} concurrent request rounds',
                   flush=True)
 
+    start_barrier = threading.Barrier(concurrency)
     barrier = threading.Barrier(concurrency, action=report_progress)
 
     def worker(_):
-        nonlocal elapsed_total, bytes_total, content_type
+        nonlocal bytes_total, content_type
         with requests.Session() as session:
             session.headers.update(headers)
+            try:
+                login(session, base_url, username, password, timeout)
+            except Exception:
+                start_barrier.abort()
+                barrier.abort()
+                raise
+            start_barrier.wait()
             for _ in range(iterations):
-                barrier.wait()
                 started = perf_counter()
                 try:
                     response = session.get(
                         url, params={'export_type': 'csv'}, timeout=timeout)
                     response.raise_for_status()
+                    header_elapsed = response.elapsed.total_seconds()
                     size = len(response.content)
                     ctype = response.headers.get('Content-Type', '')
                 except Exception:
@@ -82,15 +107,20 @@ def stress_requests(url, headers, timeout, iterations, progress_every,
                     raise
                 elapsed = perf_counter() - started
                 with timing_lock:
-                    elapsed_total += elapsed
+                    elapsed_samples.append(elapsed)
+                    header_samples.append(header_elapsed)
                     bytes_total += size
                     content_type = ctype
                 barrier.wait()
 
+    wall_started = perf_counter()
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         list(pool.map(worker, range(concurrency)))
+    wall_elapsed = perf_counter() - wall_started
     calls = concurrency * iterations
-    return elapsed_total / calls, bytes_total // calls, content_type
+    return (sum(elapsed_samples) / calls,
+            sum(header_samples) / calls, wall_elapsed,
+            bytes_total // calls, content_type)
 
 
 def main():
@@ -100,6 +130,8 @@ def main():
                         help='engine API base URL')
     parser.add_argument('--job-id', type=int, required=True,
                         help='job ID containing hazard curves')
+    parser.add_argument('--username', help='engine API login username')
+    parser.add_argument('--password', help='engine API login password')
     parser.add_argument('--concurrency', type=int, default=2,
                         help='number of concurrent workers (default: 2)')
     parser.add_argument('--iterations', type=int, default=100,
@@ -114,6 +146,8 @@ def main():
             args.progress_every < 1 or args.timeout <= 0):
         parser.error('concurrency must be >= 2; iterations, progress-every, '
                      'and timeout must be positive')
+    if bool(args.username) != bool(args.password):
+        parser.error('--username and --password must be supplied together')
     try:
         headers = parse_headers(args.header)
     except ValueError as exc:
@@ -121,12 +155,17 @@ def main():
 
     faulthandler.enable()
     url = get_hcurves_export_url(
-        args.base_url, args.job_id, headers, args.timeout)
+        args.base_url, args.job_id, headers, args.timeout,
+        args.username, args.password)
     print(f'Exporting hcurves for job {args.job_id} from {url}', flush=True)
-    average, average_bytes, content_type = stress_requests(
-        url, headers, args.timeout, args.iterations, args.progress_every,
-        args.concurrency)
-    print(f'Average request time: {average:.6f} seconds', flush=True)
+    average, header_average, wall_elapsed, average_bytes, content_type = (
+        stress_requests(url, args.base_url, headers, args.username,
+                        args.password, args.timeout, args.iterations,
+                        args.progress_every, args.concurrency))
+    print(f'Average time to response headers: {header_average:.6f} seconds',
+          flush=True)
+    print(f'Average full request time: {average:.6f} seconds', flush=True)
+    print(f'Total wall time: {wall_elapsed:.3f} seconds', flush=True)
     print(f'Average response size: {average_bytes} bytes '
           f'({content_type})', flush=True)
     print('Completed without a segfault', flush=True)
