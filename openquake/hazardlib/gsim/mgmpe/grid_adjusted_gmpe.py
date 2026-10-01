@@ -59,7 +59,7 @@ def _loc_covered_at_any_period(grids, term, key, lat, lon,
     "key" at any of "stored_periods"
     """
     for p_str in stored_periods:
-        d = grids.get(p_str, {}).get(term, {}).get(key)
+        d = grids[p_str][term].get(key)
         if d is None:
             continue
         for res in reversed(h3_res):
@@ -283,7 +283,7 @@ def _per_loc_log_interp(grids, term, key, target_imt, lats, lons,
     # Per stored period: per-location value with NaN meaning "no cell here"
     per_period_vals = {}
     for p_str in stored_periods:
-        term_at_p = grids.get(p_str, {}).get(term, {})
+        term_at_p = grids[p_str][term]
         if key not in term_at_p:
             continue
         per_period_vals[p_str] = grid_lookup(
@@ -319,11 +319,9 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
     # Per stored period: per-ray accumulated value from the path grid
     per_period_vals = {}
     for p_str in stored_periods:
-        grid = raytrace_grids_term.get(p_str)
-        if grid is None:
-            continue
         per_period_vals[p_str] = raytrace_path_adj(
-            grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
+            raytrace_grids_term[p_str],
+            ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
 
     target_period = target_imt.period
 
@@ -394,7 +392,7 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
     """
     Per-ray mean adjustment for one path term at target IMT
     """
-    raytrace_grids_term = grid_data["raytrace_grids"].get(term, {})
+    raytrace_grids_term = grid_data["raytrace_grids"][term]
     term_hdf5 = grid_data["periods_hdf5"][term]
 
     direct = raytrace_grids_term.get(imt.string)
