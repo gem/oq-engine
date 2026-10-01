@@ -68,10 +68,12 @@ STD = 1
 EPS = 1E-3
 #: How many (rupture, site) pairs are as expensive as a single surviving
 #: context, i.e. how much a discarded pair costs with respect to a context
-#: on which the GSIMs are actually evaluated. Measured on the alaska
-#: calculation (see the test in oq-risk-tests), where the point sources
-#: have 2.9M pairs and 20K surviving contexts
-PAIR_COST = 50.
+#: on which the GSIMs are actually evaluated. A least squares fit on the
+#: task durations of the alaska calculation (see oq-risk-tests), where the
+#: point sources have 2.9M pairs and 20K surviving contexts, gives a ratio
+#: of about 50; 20 is used instead, since the weight is a soft constraint
+#: and the smaller value gives more margin on the slow tasks check
+PAIR_COST = 20.
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
