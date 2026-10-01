@@ -21,6 +21,7 @@ non-ergodic corrections stored in an HDF5 file on top of any underlying
 GMM.
 """
 import json
+import math
 import h5py
 import h3
 import numpy as np
@@ -40,108 +41,65 @@ PGA_ANCHOR_PERIOD = 0.01
 PGA_ANCHOR_MAX_SA = 0.05
 
 
-### Helpers for building the interpolable CoeffsTable objects ###
-def _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms):
+### Centralised handler for per-record interpolation failures ###
+def _handle_interp_failure(term, imt, reason, **context):
     """
-    Assemble the per-term stores used inside ``compute()`` to interpolate
-    across IMTs. Returns five dicts (see "load_residual_grids" for the
-    full description of each).
+    Single hook for every per-record case where GridAdjustedGMPE
+    produces an adjustment at the target IMT for a record that is
+    only partially covered by the stored grids (covered at some
+    stored periods but not at the target, or covered at some
+    periods with pairs that cannot bracket the target). Partial
+    coverage distorts the spectral shape, so it is treated as an
+    interpolation failure.
+
+    A record that is *uniformly* uncovered (no cell at any stored
+    period of the term) is not routed here - it legitimately gets
+    zero adjustment, leaving the spectrum uniformly ergodic.
+
+    Currently every call raises; keeping all call sites routed
+    through this one function is deliberate so the policy (raise vs
+    nearest-neighbour fallback vs per-reason dispatch) can be
+    changed in one place without touching the call sites.
     """
-    cell_tables, path_tables, scalar_sig_tables, stored_periods = (
-        {}, {}, {}, {})
-    has_per_cell_sig = {}
-
-    for term, cfg in res_terms.items():
-        # Mean-adjustment CoeffsTables (per-cell), and the list of IMTs at
-        # which this term is stored.
-        if cfg["location"] == "path":
-            path_tables[term] = _build_path_ct(raytrace_grids.get(term, {}))
-            imt_strs = list(raytrace_grids.get(term, {}))
-        else:
-            cell_tables[term] = _build_hypo_site_ct(grids, term)
-            imt_strs = [s for s, td in grids.items() if term in td]
-            # Whether per-cell sigma is stored (as opposed to a scalar
-            # per-IMT in sig_scalars, or no sigma at all). Determined by
-            # the HDF5 contents, not just the res_terms config.
-            has_per_cell_sig[term] = any(
-                "sig" in grids[s][term] for s in imt_strs)
-
-        # One CoeffsTable per term for the scalar sigmas (if any).
-        sig_table = _build_scalar_sig_ct(sig_scalars, term)
-        if sig_table is not None:
-            scalar_sig_tables[term] = sig_table
-
-        # Sort the IMTs by period for the extrapolation check.
-        stored_periods[term] = sorted(
-            imt_strs, key=lambda s: imt_from_string(s).period)
-
-    return (cell_tables, path_tables, scalar_sig_tables,
-            stored_periods, has_per_cell_sig)
+    details = ", ".join(f"{k}={v}" for k, v in context.items())
+    raise ValueError(
+        f"GridAdjustedGMPE failed to interpolate term {term!r} at "
+        f"{imt}: {reason}" + (f" [{details}]" if details else ""))
 
 
-def _build_hypo_site_ct(grids, term):
+def _site_covered_at_any_period(grids, term, key, lat, lon,
+                                h3_res, stored_periods):
     """
-    Per-cell CoeffsTable for a hypo/site term. Each table's rows are the
-    IMTs where the cell has stored data; columns are ``mean`` and, if
-    per-cell sigma was configured, ``sig``.
+    True iff ``(lat, lon)`` falls inside a stored cell for ``term`` /
+    ``key`` at at least one of ``stored_periods``. Used to tell a
+    partially covered site (covered somewhere, missing here) from a
+    uniformly uncovered site (nowhere in the grid for this term).
     """
-    per_cell = {}
-    for imt_str, term_dict in grids.items():
-        if term not in term_dict:
+    for p_str in stored_periods:
+        d = grids.get(p_str, {}).get(term, {}).get(key)
+        if d is None:
             continue
-        imt_obj = imt_from_string(imt_str)
-        mean_dict = term_dict[term]["mean"]
-        sig_dict = term_dict[term].get("sig") or {}
-        for cell_id, mval in mean_dict.items():
-            row = {"mean": float(mval)}
-            if cell_id in sig_dict:
-                row["sig"] = float(sig_dict[cell_id])
-            per_cell.setdefault(cell_id, {})[imt_obj] = row
-    return {cid: CoeffsTable.fromdict(rows)
-            for cid, rows in per_cell.items()}
+        for res in reversed(h3_res):
+            if h3.latlng_to_cell(lat, lon, res) in d:
+                return True
+    return False
 
 
-def _build_path_ct(term_raytrace_grids):
-    """
-    (Polygon, CoeffsTable) per path cell. The CoeffsTable holds one
-    column (``mean``) indexed by the IMTs where the cell was stored.
-    """
-    per_cell = {}
-    for imt_str, cell_dict in term_raytrace_grids.items():
-        imt_obj = imt_from_string(imt_str)
-        for cell_id, (pgn, val) in cell_dict.items():
-            per_cell.setdefault(cell_id, (pgn, {}))[1][imt_obj] = {
-                "mean": float(val)}
-    return {cid: (pgn, CoeffsTable.fromdict(rows))
-            for cid, (pgn, rows) in per_cell.items()}
-
-
-def _build_scalar_sig_ct(sig_scalars, term):
-    """
-    Per-term CoeffsTable of scalar per-IMT sigmas, or None if this term
-    has no scalar sigma stored.
-    """
-    rows = {imt_from_string(s): {"sig": float(sig_scalars[s][term])}
-            for s in sig_scalars if term in sig_scalars[s]}
-    return CoeffsTable.fromdict(rows) if rows else None
-
-
-### Helpers for interpolation of missing IMTs ###
+### Helpers for log-period interpolation at target IMT ###
 def _check_in_range(imt, stored_imt_strs, term):
     """
     Raise ValueError if the target IMT period is outside the range in
-    which CoeffsTable can actually interpolate for this term.
+    which log-period interpolation can produce a value for this term.
 
     PGA counts as SA at PGA_ANCHOR_PERIOD only when the smallest stored
-    SA period is <= PGA_ANCHOR_MAX_SA (which is when CoeffsTable's
-    PGA-anchored fallback kicks in). Otherwise the lower bound is the
-    smallest stored SA period.
+    SA period is <= PGA_ANCHOR_MAX_SA (same gate as CoeffsTable's
+    PGA-anchored fallback). Otherwise the lower bound is the smallest
+    stored SA period.
 
-    PGA and other non-SA IMTs (PGV, PGD, IA, CAV...) cannot be
-    produced by log-period interpolation and must be stored directly.
-    PGA is only used as the low-period anchor for SA interpolation,
-    not interpolated itself; the other non-SA IMTs have no meaningful
-    period axis.
+    PGA and other non-SA IMTs (PGV, PGD, IA, CAV...) cannot be produced
+    by log-period interpolation and must be stored directly. PGA is only
+    used as the low-period anchor for SA interpolation, not interpolated
+    itself; the other non-SA IMTs have no meaningful period axis.
     """
     if not imt.string.startswith("SA("):
         raise ValueError(
@@ -161,12 +119,12 @@ def _check_in_range(imt, stored_imt_strs, term):
                 f"period {p}s above stored SA range "
                 f"(max {sa_periods[-1]}s).")
         if p >= sa_periods[0]:
-            return  # Target must sit inside the stored SA range
+            return  # Target sits inside the stored SA range
 
     # Target sits below the smallest stored SA. PGA can anchor the interp
     # by standing in for SA(0.01), but only when PGA is stored, target >=
-    # 0.01s, and the smallest stored SA is <= 0.05s (else the gap is too
-    # wide to interpolate through) - this is same lgic as in CoeffsTable
+    # 0.01s, and the smallest stored SA is <= 0.05s (otherwise the gap is
+    # too wide to interpolate through) - same logic as in CoeffsTable.
     fallback_ok = (has_pga and p >= PGA_ANCHOR_PERIOD
                    and sa_periods and sa_periods[0] <= PGA_ANCHOR_MAX_SA)
     if not fallback_ok:
@@ -176,166 +134,127 @@ def _check_in_range(imt, stored_imt_strs, term):
             f"SA period at <= {PGA_ANCHOR_MAX_SA}s to anchor against).")
 
 
-def _ensure_imt_available(grid_data, imt):
+def _log_period_interp(target_period, pairs):
     """
-    Populate any missing per-term entries for given IMT by log-period
-    interpolation of the CoeffsTable objects built at load time.
-
-    Extrapolation raises a value-error.
+    Linear log-period interpolation at ``target_period`` of a sorted list
+    of ``(period_in_seconds, value)`` pairs. Returns ``None`` if the
+    target period cannot be bracketed below and above by entries in
+    ``pairs``.
     """
-    imt_str = imt.string
-
-    # e.g. term = 'dL2L', cfg = {'location': 'hypo',
-    #                            'sig_comp_modified': 'tau',
-    #                            'sig_adjustment': 'sub'}
-    for term, cfg in grid_data["res_terms"].items():
-
-        # Get the IMTs the HDF5 provided adjustments for
-        stored = grid_data["stored_periods"][term]
-        if not stored or imt_str in stored:
-            continue
-
-        # The IMT is not present in the loaded HDF5 so
-        # check it is within interpolable range
-        _check_in_range(imt, stored, term)
-
-        # Interpolate the adjustments
-        if cfg["location"] == "path":
-            grid_data["raytrace_grids"][term][imt_str] = _interp_path(
-                grid_data["path_tables"][term], imt)
+    below = None
+    above = None
+    for p, v in pairs:
+        if p == target_period:
+            return v
+        if p < target_period:
+            below = (p, v)
         else:
-            grid_data["grids"].setdefault(imt_str, {})[term] = (
-                _interp_hypo_site(
-                    grid_data["cell_tables"][term], imt,
-                    grid_data["has_per_cell_sig"][term]))
-
-        if term in grid_data["scalar_sig_tables"]:
-            # Log-period interp happens inside CoeffsTable.__getitem__;
-            # the IMT is already validated as interpolable by _check_in_range
-            # above (scalar sig is loaded at the same IMTs as the mean)
-            grid_data["sig_scalars"].setdefault(imt_str, {})[term] = float(
-                grid_data["scalar_sig_tables"][term][imt]["sig"])
+            above = (p, v)
+            break
+    if below is None or above is None:
+        return None
+    ratio = ((math.log(target_period) - math.log(below[0])) /
+             (math.log(above[0]) - math.log(below[0])))
+    return below[1] + ratio * (above[1] - below[1])
 
 
-def _interp_hypo_site(cell_tables, imt, has_sig):
+def _periods_in_seconds(imt_strs):
     """
-    Build a hypo/site entry at the given target IMT by log-period
-    interpolating each cell's CoeffsTable.
-
-    Each cell_id in cell_tables is tried independently, with two cases:
-
-        * CASE 1: Cell is interpolable at this IMT - stored periods bracket
-          the target IMT, or the cell qualifies for the PGA-anchor fallback.
-          The interpolated value goes into the output dict under this cell_id.
-          Later, inside compute, any site whose finest containing cell
-          is this one picks up this value directly from grid_lookup's finest
-          resolution hit.
-
-        * **Cell is not interpolable at this IMT** - no bracketing rows,
-          and PGA-anchor fallback does not apply. The cell_id is left out
-          of the output dict entirely; no retry happens inside this
-          function. Later, inside ``compute()``, grid_lookup walks the
-          h3 resolutions finest-to-coarsest for every site anyway (that
-          is its normal behaviour, not a retry triggered by this
-          omission); a site whose finest containing cell is absent at
-          this IMT simply does not hit on the finest walk-step and
-          continues up to the next-coarser containing cell, using that
-          one if it is present. Interp-failure and never-stored are
-          indistinguishable from grid_lookup's point of view.
+    Convert each stored IMT string to its period in seconds for log-period
+    interp. PGA is mapped to PGA_ANCHOR_PERIOD; non-SA/non-PGA IMTs are
+    skipped (they have no meaningful period axis).
     """
-    # One entry per cell that produces a value at this IMT
-    means = {}
+    return {s: (PGA_ANCHOR_PERIOD if s == "PGA" else imt_from_string(s).period)
+            for s in imt_strs if s == "PGA" or s.startswith("SA(")}
 
-    # Only collect sigma if the HDF5 stored per-cell sigma for this term.
-    sigs = {} if has_sig else None
 
-    for cell_id, ct in cell_tables.items():
-        try:
-            # Ask the cell's CoeffsTable for the row at this IMT. If the
-            # IMT is tabulated, returns the stored row; otherwise does a
-            # log-period interpolation between the two bracketing rows.
-            rec = ct[imt]
-        except (KeyError, ValueError):
-            # KeyError = the cell has no stored row on one side of the
-            # target IMT, so it can't be bracketed (grid resolution varies
-            # per IMT, so some cells aren't stored at every period).
-            # ValueError = the PGA-anchor fallback was tried and rejected.
-            # In both cases, leave this cell_id out of the output dict and
-            # move on. See the docstring for how coarser cells are reached
-            # later inside compute().
+def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
+    """
+    Precise reason why :func:`_log_period_interp` returned ``None``
+    for record ``i``. Three cases:
+
+    * target above the record's local max SA period - extrapolation.
+    * target below the record's local min SA period and PGA is stored
+      at this record but the smallest local SA period exceeds
+      ``PGA_ANCHOR_MAX_SA``, so PGA cannot anchor the interpolation.
+    * target below the record's local min SA period and no PGA is
+      available at this record - extrapolation.
+    """
+    if target_period > pairs[-1][0]:
+        return (f"target period {target_period}s above record's local "
+                f"max SA period ({pairs[-1][0]}s): extrapolation")
+    pga_arr = per_period_vals.get("PGA")
+    pga_at_record = pga_arr is not None and not np.isnan(pga_arr[i])
+    smallest_sa = pairs[0][0]
+    if pga_at_record and smallest_sa > PGA_ANCHOR_MAX_SA:
+        return (f"PGA is stored at this record but the smallest local "
+                f"SA period ({smallest_sa}s) exceeds the PGA anchor "
+                f"gap (<= {PGA_ANCHOR_MAX_SA}s), so PGA cannot anchor "
+                f"the interp at target {target_period}s")
+    return (f"target period {target_period}s below record's local min "
+            f"SA period ({smallest_sa}s) with no usable PGA anchor: "
+            f"extrapolation")
+
+
+def _record_pairs(per_period_vals, periods_sec, i):
+    """
+    Pull row ``i`` from each per-period value array. Return a sorted
+    ``[(period_in_seconds, value)]`` list with NaN rows dropped. PGA is
+    kept only if the smallest surviving SA period in the row is
+    <= PGA_ANCHOR_MAX_SA (same gate as CoeffsTable's PGA anchor).
+    """
+    pga_val = None
+    sa_pairs = []
+    for p_str, arr in per_period_vals.items():
+        v = arr[i]
+        if np.isnan(v):
             continue
-        # Keep the interpolated mean, plus sigma if the term carries one.
-        means[cell_id] = float(rec["mean"])
-        if has_sig:
-            sigs[cell_id] = float(rec["sig"])
-
-    # Match the shape used in grids[imt_str][term] elsewhere: "mean" is
-    # always present; "sig" only when per-cell sigma was stored.
-    entry = {"mean": means}
-    if has_sig:
-        entry["sig"] = sigs
-
-    return entry
+        if p_str == "PGA":
+            pga_val = float(v)
+        else:
+            sa_pairs.append((periods_sec[p_str], float(v)))
+    sa_pairs.sort()
+    if (pga_val is not None and sa_pairs
+            and sa_pairs[0][0] <= PGA_ANCHOR_MAX_SA):
+        return [(PGA_ANCHOR_PERIOD, pga_val)] + sa_pairs
+    return sa_pairs
 
 
-def _interp_path(path_tables, imt):
+### Helpers for scalar per-IMT sigma interpolation ###
+def _build_scalar_sig_ct(sig_scalars, term):
     """
-    Build a raytrace grid at the target IMT by log-period interpolating
-    each path cell's per-km value.
-
-    Each cell_id in path_tables is tried independently:
-
-        * If the given cell has stored periods that bracket the target
-          IMT (or qualifies for the PGA-anchor fallback), the interpolated
-          per-km value goes into the output dict alongside the cell's
-          polygon (which is fixed geometry carried through unchanged).
-
-        * If not within interpolation range, that cell_id is left out of
-          the output dict entirely - no retry happens inside this function.
-
-    Unlike the hypo/site case there is no coarser-cell fallback inside
-    ``compute()``: ray-tracing simply walks the output cells and
-    accumulates nothing for the stretch of the ray that crosses a
-    left-out cell. Interp-failure and never-stored have the same effect
-    on the ray: no contribution from that stretch.
+    Per-term CoeffsTable of scalar per-IMT sigmas, or None if this term
+    has no scalar sigma stored. Queried at compute time to log-period
+    interpolate the scalar sigma to any target IMT.
     """
-    # One entry per path cell that produces a value at this IMT:
-    # cell_id -> (polygon, per-km value at this IMT).
-    grid = {}
-
-    for cell_id, (pgn, ct) in path_tables.items():
-        try:
-            # Ask the cell's CoeffsTable for the per-km value at this IMT.
-            # Returns the stored value if tabulated, else a log-period
-            # interpolation between the two bracketing rows.
-            grid[cell_id] = (pgn, float(ct[imt]["mean"]))
-        except (KeyError, ValueError):
-            # KeyError = cell can't bracket the target IMT (no stored row
-            # on one side). ValueError = PGA-anchor fallback rejected.
-            # Leave this cell_id out of the output dict; ray-tracing will
-            # not see it when the ray crosses it at this IMT.
-            continue
-    return grid
+    rows = {imt_from_string(s): {"sig": float(sig_scalars[s][term])}
+            for s in sig_scalars if term in sig_scalars[s]}
+    return CoeffsTable.fromdict(rows) if rows else None
 
 
 ### Helpers for compute-time spatial lookup and ray-tracing ###
 
-def grid_lookup(grid_dict, lats, lons, h3_res):
+def grid_lookup(grid_dict, lats, lons, h3_res, default=0.0):
     """
     Point-in-cell lookup with a finest -> coarsest fallback. Locations
-    outside every stored cell receive a correction of zero.
+    outside every stored cell receive ``default`` (0.0 by default, which
+    treats "no cell" as "no adjustment"; pass ``np.nan`` to distinguish
+    "no cell" from a stored zero value).
 
     :param grid_dict:
-        {cell_id: mean_adjustment_value} for one term and one IMT.
+        {cell_id: value} for one term and one IMT (and one of mean or sig).
     :param lats:
         Array of latitudes (hypocentre or site, depending on the term).
     :param lons:
         Array of longitudes.
     :param h3_res:
         Sorted list of h3 resolution levels (coarsest first).
+    :param default:
+        Fill value for locations where no containing cell is found at any
+        stored resolution.
     """
     n = len(lats)
-    vals = np.zeros(n)
+    vals = np.full(n, default, dtype=float)
     found = np.zeros(n, dtype=bool)
 
     # Once a site is resolved at a finer resolution it stays there.
@@ -389,35 +308,194 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
 
 ### Helpers for compute-time correction assembly ###
 
-def _mean_adj_hypo_site(entry, cfg, ctx, h3_res):
-    """Per-site mean adjustment for one hypo/site term."""
+def _hypo_site_coords(cfg, ctx):
+    """Return (lats, lons) from ``ctx`` for a hypo/site term's lookup."""
     if cfg["location"] == "hypo":
-        lats, lons = ctx.hypo_lat, ctx.hypo_lon
-    else:
-        lats, lons = ctx.lat, ctx.lon
-    return grid_lookup(entry["mean"], lats, lons, h3_res)
+        return ctx.hypo_lat, ctx.hypo_lon
+    return ctx.lat, ctx.lon
 
 
-def _mean_adj_path(grid, ctx):
-    """Per-rupture mean adjustment for one path term (via ray-tracing)."""
-    return raytrace_path_adj(
-        grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
-
-
-def _sigma_values(grid_data, term, cfg, imt_str, ctx):
+def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
+                         h3_res, stored_periods):
     """
-    Return the per-record sigma adjustment values for one term at
-    ``imt_str``. Sigma may be stored per-cell (looked up spatially) or
-    as a single scalar per IMT.
+    Per-site log-period interp. For each stored period of the term, do a
+    finest-containing-cell spatial lookup (via :func:`grid_lookup` with
+    ``NaN`` as the no-cell sentinel). Then, per site, assemble the
+    (period, value) list from the lookups and log-period interpolate at
+    the target IMT.
+
+    A site with no containing cell at any stored period is uniformly
+    uncovered for this term and legitimately gets 0 (spectrum stays
+    uniformly ergodic at that site). A site that is covered at some
+    periods but has pairs that cannot bracket the target is partially
+    covered - adjusting it would distort the spectral shape - and is
+    routed through :func:`_handle_interp_failure`.
     """
-    per_cell = grid_data["grids"].get(imt_str, {}).get(term, {}).get("sig")
-    if per_cell is not None:
-        if cfg["location"] == "hypo":
-            lats, lons = ctx.hypo_lat, ctx.hypo_lon
-        else:
-            lats, lons = ctx.lat, ctx.lon
-        return grid_lookup(per_cell, lats, lons, grid_data["h3_res"])
-    return grid_data["sig_scalars"].get(imt_str, {}).get(term)
+    # 1) Per stored period: pull per-site value with NaN for "no cell".
+    per_period_vals = {}
+    for p_str in stored_periods:
+        term_at_p = grids.get(p_str, {}).get(term, {})
+        if key not in term_at_p:
+            continue
+        per_period_vals[p_str] = grid_lookup(
+            term_at_p[key], lats, lons, h3_res, default=np.nan)
+
+    periods_sec = _periods_in_seconds(per_period_vals.keys())
+    target_period = target_imt.period
+
+    # 2) Per site: build the (period, value) pairs for *this* site from
+    #    whichever stored periods had a containing cell here, then
+    #    log-period interp at the target IMT.
+    n = len(lats)
+    out = np.zeros(n)
+    for i in range(n):
+        pairs = _record_pairs(per_period_vals, periods_sec, i)
+        if not pairs:
+            continue  # uniformly uncovered site: 0 is the right answer
+        val = _log_period_interp(target_period, pairs)
+        if val is None:
+            _handle_interp_failure(
+                term, target_imt,
+                _bracket_failure_reason(
+                    target_period, pairs, per_period_vals, i),
+                key=key, site_index=i,
+                available_periods=[p for p, _ in pairs])
+        out[i] = val
+    return out
+
+
+def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
+                        stored_periods):
+    """
+    Per-ray log-period interp for a path term. For each stored period,
+    ray-trace through the path grid at that period to get a per-ray
+    scalar. Then, per ray, log-period interp those scalars at the target
+    IMT.
+
+    Rays that don't cross any stored cell at a given period get a 0
+    accumulation at that period (same as the current path semantics);
+    0 therefore counts as a legitimate interp anchor, not a sentinel.
+    A ray with no per-period pairs at all is treated as uniformly
+    uncovered (gets 0). Pairs that exist but cannot bracket the
+    target IMT are partial coverage - the spectral shape would be
+    distorted - and are routed through :func:`_handle_interp_failure`.
+    """
+    # 1) Per stored period: ray-trace to get a per-ray accumulated value.
+    per_period_vals = {}
+    for p_str in stored_periods:
+        grid = raytrace_grids_term.get(p_str)
+        if grid is None:
+            continue
+        per_period_vals[p_str] = raytrace_path_adj(
+            grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
+
+    periods_sec = _periods_in_seconds(per_period_vals.keys())
+    target_period = target_imt.period
+
+    # 2) Per ray: interp the per-period scalars at the target IMT.
+    #    _record_pairs drops NaN rows, but ray-trace never produces NaN,
+    #    so every stored period contributes a pair for every ray.
+    n = len(ctx.hypo_lon)
+    out = np.zeros(n)
+    for i in range(n):
+        pairs = _record_pairs(per_period_vals, periods_sec, i)
+        if not pairs:
+            continue  # uniformly uncovered ray: 0 is the right answer
+        val = _log_period_interp(target_period, pairs)
+        if val is None:
+            _handle_interp_failure(
+                term, target_imt,
+                _bracket_failure_reason(
+                    target_period, pairs, per_period_vals, i),
+                ray_index=i,
+                available_periods=[p for p, _ in pairs])
+        out[i] = val
+    return out
+
+
+def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
+                           term, imt, key, grids, stored_periods):
+    """
+    Spatial lookup at a directly-stored target IMT. A record missing
+    from the direct grid is checked against the term's other stored
+    periods: if any of them covers it, the record is partially
+    covered and routes through :func:`_handle_interp_failure`;
+    otherwise the record is uniformly uncovered and silently takes 0.
+    """
+    vals = grid_lookup(direct_grid, lats, lons, h3_res, default=np.nan)
+    missing = np.where(np.isnan(vals))[0]
+    for i in missing:
+        if _site_covered_at_any_period(
+                grids, term, key, lats[i], lons[i],
+                h3_res, stored_periods):
+            _handle_interp_failure(
+                term, imt,
+                "record missing at target IMT but covered at other "
+                "stored periods (partial coverage)",
+                key=key, site_index=int(i),
+                lat=float(lats[i]), lon=float(lons[i]))
+    # Uniformly uncovered records: NaN -> 0 (ergodic default).
+    vals[np.isnan(vals)] = 0.0
+    return vals
+
+
+def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
+    """Per-site mean adjustment for one hypo/site term at target IMT."""
+    lats, lons = _hypo_site_coords(cfg, ctx)
+    h3_res = grid_data["h3_res"]
+    # Fast path: target IMT is stored directly; no interp needed.
+    direct = grid_data["grids"].get(
+        imt.string, {}).get(term, {}).get("mean")
+    if direct is not None:
+        return _direct_lookup_or_fail(
+            direct, lats, lons, h3_res, term, imt, "mean",
+            grid_data["grids"], stored_periods)
+    # Interp path: per-site log-period interp over per-period lookups.
+    return _per_site_log_interp(
+        grid_data["grids"], term, "mean", imt,
+        lats, lons, h3_res, stored_periods)
+
+
+def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
+    """Per-ray mean adjustment for one path term at target IMT."""
+    raytrace_grids_term = grid_data["raytrace_grids"].get(term, {})
+    # Fast path: target IMT is stored directly; ray-trace that grid.
+    direct = raytrace_grids_term.get(imt.string)
+    if direct is not None:
+        return raytrace_path_adj(
+            direct, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
+    # Interp path: per-ray log-period interp over per-period ray-traces.
+    return _per_ray_log_interp(
+        raytrace_grids_term, term, imt, ctx, stored_periods)
+
+
+def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
+    """
+    Return the per-record sigma adjustment values for one term at the
+    target IMT. Sigma may be stored as:
+
+    * A scalar per IMT (one value per term per IMT) - log-period
+      interpolated via the term-level ``scalar_sig_tables`` CoeffsTable.
+    * Per cell - looked up spatially per record and log-period
+      interpolated per record, same way as the mean.
+    """
+    # Scalar per-IMT sigma: single CoeffsTable interp (not spatial).
+    if term in grid_data["scalar_sig_tables"]:
+        return float(grid_data["scalar_sig_tables"][term][imt]["sig"])
+
+    # Per-cell sigma (hypo/site only; path per-cell sigma is rejected
+    # at load time).
+    lats, lons = _hypo_site_coords(cfg, ctx)
+    h3_res = grid_data["h3_res"]
+    direct = grid_data["grids"].get(
+        imt.string, {}).get(term, {}).get("sig")
+    if direct is not None:
+        return _direct_lookup_or_fail(
+            direct, lats, lons, h3_res, term, imt, "sig",
+            grid_data["grids"], stored_periods)
+    return _per_site_log_interp(
+        grid_data["grids"], term, "sig", imt,
+        lats, lons, h3_res, stored_periods)
 
 
 def _apply_sigma(action, comp, adj, sig, tau, phi):
@@ -442,41 +520,52 @@ def _apply_sigma(action, comp, adj, sig, tau, phi):
         sig[:] = np.sqrt(tau ** 2 + phi ** 2)
 
 
-def _apply_one_term(grid_data, term, cfg, imt_str, ctx,
-                    mean, sig, tau, phi):
+def _apply_one_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     """
-    Apply the mean (and optional sigma) adjustment for a single term.
+    Apply the mean (and optional sigma) adjustment for a single term at
+    target IMT. Per-record (per-site or per-ray) assembly: at each
+    stored period, do the spatial lookup / ray-trace to get a per-record
+    value for *this* record's location; then log-period interp those
+    per-period values at the target IMT.
     """
+    stored_periods = grid_data["stored_periods"][term]
+    if not stored_periods:
+        return
+
+    # Term-level range check (only when the target IMT is not stored):
+    # if the target period sits outside the term's overall interpolable
+    # range, every record would get 0, which is almost certainly a user
+    # error; raise instead.
+    if imt.string not in stored_periods:
+        _check_in_range(imt, stored_periods, term)
+
+    # Mean adjustment: path uses per-ray interp, hypo/site uses per-site.
     if cfg["location"] == "path":
-        grid = grid_data["raytrace_grids"].get(term, {}).get(imt_str)
-        if grid is None:
-            return
-        mean += _mean_adj_path(grid, ctx)
+        mean += _path_mean_adj(grid_data, term, imt, ctx, stored_periods)
     else:
-        entry = grid_data["grids"].get(imt_str, {}).get(term)
-        if entry is None:
-            return
-        mean += _mean_adj_hypo_site(entry, cfg, ctx, grid_data["h3_res"])
+        mean += _hypo_site_mean_adj(
+            grid_data, term, cfg, imt, ctx, stored_periods)
 
     sig_action = cfg.get("sig_adjustment", "none")
     if sig_action == "none":
         return
-    adj = _sigma_values(grid_data, term, cfg, imt_str, ctx)
+    adj = _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods)
     _apply_sigma(sig_action, cfg["sig_comp_modified"], adj, sig, tau, phi)
 
 
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
-    Apply every stored (or interpolated) term to the compute() outputs
-    for a single target IMT. Raises ValueError on extrapolation.
+    Apply every stored term to the compute() outputs for a single target
+    IMT. Each term is handled per-record: the mean and sigma adjustments
+    at a given site/ray are assembled from per-period finest-containing-
+    cell lookups and log-period interpolated at the target IMT.
+
+    Raises ValueError when the target IMT is outside the interpolable
+    range of any configured term (see :func:`_check_in_range`).
     """
-    # If this IMT isn't in the HDF5, fill it in by log-period interpolation
-    # of the per-cell CoeffsTables built at load time.
-    _ensure_imt_available(grid_data, imt)
-    imt_str = imt.string
     for term, cfg in grid_data["res_terms"].items():
         _apply_one_term(
-            grid_data, term, cfg, imt_str, ctx, mean, sig, tau, phi)
+            grid_data, term, cfg, imt, ctx, mean, sig, tau, phi)
 
 
 ### Helpers for ensuring GMM can actually be adjusted ###
@@ -525,18 +614,18 @@ def _extend_required_parameters(res_terms, current_rup, current_site):
 def load_residual_grids(hdf5_path):
     """
     Read the HDF5 of gridded adjustments and return the dict that
-    :class:`GridAdjustedGMPE` uses during call to compute method.
+    :class:`GridAdjustedGMPE` uses during ``compute()``.
 
     Keys in the returned dict:
 
     * "grids"             - {imt_str: {term: {"mean": {cell_id: val},
                                               "sig":  {cell_id: val}}}}
                             for hypo/site terms; "sig" present only when
-                            per-cell sigma is configured
+                            per-cell sigma is stored
 
     * "raytrace_grids"    - {term: {imt_str: {cell_id: (Polygon, val)}}}
                             for path adjustments
-                            
+
     * "sig_scalars"       - {imt_str: {term: float}} scalar per-IMT sigmas
 
     * "h3_res"            - sorted list of h3 resolutions found across all
@@ -544,41 +633,47 @@ def load_residual_grids(hdf5_path):
 
     * "res_terms"         - the JSON config from the HDF5 root attribute
 
-    * "cell_tables"       - per-cell CoeffsTables for hypo/site terms, used
-                            inside ``compute()`` to interpolate across IMTs
-
-    * "path_tables"       - (Polygon, CoeffsTable) per path cell
-
-    * "scalar_sig_tables" - one CoeffsTable per term for the scalar per-IMT
-                            sigmas
+    * "scalar_sig_tables" - {term: CoeffsTable} one CoeffsTable per term
+                            for the scalar per-IMT sigmas, log-period
+                            interpolated to any target IMT at compute time
 
     * "stored_periods"    - {term: sorted list of IMT strings at which the
-                            term is stored}, used to prevent extrapolation
-
-    * "has_per_cell_sig"  - {term: bool} True iff per-cell sigma is stored
-                            for the hypo/site term (as opposed to a scalar
-                            per IMT in sig_scalars, or no sigma at all)
+                            term is stored}, used by the term-level range
+                            check and by the per-record interp loop
     """
     grids = {}
     raytrace_grids = {}
     sig_scalars = {}
     resolutions = set()
 
-    # Read every (term, IMT) group in the hdf5 file into the plain per-cell dicts
+    # Read every (term, IMT) group in the hdf5 file into plain per-cell dicts.
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
         for term, cfg in res_terms.items():
             for imt_str in hf[term]:
                 _load_one_term_per_imt(
                     hf[term][imt_str], term, imt_str, cfg,
-                    grids, raytrace_grids, sig_scalars, resolutions
-                    )
+                    grids, raytrace_grids, sig_scalars, resolutions)
 
-    # Build CoeffsTables so a compute-time query for a target IMT that is
-    # not in the HDF5 can be answered by log-period interpolation.
-    (cell_tables, path_tables, scalar_sig_tables,
-     stored_periods, has_per_cell_sig) = _build_interp_tables(
-        grids, raytrace_grids, sig_scalars, res_terms)
+    # Per-term CoeffsTable for scalar per-IMT sigmas (log-period interpolable
+    # to any target IMT without needing a spatial lookup).
+    scalar_sig_tables = {}
+    for term in res_terms:
+        ct = _build_scalar_sig_ct(sig_scalars, term)
+        if ct is not None:
+            scalar_sig_tables[term] = ct
+
+    # Per-term sorted list of stored IMT strings. Used by the term-level
+    # extrapolation guard and by the per-record interp loop to decide which
+    # IMTs to assemble (period, value) pairs from.
+    stored_periods = {}
+    for term, cfg in res_terms.items():
+        if cfg["location"] == "path":
+            imt_strs = list(raytrace_grids.get(term, {}))
+        else:
+            imt_strs = [s for s, td in grids.items() if term in td]
+        stored_periods[term] = sorted(
+            imt_strs, key=lambda s: imt_from_string(s).period)
 
     return {
         "grids": grids,
@@ -586,11 +681,8 @@ def load_residual_grids(hdf5_path):
         "sig_scalars": sig_scalars,
         "h3_res": sorted(resolutions),
         "res_terms": res_terms,
-        "cell_tables": cell_tables,
-        "path_tables": path_tables,
         "scalar_sig_tables": scalar_sig_tables,
         "stored_periods": stored_periods,
-        "has_per_cell_sig": has_per_cell_sig,
     }
 
 
@@ -740,23 +832,36 @@ class GridAdjustedGMPE(GMPE):
       provide).
 
     * Corrections are stored per term per IMT. When the target IMT is
-      not stored, the mean and sigma corrections are filled in on the
-      fly by log-period interpolation of :class:`CoeffsTable` objects
-      built at load time.
-      
-    * Extrapolation beyond the stored period range raises a value-error.
-      PGA counts as SA at 0.01 s for the lower bound only when the smallest
-      stored SA period is <= 0.05 s (same as :class:`CoeffsTable`'s PGA
-      anchored fallback); otherwise a target IMT below the smallest stored
-      SA period is rejected. TODO: If a term has no stored data at all it is
-      silently skipped for every target IMT.
+      not directly stored, each record (site for hypo/site terms, ray
+      for path terms) is handled independently:
+
+        1. For every stored period of the term, the record's
+           finest-containing-cell value is pulled (via the
+           coarsest->finest spatial fallback) or, for a path term, the
+           ray is traced through that period's grid to produce a per-ray
+           scalar.
+        2. The resulting (period, value) list is log-period interpolated
+           at the target IMT to give the record's final adjustment.
+
+      Because the per-period lookup is driven by the record's location,
+      a record can use the finest available spatial resolution *at each
+      stored period* independently - cells at different h3 resolutions
+      can contribute to the same record's interpolation if that is what
+      the data supports.
+
+    * Extrapolation beyond the term's overall stored period range raises
+      a value-error. PGA counts as SA at 0.01 s for the lower bound only
+      when the smallest stored SA period is <= 0.05 s (same gate as
+      :class:`CoeffsTable`'s PGA-anchored fallback); otherwise a target
+      IMT below the smallest stored SA period is rejected. A record whose
+      locally available (period, value) list cannot bracket the target
+      silently gets 0 (no adjustment at that record).
 
     * The h3 grid cell resolution can vary over IMT because the
-      calibration data may vary with period. When interpolating across
-      IMTs, cells whose per-cell CoeffsTable cannot bracket the target
-      IMT are dropped from the resulting grid at that IMT; the coarsest
-      -> finest spatial fallback then resolves each site through a
-      coarser cell when available.
+      calibration data may vary with period. The per-record interp above
+      handles this naturally: at each period the lookup returns whatever
+      the finest containing cell happens to be for that record at that
+      period.
 
     A real HDF5 example is used by the unit tests
     (``openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5``)
