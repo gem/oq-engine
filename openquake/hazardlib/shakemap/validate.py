@@ -132,10 +132,9 @@ class ImpactParam:
                     f' ({rupdic["lat"]}, {rupdic["lon"]})')
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
-        with _HDF5_READ_LOCK:
-            _sitecol, assetcol, _discarded, _exp = (
-                readinput.get_sitecol_assetcol(
-                    oq, h5={'performance_data': hdf5.FakeDataset()}))
+        _sitecol, assetcol, _discarded, _exp = (
+            readinput.get_sitecol_assetcol(
+                oq, h5={'performance_data': hdf5.FakeDataset()}))
         id0s = numpy.unique(assetcol['ID_0'])
         countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
         tmap_keys = get_tmap_keys(self.exposure_hdf5, countries)
@@ -344,11 +343,10 @@ def get_tmap_keys(exposure_hdf5, countries):
     :returns: list of taxonomy mappings as keys in the the "tmap" data group
     """
     keys = []
-    with _HDF5_READ_LOCK:
-        with hdf5.File(exposure_hdf5, 'r') as exp:
-            for key in exp['tmap']:
-                if set(key.split('_')) & countries:
-                    keys.append(key)
+    with hdf5.File(exposure_hdf5, 'r') as exp:
+        for key in exp['tmap']:
+            if set(key.split('_')) & countries:
+                keys.append(key)
     return keys
 
 

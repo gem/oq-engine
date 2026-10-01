@@ -13,7 +13,8 @@ import faulthandler
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Barrier, Lock
+from time import perf_counter
 
 from openquake.calculators.export import export
 import openquake.calculators.export.hazard as hazard_export  # noqa: F401
@@ -41,8 +42,20 @@ def get_operation(args):
 
 
 def stress_reads(operation, iterations, progress_every, concurrency):
-    """Synchronize readers and report completed concurrent call rounds."""
+    """Stress the operation and return its average call duration."""
     completed_rounds = -1
+    timing_lock = Lock()
+    elapsed_total = 0.0
+    call_count = 0
+
+    def timed_operation():
+        nonlocal elapsed_total, call_count
+        started = perf_counter()
+        operation()
+        elapsed = perf_counter() - started
+        with timing_lock:
+            elapsed_total += elapsed
+            call_count += 1
 
     def report_progress():
         nonlocal completed_rounds
@@ -57,11 +70,12 @@ def stress_reads(operation, iterations, progress_every, concurrency):
     def reader(_):
         barrier.wait()  # synchronize the start of the first round
         for _ in range(iterations):
-            operation()
+            timed_operation()
             barrier.wait()
 
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         list(pool.map(reader, range(concurrency)))
+    return elapsed_total / call_count
 
 
 def main():
@@ -89,8 +103,9 @@ def main():
     faulthandler.enable()
     operation = get_operation(args)
     print(f'Stressing {args.operation} concurrently', flush=True)
-    stress_reads(operation, args.iterations, args.progress_every,
-                 args.concurrency)
+    average = stress_reads(operation, args.iterations, args.progress_every,
+                           args.concurrency)
+    print(f'Average time per call: {average:.6f} seconds', flush=True)
     print('Completed without a segfault', flush=True)
 
 
