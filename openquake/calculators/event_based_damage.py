@@ -243,6 +243,14 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=['mean'])
 
+
+
+        if oq.infrastructure_connectivity_analysis:
+            logging.info('Running connectivity analysis')
+            results = connectivity.analysis(self.datastore)
+            self._store_connectivity_analysis_results(results)
+            
+            
         # put the interdependencies logic here
         if 'interdependencies' in oq.inputs:  # we are in the child
             asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
@@ -319,15 +327,13 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore['risk_by_event/non_operational_inter'] = (
                 child_df['non_operational_inter'])
             
-            breakpoint()
+            if oq.infrastructure_connectivity_analysis:
+                logging.info('Running connectivity analysis')
+                results = connectivity.analysis(self.datastore)
+                self._store_connectivity_analysis_results(results, 'inter')
+            
 
-
-        if oq.infrastructure_connectivity_analysis:
-            logging.info('Running connectivity analysis')
-            results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(results)
-
-    def _store_connectivity_analysis_results(self, conn_results):
+    def _store_connectivity_analysis_results(self, conn_results, prefix='infra'):
         avg_dict = {}
         if 'avg_connectivity_loss_eff' in conn_results:
             avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
@@ -339,40 +345,40 @@ class DamageCalculator(EventBasedRiskCalculator):
             avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
         if avg_dict:
             self.datastore.create_df(
-                'infra-avg_loss', pandas.DataFrame(data=avg_dict),
+                prefix+'-avg_loss', pandas.DataFrame(data=avg_dict),
                 display_name=DISPLAY_NAME['infra-avg_loss'])
         if 'event_connectivity_loss_eff' in conn_results:
             self.datastore.create_df(
-                'infra-event_efl',
+                prefix+'-event_efl',
                 conn_results['event_connectivity_loss_eff'],
                 display_name=DISPLAY_NAME['infra-event_efl'])
         if 'event_connectivity_loss_pcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_pcl',
+                prefix+'-event_pcl',
                 conn_results['event_connectivity_loss_pcl'],
                 display_name=DISPLAY_NAME['infra-event_pcl'])
         if 'event_connectivity_loss_wcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_wcl',
+                prefix+'-event_wcl',
                 conn_results['event_connectivity_loss_wcl'],
                 display_name=DISPLAY_NAME['infra-event_wcl'])
         if 'event_connectivity_loss_ccl' in conn_results:
             self.datastore.create_df(
-                'infra-event_ccl',
+                prefix+'-event_ccl',
                 conn_results['event_connectivity_loss_ccl'],
                 display_name=DISPLAY_NAME['infra-event_ccl'])
         if 'taz_cl' in conn_results:
             self.datastore.create_df(
-                'infra-taz_cl',
+                prefix+'-taz_cl',
                 conn_results['taz_cl'],
                 display_name=DISPLAY_NAME['infra-taz_cl'])
         if 'dem_cl' in conn_results:
             self.datastore.create_df(
-                'infra-dem_cl',
+                prefix+'-dem_cl',
                 conn_results['dem_cl'],
                 display_name=DISPLAY_NAME['infra-dem_cl'])
         if 'node_el' in conn_results:
             self.datastore.create_df(
-                'infra-node_el',
+                prefix+'-node_el',
                 conn_results['node_el'],
                 display_name=DISPLAY_NAME['infra-node_el'])
