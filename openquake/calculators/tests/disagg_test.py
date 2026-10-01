@@ -273,6 +273,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         # the trt_smrs stored in the sources and the corresponding GSIM
         # weights, instead of reducing the logic tree
         self.run_calc(case_17.__file__, 'job.ini')
+        try:
+            __import__('rtgmpy')
+        except ModuleNotFoundError:
+            return  # mag_dst_eps_sig and mce are not generated
         dstore = self.calc.datastore
         # the disaggregation by relevant sources returned one row per IMT
         self.assertEqual(len(dstore['mag_dst_eps_sig/0']), 3)

@@ -622,7 +622,13 @@ class ClassicalCalculator(base.HazardCalculator):
             num_blocks += sum('-' in key for key in grp_keys)
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
-                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+                # NB: a RateMap is huge (550 MB in usa23) and must be
+                # created once per group: the atomic groups of a gid are
+                # split in blocks with different grp_keys[0], but they
+                # all contribute to the RateMap of the first group
+                if grp_id not in self.rmap:
+                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L,
+                                                cmaker.gid)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however

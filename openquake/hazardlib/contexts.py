@@ -66,6 +66,11 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
 EPS = 1E-3
+#: How many (rupture, site) pairs are as expensive as a single surviving
+#: context, i.e. how much a discarded pair costs with respect to a context
+#: on which the GSIMs are actually evaluated. Determined heuristically
+#: from the @slowtask in oq-risk-tests
+PAIR_COST = 20.
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1376,7 +1381,7 @@ class ContextMaker(object):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: (weight, estimate_sites)
+        :returns: an estimate of the CPU cost of processing the source
         """
         t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
@@ -1397,8 +1402,14 @@ class ContextMaker(object):
         elif src.code in b'CKX':
             C *= step
         src.nctxs = C * srcfilter.multiplier
-        weight = src.nctxs / N
-        return weight
+        # The surviving contexts are not the whole story: the contexts of a
+        # pointlike source are generated for *all* the (rupture, site) pairs
+        # and then filtered by rrup < magdist, so a collapsed point source
+        # with thousands of ruptures and a couple of surviving contexts is
+        # much more expensive than its nctxs suggests. The number of pairs
+        # is the relevant quantity, discounted by PAIR_COST
+        pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+        return (src.nctxs + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """
