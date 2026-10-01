@@ -18,6 +18,7 @@
 
 import sys
 import ast
+import asyncio
 import csv
 import shutil
 import json
@@ -203,6 +204,23 @@ def _get_bool_param(obj, name, default=False):
     return str(val).lower() in ('1', 'true', 'yes', '')
 
 
+class ReadableFileWrapper(FileWrapper):
+    """FileWrapper that also exposes the file-like read method."""
+    def read(self, size):
+        return self.filelike.read(size)
+
+
+class AsyncFileResponse(FileResponse):
+    """Stream file chunks asynchronously under ASGI."""
+    async def __aiter__(self):
+        filelike = self.file_to_stream
+        while True:
+            chunk = await asyncio.to_thread(filelike.read, self.block_size)
+            if not chunk:
+                break
+            yield chunk
+
+
 def stream_response(fname, content_type, exportname=''):
     """
     Stream a file stored in a temporary directory via Django
@@ -210,13 +228,21 @@ def stream_response(fname, content_type, exportname=''):
     ext = os.path.splitext(fname)[-1]
     exportname = exportname or os.path.basename(fname)
     tmpdir = os.path.dirname(fname)
-    stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
-    response = FileResponse(stream, content_type=content_type)
+    fileobj = open(fname, 'rb')  # 'b' is needed on Windows
+    stream = ReadableFileWrapper(fileobj)
+
+    def close_stream():
+        fileobj.close()
+        if ext == '.npz':
+            if os.path.exists(fname):
+                os.remove(fname)
+        else:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    stream.close = close_stream
+    response = AsyncFileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = 'attachment; filename=%s' % exportname
     response['Content-Length'] = str(os.path.getsize(fname))
-    stream.close = lambda: (
-        FileWrapper.close(stream),
-        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
     return response
 
 
@@ -537,6 +563,27 @@ def _stream_content(response, chunk_size):
         response.close()
 
 
+def _next_chunk(iterator):
+    """Get the next chunk, returning None at end-of-stream."""
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
+
+
+async def _astream_content(response, chunk_size):
+    """Asynchronously yield internal response chunks, then close it."""
+    chunks = iter(response.iter_content(chunk_size))
+    try:
+        while True:
+            chunk = await asyncio.to_thread(_next_chunk, chunks)
+            if chunk is None:
+                break
+            yield chunk
+    finally:
+        await asyncio.to_thread(response.close)
+
+
 def _call_api_file(request, endpoint, params=None):
     """
     Call an internal FastAPI endpoint returning a file and proxy its content,
@@ -563,8 +610,11 @@ def _call_api_file(request, endpoint, params=None):
     if request.method == 'HEAD':  # the client wants the headers only
         response.close()
         return HttpResponse(status=200, headers=headers)
-    return StreamingHttpResponse(
-        _stream_content(response, _CHUNK_SIZE), headers=headers, status=200)
+    if hasattr(request, 'scope'):  # ASGI request
+        content = _astream_content(response, _CHUNK_SIZE)
+    else:  # WSGI request
+        content = _stream_content(response, _CHUNK_SIZE)
+    return StreamingHttpResponse(content, headers=headers, status=200)
 
 
 def _post_api(request, endpoint, data, timeout=10):
