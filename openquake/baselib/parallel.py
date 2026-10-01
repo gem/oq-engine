@@ -506,6 +506,30 @@ def sendback(res, zsocket):
     return nbytes
 
 
+def task_weight(arg):
+    """
+    :param arg: the first argument of a task
+    :returns: the weight of the argument, used in the task_info dataset
+
+    The weight of a task is the estimated cost of the work it performs,
+    so it is the sum of the weights of the items it will process. The
+    argument is however often a plain list of identifiers (see the
+    classical tasks, which receive the keys of the source groups) and
+    then the weight has to be set by the task itself (see
+    `openquake.calculators.classical.classical`).
+    """
+    try:
+        return arg.weight  # for instance a SourceGroup
+    except AttributeError:
+        pass
+    if isinstance(arg, (list, tuple)) and arg:
+        try:
+            return sum(item.weight for item in arg)
+        except AttributeError:
+            pass
+    return 1.
+
+
 def safely_call(func, args, task_no, mon):
     """
     Call the given function with the given arguments safely, i.e.
@@ -529,7 +553,7 @@ def safely_call(func, args, task_no, mon):
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
-    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.weight = task_weight(args[0])  # used in task_info
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)

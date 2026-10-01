@@ -174,6 +174,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if grps[0].atomic:
         # case_27 (Japan)
@@ -206,6 +209,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
