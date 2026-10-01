@@ -435,8 +435,6 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     for given IMT, assembled per ctx row from the per-period lookups
     """
     stored_periods = grid_data["stored_periods"][term]
-    if not stored_periods:
-        return
 
     # Term-level range check only when target IMT is not stored
     if imt.string not in stored_periods:
@@ -562,8 +560,7 @@ def load_residual_grids(hdf5_path):
         if ct is not None:
             scalar_sig_tables[term] = ct
 
-    # Per-term sorted list of stored IMT strings; drives the term-level
-    # range check and the per-ctx-row interpolation loop
+    # Per-term sorted list of stored IMT strings
     stored_periods = {}
     for term, cfg in res_terms.items():
         # Get the IMTs for the term's given correction type
@@ -571,6 +568,12 @@ def load_residual_grids(hdf5_path):
             imt_strs = list(raytrace_grids.get(term, {}))
         else:
             imt_strs = [s for s, td in grids.items() if term in td]
+        if not imt_strs:
+            raise ValueError(
+                f"Term '{term}' is declared in 'res_terms' but no IMT "
+                f"groups are stored for it in {hdf5_path!r}; provide at "
+                f"least one IMT group (an explicit zero mean adjustment "
+                f"is fine) or remove the term from 'res_terms'.")
         # Store them for given term in dict of stored periods
         stored_periods[term] = sorted(
             imt_strs, key=lambda s: imt_from_string(s).period)
