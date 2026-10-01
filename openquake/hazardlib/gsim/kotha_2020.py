@@ -153,15 +153,17 @@ def _build_props_cache(props_list):
     feature property dicts, so lookups in compute() do not rebuild the
     same per-feature values array on every IMT.
     """
-    cache = {}
-    for k in props_list[0]:
-        try:
-            cache[k] = np.array(
-                [np.nan if p[k] is None else float(p[k]) for p in props_list],
-                dtype=float)
-        except (TypeError, ValueError):
-            pass  # skip non-numeric keys (names, codes, ...)
-    return cache
+    # Skip these as not used in the compute method
+    skip = frozenset({
+        'NAME', 'DOMAIN', 'TECTONIC_R', 'TECTONIC_S', 'EARTHQUAKE',
+        'TECREG', 'TECTONICS', 'CSZ_ID', 'TECTO_ID',
+        'ID', 'OBJECTID', 'LONC', 'LATC'})
+    return {
+        k: np.array(
+            [np.nan if p[k] is None else float(p[k]) for p in props_list],
+            dtype=float)
+        for k in props_list[0] if k not in skip
+    }
 
 
 def _lookup_property(feat_idx, prop_vals):
