@@ -23,6 +23,8 @@ After a refactoring run `ruff check` and make sure it does not fail.
 
 # notes
 
+Tests outside the directory openquake/calculators should be run
+preferably in parallel, otherwise they will be too slow.
 The performance of a machine can be assessed with the command
 `oq engine --run https://downloads.openquake.org/jobs/performance.zip`.
 On a laptop with an Intel Ultra/Ryzen 7 (or a modern Mac)

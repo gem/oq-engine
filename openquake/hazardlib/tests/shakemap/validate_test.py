@@ -27,6 +27,7 @@ Here are a few codes with interesting errors:
 - us7000n05d: USGS geometry == Point
 """
 
+import ast
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
@@ -58,6 +59,24 @@ class ImpactValidateTestCase(unittest.TestCase):
         rup, _rupdic, _params, err = impact_validate(POST, user)
         self.assertIsInstance(rup, BaseRupture)
         self.assertEqual(err, {})
+
+    def test_nodal_plane_product_is_saved(self):
+        POST = {
+            'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
+            'nodal_plane': 'NP1', 'msr': 'WC1994', 'aspect_ratio': '2',
+            'time_event': 'day', 'maximum_distance': '300',
+            'truncation_level': '3',
+            'number_of_ground_motion_fields': '10',
+            'asset_hazard_distance': '15', 'ses_seed': '42'}
+        _rup, rupdic, params, err = impact_validate(POST, user)
+        self.assertEqual(err, {})
+        self.assertEqual(rupdic['nodal_plane'], 'NP1')
+        product = rupdic['mechanism_product']
+        self.assertEqual(product['type'], 'moment-tensor')
+        self.assertTrue(product['id'])
+        stored = ast.literal_eval(params['rupture_dict'])
+        self.assertEqual(stored['nodal_plane'], 'NP1')
+        self.assertEqual(stored['mechanism_product'], product)
 
     def test_2a(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',

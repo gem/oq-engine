@@ -174,6 +174,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if grps[0].atomic:
         # case_27 (Japan)
@@ -206,6 +209,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
@@ -220,12 +226,17 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
+        # NB: the tasks generated below are called baseclassical, i.e. they
+        # have a different name than the Starmap (classical), hence the
+        # times are stored in separate rows of the starmap_info dataset;
+        # the split is not triggered by the tests in openquake/calculators,
+        # since the default split_time is at least 10 seconds: the reference
+        # test is classical/share_small in oq-risk-tests (split_time = 5)
         if dt > 2 * cmaker.oq.split_time:
             for blk in blks[1:]:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
             yield baseclassical(blks[0], sites, cmaker, True)
         elif dt > cmaker.oq.split_time:
-            # tested in share_small
             yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
                    True, dstore)
             rest = sum(blks[2:], [])
@@ -599,7 +610,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           self.max_weight, self.num_chunks, tiling=self.tiling)
+                           self.max_weight, self.num_chunks,
+                           tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
@@ -610,7 +622,13 @@ class ClassicalCalculator(base.HazardCalculator):
             num_blocks += sum('-' in key for key in grp_keys)
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
-                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+                # NB: a RateMap is huge (550 MB in usa23) and must be
+                # created once per group: the atomic groups of a gid are
+                # split in blocks with different grp_keys[0], but they
+                # all contribute to the RateMap of the first group
+                if grp_id not in self.rmap:
+                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L,
+                                                cmaker.gid)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however
@@ -761,11 +779,27 @@ class ClassicalCalculator(base.HazardCalculator):
             info = self.datastore.read_df('starmap_info', 'taskname')
         except hdf5.File.EmptyDataset:
             return
-        try:
-            ser = info.loc[b'classical']
-        except KeyError:  # classical_disagg
+        # NB: the classical Starmap generates baseclassical subtasks when
+        # the tasks are too slow, so there can be two rows; the rows with
+        # a tiny mean are discarded, since the tasks are then so fast
+        # that the busy times are dominated by the startup of the worker
+        # processes, so the check below would be meaningless (see eshm20,
+        # with 0.15s of busy time per worker and a ratio of 1.5)
+        ser = info[info.index.isin([b'classical', b'baseclassical'])]
+        ser = ser[ser['mean'] >= 1]
+        if not len(ser):
             return
-        slow_tasks = ser['std'] / ser['mean'] > .3
+        # NB: the ratio std/mean of the *busy times* of the workers
+        # measures how balanced the generated tasks are; since the
+        # tasks are built from an estimate of the cost, and the
+        # estimate cannot be exact, .3 is considered acceptable
+        # (see the alaska and sam_small tests in oq-risk-tests)
+        # NB: the rows are combined and not compared, since they are
+        # components of the busy time of the same workers; assuming the
+        # times spent on the different kinds of tasks are independent,
+        # the means add up and so do the variances
+        std = numpy.sqrt((ser['std'] ** 2).sum())
+        slow_tasks = std / ser['mean'].sum() > .3
         if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:

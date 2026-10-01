@@ -22,6 +22,7 @@ import sys
 import json
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import numpy
 import pandas
 from io import BytesIO
@@ -34,10 +35,28 @@ from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
+from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
     get_or_create_user, start_uvicorn, stop_uvicorn)
 
 CALC_RUN_TIMEOUT = 60
+
+
+def test_format_oqparam_displays_selected_nodal_plane():
+    oqparam = SimpleNamespace(
+        rupture_dict={
+            'approach': 'build_rup_from_usgs', 'usgs_id': 'us7000n7n8',
+            'shakemap_desc': 'v10', 'nodal_plane': 'NP2', 'lon': 1,
+            'lat': 2, 'dep': 3, 'mag': 4, 'msr': 'WC1994',
+            'aspect_ratio': 2, 'rake': 90, 'dip': 45, 'strike': 10},
+        time_event='day', maximum_distance={'default': [[0, 300]]},
+        truncation_level=3, number_of_ground_motion_fields=10,
+        asset_hazard_distance={'default': 15}, ses_seed=42,
+        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
+    inputs = format_oqparam(oqparam)
+    assert inputs['Nodal plane'] == 'NP2'
+    assert list(inputs).index('Nodal plane') < list(inputs).index(
+        'Magnitude scaling relationship')
 
 
 def check_email(job_id, email_content, expected_error):
