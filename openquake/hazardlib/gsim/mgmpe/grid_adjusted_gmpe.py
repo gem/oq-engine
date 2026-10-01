@@ -69,7 +69,7 @@ def _site_covered_at_any_period(grids, term, key, lat, lon,
 
 
 ### Helpers for log-period interpolation at target IMT ###
-def _check_in_range(imt, stored_imt_strs, term):
+def _check_in_range(imt, term_hdf5, term):
     """
     Raise ValueError if the target IMT is outside the overall
     log-period interpolable range of this term
@@ -81,61 +81,66 @@ def _check_in_range(imt, stored_imt_strs, term):
             f"can be filled in by log-period interpolation; PGA and "
             f"other non-SA IMTs must be provided directly in the HDF5.")
 
-    # Get the periods
-    has_pga = "PGA" in stored_imt_strs
-    sa_periods = sorted(
-        imt_from_string(s).period for s in stored_imt_strs if s != "PGA")
-    p = imt.period
+    # Get teh period info already parsed from the hdf5
+    has_pga = term_hdf5["has_pga"]
+    sa_periods = term_hdf5["sa_periods"]
 
+    # Get period and check if we can interpolate
+    p = imt.period
     if sa_periods:
         if p > sa_periods[-1]:
             raise ValueError(
                 f"Cannot interpolate {imt} for term '{term}': target "
                 f"period {p}s above stored SA range "
-                f"(max {sa_periods[-1]}s).")
+                f"(max {sa_periods[-1]}s)."
+                )
         if p >= sa_periods[0]:
-            return  # Target sits inside the stored SA range
+            return  # Target period sits inside the stored SA range
 
     # Below the smallest stored SA: PGA may anchor the interp, but only
-    # if it is stored and the smallest SA is <= "PGA_ANCHOR_MAX_SA"
+    # if PGA is stored and the smallest SA is <= PGA_ANCHOR_MAX_SA also
     fallback_ok = (has_pga and p >= PGA_ANCHOR_PERIOD
                    and sa_periods and sa_periods[0] <= PGA_ANCHOR_MAX_SA)
     if not fallback_ok:
         raise ValueError(
             f"Cannot interpolate {imt} for term '{term}': target period "
             f"{p}s below the interpolable range (need PGA plus a stored "
-            f"SA period at <= {PGA_ANCHOR_MAX_SA}s to anchor against).")
+            f"SA period at <= {PGA_ANCHOR_MAX_SA}s to anchor against)."
+            )
 
 
 def _log_period_interp(target_period, pairs):
     """
-    Linear log-period interp at "target_period" over sorted
-    (period, value) "pairs"; returns None if "target_period" is unbracketed
+    Linear log-period interpolation at "target_period" over sorted
+    (period, value) "pairs". Returns None if "target_period" cannot
+    be bracketed below and above.
     """
     below = None
     above = None
+    # Iterate over the stored 
     for p, v in pairs:
+        # Exact match: only fires when the target is SA(0.01) and
+        # PGA sits in "pairs" as the lower log(T) anchor at 0.01s;
+        # the anchor's value is the answer at the target period
         if p == target_period:
             return v
+        # Pair sits below the target period
         if p < target_period:
             below = (p, v)
+        # Pair sits above the target period
         else:
             above = (p, v)
             break
+
+    # No anchor on one side -> cannot bracket -> unbracketed
     if below is None or above is None:
         return None
+    
+    # Linear interp in log(period) between the two anchor pairs
     ratio = ((math.log(target_period) - math.log(below[0])) /
              (math.log(above[0]) - math.log(below[0])))
+    
     return below[1] + ratio * (above[1] - below[1])
-
-
-def _periods_in_seconds(imt_strs):
-    """
-    Map each stored IMT string to its period in seconds; PGA maps to
-    "PGA_ANCHOR_PERIOD" and non-SA/non-PGA IMTs are skipped
-    """
-    return {s: (PGA_ANCHOR_PERIOD if s == "PGA" else imt_from_string(s).period)
-            for s in imt_strs if s == "PGA" or s.startswith("SA(")}
 
 
 def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
@@ -164,12 +169,18 @@ def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
 
 def _ctx_row_pairs(per_period_vals, periods_sec, i):
     """
-    Row "i" of each per-period array as a sorted (period, value)
-    list; PGA is prepended only when the smallest SA at the row
-    is <= PGA_ANCHOR_MAX_SA
+    Row "i" (i.e., "ctx[i]") of each per-period array as a sorted
+    (period, value) list - e.g. [(0.1, 0.2), (0.2, 0.25)] where
+    position 0 is SA(0.1) and position 1 is SA(0.2) for some term
+    e.g. dL2L.
+    
+    PGA is only permitted as the anchor when the smallest retrieved
+    period at the row is <= PGA_ANCHOR_MAX_SA of 0.05 seconds (like
+    in CoeffsTable).
     """
     pga_val = None
     sa_pairs = []
+    
     for p_str, arr in per_period_vals.items():
         v = arr[i]
         if np.isnan(v):
@@ -178,10 +189,13 @@ def _ctx_row_pairs(per_period_vals, periods_sec, i):
             pga_val = float(v)
         else:
             sa_pairs.append((periods_sec[p_str], float(v)))
+    
     sa_pairs.sort()
+
     if (pga_val is not None and sa_pairs
             and sa_pairs[0][0] <= PGA_ANCHOR_MAX_SA):
         return [(PGA_ANCHOR_PERIOD, pga_val)] + sa_pairs
+    
     return sa_pairs
 
 
@@ -261,7 +275,7 @@ def _hypo_site_coords(cfg, ctx):
 
 
 def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
-                         h3_res, stored_periods):
+                         h3_res, stored_periods, periods_sec):
     """
     Per-site log-period interp over per-period finest-cell lookups;
     uniform misses stay 0, partial-coverage bracket fails raise
@@ -275,7 +289,6 @@ def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
         per_period_vals[p_str] = grid_lookup(
             term_at_p[key], lats, lons, h3_res, default=np.nan)
 
-    periods_sec = _periods_in_seconds(per_period_vals.keys())
     target_period = target_imt.period
 
     # Per site: assemble local (period, value) pairs and interp at target IMT
@@ -298,7 +311,7 @@ def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
 
 
 def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
-                        stored_periods):
+                        stored_periods, periods_sec):
     """
     Per-ray log-period interp over per-period ray-traces;
     uniform misses stay 0, partial-coverage bracket fails raise
@@ -312,7 +325,6 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
         per_period_vals[p_str] = raytrace_path_adj(
             grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
 
-    periods_sec = _periods_in_seconds(per_period_vals.keys())
     target_period = target_imt.period
 
     # Per ray: interp per-period scalars at target IMT; a ray through
@@ -364,6 +376,7 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
+    term_hdf5 = grid_data["periods_hdf5"][term]
     # Fast path: target IMT is stored directly, no interp needed
     direct = grid_data["grids"].get(
         imt.string, {}).get(term, {}).get("mean")
@@ -374,7 +387,7 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     # Interp path: per-site log-period interp over per-period lookups
     return _per_site_log_interp(
         grid_data["grids"], term, "mean", imt,
-        lats, lons, h3_res, stored_periods)
+        lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"])
 
 
 def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
@@ -382,14 +395,18 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
     Per-ray mean adjustment for one path term at target IMT
     """
     raytrace_grids_term = grid_data["raytrace_grids"].get(term, {})
-    # Fast path: target IMT is stored directly, ray-trace that grid
+    term_hdf5 = grid_data["periods_hdf5"][term]
+
     direct = raytrace_grids_term.get(imt.string)
     if direct is not None:
+        # Target IMT is stored directly, ray-trace that grid
         return raytrace_path_adj(
             direct, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
-    # Interp path: per-ray log-period interp over per-period ray-traces
+    
+    # Per-ray log-period interp over per-period ray-traces
     return _per_ray_log_interp(
-        raytrace_grids_term, term, imt, ctx, stored_periods)
+        raytrace_grids_term, term, imt, ctx, stored_periods,
+        term_hdf5["periods_sec"])
 
 
 def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
@@ -401,18 +418,22 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     if term in grid_data["scalar_sig_tables"]:
         return float(grid_data["scalar_sig_tables"][term][imt]["sig"])
 
-    # Per-cell sigma (hypo/site only; path per-cell sigma is rejected at load)
+    # Per-cell sigma (hypo/site only; path per-cell not permitted)
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
-    direct = grid_data["grids"].get(
-        imt.string, {}).get(term, {}).get("sig")
+    term_hdf5 = grid_data["periods_hdf5"][term]
+    direct = grid_data["grids"].get(imt.string, {}).get(term, {}).get("sig")
+    
     if direct is not None:
         return _direct_lookup_or_fail(
             direct, lats, lons, h3_res, term, imt, "sig",
-            grid_data["grids"], stored_periods)
+            grid_data["grids"], stored_periods
+            )
+    
     return _per_site_log_interp(
         grid_data["grids"], term, "sig", imt,
-        lats, lons, h3_res, stored_periods)
+        lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"]
+        )
 
 
 def _apply_sigma(action, comp, adj, sig, tau, phi):
@@ -440,7 +461,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
 
     # Check it's possible to interpolate a non-present IMT
     if imt.string not in stored_periods:
-        _check_in_range(imt, stored_periods, term)
+        _check_in_range(imt, grid_data["periods_hdf5"][term], term)
 
     # Path uses per-ray interp, hypo/site uses per-site
     if cfg["location"] == "path":
@@ -575,10 +596,26 @@ def load_residual_grids(hdf5_path):
                 f"Term '{term}' is declared in 'res_terms' but no IMT "
                 f"groups are stored for it in {hdf5_path!r}; provide at "
                 f"least one IMT group (an explicit zero mean adjustment "
-                f"is fine) or remove the term from 'res_terms'.")
+                f"if no adjustment is desired for it) OR remove the term "
+                f"from the 'res_terms' group."
+                )
         # Store them for given term in dict of stored periods
         stored_periods[term] = sorted(
             imt_strs, key=lambda s: imt_from_string(s).period)
+
+    # Parse the IMT info stored in the hdf5
+    periods_hdf5 = {}
+    for term, imt_strs in stored_periods.items():
+        periods_hdf5[term] = {
+            "has_pga": "PGA" in imt_strs,
+            "sa_periods": sorted(
+                imt_from_string(s).period for s in imt_strs if s != "PGA"),
+            "periods_sec": {
+                s: (PGA_ANCHOR_PERIOD if s == "PGA" 
+                    else imt_from_string(s).period)
+                for s in imt_strs if s == "PGA" or s.startswith("SA(")
+            },
+        }
 
     return {
         "grids": grids,
@@ -588,6 +625,7 @@ def load_residual_grids(hdf5_path):
         "res_terms": res_terms,
         "scalar_sig_tables": scalar_sig_tables,
         "stored_periods": stored_periods,
+        "periods_hdf5": periods_hdf5,
     }
 
 
