@@ -939,7 +939,7 @@ class Starmap(object):
                 task.result(timeout=0)
 
     def _loop(self):
-        self.busytime = AccumDict(accum=[])  # pid -> time
+        self.busytime = AccumDict()  # name -> pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -980,14 +980,23 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        if len(self.busytime) > 1:
-            times = numpy.array(list(self.busytime.values()))
-            if self.h5.mode != 'r':
-                self.monitor.save_starmap_info(self.h5, self.name, times)
+        # NB: a Starmap can generate tasks with different names, as
+        # classical -> baseclassical when the tasks are split for being
+        # too slow; the times are stored per task name, so that the
+        # tasks of different kinds are not mixed together
+        for name, dic in self.busytime.items():
+            if len(dic) > 1:  # no statistics with a single core
+                times = numpy.array(list(dic.values()))
+                if self.h5.mode != 'r':
+                    self.monitor.save_starmap_info(
+                        self.h5, self.name, name, times)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
-        self.busytime += {res.workerid: res.mon.duration}
+        name = res.mon.operation[6:]  # strip 'total '
+        if name not in self.busytime:
+            self.busytime[name] = AccumDict(accum=0.)
+        self.busytime[name] += {res.workerid: res.mon.duration}
         del self.tasks[res.mon.task_no]
         self._submit_many(1)
         todo = set(range(self.task_no)) - finished
@@ -998,7 +1007,6 @@ class Starmap(object):
         if self.h5.mode != 'r':
             del self.h5['task_sent']
             self.h5['task_sent'] = str(task_sent)
-        name = res.mon.operation[6:]  # strip 'total '
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:

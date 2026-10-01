@@ -758,14 +758,29 @@ class ClassicalCalculator(base.HazardCalculator):
         Check for slow tasks
         """
         try:
-            info = self.datastore.read_df('starmap_info', 'taskname')
+            info = self.datastore.read_df('starmap_info', 'starmap')
         except hdf5.File.EmptyDataset:
             return
         try:
             ser = info.loc[b'classical']
         except KeyError:  # classical_disagg
             return
-        slow_tasks = ser['std'] / ser['mean'] > .3
+        # NB: the classical Starmap can generate baseclassical subtasks
+        # when the tasks are too slow, so there can be more than one row;
+        # the rows with a tiny mean are discarded, since the tasks are
+        # so fast that the busy times are dominated by the startup of
+        # the worker processes, so the check below would be meaningless
+        # (see eshm20, with 0.15s of busy time per worker and a ratio
+        # of 1.5)
+        ser = ser[ser['mean'] >= 1]
+        if not len(ser):
+            return
+        # NB: the ratio std/mean of the *busy times* of the workers
+        # measures how balanced the generated tasks are; since the
+        # tasks are built from an estimate of the cost, and the
+        # estimate cannot be exact, .3 is considered acceptable
+        # (see the alaska and sam_small tests in oq-risk-tests)
+        slow_tasks = (ser['std'] / ser['mean']).max() > .3
         if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:
