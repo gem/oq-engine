@@ -1397,8 +1397,13 @@ class ContextMaker(object):
         elif src.code in b'CKX':
             C *= step
         src.nctxs = C * srcfilter.multiplier
-        weight = src.nctxs / N
-        return weight
+        # the surviving contexts are not the whole story: the contexts of a
+        # pointlike source are generated for all the (rupture, site) pairs
+        # and then filtered by rrup < magdist, so a collapsed point source
+        # with thousands of ruptures and a couple of surviving contexts is
+        # much more expensive than its nctxs suggests
+        pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+        return (src.nctxs + pairs / 50) / N
 
     def set_weight(self, sources, srcfilter):
         """
