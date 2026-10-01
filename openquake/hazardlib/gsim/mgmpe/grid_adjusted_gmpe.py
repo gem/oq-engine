@@ -33,19 +33,19 @@ from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.imt import from_string as imt_from_string
 
 # PGA stands in for SA at "PGA_ANCHOR_PERIOD" during log-period interp,
-# but only when the smallest stored SA period is <= "PGA_ANCHOR_MAX_SA"
+# but only when the smallest stored SA period is <= PGA_ANCHOR_MAX_SA
 PGA_ANCHOR_PERIOD = 0.01
 PGA_ANCHOR_MAX_SA = 0.05
 
 
-### Centralised handler for per-record interpolation failures ###
+### Centralised handler for per-ctx-row interpolation failures ###
 def _handle_interp_failure(term, imt, reason, **context):
     """
-    Single hook for every per-record case where an adjustment at the
+    Single hook for every per-ctx-row case where an adjustment at the
     target IMT would distort the spectral shape (partial coverage)
     """
-    # Uniformly uncovered records are not routed here; they get 0 so
-    # the spectrum stays uniformly ergodic at that record
+    # Uniformly uncovered ctx rows are not routed here; they get 0 so
+    # the spectrum stays uniformly ergodic at that ctx row
     details = ", ".join(f"{k}={v}" for k, v in context.items())
     raise ValueError(
         f"GridAdjustedGMPE failed to interpolate term {term!r} at "
@@ -138,32 +138,33 @@ def _periods_in_seconds(imt_strs):
 
 def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
     """
-    Classify why "_log_period_interp" returned None for record "i":
+    Classify why "_log_period_interp" returned None for ctx row "i":
     above-range, PGA stored but anchor gap too wide, or below-range
     """
     if target_period > pairs[-1][0]:
-        return (f"target period {target_period}s above record's local "
+        return (f"target period {target_period}s above ctx row's local "
                 f"max SA period ({pairs[-1][0]}s): extrapolation")
 
     pga_arr = per_period_vals.get("PGA")
-    pga_at_record = pga_arr is not None and not np.isnan(pga_arr[i])
+    pga_at_row = pga_arr is not None and not np.isnan(pga_arr[i])
     smallest_sa = pairs[0][0]
 
-    if pga_at_record and smallest_sa > PGA_ANCHOR_MAX_SA:
-        return (f"PGA is stored at this record but the smallest local "
+    if pga_at_row and smallest_sa > PGA_ANCHOR_MAX_SA:
+        return (f"PGA is stored at this ctx row but the smallest local "
                 f"SA period ({smallest_sa}s) exceeds the PGA anchor "
                 f"gap (<= {PGA_ANCHOR_MAX_SA}s), so PGA cannot anchor "
                 f"the interp at target {target_period}s")
 
-    return (f"target period {target_period}s below record's local min "
+    return (f"target period {target_period}s below ctx row's local min "
             f"SA period ({smallest_sa}s) with no usable PGA anchor: "
             f"extrapolation")
 
 
-def _record_pairs(per_period_vals, periods_sec, i):
+def _ctx_row_pairs(per_period_vals, periods_sec, i):
     """
-    Row "i" of each per-period array as a sorted (period, value) list;
-    PGA is prepended only when the smallest SA at the row is <= "PGA_ANCHOR_MAX_SA"
+    Row "i" of each per-period array as a sorted (period, value)
+    list; PGA is prepended only when the smallest SA at the row
+    is <= PGA_ANCHOR_MAX_SA
     """
     pga_val = None
     sa_pairs = []
@@ -279,7 +280,7 @@ def _per_site_log_interp(grids, term, key, target_imt, lats, lons,
     n = len(lats)
     out = np.zeros(n)
     for i in range(n):
-        pairs = _record_pairs(per_period_vals, periods_sec, i)
+        pairs = _ctx_row_pairs(per_period_vals, periods_sec, i)
         if not pairs:
             continue  # uniformly uncovered site: 0 is the right answer
         val = _log_period_interp(target_period, pairs)
@@ -317,7 +318,7 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
     n = len(ctx.hypo_lon)
     out = np.zeros(n)
     for i in range(n):
-        pairs = _record_pairs(per_period_vals, periods_sec, i)
+        pairs = _ctx_row_pairs(per_period_vals, periods_sec, i)
         if not pairs:
             continue  # uniformly uncovered ray: 0 is the right answer
         val = _log_period_interp(target_period, pairs)
@@ -346,11 +347,11 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
                 h3_res, stored_periods):
             _handle_interp_failure(
                 term, imt,
-                "record missing at target IMT but covered at other "
+                "ctx row missing at target IMT but covered at other "
                 "stored periods (partial coverage)",
                 key=key, site_index=int(i),
                 lat=float(lats[i]), lon=float(lons[i]))
-    # Uniformly uncovered records: NaN -> 0 (ergodic default)
+    # Uniformly uncovered ctx rows: NaN -> 0 (ergodic default)
     vals[np.isnan(vals)] = 0.0
     return vals
 
@@ -391,7 +392,7 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
 
 def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
-    Per-record sigma adjustment for one term at target IMT; scalar
+    Per-ctx row sigma adjustment for one term at target IMT; scalar
     per-IMT sigmas use the term's CoeffsTable, per-cell goes spatial
     """
     # Scalar per-IMT sigma: single CoeffsTable interp (not spatial)
@@ -428,10 +429,10 @@ def _apply_sigma(action, comp, adj, sig, tau, phi):
         sig[:] = np.sqrt(tau ** 2 + phi ** 2)
 
 
-def _apply_one_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
+def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     """
     Apply the mean (and optional sigma) adjustment for a single term
-    at target IMT, assembled per record from the per-period lookups
+    for given IMT, assembled per ctx row from the per-period lookups
     """
     stored_periods = grid_data["stored_periods"][term]
     if not stored_periods:
@@ -457,10 +458,11 @@ def _apply_one_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
 
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
-    Apply every stored term to the "compute()" outputs at one target IMT
+    Apply every stored adjustment term to the "compute()" outputs
+    for given IMT
     """
     for term, cfg in grid_data["res_terms"].items():
-        _apply_one_term(
+        _apply_term(
             grid_data, term, cfg, imt, ctx, mean, sig, tau, phi)
 
 
@@ -535,7 +537,7 @@ def load_residual_grids(hdf5_path):
 
     * "stored_periods"    - {term: sorted list of IMT strings at which the
                             term is stored}, used by the term-level range
-                            check and by the per-record interp loop
+                            check and by the per-ctx-row interp loop
     """
     # Set some stores
     grids = {}
@@ -561,7 +563,7 @@ def load_residual_grids(hdf5_path):
             scalar_sig_tables[term] = ct
 
     # Per-term sorted list of stored IMT strings; drives the term-level
-    # range check and the per-record interpolation loop
+    # range check and the per-ctx-row interpolation loop
     stored_periods = {}
     for term, cfg in res_terms.items():
         # Get the IMTs for the term's given correction type
@@ -718,21 +720,21 @@ class GridAdjustedGMPE(GMPE):
       provide)
 
     * Corrections are stored per term per IMT; when the target IMT is
-      not directly stored, each record (site for hypo/site terms, ray
+      not directly stored, each ctx row (site for hypo/site terms, ray
       for path terms) is handled independently:
 
-        1. For every stored period of the term, the record's
+        1. For every stored period of the term, the ctx row's
            finest-containing-cell value is pulled (via the
            coarsest->finest spatial fallback) or, for a path term, the
            ray is traced through that period's grid to produce a per-ray
            scalar
         2. The resulting (period, value) list is log-period interpolated
-           at the target IMT to give the record's final adjustment
+           at the target IMT to give the ctx row's final adjustment
 
-      Because the per-period lookup is driven by the record's location,
-      a record can use the finest available spatial resolution *at each
+      Because the per-period lookup is driven by the ctx row's location,
+      a ctx row can use the finest available spatial resolution *at each
       stored period* independently - cells at different h3 resolutions
-      can contribute to the same record's interpolation if that is what
+      can contribute to the same ctx row's interpolation if that is what
       the data supports
 
     * Extrapolation beyond the term's overall stored period range raises
@@ -741,18 +743,18 @@ class GridAdjustedGMPE(GMPE):
       "CoeffsTable"'s PGA-anchored fallback), otherwise a target IMT
       below the smallest stored SA period is rejected
 
-    * A record that is uniformly uncovered (no stored cell at any
+    * A ctx row that is uniformly uncovered (no stored cell at any
       stored period of the term) silently gets 0 at every IMT so the
-      spectrum stays uniformly ergodic at that record; a record that is
+      spectrum stays uniformly ergodic at that ctx row; a ctx row that is
       partially covered (missing at the target but covered at other
       stored periods, or has local pairs that cannot bracket the
       target) is routed through "_handle_interp_failure" because
       adjusting it would distort the spectral shape
 
     * The h3 grid cell resolution can vary over IMT because the
-      calibration data may vary with period; the per-record interp
+      calibration data may vary with period; the per-ctx-row interp
       above handles this naturally - at each period the lookup returns
-      whatever the finest containing cell happens to be for that record
+      whatever the finest containing cell happens to be for that ctx row
       at that period
 
     A real HDF5 example is used by the unit tests
