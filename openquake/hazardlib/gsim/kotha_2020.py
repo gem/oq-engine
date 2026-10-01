@@ -128,21 +128,19 @@ def _get_h(C, hypo_depth):
 def _assign_feature_indices(tree, lons, lats):
     """
     Return the index of the containing feature for each (lon, lat) point,
-    or -1 if the point is outside every feature. Uses a shapely STRtree
-    spatial index to avoid scanning all polygons per call.
+    or -1 if the point is outside every feature.
     """
-    # -1 means point is not inside any feature
+    # Set default of outside every feature so default params used if not
+    # inside any polygon
     assignment = np.full(len(lons), -1)
 
-    # STRtree batch query: returns (point_idx, polygon_idx) pairs for all
-    # points that fall inside at least one polygon
+    # 'covered_by' includes boundaries, so points on a shared edge match
+    # both polygons rather than falling through to -1
     pts = shapely.points(lons, lats)
-    pt_idx, poly_idx = tree.query(pts, predicate='within')
+    pt_idx, poly_idx = tree.query(pts, predicate='covered_by')
 
-    # If polygons overlap, keep the lowest polygon index to match the
-    # first-match behaviour of the original iterate-shapes-in-order code.
-    # Assigning in descending poly_idx order means lower indices overwrite
-    # higher ones for any shared pt_idx.
+    # Multiple matches resolve to the lowest polygon index for consistency
+    # with the behaviour of the original implementation
     order = np.argsort(poly_idx)[::-1]
     assignment[pt_idx[order]] = poly_idx[order]
 
@@ -633,10 +631,9 @@ class KothaEtAl2020regional(KothaEtAl2020):
         self.delta_l2l_epsilon = delta_l2l_epsilon
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
-        # Cache geojson feature shapes and properties once. The polygon
-        # geometry does not vary with IMT or ctx, so building shapes here
-        # (and precomputing per-point assignments per compute call) avoids
-        # rebuilding prepared polygons N_imts times per compute.
+        # Cache the STRtree and per-feature value arrays once. Neither of
+        # them varies with IMT or ctx, so building them here avoids having
+        # to re-scann all features N_imts times per compute
         attenuation_file = os.path.join(
             DATA_FOLDER, 'kotha_attenuation_regions.geojson')
         att = list(fiona.open(attenuation_file))
@@ -647,7 +644,6 @@ class KothaEtAl2020regional(KothaEtAl2020):
         tec = list(fiona.open(tectonic_file))
         self.tec_tree = STRtree([shape(f['geometry']) for f in tec])
         self.tec_vals = _build_props_cache([f['properties'] for f in tec])
-
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
