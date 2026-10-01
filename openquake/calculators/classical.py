@@ -604,7 +604,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           self.max_weight, self.num_chunks, tiling=self.tiling)
+                           self.max_weight, self.num_chunks,
+                           tiling=self.tiling)
         maxtiles = 1
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
