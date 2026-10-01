@@ -27,7 +27,8 @@ Module exports :class:`KothaEtAl2020`,
 import os
 import numpy as np
 from scipy.constants import g
-from shapely import contains_xy
+import shapely
+from shapely import STRtree
 from shapely.geometry import shape
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.geo.packager import fiona
@@ -124,58 +125,61 @@ def _get_h(C, hypo_depth):
         np.where(hypo_depth > 20., CONSTANTS["h_D20"], CONSTANTS["h_10D20"]))
 
 
-def _assign_feature_indices(shapes, lons, lats):
+def _assign_feature_indices(tree, lons, lats):
     """
     Return the index of the containing feature for each (lon, lat) point,
-    or -1 if the point is outside every feature.
+    or -1 if the point is outside every feature. Uses a shapely STRtree
+    spatial index to avoid scanning all polygons per call.
     """
-    # num entries in ctx row
-    n = len(lons)
+    # -1 means point is not inside any feature
+    assignment = np.full(len(lons), -1)
 
-    # -1 means point is not yet inside any feature
-    assignment = np.full(n, -1)
+    # STRtree batch query: returns (point_idx, polygon_idx) pairs for all
+    # points that fall inside at least one polygon
+    pts = shapely.points(lons, lats)
+    pt_idx, poly_idx = tree.query(pts, predicate='within')
 
-    # Track which points still need a feature assignment
-    unassigned = np.ones(n, bool)
-    for i, geom in enumerate(shapes):
-
-        # Stop early once every point has been assigned
-        if not unassigned.any():
-            break
-
-        # Only test points that haven't been assigned yet
-        idx = np.flatnonzero(unassigned)
-
-        # Point-in-polygon check against this feature
-        contained = contains_xy(geom, lons[idx], lats[idx])
-
-        # Orig array indices of the points inside this feature
-        hits = idx[contained]
-
-        # Record the feature index and mark those points as assigned
-        assignment[hits] = i
-        unassigned[hits] = False
+    # If polygons overlap, keep the lowest polygon index to match the
+    # first-match behaviour of the original iterate-shapes-in-order code.
+    # Assigning in descending poly_idx order means lower indices overwrite
+    # higher ones for any shared pt_idx.
+    order = np.argsort(poly_idx)[::-1]
+    assignment[pt_idx[order]] = poly_idx[order]
 
     return assignment
 
 
-def _lookup_property(feat_idx, props_list, key):
+def _build_props_cache(props_list):
     """
-    Return each point's value of "key" from its assigned feature's
-    properties, or 0.0 for points outside every feature.
+    Precompute a {key: per-feature ndarray} cache from a list of GeoJSON
+    feature property dicts, so lookups in compute() do not rebuild the
+    same per-feature values array on every IMT.
+    """
+    cache = {}
+    for k in props_list[0]:
+        try:
+            cache[k] = np.array(
+                [np.nan if p[k] is None else float(p[k]) for p in props_list],
+                dtype=float)
+        except (TypeError, ValueError):
+            pass  # skip non-numeric keys (names, codes, ...)
+    return cache
+
+
+def _lookup_property(feat_idx, prop_vals):
+    """
+    Return each point's value from a precomputed per-feature values array,
+    or 0.0 for points outside every feature.
     """
     # Set array of zeros (one per input point) - any unassigned point will
     # end up keeping this zero value and therefore fallback to base coeff
     out = np.zeros(len(feat_idx))
 
-    # Get the key property from each feature into a flat array
-    values = np.array([p[key] for p in props_list])
-
     # Get mask marking the points which got assigned to a feature
     valid = feat_idx >= 0
 
     # Assign non-zero value to each point inside a feature
-    out[valid] = values[feat_idx[valid]]
+    out[valid] = prop_vals[feat_idx[valid]]
 
     return out
 
@@ -232,7 +236,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     return c3_ + c3_epsilon * tau_c3
 
 
-def get_distance_coefficients_3(att_props, site_feat_idx, delta_c3_epsilon,
+def get_distance_coefficients_3(att_vals, site_feat_idx, delta_c3_epsilon,
                                 C, imt_key):
     """
     Return site-specific coefficient 'C3'. The function retrieves the
@@ -242,8 +246,8 @@ def get_distance_coefficients_3(att_props, site_feat_idx, delta_c3_epsilon,
     delta_c3_epsilon value of +/- 1.6 gives the 95% confidence interval
     for delta_c3.
     """
-    delta_c3 = _lookup_property(site_feat_idx, att_props, imt_key)
-    delta_c3_se = _lookup_property(site_feat_idx, att_props, imt_key + '_se')
+    delta_c3 = _lookup_property(site_feat_idx, att_vals[imt_key])
+    delta_c3_se = _lookup_property(site_feat_idx, att_vals[imt_key + '_se'])
     return C["c3"] + delta_c3 + delta_c3_epsilon * delta_c3_se
 
 
@@ -271,7 +275,7 @@ def get_magnitude_scaling(C, mag):
                     C["e1"] + C["b3"] * d_m)
 
 
-def get_dl2l(tec_props, tec_feat_idx, imt_key, delta_l2l_epsilon):
+def get_dl2l(tec_vals, tec_feat_idx, imt_key, delta_l2l_epsilon):
     """
     Returns rupture source specific delta_l2l values. The method
     retrieves the delta_l2l and standard error of delta_l2l values.
@@ -279,8 +283,8 @@ def get_dl2l(tec_props, tec_feat_idx, imt_key, delta_l2l_epsilon):
     will be included. A delta_l2l_epsilon value of +/- 1.6 gives
     the 95% confidence interval for delta_l2l.
     """
-    dl2l = _lookup_property(tec_feat_idx, tec_props, imt_key)
-    dl2l_se = _lookup_property(tec_feat_idx, tec_props, imt_key + '_se')
+    dl2l = _lookup_property(tec_feat_idx, tec_vals[imt_key])
+    dl2l_se = _lookup_property(tec_feat_idx, tec_vals[imt_key + '_se'])
     return dl2l + delta_l2l_epsilon * dl2l_se
 
 
@@ -513,9 +517,9 @@ class KothaEtAl2020(GMPE):
         # once per compute call and reuse across all IMTs.
         if self.kind == 'regional':
             site_feat_idx = _assign_feature_indices(
-                self.att_shapes, ctx.lon, ctx.lat)
+                self.att_tree, ctx.lon, ctx.lat)
             tec_feat_idx = _assign_feature_indices(
-                self.tec_shapes, ctx.hypo_lon, ctx.hypo_lat)
+                self.tec_tree, ctx.hypo_lon, ctx.hypo_lat)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             extra = {}
@@ -534,7 +538,7 @@ class KothaEtAl2020(GMPE):
                 phi_s2s = None
             if self.kind == 'regional':
                 c3 = get_distance_coefficients_3(
-                    self.att_props, site_feat_idx,
+                    self.att_vals, site_feat_idx,
                     self.delta_c3_epsilon, C, str(imt))
             else:
                 c3 = self.c3
@@ -552,7 +556,7 @@ class KothaEtAl2020(GMPE):
                 mean[m] += self.dl2l[imt]["dl2l"]
 
             elif self.kind == 'regional':
-                dl2l = get_dl2l(self.tec_props, tec_feat_idx, str(imt),
+                dl2l = get_dl2l(self.tec_vals, tec_feat_idx, str(imt),
                                 self.delta_l2l_epsilon)
                 mean[m] += dl2l
 
@@ -636,13 +640,13 @@ class KothaEtAl2020regional(KothaEtAl2020):
         attenuation_file = os.path.join(
             DATA_FOLDER, 'kotha_attenuation_regions.geojson')
         att = list(fiona.open(attenuation_file))
-        self.att_shapes = [shape(f['geometry']) for f in att]
-        self.att_props = [f['properties'] for f in att]
+        self.att_tree = STRtree([shape(f['geometry']) for f in att])
+        self.att_vals = _build_props_cache([f['properties'] for f in att])
         tectonic_file = os.path.join(
             DATA_FOLDER, 'kotha_tectonic_regions.geojson')
         tec = list(fiona.open(tectonic_file))
-        self.tec_shapes = [shape(f['geometry']) for f in tec]
-        self.tec_props = [f['properties'] for f in tec]
+        self.tec_tree = STRtree([shape(f['geometry']) for f in tec])
+        self.tec_vals = _build_props_cache([f['properties'] for f in tec])
 
 
 
