@@ -74,12 +74,14 @@ def _check_in_range(imt, stored_imt_strs, term):
     Raise ValueError if the target IMT is outside the overall
     log-period interpolable range of this term
     """
+    # Can only interp SA
     if not imt.string.startswith("SA("):
         raise ValueError(
             f"Cannot interpolate {imt} for term '{term}': only SA IMTs "
             f"can be filled in by log-period interpolation; PGA and "
             f"other non-SA IMTs must be provided directly in the HDF5.")
 
+    # Get the periods
     has_pga = "PGA" in stored_imt_strs
     sa_periods = sorted(
         imt_from_string(s).period for s in stored_imt_strs if s != "PGA")
@@ -436,7 +438,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     """
     stored_periods = grid_data["stored_periods"][term]
 
-    # Term-level range check only when target IMT is not stored
+    # Check it's possible to interpolate a non-present IMT
     if imt.string not in stored_periods:
         _check_in_range(imt, stored_periods, term)
 
