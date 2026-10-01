@@ -220,12 +220,17 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
         res = baseclassical(b0, sites, cmaker, True)
         dt = time.time() - t0
         yield res
+        # NB: the tasks generated below are called baseclassical, i.e. they
+        # have a different name than the Starmap (classical), hence the
+        # times are stored in separate rows of the starmap_info dataset;
+        # the split is not triggered by the tests in openquake/calculators,
+        # since the default split_time is at least 10 seconds: the reference
+        # test is classical/share_small in oq-risk-tests (split_time = 5)
         if dt > 2 * cmaker.oq.split_time:
             for blk in blks[1:]:
                 yield baseclassical, blk, tilegetter, cmaker, True, dstore
             yield baseclassical(blks[0], sites, cmaker, True)
         elif dt > cmaker.oq.split_time:
-            # tested in share_small
             yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
                    True, dstore)
             rest = sum(blks[2:], [])
@@ -758,20 +763,22 @@ class ClassicalCalculator(base.HazardCalculator):
         Check for slow tasks
         """
         try:
-            info = self.datastore.read_df('starmap_info', 'starmap')
+            # NB: the starmap_info is read without an index on purpose,
+            # since DataFrame.from_records does not honour the index
+            # argument on structured arrays
+            info = self.datastore.read_df('starmap_info')
         except hdf5.File.EmptyDataset:
             return
-        try:
-            ser = info.loc[b'classical']
-        except KeyError:  # classical_disagg
-            return
+        if 'starmap' not in info.columns:
+            return  # calculation started by an older version of the engine
         # NB: the classical Starmap can generate baseclassical subtasks
         # when the tasks are too slow, so there can be more than one row;
         # the rows with a tiny mean are discarded, since the tasks are
-        # so fast that the busy times are dominated by the startup of
-        # the worker processes, so the check below would be meaningless
-        # (see eshm20, with 0.15s of busy time per worker and a ratio
-        # of 1.5)
+        # then so fast that the busy times are dominated by the startup
+        # of the worker processes, so the check below would be
+        # meaningless (see eshm20, with 0.15s of busy time per worker
+        # and a ratio of 1.5)
+        ser = info[info.starmap == b'classical']  # empty for classical_disagg
         ser = ser[ser['mean'] >= 1]
         if not len(ser):
             return

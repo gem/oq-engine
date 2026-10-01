@@ -981,9 +981,10 @@ class Starmap(object):
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
         # NB: a Starmap can generate tasks with different names, as
-        # classical -> baseclassical when the tasks are split for being
-        # too slow; the times are stored per task name, so that the
-        # tasks of different kinds are not mixed together
+        # preclassical -> filter_weight, or classical -> baseclassical
+        # when the tasks are split for being too slow (see the comment
+        # in classical.py); the times are stored per task name, so that
+        # the tasks of different kinds are not mixed together
         for name, dic in self.busytime.items():
             if len(dic) > 1:  # no statistics with a single core
                 times = numpy.array(list(dic.values()))
@@ -994,9 +995,8 @@ class Starmap(object):
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
         name = res.mon.operation[6:]  # strip 'total '
-        if name not in self.busytime:
-            self.busytime[name] = AccumDict(accum=0.)
-        self.busytime[name] += {res.workerid: res.mon.duration}
+        dic = self.busytime.setdefault(name, AccumDict(accum=0.))
+        dic += {res.workerid: res.mon.duration}
         del self.tasks[res.mon.task_no]
         self._submit_many(1)
         todo = set(range(self.task_no)) - finished
