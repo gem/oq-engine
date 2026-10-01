@@ -51,6 +51,9 @@ task_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
+# NB: there is one row per task name, since a Starmap can generate
+# tasks with different names, as classical -> baseclassical when the
+# tasks are split for being too slow
 starmap_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
      ('min', numpy.float32), ('max', numpy.float32)])
@@ -350,13 +353,16 @@ class Monitor(object):
 
     def save_starmap_info(self, h5, name, times):
         """
-        Called at the end of a Starmap. Store stats about the times per core.
+        Called at the end of a Starmap. Store stats about the times per
+        core for the tasks called `name`; the same Starmap can generate
+        tasks with different names, in which case there is one row for
+        each name.
         """
         t = (name, times.mean(), times.std(), times.min(), times.max())
         data = numpy.array([t], starmap_info_dt)
         hdf5.extend(h5['starmap_info'], data)
-        logging.info('Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                     t[1], t[2], t[3], t[4])
+        logging.info('%s: mean time per core=%ds, std=%.1fs, min=%ds, '
+                     'max=%ds', name, t[1], t[2], t[3], t[4])
 
     def reset(self):
         """
