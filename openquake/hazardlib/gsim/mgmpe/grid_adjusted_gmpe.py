@@ -69,7 +69,7 @@ def _loc_covered_at_any_period(grids, term, key, lat, lon,
 
 
 ### Helpers for log-period interpolation at target IMT ###
-def _check_in_range(imt, term_hdf5, term):
+def _check_in_range(imt, term_period_info, term):
     """
     Raise ValueError if the target IMT is outside the overall
     log-period interpolable range of this term
@@ -82,8 +82,8 @@ def _check_in_range(imt, term_hdf5, term):
             f"other non-SA IMTs must be provided directly in the HDF5.")
 
     # Get teh period info already parsed from the hdf5
-    has_pga = term_hdf5["has_pga"]
-    sa_periods = term_hdf5["sa_periods"]
+    has_pga = term_period_info["has_pga"]
+    sa_periods = term_period_info["sa_periods"]
 
     # Get period and check if we can interpolate
     p = imt.period
@@ -243,8 +243,8 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     adjustments = np.zeros(n_paths)
 
     for i in range(n_paths):
-        # Discretise the hypo-site line into 100 points; the step between
-        # consecutive points is the sampling distance
+        # Discretise the hypo-site line into 100 points; the step
+        # between consecutive points is the sampling distance
         line = npoints_between(
             site_lons[i], site_lats[i], 0.0,
             hypo_lons[i], hypo_lats[i], 0.0, 100)
@@ -374,7 +374,7 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
-    term_hdf5 = grid_data["periods_hdf5"][term]
+    term_period_info = grid_data["period_info"][term]
     # Fast path: target IMT is stored directly, no interp needed
     direct = grid_data["grids"].get(
         imt.string, {}).get(term, {}).get("mean")
@@ -385,7 +385,7 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     # Interp path: per-location log-period interp over per-period lookups
     return _per_loc_log_interp(
         grid_data["grids"], term, "mean", imt,
-        lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"])
+        lats, lons, h3_res, stored_periods, term_period_info["periods_sec"])
 
 
 def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
@@ -393,7 +393,7 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
     Per-ray mean adjustment for one path term at target IMT
     """
     raytrace_grids_term = grid_data["raytrace_grids"][term]
-    term_hdf5 = grid_data["periods_hdf5"][term]
+    term_period_info = grid_data["period_info"][term]
 
     direct = raytrace_grids_term.get(imt.string)
     if direct is not None:
@@ -404,7 +404,7 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
     # Per-ray log-period interp over per-period ray-traces
     return _per_ray_log_interp(
         raytrace_grids_term, term, imt, ctx, stored_periods,
-        term_hdf5["periods_sec"])
+        term_period_info["periods_sec"])
 
 
 def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
@@ -419,7 +419,7 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     # Per-cell sigma (hypo/site only; path per-cell not permitted)
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
-    term_hdf5 = grid_data["periods_hdf5"][term]
+    term_period_info = grid_data["period_info"][term]
     direct = grid_data["grids"].get(imt.string, {}).get(term, {}).get("sig")
     
     if direct is not None:
@@ -430,7 +430,7 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     
     return _per_loc_log_interp(
         grid_data["grids"], term, "sig", imt,
-        lats, lons, h3_res, stored_periods, term_hdf5["periods_sec"]
+        lats, lons, h3_res, stored_periods, term_period_info["periods_sec"]
         )
 
 
@@ -459,7 +459,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
 
     # Check it's possible to interpolate a non-present IMT
     if imt.string not in stored_periods:
-        _check_in_range(imt, grid_data["periods_hdf5"][term], term)
+        _check_in_range(imt, grid_data["period_info"][term], term)
 
     # Path uses per-ray interp, hypo/site uses per-location
     if cfg["location"] == "path":
@@ -602,9 +602,9 @@ def load_residual_grids(hdf5_path):
             imt_strs, key=lambda s: imt_from_string(s).period)
 
     # Parse the IMT info stored in the hdf5
-    periods_hdf5 = {}
+    period_info = {}
     for term, imt_strs in stored_periods.items():
-        periods_hdf5[term] = {
+        period_info[term] = {
             "has_pga": "PGA" in imt_strs,
             "sa_periods": sorted(
                 imt_from_string(s).period for s in imt_strs if s != "PGA"),
@@ -623,7 +623,7 @@ def load_residual_grids(hdf5_path):
         "res_terms": res_terms,
         "scalar_sig_tables": scalar_sig_tables,
         "stored_periods": stored_periods,
-        "periods_hdf5": periods_hdf5,
+        "period_info": period_info,
     }
 
 
