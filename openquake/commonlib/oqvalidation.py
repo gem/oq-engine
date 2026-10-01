@@ -1685,6 +1685,13 @@ class OqParam(valid.ParamSet):
             if (not self.investigation_time and
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
+                
+        if 'interdependencies' in self.inputs:
+            if not self._parent.discrete_damage_distribution:
+                self.raise_invalid(
+                    'discrete_damage_distribution must be True'
+                    ' for interdependencies analysis')
+
 
     def check_hazard(self):
         # check for sites, site_model and hc_id
