@@ -983,14 +983,13 @@ class Starmap(object):
         # NB: a Starmap can generate tasks with different names, as
         # preclassical -> filter_weight, or classical -> baseclassical
         # when the tasks are split for being too slow (see the comment
-        # in classical.py); the times are stored per task name, so that
-        # the tasks of different kinds are not mixed together
+        # in classical.py); there is one row per task name, so that the
+        # tasks of different kinds are not mixed together
         for name, dic in self.busytime.items():
             if len(dic) > 1:  # no statistics with a single core
                 times = numpy.array(list(dic.values()))
                 if self.h5.mode != 'r':
-                    self.monitor.save_starmap_info(
-                        self.h5, self.name, name, times)
+                    self.monitor.save_starmap_info(self.h5, name, times)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)

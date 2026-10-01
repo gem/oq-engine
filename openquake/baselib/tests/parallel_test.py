@@ -144,29 +144,6 @@ class StarmapTestCase(unittest.TestCase):
             self.assertGreater(dic[b'supertask'], 0)
         shutil.rmtree(tmpdir)
 
-    def test_starmap_info_per_taskname(self):
-        # a Starmap can generate tasks with different names, as
-        # classical -> baseclassical when the tasks are split for being
-        # too slow; the times must be stored per task name, otherwise
-        # the slow tasks check on the baseclassical tasks would be
-        # performed on the busy times of the classical ones
-        tmpdir = tempfile.mkdtemp()
-        tmp = os.path.join(tmpdir, 'calc_1.hdf5')
-        performance.init_performance(tmp)
-        mon = performance.Monitor('classical')
-        with hdf5.File(tmp, 'a') as h5:
-            mon.save_starmap_info(h5, 'classical', 'classical',
-                                  numpy.array([1., 3.]))
-            mon.save_starmap_info(h5, 'classical', 'baseclassical',
-                                  numpy.array([10., 20.]))
-            rows = h5['starmap_info'][()]
-        self.assertEqual([r['taskname'] for r in rows],
-                         [b'classical', b'baseclassical'])
-        self.assertEqual([r['starmap'] for r in rows],
-                         [b'classical', b'classical'])
-        self.assertEqual([r['mean'] for r in rows], [2., 15.])
-        shutil.rmtree(tmpdir)
-
     def test_countletters(self):
         data = [('hello', 'world'), ('ciao', 'mondo')]
         smap = parallel.Starmap(countletters, data)

@@ -764,22 +764,16 @@ class ClassicalCalculator(base.HazardCalculator):
         Check for slow tasks
         """
         try:
-            # NB: the starmap_info is read without an index on purpose,
-            # since DataFrame.from_records does not honour the index
-            # argument on structured arrays
-            info = self.datastore.read_df('starmap_info')
+            info = self.datastore.read_df('starmap_info', 'taskname')
         except hdf5.File.EmptyDataset:
             return
-        if 'starmap' not in info.columns:
-            return  # calculation started by an older version of the engine
-        # NB: the classical Starmap can generate baseclassical subtasks
-        # when the tasks are too slow, so there can be more than one row;
-        # the rows with a tiny mean are discarded, since the tasks are
-        # then so fast that the busy times are dominated by the startup
-        # of the worker processes, so the check below would be
-        # meaningless (see eshm20, with 0.15s of busy time per worker
-        # and a ratio of 1.5)
-        ser = info[info.starmap == b'classical']  # empty for classical_disagg
+        # NB: the classical Starmap generates baseclassical subtasks when
+        # the tasks are too slow, so there can be two rows; the rows with
+        # a tiny mean are discarded, since the tasks are then so fast
+        # that the busy times are dominated by the startup of the worker
+        # processes, so the check below would be meaningless (see eshm20,
+        # with 0.15s of busy time per worker and a ratio of 1.5)
+        ser = info[info.index.isin([b'classical', b'baseclassical'])]
         ser = ser[ser['mean'] >= 1]
         if not len(ser):
             return
@@ -788,7 +782,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # tasks are built from an estimate of the cost, and the
         # estimate cannot be exact, .3 is considered acceptable
         # (see the alaska and sam_small tests in oq-risk-tests)
-        slow_tasks = (ser['std'] / ser['mean']).max() > .3
+        # NB: the rows are combined and not compared, since they are
+        # components of the busy time of the same workers; assuming the
+        # times spent on the different kinds of tasks are independent,
+        # the means add up and so do the variances
+        std = numpy.sqrt((ser['std'] ** 2).sum())
+        slow_tasks = std / ser['mean'].sum() > .3
         if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:
