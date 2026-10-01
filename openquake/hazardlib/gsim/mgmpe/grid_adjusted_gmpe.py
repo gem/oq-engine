@@ -40,16 +40,16 @@ PGA_ANCHOR_PERIOD = 0.01
 PGA_ANCHOR_MAX_SA = 0.05
 
 
-### Helpers for building the interpolation tables ###
-
+### Helpers for building the interpolable CoeffsTable objects ###
 def _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms):
     """
-    Assemble the per-term stores used at compute time to interpolate
-    across IMTs. Returns four dicts (see :func:`load_residual_grids`
-    for the full description of each).
+    Assemble the per-term stores used inside ``compute()`` to interpolate
+    across IMTs. Returns five dicts (see "load_residual_grids" for the
+    full description of each).
     """
     cell_tables, path_tables, scalar_sig_tables, stored_periods = (
         {}, {}, {}, {})
+    has_per_cell_sig = {}
 
     for term, cfg in res_terms.items():
         # Mean-adjustment CoeffsTables (per-cell), and the list of IMTs at
@@ -60,6 +60,11 @@ def _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms):
         else:
             cell_tables[term] = _build_hypo_site_ct(grids, term)
             imt_strs = [s for s, td in grids.items() if term in td]
+            # Whether per-cell sigma is stored (as opposed to a scalar
+            # per-IMT in sig_scalars, or no sigma at all). Determined by
+            # the HDF5 contents, not just the res_terms config.
+            has_per_cell_sig[term] = any(
+                "sig" in grids[s][term] for s in imt_strs)
 
         # One CoeffsTable per term for the scalar sigmas (if any).
         sig_table = _build_scalar_sig_ct(sig_scalars, term)
@@ -70,7 +75,8 @@ def _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms):
         stored_periods[term] = sorted(
             imt_strs, key=lambda s: imt_from_string(s).period)
 
-    return cell_tables, path_tables, scalar_sig_tables, stored_periods
+    return (cell_tables, path_tables, scalar_sig_tables,
+            stored_periods, has_per_cell_sig)
 
 
 def _build_hypo_site_ct(grids, term):
@@ -193,54 +199,121 @@ def _ensure_imt_available(grid_data, imt):
         # check it is within interpolable range
         _check_in_range(imt, stored, term)
 
+        # Interpolate the adjustments
         if cfg["location"] == "path":
             grid_data["raytrace_grids"][term][imt_str] = _interp_path(
                 grid_data["path_tables"][term], imt)
         else:
             grid_data["grids"].setdefault(imt_str, {})[term] = (
-                _interp_hypo_site(grid_data["cell_tables"][term], imt))
+                _interp_hypo_site(
+                    grid_data["cell_tables"][term], imt,
+                    grid_data["has_per_cell_sig"][term]))
 
         if term in grid_data["scalar_sig_tables"]:
-            # TODO why no interp here?
+            # Log-period interp happens inside CoeffsTable.__getitem__;
+            # the IMT is already validated as interpolable by _check_in_range
+            # above (scalar sig is loaded at the same IMTs as the mean)
             grid_data["sig_scalars"].setdefault(imt_str, {})[term] = float(
                 grid_data["scalar_sig_tables"][term][imt]["sig"])
 
 
-def _interp_hypo_site(cell_tables, imt): #TODO
+def _interp_hypo_site(cell_tables, imt, has_sig):
     """
-    Build a hypo/site entry at the target IMT by log-period interpolating
-    each cell's CoeffsTable. Cells that can't bracket the target are
-    dropped; the compute-time spatial fallback then reaches for a coarser
-    cell that survived.
+    Build a hypo/site entry at the given target IMT by log-period
+    interpolating each cell's CoeffsTable.
+
+    Each cell_id in cell_tables is tried independently, with two cases:
+
+        * CASE 1: Cell is interpolable at this IMT - stored periods bracket
+          the target IMT, or the cell qualifies for the PGA-anchor fallback.
+          The interpolated value goes into the output dict under this cell_id.
+          Later, inside compute, any site whose finest containing cell
+          is this one picks up this value directly from grid_lookup's finest
+          resolution hit.
+
+        * **Cell is not interpolable at this IMT** - no bracketing rows,
+          and PGA-anchor fallback does not apply. The cell_id is left out
+          of the output dict entirely; no retry happens inside this
+          function. Later, inside ``compute()``, grid_lookup walks the
+          h3 resolutions finest-to-coarsest for every site anyway (that
+          is its normal behaviour, not a retry triggered by this
+          omission); a site whose finest containing cell is absent at
+          this IMT simply does not hit on the finest walk-step and
+          continues up to the next-coarser containing cell, using that
+          one if it is present. Interp-failure and never-stored are
+          indistinguishable from grid_lookup's point of view.
     """
-    has_sig = "sig" in next(iter(cell_tables.values())).rb.names
+    # One entry per cell that produces a value at this IMT
     means = {}
+
+    # Only collect sigma if the HDF5 stored per-cell sigma for this term.
     sigs = {} if has_sig else None
+
     for cell_id, ct in cell_tables.items():
         try:
+            # Ask the cell's CoeffsTable for the row at this IMT. If the
+            # IMT is tabulated, returns the stored row; otherwise does a
+            # log-period interpolation between the two bracketing rows.
             rec = ct[imt]
-        except (KeyError, ValueError): #TODO needs more definitive handling
+        except (KeyError, ValueError):
+            # KeyError = the cell has no stored row on one side of the
+            # target IMT, so it can't be bracketed (grid resolution varies
+            # per IMT, so some cells aren't stored at every period).
+            # ValueError = the PGA-anchor fallback was tried and rejected.
+            # In both cases, leave this cell_id out of the output dict and
+            # move on. See the docstring for how coarser cells are reached
+            # later inside compute().
             continue
+        # Keep the interpolated mean, plus sigma if the term carries one.
         means[cell_id] = float(rec["mean"])
         if has_sig:
             sigs[cell_id] = float(rec["sig"])
+
+    # Match the shape used in grids[imt_str][term] elsewhere: "mean" is
+    # always present; "sig" only when per-cell sigma was stored.
     entry = {"mean": means}
     if has_sig:
         entry["sig"] = sigs
+
     return entry
 
 
 def _interp_path(path_tables, imt):
     """
     Build a raytrace grid at the target IMT by log-period interpolating
-    each path cell's per-km value. Cells that can't bracket the target
-    are dropped from the resulting grid.
+    each path cell's per-km value.
+
+    Each cell_id in path_tables is tried independently:
+
+        * If the given cell has stored periods that bracket the target
+          IMT (or qualifies for the PGA-anchor fallback), the interpolated
+          per-km value goes into the output dict alongside the cell's
+          polygon (which is fixed geometry carried through unchanged).
+
+        * If not within interpolation range, that cell_id is left out of
+          the output dict entirely - no retry happens inside this function.
+
+    Unlike the hypo/site case there is no coarser-cell fallback inside
+    ``compute()``: ray-tracing simply walks the output cells and
+    accumulates nothing for the stretch of the ray that crosses a
+    left-out cell. Interp-failure and never-stored have the same effect
+    on the ray: no contribution from that stretch.
     """
+    # One entry per path cell that produces a value at this IMT:
+    # cell_id -> (polygon, per-km value at this IMT).
     grid = {}
+
     for cell_id, (pgn, ct) in path_tables.items():
         try:
+            # Ask the cell's CoeffsTable for the per-km value at this IMT.
+            # Returns the stored value if tabulated, else a log-period
+            # interpolation between the two bracketing rows.
             grid[cell_id] = (pgn, float(ct[imt]["mean"]))
         except (KeyError, ValueError):
+            # KeyError = cell can't bracket the target IMT (no stored row
+            # on one side). ValueError = PGA-anchor fallback rejected.
+            # Leave this cell_id out of the output dict; ray-tracing will
+            # not see it when the ray crosses it at this IMT.
             continue
     return grid
 
@@ -472,7 +545,7 @@ def load_residual_grids(hdf5_path):
     * "res_terms"         - the JSON config from the HDF5 root attribute
 
     * "cell_tables"       - per-cell CoeffsTables for hypo/site terms, used
-                            at compute time to interpolate across IMTs
+                            inside ``compute()`` to interpolate across IMTs
 
     * "path_tables"       - (Polygon, CoeffsTable) per path cell
 
@@ -481,6 +554,10 @@ def load_residual_grids(hdf5_path):
 
     * "stored_periods"    - {term: sorted list of IMT strings at which the
                             term is stored}, used to prevent extrapolation
+
+    * "has_per_cell_sig"  - {term: bool} True iff per-cell sigma is stored
+                            for the hypo/site term (as opposed to a scalar
+                            per IMT in sig_scalars, or no sigma at all)
     """
     grids = {}
     raytrace_grids = {}
@@ -499,8 +576,9 @@ def load_residual_grids(hdf5_path):
 
     # Build CoeffsTables so a compute-time query for a target IMT that is
     # not in the HDF5 can be answered by log-period interpolation.
-    cell_tables, path_tables, scalar_sig_tables, stored_periods = (
-        _build_interp_tables(grids, raytrace_grids, sig_scalars, res_terms))
+    (cell_tables, path_tables, scalar_sig_tables,
+     stored_periods, has_per_cell_sig) = _build_interp_tables(
+        grids, raytrace_grids, sig_scalars, res_terms)
 
     return {
         "grids": grids,
@@ -512,17 +590,15 @@ def load_residual_grids(hdf5_path):
         "path_tables": path_tables,
         "scalar_sig_tables": scalar_sig_tables,
         "stored_periods": stored_periods,
+        "has_per_cell_sig": has_per_cell_sig,
     }
 
 
 def _load_one_term_per_imt(grp, term, imt_str, cfg,
-                       grids, raytrace_grids, sig_scalars, resolutions):
+                           grids, raytrace_grids, sig_scalars, resolutions):
     """
     Load the mean adjustment (and optional sigma) for given IMT stored in
     one HDF5 group into dicts.
-
-    See "load_residuals_grids" docstring for description of each argument
-    inputted into this function.
     """
     location = cfg["location"]
     sig_action = cfg.get("sig_adjustment", "none")
