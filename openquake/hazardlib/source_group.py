@@ -25,7 +25,8 @@ import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
 from openquake.baselib.general import zpik, zunpik
-from openquake.baselib.general import split_in_blocks, AccumDict, groupby
+from openquake.baselib.general import split_in_blocks, AccumDict
+from openquake.baselib.general import block_splitter, groupby, nokey
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
@@ -655,16 +656,50 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
             out.append((cmaker, tilegetters, grp_keys, False))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
+    weights_ = AccumDict(accum={})
     tilegetters_ = {}
     cmaker_ = {}
     for cmaker, tilegetters, blocks, extra in atomic:
         gid = tuple(cmaker.gid)
         tilegetters_[gid] = tilegetters
         blocks_[gid].extend(blocks)
+        # NB: keyed by grp_id, since a group is yielded once per label
+        # (see site_labels) and must be counted only once
+        weights_[gid][blocks[0]] = extra['weight']
         cmaker_[gid] = cmaker
     for gid, tgetters in tilegetters_.items():
-        grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
-        out.append((cmaker_[gid], tgetters, grp_keys, True))
+        weights = weights_[gid]
+        # the groups are deduplicated, since a group yielded once per
+        # label (see site_labels) must be computed only once
+        grp_ids = dict.fromkeys(blocks_[gid])
+        keys = [str(grp_id) for grp_id in grp_ids]
+        # The atomic groups used to be collapsed in a single task per
+        # gid, but they are independent from each other, so they can be
+        # split in blocks of about max_weight, exactly as the non-atomic
+        # groups are. This is necessary because the weight of a single
+        # group is always a tiny fraction of max_weight, hence it would
+        # always round down to a single block (see usa23, with 401 atomic
+        # groups collapsed in 2 tasks). NB: unlike splitting by site,
+        # splitting by group does not multiply the amount of data sent
+        # to the workers, since each group is still read only once.
+        def getweight(key):
+            return weights[int(key)]
+
+        if csm.oq.disagg_by_src:
+            # disagg_by_src requires all the groups in a single task,
+            # otherwise the rates are attributed to the wrong source
+            out.append((cmaker_[gid], tgetters, keys, True))
+            logging.info('Not splitting %d atomic groups, since '
+                         'disagg_by_src is set', len(keys))
+            continue
+
+        nblocks = 0
+        for ws in block_splitter(keys, max_weight, getweight, nokey):
+            nblocks += 1
+            out.append((cmaker_[gid], tgetters, list(ws), True))
+        logging.info('Split %d atomic groups with total weight %.3gs '
+                     'in %d blocks', len(keys),
+                     sum(getweight(k) for k in keys), nblocks)
     if atomic:
         logging.info('Collapsed %d atomic tasks into %d',
                      len(atomic), len(cmaker_))
