@@ -1345,6 +1345,13 @@ def concat_if_different(values):
     return '|'.join(unique_values)
 
 
+def get_interdependencies(oqparam):
+    """
+    Read the interdependencies.csv file used in composite infrastructure risk calculations
+    """
+    return pandas.read_csv(oqparam.inputs['interdependencies'])
+
+
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
     Read a DataFrame containing lon-lat-id fields.
