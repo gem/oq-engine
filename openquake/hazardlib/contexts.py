@@ -1419,16 +1419,28 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        step = 1 if src.code in b'pP' else 20 if src.num_ruptures >= 400 else 4
-        C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+        if getattr(src, 'bysrc_unc', False):
+            # NB: with OQ_BYSRC the sources modified by the uncertainties
+            # are not split here (see filter_weight) but in classical_bysrc,
+            # after modifying them; generating all their contexts now would
+            # be expensive (the area sources go through the rupture-by-
+            # rupture path of gen_contexts) and useless, since the estimate
+            # is used only to split the work in tasks, and OQ_BYSRC is
+            # active only for few sites calculations
+            C = src.num_ruptures * src.nsites
+        else:
+            step = (1 if src.code in b'pP' else
+                    20 if src.num_ruptures >= 400 else 4)
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+            # the corrections compensate the subsampling of the ruptures
+            if src.code in b'SFN':
+                C *= step**2
+            elif src.code in b'CKX':
+                C *= step
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        if src.code in b'SFN':
-            C *= step**2
-        elif src.code in b'CKX':
-            C *= step
         src.nctxs = C * srcfilter.multiplier
         # The surviving contexts are not the whole story: the contexts of a
         # pointlike source are generated for *all* the (rupture, site) pairs

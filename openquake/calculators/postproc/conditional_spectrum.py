@@ -175,6 +175,14 @@ def main(dstore):
     logging.warning('Conditional spectrum calculations are still '
                     'experimental')
     oq = dstore['oqparam']
+    if 'bysrc' in dstore:
+        # NB: with OQ_BYSRC the sources in the datastore are not modified by
+        # the uncertainties (they are modified in classical_bysrc) and the
+        # contexts of a group contain the sources with different
+        # uncertainties, so they cannot be attributed to the realizations
+        raise InvalidFile(
+            '%(job_ini)s: the conditional spectrum is not supported with '
+            'OQ_BYSRC' % oq.inputs)
     if not oq.get_total_residual_correlation_model():
         raise InvalidFile(
             "%(job_ini)s: you must specify "
