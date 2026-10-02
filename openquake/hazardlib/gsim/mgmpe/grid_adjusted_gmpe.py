@@ -377,17 +377,24 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
     term_period_info = grid_data["period_info"][term]
-    # Fast path: target IMT is stored directly, no interp needed
-    direct = grid_data["grids"].get(
-        imt.string, {}).get(term, {}).get("mean")
+    
+    # Try and first get adjustment for given IMT from the loaded grids
+    direct = grid_data["grids"].get(imt.string, {}).get(term, {}).get("mean")
+    
+    # If not, check we can interpolate
     if direct is not None:
+
+        # Will raise an error if no interpolate is possible for now
         return _direct_lookup_or_fail(
             direct, lats, lons, h3_res, term, imt, "mean",
-            grid_data["grids"], stored_periods)
-    # Interp path: per-location log-period interp over per-period lookups
+            grid_data["grids"], stored_periods
+            )
+    
+    # If here we can interpolate between periods to get an adjustment
     return _per_loc_log_interp(
         grid_data["grids"], term, "mean", imt,
-        lats, lons, h3_res, stored_periods, term_period_info["periods_sec"])
+        lats, lons, h3_res, stored_periods, term_period_info["periods_sec"]
+        )
 
 
 def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
@@ -438,9 +445,9 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
 
 def _apply_sigma(action, comp, adj, sig, tau, phi):
     """
-    Modify the sigma component "comp" in place with "action" in
-    {"replace", "sub", "add"}; recompute total "sig" if "comp"
-    was tau/phi.
+    Modify the sigma component "comp" in place with the specified
+    "action" in {"replace", "sub", "add"}; recompute total "sig"
+    if "comp" was tau/phi.
     """
     components = {"tau": tau, "phi": phi, "sig": sig}
     target = components[comp]
@@ -480,7 +487,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
 
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
-    Apply every stored adjustment term to the "compute()" outputs
+    Apply every stored adjustment term to the compute method outputs
     for given IMT.
     """
     for term, cfg in grid_data["res_terms"].items():
@@ -661,7 +668,7 @@ def _load_one_term_per_imt(grp, term, imt_str, cfg,
 def _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars):
     """
     Read the sigma for one (term, IMT); either a scalar group attribute
-    or a per-cell dataset keyed by "{term}_sig" (but never both).
+    or a per-cell dataset keyed by {term}_sig (but never both).
     """
     sig_key = f"{term}_sig"
     scalar_sig = sig_key in grp.attrs
