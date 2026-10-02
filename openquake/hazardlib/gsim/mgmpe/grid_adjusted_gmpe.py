@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-"GridAdjustedGMPE": a GSIM wrapper that adds spatially-varying
-non-ergodic corrections stored in an HDF5 file on top of any GMM
+Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
+:class:`~openquake.hazardlib.mgmpe.GridAdjustedGMPE`
 """
 import json
 import math
