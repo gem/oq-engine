@@ -327,26 +327,9 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    if not apply_unc:
-        # assume equal ID == equal sources
-        dic = {}
-        for grp in groups:
-            for src in grp:
-                dic[src.source_id] = src
-        id_by_ts = full_lt.sources_by_trt_smrs()
-        assert id_by_ts
-        out = []
-        for trt_smrs, src_ids in id_by_ts.items():
-            srcs = [dic[src_id] for src_id in src_ids]
-            for src in srcs:
-                src.trt_smr = trt_smrs
-            trt = srcs[0].tectonic_region_type
-            sg = sourceconverter.SourceGroup(trt, srcs)
-            out.append(sg)
-        csm = CompositeSourceModel(oq, full_lt, out)
-        store_data(oq, smdict, csm, dstore)
-        return csm
-
+    # NB: when apply_unc is False the uncertainties are not applied in
+    # gen_groups, however the groups are built exactly in the same way,
+    # by assuming equal ID == equal sources
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     mon = performance.Monitor('_build_csm', measuremem=True)
     with mon:
@@ -508,6 +491,21 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
+def _add_sampling(src, rlz, trti):
+    # associate the source to the sampling parameters of the realization;
+    # the same source can appear in multiple realizations, hence the list.
+    # NB: the multiplicity of the source is len(src.sampling) and it enters
+    # the classical calculations too, via SourceGroup.fix_src_offset and
+    # the source_info rows, so this cannot be skipped when apply_unc is False
+    sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
+    if src.sampling is None:
+        # the first time
+        src.sampling = [sampl]
+    else:
+        # if the same source belongs to multiple realizations
+        src.sampling.append(sampl)
+
+
 def gen_groups(full_lt, smdict, rlz, apply_unc):
     # yield all the possible source groups from the given rlz
     smlt_file = full_lt.source_model_lt.filename
@@ -528,26 +526,22 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
                 '%s contains source(s) %s already present in %s' %
                 (value, common, rlz.value))
         src_groups.extend(extra)
-    if apply_unc is False:
-        yield from src_groups
-    else:
-        for src_group in src_groups:
-            trti = 0 if full_lt.trti=={'*': 0} else full_lt.trti[src_group.trt]
+    for src_group in src_groups:
+        trti = full_lt.trti.get(src_group.trt, 0)
+        if apply_unc is False:
+            # there are no uncertainties to apply, but the sampling info is
+            # still needed, since it determines the multiplicity
+            sg = src_group
+        else:
             # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
             # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
             # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
             # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
             # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
-            for src in sg:  # tested in case_83_eb
-                sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
-                if src.sampling is None:
-                    # the first time
-                    src.sampling = [sampl]
-                else:
-                    # if the same source belongs to multiple realizations
-                    src.sampling.append(sampl)
-            yield sg
+        for src in sg:  # tested in case_83_eb
+            _add_sampling(src, rlz, trti)
+        yield sg
 
     # check applyToSources
     sm_branch = rlz.lt_path[0]

@@ -599,6 +599,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
     def check_overflow(self):
@@ -683,7 +686,8 @@ class HazardCalculator(BaseCalculator):
                 'source_model_logic_tree' in oq.inputs
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
-                if self.few_sites:
+                if self.few_sites and 'classical' in oq.calculation_mode:
+                    # OQ_BYSRC shortcut, classical only
                     apply_unc = 'OQ_BYSRC' not in os.environ
                 else:
                     apply_unc = True
