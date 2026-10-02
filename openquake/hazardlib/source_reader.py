@@ -322,6 +322,35 @@ def _sampling_array(src):
     return sampling
 
 
+def apply_unc_by_src(full_lt, trt_smrs, grp):
+    """
+    Apply the uncertainties to a group of sources built *without*
+    uncertainties (i.e. with OQ_BYSRC=1).
+
+    :param full_lt: a FullLogicTree instance
+    :param trt_smrs: the trt_smrs of the group (or of its first source)
+    :param grp: a SourceGroup with the uncertainties not applied
+    :returns: a SourceGroup with the uncertainties applied
+    """
+    # NB: the sources in a group have the same uncertainties applied in
+    # all its realizations (see _bysrc_groups), so it is enough to apply
+    # the uncertainties of the first one
+    ordinal = numpy.atleast_1d(trt_smrs)[0] % TWO24
+    rlz = next(r for r in full_lt.sm_rlzs if r.ordinal == ordinal)
+    bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
+    # NB: check=False since the group is a fragment of the original one
+    # (split by weight in preclassical), so the check must be done at
+    # build time, see _bysrc_groups
+    sg = apply_uncertainties(bset_values, grp, check=False)
+    for src in sg:
+        # the source is modified after the preclassical, so the cached
+        # geometry must be discarded; it depends on the occurrence rates
+        # (see PointSource._get_max_rupture_projection_radius)
+        if hasattr(src, 'radius'):
+            del src.radius
+    return sg
+
+
 def _unc_signature(bset_values, src):
     """
     :returns: a tuple identifying the uncertainties applied to src. It is
@@ -414,7 +443,9 @@ def _bysrc_groups(full_lt, rlz_groups):
                 atomic.append(new)
             groups[key].sources.append(new_src)
         else:
-            key = (grp.trt, trt_smrs)
+            # NB: the trt is determined by the trt_smrs, since
+            # trt_smr = trti * TWO24 + rlz.ordinal (see get_cmakers)
+            key = trt_smrs
             if key not in groups:
                 groups[key] = new = copy.copy(grp)
                 new.sources = []

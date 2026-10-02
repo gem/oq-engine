@@ -339,8 +339,15 @@ def _quintets(cmaker, src, sitecol):
         planardict = src.get_planar(cmaker.shift_hypo)
 
     magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
-    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
-    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
+    # it is 0 for all the magnitudes if the source has no magnitude inside
+    # the range, which can happen with OQ_BYSRC, since there the magnitude
+    # filtering is performed in classical_bysrc and not in the preclassical
+    # (see filter_weight)
+    magdist = {mag: dist for mag, dist in magdist.items() if dist > 0}
+    if not magdist:  # the source is irrelevant, no site is in range
+        return
+    maxmag = max(magdist)
     maxdist = magdist[maxmag]
     cdist = sitecol.get_cdist(src.location)
     # NB: having a decent max_radius is essential for performance!

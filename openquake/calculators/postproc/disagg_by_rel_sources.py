@@ -26,6 +26,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.source_reader import apply_unc_by_src
 from openquake.calculators import extract
 
 
@@ -107,6 +108,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     rel_ids_by_imt = general.AccumDict(accum={})
     src2idx = {}  # sid, src_id -> idx
+    bysrc = 'bysrc' in dstore
     # NB: the keys are the same used in mean_rates_by_src, see
     # CompositeSourceModel.get_basenames
     groups_by_bname = collections.defaultdict(list)  # bname -> [(grp, src)]
@@ -138,6 +140,12 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                     lambda pair: id(pair[0])).values():
                 grp = copy.copy(pairs[0][0])
                 grp.sources = [src for _grp, src in pairs]
+                if bysrc:
+                    # with OQ_BYSRC the sources in the csm are not modified
+                    # by the uncertainties, they are modified in
+                    # classical_bysrc, so we have to do it here too
+                    grp = apply_unc_by_src(
+                        csm.full_lt, pairs[0][1].trt_smrs, grp)
                 groups.append(grp)
             assert groups, 'No groups for %s' % source_id
             rupts = sum(src.num_ruptures for group in groups for src in group)

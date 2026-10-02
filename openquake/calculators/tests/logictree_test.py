@@ -69,7 +69,10 @@ class LogictreeTestCase(CalculatorTestCase):
             if len(sg_orig) != len(sg):
                 raise RuntimeError(f'Inconsistent {sg=}, {sg_orig=}')
 
-        if oq.use_rates:  # compare with mean_rates
+        if oq.use_rates and 'bysrc' not in self.calc.datastore:
+            # NB: with OQ_BYSRC the sources in the datastore are not
+            # modified by the uncertainties (they are modified in
+            # classical_bysrc), so the rates cannot be recomputed here
             print('Comparing mean_rates')
             poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
             exp_rates = to_rates(poes)  # shape (N, M, L1)
@@ -578,9 +581,18 @@ hazard_uhs-std.csv
 
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
-        ae(info['source_id'], [b'21;0', b'21;1', b'22'])
-        ae(info['grp_id'], [0, 1, 2])
-        ae(info['weight'] > 0, [True, True, True])
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC the sources are grouped by the uncertainties to
+            # be applied, not by the resulting parameters: the maxMagGR
+            # branches +0.2 and +0.4 are kept separated, even if they
+            # produce the same source (they don't change the max mag of
+            # the source 21)
+            srcids = [b'21;0', b'21;1', b'21;2', b'21;3', b'22']
+        else:
+            srcids = [b'21;0', b'21;1', b'22']
+        ae(info['source_id'], srcids)
+        ae(info['grp_id'], list(range(len(srcids))))
+        ae(info['weight'] > 0, [True] * len(srcids))
 
         # check collapse_gsim_logic_tree
         aw = extract(self.calc.datastore, 'realizations')

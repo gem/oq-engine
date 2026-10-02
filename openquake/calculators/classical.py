@@ -29,12 +29,13 @@ from openquake.baselib import parallel, hdf5, config, general
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.lt import apply_uncertainties, get_bset_values
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
+from openquake.hazardlib.source_reader import apply_unc_by_src
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.map_array import (
     RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
@@ -184,33 +185,25 @@ def read_full_lt(dstore):
         return full_lt
 
 
-def apply_unc_by_src(full_lt, cmaker, grp):
+def split_modified(grp):
     """
-    Apply the uncertainties to a group of sources built *without*
-    uncertainties (i.e. with OQ_BYSRC=1).
+    Split the sources modified by the uncertainties, which were not split
+    in the preclassical (see filter_weight). This is called after the
+    uncertainties have been applied: not splitting would mean using the
+    area sources whole, without building the planar ruptures, thus
+    returning different hazard curves (see logictree/case_67).
 
-    :param full_lt: a FullLogicTree instance
-    :param cmaker: the ContextMaker associated to the group
-    :param grp: a SourceGroup with the uncertainties not applied
-    :returns: a SourceGroup with the uncertainties applied
+    NB: the fault sources are still not split, since their splitting
+    requires recomputing the rupture counts, see also filter_weight.
+
+    :param grp: a SourceGroup of modified sources
+    :returns: a SourceGroup with split sources
     """
-    # NB: the sources in a group have the same uncertainties applied in
-    # all its realizations (see _bysrc_groups), so it is enough to apply
-    # the uncertainties of the first one
-    ordinal = numpy.atleast_1d(cmaker.trt_smrs)[0] % TWO24
-    rlz = next(r for r in full_lt.sm_rlzs if r.ordinal == ordinal)
-    bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
-    # NB: check=False since the group is a fragment of the original one
-    # (split by weight in preclassical), so the check must be done at
-    # build time, see _bysrc_groups
-    sg = apply_uncertainties(bset_values, grp, check=False)
-    for src in sg:
-        # the source is modified after the preclassical, so the cached
-        # geometry must be discarded; it depends on the occurrence rates
-        # (see PointSource._get_max_rupture_projection_radius)
-        if hasattr(src, 'radius'):
-            del src.radius
-    return sg
+    out = []
+    for src in grp:
+        out.extend(split_source(src) if src.code in b'AM' else [src])
+    grp.sources = out
+    return grp
 
 
 # NB: the tilegetter here is trivial unless there are ilabels
@@ -245,7 +238,8 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
                 # the uncertainties are applied to the whole group, since
                 # correlated branchsets (applyToSources='*') refer to
                 # sources outside the base source below
-                grp = apply_unc_by_src(full_lt, cmaker, grp)
+                grp = split_modified(
+                    apply_unc_by_src(full_lt, cmaker.trt_smrs, grp))
             for srcs in groupby(grp, valid.basename).values():
                 if bysrc:
                     # the magnitude filtering is done here and not in

@@ -526,11 +526,13 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_epistemic_error.xml'))
-        self.assertEqual(
-            str(ctx.exception),
+        # NB: with OQ_BYSRC the error is raised in classical_bysrc, i.e.
+        # inside a parallel task, so the exception message is prefixed
+        # by the traceback
+        self.assertIn(
             "Cannot apply set_aspect_ratio to source '1': epistemic "
             "uncertainties on aspect ratio are not compatible with "
-            "aspectRatioFunction")
+            "aspectRatioFunction", str(ctx.exception))
 
         # Check that aspectRatioFunction is rejected for kiteFaultSource
         with self.assertRaises(InvalidFile) as ctx:
