@@ -244,17 +244,18 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     adjustments = np.zeros(n_paths)
 
     for i in range(n_paths):
-        # Discretise the hypo-site line into 100 points; the step
-        # between consecutive points is the sampling distance
+        # 100 equally-spaced samples along the site-hypo ray
         line = npoints_between(
             site_lons[i], site_lats[i], 0.0,
             hypo_lons[i], hypo_lats[i], 0.0, 100)
         mesh = Mesh(line[0], line[1])
+        # km between consecutive samples (constant since equally-spaced)
         spacing = distance(
             mesh.lons[0], mesh.lats[0], 0.0,
             mesh.lons[1], mesh.lats[1], 0.0)
 
-        # Per cell: add (#points inside) * spacing * per-km value #TODO
+        # Per cell: (samples inside cell) * spacing approximates the ray
+        # length in km inside that cell; * per_km gives its contribution
         total = 0.0
         for polygon, per_km in grid.values():
             total += (np.count_nonzero(polygon.intersects(mesh))
