@@ -44,7 +44,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95)
+    case_95, case_96)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1235,6 +1235,17 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_95.__file__, 'job_sea.ini')
         hcurves2 = self.calc.datastore['hcurves-stats'][:]
         aac(hcurves1, hcurves2, rtol=1E-6)
+
+    def test_case_96(self):
+        # a source with an uncertainty and magnitudes partially outside
+        # the integration distance: the magnitudes with zero integration
+        # distance must be ignored, not raise a KeyError (see _quintets).
+        # With OQ_BYSRC the source is weighted in the preclassical before
+        # the uncertainties are applied, i.e. before the magnitude
+        # filtering, which is performed in classical_bysrc (see filter_mag)
+        self.run_calc(case_96.__file__, 'job.ini')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
 
 
 class FakeDatastoreCalculator:

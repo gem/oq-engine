@@ -343,12 +343,12 @@ def _quintets(cmaker, src, sitecol):
     # it is 0 for all the magnitudes if the source has no magnitude inside
     # the range, which can happen with OQ_BYSRC, since there the magnitude
     # filtering is performed in classical_bysrc and not in the preclassical
-    # (see filter_weight)
-    magdist = {mag: dist for mag, dist in magdist.items() if dist > 0}
-    if not magdist:  # the source is irrelevant, no site is in range
+    # (see filter_mag)
+    valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
+    if not valid:  # the source is irrelevant, no site is in range
         return
-    maxmag = max(magdist)
-    maxdist = magdist[maxmag]
+    maxmag = max(valid)
+    maxdist = valid[maxmag]
     cdist = sitecol.get_cdist(src.location)
     # NB: having a decent max_radius is essential for performance!
     mask = cdist <= maxdist + src.max_radius(maxdist)
