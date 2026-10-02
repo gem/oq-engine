@@ -42,7 +42,7 @@ PGA_ANCHOR_MAX_SA = 0.05
 def _handle_interp_failure(term, imt, reason, **context):
     """
     Single hook for every per-ctx-row case where an adjustment at the
-    target IMT would distort the spectral shape (partial coverage)
+    target IMT would distort the spectral shape (partial coverage).
     """
     # Uniformly uncovered ctx rows are not routed here; they get 0 so
     # the spectrum stays uniformly ergodic at that ctx row
@@ -53,10 +53,10 @@ def _handle_interp_failure(term, imt, reason, **context):
 
 
 def _loc_covered_at_any_period(grids, term, key, lat, lon,
-                                h3_res, stored_periods):
+                               h3_res, stored_periods):
     """
-    True if ("lat", "lon") sits inside a stored cell for "term" /
-    "key" at any of "stored_periods"
+    True if (lat, lon) sits inside a stored cell for term / key
+    at any of stored_periods.
     """
     for p_str in stored_periods:
         d = grids[p_str][term].get(key)
@@ -72,7 +72,7 @@ def _loc_covered_at_any_period(grids, term, key, lat, lon,
 def _check_in_range(imt, term_period_info, term):
     """
     Raise ValueError if the target IMT is outside the overall
-    log-period interpolable range of this term
+    log-period interpolable range of this term.
     """
     # Can only interp SA
     if not imt.string.startswith("SA("):
@@ -111,8 +111,8 @@ def _check_in_range(imt, term_period_info, term):
 
 def _log_period_interp(target_period, pairs):
     """
-    Linear log-period interpolation at "target_period" over sorted
-    (period, value) "pairs". Returns None if "target_period" cannot
+    Linear log-period interpolation at target_period over sorted
+    (period, value) in "pairs". Returns None if target_period cannot
     be bracketed below and above.
     """
     below = None
@@ -120,7 +120,7 @@ def _log_period_interp(target_period, pairs):
     # Iterate over the stored 
     for p, v in pairs:
         # Exact match: only fires when the target is SA(0.01) and
-        # PGA sits in "pairs" as the lower log(T) anchor at 0.01s;
+        # PGA sits in pairs as the lower log(T) anchor at 0.01s;
         # the anchor's value is the answer at the target period
         if p == target_period:
             return v
@@ -136,7 +136,7 @@ def _log_period_interp(target_period, pairs):
     if below is None or above is None:
         return None
     
-    # Linear interp in log(period) between the two anchor pairs
+    # Linear interp in log(period) between the two anchor "pairs
     ratio = ((math.log(target_period) - math.log(below[0])) /
              (math.log(above[0]) - math.log(below[0])))
     
@@ -145,8 +145,9 @@ def _log_period_interp(target_period, pairs):
 
 def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
     """
-    Classify why "_log_period_interp" returned None for ctx row "i":
-    above-range, PGA stored but anchor gap too wide, or below-range
+    Classify why _log_period_interp returned None for ctx row i. It can
+    be because target period is above-range, PGA stored but anchor gap
+    too wide, or because target period is below-range.
     """
     if target_period > pairs[-1][0]:
         return (f"target period {target_period}s above ctx row's local "
@@ -169,7 +170,7 @@ def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
 
 def _ctx_row_pairs(per_period_vals, periods_sec, i):
     """
-    Row "i" (i.e., "ctx[i]") of each per-period array as a sorted
+    Row i (i.e., ctx[i]) of each per-period array as a sorted
     (period, value) list - e.g. [(0.1, 0.2), (0.2, 0.25)] where
     position 0 is SA(0.1) and position 1 is SA(0.2) for some term
     e.g. dL2L.
@@ -203,7 +204,7 @@ def _ctx_row_pairs(per_period_vals, periods_sec, i):
 def _build_scalar_sig_ct(sig_scalars, term):
     """
     Per-term CoeffsTable of scalar per-IMT sigmas, or None if "term"
-    has no scalar sigma stored
+    has no scalar sigma stored.
     """
     rows = {imt_from_string(s): {"sig": float(sig_scalars[s][term])}
             for s in sig_scalars if term in sig_scalars[s]}
@@ -214,8 +215,8 @@ def _build_scalar_sig_ct(sig_scalars, term):
 
 def grid_lookup(grid_dict, lats, lons, h3_res, default=0.0):
     """
-    Point-in-cell lookup over "grid_dict" with a finest-to-coarsest
-    fallback; locations outside every stored cell receive "default"
+    Point-in-cell lookup over grid_dict with a finest-to-coarsest
+    fallback; locations outside every stored cell receive default.
     """
     n = len(lats)
     vals = np.full(n, default, dtype=float)
@@ -237,7 +238,7 @@ def grid_lookup(grid_dict, lats, lons, h3_res, default=0.0):
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     """
     Per (hypo, site) pair: accumulate the per-km adjustment along the
-    portion of the ray inside each stored polygon of "grid"
+    portion of the ray inside each stored polygon of "grid".
     """
     n_paths = len(hypo_lons)
     adjustments = np.zeros(n_paths)
@@ -253,7 +254,7 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
             mesh.lons[0], mesh.lats[0], 0.0,
             mesh.lons[1], mesh.lats[1], 0.0)
 
-        # Per cell: add (#points inside) * spacing * per-km value
+        # Per cell: add (#points inside) * spacing * per-km value #TODO
         total = 0.0
         for polygon, per_km in grid.values():
             total += (np.count_nonzero(polygon.intersects(mesh))
@@ -267,7 +268,7 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
 
 def _hypo_site_coords(cfg, ctx):
     """
-    Return (lats, lons) from "ctx" for a hypo/site term's lookup
+    Return (lats, lons) from ctx for a hypo/site term's lookup.
     """
     if cfg["location"] == "hypo":
         return ctx.hypo_lat, ctx.hypo_lon
@@ -278,7 +279,7 @@ def _per_loc_log_interp(grids, term, key, target_imt, lats, lons,
                         h3_res, stored_periods, periods_sec):
     """
     Per-location log-period interp over per-period finest-cell lookups;
-    uniform misses stay 0, partial-coverage bracket fails raise
+    uniform misses stay 0, partial-coverage bracket fails raise.
     """
     # Per stored period: per-location value with NaN meaning "no cell here"
     per_period_vals = {}
@@ -314,7 +315,7 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
                         stored_periods, periods_sec):
     """
     Per-ray log-period interp over per-period ray-traces;
-    uniform misses stay 0, partial-coverage bracket fails raise
+    uniform misses stay 0, partial-coverage bracket fails raise.
     """
     # Per stored period: per-ray accumulated value from the path grid
     per_period_vals = {}
@@ -349,7 +350,7 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
                            term, imt, key, grids, stored_periods):
     """
     Direct-IMT lookup; partial-coverage misses raise via
-    "_handle_interp_failure" and uniform-coverage misses silently take 0
+    _handle_interp_failure and uniform-coverage misses silently take 0.
     """
     vals = grid_lookup(direct_grid, lats, lons, h3_res, default=np.nan)
     missing = np.where(np.isnan(vals))[0]
@@ -357,7 +358,7 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
         if _loc_covered_at_any_period(
                 grids, term, key, lats[i], lons[i],
                 h3_res, stored_periods):
-            _handle_interp_failure(
+            _handle_interp_failure( #TODO
                 term, imt,
                 "ctx row missing at target IMT but covered at other "
                 "stored periods (partial coverage)",
@@ -370,7 +371,7 @@ def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
 
 def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
-    Per-location mean adjustment for one hypo/site term at target IMT
+    Per-location mean adjustment for one hypo/site term at target IMT.
     """
     lats, lons = _hypo_site_coords(cfg, ctx)
     h3_res = grid_data["h3_res"]
@@ -390,7 +391,7 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
 
 def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
     """
-    Per-ray mean adjustment for one path term at target IMT
+    Per-ray mean adjustment for one path term at target IMT.
     """
     raytrace_grids_term = grid_data["raytrace_grids"][term]
     term_period_info = grid_data["period_info"][term]
@@ -410,7 +411,7 @@ def _path_mean_adj(grid_data, term, imt, ctx, stored_periods):
 def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     """
     Per-ctx row sigma adjustment for one term at target IMT; scalar
-    per-IMT sigmas use the term's CoeffsTable, per-cell goes spatial
+    per-IMT sigmas use the term's CoeffsTable, per-cell goes spatial.
     """
     # Scalar per-IMT sigma: single CoeffsTable interp (not spatial)
     if term in grid_data["scalar_sig_tables"]:
@@ -437,7 +438,8 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
 def _apply_sigma(action, comp, adj, sig, tau, phi):
     """
     Modify the sigma component "comp" in place with "action" in
-    {"replace", "sub", "add"}; recompute total "sig" if "comp" was tau/phi
+    {"replace", "sub", "add"}; recompute total "sig" if "comp"
+    was tau/phi.
     """
     components = {"tau": tau, "phi": phi, "sig": sig}
     target = components[comp]
@@ -453,7 +455,7 @@ def _apply_sigma(action, comp, adj, sig, tau, phi):
 def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
     """
     Apply the mean (and optional sigma) adjustment for a single term
-    for given IMT, assembled per ctx row from the per-period lookups
+    for given IMT, assembled per ctx row from the per-period lookups.
     """
     stored_periods = grid_data["stored_periods"][term]
 
@@ -478,7 +480,7 @@ def _apply_term(grid_data, term, cfg, imt, ctx, mean, sig, tau, phi):
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
     """
     Apply every stored adjustment term to the "compute()" outputs
-    for given IMT
+    for given IMT.
     """
     for term, cfg in grid_data["res_terms"].items():
         _apply_term(
@@ -488,8 +490,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
 ### Helpers for setting up the GridAdjustedGMPE ###
 def _validate_res_terms(res_terms, defined_stddev_types):
     """
-    Reject invalid "location" targets and refuse tau/phi adjustments
-    on a GMM that has no tau/phi components
+    Reject invalid "location" targets for each "term" and refuse
+    tau/phi adjustments on a GMM that has no tau/phi components.
     """
     valid_targets = ("hypo", "site", "path")
     needs_random_effects = False
@@ -513,10 +515,10 @@ def _validate_res_terms(res_terms, defined_stddev_types):
 def _extend_required_parameters(res_terms, current_rup, current_site):
     """
     Extend the rupture/site parameter sets based on which "location"
-    lookups the "res_terms" use (hypo/site/path)
+    lookups the "res_terms" use (hypo/site/path).
 
     e.g., a GMM might lack "hypo_lon" and "hypo_lat" which are required
-    and otherwise they will not propagate into the "ctx" recarray used
+    and otherwise they will not propagate into the "ctx" recarray used.
     """
     locations = {cfg["location"] for cfg in res_terms.values()}
     rup = current_rup
@@ -531,7 +533,7 @@ def _extend_required_parameters(res_terms, current_rup, current_site):
 def load_residual_grids(hdf5_path):
     """
     Read the HDF5 of gridded adjustments and return the dict that
-    "GridAdjustedGMPE" uses during "compute()"
+    "GridAdjustedGMPE" uses during compute method.
 
     Keys in the returned dict:
 
@@ -631,7 +633,7 @@ def _load_one_term_per_imt(grp, term, imt_str, cfg,
                            grids, raytrace_grids, sig_scalars, resolutions):
     """
     Load the mean (and optional sigma) for one (term, IMT) group
-    from the HDF5 into the shared dicts
+    from the HDF5 into the shared dicts.
     """
     location = cfg["location"]
     sig_action = cfg.get("sig_adjustment", "none")
@@ -657,8 +659,8 @@ def _load_one_term_per_imt(grp, term, imt_str, cfg,
 
 def _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars):
     """
-    Read the sigma for one (term, IMT); either a scalar group
-    attribute or a per-cell dataset keyed by "{term}_sig" - never both
+    Read the sigma for one (term, IMT); either a scalar group attribute
+    or a per-cell dataset keyed by "{term}_sig" (but never both).
     """
     sig_key = f"{term}_sig"
     scalar_sig = sig_key in grp.attrs
@@ -701,7 +703,7 @@ def _load_sigma(grp, term, imt_str, location, cell_ids, grids, sig_scalars):
 
 def _build_raytrace_grid(cell_ids, mean_vals):
     """
-    Turn h3 cell IDs into (OQ Polygon, per-km value) pairs for ray-tracing
+    Turn h3 cell IDs into (OQ Polygon, per-km value) pairs for ray-tracing.
     """
     grid = {}
     for cid, val in zip(cell_ids, mean_vals):
@@ -715,10 +717,10 @@ class GridAdjustedGMPE(GMPE):
     A GSIM class that adds spatially-varying corrections stored in a
     HDF5 file of h3-gridded residual terms on top of any underlying GMM
     (which in theory is your backbone model used to compute these
-    residual terms)
+    residual terms).
 
     The HDF5 file has a root-level attribute "res_terms" that configures
-    each corrective term (e.g. "dL2L", "dS2S", "att_per_km")
+    each corrective term (e.g. "dL2L", "dS2S", "att_per_km").
 
     Every term specifies:
 
@@ -740,25 +742,25 @@ class GridAdjustedGMPE(GMPE):
         OR
 
         * a HDF5 dataset (also keyed by "{term}_sig") giving one value
-          per h3 cell (looked up spatially the same way as the mean)
+          per h3 cell (looked up spatially the same way as the mean).
 
-          NOTE: per-cell sigma is not supported for path terms
+          NOTE: per-cell sigma is not supported for path terms.
 
         Actions:
 
-            * "none" = skip sigma adjustment (mean-only correction)
-            * "sub" = subtract variance from the chosen component
-            * "add" = add variance to the chosen component
-            * "replace" = overwrite the chosen component with the value
+            * "none" = skip sigma adjustment (mean-only correction).
+            * "sub" = subtract variance from the chosen component.
+            * "add" = add variance to the chosen component.
+            * "replace" = overwrite the chosen component with the value.
 
     * "sig_comp_modified" (required when "sig_adjustment" != "none") is
-      the std-dev component to modify ("tau", "phi" or "sig")
+      the std-dev component to modify ("tau", "phi" or "sig").
 
     Useful info:
 
     * The set of terms is not fixed - the user is free to include only
       the ones they need (and thus include only those in the HDF5 they
-      provide)
+      provide).
 
     * Corrections are stored per term per IMT; when the target IMT is
       not directly stored, each ctx row (site for hypo/site terms, ray
@@ -768,21 +770,21 @@ class GridAdjustedGMPE(GMPE):
            finest-containing-cell value is pulled (via the
            coarsest->finest spatial fallback) or, for a path term, the
            ray is traced through that period's grid to produce a per-ray
-           scalar
+           scalar.
         2. The resulting (period, value) list is log-period interpolated
-           at the target IMT to give the ctx row's final adjustment
+           at the target IMT to give the ctx row's final adjustment.
 
       Because the per-period lookup is driven by the ctx row's location,
       a ctx row can use the finest available spatial resolution *at each
       stored period* independently - cells at different h3 resolutions
       can contribute to the same ctx row's interpolation if that is what
-      the data supports
+      the data supports.
 
     * Extrapolation beyond the term's overall stored period range raises
       a value-error; PGA counts as SA at 0.01 s for the lower bound only
       when the smallest stored SA period is <= 0.05 s (same gate as
       "CoeffsTable"'s PGA-anchored fallback), otherwise a target IMT
-      below the smallest stored SA period is rejected
+      below the smallest stored SA period is rejected.
 
     * A ctx row that is uniformly uncovered (no stored cell at any
       stored period of the term) silently gets 0 at every IMT so the
@@ -790,13 +792,13 @@ class GridAdjustedGMPE(GMPE):
       partially covered (missing at the target but covered at other
       stored periods, or has local pairs that cannot bracket the
       target) is routed through "_handle_interp_failure" because
-      adjusting it would distort the spectral shape
+      adjusting it would distort the spectral shape.
 
     * The h3 grid cell resolution can vary over IMT because the
       calibration data may vary with period; the per-ctx-row interp
       above handles this naturally - at each period the lookup returns
       whatever the finest containing cell happens to be for that ctx row
-      at that period
+      at that period.
 
     A real HDF5 example is used by the unit tests
     ("openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5")
@@ -805,10 +807,10 @@ class GridAdjustedGMPE(GMPE):
     including a README with visualisations of the grids)
 
     :param gmpe_name:
-        Underlying GMM to which the grid-based adjustments are applied
+        Underlying GMM to which the grid-based adjustments are applied.
 
     :param grid_hdf5_file:
-        Path to the HDF5 file with the gridded adjustments
+        Path to the HDF5 file with the gridded adjustments.
     """
     # Filled in by set_parameters() from the underlying GMM
     REQUIRES_SITES_PARAMETERS = set()
