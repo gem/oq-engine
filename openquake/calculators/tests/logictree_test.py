@@ -199,10 +199,13 @@ class LogictreeTestCase(CalculatorTestCase):
             case_08.__file__)
 
     def test_case_09(self):
+        # NB: the tight delta is needed to detect the case of the
+        # maxMagGRAbsolute uncertainty not being applied: the two curves
+        # differ by 6.8e-6, while the reproduction error is 1.6e-8
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_09.__file__)
+            case_09.__file__, delta=1e-6)
 
     def test_case_10(self):
         self.assert_curves_ok(
