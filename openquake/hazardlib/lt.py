@@ -568,31 +568,83 @@ def _dummy(utype, source, value):
 
 # ######################### apply_uncertainties ########################### #
 
-def apply_uncertainties(bset_values, src_group):
+def _correlated_key(value, source):
+    """
+    :param value: the {source ID: value} dictionary of a correlated branch
+    :param source: a source instance
+    :returns: the key of value corresponding to the source; it is looked
+        up also by basename, since the source can be a fragment of the
+        source in the logic tree (i.e. 'area1.0' for 'area1'). This happens
+        when the uncertainties are applied after the splitting of the
+        sources, as done by classical_bysrc with OQ_BYSRC
+    """
+    if source.source_id in value:
+        return source.source_id
+    return valid.basename(source)
+
+
+def _in_correlated(value, source):
+    """
+    :returns: True if the correlated branchset applies to the source
+    """
+    return source.source_id in value or valid.basename(source) in value
+
+
+def get_bset_values(lt_path, source_model_lt):
+    """
+    :param lt_path: the logic tree path of a source model realization
+    :param source_model_lt: a SourceModelLogicTree instance
+    :returns: the list of (branchset, value) pairs whose uncertainties must
+        be applied to the sources, i.e. excluding the extendModel
+        branchsets, which add sources and are handled in gen_groups
+    """
+    bset_values = source_model_lt.bset_values(lt_path)
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        bset_values = bset_values[1:]
+    return bset_values
+
+
+def check_correlated(bset_values, src_group):
+    """
+    Check that the sources of the correlated branchsets are in the group.
+    The sources are also looked up by basename, since they can be fragments
+    of the sources in the logic tree (i.e. 'area1.0' for 'area1')
+    """
+    srcs = set(src.source_id for src in src_group)
+    bnames = set(valid.basename(src) for src in src_group)
+    for bset, value in bset_values:
+        if bset.correlated:
+            for source_id in value:
+                if source_id not in srcs and source_id not in bnames:
+                    raise NameError(
+                        f'The source {source_id} in {bset.uncertainty_type} is'
+                        ' missing, maybe you mispelled the name?')
+
+
+def apply_uncertainties(bset_values, src_group, check=True):
     """
     :param bset_value: a list of pairs (branchset, value)
         List of branch IDs
     :param src_group:
         SourceGroup instance
+    :param check:
+        if True, check that the sources of the correlated branchsets exist;
+        set it to False when the group is a fragment of the original one
+        (as it happens applying the uncertainties in classical_bysrc)
     :returns:
         A copy of the original group with possibly modified sources
     """
     sg = copy.copy(src_group)
     sg.sources = []
     sg.changes = 0
-    srcs = set(src.source_id for src in src_group)
-    for bset, value in bset_values:
-        if bset.correlated:
-            for source_id in value:
-                if source_id not in srcs:
-                    raise NameError(
-                        f'The source {source_id} in {bset.uncertainty_type} is'
-                        ' missing, maybe you mispelled the name?')
+    if check:
+        check_correlated(bset_values, src_group)
     for source in src_group:
         oks = []
         for bset, value in bset_values:
             if bset.correlated:
-                oks.append(source.source_id in value)
+                oks.append(_in_correlated(value, source))
             else:
                 oks.append(bset.filter_source(source))
         if sum(oks):  # source not filtered out
@@ -619,7 +671,7 @@ def apply_uncertainties(bset_values, src_group):
                         if bset.correlated:
                             apply_uncertainty(
                                 bset.uncertainty_type, s,
-                                value[source.source_id])
+                                value[_correlated_key(value, source)])
                         else:
                             apply_uncertainty(bset.uncertainty_type, s, value)
                     sg.changes += 1

@@ -96,7 +96,7 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter_mag(srcs, min_mag, strict):
+def filter_mag(srcs, min_mag, strict):
     # filter by magnitude and count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
@@ -107,10 +107,16 @@ def _filter_mag(srcs, min_mag, strict):
     return out
 
 
-def filter_weight(srcs, sf, cmaker, secparams, monitor):
+def filter_weight(srcs, sf, cmaker, secparams, bysrc=False, monitor=None):
     """
     Filter and weight the sources. Also split them, except for
     pointlike and multifault sources, which have been split already.
+
+    If bysrc is True (i.e. OQ_BYSRC is set) the sources are not filtered,
+    since the filtering depends on the occurrence rates, which are modified
+    only later, in classical_bysrc. The fault sources (codes S, C, K) are
+    not split either, since splitting them replaces the MFD with an
+    ArbitraryMFD, unable to accept the uncertainties applied later on.
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
@@ -140,14 +146,17 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if oq.split_sources and src.nsites and src.code != b'F':
+        unsplittable = bysrc and src.code in b'SCK'  # see the docstring
+        if oq.split_sources and src.nsites and src.code != b'F' and not (
+                unsplittable):
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
 
     # filter by magnitude and count ruptures
-    splits = _filter_mag(splits, oq.minimum_magnitude, oq.strict)
+    if not bysrc:
+        splits = filter_mag(splits, oq.minimum_magnitude, oq.strict)
     if not splits:
         return {}
 
@@ -155,7 +164,8 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, bysrc=False,
+                 monitor=None):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
@@ -177,7 +187,7 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
     for i in range(Ns):
         lst = srcs[i::Ns]
         if lst:
-            yield filter_weight, lst, sf, cmaker, secparams
+            yield filter_weight, lst, sf, cmaker, secparams, bysrc
 
 
 def get_req_gb(data, N, oq):
@@ -373,13 +383,14 @@ class PreClassicalCalculator(base.HazardCalculator):
             smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
             cmakers = self.cmakers.to_array()
             num_tasks = len(sources_by_key)
+            bysrc = 'bysrc' in self.datastore
             for grp_id, srcs in sources_by_key.items():
                 cmaker = cmakers[grp_id]
                 cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
                 pointlike = [src for src in srcs
                              if hasattr(src, 'nodal_plane_distribution')]
                 check_maxmag(pointlike)
-                smap.submit((srcs, sf, cmaker, secparams, num_tasks))
+                smap.submit((srcs, sf, cmaker, secparams, num_tasks, bysrc))
             res = smap.reduce()
         else:
             res = {}

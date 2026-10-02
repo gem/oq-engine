@@ -517,11 +517,16 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertIn("Invalid source code 'Z' in 'PAZ'", str(ctx.exception))
 
     def test_no_uncertainties(self):
+        # with apply_unc=False the uncertainties are not applied, but the
+        # structure of the CSM is the same: the sources are not duplicated
+        # per uncertainty, so there are less distinct source IDs
         oq = readinput.get_oqparam('job.ini', case_25)
         csm = readinput.get_composite_source_model(oq)
         self.assertEqual(len(csm.src_groups), 27)  # many groups :-(
+        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 59)
         csm = readinput.get_composite_source_model(oq, apply_unc=False)
-        self.assertEqual(len(csm.src_groups), 6)  # less groups :-)
+        self.assertEqual(len(csm.src_groups), 27)  # same structure
+        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 22)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

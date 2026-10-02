@@ -29,6 +29,7 @@ from openquake.baselib import parallel, hdf5, config, general
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, delta)
 from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.lt import apply_uncertainties, get_bset_values
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
@@ -165,6 +166,53 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
     return result
 
 
+_full_lt_cache = {}  # dstore filename -> initialized FullLogicTree
+
+
+def read_full_lt(dstore):
+    """
+    :returns: the FullLogicTree stored in the datastore, initialized only
+        once per process, since the init is not cheap for large LTs
+    """
+    filename = dstore.filename
+    try:
+        return _full_lt_cache[filename]
+    except KeyError:
+        with dstore:
+            full_lt = dstore['full_lt'].init()
+        _full_lt_cache[filename] = full_lt
+        return full_lt
+
+
+def apply_unc_by_src(full_lt, cmaker, grp):
+    """
+    Apply the uncertainties to a group of sources built *without*
+    uncertainties (i.e. with OQ_BYSRC=1).
+
+    :param full_lt: a FullLogicTree instance
+    :param cmaker: the ContextMaker associated to the group
+    :param grp: a SourceGroup with the uncertainties not applied
+    :returns: a SourceGroup with the uncertainties applied
+    """
+    # NB: the sources in a group have the same uncertainties applied in
+    # all its realizations (see _bysrc_groups), so it is enough to apply
+    # the uncertainties of the first one
+    ordinal = numpy.atleast_1d(cmaker.trt_smrs)[0] % TWO24
+    rlz = next(r for r in full_lt.sm_rlzs if r.ordinal == ordinal)
+    bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
+    # NB: check=False since the group is a fragment of the original one
+    # (split by weight in preclassical), so the check must be done at
+    # build time, see _bysrc_groups
+    sg = apply_uncertainties(bset_values, grp, check=False)
+    for src in sg:
+        # the source is modified after the preclassical, so the cached
+        # geometry must be discarded; it depends on the occurrence rates
+        # (see PointSource._get_max_rupture_projection_radius)
+        if hasattr(src, 'radius'):
+            del src.radius
+    return sg
+
+
 # NB: the tilegetter here is trivial unless there are ilabels
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
@@ -173,11 +221,16 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
+    bysrc = 'bysrc' in dstore
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     # the weight of the task is not inferrable from grp_keys, which are
     # plain strings, so it is set explicitly (used in task_info)
     monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
+    if bysrc:
+        # the CSM was built without uncertainties, so they are applied
+        # here, one realization at a time (see apply_unc_by_src)
+        full_lt = read_full_lt(dstore)
     if grps[0].atomic:
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
@@ -188,8 +241,22 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     else:
         # yield a result for each base source
         for grp in grps:
+            if bysrc:
+                # the uncertainties are applied to the whole group, since
+                # correlated branchsets (applyToSources='*') refer to
+                # sources outside the base source below
+                grp = apply_unc_by_src(full_lt, cmaker, grp)
             for srcs in groupby(grp, valid.basename).values():
-                result = baseclassical(srcs, sites, cmaker, remove_zeros=False)
+                if bysrc:
+                    # the magnitude filtering is done here and not in
+                    # preclassical, since the uncertainties can change
+                    # the max magnitude of the sources
+                    srcs = preclassical.filter_mag(
+                        srcs, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
+                    if not srcs:
+                        continue
+                result = baseclassical(
+                    srcs, sites, cmaker, remove_zeros=False)
                 yield result
 
 

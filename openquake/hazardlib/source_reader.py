@@ -18,6 +18,7 @@
 
 import time
 import zlib
+import copy
 import os.path
 import pickle
 import operator
@@ -29,7 +30,8 @@ from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
 from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
-from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.lt import (
+    apply_uncertainties, check_correlated, get_bset_values)
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
@@ -310,6 +312,96 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
 
 
 # calls _build_csm
+def _sampling_array(src):
+    """
+    :returns: the sampling of the source as a structured array
+    """
+    sampling = src.sampling
+    if isinstance(sampling, list):
+        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
+    return sampling
+
+
+def _unc_signature(bset_values, src):
+    """
+    :returns: a tuple identifying the uncertainties applied to src. It is
+        used to group together the sources which will have the same
+        parameters once the uncertainties are applied, exactly as
+        _group_sources does with the modified sources
+    """
+    sig = []
+    for bset, value in bset_values:
+        if bset.correlated:
+            ok = src.source_id in value
+        else:
+            ok = bset.filter_source(src)
+        if ok:
+            sig.append((bset.id, str(value)))
+    return tuple(sig)
+
+
+def _bysrc_groups(full_lt, rlz_groups):
+    """
+    Build the source groups without applying the uncertainties, i.e. for
+    OQ_BYSRC=1. The sources are grouped by the realizations they belong
+    to and by the uncertainties applied to them, so that the structure is
+    the same as the one built by _build_csm with the modified sources.
+    The source IDs are left untouched, so that a source split in N
+    realizations produces a single row in the source_info table.
+    """
+    dic = {}  # (trt, source_id, signature) -> [group, [(source, trt_smr)]]
+    for rlz, grp in rlz_groups:
+        trti = full_lt.trti.get(grp.trt, 0)
+        trt_smr = trti * TWO24 + rlz.ordinal
+        bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
+        # NB: the uncertainties are applied later, in classical_bysrc, on
+        # groups split by weight, so the correlated branchsets are checked
+        # here, where the groups are still whole
+        check_correlated(bset_values, grp)
+        for src in grp:
+            sig = _unc_signature(bset_values, src)
+            dic.setdefault((grp.trt, src.source_id, sig),
+                           [grp, []])[1].append((src, trt_smr))
+
+    def order(item):
+        (trt, srcid, _sig), (_grp, pairs) = item
+        return (sorted({trt_smr for _, trt_smr in pairs}), srcid)
+
+    out, atomic, groups = [], [], {}  # groups sorted by trt_smrs
+    for (_trt, _srcid, _sig), (grp, pairs) in sorted(dic.items(),
+                                                      key=order):
+        trt_smrs = tuple(sorted({trt_smr for _, trt_smr in pairs}))
+        # sources with the same ID coming from different source model files
+        # are merged, as reduce_sources does in _build_csm
+        arrays, seen = [], {}
+        for src, _trt_smr in pairs:
+            seen.setdefault(id(src), src)
+        for src in seen.values():
+            sampling = _sampling_array(src)
+            rows = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
+            if len(rows):
+                arrays.append(rows)
+        assert arrays, (grp.trt, _srcid, trt_smrs)
+        new_src = copy.copy(pairs[0][0])
+        new_src.sampling = numpy.concatenate(arrays, dtype=sampling_dt)
+        if grp.atomic:
+            # atomic groups are never merged, as in _build_csm
+            key = (id(grp), trt_smrs)
+            if key not in groups:
+                groups[key] = new = copy.copy(grp)
+                new.sources = []
+                atomic.append(new)
+            groups[key].sources.append(new_src)
+        else:
+            key = (grp.trt, trt_smrs)
+            if key not in groups:
+                groups[key] = new = copy.copy(grp)
+                new.sources = []
+                out.append(new)
+            groups[key].sources.append(new_src)
+    return out + atomic
+
+
 def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     """
     :param oq: OqParam instance
@@ -321,19 +413,28 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     """
     mon = performance.Monitor('_build_groups', measuremem=True)
     with mon:
-        groups = []
+        rlz_groups = []
         for rlz in full_lt.sm_rlzs:
-            groups.extend(gen_groups(full_lt, smdict, rlz, apply_unc))
+            rlz_groups.extend((rlz, grp) for grp in
+                              gen_groups(full_lt, smdict, rlz, apply_unc))
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    # NB: when apply_unc is False the uncertainties are not applied in
-    # gen_groups, however the groups are built exactly in the same way,
-    # by assuming equal ID == equal sources
+    if not apply_unc:
+        # The sources are not modified, so there is a group per
+        # realization, each with its own trt_smr; this way the rates
+        # computed by classical_bysrc can be attributed to the right
+        # realization
+        groups = _bysrc_groups(full_lt, rlz_groups)
+        csm = CompositeSourceModel(oq, full_lt, groups)
+        store_data(oq, smdict, csm, dstore)
+        return csm
+
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     mon = performance.Monitor('_build_csm', measuremem=True)
     with mon:
-        csm = _build_csm(oq, full_lt, groups, is_event_based)
+        csm = _build_csm(oq, full_lt, [g for _, g in rlz_groups],
+                         is_event_based)
     logging.info(mon)
     store_data(oq, smdict, csm, dstore)
     return csm
