@@ -107,9 +107,12 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata, grp_id):
+def store_ctxs(dstore, rupdata, grp_id, gid=0):
     """
     Store contexts in the datastore
+
+    :param gid: the gid of the unit of rate attribution, stored with
+        OQ_BYSRC only, when the contexts of a group have different gids
     """
     nr = len(rupdata)
     known = set(rupdata.dtype.names)
@@ -125,6 +128,8 @@ def store_ctxs(dstore, rupdata, grp_id):
             hdf5.extend(dstore['rup/' + par], rupdata[par])
         else:
             hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
+    if 'ctx_gid' in dstore:
+        hdf5.extend(dstore['ctx_gid'], numpy.full(nr, gid, U32))
 
 
 #  ########################### task functions ############################ #
@@ -209,19 +214,23 @@ def read_gid_dic(dstore, full_lt=None):
             for trt_smr, gids in zip(trt_smrs, full_lt.get_gids(trt_smrs))}
 
 
-def group_gids(grp, gid_dic):
+def group_gids(src_groups, gid_dic):
     """
-    :param grp: a SourceGroup built with OQ_BYSRC, i.e. without applying
-        the uncertainties
+    :param src_groups: the groups of a CSM built with OQ_BYSRC, i.e. without
+        applying the uncertainties
     :param gid_dic: a dictionary trt_smrs -> (gids, weights)
-    :returns: the gids of all the rates the group can produce, i.e. one
-        per set of realizations with the same uncertainties
+    :returns: a dictionary grp_id -> gids, with the gids of all the rates
+        each group can produce, i.e. one per set of realizations with the
+        same uncertainties
     """
-    gids = set()
-    for src in grp:
-        for trt_smrs in sig_subsets(src):
-            gids.update(gid_dic[trt_smrs][0])
-    return U32(sorted(gids))
+    out = {}
+    for grp in src_groups:
+        gids = set()
+        for src in grp:
+            for trt_smrs in sig_subsets(src):
+                gids.update(gid_dic[trt_smrs][0])
+        out[grp.grp_id] = U32(sorted(gids))
+    return out
 
 
 def group_subsets(srcs):
@@ -537,7 +546,10 @@ class ClassicalCalculator(base.HazardCalculator):
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
             with self.monitor('saving rup_data'):
-                store_ctxs(self.datastore, dic['rup_data'], grp_id)
+                # NB: with OQ_BYSRC each result has its own gid, see
+                # classical_bysrc; without it there is no gid column
+                store_ctxs(self.datastore, dic['rup_data'], grp_id,
+                           dic['rmap'].gid.min())
 
         rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
@@ -586,6 +598,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
+            if 'bysrc' in self.datastore:
+                # with OQ_BYSRC the contexts of a group contain the sources
+                # with different uncertainties, so the gid of the unit of
+                # rate attribution of each context is stored in a separate
+                # dataset, see store_ctxs
+                self.datastore.create_dset('ctx_gid', U32)
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
 
@@ -716,10 +734,26 @@ class ClassicalCalculator(base.HazardCalculator):
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
 
+    def get_rmap(self, cmaker, grp_id, gids):
+        """
+        :returns: the RateMap of the group, created if not existing
+
+        NB: a RateMap is huge (550 MB in usa23) and must be created once
+        per group: the atomic groups of a gid are split in blocks with
+        different grp_keys[0], but they all contribute to the RateMap of
+        the first group
+        """
+        if grp_id not in self.rmap:
+            # with OQ_BYSRC gids is a dictionary grp_id -> gids, otherwise
+            # the rates are attributed to the trt_smrs of the group
+            self.rmap[grp_id] = RateMap(
+                self.sitecol.sids, self.oqparam.imtls.size,
+                cmaker.gid if gids is None else gids[grp_id])
+        return self.rmap[grp_id]
+
     def _execute(self, sgs, ds):
         oq = self.oqparam
         allargs = []
-        L = self.oqparam.imtls.size
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
@@ -736,24 +770,16 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: this is read on ds, the dataset read by the tasks, which can
         # be the parent calculation (as in case_36)
         gid_dic = read_gid_dic(ds, self.full_lt)
+        # NB: with OQ_BYSRC the rates of a group are attributed to the sets
+        # of realizations with the same uncertainties, not to the trt_smrs of
+        # the group, which are the gids of the cmaker (see read_gid_dic)
+        gids = (group_gids(self.csm.src_groups, gid_dic)
+                if gid_dic else None)
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
-                # NB: a RateMap is huge (550 MB in usa23) and must be
-                # created once per group: the atomic groups of a gid are
-                # split in blocks with different grp_keys[0], but they
-                # all contribute to the RateMap of the first group
-                if grp_id not in self.rmap:
-                    if gid_dic:  # OQ_BYSRC
-                        # the gids of the cmaker refer to the whole group,
-                        # while the rates are attributed to the sets of
-                        # realizations with the same uncertainties
-                        gids = group_gids(self.csm.src_groups[grp_id],
-                                          gid_dic)
-                    else:
-                        gids = cmaker.gid
-                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L, gids)
+                self.get_rmap(cmaker, grp_id, gids)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however

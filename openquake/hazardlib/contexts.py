@@ -2198,6 +2198,12 @@ def read_ctx_by_grp(dstore):
     """
     sitecol = dstore['sitecol'].complete.array
     params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
+    if 'ctx_gid' in dstore:
+        # with OQ_BYSRC the contexts of a group contain the sources with
+        # different uncertainties, so the gid of the unit of rate
+        # attribution of each context is stored in a separate dataset,
+        # see store_ctxs
+        params['gid'] = dstore['ctx_gid'][:]
     dtlist = []
     for par, val in params.items():
         if len(val) == 0:

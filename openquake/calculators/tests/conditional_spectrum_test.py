@@ -16,18 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import unittest
-
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.export import export
 from openquake.qa_tests_data.conditional_spectrum import case_1, case_2, case_3
 
 
-# NB: with OQ_BYSRC the contexts of a group contain sources with
-# different uncertainties, so they cannot be attributed to the
-# realizations, see conditional_spectrum.main
-@unittest.skipIf('OQ_BYSRC' in os.environ, 'unsupported with OQ_BYSRC')
 class ConditionalSpectrumTestCase(CalculatorTestCase):
 
     def test_case_1(self):
