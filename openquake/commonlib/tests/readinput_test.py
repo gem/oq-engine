@@ -518,15 +518,20 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_no_uncertainties(self):
         # with apply_unc=False the uncertainties are not applied, but the
-        # structure of the CSM is the same: the sources are not duplicated
-        # per uncertainty, so there are less distinct source IDs
+        # structure of the CSM is the same: the sources modified by
+        # different uncertainties are grouped as in _build_csm and get a
+        # different source_id, with a semicolon (see _bysrc_groups)
         oq = readinput.get_oqparam('job.ini', case_25)
         csm = readinput.get_composite_source_model(oq)
         self.assertEqual(len(csm.src_groups), 27)  # many groups :-(
         self.assertEqual(len({s.source_id for s in csm.get_sources()}), 59)
         csm = readinput.get_composite_source_model(oq, apply_unc=False)
         self.assertEqual(len(csm.src_groups), 27)  # same structure
-        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 22)
+        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 59)
+        # the source IDs are the same, too
+        ids1 = {s.source_id for s in csm.get_sources()}
+        csm = readinput.get_composite_source_model(oq)
+        self.assertEqual(ids1, {s.source_id for s in csm.get_sources()})
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

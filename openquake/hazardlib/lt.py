@@ -985,7 +985,14 @@ class BranchSet(object):
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSources':
-                if source and source.source_id not in value:
+                # NB: with OQ_BYSRC the uncertainties are applied
+                # late, i.e. after add_semicolons has appended the
+                # suffix ';i' to the sources modified by different
+                # uncertainties, so the base source_id must be
+                # compared with the filter (see _bysrc_groups). This is
+                # a no-op without OQ_BYSRC, since in that case the
+                # semicolons are added after apply_uncertainties
+                if source and source.source_id.rsplit(';', 1)[0] not in value:
                     return False
             elif key == 'applyToBranches':
                 pass

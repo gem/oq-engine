@@ -346,8 +346,11 @@ def _bysrc_groups(full_lt, rlz_groups):
     OQ_BYSRC=1. The sources are grouped by the realizations they belong
     to and by the uncertainties applied to them, so that the structure is
     the same as the one built by _build_csm with the modified sources.
-    The source IDs are left untouched, so that a source split in N
-    realizations produces a single row in the source_info table.
+    The source IDs are modified as in _build_csm: the copies of a source
+    modified by different uncertainties are given a different source_id,
+    with a semicolon. NB: the uncertainties are applied later, in
+    classical_bysrc, on the sources renamed here, so the applyToSources
+    filter must be applied on the base source_id (see filter_source).
     """
     dic = {}  # (trt, source_id, signature) -> [group, [(source, trt_smr)]]
     for rlz, grp in rlz_groups:
@@ -362,6 +365,17 @@ def _bysrc_groups(full_lt, rlz_groups):
             sig = _unc_signature(bset_values, src)
             dic.setdefault((grp.trt, src.source_id, sig),
                            [grp, []])[1].append((src, trt_smr))
+
+    # as in _build_csm, the copies of a source modified by different
+    # uncertainties are given a different source_id, with a semicolon
+    sigs = {}  # (trt, srcid) -> list of distinct signatures
+    for trt, srcid, sig in dic:
+        sigs.setdefault((trt, srcid), []).append(sig)
+    suffix = {}  # (trt, srcid, sig) -> index
+    for (trt, srcid), sigs_ in sigs.items():
+        if len(sigs_) > 1:
+            for i, sig in enumerate(sorted(sigs_)):
+                suffix[(trt, srcid, sig)] = i
 
     def order(item):
         (trt, srcid, _sig), (_grp, pairs) = item
@@ -383,6 +397,9 @@ def _bysrc_groups(full_lt, rlz_groups):
                 arrays.append(rows)
         assert arrays, (grp.trt, _srcid, trt_smrs)
         new_src = copy.copy(pairs[0][0])
+        if (_trt, _srcid, _sig) in suffix:
+            new_src.source_id = '%s;%d' % (
+                _srcid, suffix[(_trt, _srcid, _sig)])
         new_src.sampling = numpy.concatenate(arrays, dtype=sampling_dt)
         # flag the sources which will be modified by classical_bysrc: they
         # must not be split in the preclassical, since the splitting
