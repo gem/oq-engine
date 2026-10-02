@@ -174,6 +174,9 @@ def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if grps[0].atomic:
         # case_27 (Japan)
@@ -206,6 +209,9 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
     if fulltask:
@@ -616,7 +622,13 @@ class ClassicalCalculator(base.HazardCalculator):
             num_blocks += sum('-' in key for key in grp_keys)
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 grp_id = int(grp_keys[0].split('-')[0])
-                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
+                # NB: a RateMap is huge (550 MB in usa23) and must be
+                # created once per group: the atomic groups of a gid are
+                # split in blocks with different grp_keys[0], but they
+                # all contribute to the RateMap of the first group
+                if grp_id not in self.rmap:
+                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L,
+                                                cmaker.gid)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however
