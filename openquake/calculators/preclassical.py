@@ -29,6 +29,7 @@ from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
+from openquake.hazardlib.source_reader import get_trt_smrs_gid
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -146,9 +147,13 @@ def filter_weight(srcs, sf, cmaker, secparams, bysrc=False, monitor=None):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
+        # NB: with OQ_BYSRC the sources modified by the uncertainties are
+        # not split, since the splitting destroys the geometry (and the MFD
+        # of the fault sources); they are split in classical_bysrc, after
+        # applying the uncertainties, see split_modified
         unsplittable = bysrc and getattr(src, 'bysrc_unc', False)
-        if oq.split_sources and src.nsites and src.code != b'F' and not (
-                unsplittable):
+        if oq.split_sources and src.nsites and src.code != b'F' and \
+                not unsplittable:
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
@@ -315,7 +320,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             # realizations with the same uncertainties, not the trt_smrs of
             # the groups, since the groups are not split by uncertainties
             self.datastore.hdf5.save_vlen(
-                'trt_smrs_gid', csm.get_trt_smrs_gid())
+                'trt_smrs_gid', get_trt_smrs_gid(csm))
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')

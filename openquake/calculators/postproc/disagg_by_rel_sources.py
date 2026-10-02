@@ -147,7 +147,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                     # classical_bysrc), so we have to do it here too, one
                     # set of realizations at a time, since the source can
                     # have different uncertainties in different branches
-                    for trt_smrs, _sig in sig_subsets(grp[0]):
+                    for trt_smrs in sig_subsets(grp[0]):
                         subgrp = copy.copy(grp)
                         subgrp.sources = [restrict_sampling(src, trt_smrs)
                                           for src in grp]

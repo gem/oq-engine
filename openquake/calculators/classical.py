@@ -219,7 +219,7 @@ def read_gid_dic(dstore, full_lt=None):
     With OQ_BYSRC the units of rate attribution are the sets of realizations
     with the same uncertainties applied (see get_trt_smrs_gid), otherwise
     they are the trt_smrs of the groups. In both cases the gid of a rate is
-    the index of its trt_smrs in the corresponding array, see get_rmap_gb.
+    the index of its trt_smrs in the corresponding list, see get_rmap_gb.
     """
     with dstore:  # NB: the datastore is closed when passed to a task
         if 'trt_smrs_gid' not in dstore:
@@ -241,7 +241,7 @@ def group_gids(grp, gid_dic):
     """
     gids = set()
     for src in grp:
-        for trt_smrs, _sig in sig_subsets(src):
+        for trt_smrs in sig_subsets(src):
             gids.update(gid_dic[trt_smrs][0])
     return U32(sorted(gids))
 
@@ -249,8 +249,8 @@ def group_gids(grp, gid_dic):
 def group_subsets(srcs):
     """
     :param srcs: a list of sources with the same basename
-    :returns: a list of (trt_smrs, sig) pairs, the sets of realizations
-        with the same uncertainties applied to the sources
+    :returns: a list of tuples of trt_smr, the sets of realizations with
+        the same uncertainties applied to the sources
 
     NB: the sources with the same basename always have the same sampling,
     since they are fragments of the same source (see _bysrc_groups).
@@ -290,30 +290,29 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
         # yield a result for each base source and set of uncertainties
         for grp in grps:
             for srcs in groupby(grp, valid.basename).values():
-                if not gid_dic:
+                if not gid_dic:  # the uncertainties were applied at build
                     yield baseclassical(
                         srcs, sites, cmaker, remove_zeros=False)
                     continue
                 # NB: the uncertainties are applied to the whole group,
                 # since correlated branchsets (applyToSources='*') refer
                 # to sources outside the base source below
-                for trt_smrs, _sig in group_subsets(srcs):
+                subgrp = copy.copy(grp)
+                subgrp.sources = list(srcs)
+                for trt_smrs in group_subsets(srcs):
                     gids, wei = gid_dic[trt_smrs]
-                    cmaker_ = cmaker.restrict_trt_smrs(trt_smrs, gids, wei)
-                    subgrp = copy.copy(grp)
-                    subgrp.sources = list(srcs)
-                    subgrp = split_modified(apply_unc_by_src(
+                    sg = split_modified(apply_unc_by_src(
                         full_lt, trt_smrs, subgrp))
                     # the magnitude filtering is done here and not in
                     # preclassical, since the uncertainties can change
                     # the max magnitude of the sources
-                    ss = preclassical.filter_mag(
-                        subgrp, cmaker.oq.minimum_magnitude,
-                        cmaker.oq.strict)
-                    if not ss:
+                    sg = preclassical.filter_mag(
+                        sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
+                    if not sg:
                         continue
+                    cmaker_ = cmaker.restrict_trt_smrs(trt_smrs, gids, wei)
                     yield baseclassical(
-                        ss, sites, cmaker_, remove_zeros=False)
+                        sg, sites, cmaker_, remove_zeros=False)
 
 
 def _split_src(srcs, n):

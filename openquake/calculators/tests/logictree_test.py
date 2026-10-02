@@ -814,9 +814,10 @@ hazard_uhs-std.csv
         csm = readinput.get_composite_source_model(oq)
         assert len(csm.src_groups) == 1
         if 'bysrc' in self.calc.datastore:
-            # with OQ_BYSRC there is a group per source group in the source
-            # model files, i.e. 5, and not one per (trt_smrs, uncertainties)
-            assert len(self.calc.csm.src_groups) == 5
+            # with OQ_BYSRC there is a group per set of realizations,
+            # instead of one per (trt_smrs, uncertainties): the groups with
+            # the same realizations are merged, as in _group_sources
+            assert len(self.calc.csm.src_groups) == 4
         else:
             assert len(self.calc.csm.src_groups) == 4
 

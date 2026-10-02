@@ -601,7 +601,6 @@ class ContextMaker(object):
             betw_ratio = {'with_betw_ratio': 1.7}  # same as in GEESE
         else:
             betw_ratio = {}
-        self.betw_ratio = betw_ratio
         if isinstance(gsims, dict):
             self.gsims = _fix(gsims, betw_ratio)
         else:

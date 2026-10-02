@@ -32,6 +32,7 @@ from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_values)
+from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
@@ -42,12 +43,7 @@ bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 sampling_dt = numpy.dtype([
     ('trt_smr', U32),
-    ('samples', U32),
-    # index of the set of uncertainties applied to the source in the
-    # realization trt_smr; it is 0 if there are no uncertainties or if
-    # they are not applied at build time (i.e. with OQ_BYSRC, where they
-    # are applied in classical_bysrc)
-    ('sig', U16)])
+    ('samples', U32)])
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -62,11 +58,11 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def sampling(samples, trt_smr, sig=0):
+def sampling(samples, trt_smr):
     """
-    :returns: a structured array (trt_smr, samples, sig) of length 1
+    :returns: a structured array (trt_smr, samples) of length 1
     """
-    return numpy.array([(trt_smr, samples, sig)], sampling_dt)
+    return numpy.array([(trt_smr, samples)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -383,10 +379,11 @@ def _bysrc_groups(full_lt, rlz_groups):
     uncertainties.
 
     The uncertainties to be applied in each realization are not known
-    until classical_bysrc, but a small signature of them is stored in
-    the sampling of each source (see sig_subsets), so that the sources
-    with different uncertainties can be told apart, and the rates can be
-    attributed to the right realizations.
+    until classical_bysrc, so the realizations with different
+    uncertainties are stored in the bysrc_subsets attribute of each
+    source (see sig_subsets), and the rates are computed and attributed
+    one set at a time. This happens with OQ_BYSRC only, since without it
+    the uncertainties are applied here, as in _build_csm.
 
     NB: the uncertainties are applied on the sources as they are here,
     without the ';' suffix added by add_semicolons in _build_csm, so the
@@ -401,57 +398,93 @@ def _bysrc_groups(full_lt, rlz_groups):
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole
         check_correlated(bset_values, grp)
-        # NB: the groups are keyed by id(grp), since the group objects are
-        # shared by all the realizations selecting the same source model
-        # file (see gen_groups), while two groups with the same trt but
-        # coming from different files have different ids. The dict
-        # preserves the order of first appearance, making the groups and
-        # the sources inside them reproducible.
+        # NB: the sources are collected by id(grp), since the group objects
+        # are shared by all the realizations selecting the same source model
+        # file (see gen_groups); the groups built from them are then merged
+        # by trt_smrs below. The dicts preserve the order of first
+        # appearance, making the groups and the sources inside them
+        # reproducible.
         srcs = dic.setdefault(id(grp), [grp, {}])[1]
         for src in grp:
             sig = _unc_signature(bset_values, src)
             srcs.setdefault(src.source_id, []).append(
                 (src, trt_smr, rlz.samples, sig))
 
-    out, atomic = [], []
+    out, atomic, groups = [], [], {}  # groups keyed by trt_smrs
     for grp, srcs in dic.values():
-        new = copy.copy(grp)
-        new.sources = []
-        (atomic if grp.atomic else out).append(new)
+        new_srcs = []
         for srcid in sorted(srcs):
             pairs = srcs[srcid]
-            # the realizations are grouped by the uncertainties applied to
-            # them, generating a signature index for each group of them
-            sigidx = {}
-            arrays, seen = [], {}
+            arrays, seen, sigdict = [], {}, {}
             for src, trt_smr, samples, sig in pairs:
                 seen.setdefault(id(src), src)
-                arrays.append(
-                    (trt_smr, samples, sigidx.setdefault(sig, len(sigidx))))
+                arrays.append((trt_smr, samples))
+                sigdict.setdefault(sig, []).append(trt_smr)
             new_src = copy.copy(next(iter(seen.values())))
             new_src.sampling = numpy.array(
                 sorted(arrays), sampling_dt)  # sorted by trt_smr
+            # NB: the subsets are stored only if the uncertainties are not
+            # the same in all the realizations; a source with no
+            # uncertainties (or with the same uncertainties everywhere)
+            # keeps its sampling as it is
+            new_src.bysrc_subsets = [
+                numpy.array(sorted(t), U32) for t in sigdict.values()
+                ] if len(sigdict) > 1 else []
             # flag the sources which will be modified by classical_bysrc:
             # they must not be split in the preclassical, since the
             # splitting destroys the geometry (and the MFD of the fault
             # sources)
-            new_src.bysrc_unc = bool(sigidx)
-            new.sources.append(new_src)
+            new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
+            new_srcs.append(new_src)
+        # NB: the groups are keyed by the trt_smrs, as _group_sources does
+        # (the trt is determined by them, see get_cmakers), so that the
+        # groups with the same realizations are merged and there is one
+        # cmaker for each set of realizations
+        trt_smrs = new_srcs[0].trt_smrs
+        # NB: the atomic groups are never merged, as in _build_csm
+        key = (id(grp), trt_smrs) if grp.atomic else trt_smrs
+        if key not in groups:
+            groups[key] = new = copy.copy(grp)
+            new.sources = []
+            (atomic if grp.atomic else out).append(new)
+        groups[key].sources.extend(new_srcs)
     return out + atomic
 
 
 def sig_subsets(src):
     """
-    :param src: a source with a sampling storing the uncertainty signature
-    :returns: a list of (trt_smrs, sig) pairs, one per set of uncertainties
-        applied to the source
+    :returns: a list of tuples of trt_smr, the sets of realizations with
+        the same uncertainties applied to the source; there is a single set
+        if the uncertainties are the same in all the realizations
+
+    NB: the subsets are stored by _bysrc_groups with OQ_BYSRC only; the
+    sources of a normal calculation have a single set, given by the
+    sampling.
     """
-    sampling = _sampling_array(src)
-    out = []
-    for sig in numpy.unique(sampling['sig']):
-        trt_smrs = tuple(sorted(sampling['trt_smr'][sampling['sig'] == sig]))
-        out.append((trt_smrs, sig))
-    return out
+    subsets = getattr(src, 'bysrc_subsets', None)
+    if subsets:
+        return [tuple(t) for t in subsets]
+    return [tuple(_sampling_array(src)['trt_smr'])]
+
+
+def get_trt_smrs_gid(csm):
+    """
+    :param csm: a CompositeSourceModel built with OQ_BYSRC, i.e. without
+        applying the uncertainties
+    :returns: a sorted list of trt_smrs, the units of rate attribution
+        (to be stored as an hdf5.vuint32 array)
+
+    With OQ_BYSRC the uncertainties are applied in classical_bysrc, so the
+    realizations with different uncertainties are not separated at build
+    time (see _bysrc_groups). The rates are nevertheless computed
+    separately for each set of uncertainties and must be attributed to
+    the right realizations, hence this extra list; the gid of a rate is
+    the index of its trt_smrs in it.
+    """
+    all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
+                    for trt_smrs in sig_subsets(src)]
+    unique, _ = get_unique_inverse(all_trt_smrs)
+    return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
 def restrict_sampling(src, trt_smrs):
