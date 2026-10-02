@@ -867,7 +867,7 @@ def view_task_cd(token, dstore):
      $ oq show task_cd:0  # the fastest task
      $ oq show task_cd:-1  # the slowest task
     """
-    return view_task(token, dstore, 'classical_disagg')
+    return view_task(token, dstore, 'classical_bysrc')
 
 
 @view.add('source_data')

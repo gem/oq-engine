@@ -1287,7 +1287,7 @@ class SlowTasksTestCase(unittest.TestCase):
         ([('classical', 10., 5., 5., 15.),
           ('baseclassical', 10., 5., 5., 15.)], True),
         # a disaggregation calculation has no classical Starmap
-        ([('classical_disagg', 12., 9., 3., 21.)], False),
+        ([('classical_bysrc', 12., 9., 3., 21.)], False),
     ]
 
     def check(self, rows):

@@ -166,7 +166,7 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
 
 
 # NB: the tilegetter here is trivial unless there are ilabels
-def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
+def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites.
     `grp_keys` contains always a single element except in the case
@@ -670,7 +670,7 @@ class ClassicalCalculator(base.HazardCalculator):
             allargs = [allargs[int(OQ_TASK_NO)]]
         if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
-                classical_disagg, allargs, h5=self.datastore.hdf5)
+                classical_bysrc, allargs, h5=self.datastore.hdf5)
         else:
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))

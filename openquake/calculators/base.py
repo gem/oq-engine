@@ -684,7 +684,7 @@ class HazardCalculator(BaseCalculator):
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore)
+                    oq, self.datastore, apply_unc='OQ_BYSRC' not in os.environ)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
                     trts = {sg.trt for sg in csm.src_groups}
