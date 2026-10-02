@@ -36,7 +36,6 @@ from openquake.hazardlib.source_reader import apply_unc_by_src, sig_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.map_array import (
     RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
 from openquake.commonlib import calc
@@ -186,27 +185,6 @@ def read_full_lt(dstore):
         return full_lt
 
 
-def split_modified(grp):
-    """
-    Split the sources modified by the uncertainties, which were not split
-    in the preclassical (see filter_weight). This is called after the
-    uncertainties have been applied: not splitting would mean using the
-    area sources whole, without building the planar ruptures, thus
-    returning different hazard curves (see logictree/case_67).
-
-    NB: the fault sources are still not split, since their splitting
-    requires recomputing the rupture counts, see also filter_weight.
-
-    :param grp: a SourceGroup of modified sources
-    :returns: a SourceGroup with split sources
-    """
-    out = []
-    for src in grp:
-        out.extend(split_source(src) if src.code in b'AM' else [src])
-    grp.sources = out
-    return grp
-
-
 def read_gid_dic(dstore, full_lt=None):
     """
     :param dstore: a DataStore instance
@@ -261,6 +239,38 @@ def group_subsets(srcs):
     return subsets
 
 
+def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
+    """
+    :param srcs: the sources with the same basename in the group grp
+    :param grp: the SourceGroup the sources belong to
+    :param cmaker: the ContextMaker associated to the group
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights), empty if the
+        uncertainties were applied at build time
+    :param full_lt: a FullLogicTree instance, or None
+    :returns: a generator of (cmaker, sources) pairs, one per set of
+        realizations with the same uncertainties applied to the sources
+    """
+    if not gid_dic:  # the uncertainties were applied at build time
+        yield cmaker, srcs
+        return
+    # NB: the uncertainties are applied to the whole group, since
+    # correlated branchsets (applyToSources='*') refer to sources outside
+    # the base source
+    subgrp = copy.copy(grp)
+    subgrp.sources = list(srcs)
+    for trt_smrs in group_subsets(srcs):
+        sg = preclassical.split_modified(
+            apply_unc_by_src(full_lt, trt_smrs, subgrp))
+        # the magnitude filtering is done here and not in the preclassical,
+        # since the uncertainties can change the max magnitude
+        sg = preclassical.filter_mag(
+            sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
+        if not sg:
+            continue
+        gids, wei = gid_dic[trt_smrs]
+        yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg
+
+
 # NB: the tilegetter here is trivial unless there are ilabels
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
@@ -274,11 +284,11 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     # plain strings, so it is set explicitly (used in task_info)
     monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
+    # NB: the datastore is closed when passed to a task, see read_gid_dic
     gid_dic = read_gid_dic(dstore)
-    if gid_dic:
-        # the CSM was built without uncertainties, so they are applied
-        # here, one set of realizations at a time (see apply_unc_by_src)
-        full_lt = read_full_lt(dstore)
+    # if there is a gid_dic the CSM was built without uncertainties, so
+    # they are applied here, one set of realizations at a time
+    full_lt = read_full_lt(dstore) if gid_dic else None
     if grps[0].atomic:
         # case_27 (Japan)
         # disagg_by_src works since the atomic group contains a single
@@ -290,27 +300,8 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
         # yield a result for each base source and set of uncertainties
         for grp in grps:
             for srcs in groupby(grp, valid.basename).values():
-                if not gid_dic:  # the uncertainties were applied at build
-                    yield baseclassical(
-                        srcs, sites, cmaker, remove_zeros=False)
-                    continue
-                # NB: the uncertainties are applied to the whole group,
-                # since correlated branchsets (applyToSources='*') refer
-                # to sources outside the base source below
-                subgrp = copy.copy(grp)
-                subgrp.sources = list(srcs)
-                for trt_smrs in group_subsets(srcs):
-                    gids, wei = gid_dic[trt_smrs]
-                    sg = split_modified(apply_unc_by_src(
-                        full_lt, trt_smrs, subgrp))
-                    # the magnitude filtering is done here and not in
-                    # preclassical, since the uncertainties can change
-                    # the max magnitude of the sources
-                    sg = preclassical.filter_mag(
-                        sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
-                    if not sg:
-                        continue
-                    cmaker_ = cmaker.restrict_trt_smrs(trt_smrs, gids, wei)
+                for cmaker_, sg in subsets_and_cmakers(
+                        srcs, grp, cmaker, gid_dic, full_lt):
                     yield baseclassical(
                         sg, sites, cmaker_, remove_zeros=False)
 

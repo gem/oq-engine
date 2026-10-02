@@ -187,12 +187,7 @@ class LogictreeTestCase(CalculatorTestCase):
 
         csm = source_group.read_csm(self.calc.datastore)
         source_ids = [src.source_id for src in csm.get_sources(0)]
-        if 'bysrc' in self.calc.datastore:
-            # with OQ_BYSRC the sources are not sorted by trt_smrs, but
-            # kept in the order of the source model
-            assert source_ids == ['1', '2']
-        else:
-            assert source_ids == ['2', '1']
+        assert source_ids == ['2', '1']
         source_ids = [src.source_id for src in csm.get_sources(1)]
         assert source_ids == ['1']
         source_ids = [src.source_id for src in csm.get_sources(2)]
@@ -813,13 +808,7 @@ hazard_uhs-std.csv
         oq.smlt_branch = 'b01'
         csm = readinput.get_composite_source_model(oq)
         assert len(csm.src_groups) == 1
-        if 'bysrc' in self.calc.datastore:
-            # with OQ_BYSRC there is a group per set of realizations,
-            # instead of one per (trt_smrs, uncertainties): the groups with
-            # the same realizations are merged, as in _group_sources
-            assert len(self.calc.csm.src_groups) == 4
-        else:
-            assert len(self.calc.csm.src_groups) == 4
+        assert len(self.calc.csm.src_groups) == 4
 
         # checking `oq show rlz:2`, 2 being the rlz without extendModel
         assert len(self.calc.datastore['weights']) == 3
@@ -907,8 +896,8 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
         if 'bysrc' in self.calc.datastore:
-            # with OQ_BYSRC there is a group per source group in the source
-            # model file, i.e. a single row, and not one per set of
+            # with OQ_BYSRC the uncertainties are not applied at build time,
+            # so there is a single group and not one per set of
             # uncertainties
             lines = open(f).readlines()
             self.assertEqual(len(lines), 3)  # comment, header, one group

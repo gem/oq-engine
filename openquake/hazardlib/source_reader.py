@@ -410,7 +410,7 @@ def _bysrc_groups(full_lt, rlz_groups):
             srcs.setdefault(src.source_id, []).append(
                 (src, trt_smr, rlz.samples, sig))
 
-    out, atomic, groups = [], [], {}  # groups keyed by trt_smrs
+    out, atomic, acc = [], [], general.AccumDict(accum=[])
     for grp, srcs in dic.values():
         new_srcs = []
         for srcid in sorted(srcs):
@@ -436,18 +436,20 @@ def _bysrc_groups(full_lt, rlz_groups):
             # sources)
             new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
             new_srcs.append(new_src)
-        # NB: the groups are keyed by the trt_smrs, as _group_sources does
-        # (the trt is determined by them, see get_cmakers), so that the
-        # groups with the same realizations are merged and there is one
-        # cmaker for each set of realizations
-        trt_smrs = new_srcs[0].trt_smrs
-        # NB: the atomic groups are never merged, as in _build_csm
-        key = (id(grp), trt_smrs) if grp.atomic else trt_smrs
-        if key not in groups:
-            groups[key] = new = copy.copy(grp)
-            new.sources = []
-            (atomic if grp.atomic else out).append(new)
-        groups[key].sources.extend(new_srcs)
+        if grp.atomic:
+            # the atomic groups are never merged, as in _build_csm
+            new = copy.copy(grp)
+            new.sources = new_srcs
+            atomic.append(new)
+        else:
+            acc[grp.trt].extend(new_srcs)
+    # NB: the sources are grouped exactly as in _build_csm, i.e. by
+    # trt_smrs and TOM, so that the structure and the order of the groups
+    # are the same; in particular there is one cmaker for each set of
+    # realizations, see get_cmakers
+    for trt, sources in acc.items():
+        grps, _red = _group_sources(trt, sources, full_lt)
+        out.extend(grps)
     return out + atomic
 
 

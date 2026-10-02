@@ -568,26 +568,26 @@ def _dummy(utype, source, value):
 
 # ######################### apply_uncertainties ########################### #
 
-def _correlated_key(value, source):
+def get_bset_value(bset, value, source):
     """
-    :param value: the {source ID: value} dictionary of a correlated branch
+    :param bset: a BranchSet instance
+    :param value: the value of the branch
     :param source: a source instance
-    :returns: the key of value corresponding to the source; it is looked
-        up also by basename, since the source can be a fragment of the
-        source in the logic tree (i.e. 'area1.0' for 'area1'). This happens
-        when the uncertainties are applied after the splitting of the
-        sources, as done by classical_bysrc with OQ_BYSRC
-    """
-    if source.source_id in value:
-        return source.source_id
-    return valid.basename(source)
+    :returns: a pair (ok, value), where ok tells if the branchset applies
+        to the source and value is the value to apply to it
 
-
-def _in_correlated(value, source):
+    NB: the source of a correlated branchset is looked up by ID and by
+    basename, since it can be a fragment of the source in the logic tree
+    (i.e. 'area1.0' for 'area1'); this happens when the uncertainties are
+    applied after the splitting of the sources, as done by classical_bysrc
+    with OQ_BYSRC
     """
-    :returns: True if the correlated branchset applies to the source
-    """
-    return source.source_id in value or valid.basename(source) in value
+    if bset.correlated:
+        if source.source_id in value:
+            return True, value[source.source_id]
+        bname = valid.basename(source)
+        return bname in value, value.get(bname)
+    return bset.filter_source(source), value
 
 
 def get_bset_values(lt_path, source_model_lt):
@@ -641,16 +641,14 @@ def apply_uncertainties(bset_values, src_group, check=True):
     if check:
         check_correlated(bset_values, src_group)
     for source in src_group:
-        oks = []
-        for bset, value in bset_values:
-            if bset.correlated:
-                oks.append(_in_correlated(value, source))
-            else:
-                oks.append(bset.filter_source(source))
-        if sum(oks):  # source not filtered out
+        # NB: the correlated branchsets are resolved here, once per
+        # branchset and source
+        pairs = [get_bset_value(bset, value, source)
+                 for bset, value in bset_values]
+        if any(ok for ok, _ in pairs):  # source not filtered out
             src = copy.deepcopy(source)
             srcs = []
-            for (bset, value), ok in zip(bset_values, oks):
+            for (bset, _v), (ok, v) in zip(bset_values, pairs):
                 if ok and bset.collapsed:
                     if src.code == b'N':
                         raise NotImplementedError(
@@ -668,12 +666,7 @@ def apply_uncertainties(bset_values, src_group, check=True):
                         srcs.append(src)
                     for s in srcs:
                         # tested in test_mixed_collapsed_apply_uncertainties
-                        if bset.correlated:
-                            apply_uncertainty(
-                                bset.uncertainty_type, s,
-                                value[_correlated_key(value, source)])
-                        else:
-                            apply_uncertainty(bset.uncertainty_type, s, value)
+                        apply_uncertainty(bset.uncertainty_type, s, v)
                     sg.changes += 1
             sg.sources.extend(srcs)
         else:
