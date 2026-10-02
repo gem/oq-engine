@@ -28,13 +28,19 @@ per site, the annual exceedance rates of fault displacement:
     lambda_principal   = rate * P_sr * P_fd_primary       * W_p(r)
     lambda_distributed = rate * P_sr * P_dist_combined(r) * G(r)
 
-``W_p(r)`` is the rupture-location weight (see :func:`location_weight`); the
-distributed weight ``G`` depends on the ``W_p`` path:
+``W_p(r)`` is the rupture-location weight (see :func:`location_weight`) and
+the distributed weight is its complement ``G = 1 - W_p`` on both paths:
 
-* ``r_sigma_km == 0`` -- boxcar ``W_p = 1{|r| <= r_threshold_km}`` and the
-  COMPLEMENTARY split ``G = 1 - W_p`` (Youngs 2003 / Takao 2013 either/or);
+* ``r_sigma_km == 0`` -- boxcar ``W_p = 1{|r| <= r_threshold_km}``: inside
+  the half-width only principal, outside only distributed (Youngs 2003 /
+  Takao 2013 either/or);
 * ``r_sigma_km > 0``  -- Petersen et al. (2011) pinned, +/-2-sigma Gaussian
-  ``W_p`` and the ADDITIVE split ``G = 1`` (eq. 1 + eq. 2, "total hazard").
+  ``W_p``: each site blends ``W_p`` x principal + ``(1 - W_p)`` x
+  distributed; on the trace ``G = 0``, beyond 2 sigma ``G = 1``.
+
+Inside a distributed model's own declared near-trace exclusion
+(``APPLICABILITY_RANGE['r_min_km']``, e.g. 5 m for Visini et al. 2025) the
+regression is undefined and the distributed term is set to zero.
 
 An aggregate-definition primary FD model (Sarmiento et al. 2025 Table 1, the
 class choice IS the definition) already includes the distributed
@@ -100,6 +106,29 @@ def _definition(model):
     return getattr(model, 'DISPLACEMENT_DEFINITION', None)
 
 
+def _inside_declared_exclusion(adapter, ctx) -> Optional[np.ndarray]:
+    """
+    Sites closer to the rupture than the distributed model's own published
+    near-trace exclusion, in the model's own distance metric.
+
+    A regression fitted only beyond some minimum distance predicts nothing
+    inside it: Visini et al. (2025) exclude data within 5 m of the
+    principal rupture because such scarps cannot be told apart from
+    principal faulting (pp. 11, 20), and their ln(s) predictor is unbounded
+    as s -> 0. The complementary weight suppresses the distributed term on
+    the trace but not just off it, so the exclusion is enforced here.
+
+    :returns: boolean mask over the context sites, or ``None`` when the
+        model declares no ``r_min_km``
+    """
+    rng = getattr(adapter.model, 'APPLICABILITY_RANGE', None)
+    if not rng or 'r_min_km' not in rng:
+        return None
+    metrics = getattr(adapter, '_ctx_metrics', None)
+    r = metrics(ctx)[0] if metrics is not None else ctx.rtor
+    return np.abs(np.asarray(r, dtype=np.float64)) < float(rng['r_min_km'])
+
+
 def calc_rupture_contribution(
         ctx,
         adapters: Mapping[str, Any],
@@ -117,7 +146,8 @@ def calc_rupture_contribution(
         (primary SR defaults to 1, the "always surface-ruptures" assumption)
     :param imls: displacement levels (m), shape ``(D,)``
     :param r_threshold_km: boxcar half-width for the ``W_p`` sigma == 0 path
-    :param r_sigma_km: mapping-error sigma; 0 selects the complementary split
+    :param r_sigma_km: mapping-error sigma; 0 selects the boxcar ``W_p``,
+        > 0 the pinned Gaussian ``W_p`` (``G = 1 - W_p`` on both paths)
     :param red_cfg: Monte-Carlo reduction config
     :returns: ``(principal, distributed)``, each ``(N, D)`` annual rates
     """
@@ -173,13 +203,14 @@ def calc_rupture_contribution(
 
         p_dist = p_sr_sec[:, np.newaxis] * p_fd_sec
 
-    if float(r_sigma_km) == 0.0:
-        g = 1.0 - wp           # complementary (legacy boxcar split)
-    else:
-        g = np.ones_like(wp)   # additive (Petersen eq. 1 + eq. 2)
+    g = 1.0 - wp
 
     principal = rate * p_sr[:, np.newaxis] * p_fd_primary * wp[:, np.newaxis]
     distributed = rate * p_sr[:, np.newaxis] * p_dist * g[:, np.newaxis]
+    if 'secondary_fd' in adapters:
+        excl = _inside_declared_exclusion(adapters['secondary_fd'], ctx)
+        if excl is not None and excl.any():
+            distributed[excl] = 0.0
     return principal, distributed
 
 
