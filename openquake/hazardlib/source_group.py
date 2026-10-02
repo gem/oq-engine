@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.contexts import get_cmakers, get_unique_inverse
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
@@ -367,6 +367,27 @@ class CompositeSourceModel:
         keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
+
+    def get_trt_smrs_gid(self):
+        """
+        :returns: a sorted array of trt_smrs, the units of rate attribution
+        With OQ_BYSRC the sources are not modified by the uncertainties,
+        which are applied in classical_bysrc, so the realizations with
+        different uncertainties are not separated at build time (see
+        _bysrc_groups). The rates are nevertheless computed separately
+        for each set of uncertainties and must be attributed to the
+        right realizations, hence this extra array; the gid of a rate is
+        the index of its trt_smrs in it.
+        """
+        from openquake.hazardlib.source_reader import (  # circular import
+            sig_subsets)
+        all_trt_smrs = []
+        for sg in self.src_groups:
+            for src in sg:
+                all_trt_smrs.extend(
+                    trt_smrs for trt_smrs, _sig in sig_subsets(src))
+        unique, _ = get_unique_inverse(all_trt_smrs)
+        return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
     def get_cmakers(self):
         """

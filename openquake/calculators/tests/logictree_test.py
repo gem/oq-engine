@@ -187,7 +187,12 @@ class LogictreeTestCase(CalculatorTestCase):
 
         csm = source_group.read_csm(self.calc.datastore)
         source_ids = [src.source_id for src in csm.get_sources(0)]
-        assert source_ids == ['2', '1']
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC the sources are not sorted by trt_smrs, but
+            # kept in the order of the source model
+            assert source_ids == ['1', '2']
+        else:
+            assert source_ids == ['2', '1']
         source_ids = [src.source_id for src in csm.get_sources(1)]
         assert source_ids == ['1']
         source_ids = [src.source_id for src in csm.get_sources(2)]
@@ -381,18 +386,33 @@ hazard_uhs-std.csv
             'hazard_curve-11.csv'],
             case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
-        sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
-        self.assertEqual(len(sgs), 7)
-        dupl = sum(len(sg.sources[0].trt_smrs) - 1 for sg in sgs)
-        self.assertEqual(dupl, 29)  # there are 29 duplicated sources
+        sgs = self.calc.csm.src_groups
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC there is a single group with the full trt_smrs,
+            # instead of 7 groups with 1 source each
+            self.assertEqual(len(sgs), 1)
+            self.assertEqual([src.source_id for src in sgs[0]],
+                             ['CHAR1', 'COMFLT1', 'SFLT1'])
+            dupl = sum(len(src.trt_smrs) - 1 for src in sgs[0])
+            self.assertEqual(dupl, 33)  # 3 sources x 12 sm_rlzs
+        else:
+            self.assertEqual(len(sgs), 7)  # 7 source groups with 1 source
+            dupl = sum(len(sg.sources[0].trt_smrs) - 1 for sg in sgs)
+            self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        numpy.testing.assert_equal(
-            decode(list(df.index)),
-            ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0', 'COMFLT1;1',
-             'SFLT1;0', 'SFLT1;1'])
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC there is one row per base source, without the
+            # ';' suffix added to the copies with different uncertainties
+            numpy.testing.assert_equal(
+                decode(list(df.index)), ['CHAR1', 'COMFLT1', 'SFLT1'])
+        else:
+            numpy.testing.assert_equal(
+                decode(list(df.index)),
+                ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0', 'COMFLT1;1',
+                 'SFLT1;0', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
@@ -582,12 +602,9 @@ hazard_uhs-std.csv
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
         if 'bysrc' in self.calc.datastore:
-            # with OQ_BYSRC the sources are grouped by the uncertainties to
-            # be applied, not by the resulting parameters: the maxMagGR
-            # branches +0.2 and +0.4 are kept separated, even if they
-            # produce the same source (they don't change the max mag of
-            # the source 21)
-            srcids = [b'21;0', b'21;1', b'21;2', b'21;3', b'22']
+            # with OQ_BYSRC the uncertainties are not applied at build
+            # time, so there is one row per base source and no ';i' suffix
+            srcids = [b'21', b'22']
         else:
             srcids = [b'21;0', b'21;1', b'22']
         ae(info['source_id'], srcids)
@@ -796,7 +813,12 @@ hazard_uhs-std.csv
         oq.smlt_branch = 'b01'
         csm = readinput.get_composite_source_model(oq)
         assert len(csm.src_groups) == 1
-        assert len(self.calc.csm.src_groups) == 4
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC there is a group per source group in the source
+            # model files, i.e. 5, and not one per (trt_smrs, uncertainties)
+            assert len(self.calc.csm.src_groups) == 5
+        else:
+            assert len(self.calc.csm.src_groups) == 4
 
         # checking `oq show rlz:2`, 2 being the rlz without extendModel
         assert len(self.calc.datastore['weights']) == 3
@@ -883,4 +905,13 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/trt_gsim.csv', f)
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC there is a group per source group in the source
+            # model file, i.e. a single row, and not one per set of
+            # uncertainties
+            lines = open(f).readlines()
+            self.assertEqual(len(lines), 3)  # comment, header, one group
+            self.assertIn('0,Active Shallow Crust,[BooreAtkinson2008]',
+                          lines[2])
+        else:
+            self.assertEqualFiles('expected/trt_gsim.csv', f)

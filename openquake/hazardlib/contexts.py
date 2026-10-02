@@ -601,6 +601,7 @@ class ContextMaker(object):
             betw_ratio = {'with_betw_ratio': 1.7}  # same as in GEESE
         else:
             betw_ratio = {}
+        self.betw_ratio = betw_ratio
         if isinstance(gsims, dict):
             self.gsims = _fix(gsims, betw_ratio)
         else:
@@ -782,6 +783,27 @@ class ContextMaker(object):
             new.gid = gid
             new.wei = wei
             yield new
+
+    def restrict_trt_smrs(self, trt_smrs, gid, wei):
+        """
+        :param trt_smrs: the trt_smrs of the unit of rate attribution
+        :param gid: the gids identifying the unit of rate attribution
+        :param wei: the weights of the gids
+        :returns: a shallow copy of the cmaker restricted to the
+            realizations trt_smrs, as used with OQ_BYSRC, where a group has
+            the trt_smrs of all the realizations but the sources can have
+            different uncertainties in different ones
+
+        NB: the gsims are not restricted, since the number of gsims of a unit
+        of rate attribution is the number of gsims of its TRT, see
+        get_rlzs_by_gsim, and must match the number of gids, see get_gids
+        """
+        new = copy.copy(self)
+        new.trt_smrs = numpy.array(trt_smrs, U32)
+        new.gid = gid
+        new.wei = wei
+        assert len(new.gsims) == len(gid), (len(new.gsims), len(gid))
+        return new
 
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
         """

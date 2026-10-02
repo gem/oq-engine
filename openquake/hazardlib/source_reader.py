@@ -42,7 +42,12 @@ bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 sampling_dt = numpy.dtype([
     ('trt_smr', U32),
-    ('samples', U32)])
+    ('samples', U32),
+    # index of the set of uncertainties applied to the source in the
+    # realization trt_smr; it is 0 if there are no uncertainties or if
+    # they are not applied at build time (i.e. with OQ_BYSRC, where they
+    # are applied in classical_bysrc)
+    ('sig', U16)])
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -57,11 +62,11 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def sampling(samples, trt_smr):
+def sampling(samples, trt_smr, sig=0):
     """
-    :returns: a structured array (trt_smr, samples) of length 1
+    :returns: a structured array (trt_smr, samples, sig) of length 1
     """
-    return numpy.array([(trt_smr, samples)], sampling_dt)
+    return numpy.array([(trt_smr, samples, sig)], sampling_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -353,10 +358,7 @@ def apply_unc_by_src(full_lt, trt_smrs, grp):
 
 def _unc_signature(bset_values, src):
     """
-    :returns: a tuple identifying the uncertainties applied to src. It is
-        used to group together the sources which will have the same
-        parameters once the uncertainties are applied, exactly as
-        _group_sources does with the modified sources
+    :returns: a tuple identifying the uncertainties applied to src
     """
     sig = []
     for bset, value in bset_values:
@@ -372,16 +374,25 @@ def _unc_signature(bset_values, src):
 def _bysrc_groups(full_lt, rlz_groups):
     """
     Build the source groups without applying the uncertainties, i.e. for
-    OQ_BYSRC=1. The sources are grouped by the realizations they belong
-    to and by the uncertainties applied to them, so that the structure is
-    the same as the one built by _build_csm with the modified sources.
-    The source IDs are modified as in _build_csm: the copies of a source
-    modified by different uncertainties are given a different source_id,
-    with a semicolon. NB: the uncertainties are applied later, in
-    classical_bysrc, on the sources renamed here, so the applyToSources
-    filter must be applied on the base source_id (see filter_source).
+    OQ_BYSRC=1. There is one group per source group in the source model
+    files, as expected in a CompositeSourceModel, and the sources keep
+    the trt_smrs of all the realizations they belong to (i.e. the full
+    trt_smrs of their group), not just the ones with a given set of
+    uncertainties: this way the number of groups (and of associated
+    cmakers) depends on the source models only and not on the
+    uncertainties.
+
+    The uncertainties to be applied in each realization are not known
+    until classical_bysrc, but a small signature of them is stored in
+    the sampling of each source (see sig_subsets), so that the sources
+    with different uncertainties can be told apart, and the rates can be
+    attributed to the right realizations.
+
+    NB: the uncertainties are applied on the sources as they are here,
+    without the ';' suffix added by add_semicolons in _build_csm, so the
+    applyToSources filter is applied on the source_id as it is.
     """
-    dic = {}  # (trt, source_id, signature) -> [group, [(source, trt_smr)]]
+    dic = {}  # id(grp) -> [group, {source_id: [(src, trt_smr, samples, sig)]}]
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
@@ -390,68 +401,68 @@ def _bysrc_groups(full_lt, rlz_groups):
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole
         check_correlated(bset_values, grp)
+        # NB: the groups are keyed by id(grp), since the group objects are
+        # shared by all the realizations selecting the same source model
+        # file (see gen_groups), while two groups with the same trt but
+        # coming from different files have different ids. The dict
+        # preserves the order of first appearance, making the groups and
+        # the sources inside them reproducible.
+        srcs = dic.setdefault(id(grp), [grp, {}])[1]
         for src in grp:
             sig = _unc_signature(bset_values, src)
-            dic.setdefault((grp.trt, src.source_id, sig),
-                           [grp, []])[1].append((src, trt_smr))
+            srcs.setdefault(src.source_id, []).append(
+                (src, trt_smr, rlz.samples, sig))
 
-    # as in _build_csm, the copies of a source modified by different
-    # uncertainties are given a different source_id, with a semicolon
-    sigs = {}  # (trt, srcid) -> list of distinct signatures
-    for trt, srcid, sig in dic:
-        sigs.setdefault((trt, srcid), []).append(sig)
-    suffix = {}  # (trt, srcid, sig) -> index
-    for (trt, srcid), sigs_ in sigs.items():
-        if len(sigs_) > 1:
-            for i, sig in enumerate(sorted(sigs_)):
-                suffix[(trt, srcid, sig)] = i
-
-    def order(item):
-        (trt, srcid, _sig), (_grp, pairs) = item
-        return (sorted({trt_smr for _, trt_smr in pairs}), srcid)
-
-    out, atomic, groups = [], [], {}  # groups sorted by trt_smrs
-    for (_trt, _srcid, _sig), (grp, pairs) in sorted(dic.items(),
-                                                      key=order):
-        trt_smrs = tuple(sorted({trt_smr for _, trt_smr in pairs}))
-        # sources with the same ID coming from different source model files
-        # are merged, as reduce_sources does in _build_csm
-        arrays, seen = [], {}
-        for src, _trt_smr in pairs:
-            seen.setdefault(id(src), src)
-        for src in seen.values():
-            sampling = _sampling_array(src)
-            rows = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
-            if len(rows):
-                arrays.append(rows)
-        assert arrays, (grp.trt, _srcid, trt_smrs)
-        new_src = copy.copy(pairs[0][0])
-        if (_trt, _srcid, _sig) in suffix:
-            new_src.source_id = '%s;%d' % (
-                _srcid, suffix[(_trt, _srcid, _sig)])
-        new_src.sampling = numpy.concatenate(arrays, dtype=sampling_dt)
-        # flag the sources which will be modified by classical_bysrc: they
-        # must not be split in the preclassical, since the splitting
-        # destroys the geometry (and the MFD of the fault sources)
-        new_src.bysrc_unc = bool(_sig)
-        if grp.atomic:
-            # atomic groups are never merged, as in _build_csm
-            key = (id(grp), trt_smrs)
-            if key not in groups:
-                groups[key] = new = copy.copy(grp)
-                new.sources = []
-                atomic.append(new)
-            groups[key].sources.append(new_src)
-        else:
-            # NB: the trt is determined by the trt_smrs, since
-            # trt_smr = trti * TWO24 + rlz.ordinal (see get_cmakers)
-            key = trt_smrs
-            if key not in groups:
-                groups[key] = new = copy.copy(grp)
-                new.sources = []
-                out.append(new)
-            groups[key].sources.append(new_src)
+    out, atomic = [], []
+    for grp, srcs in dic.values():
+        new = copy.copy(grp)
+        new.sources = []
+        (atomic if grp.atomic else out).append(new)
+        for srcid in sorted(srcs):
+            pairs = srcs[srcid]
+            # the realizations are grouped by the uncertainties applied to
+            # them, generating a signature index for each group of them
+            sigidx = {}
+            arrays, seen = [], {}
+            for src, trt_smr, samples, sig in pairs:
+                seen.setdefault(id(src), src)
+                arrays.append(
+                    (trt_smr, samples, sigidx.setdefault(sig, len(sigidx))))
+            new_src = copy.copy(next(iter(seen.values())))
+            new_src.sampling = numpy.array(
+                sorted(arrays), sampling_dt)  # sorted by trt_smr
+            # flag the sources which will be modified by classical_bysrc:
+            # they must not be split in the preclassical, since the
+            # splitting destroys the geometry (and the MFD of the fault
+            # sources)
+            new_src.bysrc_unc = bool(sigidx)
+            new.sources.append(new_src)
     return out + atomic
+
+
+def sig_subsets(src):
+    """
+    :param src: a source with a sampling storing the uncertainty signature
+    :returns: a list of (trt_smrs, sig) pairs, one per set of uncertainties
+        applied to the source
+    """
+    sampling = _sampling_array(src)
+    out = []
+    for sig in numpy.unique(sampling['sig']):
+        trt_smrs = tuple(sorted(sampling['trt_smr'][sampling['sig'] == sig]))
+        out.append((trt_smrs, sig))
+    return out
+
+
+def restrict_sampling(src, trt_smrs):
+    """
+    :returns: a copy of the source with the sampling restricted to trt_smrs,
+        i.e. belonging to a single set of uncertainties
+    """
+    new = copy.copy(src)
+    sampling = _sampling_array(src)
+    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
+    return new
 
 
 def build_csm(oq, full_lt, smdict, apply_unc, dstore):

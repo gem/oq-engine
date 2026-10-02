@@ -26,7 +26,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.source_reader import apply_unc_by_src
+from openquake.hazardlib.source_reader import (
+    apply_unc_by_src, restrict_sampling, sig_subsets)
 from openquake.calculators import extract
 
 
@@ -142,11 +143,18 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                 grp.sources = [src for _grp, src in pairs]
                 if bysrc:
                     # with OQ_BYSRC the sources in the csm are not modified
-                    # by the uncertainties, they are modified in
-                    # classical_bysrc, so we have to do it here too
-                    grp = apply_unc_by_src(
-                        csm.full_lt, pairs[0][1].trt_smrs, grp)
-                groups.append(grp)
+                    # by the uncertainties (they are modified in
+                    # classical_bysrc), so we have to do it here too, one
+                    # set of realizations at a time, since the source can
+                    # have different uncertainties in different branches
+                    for trt_smrs, _sig in sig_subsets(grp[0]):
+                        subgrp = copy.copy(grp)
+                        subgrp.sources = [restrict_sampling(src, trt_smrs)
+                                          for src in grp]
+                        groups.append(apply_unc_by_src(
+                            csm.full_lt, trt_smrs, subgrp))
+                else:
+                    groups.append(grp)
             assert groups, 'No groups for %s' % source_id
             rupts = sum(src.num_ruptures for group in groups for src in group)
             logging.info('(%.1f,%.1f) source %s (%d groups, %d rupts)',

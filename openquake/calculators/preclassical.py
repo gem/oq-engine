@@ -310,6 +310,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        if 'bysrc' in self.datastore:
+            # with OQ_BYSRC the units of rate attribution are the sets of
+            # realizations with the same uncertainties, not the trt_smrs of
+            # the groups, since the groups are not split by uncertainties
+            self.datastore.hdf5.save_vlen(
+                'trt_smrs_gid', csm.get_trt_smrs_gid())
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')

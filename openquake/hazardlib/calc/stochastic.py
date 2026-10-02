@@ -121,7 +121,8 @@ def sample_cluster(group, num_ses, ses_seed):
     sampling = unique_sampling(group)
     seed = group[0].serial(ses_seed)
     offset = 0
-    for trt_smr, samples in sampling:
+    for row in sampling:
+        trt_smr, samples = row['trt_smr'], row['samples']
         for src in group:
             src.offset = offset
             offset += src.num_ruptures

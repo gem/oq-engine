@@ -18,6 +18,7 @@
 
 import io
 import os
+import copy
 import time
 import psutil
 import logging
@@ -31,7 +32,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
-from openquake.hazardlib.source_reader import apply_unc_by_src
+from openquake.hazardlib.source_reader import apply_unc_by_src, sig_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -206,6 +207,60 @@ def split_modified(grp):
     return grp
 
 
+def read_gid_dic(dstore, full_lt=None):
+    """
+    :param dstore: a DataStore instance
+    :param full_lt: a FullLogicTree instance, read from the datastore if None
+    :returns: a dictionary trt_smrs -> (gids, weights), associating to each
+        unit of rate attribution its gids and the weights of the
+        corresponding realizations; an empty dictionary if the calculation
+        is not running with OQ_BYSRC
+
+    With OQ_BYSRC the units of rate attribution are the sets of realizations
+    with the same uncertainties applied (see get_trt_smrs_gid), otherwise
+    they are the trt_smrs of the groups. In both cases the gid of a rate is
+    the index of its trt_smrs in the corresponding array, see get_rmap_gb.
+    """
+    with dstore:  # NB: the datastore is closed when passed to a task
+        if 'trt_smrs_gid' not in dstore:
+            return {}
+        trt_smrs = [tuple(t) for t in dstore['trt_smrs_gid'][:]]
+    full_lt = full_lt or read_full_lt(dstore)
+    gweights = full_lt.g_weights(trt_smrs)[:, -1]  # shape Gt
+    return {trt_smr: (gids, gweights[gids])
+            for trt_smr, gids in zip(trt_smrs, full_lt.get_gids(trt_smrs))}
+
+
+def group_gids(grp, gid_dic):
+    """
+    :param grp: a SourceGroup built with OQ_BYSRC, i.e. without applying
+        the uncertainties
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :returns: the gids of all the rates the group can produce, i.e. one
+        per set of realizations with the same uncertainties
+    """
+    gids = set()
+    for src in grp:
+        for trt_smrs, _sig in sig_subsets(src):
+            gids.update(gid_dic[trt_smrs][0])
+    return U32(sorted(gids))
+
+
+def group_subsets(srcs):
+    """
+    :param srcs: a list of sources with the same basename
+    :returns: a list of (trt_smrs, sig) pairs, the sets of realizations
+        with the same uncertainties applied to the sources
+
+    NB: the sources with the same basename always have the same sampling,
+    since they are fragments of the same source (see _bysrc_groups).
+    """
+    subsets = sig_subsets(srcs[0])
+    for src in srcs[1:]:
+        assert sig_subsets(src) == subsets, (src.source_id, subsets)
+    return subsets
+
+
 # NB: the tilegetter here is trivial unless there are ilabels
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
@@ -214,15 +269,15 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     of multiple atomic groups.
     """
     cmaker.init_monitoring(monitor)
-    bysrc = 'bysrc' in dstore
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
     # the weight of the task is not inferrable from grp_keys, which are
     # plain strings, so it is set explicitly (used in task_info)
     monitor.weight = sum(grp.weight for grp in grps)
     sites = tilegetter(sitecol, cmaker.ilabel)
-    if bysrc:
+    gid_dic = read_gid_dic(dstore)
+    if gid_dic:
         # the CSM was built without uncertainties, so they are applied
-        # here, one realization at a time (see apply_unc_by_src)
+        # here, one set of realizations at a time (see apply_unc_by_src)
         full_lt = read_full_lt(dstore)
     if grps[0].atomic:
         # case_27 (Japan)
@@ -232,26 +287,33 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
         # do not remove zeros, otherwise AELO for JPN will break
         yield result
     else:
-        # yield a result for each base source
+        # yield a result for each base source and set of uncertainties
         for grp in grps:
-            if bysrc:
-                # the uncertainties are applied to the whole group, since
-                # correlated branchsets (applyToSources='*') refer to
-                # sources outside the base source below
-                grp = split_modified(
-                    apply_unc_by_src(full_lt, cmaker.trt_smrs, grp))
             for srcs in groupby(grp, valid.basename).values():
-                if bysrc:
+                if not gid_dic:
+                    yield baseclassical(
+                        srcs, sites, cmaker, remove_zeros=False)
+                    continue
+                # NB: the uncertainties are applied to the whole group,
+                # since correlated branchsets (applyToSources='*') refer
+                # to sources outside the base source below
+                for trt_smrs, _sig in group_subsets(srcs):
+                    gids, wei = gid_dic[trt_smrs]
+                    cmaker_ = cmaker.restrict_trt_smrs(trt_smrs, gids, wei)
+                    subgrp = copy.copy(grp)
+                    subgrp.sources = list(srcs)
+                    subgrp = split_modified(apply_unc_by_src(
+                        full_lt, trt_smrs, subgrp))
                     # the magnitude filtering is done here and not in
                     # preclassical, since the uncertainties can change
                     # the max magnitude of the sources
-                    srcs = preclassical.filter_mag(
-                        srcs, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
-                    if not srcs:
+                    ss = preclassical.filter_mag(
+                        subgrp, cmaker.oq.minimum_magnitude,
+                        cmaker.oq.strict)
+                    if not ss:
                         continue
-                result = baseclassical(
-                    srcs, sites, cmaker, remove_zeros=False)
-                yield result
+                    yield baseclassical(
+                        ss, sites, cmaker_, remove_zeros=False)
 
 
 def _split_src(srcs, n):
@@ -679,6 +741,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
         num_blocks = 0
+        # with OQ_BYSRC the rates are attributed to the sets of
+        # realizations with the same uncertainties, see read_gid_dic.
+        # NB: this is read on ds, the dataset read by the tasks, which can
+        # be the parent calculation (as in case_36)
+        gid_dic = read_gid_dic(ds, self.full_lt)
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
@@ -688,8 +755,15 @@ class ClassicalCalculator(base.HazardCalculator):
                 # split in blocks with different grp_keys[0], but they
                 # all contribute to the RateMap of the first group
                 if grp_id not in self.rmap:
-                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L,
-                                                cmaker.gid)
+                    if gid_dic:  # OQ_BYSRC
+                        # the gids of the cmaker refer to the whole group,
+                        # while the rates are attributed to the sets of
+                        # realizations with the same uncertainties
+                        gids = group_gids(self.csm.src_groups[grp_id],
+                                          gid_dic)
+                    else:
+                        gids = cmaker.gid
+                    self.rmap[grp_id] = RateMap(self.sitecol.sids, L, gids)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however
