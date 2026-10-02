@@ -114,9 +114,9 @@ def filter_weight(srcs, sf, cmaker, secparams, bysrc=False, monitor=None):
 
     If bysrc is True (i.e. OQ_BYSRC is set) the sources are not filtered,
     since the filtering depends on the occurrence rates, which are modified
-    only later, in classical_bysrc. The fault sources (codes S, C, K) are
-    not split either, since splitting them replaces the MFD with an
-    ArbitraryMFD, unable to accept the uncertainties applied later on.
+    only later, in classical_bysrc. The sources modified by the
+    uncertainties (i.e. src.bysrc_unc) are not split either, since the
+    splitting destroys the geometry and the MFD of the fault sources.
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
@@ -146,7 +146,7 @@ def filter_weight(srcs, sf, cmaker, secparams, bysrc=False, monitor=None):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        unsplittable = bysrc and src.code in b'SCK'  # see the docstring
+        unsplittable = bysrc and getattr(src, 'bysrc_unc', False)
         if oq.split_sources and src.nsites and src.code != b'F' and not (
                 unsplittable):
             # multifault source have been already split in save_and_split

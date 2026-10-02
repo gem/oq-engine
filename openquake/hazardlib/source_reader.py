@@ -384,6 +384,10 @@ def _bysrc_groups(full_lt, rlz_groups):
         assert arrays, (grp.trt, _srcid, trt_smrs)
         new_src = copy.copy(pairs[0][0])
         new_src.sampling = numpy.concatenate(arrays, dtype=sampling_dt)
+        # flag the sources which will be modified by classical_bysrc: they
+        # must not be split in the preclassical, since the splitting
+        # destroys the geometry (and the MFD of the fault sources)
+        new_src.bysrc_unc = bool(_sig)
         if grp.atomic:
             # atomic groups are never merged, as in _build_csm
             key = (id(grp), trt_smrs)
