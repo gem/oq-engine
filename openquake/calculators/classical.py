@@ -991,6 +991,16 @@ class ClassicalCalculator(base.HazardCalculator):
         ser = ser[ser['mean'] >= 1]
         if not len(ser):
             return
+        # NB: the check is meaningful only if there are enough tasks to
+        # keep all the workers busy, since the busy times per worker
+        # cannot be balanced with few tasks (i.e. a model with a single
+        # source model logic tree branch and few sites, see the sslt test
+        # in oq-risk-tests, with 2 tasks and 16 workers)
+        ntasks = len(self.datastore['grp_keys'])
+        if ntasks < 4 * parallel.num_cores:
+            logging.info('Only %d tasks for %d workers, not checking for '
+                         'slow tasks', ntasks, parallel.num_cores)
+            return
         # NB: the ratio std/mean of the *busy times* of the workers
         # measures how balanced the generated tasks are; since the
         # tasks are built from an estimate of the cost, and the
