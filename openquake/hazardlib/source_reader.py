@@ -488,6 +488,17 @@ def get_trt_smrs_gid(csm):
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
+def read_trt_smrs_gid(dstore):
+    """
+    :param dstore: a DataStore instance, possibly closed
+    :returns: the units of rate attribution stored by the preclassical,
+        i.e. the sets of realizations with the same uncertainties, as a
+        list of tuples (the inverse of get_trt_smrs_gid)
+    """
+    with dstore:  # NB: the datastore is closed when passed to a task
+        return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
+
+
 def restrict_sampling(src, trt_smrs):
     """
     :returns: a copy of the source with the sampling restricted to trt_smrs,
