@@ -109,8 +109,7 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
         return []
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs
-           if src.bysrc_unc and bysrc or
-           src.get_mags()[-1] >= mmag]
+           if src.get_mags()[-1] >= mmag or (bysrc and src.bysrc_unc)]
     for ss in out:
         if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
             ss.code in b'FSCNXK'):  # only for fault sources
