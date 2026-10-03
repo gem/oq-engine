@@ -520,7 +520,13 @@ hazard_uhs-std.csv
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
         ns = len(self.calc.datastore['source_info'])
-        assert ns == 26
+        if 'bysrc' in self.calc.datastore:
+            # with OQ_BYSRC the uncertainties are not applied at build
+            # time, so there is one row per base source and no ';i' suffix
+            # for the 7 sources modified by the correlated uncertainties
+            assert ns == 19
+        else:
+            assert ns == 26
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
