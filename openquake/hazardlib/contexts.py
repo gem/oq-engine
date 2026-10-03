@@ -341,9 +341,9 @@ def _quintets(cmaker, src, sitecol):
     magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
     # it is 0 for all the magnitudes if the source has no magnitude inside
-    # the range, which can happen with OQ_BYSRC, since there the magnitude
-    # filtering is performed in classical_bysrc and not in the preclassical
-    # (see filter_mag)
+    # the range, which can happen since for the sources modified by the
+    # uncertainties the magnitude filtering is performed in the classical
+    # workers and not in the preclassical (see filter_mag)
     valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
     if not valid:  # the source is irrelevant, no site is in range
         return
@@ -789,9 +789,9 @@ class ContextMaker(object):
         :param gid: the gids identifying the unit of rate attribution
         :param wei: the weights of the gids
         :returns: a shallow copy of the cmaker restricted to the
-            realizations trt_smrs, as used with OQ_BYSRC, where a group has
-            the trt_smrs of all the realizations but the sources can have
-            different uncertainties in different ones
+            realizations trt_smrs, since a group has the trt_smrs of all
+            the realizations but the sources can have different
+            uncertainties in different ones
 
         NB: the gsims are not restricted, since the number of gsims of a unit
         of rate attribution is the number of gsims of its TRT, see
@@ -1420,11 +1420,10 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         if getattr(src, 'bysrc_unc', False):
-            # NB: with OQ_BYSRC the sources modified by the uncertainties
-            # are not split here (see filter_weight) but in classical_bysrc
-            # (few sites) or classical (many sites), after modifying them;
-            # generating all their contexts now would be expensive (the
-            # area sources go through the rupture-by-rupture path of
+            # NB: the sources modified by the uncertainties are not split
+            # here (see filter_weight) but in classical, after modifying
+            # them; generating all their contexts now would be expensive
+            # (the area sources go through the rupture-by-rupture path of
             # gen_contexts) and useless, since the estimate is used only
             # to split the work in tasks. Since each source is processed
             # once per set of realizations with different uncertainties,
@@ -2203,10 +2202,9 @@ def read_ctx_by_grp(dstore):
     sitecol = dstore['sitecol'].complete.array
     params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
     if 'ctx_gid' in dstore:
-        # with OQ_BYSRC the contexts of a group contain the sources with
-        # different uncertainties, so the gid of the unit of rate
-        # attribution of each context is stored in a separate dataset,
-        # see store_ctxs
+        # the contexts of a group contain the sources with different
+        # uncertainties, so the gid of the unit of rate attribution of
+        # each context is stored in a separate dataset, see store_ctxs
         params['gid'] = dstore['ctx_gid'][:]
     dtlist = []
     for par, val in params.items():

@@ -64,6 +64,15 @@ get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+# The calculation modes building the CSM without applying the
+# uncertainties, that are applied in the workers, i.e. in classical: the
+# modes computing the rates with the classical workers, directly
+# (classical) or via a precalculation (disaggregation, classical_risk,
+# classical_damage, classical_bcr), plus the preclassical ones, since a
+# preclassical calculation can be the parent only of a classical one (see
+# accept_precalc)
+UNC_IN_WORKERS = ('classical', 'disaggregation', 'preclassical',
+                  'classical_risk', 'classical_damage', 'classical_bcr')
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -604,19 +613,6 @@ class HazardCalculator(BaseCalculator):
             return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
-    def get_apply_unc(self, oq):
-        """
-        :returns: the value of the `apply_unc` flag. If OQ_BYSRC is set and
-            the calculation is a classical one, the flag is False and the
-            `bysrc` flag is stored in the datastore: in that case the
-            uncertainties are not applied at the CSM level, but later on,
-            by classical_bysrc (few sites) or classical (many sites)
-        """
-        if 'classical' in oq.calculation_mode and 'OQ_BYSRC' in os.environ:
-            self.datastore['bysrc'] = True
-            return False
-        return True
-
     def check_overflow(self):
         """Overridden in event based"""
 
@@ -699,7 +695,11 @@ class HazardCalculator(BaseCalculator):
                 'source_model_logic_tree' in oq.inputs
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
-                apply_unc = self.get_apply_unc(oq)
+                # NB: for the classical, disaggregation and preclassical
+                # calculations the uncertainties are not applied at the CSM
+                # level, but in the workers, i.e. in classical; the other
+                # calculation modes apply them here, at build time
+                apply_unc = oq.calculation_mode not in UNC_IN_WORKERS
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore, apply_unc)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt

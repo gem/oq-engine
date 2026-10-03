@@ -26,6 +26,7 @@ from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.source_reader import read_trt_smrs_gid
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -70,31 +71,27 @@ def store_spectra(dstore, name, R, oq, spectra):
 def get_blocks(dstore, oq, cmakers, ctx_by_grp):
     """
     :returns: a pair (blocks, trt_rlzs) where blocks is a list of
-        (cmaker, ctx, tom) tuples, one per group (or per unit of rate
-        attribution with OQ_BYSRC) and trt_rlzs is the list of the
-        realizations associated to the gid of each block
+        (cmaker, ctx, tom) tuples, one per unit of rate attribution, i.e.
+        per set of realizations with the same uncertainties, and trt_rlzs
+        is the list of the realizations associated to the gid of each block
 
-    NB: with OQ_BYSRC the contexts of a group contain the sources with
-    different uncertainties, so they must be attributed to the sets of
-    realizations with the same uncertainties, see read_gid_dic
+    NB: the contexts of a group contain the sources with different
+    uncertainties, so they must be attributed to the sets of realizations
+    with the same uncertainties, see read_gid_dic
     """
     full_lt = dstore['full_lt'].init()
     toms = decode(dstore['toms'][:])
-    if 'trt_smrs_gid' in dstore:
-        units = [tuple(t) for t in dstore['trt_smrs_gid'][:]]
-        gids = full_lt.get_gids(units)  # one array per unit
-        unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
-        blocks = []
-        for grp_id, ctx in ctx_by_grp.items():
-            tom = valid.occurrence_model(toms[grp_id])
-            for gid in numpy.unique(ctx.gid):
-                unit = unit_of[gid]
-                blocks.append((cmakers[grp_id].copy(gid=gids[unit]),
-                               ctx[ctx.gid == gid], tom))
-        return blocks, full_lt.get_trt_rlzs(units)
-    blocks = [(cmakers[grp_id], ctx, valid.occurrence_model(toms[grp_id]))
-              for grp_id, ctx in ctx_by_grp.items()]
-    return blocks, full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+    units = read_trt_smrs_gid(dstore)
+    gids = full_lt.get_gids(units)  # one array per unit
+    unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
+    blocks = []
+    for grp_id, ctx in ctx_by_grp.items():
+        tom = valid.occurrence_model(toms[grp_id])
+        for gid in numpy.unique(ctx.gid):
+            unit = unit_of[gid]
+            blocks.append((cmakers[grp_id].copy(gid=gids[unit]),
+                           ctx[ctx.gid == gid], tom))
+    return blocks, full_lt.get_trt_rlzs(units)
 
 
 def compute_cs(dstore, oq, N, M, P):

@@ -146,9 +146,10 @@ def get_rmap_gb(dstore, full_lt=None):
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
     if 'trt_smrs_gid' in dstore:
-        # with OQ_BYSRC the rates are attributed to the sets of realizations
-        # with the same uncertainties, not to the trt_smrs of the groups,
-        # since the groups are not split by the uncertainties
+        # for classical calculations the rates are attributed to the sets of
+        # realizations with the same uncertainties, not to the trt_smrs of
+        # the groups, since the groups are not split by the uncertainties,
+        # which are applied in the workers
         key = 'trt_smrs_gid'
     else:
         key = 'trt_smrs'

@@ -526,9 +526,9 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_epistemic_error.xml'))
-        # NB: with OQ_BYSRC the error is raised in classical_bysrc, i.e.
-        # inside a parallel task, so the exception message is prefixed
-        # by the traceback
+        # NB: the error is raised in the classical workers, i.e. inside a
+        # parallel task, so the exception message is prefixed by the
+        # traceback
         self.assertIn(
             "Cannot apply set_aspect_ratio to source '1': epistemic "
             "uncertainties on aspect ratio are not compatible with "
@@ -1240,9 +1240,9 @@ class ClassicalTestCase(CalculatorTestCase):
         # a source with an uncertainty and magnitudes partially outside
         # the integration distance: the magnitudes with zero integration
         # distance must be ignored, not raise a KeyError (see _quintets).
-        # With OQ_BYSRC the source is weighted in the preclassical before
-        # the uncertainties are applied, i.e. before the magnitude
-        # filtering, which is performed in classical_bysrc (see filter_mag)
+        # The source is weighted in the preclassical before the
+        # uncertainties are applied, i.e. before the magnitude filtering,
+        # which is performed in the classical workers (see filter_mag)
         self.run_calc(case_96.__file__, 'job.ini')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
@@ -1299,8 +1299,8 @@ class SlowTasksTestCase(unittest.TestCase):
           ('baseclassical', 10., 4., 4., 16.)], False),
         ([('classical', 10., 5., 5., 15.),
           ('baseclassical', 10., 5., 5., 15.)], True),
-        # a disaggregation calculation has no classical Starmap
-        ([('classical_bysrc', 12., 9., 3., 21.)], False),
+        # a calculation with no classical Starmap has no slow tasks
+        ([('postclassical', 12., 9., 3., 21.)], False),
     ]
 
     def check(self, rows):

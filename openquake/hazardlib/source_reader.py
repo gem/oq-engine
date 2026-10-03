@@ -326,7 +326,7 @@ def _sampling_array(src):
 def apply_unc_by_src(full_lt, trt_smrs, grp):
     """
     Apply the uncertainties to a group of sources built *without*
-    uncertainties (i.e. with OQ_BYSRC=1).
+    uncertainties, as needed by the classical workers.
 
     :param full_lt: a FullLogicTree instance
     :param trt_smrs: the trt_smrs of the group (or of its first source)
@@ -369,21 +369,20 @@ def _unc_signature(bset_values, src):
 
 def _bysrc_groups(full_lt, rlz_groups):
     """
-    Build the source groups without applying the uncertainties, i.e. for
-    OQ_BYSRC=1. There is one group per source group in the source model
-    files, as expected in a CompositeSourceModel, and the sources keep
-    the trt_smrs of all the realizations they belong to (i.e. the full
-    trt_smrs of their group), not just the ones with a given set of
-    uncertainties: this way the number of groups (and of associated
+    Build the source groups without applying the uncertainties, as needed
+    by the classical workers. There is one group per source group in the
+    source model files, as expected in a CompositeSourceModel, and the
+    sources keep the trt_smrs of all the realizations they belong to (i.e.
+    the full trt_smrs of their group), not just the ones with a given set
+    of uncertainties: this way the number of groups (and of associated
     cmakers) depends on the source models only and not on the
     uncertainties.
 
     The uncertainties to be applied in each realization are not known
-    until classical_bysrc, so the realizations with different
-    uncertainties are stored in the bysrc_subsets attribute of each
-    source (see sig_subsets), and the rates are computed and attributed
-    one set at a time. This happens with OQ_BYSRC only, since without it
-    the uncertainties are applied here, as in _build_csm.
+    until classical, so the realizations with different uncertainties are
+    stored in the bysrc_subsets attribute of each source (see
+    sig_subsets), and the rates are computed and attributed one set at a
+    time.
 
     NB: the uncertainties are applied on the sources as they are here,
     without the ';' suffix added by add_semicolons in _build_csm, so the
@@ -394,7 +393,7 @@ def _bysrc_groups(full_lt, rlz_groups):
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
         bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
-        # NB: the uncertainties are applied later, in classical_bysrc, on
+        # NB: the uncertainties are applied later, in classical, on
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole
         check_correlated(bset_values, grp)
@@ -430,7 +429,7 @@ def _bysrc_groups(full_lt, rlz_groups):
             new_src.bysrc_subsets = [
                 numpy.array(sorted(t), U32) for t in sigdict.values()
                 ] if len(sigdict) > 1 else []
-            # flag the sources which will be modified by classical_bysrc:
+            # flag the sources which will be modified by classical:
             # they must not be split in the preclassical, since the
             # splitting destroys the geometry (and the MFD of the fault
             # sources)
@@ -459,9 +458,9 @@ def sig_subsets(src):
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
-    NB: the subsets are stored by _bysrc_groups with OQ_BYSRC only; the
-    sources of a normal calculation have a single set, given by the
-    sampling.
+    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
+        modified by the uncertainties; the sources without uncertainties
+        have a single set, given by the sampling.
     """
     subsets = getattr(src, 'bysrc_subsets', None)
     if subsets:
@@ -471,12 +470,12 @@ def sig_subsets(src):
 
 def get_trt_smrs_gid(csm):
     """
-    :param csm: a CompositeSourceModel built with OQ_BYSRC, i.e. without
-        applying the uncertainties
+    :param csm: a CompositeSourceModel built without applying the
+        uncertainties
     :returns: a sorted list of trt_smrs, the units of rate attribution
         (to be stored as an hdf5.vuint32 array)
 
-    With OQ_BYSRC the uncertainties are applied in classical_bysrc, so the
+    The uncertainties are applied in the classical workers, so the
     realizations with different uncertainties are not separated at build
     time (see _bysrc_groups). The rates are nevertheless computed
     separately for each set of uncertainties and must be attributed to
@@ -487,6 +486,17 @@ def get_trt_smrs_gid(csm):
                     for trt_smrs in sig_subsets(src)]
     unique, _ = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
+
+
+def read_trt_smrs_gid(dstore):
+    """
+    :param dstore: a DataStore instance, possibly closed
+    :returns: the units of rate attribution stored by the preclassical,
+        i.e. the sets of realizations with the same uncertainties, as a
+        list of tuples (the inverse of get_trt_smrs_gid)
+    """
+    with dstore:  # NB: the datastore is closed when passed to a task
+        return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
 
 
 def restrict_sampling(src, trt_smrs):
@@ -521,7 +531,7 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
     if not apply_unc:
         # The sources are not modified, so there is a group per
         # realization, each with its own trt_smr; this way the rates
-        # computed by classical_bysrc can be attributed to the right
+        # computed by classical can be attributed to the right
         # realization
         groups = _bysrc_groups(full_lt, rlz_groups)
         csm = CompositeSourceModel(oq, full_lt, groups)

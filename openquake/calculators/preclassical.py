@@ -101,10 +101,9 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     """
     Filter by magnitude and count the ruptures.
 
-    NB: if bysrc is True (i.e. OQ_BYSRC is set) the sources modified by
-    the uncertainties are not filtered, since the filtering depends on the
-    occurrence rates, which are modified in classical_bysrc, where the
-    filtering is performed anyway.
+    NB: if bysrc is True the sources modified by the uncertainties are not
+    filtered, since the filtering depends on the occurrence rates, which
+    are modified in the workers, where the filtering is performed anyway.
     """
     if not srcs:
         return []
@@ -150,12 +149,12 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     Filter and weight the sources. Also split them, except for
     pointlike and multifault sources, which have been split already.
 
-    NB: the sources modified by the uncertainties with OQ_BYSRC (i.e. the
-    ones with bysrc_unc, see _bysrc_groups) are neither split nor
-    filtered here: the splitting would destroy the geometry (and the MFD
-    of the fault sources) and the filtering depends on the occurrence
-    rates, which are modified in classical_bysrc; there they are split
-    (see split_modified) and filtered (see filter_mag).
+    NB: the sources modified by the uncertainties (i.e. the ones with
+    bysrc_unc, see _bysrc_groups) are neither split nor filtered here: the
+    splitting would destroy the geometry (and the MFD of the fault
+    sources) and the filtering depends on the occurrence rates, which are
+    modified in the workers; there they are split (see split_modified) and
+    filtered (see filter_mag).
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
@@ -346,10 +345,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
-        if 'bysrc' in self.datastore:
-            # with OQ_BYSRC the units of rate attribution are the sets of
-            # realizations with the same uncertainties, not the trt_smrs of
-            # the groups, since the groups are not split by uncertainties
+        if oq.calculation_mode in base.UNC_IN_WORKERS:
+            # the units of rate attribution are the sets of realizations
+            # with the same uncertainties, not the trt_smrs of the groups,
+            # since the groups are not split by the uncertainties, which
+            # are applied in the workers
             self.datastore.hdf5.save_vlen(
                 'trt_smrs_gid', get_trt_smrs_gid(csm))
         sites = csm.sitecol if csm.sitecol else None

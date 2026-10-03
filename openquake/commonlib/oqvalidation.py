@@ -909,7 +909,8 @@ split_sources:
   INTERNAL
 
 split_time:
-  After how much time starts splitting classical tasks
+  After how much time starts splitting the classical tasks with many
+  sites; the tasks with few sites are never split
   Example: *split_time = 600*
   Default: None, meaning the split_time is automatically determined
 

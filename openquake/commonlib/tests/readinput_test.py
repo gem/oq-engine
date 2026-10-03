@@ -530,7 +530,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oq, apply_unc=False)
         self.assertEqual(len(csm.src_groups), 6)  # fewer groups :-)
         # the source IDs have no ';' suffix, since the uncertainties are
-        # applied later, in classical_bysrc
+        # applied later, in the classical workers
         self.assertEqual({valid.basename(s, ':;') for s in ids1},
                          {s.source_id for s in csm.get_sources()})
 
