@@ -35,6 +35,7 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.source_reader import get_bset_values
 from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
@@ -861,6 +862,11 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
+            # NB: the uncertainties are not applied at the CSM level, but
+            # in sample_ruptures via modified_groups, one set of
+            # realizations at a time; the values are computed here, since
+            # the logic tree is too big to be sent to the workers
+            param['bset_values'] = get_bset_values(self.full_lt, sg)
             mfs = [src for src in sg if src.code == b'F']
             if sg.atomic:
                 allargs.append((sg, param))
@@ -880,7 +886,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         return smap
-        
+
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info

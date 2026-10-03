@@ -28,10 +28,12 @@ import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
-from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
+from openquake.hazardlib.source_group import (
+    CompositeSourceModel, SourceGroup, get_unique)
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
-    apply_uncertainties, check_correlated, get_bset_values)
+    apply_uncertainties, check_correlated, get_bset_value,
+    restrict_sampling, sampling_dt, unc_subsets)
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -41,9 +43,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
-sampling_dt = numpy.dtype([
-    ('trt_smr', U32),
-    ('samples', U32)])
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -246,10 +245,10 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
-def get_csm(oq, full_lt, dstore=None, apply_unc=True):
+def get_csm(oq, full_lt, dstore=None):
     """
-    Build source models from the logic tree and store
-    them inside the `source_full_lt` dataset.
+    Build a CompositeSourceModel without applying the uncertainties,
+    that are applied in the workers, see modified_groups.
     """
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
@@ -309,47 +308,93 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
-    return build_csm(oq, full_lt, smdict, apply_unc, dstore)
+    return build_csm(oq, full_lt, smdict, dstore)
 
 
-# calls _build_csm
-def _sampling_array(src):
+def get_bset_values(full_lt, sources):
     """
-    :returns: the sampling of the source as a structured array
-    """
-    sampling = src.sampling
-    if isinstance(sampling, list):
-        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
-    return sampling
-
-
-def apply_unc_by_src(full_lt, trt_smrs, grp):
-    """
-    Apply the uncertainties to a group of sources built *without*
-    uncertainties, as needed by the classical workers.
-
     :param full_lt: a FullLogicTree instance
-    :param trt_smrs: the trt_smrs of the group (or of its first source)
-    :param grp: a SourceGroup with the uncertainties not applied
-    :returns: a SourceGroup with the uncertainties applied
+    :param sources: a SourceGroup or a list of sources of the same group
+    :returns: the dictionary of uncertainties to apply expected by
+        modified_groups, i.e. one entry for each set of realizations
+        with the same uncertainties; the uncertainties of a set are the
+        ones of its first realization
+
+    NB: only the uncertainties relevant for the given sources are
+        returned, since the logic tree can be huge and the dictionary is
+        sent to the workers
     """
-    # NB: the sources in a group have the same uncertainties applied in
-    # all its realizations (see _bysrc_groups), so it is enough to apply
-    # the uncertainties of the first one
-    ordinal = numpy.atleast_1d(trt_smrs)[0] % TWO24
-    rlz = next(r for r in full_lt.sm_rlzs if r.ordinal == ordinal)
-    bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
-    # NB: check=False since the group is a fragment of the original one
-    # (split by weight in preclassical), so the check must be done at
-    # build time, see _bysrc_groups
-    sg = apply_uncertainties(bset_values, grp, check=False)
-    for src in sg:
-        # the source is modified after the preclassical, so the cached
-        # geometry must be discarded; it depends on the occurrence rates
-        # (see PointSource._get_max_rupture_projection_radius)
-        if hasattr(src, 'radius'):
-            del src.radius
-    return sg
+    ordinals = {trt_smrs[0] % TWO24 for src in sources
+                for trt_smrs in unc_subsets(src)}
+    return {ordinal: full_lt.get_bset_values(ordinal)
+            for ordinal in sorted(ordinals)}
+
+
+def modified_groups(sources, bset_values):
+    """
+    Apply the uncertainties to a group of sources built *without* them,
+    as needed by the workers computing the rates or the ruptures: this
+    is done one set of realizations at a time, i.e. one set with the
+    same uncertainties at a time (see _bysrc_groups).
+
+    :param sources: a SourceGroup or a list of sources of the same group
+    :param bset_values:
+        the uncertainties to apply, as returned by get_bset_values; it
+        can be empty, if there are no uncertainties at all
+    :returns:
+        a generator of (trt_smrs, group) pairs, one for each set of
+        realizations with the same uncertainties, with the uncertainties
+        applied and the sampling restricted to the set of realizations
+    """
+    for trt_smrs, srcs in _subsets_by_unc(sources).items():
+        grp = _restricted_group(sources, srcs, trt_smrs)
+        # NB: the trt_smrs are trti * TWO24 + ordinal, see gen_groups
+        bvals = bset_values[trt_smrs[0] % TWO24] if bset_values else []
+        # NB: check=False since the group is a fragment of the original
+        # one (split by weight in the preclassical), so the correlated
+        # branchsets were already checked at build time, see _bysrc_groups
+        grp = apply_uncertainties(bvals, grp, check=False)
+        for src in grp:
+            # the sources are modified after the preclassical, so the
+            # cached geometry must be discarded; it depends on the
+            # occurrence rates (see PointSource.
+            # _get_max_rupture_projection_radius)
+            if hasattr(src, 'radius'):
+                del src.radius
+        yield trt_smrs, grp
+
+
+def _subsets_by_unc(sources):
+    """
+    :returns: a dictionary trt_smrs -> sources, i.e. the sources grouped
+        by set of realizations with the same uncertainties
+    """
+    if getattr(sources, 'atomic', False):
+        # the sources of an atomic group are mutually exclusive (or belong
+        # to a cluster), so they must be kept together, see sample_cluster
+        # and cmakers_groups; the sets of realizations are the same for
+        # all of them, since they belong to the same source model
+        return {trt_smrs: list(sources)
+                for trt_smrs in unc_subsets(sources[0])}
+    subsets = {}
+    for src in sources:
+        for trt_smrs in unc_subsets(src):
+            subsets.setdefault(trt_smrs, []).append(src)
+    return subsets
+
+
+def _restricted_group(sources, srcs, trt_smrs):
+    """
+    :returns: a group with the given sources, i.e. copies of the sources
+        of `sources` with the sampling restricted to trt_smrs
+    """
+    restricted = [restrict_sampling(src, trt_smrs) for src in srcs]
+    if hasattr(sources, 'sources'):  # keep the attributes of the group
+        grp = copy.copy(sources)
+        grp.sources = restricted
+    else:  # a plain list of sources, e.g. a block of sources
+        grp = SourceGroup(sources[0].tectonic_region_type, restricted)
+    return grp
 
 
 def _unc_signature(bset_values, src):
@@ -358,12 +403,9 @@ def _unc_signature(bset_values, src):
     """
     sig = []
     for bset, value in bset_values:
-        if bset.correlated:
-            ok = src.source_id in value
-        else:
-            ok = bset.filter_source(src)
+        ok, val = get_bset_value(bset, value, src)
         if ok:
-            sig.append((bset.id, str(value)))
+            sig.append((bset.id, str(val)))
     return tuple(sig)
 
 
@@ -381,19 +423,20 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     The uncertainties to be applied in each realization are not known
     until classical, so the realizations with different uncertainties are
     stored in the bysrc_subsets attribute of each source (see
-    sig_subsets), and the rates are computed and attributed one set at a
+    unc_subsets), and the rates are computed and attributed one set at a
     time.
 
     NB: the same source_id can be used by different sources, i.e. in
     different source models, so the sources are keyed by id(src) and not
-    by source_id; the ids are disambiguated at the end, as in _build_csm
+    by source_id; the ids are disambiguated at the end, by adding a
+    semicolon, see add_semicolons
     """
     dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
-        bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
-        # NB: the uncertainties are applied later, in classical, on
+        bset_values = full_lt.get_bset_values(rlz.ordinal)
+        # NB: the uncertainties are applied later, in the workers, on
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole
         check_correlated(bset_values, grp)
@@ -427,47 +470,36 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
             new_src.bysrc_subsets = [
                 numpy.array(sorted(t), U32) for t in sigdict.values()
                 ] if len(sigdict) > 1 else []
-            # flag the sources which will be modified by classical:
+            # flag the sources which will be modified in the workers:
             # they must not be split in the preclassical, since the
             # splitting destroys the geometry (and the MFD of the fault
             # sources)
             new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
             new_srcs.append(new_src)
         if grp.atomic:
-            # the atomic groups are never merged, as in _build_csm
+            # the atomic groups are never merged with the other groups,
+            # since their sources must be computed together
             new = copy.copy(grp)
             new.sources = new_srcs
             atomic.append(new)
         else:
             acc[grp.trt].extend(new_srcs)
-    # NB: the sources are grouped exactly as in _build_csm, i.e. by
-    # trt_smrs and TOM, so that the structure and the order of the groups
-    # are the same; in particular there is one cmaker for each set of
-    # realizations, see get_cmakers
+    if atomic:
+        logging.info('Found %d atomic groups', len(atomic))
+    # NB: the sources are grouped by trt_smrs and TOM, so that there is
+    # one cmaker for each set of realizations, see get_cmakers
+    red_sources = 0
     for trt, sources in acc.items():
-        grps, _red = _group_sources(trt, sources, full_lt)
+        grps, red = _group_sources(trt, sources)
         out.extend(grps)
+        red_sources += red
+    if red_sources:
+        logging.info('reduce_sources was called %d times', red_sources)
     out.extend(atomic)
     for grp in out:
-        splitMF(grp.sources, oq.disagg_by_src)  # as in _build_csm
+        splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
     return out
-
-
-def sig_subsets(src):
-    """
-    :returns: a list of tuples of trt_smr, the sets of realizations with
-        the same uncertainties applied to the source; there is a single set
-        if the uncertainties are the same in all the realizations
-
-    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
-    """
-    subsets = getattr(src, 'bysrc_subsets', None)
-    if subsets:
-        return [tuple(t) for t in subsets]
-    return [tuple(_sampling_array(src)['trt_smr'])]
 
 
 def get_trt_smrs_gid(csm):
@@ -485,7 +517,7 @@ def get_trt_smrs_gid(csm):
     the index of its trt_smrs in it.
     """
     all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
-                    for trt_smrs in sig_subsets(src)]
+                    for trt_smrs in unc_subsets(src)]
     unique, _ = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
@@ -501,23 +533,11 @@ def read_trt_smrs_gid(dstore):
         return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
 
 
-def restrict_sampling(src, trt_smrs):
-    """
-    :returns: a copy of the source with the sampling restricted to trt_smrs,
-        i.e. belonging to a single set of uncertainties
-    """
-    new = copy.copy(src)
-    sampling = _sampling_array(src)
-    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
-    return new
-
-
-def build_csm(oq, full_lt, smdict, apply_unc, dstore):
+def build_csm(oq, full_lt, smdict, dstore):
     """
     :param oq: OqParam instance
     :param full_lt: FullLogicTree instance
     :param smdict: dictionary source_model_path -> SourceModel instance
-    :param apply_unc: flag
     :param dstore: DataStore instance
     :returns: a CompositeSourceModel instance
     """
@@ -526,26 +546,12 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
         rlz_groups = []
         for rlz in full_lt.sm_rlzs:
             rlz_groups.extend((rlz, grp) for grp in
-                              gen_groups(full_lt, smdict, rlz, apply_unc))
+                              gen_groups(full_lt, smdict, rlz))
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    if not apply_unc:
-        # The sources are not modified, so there is a group per
-        # realization, each with its own trt_smr; this way the rates
-        # computed by classical can be attributed to the right
-        # realization
-        groups = _bysrc_groups(full_lt, rlz_groups, oq)
-        csm = CompositeSourceModel(oq, full_lt, groups)
-        store_data(oq, smdict, csm, dstore)
-        return csm
-
-    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    mon = performance.Monitor('_build_csm', measuremem=True)
-    with mon:
-        csm = _build_csm(oq, full_lt, [g for _, g in rlz_groups],
-                         is_event_based)
-    logging.info(mon)
+    groups = _bysrc_groups(full_lt, rlz_groups, oq)
+    csm = CompositeSourceModel(oq, full_lt, groups)
     store_data(oq, smdict, csm, dstore)
     return csm
 
@@ -707,7 +713,7 @@ def _add_sampling(src, rlz, trti):
     # the same source can appear in multiple realizations, hence the list.
     # NB: the multiplicity of the source is len(src.sampling) and it enters
     # the classical calculations too, via SourceGroup.fix_src_offset and
-    # the source_info rows, so this cannot be skipped when apply_unc is False
+    # the source_info rows, so the sampling must be always set
     sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
     if src.sampling is None:
         # the first time
@@ -717,7 +723,7 @@ def _add_sampling(src, rlz, trti):
         src.sampling.append(sampl)
 
 
-def gen_groups(full_lt, smdict, rlz, apply_unc):
+def gen_groups(full_lt, smdict, rlz):
     # yield all the possible source groups from the given rlz
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
@@ -737,22 +743,14 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
                 '%s contains source(s) %s already present in %s' %
                 (value, common, rlz.value))
         src_groups.extend(extra)
+    # NB: the uncertainties are not applied here, but in the workers,
+    # one set of realizations at a time, see modified_groups; the
+    # sampling info is set anyway, since it determines the multiplicity
     for src_group in src_groups:
         trti = full_lt.trti.get(src_group.trt, 0)
-        if apply_unc is False:
-            # there are no uncertainties to apply, but the sampling info is
-            # still needed, since it determines the multiplicity
-            sg = src_group
-        else:
-            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
-            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
-            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
-            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
-            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            sg = apply_uncertainties(bset_values, src_group)
-        for src in sg:  # tested in case_83_eb
+        for src in src_group:  # tested in case_83_eb
             _add_sampling(src, rlz, trti)
-        yield sg
+        yield src_group
 
     # check applyToSources
     sm_branch = rlz.lt_path[0]
@@ -768,11 +766,9 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
                                         rlz.value[0].split()))
 
 
-def reduce_sources(sources_with_same_id, full_lt, event_based):
+def reduce_sources(sources_with_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :param full_lt: FullLogicTree instance
-    :param event_based: flag True for event_based calculations
     :returns: a list of truly unique sources
     """
     # first reduce identical sources having the same id(src)
@@ -803,7 +799,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _group_sources(trt, sources, full_lt, event_based=False):
+def _group_sources(trt, sources):
     """
     Reduce identical sources, regroup by trt_smrs and TOM,
     then return (source_groups, reduction_count).
@@ -813,7 +809,7 @@ def _group_sources(trt, sources, full_lt, event_based=False):
     red = 0
     for srcs in general.groupby(sources, key).values():
         if len(srcs) > 1:
-            srcs = reduce_sources(srcs, full_lt, event_based)
+            srcs = reduce_sources(srcs)
             red += 1
         lst.extend(srcs)
     src_groups = []
@@ -821,40 +817,3 @@ def _group_sources(trt, sources, full_lt, event_based=False):
         for grp in split_by_tom(sources):
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     return src_groups, red
-
-
-def _build_csm(oq, full_lt, groups, event_based):
-    acc = general.AccumDict(accum=[])
-    atomic = []
-    changes = 0
-    # concatenate sampling records, split MF sources, single out atomic groups
-    for grp in groups:
-        changes += grp.changes
-        for src in grp:
-            if isinstance(src.sampling, list):
-                src.sampling = numpy.concatenate(
-                    src.sampling, dtype=sampling_dt)
-        splitMF(grp.sources, oq.disagg_by_src)
-        if grp and grp.atomic:
-            atomic.append(grp)
-        elif grp:
-            acc[grp.trt].extend(grp)
-    if atomic:
-        logging.info('Found %d atomic groups', len(atomic))
-    if changes:
-        logging.info(f'Applied {changes:_d} changes to '
-                     f'{len(groups):_d} source groups')
-
-    # reduce identical sources by concatenating the sampling records,
-    # then regroup by trt_smrs
-    src_groups = []
-    red_sources = 0
-    for trt in acc:
-        grps, red = _group_sources(trt, acc[trt], full_lt, event_based)
-        src_groups.extend(grps)
-        red_sources += red
-    src_groups.extend(atomic)
-    logging.info('reduce_sources was called %d times', red_sources)
-    add_semicolons(src_groups)
-    csm = CompositeSourceModel(oq, full_lt, src_groups)
-    return csm

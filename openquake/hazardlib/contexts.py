@@ -1419,7 +1419,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        if getattr(src, 'bysrc_unc', False):
+        if src.bysrc_unc:
             # NB: the sources modified by the uncertainties are not split
             # here (see filter_weight) but in classical, after modifying
             # them; generating all their contexts now would be expensive
@@ -1429,8 +1429,8 @@ class ContextMaker(object):
             # once per set of realizations with different uncertainties,
             # the cost is proportional to the number of sets; NB: the
             # import is local to avoid a circular dependency
-            from openquake.hazardlib.source_reader import sig_subsets
-            C = src.num_ruptures * src.nsites * len(sig_subsets(src))
+            from openquake.hazardlib.lt import unc_subsets
+            C = src.num_ruptures * src.nsites * len(unc_subsets(src))
         else:
             step = (1 if src.code in b'pP' else
                     20 if src.num_ruptures >= 400 else 4)
