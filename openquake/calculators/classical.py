@@ -239,7 +239,7 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
     :param gid_dic: a dictionary trt_smrs -> (gids, weights)
     :param full_lt: a FullLogicTree instance
     :returns: a generator of (cmaker, group) pairs, one per set of
-        realizations with the same uncertainties applied to the sources
+        realizations, with the uncertainties applied to the sources
     """
     subsets = sig_subsets(srcs[0])
     for src in srcs[1:]:
@@ -304,10 +304,10 @@ def rate_map_flags(oq, grp_keys, N):
 def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
                   as_rmap):
     """
-    Yield the results of a classical task: since the CSM is built without
-    applying the uncertainties, they are applied here, one set of
-    realizations at a time, and the rates are attributed to the gids of
-    the set, see read_gid_dic.
+    Yield the results of a classical task: the CSM is built without
+    applying the uncertainties, so subsets_and_cmakers applies them one
+    set of realizations at a time and restricts the cmaker to the set;
+    the rates are attributed to the gids of the set, see read_gid_dic.
 
     :param grps: the source groups of the task
     :param sites: the sites of the task
