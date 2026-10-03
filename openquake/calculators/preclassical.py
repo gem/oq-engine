@@ -109,7 +109,7 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
         return []
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     out = [src for src in srcs
-           if getattr(src, 'bysrc_unc', False) and bysrc or
+           if src.bysrc_unc and bysrc or
            src.get_mags()[-1] >= mmag]
     for ss in out:
         if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
@@ -136,7 +136,7 @@ def split_modified(grp):
     """
     out = []
     for src in grp:
-        if getattr(src, 'bysrc_unc', False) and src.code in b'AM':
+        if src.bysrc_unc and src.code in b'AM':
             out.extend(split_source(src))
         else:
             out.append(src)
@@ -185,7 +185,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
         if oq.split_sources and src.nsites and src.code != b'F' and \
-                not getattr(src, 'bysrc_unc', False):
+                not src.bysrc_unc:
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:

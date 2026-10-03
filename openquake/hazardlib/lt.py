@@ -639,7 +639,6 @@ def apply_uncertainties(bset_values, src_group, check=True):
     """
     sg = copy.copy(src_group)
     sg.sources = []
-    sg.changes = 0
     if check:
         check_correlated(bset_values, src_group)
     for source in src_group:
@@ -666,14 +665,12 @@ def apply_uncertainties(bset_values, src_group, check=True):
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)
-                    sg.changes += len(srcs)
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
                     for s in srcs:
                         # tested in test_mixed_collapsed_apply_uncertainties
                         apply_uncertainty(bset.uncertainty_type, s, v)
-                    sg.changes += 1
             sg.sources.extend(srcs)
         else:
             # no copy
@@ -704,9 +701,8 @@ def sig_subsets(src):
         modified by the uncertainties; the sources without uncertainties
         have a single set, given by the sampling.
     """
-    subsets = getattr(src, 'bysrc_subsets', None)
-    if subsets:
-        return [tuple(t) for t in subsets]
+    if src.bysrc_subsets:
+        return [tuple(t) for t in src.bysrc_subsets]
     return [tuple(_sampling_array(src)['trt_smr'])]
 
 

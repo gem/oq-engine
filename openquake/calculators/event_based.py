@@ -863,9 +863,9 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
             # NB: the uncertainties are not applied at the CSM level, but
-            # in sample_ruptures, one set of realizations at a time; the
-            # values are computed here, since the logic tree is too big
-            # to be sent to the workers
+            # in sample_ruptures via modified_groups, one set of
+            # realizations at a time; the values are computed here, since
+            # the logic tree is too big to be sent to the workers
             param['bset_values'] = get_bset_values(self.full_lt, sg)
             mfs = [src for src in sg if src.code == b'F']
             if sg.atomic:

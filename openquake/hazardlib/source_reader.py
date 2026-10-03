@@ -470,7 +470,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
             new_src.bysrc_subsets = [
                 numpy.array(sorted(t), U32) for t in sigdict.values()
                 ] if len(sigdict) > 1 else []
-            # flag the sources which will be modified by classical:
+            # flag the sources which will be modified in the workers:
             # they must not be split in the preclassical, since the
             # splitting destroys the geometry (and the MFD of the fault
             # sources)

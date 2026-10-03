@@ -388,7 +388,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     remove_zeros = True  # reduce the size of the arrays of rates
     as_rmap = any('-' in grp_key for grp_key in grp_keys)
     unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
-    bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
+    bysrc = any(src.bysrc_unc for src in grps[0])
     # NB: the sources are split in blocks by time only if the rates are
     # accumulated in a RateMap in the master, i.e. if the groups are
     # already split in blocks, and not with tiling, where each tile is

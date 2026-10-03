@@ -1419,7 +1419,7 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        if getattr(src, 'bysrc_unc', False):
+        if src.bysrc_unc:
             # NB: the sources modified by the uncertainties are not split
             # here (see filter_weight) but in classical, after modifying
             # them; generating all their contexts now would be expensive
