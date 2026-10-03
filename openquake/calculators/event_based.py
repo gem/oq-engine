@@ -35,7 +35,6 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.lt import get_bset_values, sig_subsets
 from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.filters import (
@@ -761,16 +760,6 @@ def in_mosaic(rup_array):
     return slice(None)
 
 
-def get_ordinals(group):
-    """
-    :param group: a SourceGroup or a list of sources of the same group
-    :returns: the sorted realization ordinals of the sources, i.e. the
-        trt_smrs reduced modulo TWO24, see gen_groups
-    """
-    return sorted({trt_smr % TWO24 for src in group
-                   for trt_smrs in sig_subsets(src) for trt_smr in trt_smrs})
-
-
 def identical_to_any(group, groups):
     """
     :returns: True if the grp is contained in the groups
@@ -859,12 +848,6 @@ class EventBasedCalculator(base.HazardCalculator):
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
         allargs = []
         sent = []
-        # NB: the uncertainties are not applied at the CSM level, but in
-        # sample_ruptures, one set of realizations at a time; the lt_paths
-        # of the realizations are sent to the workers, since the logic
-        # tree can be too big to be sent as a whole
-        lt_paths = {rlz.ordinal: rlz.lt_path for rlz in self.full_lt.sm_rlzs}
-        smlt = self.full_lt.source_model_lt
         for sg_id, cmaker in cmakers.enumerate():
             sg = self.csm.src_groups[sg_id]
             if sent and identical_to_any(sg, sent):
@@ -878,12 +861,11 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
-            # only the uncertainties of the realizations of the group are
-            # relevant, and they are computed in the master, since the
-            # logic tree is not sent to the workers
-            param['bset_values'] = {
-                ordinal: get_bset_values(lt_paths[ordinal], smlt)
-                for ordinal in get_ordinals(sg)}
+            # NB: the uncertainties are not applied at the CSM level, but
+            # in sample_ruptures, one set of realizations at a time; the
+            # values are computed here, since the logic tree is too big
+            # to be sent to the workers
+            param['bset_values'] = self.full_lt.get_bset_values_by_ordinal(sg)
             mfs = [src for src in sg if src.code == b'F']
             if sg.atomic:
                 allargs.append((sg, param))

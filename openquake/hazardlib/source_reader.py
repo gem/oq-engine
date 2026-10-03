@@ -31,8 +31,9 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
-    apply_uncertainties, check_correlated, get_bset_values,
-    sampling_dt, sig_subsets)
+    apply_uncertainties, check_correlated, get_bset_value, get_bset_values,
+    restrict_sampling, sampling_dt, sig_subsets)
+from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -310,48 +311,81 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
     return build_csm(oq, full_lt, smdict, apply_unc, dstore)
 
 
-def apply_unc_by_src(full_lt, trt_smrs, grp):
+def modified_groups(sources, bset_values):
     """
-    Apply the uncertainties to a group of sources built *without*
-    uncertainties, as needed by the classical workers.
+    Apply the uncertainties to a group of sources built *without* them,
+    as needed by the workers computing the rates or the ruptures: this
+    is done one set of realizations at a time, i.e. one set with the
+    same uncertainties at a time (see _bysrc_groups).
 
-    :param full_lt: a FullLogicTree instance
-    :param trt_smrs: the trt_smrs of the group (or of its first source)
-    :param grp: a SourceGroup with the uncertainties not applied
-    :returns: a SourceGroup with the uncertainties applied
+    :param sources: a SourceGroup or a list of sources of the same group
+    :param bset_values:
+        a dictionary ordinal -> the uncertainties to apply in the
+        corresponding realization, as returned by
+        FullLogicTree.get_bset_values_by_ordinal; it can be empty, if
+        there are no uncertainties at all
+    :returns:
+        a generator of (trt_smrs, group) pairs, one for each set of
+        realizations with the same uncertainties, with the uncertainties
+        applied and the sampling restricted to the set of realizations
     """
-    # NB: the sources in a group have the same uncertainties applied in
-    # all its realizations (see _bysrc_groups), so it is enough to apply
-    # the uncertainties of the first one
-    ordinal = numpy.atleast_1d(trt_smrs)[0] % TWO24
-    rlz = next(r for r in full_lt.sm_rlzs if r.ordinal == ordinal)
-    bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
-    # NB: check=False since the group is a fragment of the original one
-    # (split by weight in preclassical), so the check must be done at
-    # build time, see _bysrc_groups
-    sg = apply_uncertainties(bset_values, grp, check=False)
-    for src in sg:
-        # the source is modified after the preclassical, so the cached
-        # geometry must be discarded; it depends on the occurrence rates
-        # (see PointSource._get_max_rupture_projection_radius)
-        if hasattr(src, 'radius'):
-            del src.radius
-    return sg
+    for trt_smrs, srcs in _unc_subsets(sources).items():
+        grp = _restricted_group(sources, srcs, trt_smrs)
+        # NB: the trt_smrs are trti * TWO24 + ordinal, see gen_groups
+        bvals = bset_values[trt_smrs[0] % TWO24] if bset_values else []
+        # NB: check=False since the group is a fragment of the original
+        # one (split by weight in the preclassical), so the correlated
+        # branchsets were already checked at build time, see _bysrc_groups
+        grp = apply_uncertainties(bvals, grp, check=False)
+        for src in grp:
+            # the sources are modified after the preclassical, so the
+            # cached geometry must be discarded; it depends on the
+            # occurrence rates (see PointSource.
+            # _get_max_rupture_projection_radius)
+            if hasattr(src, 'radius'):
+                del src.radius
+        yield trt_smrs, grp
+
+
+def _unc_subsets(sources):
+    """
+    :returns: a dictionary trt_smrs -> sources, i.e. the sources grouped
+        by set of realizations with the same uncertainties
+    """
+    if getattr(sources, 'atomic', False):
+        # the sources of an atomic group are mutually exclusive (or belong
+        # to a cluster), so they must be kept together, see sample_cluster
+        # and cmakers_groups; the sets of realizations are the same for
+        # all of them, since they belong to the same source model
+        return {trt_smrs: list(sources)
+                for trt_smrs in sig_subsets(sources[0])}
+    subsets = {}
+    for src in sources:
+        for trt_smrs in sig_subsets(src):
+            subsets.setdefault(trt_smrs, []).append(src)
+    return subsets
+
+
+def _restricted_group(sources, srcs, trt_smrs):
+    """
+    :returns: a group with the given sources, i.e. copies of the sources
+        of `sources` with the sampling restricted to trt_smrs
+    """
+    restricted = [restrict_sampling(src, trt_smrs) for src in srcs]
+    if hasattr(sources, 'sources'):  # keep the attributes of the group
+        grp = copy.copy(sources)
+        grp.sources = restricted
+    else:  # a plain list of sources, e.g. a block of sources
+        grp = SourceGroup(sources[0].tectonic_region_type, restricted)
+    return grp
 
 
 def _unc_signature(bset_values, src):
     """
     :returns: a tuple identifying the uncertainties applied to src
     """
-    sig = []
-    for bset, value in bset_values:
-        if bset.correlated:
-            ok = src.source_id in value
-        else:
-            ok = bset.filter_source(src)
-        if ok:
-            sig.append((bset.id, str(value)))
-    return tuple(sig)
+    return tuple((bset.id, str(v)) for bset, value in bset_values
+                 for ok, v in [get_bset_value(bset, value, src)] if ok)
 
 
 def _bysrc_groups(full_lt, rlz_groups, oq):

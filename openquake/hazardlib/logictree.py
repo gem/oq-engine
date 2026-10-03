@@ -49,7 +49,8 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    LogicTreeError, parse_uncertainty, attach_branches)
+    LogicTreeError, parse_uncertainty, attach_branches,
+    get_bset_values, sig_subsets)
 
 
 U16 = numpy.uint16
@@ -1305,6 +1306,29 @@ class FullLogicTree(object):
         if len(self.trts) == 1:
             return self.trts[0]
         return self.trts[trt_smr // TWO24]
+
+    def get_bset_values(self, ordinal):
+        """
+        :param ordinal: the ordinal of a source model realization
+        :returns: the list of (branchset, value) pairs whose uncertainties
+            must be applied in the given realization, see _bysrc_groups
+        """
+        return get_bset_values(self.sm_rlzs[ordinal].lt_path,
+                               self.source_model_lt)
+
+    def get_bset_values_by_ordinal(self, sources):
+        """
+        :param sources: a SourceGroup or a list of sources of the same group
+        :returns: a dictionary ordinal -> the uncertainties to apply in the
+            corresponding realization, restricted to the realizations of
+            the given sources (the logic tree can be huge, so it is better
+            to send to the workers only what is relevant)
+        """
+        ordinals = sorted({trt_smr % TWO24 for src in sources
+                           for trt_smrs in sig_subsets(src)
+                           for trt_smr in trt_smrs})
+        return {ordinal: self.get_bset_values(ordinal)
+                for ordinal in ordinals}
 
     @property
     def seed(self):

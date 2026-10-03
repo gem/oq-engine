@@ -626,14 +626,13 @@ def check_correlated(bset_values, src_group):
 
 def apply_uncertainties(bset_values, src_group, check=True):
     """
-    :param bset_value: a list of pairs (branchset, value)
-        List of branch IDs
+    :param bset_values: a list of pairs (branchset, value)
     :param src_group:
         SourceGroup instance
     :param check:
         if True, check that the sources of the correlated branchsets exist;
         set it to False when the group is a fragment of the original one
-        (as it happens applying the uncertainties in classical)
+        (as it happens applying the uncertainties in the workers)
     :returns:
         A copy of the original group with possibly modified sources
     """
@@ -649,6 +648,10 @@ def apply_uncertainties(bset_values, src_group, check=True):
                  for bset, value in bset_values]
         if any(ok for ok, _ in pairs):  # source not filtered out
             src = copy.deepcopy(source)
+            # the uncertainties can change the number of ruptures, for
+            # instance by truncating the MFD, so a cached value is not
+            # valid anymore
+            src._num_ruptures = 0
             srcs = []
             for (bset, _v), (ok, v) in zip(bset_values, pairs):
                 if ok and bset.collapsed:

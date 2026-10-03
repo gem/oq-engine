@@ -21,7 +21,6 @@
 :func:`stochastic_event_set`.
 """
 import time
-import copy
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
@@ -29,9 +28,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
 from openquake.hazardlib.geo.surface.base import to_geom_lons_lats
-from openquake.hazardlib.lt import (
-    apply_uncertainties, get_bset_value, restrict_sampling, sig_subsets)
-from openquake.hazardlib.source_group import SourceGroup
+from openquake.hazardlib.source_reader import modified_groups
 
 TWO24 = 2 ** 24
 I64 = numpy.int64
@@ -358,7 +355,8 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         a sequence of sources of the same group
     :param param:
         a dictionary with ses_per_logic_tree_path, ses_seed, magdist
-        and bset_values, i.e. the uncertainties to apply
+        and bset_values, i.e. the uncertainties to apply (optional, if
+        there are no uncertainties)
     :param monitor:
         monitor instance
     :yields:
@@ -369,12 +367,12 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     # gets a different seed, otherwise the same source would be sampled
     # with the same random stream in sets with different uncertainties
     ses_seed = param['ses_seed']
-    bset_values = param['bset_values']
     # NB: the rupture IDs of the sets with different uncertainties must be
     # disjoint, see RuptureImporter; they are built from src.id and from
     # src.offset (see poisson_sample), hence the running offset
     offset = 0
-    for i, group in enumerate(modified_groups(sources, bset_values)):
+    groups = modified_groups(sources, param.get('bset_values'))
+    for i, (_trt_smrs, group) in enumerate(groups):
         yield from _sample_group(group, ses_seed + i, offset, param, monitor)
         offset += num_rup_ids(group)
         if offset >= TWO30:
@@ -390,61 +388,6 @@ def num_rup_ids(group):
         realizations of the source
     """
     return sum(src.num_ruptures * len(src.sampling) for src in group)
-
-
-def modified_groups(sources, bset_values):
-    """
-    :param sources: a sequence of sources of the same group
-    :param bset_values: a dictionary realization ordinal -> the
-        uncertainties to apply
-    :returns: a generator of groups, one for each set of realizations with
-        the same uncertainties, with the uncertainties applied and the
-        sampling restricted to the set of realizations
-    """
-    for trt_smrs, srcs in _unc_subsets(sources).items():
-        restricted = [restrict_sampling(src, trt_smrs) for src in srcs]
-        if hasattr(sources, 'sources'):  # keep the attributes of the group
-            grp = copy.copy(sources)
-            grp.sources = restricted
-        else:  # a plain list of sources, e.g. a block of sources
-            grp = SourceGroup(sources[0].tectonic_region_type, restricted)
-        # NB: the trt_smrs are trti * TWO24 + ordinal, see gen_groups
-        bvals = bset_values[trt_smrs[0] % TWO24]
-        grp = apply_uncertainties(bvals, grp, check=False)
-        if any(has_uncertainties(bvals, src) for src in restricted):
-            # the uncertainties can change the number of ruptures, e.g. by
-            # truncating the MFD, and the cached value would be wrong; it
-            # is used to generate the rupture IDs, see poisson_sample
-            for src in grp:
-                src._num_ruptures = 0
-        yield grp
-
-
-def has_uncertainties(bset_values, src):
-    """
-    :returns: True if at least one of the uncertainties applies to src
-    """
-    return any(get_bset_value(bset, value, src)[0]
-               for bset, value in bset_values)
-
-
-def _unc_subsets(sources):
-    """
-    :returns: a dictionary trt_smrs -> sources, i.e. the sources grouped
-        by set of realizations with the same uncertainties
-    """
-    if getattr(sources, 'atomic', False):
-        # the sources of an atomic group are mutually exclusive (or belong
-        # to a cluster), so they must be sampled together, see also
-        # classical; the sets of realizations are the same for all of
-        # them, since they belong to the same source model
-        return {trt_smrs: list(sources)
-                for trt_smrs in sig_subsets(sources[0])}
-    subsets = {}
-    for src in sources:
-        for trt_smrs in sig_subsets(src):
-            subsets.setdefault(trt_smrs, []).append(src)
-    return subsets
 
 
 def _sample_group(sources, ses_seed, offset, param, monitor=Monitor()):

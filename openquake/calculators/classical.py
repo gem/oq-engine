@@ -32,7 +32,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
-from openquake.hazardlib.source_reader import apply_unc_by_src, read_trt_smrs_gid
+from openquake.hazardlib.source_reader import (
+    modified_groups, read_trt_smrs_gid)
 from openquake.hazardlib.lt import sig_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
@@ -248,17 +249,14 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     :returns: a generator of (cmaker, group) pairs, one per set of
         realizations, with the uncertainties applied to the sources
     """
-    subsets = sig_subsets(srcs[0])
-    for src in srcs[1:]:
-        assert sig_subsets(src) == subsets, (src.source_id, subsets)
     # NB: the uncertainties are applied to the whole group, since
     # correlated branchsets (applyToSources='*') refer to sources outside
     # the base source
     subgrp = copy.copy(grp)
     subgrp.sources = list(srcs)
-    for trt_smrs in subsets:
-        sg = preclassical.split_modified(
-            apply_unc_by_src(full_lt, trt_smrs, subgrp))
+    bset_values = full_lt.get_bset_values_by_ordinal(subgrp)
+    for trt_smrs, sg in modified_groups(subgrp, bset_values):
+        sg = preclassical.split_modified(sg)
         # the sources modified by the uncertainties are filtered here and
         # not in the preclassical (see filter_mag), since the uncertainties
         # can change the max magnitude
