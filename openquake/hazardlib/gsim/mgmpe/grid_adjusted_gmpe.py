@@ -60,8 +60,10 @@ def _loc_covered_at_any_period(grids, term, key, lat, lon,
     """
     for p_str in stored_periods:
         d = grids[p_str][term].get(key)
+        # No grid for this key at this period (e.g. "sig" absent)
         if d is None:
             continue
+        # Finest resolution first: a hit at any resolution counts as covered
         for res in reversed(h3_res):
             if h3.latlng_to_cell(lat, lon, res) in d:
                 return True
@@ -81,7 +83,7 @@ def _check_in_range(imt, term_period_info, term):
             f"can be filled in by log-period interpolation; PGA and "
             f"other non-SA IMTs must be provided directly in the HDF5.")
 
-    # Get teh period info already parsed from the hdf5
+    # Period info was pre-parsed from the HDF5 at load time
     has_pga = term_period_info["has_pga"]
     sa_periods = term_period_info["sa_periods"]
 
@@ -117,29 +119,27 @@ def _log_period_interp(target_period, pairs):
     """
     below = None
     above = None
-    # Iterate over the stored 
+    # Walk the sorted pairs, picking out the closest anchor on each side
     for p, v in pairs:
         # Exact match: only fires when the target is SA(0.01) and
         # PGA sits in pairs as the lower log(T) anchor at 0.01s;
         # the anchor's value is the answer at the target period
         if p == target_period:
             return v
-        # Pair sits below the target period
         if p < target_period:
             below = (p, v)
-        # Pair sits above the target period
         else:
             above = (p, v)
             break
 
-    # No anchor on one side -> cannot bracket -> unbracketed
+    # Missing anchor on either side means we can't bracket the target
     if below is None or above is None:
         return None
-    
-    # Linear interp in log(period) between the two anchor "pairs
+
+    # Linear interpolation in log(period) between the two anchors
     ratio = ((math.log(target_period) - math.log(below[0])) /
              (math.log(above[0]) - math.log(below[0])))
-    
+
     return below[1] + ratio * (above[1] - below[1])
 
 
@@ -149,6 +149,7 @@ def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
     be because target period is above-range, PGA stored but anchor gap
     too wide, or because target period is below-range.
     """
+    # Target period sits above every stored period at this row
     if target_period > pairs[-1][0]:
         return (f"target period {target_period}s above ctx row's local "
                 f"max SA period ({pairs[-1][0]}s): extrapolation")
@@ -157,12 +158,14 @@ def _bracket_failure_reason(target_period, pairs, per_period_vals, i):
     pga_at_row = pga_arr is not None and not np.isnan(pga_arr[i])
     smallest_sa = pairs[0][0]
 
+    # PGA is stored here but the smallest local SA is too far from PGA to anchor
     if pga_at_row and smallest_sa > PGA_ANCHOR_MAX_SA:
         return (f"PGA is stored at this ctx row but the smallest local "
                 f"SA period ({smallest_sa}s) exceeds the PGA anchor "
                 f"gap (<= {PGA_ANCHOR_MAX_SA}s), so PGA cannot anchor "
                 f"the interp at target {target_period}s")
 
+    # Target below the smallest local SA with no PGA to anchor from
     return (f"target period {target_period}s below ctx row's local min "
             f"SA period ({smallest_sa}s) with no usable PGA anchor: "
             f"extrapolation")
@@ -181,7 +184,8 @@ def _ctx_row_pairs(per_period_vals, periods_sec, i):
     """
     pga_val = None
     sa_pairs = []
-    
+
+    # Walk every stored period, keeping only the ones that have a value at row i
     for p_str, arr in per_period_vals.items():
         v = arr[i]
         if np.isnan(v):
@@ -190,13 +194,14 @@ def _ctx_row_pairs(per_period_vals, periods_sec, i):
             pga_val = float(v)
         else:
             sa_pairs.append((periods_sec[p_str], float(v)))
-    
+
     sa_pairs.sort()
 
+    # PGA anchors the interp only when the smallest local SA sits close enough
     if (pga_val is not None and sa_pairs
             and sa_pairs[0][0] <= PGA_ANCHOR_MAX_SA):
         return [(PGA_ANCHOR_PERIOD, pga_val)] + sa_pairs
-    
+
     return sa_pairs
 
 
@@ -332,9 +337,11 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
     n = len(ctx.hypo_lon)
     out = np.zeros(n)
     for i in range(n):
+    
         pairs = _ctx_row_pairs(per_period_vals, periods_sec, i)
         if not pairs:
             continue  # uniformly uncovered ray: 0 is the right answer
+    
         val = _log_period_interp(target_period, pairs)
         if val is None:
             _handle_interp_failure(
@@ -344,29 +351,34 @@ def _per_ray_log_interp(raytrace_grids_term, term, target_imt, ctx,
                 ray_index=i,
                 available_periods=[p for p, _ in pairs])
         out[i] = val
+    
     return out
 
 
-def _direct_lookup_or_fail(direct_grid, lats, lons, h3_res,
+def _resolve_direct_misses(vals, lats, lons, h3_res,
                            term, imt, key, grids, stored_periods):
     """
-    Direct-IMT lookup; partial-coverage misses raise via
-    _handle_interp_failure and uniform-coverage misses silently take 0.
+    Deal with the NaN rows left by a direct-IMT lookup. If a row has
+    no cell at any stored period, 0 is the right answer (fully
+    ergodic at every IMT). If a row has a cell at some other stored
+    period but not at the target IMT, raise -- applying 0 here while
+    applying a real value elsewhere would warp its spectrum.
     """
-    vals = grid_lookup(direct_grid, lats, lons, h3_res, default=np.nan)
-    missing = np.where(np.isnan(vals))[0]
-    for i in missing:
+    # Walk the NaN rows; raise on any that have a cell at some other period
+    for i in np.where(np.isnan(vals))[0]:
         if _loc_covered_at_any_period(
                 grids, term, key, lats[i], lons[i],
                 h3_res, stored_periods):
-            _handle_interp_failure( #TODO
+            _handle_interp_failure(
                 term, imt,
                 "ctx row missing at target IMT but covered at other "
                 "stored periods (partial coverage)",
                 key=key, site_index=int(i),
                 lat=float(lats[i]), lon=float(lons[i]))
-    # Uniformly uncovered ctx rows: NaN -> 0 (ergodic default)
+            
+    # Remaining NaN rows have no cell anywhere, so 0 is the ergodic default
     vals[np.isnan(vals)] = 0.0
+    
     return vals
 
 
@@ -378,19 +390,17 @@ def _hypo_site_mean_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     h3_res = grid_data["h3_res"]
     term_period_info = grid_data["period_info"][term]
     
-    # Try and first get adjustment for given IMT from the loaded grids
+    # Target IMT stored directly: spatial lookup only, no period interp
     direct = grid_data["grids"].get(imt.string, {}).get(term, {}).get("mean")
-    
-    # If not, check we can interpolate
     if direct is not None:
-
-        # Will raise an error if no interpolate is possible for now
-        return _direct_lookup_or_fail(
-            direct, lats, lons, h3_res, term, imt, "mean",
+        vals = grid_lookup(direct, lats, lons, h3_res, default=np.nan)
+        # NaN rows: raise if the row has a cell at another period, else leave at 0
+        return _resolve_direct_misses(
+            vals, lats, lons, h3_res, term, imt, "mean",
             grid_data["grids"], stored_periods
             )
-    
-    # If here we can interpolate between periods to get an adjustment
+
+    # Target IMT not stored: per-record log-period interp over stored periods
     return _per_loc_log_interp(
         grid_data["grids"], term, "mean", imt,
         lats, lons, h3_res, stored_periods, term_period_info["periods_sec"]
@@ -432,8 +442,9 @@ def _sigma_adj(grid_data, term, cfg, imt, ctx, stored_periods):
     direct = grid_data["grids"].get(imt.string, {}).get(term, {}).get("sig")
     
     if direct is not None:
-        return _direct_lookup_or_fail(
-            direct, lats, lons, h3_res, term, imt, "sig",
+        vals = grid_lookup(direct, lats, lons, h3_res, default=np.nan)
+        return _resolve_direct_misses(
+            vals, lats, lons, h3_res, term, imt, "sig",
             grid_data["grids"], stored_periods
             )
     
@@ -451,11 +462,13 @@ def _apply_sigma(action, comp, adj, sig, tau, phi):
     """
     components = {"tau": tau, "phi": phi, "sig": sig}
     target = components[comp]
+    # "replace" overwrites outright; "sub"/"add" update variance in quadrature
     if action == "replace":
         target[:] = adj
     else:
         sign = -1 if action == "sub" else 1
         target[:] = np.sqrt(target ** 2 + sign * adj ** 2)
+    # If we touched tau or phi, the stored sig is now stale: recompute from both
     if comp != "sig":
         sig[:] = np.sqrt(tau ** 2 + phi ** 2)
 
@@ -504,14 +517,17 @@ def _validate_res_terms(res_terms, defined_stddev_types):
     valid_targets = ("hypo", "site", "path")
     needs_random_effects = False
     for cfg in res_terms.values():
+        # Reject unknown "location" keys up front
         if cfg["location"] not in valid_targets:
             raise ValueError(
                 f"Invalid location {cfg['location']!r}; must be one "
                 f"of {valid_targets}.")
+        # Any term that modifies tau or phi means we need those on the backbone
         if (cfg.get("sig_adjustment", "none") != "none"
                 and cfg.get("sig_comp_modified") in ("tau", "phi")):
             needs_random_effects = True
 
+    # Backbone must expose tau and phi if any term modifies them
     if needs_random_effects:
         required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
         if not required.issubset(defined_stddev_types):
@@ -531,10 +547,12 @@ def _extend_required_parameters(res_terms, current_rup, current_site):
     locations = {cfg["location"] for cfg in res_terms.values()}
     rup = current_rup
     site = current_site
+    # hypo/path lookups need the hypocentre coords on the rup side
     if locations & {"hypo", "path"}:
         rup = frozenset(rup | {"hypo_lat", "hypo_lon"})
+    # site/path lookups need the site coords on the site side
     if locations & {"site", "path"}:
-        site = frozenset(site | {"lat", "lon"})   
+        site = frozenset(site | {"lat", "lon"})
     return rup, site
 
 
@@ -568,7 +586,7 @@ def load_residual_grids(hdf5_path):
                             term is stored}, used by the term-level range
                             check and by the per-ctx-row interp loop
     """
-    # Set some stores
+    # Collect everything that will be packed into the returned dict
     grids = {}
     raytrace_grids = {}
     sig_scalars = {}
@@ -611,7 +629,8 @@ def load_residual_grids(hdf5_path):
         stored_periods[term] = sorted(
             imt_strs, key=lambda s: imt_from_string(s).period)
 
-    # Parse the IMT info stored in the hdf5
+    # Pre-compute per-term period lookups used at compute time: whether PGA
+    # is stored, sorted SA periods, and imt-string -> period(sec) map
     period_info = {}
     for term, imt_strs in stored_periods.items():
         period_info[term] = {
