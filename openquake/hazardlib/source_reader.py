@@ -490,7 +490,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     # one cmaker for each set of realizations, see get_cmakers
     red_sources = 0
     for trt, sources in acc.items():
-        grps, red = _group_sources(trt, sources, full_lt)
+        grps, red = _group_sources(trt, sources)
         out.extend(grps)
         red_sources += red
     if red_sources:
@@ -766,10 +766,9 @@ def gen_groups(full_lt, smdict, rlz):
                                         rlz.value[0].split()))
 
 
-def reduce_sources(sources_with_same_id, full_lt):
+def reduce_sources(sources_with_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :param full_lt: FullLogicTree instance
     :returns: a list of truly unique sources
     """
     # first reduce identical sources having the same id(src)
@@ -800,7 +799,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _group_sources(trt, sources, full_lt):
+def _group_sources(trt, sources):
     """
     Reduce identical sources, regroup by trt_smrs and TOM,
     then return (source_groups, reduction_count).
@@ -810,7 +809,7 @@ def _group_sources(trt, sources, full_lt):
     red = 0
     for srcs in general.groupby(sources, key).values():
         if len(srcs) > 1:
-            srcs = reduce_sources(srcs, full_lt)
+            srcs = reduce_sources(srcs)
             red += 1
         lst.extend(srcs)
     src_groups = []

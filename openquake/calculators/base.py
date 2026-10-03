@@ -686,9 +686,6 @@ class HazardCalculator(BaseCalculator):
                 'source_model_logic_tree' in oq.inputs
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
-                # NB: the uncertainties are not applied at the CSM level,
-                # but in the workers generating the rates or the ruptures,
-                # one set of realizations at a time, see modified_groups
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
