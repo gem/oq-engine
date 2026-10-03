@@ -352,6 +352,9 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
                 cmaker_.gid, as_rmap)
 
 
+# NB: _split_src is used in conjunction with the split_time mechanism,
+# i.e. only for the groups without sources modified by the uncertainties
+# and with many sites, see classical
 def _split_src(srcs, n):
     for i in range(n):
         blk = srcs[i::n]
