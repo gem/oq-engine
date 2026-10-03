@@ -237,7 +237,7 @@ def group_gids(src_groups, gid_dic):
     return out
 
 
-def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
+def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     """
     :param srcs: the sources of the group grp with the same sets of
         realizations, i.e. grouped either by basename or by subset
@@ -277,10 +277,9 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
                   as_rmap=True):
     """
     Yield the results of a classical task as RateMaps: the CSM is built
-    without applying the uncertainties, so subsets_and_cmakers applies
-    them one set of realizations at a time and restricts the cmaker to
-    the set; the rates are attributed to the gids of the set, see
-    read_gid_dic.
+    without applying the uncertainties, so cmakers_groups applies them one
+    set of realizations at a time and restricts the cmaker to the set; the
+    rates are attributed to the gids of the set, see read_gid_dic.
 
     :param grps: the source groups of the task
     :param sites: the sites of the task
@@ -318,7 +317,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         srcblocks = groupby(
             grp, lambda src: tuple(sig_subsets(src))).values()
     for srcs in srcblocks:
-        for cmaker_, sg in subsets_and_cmakers(
+        for cmaker_, sg in cmakers_groups(
                 srcs, grp, cmaker, gid_dic, full_lt):
             yield baseclassical(
                 sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
