@@ -291,9 +291,12 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     if len(grps) > 1:
         # the atomic groups collapsed in a single task (see get_allargs)
         # contribute to the same RateMap in the master, so they must be
-        # returned in a single result; the uncertainties are not applied,
-        # since the sources of an atomic group are mutually exclusive and
-        # must be computed together
+        # returned in a single result, with the gids of all the
+        # realizations; the uncertainties are not applied, which is fine
+        # because the sources of an atomic group are nonparametric (the
+        # mutex ones must be, since mutually exclusive ruptures are
+        # modelled with nonparametric sources) and no uncertainty can be
+        # applied to a nonparametric source (the calculation would fail)
         yield baseclassical(grps, sites, cmaker, remove_zeros, as_rmap=as_rmap)
         return
     grp = grps[0]
