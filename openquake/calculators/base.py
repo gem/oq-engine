@@ -64,6 +64,15 @@ get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+# The calculation modes building the CSM without applying the
+# uncertainties, that are applied in the workers, i.e. in classical: the
+# modes computing the rates with the classical workers, directly
+# (classical) or via a precalculation (disaggregation, classical_risk,
+# classical_damage, classical_bcr), plus the preclassical ones, since a
+# preclassical calculation can be the parent only of a classical one (see
+# accept_precalc)
+UNC_IN_WORKERS = ('classical', 'disaggregation', 'preclassical',
+                  'classical_risk', 'classical_damage', 'classical_bcr')
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -599,6 +608,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
     def check_overflow(self):
@@ -683,8 +695,13 @@ class HazardCalculator(BaseCalculator):
                 'source_model_logic_tree' in oq.inputs
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
+                # NB: for the classical, disaggregation and preclassical
+                # calculations the uncertainties are not applied at the CSM
+                # level, but in the workers, i.e. in classical; the other
+                # calculation modes apply them here, at build time
+                apply_unc = oq.calculation_mode not in UNC_IN_WORKERS
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore)
+                    oq, self.datastore, apply_unc)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
                     trts = {sg.trt for sg in csm.src_groups}
