@@ -153,10 +153,15 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def baseclassical(grp, tgetter, cmaker, remove_zeros,
-                  dstore=None, monitor=None):
+def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
+                  as_rmap=True, monitor=None):
     """
     Wrapper over hazard_curve.classical
+
+    :param remove_zeros: if True the sites with zero rates are removed
+    :param as_rmap: if False the rates are returned as an array of rates,
+        to be stored right away by the master, instead of as a RateMap
+        accumulated in the master (see get_rmap)
     """
     if monitor:
         cmaker.init_monitoring(monitor)
@@ -170,6 +175,8 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
         result['rmap'] = result['rmap'].remove_zeros()
     result['rmap'].gid = cmaker.gid
     result['rmap'].wei = cmaker.wei
+    if not as_rmap:
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
     return result
 
 
@@ -265,49 +272,14 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
         yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg
 
 
-def store_rates(res, gid, as_rmap):
-    """
-    :param res: a dictionary with a 'rmap' key
-    :param gid: the gids of the unit of rate attribution
-    :param as_rmap: if False the RateMap is converted into an array of
-        rates, to be stored right away by the master
-    :returns: the result dictionary
-    """
-    if not as_rmap:
-        res['rmap'] = res['rmap'].to_array(gid)
-    return res
-
-
-# NB: rate_map_flags is called by classical, i.e. in the workers, to
-# decide how to return the rates, and by ClassicalCalculator._execute,
-# i.e. in the master, to decide if a RateMap must be created; the two
-# calls must agree
-# NB: the zeros are not removed for few sites and for disagg_by_src,
-# otherwise AELO for JPN will break; a task whose groups are not split in
-# blocks returns an array of rates, to avoid storing huge RateMaps in the
-# master
-def rate_map_flags(oq, grp_keys, N):
-    """
-    :param oq: an OqParam instance
-    :param grp_keys: the keys of the groups of a task
-    :param N: the number of sites
-    :returns: a pair (remove_zeros, as_rmap) telling if the sites with
-        zero rates must be removed from the rates and if the rates must
-        be returned as a RateMap, to be accumulated in the master (see
-        get_rmap), instead of as an array of rates stored right away
-    """
-    remove_zeros = not (N <= oq.max_sites_disagg or oq.disagg_by_src)
-    fulltask = all('-' not in grp_key for grp_key in grp_keys)
-    return remove_zeros, not (remove_zeros and fulltask)
-
-
 def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
-                  as_rmap):
+                  as_rmap=True):
     """
-    Yield the results of a classical task: the CSM is built without
-    applying the uncertainties, so subsets_and_cmakers applies them one
-    set of realizations at a time and restricts the cmaker to the set;
-    the rates are attributed to the gids of the set, see read_gid_dic.
+    Yield the results of a classical task as RateMaps: the CSM is built
+    without applying the uncertainties, so subsets_and_cmakers applies
+    them one set of realizations at a time and restricts the cmaker to
+    the set; the rates are attributed to the gids of the set, see
+    read_gid_dic.
 
     :param grps: the source groups of the task
     :param sites: the sites of the task
@@ -315,9 +287,8 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     :param gid_dic: a dictionary trt_smrs -> (gids, weights)
     :param full_lt: a FullLogicTree instance
     :param remove_zeros: if True the sites with zero rates are removed
-    :param as_rmap: if True the rates are returned as RateMaps to be
-        accumulated in the master (see get_rmap), otherwise as arrays of
-        rates, stored right away by the master
+    :param as_rmap: if False the rates are returned as arrays of rates,
+        stored right away by the master, see baseclassical
     """
     if len(grps) > 1:
         # the atomic groups collapsed in a single task (see get_allargs)
@@ -325,9 +296,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # returned in a single result; the uncertainties are not applied,
         # since the sources of an atomic group are mutually exclusive and
         # must be computed together
-        yield store_rates(
-            baseclassical(grps, sites, cmaker, remove_zeros),
-            cmaker.gid, as_rmap)
+        yield baseclassical(grps, sites, cmaker, remove_zeros, as_rmap=as_rmap)
         return
     grp = grps[0]
     if grp.atomic:
@@ -350,9 +319,8 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     for srcs in srcblocks:
         for cmaker_, sg in subsets_and_cmakers(
                 srcs, grp, cmaker, gid_dic, full_lt):
-            yield store_rates(
-                baseclassical(sg, sites, cmaker_, remove_zeros),
-                cmaker_.gid, as_rmap)
+            yield baseclassical(
+                sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
 
 
 # NB: _split_src is used in conjunction with the split_time mechanism,
@@ -365,13 +333,11 @@ def _split_src(srcs, n):
             yield blk
 
 
-def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
-    Call the classical calculator in hazardlib. `grp_keys` contains always
-    a single element except in the case of multiple atomic groups.
-
-    The uncertainties are applied in the workers, one set of realizations
-    at a time, since the CSM is built without them.
+    :returns: a tuple (groups, sites, gid_dic, full_lt) with the source
+        groups, the sites, the units of rate attribution and the logic
+        tree of a classical task
     """
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups
@@ -379,34 +345,57 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # the weight of the task is not inferrable from grp_keys, which are
     # plain strings, so it is set explicitly (used in task_info)
     monitor.weight = sum(grp.weight for grp in grps)
-    oq = cmaker.oq
-    # NB: the tilegetter is trivial unless there are site labels
-    sites = tilegetter(sitecol, cmaker.ilabel)
-    remove_zeros, as_rmap = rate_map_flags(
-        oq, grp_keys, len(sitecol.complete))
     # NB: the datastore is closed when passed to a task, see read_gid_dic;
     # full_lt is read from the datastore, since it is too big to be passed
     # to the tasks
-    gid_dic = read_gid_dic(dstore)
-    full_lt = read_full_lt(dstore)
-    # NB: gid_dic is not empty even without uncertainties, since the units
-    # of rate attribution are the trt_smrs of the groups; the groups whose
-    # sources have different uncertainties, i.e. the ones with bysrc_unc
-    # sources, are computed by bysrc_results and are not split, as on master
+    # NB: the tilegetter is trivial unless there are site labels
+    return (grps, tilegetter(sitecol, cmaker.ilabel),
+            read_gid_dic(dstore), read_full_lt(dstore))
+
+
+def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with few sites, i.e. with
+    disagg_by_src or with at most max_sites_disagg sites. `grp_keys`
+    contains always a single element except in the case of multiple
+    atomic groups.
+
+    The rates are returned as RateMaps, accumulated in a RateMap in the
+    master (see get_rmap), and the sites with zero rates are not removed,
+    otherwise AELO for JPN will break.
+    """
+    grps, sites, gid_dic, full_lt = read_task_input(
+        grp_keys, tilegetter, cmaker, dstore, monitor)
+    yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                             remove_zeros=False)
+
+
+def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with many sites.
+    `grp_keys` contains always a single element except in the case of
+    multiple atomic groups.
+
+    The rates of a task whose groups are not split in blocks are returned
+    as arrays of rates, stored right away by the master, while the rates
+    of the other tasks are accumulated in a RateMap in the master; the
+    sites with zero rates are removed.
+    """
+    grps, sites, gid_dic, full_lt = read_task_input(
+        grp_keys, tilegetter, cmaker, dstore, monitor)
+    oq = cmaker.oq
+    remove_zeros = True  # reduce the size of the arrays of rates
+    as_rmap = any('-' in grp_key for grp_key in grp_keys)
     unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
     bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
-    # the split_time mechanism below is meaningful only with many sites,
-    # since with few sites the tasks are fast and there is nothing to split
-    few = len(sitecol.complete) <= oq.max_sites_disagg
-    if unsplit or bysrc or few:
+    if unsplit or bysrc:
         yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
                                  remove_zeros, as_rmap)
         return
     # NB: multifaults are not split to avoid transferring the dparam cache
     b0, *blks = _split_src(list(grps[0]), 5)
     t0 = time.time()
-    res = baseclassical(b0, sites, cmaker, remove_zeros)
-    yield store_rates(res, cmaker.gid, as_rmap)
+    yield baseclassical(b0, sites, cmaker, remove_zeros, as_rmap=as_rmap)
     dt = time.time() - t0
     # NB: the tasks generated below are called baseclassical, i.e. they
     # have a different name than the Starmap (classical), hence the times
@@ -418,21 +407,18 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     if dt > 2 * oq.split_time:
         for blk in blks[1:]:
             yield baseclassical, blk, tilegetter, cmaker, remove_zeros, dstore
-        yield store_rates(
-            baseclassical(blks[0], sites, cmaker, remove_zeros),
-            cmaker.gid, as_rmap)
+        yield baseclassical(
+            blks[0], sites, cmaker, remove_zeros, as_rmap=as_rmap)
     elif dt > oq.split_time:
         yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
                remove_zeros, dstore)
         rest = sum(blks[2:], [])
         if rest:
-            yield store_rates(
-                baseclassical(rest, sites, cmaker, remove_zeros),
-                cmaker.gid, as_rmap)
+            yield baseclassical(
+                rest, sites, cmaker, remove_zeros, as_rmap=as_rmap)
     else:
-        yield store_rates(
-            baseclassical(sum(blks, []), sites, cmaker, remove_zeros),
-            cmaker.gid, as_rmap)
+        yield baseclassical(
+            sum(blks, []), sites, cmaker, remove_zeros, as_rmap=as_rmap)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -836,9 +822,10 @@ class ClassicalCalculator(base.HazardCalculator):
         gids = group_gids(self.csm.src_groups, gid_dic)
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
-            # the rates are accumulated in a RateMap in the master unless
-            # the task returns an array of rates, see rate_map_flags
-            if rate_map_flags(oq, grp_keys, self.N)[1]:
+            # the rates are accumulated in a RateMap in the master, unless
+            # the task returns an array of rates, i.e. unless there are
+            # many sites and the groups are not split in blocks
+            if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 self.get_rmap(int(grp_keys[0].split('-')[0]), gids)
             if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
                 # NB: a group discarded by the prefiltering has no tiles
@@ -879,7 +866,11 @@ class ClassicalCalculator(base.HazardCalculator):
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO', '')
         if OQ_TASK_NO:
             allargs = [allargs[int(OQ_TASK_NO)]]
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+        if self.few_sites or oq.disagg_by_src:
+            smap = parallel.Starmap(
+                classical_bysrc, allargs, h5=self.datastore.hdf5)
+        else:
+            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_execute(acc)
 
