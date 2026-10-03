@@ -265,16 +265,6 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
         yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg
 
 
-def groupby_subset(grp):
-    """
-    :param grp: a SourceGroup built without uncertainties
-    :returns: a dictionary subsets -> list of sources, i.e. the sources
-        grouped by the sets of realizations with the same uncertainties
-        applied to them
-    """
-    return groupby(grp, lambda src: tuple(sig_subsets(src)))
-
-
 def store_rates(res, gid, as_rmap):
     """
     :param res: a dictionary with a 'rmap' key
@@ -348,11 +338,12 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # them, see the 'basename' key in RmapMaker.make
         srcblocks = groupby(grp, valid.basename).values()
     else:
-        # the sources with the same sets of realizations are computed
-        # together, since they are modified by the same uncertainties;
-        # otherwise there would be a RateMap per source and with many
-        # sites that would be extremely slow (share_small)
-        srcblocks = groupby_subset(grp).values()
+        # the sources with the same sets of realizations, i.e. with the
+        # same uncertainties, are computed together; otherwise there
+        # would be a RateMap per source and with many sites that would be
+        # extremely slow (share_small)
+        srcblocks = groupby(
+            grp, lambda src: tuple(sig_subsets(src))).values()
     for srcs in srcblocks:
         for cmaker_, sg in subsets_and_cmakers(
                 srcs, grp, cmaker, gid_dic, full_lt):
