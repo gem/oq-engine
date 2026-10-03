@@ -245,10 +245,10 @@ def save_read_times(dstore, source_models):
     dstore.create_dset('source_model_read_times', arr)
 
 
-def get_csm(oq, full_lt, dstore=None, apply_unc=True):
+def get_csm(oq, full_lt, dstore=None):
     """
-    Build source models from the logic tree and store
-    them inside the `source_full_lt` dataset.
+    Build a CompositeSourceModel without applying the uncertainties,
+    that are applied in the workers, see modified_groups.
     """
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
@@ -308,7 +308,7 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
-    return build_csm(oq, full_lt, smdict, apply_unc, dstore)
+    return build_csm(oq, full_lt, smdict, dstore)
 
 
 def get_bset_values(full_lt, sources):
@@ -428,7 +428,8 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
 
     NB: the same source_id can be used by different sources, i.e. in
     different source models, so the sources are keyed by id(src) and not
-    by source_id; the ids are disambiguated at the end, as in _build_csm
+    by source_id; the ids are disambiguated at the end, by adding a
+    semicolon, see add_semicolons
     """
     dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
     for rlz, grp in rlz_groups:
@@ -476,22 +477,27 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
             new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
             new_srcs.append(new_src)
         if grp.atomic:
-            # the atomic groups are never merged, as in _build_csm
+            # the atomic groups are never merged with the other groups,
+            # since their sources must be computed together
             new = copy.copy(grp)
             new.sources = new_srcs
             atomic.append(new)
         else:
             acc[grp.trt].extend(new_srcs)
-    # NB: the sources are grouped exactly as in _build_csm, i.e. by
-    # trt_smrs and TOM, so that the structure and the order of the groups
-    # are the same; in particular there is one cmaker for each set of
-    # realizations, see get_cmakers
+    if atomic:
+        logging.info('Found %d atomic groups', len(atomic))
+    # NB: the sources are grouped by trt_smrs and TOM, so that there is
+    # one cmaker for each set of realizations, see get_cmakers
+    red_sources = 0
     for trt, sources in acc.items():
-        grps, _red = _group_sources(trt, sources, full_lt)
+        grps, red = _group_sources(trt, sources, full_lt)
         out.extend(grps)
+        red_sources += red
+    if red_sources:
+        logging.info('reduce_sources was called %d times', red_sources)
     out.extend(atomic)
     for grp in out:
-        splitMF(grp.sources, oq.disagg_by_src)  # as in _build_csm
+        splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
     return out
 
@@ -527,12 +533,11 @@ def read_trt_smrs_gid(dstore):
         return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
 
 
-def build_csm(oq, full_lt, smdict, apply_unc, dstore):
+def build_csm(oq, full_lt, smdict, dstore):
     """
     :param oq: OqParam instance
     :param full_lt: FullLogicTree instance
     :param smdict: dictionary source_model_path -> SourceModel instance
-    :param apply_unc: flag
     :param dstore: DataStore instance
     :returns: a CompositeSourceModel instance
     """
@@ -541,26 +546,12 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
         rlz_groups = []
         for rlz in full_lt.sm_rlzs:
             rlz_groups.extend((rlz, grp) for grp in
-                              gen_groups(full_lt, smdict, rlz, apply_unc))
+                              gen_groups(full_lt, smdict, rlz))
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    if not apply_unc:
-        # The sources are not modified, so there is a group per
-        # realization, each with its own trt_smr; this way the rates
-        # computed by classical can be attributed to the right
-        # realization
-        groups = _bysrc_groups(full_lt, rlz_groups, oq)
-        csm = CompositeSourceModel(oq, full_lt, groups)
-        store_data(oq, smdict, csm, dstore)
-        return csm
-
-    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    mon = performance.Monitor('_build_csm', measuremem=True)
-    with mon:
-        csm = _build_csm(oq, full_lt, [g for _, g in rlz_groups],
-                         is_event_based)
-    logging.info(mon)
+    groups = _bysrc_groups(full_lt, rlz_groups, oq)
+    csm = CompositeSourceModel(oq, full_lt, groups)
     store_data(oq, smdict, csm, dstore)
     return csm
 
@@ -722,7 +713,7 @@ def _add_sampling(src, rlz, trti):
     # the same source can appear in multiple realizations, hence the list.
     # NB: the multiplicity of the source is len(src.sampling) and it enters
     # the classical calculations too, via SourceGroup.fix_src_offset and
-    # the source_info rows, so this cannot be skipped when apply_unc is False
+    # the source_info rows, so the sampling must be always set
     sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
     if src.sampling is None:
         # the first time
@@ -732,7 +723,7 @@ def _add_sampling(src, rlz, trti):
         src.sampling.append(sampl)
 
 
-def gen_groups(full_lt, smdict, rlz, apply_unc):
+def gen_groups(full_lt, smdict, rlz):
     # yield all the possible source groups from the given rlz
     smlt_file = full_lt.source_model_lt.filename
     smlt_dir = os.path.dirname(smlt_file)
@@ -752,22 +743,14 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
                 '%s contains source(s) %s already present in %s' %
                 (value, common, rlz.value))
         src_groups.extend(extra)
+    # NB: the uncertainties are not applied here, but in the workers,
+    # one set of realizations at a time, see modified_groups; the
+    # sampling info is set anyway, since it determines the multiplicity
     for src_group in src_groups:
         trti = full_lt.trti.get(src_group.trt, 0)
-        if apply_unc is False:
-            # there are no uncertainties to apply, but the sampling info is
-            # still needed, since it determines the multiplicity
-            sg = src_group
-        else:
-            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
-            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
-            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
-            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
-            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
-            sg = apply_uncertainties(bset_values, src_group)
-        for src in sg:  # tested in case_83_eb
+        for src in src_group:  # tested in case_83_eb
             _add_sampling(src, rlz, trti)
-        yield sg
+        yield src_group
 
     # check applyToSources
     sm_branch = rlz.lt_path[0]
@@ -783,11 +766,10 @@ def gen_groups(full_lt, smdict, rlz, apply_unc):
                                         rlz.value[0].split()))
 
 
-def reduce_sources(sources_with_same_id, full_lt, event_based):
+def reduce_sources(sources_with_same_id, full_lt):
     """
     :param sources_with_same_id: a list of sources with the same source_id
     :param full_lt: FullLogicTree instance
-    :param event_based: flag True for event_based calculations
     :returns: a list of truly unique sources
     """
     # first reduce identical sources having the same id(src)
@@ -818,7 +800,7 @@ def split_by_tom(sources):
     return general.groupby(sources, key).values()
 
 
-def _group_sources(trt, sources, full_lt, event_based=False):
+def _group_sources(trt, sources, full_lt):
     """
     Reduce identical sources, regroup by trt_smrs and TOM,
     then return (source_groups, reduction_count).
@@ -828,7 +810,7 @@ def _group_sources(trt, sources, full_lt, event_based=False):
     red = 0
     for srcs in general.groupby(sources, key).values():
         if len(srcs) > 1:
-            srcs = reduce_sources(srcs, full_lt, event_based)
+            srcs = reduce_sources(srcs, full_lt)
             red += 1
         lst.extend(srcs)
     src_groups = []
@@ -836,40 +818,3 @@ def _group_sources(trt, sources, full_lt, event_based=False):
         for grp in split_by_tom(sources):
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     return src_groups, red
-
-
-def _build_csm(oq, full_lt, groups, event_based):
-    acc = general.AccumDict(accum=[])
-    atomic = []
-    changes = 0
-    # concatenate sampling records, split MF sources, single out atomic groups
-    for grp in groups:
-        changes += grp.changes
-        for src in grp:
-            if isinstance(src.sampling, list):
-                src.sampling = numpy.concatenate(
-                    src.sampling, dtype=sampling_dt)
-        splitMF(grp.sources, oq.disagg_by_src)
-        if grp and grp.atomic:
-            atomic.append(grp)
-        elif grp:
-            acc[grp.trt].extend(grp)
-    if atomic:
-        logging.info('Found %d atomic groups', len(atomic))
-    if changes:
-        logging.info(f'Applied {changes:_d} changes to '
-                     f'{len(groups):_d} source groups')
-
-    # reduce identical sources by concatenating the sampling records,
-    # then regroup by trt_smrs
-    src_groups = []
-    red_sources = 0
-    for trt in acc:
-        grps, red = _group_sources(trt, acc[trt], full_lt, event_based)
-        src_groups.extend(grps)
-        red_sources += red
-    src_groups.extend(atomic)
-    logging.info('reduce_sources was called %d times', red_sources)
-    add_semicolons(src_groups)
-    csm = CompositeSourceModel(oq, full_lt, src_groups)
-    return csm

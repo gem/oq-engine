@@ -688,9 +688,9 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 # NB: the uncertainties are not applied at the CSM level,
                 # but in the workers generating the rates or the ruptures,
-                # one set of realizations at a time, see _bysrc_groups
+                # one set of realizations at a time, see modified_groups
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore, False)
+                    oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
                     trts = {sg.trt for sg in csm.src_groups}
