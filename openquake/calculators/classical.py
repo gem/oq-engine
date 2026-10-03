@@ -292,6 +292,10 @@ def rate_map_flags(oq, grp_keys, N):
     otherwise AELO for JPN will break; a task whose groups are not split
     in blocks returns an array of rates, to avoid storing huge RateMaps
     in the master
+
+    NB: called by classical, i.e. in the workers, to decide how to return
+    the rates, and by ClassicalCalculator._execute, i.e. in the master,
+    to decide if a RateMap must be created; the two must agree
     """
     remove_zeros = not (N <= oq.max_sites_disagg or oq.disagg_by_src)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
