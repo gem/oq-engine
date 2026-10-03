@@ -367,7 +367,7 @@ def _unc_signature(bset_values, src):
     return tuple(sig)
 
 
-def _bysrc_groups(full_lt, rlz_groups):
+def _bysrc_groups(full_lt, rlz_groups, oq):
     """
     Build the source groups without applying the uncertainties, as needed
     by the classical workers. There is one group per source group in the
@@ -384,11 +384,11 @@ def _bysrc_groups(full_lt, rlz_groups):
     sig_subsets), and the rates are computed and attributed one set at a
     time.
 
-    NB: the uncertainties are applied on the sources as they are here,
-    without the ';' suffix added by add_semicolons in _build_csm, so the
-    applyToSources filter is applied on the source_id as it is.
+    NB: the same source_id can be used by different sources, i.e. in
+    different source models, so the sources are keyed by id(src) and not
+    by source_id; the ids are disambiguated at the end, as in _build_csm
     """
-    dic = {}  # id(grp) -> [group, {source_id: [(src, trt_smr, samples, sig)]}]
+    dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
@@ -406,20 +406,18 @@ def _bysrc_groups(full_lt, rlz_groups):
         srcs = dic.setdefault(id(grp), [grp, {}])[1]
         for src in grp:
             sig = _unc_signature(bset_values, src)
-            srcs.setdefault(src.source_id, []).append(
-                (src, trt_smr, rlz.samples, sig))
+            pairs = srcs.setdefault(id(src), (src, []))[1]
+            pairs.append((trt_smr, rlz.samples, sig))
 
     out, atomic, acc = [], [], general.AccumDict(accum=[])
     for grp, srcs in dic.values():
         new_srcs = []
-        for srcid in sorted(srcs):
-            pairs = srcs[srcid]
-            arrays, seen, sigdict = [], {}, {}
-            for src, trt_smr, samples, sig in pairs:
-                seen.setdefault(id(src), src)
+        for src, pairs in srcs.values():
+            arrays, sigdict = [], {}
+            for trt_smr, samples, sig in pairs:
                 arrays.append((trt_smr, samples))
                 sigdict.setdefault(sig, []).append(trt_smr)
-            new_src = copy.copy(next(iter(seen.values())))
+            new_src = copy.copy(src)
             new_src.sampling = numpy.array(
                 sorted(arrays), sampling_dt)  # sorted by trt_smr
             # NB: the subsets are stored only if the uncertainties are not
@@ -449,7 +447,11 @@ def _bysrc_groups(full_lt, rlz_groups):
     for trt, sources in acc.items():
         grps, _red = _group_sources(trt, sources, full_lt)
         out.extend(grps)
-    return out + atomic
+    out.extend(atomic)
+    for grp in out:
+        splitMF(grp.sources, oq.disagg_by_src)  # as in _build_csm
+    add_semicolons(out)  # else sources with the same id are lost
+    return out
 
 
 def sig_subsets(src):
@@ -533,7 +535,7 @@ def build_csm(oq, full_lt, smdict, apply_unc, dstore):
         # realization, each with its own trt_smr; this way the rates
         # computed by classical can be attributed to the right
         # realization
-        groups = _bysrc_groups(full_lt, rlz_groups)
+        groups = _bysrc_groups(full_lt, rlz_groups, oq)
         csm = CompositeSourceModel(oq, full_lt, groups)
         store_data(oq, smdict, csm, dstore)
         return csm

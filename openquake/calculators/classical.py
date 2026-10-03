@@ -388,7 +388,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     as_rmap = any('-' in grp_key for grp_key in grp_keys)
     unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
     bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
-    if unsplit or bysrc:
+    # NB: the sources are split in blocks by time only if the rates are
+    # accumulated in a RateMap in the master, i.e. if the groups are
+    # already split in blocks, and not with tiling, where each tile is
+    # already a separate task
+    if unsplit or bysrc or not as_rmap or oq.tiling:
         yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
                                  remove_zeros, as_rmap)
         return
@@ -986,6 +990,16 @@ class ClassicalCalculator(base.HazardCalculator):
         ser = info[info.index.isin([b'classical', b'baseclassical'])]
         ser = ser[ser['mean'] >= 1]
         if not len(ser):
+            return
+        # NB: the check is meaningful only if there are enough tasks to
+        # keep all the workers busy, since the busy times per worker
+        # cannot be balanced with few tasks (i.e. a model with a single
+        # source model logic tree branch and few sites, see the sslt test
+        # in oq-risk-tests, with 2 tasks and 16 workers)
+        ntasks = len(self.datastore['grp_keys'])
+        if ntasks < 4 * parallel.num_cores:
+            logging.info('Only %d tasks for %d workers, not checking for '
+                         'slow tasks', ntasks, parallel.num_cores)
             return
         # NB: the ratio std/mean of the *busy times* of the workers
         # measures how balanced the generated tasks are; since the
