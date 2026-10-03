@@ -31,7 +31,8 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
-    apply_uncertainties, check_correlated, get_bset_values)
+    apply_uncertainties, check_correlated, get_bset_values,
+    sampling_dt, sig_subsets)
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -41,9 +42,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
-sampling_dt = numpy.dtype([
-    ('trt_smr', U32),
-    ('samples', U32)])
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -312,17 +310,6 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
     return build_csm(oq, full_lt, smdict, apply_unc, dstore)
 
 
-# calls _build_csm
-def _sampling_array(src):
-    """
-    :returns: the sampling of the source as a structured array
-    """
-    sampling = src.sampling
-    if isinstance(sampling, list):
-        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
-    return sampling
-
-
 def apply_unc_by_src(full_lt, trt_smrs, grp):
     """
     Apply the uncertainties to a group of sources built *without*
@@ -454,22 +441,6 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     return out
 
 
-def sig_subsets(src):
-    """
-    :returns: a list of tuples of trt_smr, the sets of realizations with
-        the same uncertainties applied to the source; there is a single set
-        if the uncertainties are the same in all the realizations
-
-    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
-    """
-    subsets = getattr(src, 'bysrc_subsets', None)
-    if subsets:
-        return [tuple(t) for t in subsets]
-    return [tuple(_sampling_array(src)['trt_smr'])]
-
-
 def get_trt_smrs_gid(csm):
     """
     :param csm: a CompositeSourceModel built without applying the
@@ -499,17 +470,6 @@ def read_trt_smrs_gid(dstore):
     """
     with dstore:  # NB: the datastore is closed when passed to a task
         return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
-
-
-def restrict_sampling(src, trt_smrs):
-    """
-    :returns: a copy of the source with the sampling restricted to trt_smrs,
-        i.e. belonging to a single set of uncertainties
-    """
-    new = copy.copy(src)
-    sampling = _sampling_array(src)
-    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
-    return new
 
 
 def build_csm(oq, full_lt, smdict, apply_unc, dstore):

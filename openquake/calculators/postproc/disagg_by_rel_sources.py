@@ -26,8 +26,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.source_reader import (
-    apply_unc_by_src, restrict_sampling, sig_subsets)
+from openquake.hazardlib.source_reader import apply_unc_by_src
+from openquake.hazardlib.lt import restrict_sampling, sig_subsets
 from openquake.calculators import extract
 
 

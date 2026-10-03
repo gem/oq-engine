@@ -345,13 +345,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
-        if oq.calculation_mode in base.UNC_IN_WORKERS:
-            # the units of rate attribution are the sets of realizations
-            # with the same uncertainties, not the trt_smrs of the groups,
-            # since the groups are not split by the uncertainties, which
-            # are applied in the workers
-            self.datastore.hdf5.save_vlen(
-                'trt_smrs_gid', get_trt_smrs_gid(csm))
+        # the units of rate attribution are the sets of realizations with
+        # the same uncertainties, not the trt_smrs of the groups, since the
+        # groups are not split by the uncertainties, which are applied in
+        # the workers
+        self.datastore.hdf5.save_vlen('trt_smrs_gid', get_trt_smrs_gid(csm))
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')

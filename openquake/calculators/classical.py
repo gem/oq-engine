@@ -32,8 +32,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
-from openquake.hazardlib.source_reader import (
-    apply_unc_by_src, read_trt_smrs_gid, sig_subsets)
+from openquake.hazardlib.source_reader import apply_unc_by_src, read_trt_smrs_gid
+from openquake.hazardlib.lt import sig_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
