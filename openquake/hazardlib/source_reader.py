@@ -31,7 +31,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
-    apply_uncertainties, check_correlated, get_bset_value, get_bset_values,
+    apply_uncertainties, check_correlated, get_bset_value,
     restrict_sampling, sampling_dt, sig_subsets)
 from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.contexts import get_unique_inverse
@@ -311,6 +311,25 @@ def get_csm(oq, full_lt, dstore=None, apply_unc=True):
     return build_csm(oq, full_lt, smdict, apply_unc, dstore)
 
 
+def get_bset_values(full_lt, sources):
+    """
+    :param full_lt: a FullLogicTree instance
+    :param sources: a SourceGroup or a list of sources of the same group
+    :returns: the dictionary of uncertainties to apply expected by
+        modified_groups, i.e. one entry for each set of realizations
+        with the same uncertainties; the uncertainties of a set are the
+        ones of its first realization
+
+    NB: only the uncertainties relevant for the given sources are
+        returned, since the logic tree can be huge and the dictionary is
+        sent to the workers
+    """
+    ordinals = {trt_smrs[0] % TWO24 for src in sources
+                for trt_smrs in sig_subsets(src)}
+    return {ordinal: full_lt.get_bset_values(ordinal)
+            for ordinal in sorted(ordinals)}
+
+
 def modified_groups(sources, bset_values):
     """
     Apply the uncertainties to a group of sources built *without* them,
@@ -320,10 +339,8 @@ def modified_groups(sources, bset_values):
 
     :param sources: a SourceGroup or a list of sources of the same group
     :param bset_values:
-        a dictionary ordinal -> the uncertainties to apply in the
-        corresponding realization, as returned by
-        FullLogicTree.get_bset_values_by_ordinal; it can be empty, if
-        there are no uncertainties at all
+        the uncertainties to apply, as returned by get_bset_values; it
+        can be empty, if there are no uncertainties at all
     :returns:
         a generator of (trt_smrs, group) pairs, one for each set of
         realizations with the same uncertainties, with the uncertainties
@@ -413,7 +430,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
-        bset_values = get_bset_values(rlz.lt_path, full_lt.source_model_lt)
+        bset_values = full_lt.get_bset_values(rlz.ordinal)
         # NB: the uncertainties are applied later, in classical, on
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole

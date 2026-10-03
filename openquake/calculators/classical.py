@@ -33,7 +33,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    modified_groups, read_trt_smrs_gid)
+    get_bset_values, modified_groups, read_trt_smrs_gid)
 from openquake.hazardlib.lt import sig_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
@@ -254,7 +254,7 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     # the base source
     subgrp = copy.copy(grp)
     subgrp.sources = list(srcs)
-    bset_values = full_lt.get_bset_values_by_ordinal(subgrp)
+    bset_values = get_bset_values(full_lt, subgrp)
     for trt_smrs, sg in modified_groups(subgrp, bset_values):
         sg = preclassical.split_modified(sg)
         # the sources modified by the uncertainties are filtered here and

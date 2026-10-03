@@ -371,7 +371,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
     # disjoint, see RuptureImporter; they are built from src.id and from
     # src.offset (see poisson_sample), hence the running offset
     offset = 0
-    groups = modified_groups(sources, param.get('bset_values'))
+    groups = modified_groups(sources, param.get('bset_values', {}))
     for i, (_trt_smrs, group) in enumerate(groups):
         yield from _sample_group(group, ses_seed + i, offset, param, monitor)
         offset += num_rup_ids(group)
