@@ -388,7 +388,11 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     as_rmap = any('-' in grp_key for grp_key in grp_keys)
     unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
     bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
-    if unsplit or bysrc:
+    # NB: the sources are split in blocks by time only if the rates are
+    # accumulated in a RateMap in the master, i.e. if the groups are
+    # already split in blocks, and not with tiling, where each tile is
+    # already a separate task
+    if unsplit or bysrc or not as_rmap or oq.tiling:
         yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
                                  remove_zeros, as_rmap)
         return
