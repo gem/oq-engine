@@ -259,8 +259,9 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
     for trt_smrs in subsets:
         sg = preclassical.split_modified(
             apply_unc_by_src(full_lt, trt_smrs, subgrp))
-        # the magnitude filtering is done here and not in the preclassical,
-        # since the uncertainties can change the max magnitude
+        # the sources modified by the uncertainties are filtered here and
+        # not in the preclassical (see filter_mag), since the uncertainties
+        # can change the max magnitude
         # NB: filter_mag returns a list of sources, but the group must be
         # returned, since it contains the interdependencies (mutex,
         # cluster, ...) used by RmapMaker
