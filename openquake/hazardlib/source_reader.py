@@ -28,12 +28,12 @@ import numpy
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
     geo, nrml, source, sourceconverter, InvalidFile, calc)
-from openquake.hazardlib.source_group import CompositeSourceModel, get_unique
+from openquake.hazardlib.source_group import (
+    CompositeSourceModel, SourceGroup, get_unique)
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
     restrict_sampling, sampling_dt, sig_subsets)
-from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -401,8 +401,12 @@ def _unc_signature(bset_values, src):
     """
     :returns: a tuple identifying the uncertainties applied to src
     """
-    return tuple((bset.id, str(v)) for bset, value in bset_values
-                 for ok, v in [get_bset_value(bset, value, src)] if ok)
+    sig = []
+    for bset, value in bset_values:
+        ok, val = get_bset_value(bset, value, src)
+        if ok:
+            sig.append((bset.id, str(val)))
+    return tuple(sig)
 
 
 def _bysrc_groups(full_lt, rlz_groups, oq):
@@ -431,7 +435,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
         bset_values = full_lt.get_bset_values(rlz.ordinal)
-        # NB: the uncertainties are applied later, in classical, on
+        # NB: the uncertainties are applied later, in the workers, on
         # groups split by weight, so the correlated branchsets are checked
         # here, where the groups are still whole
         check_correlated(bset_values, grp)
