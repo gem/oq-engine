@@ -1429,8 +1429,8 @@ class ContextMaker(object):
             # once per set of realizations with different uncertainties,
             # the cost is proportional to the number of sets; NB: the
             # import is local to avoid a circular dependency
-            from openquake.hazardlib.lt import sig_subsets
-            C = src.num_ruptures * src.nsites * len(sig_subsets(src))
+            from openquake.hazardlib.lt import unc_subsets
+            C = src.num_ruptures * src.nsites * len(unc_subsets(src))
         else:
             step = (1 if src.code in b'pP' else
                     20 if src.num_ruptures >= 400 else 4)

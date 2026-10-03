@@ -33,7 +33,7 @@ from openquake.hazardlib.source_group import (
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
-    restrict_sampling, sampling_dt, sig_subsets)
+    restrict_sampling, sampling_dt, unc_subsets)
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -325,7 +325,7 @@ def get_bset_values(full_lt, sources):
         sent to the workers
     """
     ordinals = {trt_smrs[0] % TWO24 for src in sources
-                for trt_smrs in sig_subsets(src)}
+                for trt_smrs in unc_subsets(src)}
     return {ordinal: full_lt.get_bset_values(ordinal)
             for ordinal in sorted(ordinals)}
 
@@ -346,7 +346,7 @@ def modified_groups(sources, bset_values):
         realizations with the same uncertainties, with the uncertainties
         applied and the sampling restricted to the set of realizations
     """
-    for trt_smrs, srcs in _unc_subsets(sources).items():
+    for trt_smrs, srcs in _subsets_by_unc(sources).items():
         grp = _restricted_group(sources, srcs, trt_smrs)
         # NB: the trt_smrs are trti * TWO24 + ordinal, see gen_groups
         bvals = bset_values[trt_smrs[0] % TWO24] if bset_values else []
@@ -364,7 +364,7 @@ def modified_groups(sources, bset_values):
         yield trt_smrs, grp
 
 
-def _unc_subsets(sources):
+def _subsets_by_unc(sources):
     """
     :returns: a dictionary trt_smrs -> sources, i.e. the sources grouped
         by set of realizations with the same uncertainties
@@ -375,10 +375,10 @@ def _unc_subsets(sources):
         # and cmakers_groups; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
-                for trt_smrs in sig_subsets(sources[0])}
+                for trt_smrs in unc_subsets(sources[0])}
     subsets = {}
     for src in sources:
-        for trt_smrs in sig_subsets(src):
+        for trt_smrs in unc_subsets(src):
             subsets.setdefault(trt_smrs, []).append(src)
     return subsets
 
@@ -423,7 +423,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     The uncertainties to be applied in each realization are not known
     until classical, so the realizations with different uncertainties are
     stored in the bysrc_subsets attribute of each source (see
-    sig_subsets), and the rates are computed and attributed one set at a
+    unc_subsets), and the rates are computed and attributed one set at a
     time.
 
     NB: the same source_id can be used by different sources, i.e. in
@@ -517,7 +517,7 @@ def get_trt_smrs_gid(csm):
     the index of its trt_smrs in it.
     """
     all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
-                    for trt_smrs in sig_subsets(src)]
+                    for trt_smrs in unc_subsets(src)]
     unique, _ = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 

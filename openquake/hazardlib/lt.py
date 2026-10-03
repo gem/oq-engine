@@ -691,7 +691,7 @@ def _sampling_array(src):
     return sampling
 
 
-def sig_subsets(src):
+def unc_subsets(src):
     """
     :returns: a list of tuples of trt_smr, the sets of realizations with
         the same uncertainties applied to the source; there is a single set
