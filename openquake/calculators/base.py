@@ -599,7 +599,24 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
+
+    def get_apply_unc(self, oq):
+        """
+        :returns: the value of the `apply_unc` flag. If OQ_BYSRC is set and
+            the calculation is a classical one with few sites, the flag is
+            False and the `bysrc` flag is stored in the datastore: in that
+            case the uncertainties are not applied at the CSM level, but
+            later on, by classical_bysrc
+        """
+        if (self.few_sites and 'classical' in oq.calculation_mode and
+                'OQ_BYSRC' in os.environ):
+            self.datastore['bysrc'] = True
+            return False
+        return True
 
     def check_overflow(self):
         """Overridden in event based"""
@@ -683,8 +700,9 @@ class HazardCalculator(BaseCalculator):
                 'source_model_logic_tree' in oq.inputs
                 or 'source_model' in oq.inputs):
             with self.monitor('composite source model', measuremem=True):
+                apply_unc = self.get_apply_unc(oq)
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore)
+                    oq, self.datastore, apply_unc)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
                     trts = {sg.trt for sg in csm.src_groups}

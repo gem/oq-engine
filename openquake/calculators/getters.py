@@ -145,10 +145,17 @@ def get_rmap_gb(dstore, full_lt=None):
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
-    if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+    if 'trt_smrs_gid' in dstore:
+        # with OQ_BYSRC the rates are attributed to the sets of realizations
+        # with the same uncertainties, not to the trt_smrs of the groups,
+        # since the groups are not split by the uncertainties
+        key = 'trt_smrs_gid'
+    else:
+        key = 'trt_smrs'
+    if key not in dstore:  # starting from hazard_curves.csv
         trt_smrs = [[0]]
     else:
-        trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+        trt_smrs, _ = get_unique_inverse(dstore[key][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs, trt_smrs

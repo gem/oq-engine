@@ -29,6 +29,7 @@ from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
+from openquake.hazardlib.source_reader import get_trt_smrs_gid
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -96,10 +97,21 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter_mag(srcs, min_mag, strict):
-    # filter by magnitude and count the ruptures
+def filter_mag(srcs, min_mag, strict, bysrc=False):
+    """
+    Filter by magnitude and count the ruptures.
+
+    NB: if bysrc is True (i.e. OQ_BYSRC is set) the sources modified by
+    the uncertainties are not filtered, since the filtering depends on the
+    occurrence rates, which are modified in classical_bysrc, where the
+    filtering is performed anyway.
+    """
+    if not srcs:
+        return []
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
-    out = [src for src in srcs if src.get_mags()[-1] >= mmag]
+    out = [src for src in srcs
+           if getattr(src, 'bysrc_unc', False) and bysrc or
+           src.get_mags()[-1] >= mmag]
     for ss in out:
         if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
             ss.code in b'FSCNXK'):  # only for fault sources
@@ -107,10 +119,38 @@ def _filter_mag(srcs, min_mag, strict):
     return out
 
 
+def split_modified(grp):
+    """
+    Split the sources modified by the uncertainties, which were not split
+    in the preclassical (see filter_weight). This is called after the
+    uncertainties have been applied: not splitting would mean using the
+    area sources whole, without building the planar ruptures, thus
+    returning different hazard curves (see logictree/case_67).
+
+    NB: the fault sources are still not split, since their splitting
+    requires recomputing the rupture counts, see also filter_weight.
+
+    :param grp: a SourceGroup of modified sources
+    :returns: a SourceGroup with split sources
+    """
+    out = []
+    for src in grp:
+        out.extend(split_source(src) if src.code in b'AM' else [src])
+    grp.sources = out
+    return grp
+
+
 def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
     pointlike and multifault sources, which have been split already.
+
+    NB: the sources modified by the uncertainties with OQ_BYSRC (i.e. the
+    ones with bysrc_unc, see _bysrc_groups) are neither split nor
+    filtered here: the splitting would destroy the geometry (and the MFD
+    of the fault sources) and the filtering depends on the occurrence
+    rates, which are modified in classical_bysrc; there they are split
+    (see split_modified) and filtered (see filter_mag).
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
@@ -140,14 +180,15 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if oq.split_sources and src.nsites and src.code != b'F':
+        if oq.split_sources and src.nsites and src.code != b'F' and \
+                not getattr(src, 'bysrc_unc', False):
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
 
     # filter by magnitude and count ruptures
-    splits = _filter_mag(splits, oq.minimum_magnitude, oq.strict)
+    splits = filter_mag(splits, oq.minimum_magnitude, oq.strict, bysrc=True)
     if not splits:
         return {}
 
@@ -155,7 +196,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
@@ -300,6 +341,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        if 'bysrc' in self.datastore:
+            # with OQ_BYSRC the units of rate attribution are the sets of
+            # realizations with the same uncertainties, not the trt_smrs of
+            # the groups, since the groups are not split by uncertainties
+            self.datastore.hdf5.save_vlen(
+                'trt_smrs_gid', get_trt_smrs_gid(csm))
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
