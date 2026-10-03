@@ -1256,9 +1256,10 @@ class FakeDatastoreCalculator:
     SLOW_TASK_ERROR = True
 
     def __init__(self, h5):
-        self.datastore = mock.Mock(calc_id=1)
+        self.datastore = mock.MagicMock(calc_id=1)
         self.datastore.read_df.side_effect = (
             lambda key, index=None: h5.read_df(key, index))
+        self.datastore.__getitem__.side_effect = lambda key: h5[key]
 
 
 class SlowTasksTestCase(unittest.TestCase):
@@ -1308,6 +1309,9 @@ class SlowTasksTestCase(unittest.TestCase):
         fname = gettemp(suffix='.hdf5')
         performance.init_performance(fname)
         with hdf5.File(fname, 'a') as h5:
+            # enough tasks to fill the workers, so that the check for
+            # slow tasks is performed
+            h5['grp_keys'] = numpy.array([b'%d' % i for i in range(100)])
             if rows:
                 hdf5.extend(h5['starmap_info'],
                             numpy.array(rows, performance.starmap_info_dt))
