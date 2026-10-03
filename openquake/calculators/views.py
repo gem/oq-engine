@@ -859,17 +859,6 @@ def view_task_cl(token, dstore):
     return view_task(token, dstore, 'classical')
 
 
-@view.add('task_cd')
-def view_task_cd(token, dstore):
-    """
-    Display info about a given task. Here are a few examples of usage::
-
-     $ oq show task_cd:0  # the fastest task
-     $ oq show task_cd:-1  # the slowest task
-    """
-    return view_task(token, dstore, 'classical_bysrc')
-
-
 @view.add('source_data')
 def view_source_data(token, dstore):
     """

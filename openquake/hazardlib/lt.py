@@ -579,8 +579,7 @@ def get_bset_value(bset, value, source):
     NB: the source of a correlated branchset is looked up by ID and by
     basename, since it can be a fragment of the source in the logic tree
     (i.e. 'area1.0' for 'area1'); this happens when the uncertainties are
-    applied after the splitting of the sources, as done by classical_bysrc
-    with OQ_BYSRC
+    applied after the splitting of the sources, as done by classical
     """
     if bset.correlated:
         if source.source_id in value:
@@ -631,7 +630,7 @@ def apply_uncertainties(bset_values, src_group, check=True):
     :param check:
         if True, check that the sources of the correlated branchsets exist;
         set it to False when the group is a fragment of the original one
-        (as it happens applying the uncertainties in classical_bysrc)
+        (as it happens applying the uncertainties in classical)
     :returns:
         A copy of the original group with possibly modified sources
     """

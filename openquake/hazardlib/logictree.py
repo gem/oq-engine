@@ -113,7 +113,7 @@ def branches_to_h5(branches, bsetdict):
     # reversible, so the parsed values (i.e. the objects returned by
     # parse_uncertainty) are pickled in an attribute; this is required
     # by the readers applying the uncertainties from the datastore,
-    # i.e. classical_bysrc with OQ_BYSRC=1
+    # i.e. the classical workers
     parsed = base64.b64encode(pickle.dumps(
         {(bsid, bid): value
          for bsid, bid, _ut, value, _w in branches},
