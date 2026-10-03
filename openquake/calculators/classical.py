@@ -256,7 +256,7 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
     :param gid_dic: a dictionary trt_smrs -> (gids, weights), empty if the
         uncertainties were applied at build time
     :param full_lt: a FullLogicTree instance, or None
-    :returns: a generator of (cmaker, sources) pairs, one per set of
+    :returns: a generator of (cmaker, group) pairs, one per set of
         realizations with the same uncertainties applied to the sources
     """
     if not gid_dic:  # the uncertainties were applied at build time
@@ -272,9 +272,12 @@ def subsets_and_cmakers(srcs, grp, cmaker, gid_dic, full_lt):
             apply_unc_by_src(full_lt, trt_smrs, subgrp))
         # the magnitude filtering is done here and not in the preclassical,
         # since the uncertainties can change the max magnitude
-        sg = preclassical.filter_mag(
+        # NB: filter_mag returns a list of sources, but the group must be
+        # returned, since it contains the interdependencies (mutex,
+        # cluster, ...) used by RmapMaker
+        sg.sources = preclassical.filter_mag(
             sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
-        if not sg:
+        if not sg.sources:
             continue
         gids, wei = gid_dic[trt_smrs]
         yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg
@@ -322,6 +325,69 @@ def _split_src(srcs, n):
             yield blk
 
 
+def groupby_subset(grp):
+    """
+    :param grp: a SourceGroup built without uncertainties
+    :returns: a dictionary subsets -> list of sources, i.e. the sources
+        grouped by the sets of realizations with the same uncertainties
+        applied to them
+    """
+    return groupby(grp, lambda src: tuple(sig_subsets(src)))
+
+
+def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, fulltask):
+    """
+    Yield the results of a classical task with many sites and OQ_BYSRC=1,
+    i.e. with a CSM built without applying the uncertainties: the
+    uncertainties are applied here, one set of realizations at a time, and
+    the rates are attributed to the gids of the set, see read_gid_dic.
+    This is the many-sites counterpart of classical_bysrc.
+
+    :param grps: the source groups of the task
+    :param sites: the sites of the task
+    :param cmaker: the ContextMaker associated to the groups
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :param full_lt: a FullLogicTree instance
+    :param fulltask: if True the rates are returned as arrays of rates,
+        stored immediately by the master, as in classical; otherwise they
+        are returned as RateMaps, accumulated in a RateMap in the master
+        (see get_rmap)
+    """
+    if len(grps) > 1:
+        # the atomic groups collapsed in a single task (see get_allargs)
+        # contribute to the same RateMap in the master, so they must be
+        # returned in a single result; as in classical_bysrc the
+        # uncertainties are not applied, since the sources of an atomic
+        # group are mutually exclusive and must be computed together
+        res = baseclassical(grps, sites, cmaker, remove_zeros=True)
+        if fulltask:
+            res['rmap'] = res['rmap'].to_array(cmaker.gid)
+        yield res
+        return
+    # NB: contrary to the non-OQ_BYSRC case the sources are not split in
+    # blocks by time, since the uncertainties must be applied to all the
+    # sources with the same basename
+    grp = grps[0]
+    if grp.atomic:
+        # the sources of an atomic group are mutually exclusive, so they
+        # must be computed together, exactly as in classical_bysrc
+        srcblocks = [list(grp)]
+    else:
+        # the sources with the same sets of realizations are computed
+        # together, since they are modified by the same uncertainties;
+        # otherwise there would be a RateMap per source and with many
+        # sites that would be extremely slow (share_small)
+        srcblocks = groupby_subset(grp).values()
+    for srcs in srcblocks:
+        for cmaker_, sg in subsets_and_cmakers(
+                srcs, grp, cmaker, gid_dic, full_lt):
+            res = baseclassical(sg, sites, cmaker_, remove_zeros=True)
+            if fulltask:
+                # raw array of rates, stored immediately by the master
+                res['rmap'] = res['rmap'].to_array(cmaker_.gid)
+            yield res
+
+
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
@@ -336,7 +402,17 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     monitor.weight = sum(grp.weight for grp in grps)
     fulltask = all('-' not in grp_key for grp_key in grp_keys)
     sites = tilegetter(sitecol, cmaker.ilabel)
-    if fulltask:
+    # NB: the datastore is closed when passed to a task, see read_gid_dic;
+    # if there is a gid_dic the CSM was built without uncertainties, so
+    # they are applied here, one set of realizations at a time, as in
+    # classical_bysrc; full_lt is read from the datastore, since it is too
+    # big to be passed to the tasks
+    gid_dic = read_gid_dic(dstore)
+    if gid_dic:
+        full_lt = read_full_lt(dstore)
+        yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                                 fulltask)
+    elif fulltask:
         # return raw array that will be stored immediately
         result = baseclassical(grps, sites, cmaker, remove_zeros=True)
         result['rmap'] = result['rmap'].to_array(cmaker.gid)

@@ -127,15 +127,20 @@ def split_modified(grp):
     area sources whole, without building the planar ruptures, thus
     returning different hazard curves (see logictree/case_67).
 
-    NB: the fault sources are still not split, since their splitting
-    requires recomputing the rupture counts, see also filter_weight.
+    NB: the sources not modified by the uncertainties are not split, since
+    they were already split (or not) by the preclassical as usual; and the
+    fault sources are still not split, since their splitting requires
+    recomputing the rupture counts, see also filter_weight.
 
     :param grp: a SourceGroup of modified sources
     :returns: a SourceGroup with split sources
     """
     out = []
     for src in grp:
-        out.extend(split_source(src) if src.code in b'AM' else [src])
+        if getattr(src, 'bysrc_unc', False) and src.code in b'AM':
+            out.extend(split_source(src))
+        else:
+            out.append(src)
     grp.sources = out
     return grp
 

@@ -607,13 +607,12 @@ class HazardCalculator(BaseCalculator):
     def get_apply_unc(self, oq):
         """
         :returns: the value of the `apply_unc` flag. If OQ_BYSRC is set and
-            the calculation is a classical one with few sites, the flag is
-            False and the `bysrc` flag is stored in the datastore: in that
-            case the uncertainties are not applied at the CSM level, but
-            later on, by classical_bysrc
+            the calculation is a classical one, the flag is False and the
+            `bysrc` flag is stored in the datastore: in that case the
+            uncertainties are not applied at the CSM level, but later on,
+            by classical_bysrc (few sites) or classical (many sites)
         """
-        if (self.few_sites and 'classical' in oq.calculation_mode and
-                'OQ_BYSRC' in os.environ):
+        if 'classical' in oq.calculation_mode and 'OQ_BYSRC' in os.environ:
             self.datastore['bysrc'] = True
             return False
         return True

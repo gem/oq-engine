@@ -1421,13 +1421,17 @@ class ContextMaker(object):
         src.nsites = len(sites)
         if getattr(src, 'bysrc_unc', False):
             # NB: with OQ_BYSRC the sources modified by the uncertainties
-            # are not split here (see filter_weight) but in classical_bysrc,
-            # after modifying them; generating all their contexts now would
-            # be expensive (the area sources go through the rupture-by-
-            # rupture path of gen_contexts) and useless, since the estimate
-            # is used only to split the work in tasks, and OQ_BYSRC is
-            # active only for few sites calculations
-            C = src.num_ruptures * src.nsites
+            # are not split here (see filter_weight) but in classical_bysrc
+            # (few sites) or classical (many sites), after modifying them;
+            # generating all their contexts now would be expensive (the
+            # area sources go through the rupture-by-rupture path of
+            # gen_contexts) and useless, since the estimate is used only
+            # to split the work in tasks. Since each source is processed
+            # once per set of realizations with different uncertainties,
+            # the cost is proportional to the number of sets; NB: the
+            # import is local to avoid a circular dependency
+            from openquake.hazardlib.source_reader import sig_subsets
+            C = src.num_ruptures * src.nsites * len(sig_subsets(src))
         else:
             step = (1 if src.code in b'pP' else
                     20 if src.num_ruptures >= 400 else 4)
