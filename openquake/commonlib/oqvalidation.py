@@ -909,9 +909,10 @@ split_sources:
   INTERNAL
 
 split_time:
-  INTERNAL, i.e. ignored: the classical tasks are not split by time
-  anymore, since the uncertainties are applied in the workers and must
-  be applied to all the fragments of a source at once
+  After how much time starts splitting the classical tasks with many
+  sites; the tasks with few sites are never split
+  Example: *split_time = 600*
+  Default: None, meaning the split_time is automatically determined
 
 std:
   Compute the standard deviation  across realizations. Akin to mean and max.
