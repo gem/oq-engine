@@ -19,6 +19,7 @@
 import io
 import os
 import copy
+import time
 import psutil
 import logging
 import operator
@@ -360,6 +361,13 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
                 cmaker_.gid, as_rmap)
 
 
+def _split_src(srcs, n):
+    for i in range(n):
+        blk = srcs[i::n]
+        if len(blk):
+            yield blk
+
+
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib. `grp_keys` contains always
@@ -384,8 +392,50 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # to the tasks
     gid_dic = read_gid_dic(dstore)
     full_lt = read_full_lt(dstore)
-    yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
-                             remove_zeros, as_rmap)
+    # NB: gid_dic is not empty even without uncertainties, since the units
+    # of rate attribution are the trt_smrs of the groups; the groups whose
+    # sources have different uncertainties, i.e. the ones with bysrc_unc
+    # sources, are computed by bysrc_results and are not split, as on master
+    unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
+    bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
+    # the split_time mechanism below is meaningful only with many sites,
+    # since with few sites the tasks are fast and there is nothing to split
+    few = len(sitecol.complete) <= oq.max_sites_disagg
+    if unsplit or bysrc or few:
+        yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                                 remove_zeros, as_rmap)
+        return
+    # NB: multifaults are not split to avoid transferring the dparam cache
+    b0, *blks = _split_src(list(grps[0]), 5)
+    t0 = time.time()
+    res = baseclassical(b0, sites, cmaker, remove_zeros)
+    yield store_rates(res, cmaker.gid, as_rmap)
+    dt = time.time() - t0
+    # NB: the tasks generated below are called baseclassical, i.e. they
+    # have a different name than the Starmap (classical), hence the times
+    # are stored in a separate row of the starmap_info dataset; this is
+    # what repairs the stragglers when the initial split underestimates the
+    # cost of a group. The split is not triggered by the tests, since they
+    # have few sites; the reference test is classical/share_small in
+    # oq-risk-tests (split_time = 5)
+    if dt > 2 * oq.split_time:
+        for blk in blks[1:]:
+            yield baseclassical, blk, tilegetter, cmaker, remove_zeros, dstore
+        yield store_rates(
+            baseclassical(blks[0], sites, cmaker, remove_zeros),
+            cmaker.gid, as_rmap)
+    elif dt > oq.split_time:
+        yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+               remove_zeros, dstore)
+        rest = sum(blks[2:], [])
+        if rest:
+            yield store_rates(
+                baseclassical(rest, sites, cmaker, remove_zeros),
+                cmaker.gid, as_rmap)
+    else:
+        yield store_rates(
+            baseclassical(sum(blks, []), sites, cmaker, remove_zeros),
+            cmaker.gid, as_rmap)
 
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
@@ -777,6 +827,10 @@ class ClassicalCalculator(base.HazardCalculator):
                            tiling=self.tiling)
         maxtiles = 1
         num_blocks = 0
+        max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
+        # NB: the multiplier 60 is chosen so that SAM runs well on engine192
+        if oq.split_time is None:
+            oq.split_time = max(max_gb * 100, 10)
         # the rates are attributed to the sets of realizations with the
         # same uncertainties, see read_gid_dic; NB: this is read on ds, the
         # dataset read by the tasks, which can be the parent calculation
@@ -809,6 +863,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     for grp_key in grp_keys:
                         allargs.append(([grp_key], tgetter, cmaker, ds))
             maxtiles = max(maxtiles, len(tilegetters))
+        if num_blocks and not self.few_sites:
+            logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
                         'num_blocks=%d', len(allargs), maxtiles, num_blocks)
 
