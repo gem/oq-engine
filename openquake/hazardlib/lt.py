@@ -37,6 +37,7 @@ NOAPPLY_UNCERTAINTIES = [
 U32 = numpy.uint32
 sampling_dt = numpy.dtype([('trt_smr', U32), ('samples', U32)])
 
+
 class LogicTreeError(Exception):
     """
     Logic tree file contains a logic error.
@@ -678,6 +679,47 @@ def apply_uncertainties(bset_values, src_group, check=True):
             # no copy
             sg.sources.append(source)
     return sg
+
+
+# ####################### uncertainties and sampling ###################### #
+
+
+def _sampling_array(src):
+    """
+    :returns: the sampling of the source as a structured array
+    """
+    sampling = src.sampling
+    if isinstance(sampling, list):
+        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
+    return sampling
+
+
+def sig_subsets(src):
+    """
+    :returns: a list of tuples of trt_smr, the sets of realizations with
+        the same uncertainties applied to the source; there is a single set
+        if the uncertainties are the same in all the realizations
+
+    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
+        modified by the uncertainties; the sources without uncertainties
+        have a single set, given by the sampling.
+    """
+    subsets = getattr(src, 'bysrc_subsets', None)
+    if subsets:
+        return [tuple(t) for t in subsets]
+    return [tuple(_sampling_array(src)['trt_smr'])]
+
+
+def restrict_sampling(src, trt_smrs):
+    """
+    :returns: a copy of the source with the sampling restricted to
+        trt_smrs, i.e. belonging to a single set of uncertainties
+    """
+    new = copy.copy(src)
+    sampling = _sampling_array(src)
+    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
+    return new
+
 
 # ######################### sampling ######################## #
 
@@ -1424,39 +1466,3 @@ def build(*bslists, applyToSources=''):
         bsets.append(bset)
     return CompositeLogicTree(bsets)
 
-
-def _sampling_array(src):
-    """
-    :returns: the sampling of the source as a structured array
-    """
-    sampling = src.sampling
-    if isinstance(sampling, list):
-        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
-    return sampling
-
-
-def sig_subsets(src):
-    """
-    :returns: a list of tuples of trt_smr, the sets of realizations with
-        the same uncertainties applied to the source; there is a single set
-        if the uncertainties are the same in all the realizations
-
-    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
-    """
-    subsets = getattr(src, 'bysrc_subsets', None)
-    if subsets:
-        return [tuple(t) for t in subsets]
-    return [tuple(_sampling_array(src)['trt_smr'])]
-
-
-def restrict_sampling(src, trt_smrs):
-    """
-    :returns: a copy of the source with the sampling restricted to
-        trt_smrs, i.e. belonging to a single set of uncertainties
-    """
-    new = copy.copy(src)
-    sampling = _sampling_array(src)
-    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
-    return new
