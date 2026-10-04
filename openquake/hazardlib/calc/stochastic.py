@@ -363,7 +363,7 @@ def sample_ruptures(sources, param, monitor=Monitor()):
         dictionaries with keys rup_array, source_data
     """
     # NB: the uncertainties are not applied at the CSM level, but here
-    # (see _bysrc_groups), one set of realizations at a time; each set
+    # (see build_groups), one set of realizations at a time; each set
     # gets a different seed, otherwise the same source would be sampled
     # with the same random stream in sets with different uncertainties
     ses_seed = param['ses_seed']

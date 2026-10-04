@@ -697,7 +697,7 @@ def unc_subsets(src):
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
-    NB: the subsets are stored by _bysrc_groups, i.e. for the sources
+    NB: the subsets are stored by build_groups, i.e. for the sources
         modified by the uncertainties; the sources without uncertainties
         have a single set, given by the sampling.
     """

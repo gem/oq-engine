@@ -149,7 +149,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     pointlike and multifault sources, which have been split already.
 
     NB: the sources modified by the uncertainties (i.e. the ones with
-    bysrc_unc, see _bysrc_groups) are neither split nor filtered here: the
+    bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
     modified in the workers; there they are split (see split_modified) and

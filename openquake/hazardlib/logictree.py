@@ -1310,7 +1310,7 @@ class FullLogicTree(object):
         """
         :param ordinal: the ordinal of a source model realization
         :returns: the list of (branchset, value) pairs whose uncertainties
-            must be applied in the given realization, see _bysrc_groups
+            must be applied in the given realization, see build_groups
         """
         return get_bset_values(self.sm_rlzs[ordinal].lt_path,
                                self.source_model_lt)
