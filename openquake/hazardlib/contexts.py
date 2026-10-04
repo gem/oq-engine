@@ -2201,10 +2201,10 @@ def read_ctx_by_grp(dstore):
     """
     sitecol = dstore['sitecol'].complete.array
     params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
-    if 'ctx_gid' in dstore:
-        # the contexts of a group contain the sources with different
-        # uncertainties, so the gid of the unit of rate attribution of
-        # each context is stored in a separate dataset, see store_ctxs
+    if 'gid' not in params and 'ctx_gid' in dstore:
+        # the gid of each context (i.e. of the index of rate attribution)
+        # is stored in a separate dataset in the datastores computed
+        # with the engine <= 3.27; NB: the gids are the gsim_idx, see gmf.py
         params['gid'] = dstore['ctx_gid'][:]
     dtlist = []
     for par, val in params.items():
