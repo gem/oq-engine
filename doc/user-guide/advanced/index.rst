@@ -47,6 +47,7 @@ It is a good idea to read the section about :ref:`Common mistakes <common-mistak
 
    advanced-calculations
    classical-internals
+   correlated-uncertainties
    probabilistic-fault-displacement
    special-features
    useful-oq-commands

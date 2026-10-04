@@ -173,16 +173,6 @@ class SourceGroup(collections.abc.Sequence):
         return self.sources[0].trt_smrs
 
     @property
-    def tom_name(self):
-        """
-        :returns: name of the associated temporal occurrence model
-        """
-        if self.temporal_occurrence_model:
-            return self.temporal_occurrence_model.__class__.__name__
-        else:
-            return 'PoissonTOM'
-
-    @property
     def atomic(self):
         """
         :returns: True if the group cannot be split
@@ -252,12 +242,6 @@ class SourceGroup(collections.abc.Sequence):
         prev_max_mag = self.max_mag
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
-
-    def get_trt_smr(self):
-        """
-        :returns: the .trt_smr attribute of the underlying sources
-        """
-        return self.sources[0].trt_smr
 
     def get_tom_toml(self, time_span):
         """

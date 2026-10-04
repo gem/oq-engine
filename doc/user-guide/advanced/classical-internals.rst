@@ -204,12 +204,14 @@ codes (``S`` simple fault, ``A`` area source).
        [array([ 0,  3,  6, 27, 30, 33, 54, 57, 60], dtype=uint32)
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
-   The two datasets contain the same ``trt_smrs``, but partitioned
-   differently: every subset of ``trt_smrs_gid`` is contained in
-   exactly one row of ``trt_smrs``. The rates cannot be attributed to a
-   whole group, since the uncertainties change within the group, hence
-   the attribution happens at the level of the subsets; see the section
-   on the uncertainties below.
+   Every index of rate attribution is contained in exactly one row of
+   ``trt_smrs``, but the converse does not hold: the trt_smrs of a group
+   can be spread over several indices, since the sources of a group can
+   be affected by different uncertainties (see the page on correlated
+   uncertainties), so a realization can belong to more than one index.
+   The rates cannot be attributed to a whole group, since the
+   uncertainties change within it, hence the attribution happens at the
+   level of the indices; see the section on the uncertainties below.
 
 Management of the uncertainties
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -442,3 +444,41 @@ is computed directly from the rates by ``MapGetter.get_fast_mean``,
 skipping the per-realization curves. The resulting MapArrays are stored
 in the ``hcurves-rlzs`` and ``hcurves-stats`` datasets, and the maps in
 ``hmaps-rlzs`` and ``hmaps-stats``.
+
+.. note::
+
+   The logic tree of the demo has 324 realizations but only 36 gids: 36 is
+   the *core size* of the logic tree, i.e. the number of distinct rate
+   components, each one standing for a set of realizations with the same
+   uncertainties and the same GMM, as shown by the rows of
+   ``oq show trt_smrs_gid`` (18 indices of 9 realizations, one per GMM,
+   since the demo has two GMMs per tectonic region type).
+   In general the core size is much smaller than the size of the logic
+   tree, since with a sampled logic tree many realizations share the same
+   set of uncertainties; in the extreme case of a single GMM and no
+   uncertainties the two are equal.
+
+   The rates of all the realizations can be reconstructed from the core
+   ``RateMap``, since each realization is the sum of the columns of its
+   gids; that is exactly what ``MapGetter.init`` and ``get_hcurve`` do::
+
+       >> from openquake.commonlib import datastore
+       >> from openquake.calculators import getters
+       >> ds = datastore.read(calc_id)
+       >> full_lt = ds['full_lt'].init()
+       >> oq = ds['oqparam']
+       >> full_lt.get_num_paths(), getters.get_rmap_gb(ds, full_lt)[1] \
+       ...     # (324, [36 arrays of realizations])
+       (324, [array([0, 1, 12, ...], dtype=uint32), ...])
+       >> getter = getters.map_getters(ds, full_lt, oq)[0]
+       >> rates = getter.init()  # (N, L, Gt) core RateMap of rates
+       >>> rates.shape
+       (1, 19, 36)
+       >> hcurves = getter.get_hcurve(getter.sids[0])  # (L, R)
+       >>> hcurves.shape
+       (19, 324)
+
+   i.e. the core ``RateMap`` of shape ``(N, L, Gt)`` contains all the
+   rates of the ``Gt`` components, and the ``R`` columns of the hazard
+   curves are obtained by summing the ``G(rlz)`` columns belonging to
+   each realization.

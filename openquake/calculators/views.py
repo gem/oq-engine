@@ -39,6 +39,7 @@ from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
+from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
@@ -1435,36 +1436,19 @@ def view_composite_source_model(token, dstore):
     """
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
+    # NB: the TRT of a group is taken from the source_groups dataset,
+    # since the source_info has no trti field
+    try:
+        trt_by_grp = {rec['grp_id']: decode(rec['trt'])
+                      for rec in dstore['source_groups'][:]}
+    except KeyError:  # preclassical without sites, see store_csm
+        csm = read_csm(dstore)
+        trt_by_grp = {grp_id: sg.trt for grp_id, sg
+                       in enumerate(csm.src_groups)}
     lst = []
-    full_lt = dstore['full_lt'].init()
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
+        lst.append((str(grp_id), trt_by_grp[grp_id], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
-
-
-@view.add('gids')
-def view_gids(token, dstore):
-    """
-    Show the meaning of the gids indices
-    """
-    # NB: these are the gsim_idx of the cmakers, i.e. the ids of the
-    # gsims of each group, see ContextMaker.gsim_idx; they are not the
-    # gids of the columns of the rates, see trt_smrs_gid
-    full_lt = dstore['full_lt']
-    ws = dstore['weights'][:]
-    all_trt_smrs = dstore['trt_smrs'][:]
-    gid = 0
-    data = []
-    for trt_smrs in all_trt_smrs:
-        for g, (gsim, rlzs) in enumerate(
-                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
-            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
-            if len(ts) == 1:
-                ts = ts[0]
-            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
-                         ws[rlzs].sum(), len(rlzs)))
-            gid += 1
-    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
