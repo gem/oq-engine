@@ -113,7 +113,7 @@ def store_ctxs(dstore, rupdata, grp_id, gid):
     """
     Store contexts in the datastore
 
-    :param gid: the gid of the unit of rate attribution, stored since the
+    :param gid: the gid of the index of rate attribution, stored since the
         contexts of a group have different gids
     """
     nr = len(rupdata)

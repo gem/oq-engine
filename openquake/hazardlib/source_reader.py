@@ -335,7 +335,7 @@ def modified_groups(sources, bset_values):
     Apply the uncertainties to a group of sources built *without* them,
     as needed by the workers computing the rates or the ruptures: this
     is done one set of realizations at a time, i.e. one set with the
-    same uncertainties at a time (see _bysrc_groups).
+    same uncertainties at a time (see build_groups).
 
     :param sources: a SourceGroup or a list of sources of the same group
     :param bset_values:
@@ -352,7 +352,7 @@ def modified_groups(sources, bset_values):
         bvals = bset_values[trt_smrs[0] % TWO24] if bset_values else []
         # NB: check=False since the group is a fragment of the original
         # one (split by weight in the preclassical), so the correlated
-        # branchsets were already checked at build time, see _bysrc_groups
+        # branchsets were already checked at build time, see build_groups
         grp = apply_uncertainties(bvals, grp, check=False)
         for src in grp:
             # the sources are modified after the preclassical, so the
@@ -397,7 +397,7 @@ def _restricted_group(sources, srcs, trt_smrs):
     return grp
 
 
-def _unc_signature(bset_values, src):
+def unc_signature(bset_values, src):
     """
     :returns: a tuple identifying the uncertainties applied to src
     """
@@ -409,11 +409,11 @@ def _unc_signature(bset_values, src):
     return tuple(sig)
 
 
-def _bysrc_groups(full_lt, rlz_groups, oq):
+def build_groups(full_lt, rlz_groups, oq):
     """
     Build the source groups without applying the uncertainties, as needed
-    by the classical workers. There is one group per source group in the
-    source model files, as expected in a CompositeSourceModel, and the
+    by the workers. There is one group per source group in the source
+    model files, as expected in a CompositeSourceModel, and the
     sources keep the trt_smrs of all the realizations they belong to (i.e.
     the full trt_smrs of their group), not just the ones with a given set
     of uncertainties: this way the number of groups (and of associated
@@ -421,8 +421,8 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
     uncertainties.
 
     The uncertainties to be applied in each realization are not known
-    until classical, so the realizations with different uncertainties are
-    stored in the bysrc_subsets attribute of each source (see
+    until the workers, so the realizations with different uncertainties
+    are stored in the bysrc_subsets attribute of each source (see
     unc_subsets), and the rates are computed and attributed one set at a
     time.
 
@@ -448,7 +448,7 @@ def _bysrc_groups(full_lt, rlz_groups, oq):
         # reproducible.
         srcs = dic.setdefault(id(grp), [grp, {}])[1]
         for src in grp:
-            sig = _unc_signature(bset_values, src)
+            sig = unc_signature(bset_values, src)
             pairs = srcs.setdefault(id(src), (src, []))[1]
             pairs.append((trt_smr, rlz.samples, sig))
 
@@ -506,15 +506,15 @@ def get_trt_smrs_gid(csm):
     """
     :param csm: a CompositeSourceModel built without applying the
         uncertainties
-    :returns: a sorted list of trt_smrs, the units of rate attribution
+    :returns: a sorted list of trt_smrs, the indices of rate attribution
         (to be stored as an hdf5.vuint32 array)
 
-    The uncertainties are applied in the classical workers, so the
-    realizations with different uncertainties are not separated at build
-    time (see _bysrc_groups). The rates are nevertheless computed
-    separately for each set of uncertainties and must be attributed to
-    the right realizations, hence this extra list; the gid of a rate is
-    the index of its trt_smrs in it.
+    The uncertainties are applied in the workers, so the realizations
+    with different uncertainties are not separated at build time (see
+    build_groups). The rates are nevertheless computed separately for each
+    set of uncertainties and must be attributed to the right
+    realizations, hence this extra list; the gid of a rate is the index
+    of its trt_smrs in it.
     """
     all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
                     for trt_smrs in unc_subsets(src)]
@@ -550,7 +550,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    groups = _bysrc_groups(full_lt, rlz_groups, oq)
+    groups = build_groups(full_lt, rlz_groups, oq)
     csm = CompositeSourceModel(oq, full_lt, groups)
     store_data(oq, smdict, csm, dstore)
     return csm
