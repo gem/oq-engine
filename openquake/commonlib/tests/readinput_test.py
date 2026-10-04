@@ -521,7 +521,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         # workers, one set of realizations at a time; therefore there is a
         # group per source group in the source model files, with the trt_smrs
         # of all the realizations, and not a group per set of uncertainties
-        # (see _bysrc_groups)
+        # (see build_groups)
         oq = readinput.get_oqparam('job.ini', case_25)
         csm = readinput.get_composite_source_model(oq)
         self.assertEqual(len(csm.src_groups), 6)  # one per source group

@@ -474,7 +474,7 @@ class GmfComputer(object):
             if not conditioned:
                 with self.cmaker.gmf_mon:
                     mean_stds = self.cmaker.get_4MN([self.ctx], gs).astype(F32)
-            gs.gid = self.cmaker.gid[g]
+            gs.gid = self.cmaker.gsim_idx[g]
             idxs, = np.where(np.isin(self.rlz, rlzs))
             E = len(idxs)
             if E == 0:  # crucial for performance
@@ -516,7 +516,7 @@ class GmfComputer(object):
         if rng is None:
             rng = self.rng
         gsim, rlzs = list(self.cmaker.gsims.items())[g]
-        gsim.gid = self.cmaker.gid[g]
+        gsim.gid = self.cmaker.gsim_idx[g]
         num_events = len(indices)
         expected = (self.M, self.N, num_events)
         if fields.shape != expected:
@@ -582,7 +582,7 @@ class GmfComputer(object):
                 with self.cmaker.gmf_mon:
                     mean_stds_by_gsim[g] = self.cmaker.get_4MN(
                         [self.ctx], gs).astype(F32)
-            gs.gid = self.cmaker.gid[g]
+            gs.gid = self.cmaker.gsim_idx[g]
             record_stats = g not in recorded_gsims
             df = self._compute_ce_batch(
                 factor, gs, rlzs, mean_stds_by_gsim[g], idxs, max_iml,
