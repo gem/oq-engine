@@ -10,34 +10,34 @@ configuration file.
 
 The basic job configuration file required for running a scenario hazard calculation is shown in the listing below.::
 
-	[general]
-	description = Scenario Hazard Config File
-	calculation_mode = scenario
+    [general]
+    description = Scenario Hazard Config File
+    calculation_mode = scenario
 
-	[sites]
-	sites_csv = sites.csv
+    [sites]
+    sites_csv = sites.csv
 
-	[station_data]
-	station_data_file = stationlist.csv
+    [station_data]
+    station_data_file = stationlist.csv
 
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
 
-	[site_params]
-	site_model_file = site_model.csv site_model_stations.csv
+    [site_params]
+    site_model_file = site_model.csv site_model_stations.csv
 
-	[correlation]
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
+    [correlation]
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
 
-	[hazard_calculation]
-	intensity_measure_types = PGA, SA(0.3), SA(1.0)
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim = BooreAtkinson2008
-	number_of_ground_motion_fields = 1000
+    [hazard_calculation]
+    intensity_measure_types = PGA, SA(0.3), SA(1.0)
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim = BooreAtkinson2008
+    number_of_ground_motion_fields = 1000
 
 Most of the job configuration parameters required for running a scenario hazard calculation seen in the example in the 
 listing above are the same as those described in the previous sections for the classical PSHA calculator 
@@ -65,8 +65,8 @@ controlled separately for between-event and within-event residuals:
 Otherwise, if only ``truncation_level`` is specified, the
 engine assumes::
 
-	truncation_level_between = truncation_level
-	truncation_level_within = truncation_level
+    truncation_level_between = truncation_level
+    truncation_level_within = truncation_level
 
 If both new parameters are provided, they take precedence for GMF sampling.
 
@@ -82,8 +82,8 @@ station_data
 In a section conventionally called ``[station_data]``, the user specifies the CSV file 
 containing the observations::
 
-	[station_data]
-	station_data_file = stationlist.csv
+    [station_data]
+    station_data_file = stationlist.csv
 
 This CSV file contains the observed intensity values available from ground motion recordings 
 and macroseismic intensity data. One or multiple intensity measure types can be indicated for all observations. An 
@@ -118,7 +118,7 @@ The following parameters are mandatory:
 - ``LONGITUDE``, ``LATITUDE``: floats; valid longitude and latitude values.
 - ``STATION_TYPE``: string; currently the only two valid options are ‘seismic’ and ‘macroseismic’.
 - ``<IMT>_VALUE``, ``<IMT>_LN_SIGMA``, ``<IMT>_STDDEV``: floats; for each IMT observed at the recording stations, two values should be provided
-	
+    
   - for IMTs that are assumed to be lognormally distributed (eg. PGV, PGA, SA), these would be the median and lognormal standard deviation using the column headers ``<IMT>_VALUE``, ``<IMT>_LN_SIGMA`` respectively.
   - for other IMTs (e.g., MMI), these would simply be the mean and standard deviation using the column headers ``<IMT>_VALUE``, ``<IMT>_STDDEV`` respectively.
 
@@ -140,29 +140,29 @@ http://docs.openquake.org/oq-engine/stable/openquake.hazardlib.gsim.html.
 - A GSIM logic tree (see Section :ref:`The Ground Motion Logic Tree <gm-logic-tree>`). In this case multiple ground motion models can be specified in a GMPE logic tree file using the parameter ``gsim_logic_tree_file``. In this case, the OpenQuake engine generates ground motion fields for all GMPEs specified in the logic tree file. The *Branch* weights in the logic tree file are ignored in a scenario analysis and only the individual *Branch* results are computed. Mean or quantile ground motion fields will not be generated.
 - A weighted average GSIM: starting from OpenQuake engine v3.8 it is possible to indicate an AvgGMPE that computes the geometric mean of the underlying GMPEs, similarly to AvgSA. In the configuration file, a weighted average GSIM can be specified as ``gsim_logic_tree_file = gsim_weighted_avg.xml``, where the file ``gsim_weighted_avg.xml`` can be constructed using the modifiable GMPE structure for AvgGMPE as shown in the example below::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.4">
-	<logicTree logicTreeID='lt1'>
-	   <logicTreeBranchingLevel branchingLevelID="bl1">
-	      <logicTreeBranchSet
-	      branchSetID="bs1"
-	      uncertaintyType="gmpeModel"
-	      applyToTectonicRegionType="Active Shallow Crust">
-	      <logicTreeBranch branchID="br1">
-	         <uncertaintyModel>
-	            [AvgGMPE]
-	            b1.AbrahamsonEtAl2014.weight=0.22
-	            b2.BooreEtAl2014.weight=0.22
-	            b3.CampbellBozorgnia2014.weight=0.22
-	            b4.ChiouYoungs2014.weight=0.22
-	            b5.Idriss2014.weight=0.12
-	         </uncertaintyModel>
-	         <uncertaintyWeight>
-	            1.0
-	         </uncertaintyWeight>
-	      </logicTreeBranch>
-	      </logicTreeBranchSet>
-	   </logicTreeBranchingLevel>
-	</logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+       <logicTreeBranchingLevel branchingLevelID="bl1">
+          <logicTreeBranchSet
+          branchSetID="bs1"
+          uncertaintyType="gmpeModel"
+          applyToTectonicRegionType="Active Shallow Crust">
+          <logicTreeBranch branchID="br1">
+             <uncertaintyModel>
+                [AvgGMPE]
+                b1.AbrahamsonEtAl2014.weight=0.22
+                b2.BooreEtAl2014.weight=0.22
+                b3.CampbellBozorgnia2014.weight=0.22
+                b4.ChiouYoungs2014.weight=0.22
+                b5.Idriss2014.weight=0.12
+             </uncertaintyModel>
+             <uncertaintyWeight>
+                1.0
+             </uncertaintyWeight>
+          </logicTreeBranch>
+          </logicTreeBranchSet>
+       </logicTreeBranchingLevel>
+    </logicTree>
+    </nrml>

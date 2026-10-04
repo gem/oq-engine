@@ -44,24 +44,24 @@ Below we present an example of an exposure model considering the policy informat
 
 ::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-	  <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
-	    <description>exposure model</description>
-	    <conversions>
-	      <costTypes>
-	        <costType name="structural" type="aggregated" unit="USD"/>
-	        <costType name="nonstructural" type="aggregated" unit="USD"/>
-	        <costType name="contents" type="aggregated" unit="USD"/>
-	      </costTypes>
-	    </conversions>
-	    <tagNames>tag_1 policy</tagNames>
-	    <occupancyPeriods>night </occupancyPeriods>
-	    <assets>
-	      exposure_model.csv
-	    </assets>
-	  </exposureModel>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+        <description>exposure model</description>
+        <conversions>
+          <costTypes>
+            <costType name="structural" type="aggregated" unit="USD"/>
+            <costType name="nonstructural" type="aggregated" unit="USD"/>
+            <costType name="contents" type="aggregated" unit="USD"/>
+          </costTypes>
+        </conversions>
+        <tagNames>tag_1 policy</tagNames>
+        <occupancyPeriods>night </occupancyPeriods>
+        <assets>
+          exposure_model.csv
+        </assets>
+      </exposureModel>
+    </nrml>
 
 This example presents 7 assets (a1 to a7) with 4 associated policies. Notice that the column ``policy`` is mandatory, as well as the line ``<tagNames>policy</tagNames>`` in the xml. Additional tags can be included as needed.
 
@@ -75,23 +75,23 @@ The insurance and reinsurance information is defined by a ``reinsurance.xml`` th
 
 The following example facilitates the understanding of the input file::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
-	      xmlns:gml="http://www.opengis.net/gml">
-	  <reinsuranceModel>
-	    <description>reinsurance model</description>
-	
-	    <fieldMap>
-	      <field oq="liability" input="Limit" />
-	      <field oq="deductible" input="Deductible" />
-	
-	      <field input="treaty_1" type="prop" max_cession_event="400" />
-	      <field input="treaty_2" type="prop" max_cession_event="400" />
-	      <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
-	    </fieldMap>
-	  <policies>policy.csv</policies>
-	  </reinsuranceModel>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+          xmlns:gml="http://www.opengis.net/gml">
+      <reinsuranceModel>
+        <description>reinsurance model</description>
+    
+        <fieldMap>
+          <field oq="liability" input="Limit" />
+          <field oq="deductible" input="Deductible" />
+    
+          <field input="treaty_1" type="prop" max_cession_event="400" />
+          <field input="treaty_2" type="prop" max_cession_event="400" />
+          <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
+        </fieldMap>
+      <policies>policy.csv</policies>
+      </reinsuranceModel>
+    </nrml>
 
 **reinsurance.xml parameters:**
 

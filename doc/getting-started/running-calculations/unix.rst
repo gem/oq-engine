@@ -16,43 +16,43 @@ repository.
 
 An example of running the ``AreaSourceClassicalPSHA`` demo::
 
-	[user@centos7 ~]$ oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
+    [user@centos7 ~]$ oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 The output should look something like this::
 
-	[2016-06-14 16:47:35,202 #2 INFO] Using engine version 2
-	[2016-06-14 16:47:35,333 #2 INFO] Read 528 hazard site(s)
-	[2016-06-14 16:47:35,386 #2 INFO] Parsed 1 sources from /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/source_model.xml
-	[2016-06-14 16:47:35,491 #2 INFO] Processed source model 1/1 with 1 gsim path(s)
-	[2016-06-14 16:47:35,546 #2 WARNING] Reducing the logic tree of source_model.xml from 1 to 0 realizations
-	[2016-06-14 16:47:35,597 #2 INFO] Instantiated SourceManager with maxweight=5.5
-	[2016-06-14 16:47:35,647 #2 INFO] Filtering light sources
-	[2016-06-14 16:47:35,694 #2 INFO] Filtering heavy sources
-	[2016-06-14 16:47:35,743 #2 INFO] splitting <AreaSource 1> of weight 41.0
-	[2016-06-14 16:47:35,856 #2 INFO] Submitting task classical #1
-	[2016-06-14 16:47:35,916 #2 INFO] Submitting task classical #2
-	[2016-06-14 16:47:35,966 #2 INFO] Submitting task classical #3
-	[2016-06-14 16:47:36,016 #2 INFO] Submitting task classical #4
-	[2016-06-14 16:47:36,076 #2 INFO] Submitting task classical #5
-	[2016-06-14 16:47:36,125 #2 INFO] Submitting task classical #6
-	[2016-06-14 16:47:36,179 #2 INFO] Submitting task classical #7
-	[2016-06-14 16:47:36,229 #2 INFO] Submitting task classical #8
-	[2016-06-14 16:47:36,284 #2 INFO] Sent 205 sources in 8 block(s)
-	[2016-06-14 16:47:36,360 #2 INFO] Sent 167.14 KB of data in 8 task(s)
-	[2016-06-14 16:47:43,515 #2 INFO] classical  12%
-	[2016-06-14 16:47:43,813 #2 INFO] classical  25%
-	[2016-06-14 16:47:44,170 #2 INFO] classical  37%
-	[2016-06-14 16:47:44,801 #2 INFO] classical  50%
-	[2016-06-14 16:47:49,680 #2 INFO] classical  62%
-	[2016-06-14 16:47:51,829 #2 INFO] classical  75%
-	[2016-06-14 16:47:51,949 #2 INFO] classical  87%
-	[2016-06-14 16:47:52,055 #2 INFO] classical 100%
-	[2016-06-14 16:47:52,110 #2 INFO] Received 6.67 MB of data, maximum per task 853.96 KB
-	[2016-06-14 16:47:59,660 #2 INFO] Calculation 2 finished correctly in 24 seconds
-	  id | name
-	   1 | hcurves
-	   2 | hmaps
-	   3 | uhs
+    [2016-06-14 16:47:35,202 #2 INFO] Using engine version 2
+    [2016-06-14 16:47:35,333 #2 INFO] Read 528 hazard site(s)
+    [2016-06-14 16:47:35,386 #2 INFO] Parsed 1 sources from /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/source_model.xml
+    [2016-06-14 16:47:35,491 #2 INFO] Processed source model 1/1 with 1 gsim path(s)
+    [2016-06-14 16:47:35,546 #2 WARNING] Reducing the logic tree of source_model.xml from 1 to 0 realizations
+    [2016-06-14 16:47:35,597 #2 INFO] Instantiated SourceManager with maxweight=5.5
+    [2016-06-14 16:47:35,647 #2 INFO] Filtering light sources
+    [2016-06-14 16:47:35,694 #2 INFO] Filtering heavy sources
+    [2016-06-14 16:47:35,743 #2 INFO] splitting <AreaSource 1> of weight 41.0
+    [2016-06-14 16:47:35,856 #2 INFO] Submitting task classical #1
+    [2016-06-14 16:47:35,916 #2 INFO] Submitting task classical #2
+    [2016-06-14 16:47:35,966 #2 INFO] Submitting task classical #3
+    [2016-06-14 16:47:36,016 #2 INFO] Submitting task classical #4
+    [2016-06-14 16:47:36,076 #2 INFO] Submitting task classical #5
+    [2016-06-14 16:47:36,125 #2 INFO] Submitting task classical #6
+    [2016-06-14 16:47:36,179 #2 INFO] Submitting task classical #7
+    [2016-06-14 16:47:36,229 #2 INFO] Submitting task classical #8
+    [2016-06-14 16:47:36,284 #2 INFO] Sent 205 sources in 8 block(s)
+    [2016-06-14 16:47:36,360 #2 INFO] Sent 167.14 KB of data in 8 task(s)
+    [2016-06-14 16:47:43,515 #2 INFO] classical  12%
+    [2016-06-14 16:47:43,813 #2 INFO] classical  25%
+    [2016-06-14 16:47:44,170 #2 INFO] classical  37%
+    [2016-06-14 16:47:44,801 #2 INFO] classical  50%
+    [2016-06-14 16:47:49,680 #2 INFO] classical  62%
+    [2016-06-14 16:47:51,829 #2 INFO] classical  75%
+    [2016-06-14 16:47:51,949 #2 INFO] classical  87%
+    [2016-06-14 16:47:52,055 #2 INFO] classical 100%
+    [2016-06-14 16:47:52,110 #2 INFO] Received 6.67 MB of data, maximum per task 853.96 KB
+    [2016-06-14 16:47:59,660 #2 INFO] Calculation 2 finished correctly in 24 seconds
+      id | name
+       1 | hcurves
+       2 | hmaps
+       3 | uhs
 
 To interrupt a running calculation simply press ``CTRL-C``.
 
@@ -75,7 +75,7 @@ Non-interactive use
 
 For non-interactive jobs run in batch we suggest the use of ``nohup`` which is part of every Unix like OS::
 
-	[user@centos7 ~]$ nohup oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini &> /tmp/calc.log &
+    [user@centos7 ~]$ nohup oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini &> /tmp/calc.log &
 
 More info about ``nohup``: https://en.wikipedia.org/wiki/Nohup.
 

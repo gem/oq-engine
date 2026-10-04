@@ -29,47 +29,47 @@ functions. In :ref:`the next figure <fragility-continuous>`, a continuous *Fragi
 An example *Fragility Model* comprising one discrete Fragility Function and one continuous *Fragility Function* is shown 
 in the listing below.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<fragilityModel id="fragility_example"
-	                assetCategory="buildings"
-	                lossCategory="structural">
-	
-	  <description>Fragility Model Example</description>
-	  <limitStates>slight moderate extensive complete</limitStates>
-	
-	  <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
-	    <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
-	    <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
-	    <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
-	    <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
-	    <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
-	  </fragilityFunction>
-	
-	  <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
-	    <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
-	    <params ls="slight" mean="0.50" stddev="0.10"/>
-	    <params ls="moderate" mean="1.00" stddev="0.40"/>
-	    <params ls="extensive" mean="1.50" stddev="0.90"/>
-	    <params ls="complete" mean="2.00" stddev="1.60"/>
-	  </fragilityFunction>
-	
-	</fragilityModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <fragilityModel id="fragility_example"
+                    assetCategory="buildings"
+                    lossCategory="structural">
+    
+      <description>Fragility Model Example</description>
+      <limitStates>slight moderate extensive complete</limitStates>
+    
+      <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
+        <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
+        <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
+        <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
+        <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
+        <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
+      </fragilityFunction>
+    
+      <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
+        <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
+        <params ls="slight" mean="0.50" stddev="0.10"/>
+        <params ls="moderate" mean="1.00" stddev="0.40"/>
+        <params ls="extensive" mean="1.50" stddev="0.90"/>
+        <params ls="complete" mean="2.00" stddev="1.60"/>
+      </fragilityFunction>
+    
+    </fragilityModel>
+    
+    </nrml>
 
 The initial portion of the schema contains general information that describes some general aspects of the *Fragility 
 Model*. The information in this metadata section is common to all of the functions in the *Fragility Model* and needs to 
 be included at the beginning of every *Fragility Model* file. The parameters of the metadata section are shown in the 
 snippet below and described after the snippet::
 
-	<fragilityModel id="fragility_example"
-	                assetCategory="buildings"
-	                lossCategory="structural">
-	
-	  <description>Fragility Model Example</description>
-	  <limitStates>slight moderate extensive complete</limitStates>
+    <fragilityModel id="fragility_example"
+                    assetCategory="buildings"
+                    lossCategory="structural">
+    
+      <description>Fragility Model Example</description>
+      <limitStates>slight moderate extensive complete</limitStates>
 
 - ``id``: mandatory; a unique string used to identify the *Fragility Model*. This string can contain letters (a–z; A–Z), numbers (0–9), dashes (-), and underscores (_), with a maximum of 100 characters.
 - ``assetCategory``: an optional string used to specify the type of assets for which fragility functions will be defined in this file (e.g: buildings, lifelines).
@@ -79,13 +79,13 @@ snippet below and described after the snippet::
 
 The following snippet from the above *Fragility Model* example file defines a discrete *Fragility Function*::
 
-	  <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
-	    <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
-	    <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
-	    <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
-	    <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
-	    <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
-	  </fragilityFunction>
+      <fragilityFunction id="Woodframe_TwoStorey" format="discrete">
+        <imls imt="PGA" noDamageLimit="0.05">0.005 0.2 0.4 0.6 0.8 1.0 1.2</imls>
+        <poes ls="slight">0.00 0.01 0.15 0.84 0.99 1.00 1.00</poes>
+        <poes ls="moderate">0.00 0.00 0.01 0.12 0.35 0.57 0.74</poes>
+        <poes ls="extensive">0.00 0.00 0.00 0.08 0.19 0.32 0.45</poes>
+        <poes ls="complete">0.00 0.00 0.00 0.06 0.17 0.26 0.35</poes>
+      </fragilityFunction>
 
 The following attributes are needed to define a discrete *Fragility Function*:
 
@@ -96,13 +96,13 @@ The following attributes are needed to define a discrete *Fragility Function*:
 
 The following snippet from the above *Fragility Model* example file defines a continuous *Fragility Function*::
 
-	  <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
-	    <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
-	    <params ls="slight" mean="0.50" stddev="0.10"/>
-	    <params ls="moderate" mean="1.00" stddev="0.40"/>
-	    <params ls="extensive" mean="1.50" stddev="0.90"/>
-	    <params ls="complete" mean="2.00" stddev="1.60"/>
-	  </fragilityFunction>
+      <fragilityFunction id="RC_LowRise" format="continuous" shape="logncdf">
+        <imls imt="SA(0.3)" noDamageLimit="0.05" minIML="0.0" maxIML="5.0"/>
+        <params ls="slight" mean="0.50" stddev="0.10"/>
+        <params ls="moderate" mean="1.00" stddev="0.40"/>
+        <params ls="extensive" mean="1.50" stddev="0.90"/>
+        <params ls="complete" mean="2.00" stddev="1.60"/>
+      </fragilityFunction>
 
 The following attributes are needed to define a continuous *Fragility Function*:
 
@@ -120,7 +120,7 @@ Markup Language v0.4 format in an OpenQuake engine v1.7 (or later) risk calculat
 upgrade the old fragility models files to Natural hazards’ Risk Markup Language v0.5. You can use the command 
 ``upgrade_nrml`` with oq to do this as follows::
 
-	user@ubuntu:~$ oq upgrade_nrml <directory-name>
+    user@ubuntu:~$ oq upgrade_nrml <directory-name>
 
 The above command will upgrade all of your old *Fragility Model* files to Natural hazards’ Risk Markup Language v0.5. The 
 original files will be kept, but with a .bak extension appended. Notice that you will need to set the ``lossCategory`` 

@@ -70,7 +70,7 @@ Once you have the engine installed you can run calculations. We recommend starti
 contains examples of hazard and risk calculations. For instance you could run the area source demo with the following
 command::
 
-	$ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
+    $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 You should notice that we used here the command ``oq run`` while the engine manual recommends the usage of ``oq engine
 --run``. There is no contradiction. The command ``oq engine --run`` is meant for production usage, but here we are doing
@@ -107,9 +107,9 @@ Then the results can be read from the datastore by using the extract API:
 
 .. code-block:: python
 
-	>> from openquake.commonlib import datastore
-	>> from openquake.calculators.extract import extract
-	>> extract(datastore.read(jobs[0].calc_id), 'something')
+    >> from openquake.commonlib import datastore
+    >> from openquake.calculators.extract import extract
+    >> extract(datastore.read(jobs[0].calc_id), 'something')
 
 The advantage of ``create_jobs`` is that it also accepts dictionaries
 of parameters. So, instead of generating multiple `job.ini`
@@ -197,92 +197,92 @@ If you are an hazard scientist, you will likely want to interact with
 the GMPE library in ``openquake.hazardlib.gsim``.  The recommended way
 to do so is in terms of a ``ContextMaker`` object.::
 
-	>>> from openquake.hazardlib.contexts import ContextMaker
+    >>> from openquake.hazardlib.contexts import ContextMaker
 
 In order to instantiate a ``ContextMaker`` you first need an OqParam
 object containing the parameters of the calculation::
 
-	>>> from openquake.commonlib import readinput
-	>>> oq = readinput.get_oqparam(dict(
-	... calculation_mode='classical',
-	... sites='15.0 45.2',
-	... reference_vs30_type='measured',
-	... reference_vs30_value='600.0',
-	... intensity_measure_types_and_levels="{'PGA': [0.1]}",
-	... investigation_time='50.0',
-	... gsim='ToroEtAl2002SHARE',
-	... truncation_level='99.0',
-	... maximum_distance='200.0'))
-	>>> gsims = readinput.get_gsim_lt(oq).values["*"]
-	>>> cmaker = ContextMaker("*", gsims, oq)
+    >>> from openquake.commonlib import readinput
+    >>> oq = readinput.get_oqparam(dict(
+    ... calculation_mode='classical',
+    ... sites='15.0 45.2',
+    ... reference_vs30_type='measured',
+    ... reference_vs30_value='600.0',
+    ... intensity_measure_types_and_levels="{'PGA': [0.1]}",
+    ... investigation_time='50.0',
+    ... gsim='ToroEtAl2002SHARE',
+    ... truncation_level='99.0',
+    ... maximum_distance='200.0'))
+    >>> gsims = readinput.get_gsim_lt(oq).values["*"]
+    >>> cmaker = ContextMaker("*", gsims, oq)
 
 Then we can specify the sites and a source as follows::
 
         >>> sitecol = readinput.get_site_collection(oq)
 
-	>>> from openquake.hazardlib import nrml
-	>>> src = nrml.get('''
-	...         <areaSource
-	...         id="126"
-	...         name="HRAS195"
-	...         >
-	...             <areaGeometry discretization="10">
-	...                 <gml:Polygon>
-	...                     <gml:exterior>
-	...                         <gml:LinearRing>
-	...                             <gml:posList>
-	...                                 1.5026169E+01 4.5773603E+01
-	...                                 1.5650548E+01 4.6176279E+01
-	...                                 1.6273108E+01 4.6083465E+01
-	...                                 1.6398742E+01 4.6024744E+01
-	...                                 1.5947759E+01 4.5648318E+01
-	...                                 1.5677179E+01 4.5422577E+01
-	...                             </gml:posList>
-	...                         </gml:LinearRing>
-	...                     </gml:exterior>
-	...                 </gml:Polygon>
-	...                 <upperSeismoDepth>0</upperSeismoDepth>
-	...                 <lowerSeismoDepth>30</lowerSeismoDepth>
-	...             </areaGeometry>
-	...             <magScaleRel>WC1994</magScaleRel>
-	...             <ruptAspectRatio>1</ruptAspectRatio>
-	...             <incrementalMFD binWidth=".2" minMag="4.7">
-	...                 <occurRates>
-	...                     1.4731083E-02 9.2946848E-03 5.8645496E-03
-	...                     3.7002807E-03 2.3347193E-03 1.4731083E-03
-	...                     9.2946848E-04 5.8645496E-04 3.7002807E-04
-	...                     2.3347193E-04 1.4731083E-04 9.2946848E-05
-	...                     1.7588460E-05 1.1097568E-05 2.3340307E-06
-	...                 </occurRates>
-	...             </incrementalMFD>
-	...             <nodalPlaneDist>
-	...                 <nodalPlane dip="5.7596810E+01" probability="1"
-	...                             rake="0" strike="6.9033586E+01"/>
-	...             </nodalPlaneDist>
-	...             <hypoDepthDist>
-	...                 <hypoDepth depth="1.0200000E+01" probability="1"/>
-	...             </hypoDepthDist>
-	...         </areaSource>
-	... ''')
+    >>> from openquake.hazardlib import nrml
+    >>> src = nrml.get('''
+    ...         <areaSource
+    ...         id="126"
+    ...         name="HRAS195"
+    ...         >
+    ...             <areaGeometry discretization="10">
+    ...                 <gml:Polygon>
+    ...                     <gml:exterior>
+    ...                         <gml:LinearRing>
+    ...                             <gml:posList>
+    ...                                 1.5026169E+01 4.5773603E+01
+    ...                                 1.5650548E+01 4.6176279E+01
+    ...                                 1.6273108E+01 4.6083465E+01
+    ...                                 1.6398742E+01 4.6024744E+01
+    ...                                 1.5947759E+01 4.5648318E+01
+    ...                                 1.5677179E+01 4.5422577E+01
+    ...                             </gml:posList>
+    ...                         </gml:LinearRing>
+    ...                     </gml:exterior>
+    ...                 </gml:Polygon>
+    ...                 <upperSeismoDepth>0</upperSeismoDepth>
+    ...                 <lowerSeismoDepth>30</lowerSeismoDepth>
+    ...             </areaGeometry>
+    ...             <magScaleRel>WC1994</magScaleRel>
+    ...             <ruptAspectRatio>1</ruptAspectRatio>
+    ...             <incrementalMFD binWidth=".2" minMag="4.7">
+    ...                 <occurRates>
+    ...                     1.4731083E-02 9.2946848E-03 5.8645496E-03
+    ...                     3.7002807E-03 2.3347193E-03 1.4731083E-03
+    ...                     9.2946848E-04 5.8645496E-04 3.7002807E-04
+    ...                     2.3347193E-04 1.4731083E-04 9.2946848E-05
+    ...                     1.7588460E-05 1.1097568E-05 2.3340307E-06
+    ...                 </occurRates>
+    ...             </incrementalMFD>
+    ...             <nodalPlaneDist>
+    ...                 <nodalPlane dip="5.7596810E+01" probability="1"
+    ...                             rake="0" strike="6.9033586E+01"/>
+    ...             </nodalPlaneDist>
+    ...             <hypoDepthDist>
+    ...                 <hypoDepth depth="1.0200000E+01" probability="1"/>
+    ...             </hypoDepthDist>
+    ...         </areaSource>
+    ... ''')
 
 Then you can use the ``ContextMaker`` to generate context arrays from the sources::
 
-	>>> ctx = cmaker.from_srcs([src], sitecol)
+    >>> ctx = cmaker.from_srcs([src], sitecol)
 
 In our example, there are 15 magnitudes::
 
-	>>> len(src.get_annual_occurrence_rates())
-	15
+    >>> len(src.get_annual_occurrence_rates())
+    15
 
 and the area source contains 47 point sources::
 
-	>>> len(list(src))
-	47
+    >>> len(list(src))
+    47
 
 so in total there are 15 x 47 = 705 ruptures::
 
-	>>> len(ctx)
-	705
+    >>> len(ctx)
+    705
 
 The ``ContextMaker`` takes care of the maximum_distance filtering, so in general the number of contexts is lower than the
 total number of ruptures, since some ruptures are normally discarded, being distant from the sites.
@@ -291,32 +291,32 @@ The contexts contain all the rupture, site and distance parameters.
 
 Then you have::
 
-	>>> float(ctx.mag[0])
-	4.7
-	>>> float(round(ctx.rrup[0], 1))
-	106.4
-	>>> float(round(ctx.rjb[0], 1))
-	105.9
+    >>> float(ctx.mag[0])
+    4.7
+    >>> float(round(ctx.rrup[0], 1))
+    106.4
+    >>> float(round(ctx.rjb[0], 1))
+    105.9
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site parameters, so calling ``ctx.vs30`` will raise an
 ``AttributeError`` but in general the contexts contain also arrays of site parameters. There is also an array of indices
 telling which are the sites affected by the rupture associated to the context::
 
-	>>> import numpy
-	>>> numpy.unique(ctx.sids)
-	array([0], dtype=uint32)
+    >>> import numpy
+    >>> numpy.unique(ctx.sids)
+    array([0], dtype=uint32)
 
 Once you have the contexts, the ``ContextMaker`` is able to compute means and standard deviations from the underlying
 GMPEs as follows (for engine version >= v3.13):::
 
-	>>> mean, sig, tau, phi = cmaker.get_mean_stds([ctx])
+    >>> mean, sig, tau, phi = cmaker.get_mean_stds([ctx])
 
 Since in this example there is a single gsim and a single IMT you will get::
 
-	>>> mean.shape
-	(1, 1, 705)
-	>>> sig.shape
-	(1, 1, 705)
+    >>> mean.shape
+    (1, 1, 705)
+    >>> sig.shape
+    (1, 1, 705)
 
 The shape of the arrays in general is (G, M, N) where G is the number of GSIMs, M the number of intensity measure types
 and N the total size of the contexts. Since this is an example with a single site, each context has size 1, therefore
@@ -329,8 +329,8 @@ probabilities of exceedence. The ``ContextMaker`` provides a method to
 compute directly the rates (annual frequencies), from which the hazard
 curves can be extracted::
 
-	>>> cmaker.get_pmap(ctx).array  # shape (N, L, G)
-	array([[[0.00507998]]], dtype=float32)
+    >>> cmaker.get_pmap(ctx).array  # shape (N, L, G)
+    array([[[0.00507998]]], dtype=float32)
 
 If you want to know exactly how ``get_pmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
@@ -486,10 +486,10 @@ outputs.
 For instance, for the Atkinson2015 GMPE (chosen simply because is the first GMPE in lexicographic order in hazardlib)
 the verification table has a structure like this::
 
-	rup_mag,dist_rhypo,result_type,pgv,pga,0.03,0.05,0.1,0.2,0.3,0.5
-	2.0,1.0,MEAN,5.50277734e-02,3.47335058e-03,4.59601700e-03,7.71361460e-03,9.34624779e-03,4.33207607e-03,1.75322233e-03,3.44695521e-04
-	2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
-	...
+    rup_mag,dist_rhypo,result_type,pgv,pga,0.03,0.05,0.1,0.2,0.3,0.5
+    2.0,1.0,MEAN,5.50277734e-02,3.47335058e-03,4.59601700e-03,7.71361460e-03,9.34624779e-03,4.33207607e-03,1.75322233e-03,3.44695521e-04
+    2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
+    ...
 
 The columns starting with ``rup_`` contain rupture parameters (the magnitude in this example) while the columns starting
 with ``dist_`` contain distance parameters. The column ``result_type`` is a string in the set {“MEAN”, “INTER_EVENT_STDDEV”,
@@ -499,30 +499,30 @@ in the the example the IMTs are PGV, PGA, SA(0.03), SA(0.05), SA(0.1), SA(0.2), 
 Starting from engine version v3.13, it is possible to instantiate a ``ContextMaker`` and the associated contexts from a
 GMPE and its verification tables with a few simple steps. First of all one must instantiate the GMPE::
 
-	>>> from openquake.hazardlib import valid
-	>>> gsim = valid.gsim("Atkinson2015")
+    >>> from openquake.hazardlib import valid
+    >>> gsim = valid.gsim("Atkinson2015")
 
 Second, one can determine the path names to the verification tables as follows (they are in a subdirectory of
 *hazardlib/tests/gsim/data*)::
 
-	>>> import os
-	>>> from openquake.hazardlib.tests.gsim import data
-	>>> datadir = os.path.join(data.__path__[0], 'ATKINSON2015')
-	>>> fnames = [os.path.join(datadir, f) for f in ["ATKINSON2015_MEAN.csv",
-	...           "ATKINSON2015_STD_INTER.csv", "ATKINSON2015_STD_INTRA.csv",
-	...           "ATKINSON2015_STD_TOTAL.csv"]]
+    >>> import os
+    >>> from openquake.hazardlib.tests.gsim import data
+    >>> datadir = os.path.join(data.__path__[0], 'ATKINSON2015')
+    >>> fnames = [os.path.join(datadir, f) for f in ["ATKINSON2015_MEAN.csv",
+    ...           "ATKINSON2015_STD_INTER.csv", "ATKINSON2015_STD_INTRA.csv",
+    ...           "ATKINSON2015_STD_TOTAL.csv"]]
 
 Then it is possible to instantiate the ``ContextMaker`` associated to the GMPE and a pandas DataFrame associated to the
 verification tables in a single step::
 
-	>>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
-	>>> cmaker, df = read_cmaker_df(gsim, fnames)
-	>>> list(df.columns)
-	['rup_mag', 'dist_rhypo', 'result_type', 'damping', 'PGV', 'PGA', 'SA(0.03)', 'SA(0.05)', 'SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)', 'SA(1.0)', 'SA(2.0)', 'SA(3.0)', 'SA(5.0)']
+    >>> from openquake.hazardlib.tests.gsim.utils import read_cmaker_df, gen_ctxs
+    >>> cmaker, df = read_cmaker_df(gsim, fnames)
+    >>> list(df.columns)
+    ['rup_mag', 'dist_rhypo', 'result_type', 'damping', 'PGV', 'PGA', 'SA(0.03)', 'SA(0.05)', 'SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)', 'SA(1.0)', 'SA(2.0)', 'SA(3.0)', 'SA(5.0)']
 
 Then you can immediately compute mean and standard deviations and compare with the values in the verification table::
 
-	>>> mean, sig, tau, phi = cmaker.get_mean_stds(gen_ctxs(df))
+    >>> mean, sig, tau, phi = cmaker.get_mean_stds(gen_ctxs(df))
 
 *sig* refers to the “TOTAL_STDDEV”, *tau* to the “INTER_EVENT_STDDEV” and *phi* to the “INTRA_EVENT_STDDEV”. This is how
 the tests in hazardlib are implemented. Interested users should look at the code in gem/oq-engine.
@@ -533,13 +533,13 @@ Running the engine tests
 If you are a hazard scientist contributing a bug fix to a GMPE (or any other kind of bug fix) you may need to run the
 engine tests and possibly change the expected files if there is a change in the numbers. The way to do it is to give the following command from the repository root::
 
-	$ pytest -vx openquake/calculators
+    $ pytest -vx openquake/calculators
 
 If you get an error like the following::
 
-	openquake/calculators/tests/__init__.py:218: in assertEqualFiles
-	    raise DifferentFiles('%s %s' % (expected, actual))
-	E   openquake.calculators.tests.DifferentFiles: /home/michele/oq-engine/openquake/qa_tests_data/classical/case_1/expected/hazard_curve-PGA.csv /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv
+    openquake/calculators/tests/__init__.py:218: in assertEqualFiles
+        raise DifferentFiles('%s %s' % (expected, actual))
+    E   openquake.calculators.tests.DifferentFiles: /home/michele/oq-engine/openquake/qa_tests_data/classical/case_1/expected/hazard_curve-PGA.csv /tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv
 
 you need to change the expected file, i.e. copy the file ``/tmp/tmpkdvdhlq5/hazard_curve-mean-PGA_27249.csv`` over
 ``classical/case_1/expected/hazard_curve-PGA.csv``.

@@ -21,38 +21,38 @@ A simple *Exposure Model Metadata XML* is shown in the listing below:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure Model Example</description>
-	
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure Model Example</description>
+    
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
 
-	<occupancyPeriods>night</occupancyPeriods>
-	<tagNames>OCCUPANCY NAME_1 ID_1 NAME_2 ID_2</tagNames>
-	<assets>Exposure_File_1.csv Exposure_File_2.csv Exposure_File_3.csv </assets>
+    <occupancyPeriods>night</occupancyPeriods>
+    <tagNames>OCCUPANCY NAME_1 ID_1 NAME_2 ID_2</tagNames>
+    <assets>Exposure_File_1.csv Exposure_File_2.csv Exposure_File_3.csv </assets>
 
-	<exposureFields>
-		<field oq="taxonomy" input="TAXONOMY" />
-		<field oq="number" input="BUILDINGS" />
-		<field oq="area" input="AREA_PER_DWELLING_SQM" />
-		<field oq="value" type="structural" input="COST_PER_AREA_USD" />
-		<field oq="value" type="nonstructural" input="COST_NONSTRUCTURAL_USD" />
-		<field oq="night" input="OCCUPANTS_PER_ASSET" />
-	</exposureFields>
+    <exposureFields>
+        <field oq="taxonomy" input="TAXONOMY" />
+        <field oq="number" input="BUILDINGS" />
+        <field oq="area" input="AREA_PER_DWELLING_SQM" />
+        <field oq="value" type="structural" input="COST_PER_AREA_USD" />
+        <field oq="value" type="nonstructural" input="COST_NONSTRUCTURAL_USD" />
+        <field oq="night" input="OCCUPANTS_PER_ASSET" />
+    </exposureFields>
 
-	</exposureModel>
-		
-	</nrml>
+    </exposureModel>
+        
+    </nrml>
 
 Let us take a look at each of the sections in the above example file.
 There are 5 main sections:
@@ -76,14 +76,14 @@ These parameters are described below:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure Model Example</description>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure Model Example</description>
 
 - ``id``: mandatory; a unique string used to identify the *Exposure Model*. This string can contain letters (a–z; A–Z), numbers (0–9), dashes (–), and underscores (_), with a maximum of 100 characters.
 - ``category``: an optional string used to define the type of assets being stored (e.g: buildings, lifelines).
@@ -100,12 +100,12 @@ This section describes the area and cost conversions applied to all assets in th
 
 .. code-block:: xml
 
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
 
 
 Notice that the ``costType`` element defines a ``name``, a ``type``, and a ``unit`` attribute.
@@ -165,13 +165,13 @@ below:
 
 .. code-block:: xml
 
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD"
-	                retrofittedType="per_asset" retrofittedUnit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD"
+                    retrofittedType="per_asset" retrofittedUnit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
 
 Despite the fact that for the demonstration of how the retrofitting cost can be stored the "per_asset" type of cost 
 structure was used, it is important to mention that any of the other cost storing approaches can 
@@ -190,7 +190,7 @@ Each entry within this element specifies the number of occupants for the asset f
 
 .. code-block:: xml
 
-	<occupancyPeriods>night</occupancyPeriods>
+    <occupancyPeriods>night</occupancyPeriods>
 
 As shown in the example above, each occupancy entry must define the ``period`` and the ``occupants``. 
 Currently supported valid options for the ``period`` are: ``day``, ``transit``, and ``night``. 
@@ -208,7 +208,7 @@ for the different assets in the *Exposure Model*.
 
 .. code-block:: xml
 
-	<tagNames>OCCUPANCY NAME_1 ID_1 NAME_2 ID_2</tagNames>
+    <tagNames>OCCUPANCY NAME_1 ID_1 NAME_2 ID_2</tagNames>
 
 Note that it is not mandatory that every tag name specified in the metadata section must be provided with a tag value 
 for each asset.
@@ -261,16 +261,16 @@ The example below demonstrates how custom headers in a `.csv` file can be mapped
 
 .. code-block:: xml
 
-	<assets>Exposure_File_1.csv Exposure_File_2.csv Exposure_File_3.csv </assets>
+    <assets>Exposure_File_1.csv Exposure_File_2.csv Exposure_File_3.csv </assets>
 
-	<exposureFields>
-		<field oq="taxonomy" input="TAXONOMY" />
-		<field oq="number" input="BUILDINGS" />
-		<field oq="area" input="AREA_PER_DWELLING_SQM" />
-		<field oq="value" type="structural" input="COST_PER_AREA_USD" />
-		<field oq="value" type="nonstructural" input="COST_NONSTRUCTURAL_USD" />
-		<field oq="night" input="OCCUPANTS_PER_ASSET" />
-	</exposureFields>
+    <exposureFields>
+        <field oq="taxonomy" input="TAXONOMY" />
+        <field oq="number" input="BUILDINGS" />
+        <field oq="area" input="AREA_PER_DWELLING_SQM" />
+        <field oq="value" type="structural" input="COST_PER_AREA_USD" />
+        <field oq="value" type="nonstructural" input="COST_NONSTRUCTURAL_USD" />
+        <field oq="night" input="OCCUPANTS_PER_ASSET" />
+    </exposureFields>
 
 
 
@@ -290,37 +290,37 @@ Let us take a look at the metadata section of the Exposure Model, which is liste
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example_with_csv_files"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.0">
-	  <description>Exposure Model Example with CSV Files</description>
-	
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD" />
-	      <costType name="nonstructural" type="aggregated" unit="USD" />
-	      <costType name="contents" type="aggregated" unit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQFT" />
-	  </conversions>
-	
-	  <occupancyPeriods>night</occupancyPeriods>
-	
-	  <tagNames>occupancy state_id state county_id county tract</tagNames>
-	
-	  <assets>
-	    Washington.csv
-	    Oregon.csv
-	    California.csv
-	  </assets>
-	
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example_with_csv_files"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.0">
+      <description>Exposure Model Example with CSV Files</description>
+    
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD" />
+          <costType name="nonstructural" type="aggregated" unit="USD" />
+          <costType name="contents" type="aggregated" unit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQFT" />
+      </conversions>
+    
+      <occupancyPeriods>night</occupancyPeriods>
+    
+      <tagNames>occupancy state_id state county_id county tract</tagNames>
+    
+      <assets>
+        Washington.csv
+        Oregon.csv
+        California.csv
+      </assets>
+    
+    </exposureModel>
+    
+    </nrml>
 
 As in all previous examples, the information in the metadata section is common to all of the assets in the portfolio.
 
@@ -381,38 +381,38 @@ as shown in the listing below:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with aggregated replacement costs for each asset
-	  </description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD" />
-	      <costType name="nonstructural" type="aggregated" unit="USD" />
-	      <costType name="contents" type="aggregated" unit="USD" />
-	      <costType name="business_interruption" type="aggregated" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="20000" />
-	        <cost type="nonstructural" value="30000" />
-	        <cost type="contents" value="10000" />
-	        <cost type="business_interruption" value="4000" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with aggregated replacement costs for each asset
+      </description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD" />
+          <costType name="nonstructural" type="aggregated" unit="USD" />
+          <costType name="contents" type="aggregated" unit="USD" />
+          <costType name="business_interruption" type="aggregated" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="20000" />
+            <cost type="nonstructural" value="30000" />
+            <cost type="contents" value="10000" />
+            <cost type="business_interruption" value="4000" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 In this case, the cost ``type`` of each component as been defined as ``aggregated``. Once the way in which each cost is 
 going to be defined has been established, the values for each asset can be stored according to the format shown in the 
@@ -420,38 +420,38 @@ listing:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with aggregated replacement costs for each asset
-	  </description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD" />
-	      <costType name="nonstructural" type="aggregated" unit="USD" />
-	      <costType name="contents" type="aggregated" unit="USD" />
-	      <costType name="business_interruption" type="aggregated" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="20000" />
-	        <cost type="nonstructural" value="30000" />
-	        <cost type="contents" value="10000" />
-	        <cost type="business_interruption" value="4000" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with aggregated replacement costs for each asset
+      </description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD" />
+          <costType name="nonstructural" type="aggregated" unit="USD" />
+          <costType name="contents" type="aggregated" unit="USD" />
+          <costType name="business_interruption" type="aggregated" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="20000" />
+            <cost type="nonstructural" value="30000" />
+            <cost type="contents" value="10000" />
+            <cost type="business_interruption" value="4000" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 Each asset is uniquely identified by its ``id``. Then, a pair of coordinates (latitude and longitude) for a ``location`` 
 where the asset is assumed to exist is defined. Each asset must be classified according to a ``taxonomy``, so that the 
@@ -470,76 +470,76 @@ associated costs per unit of each asset is presented:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per building for each asset
-	  </description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_asset" unit="USD" />
-	      <costType name="nonstructural" type="per_asset" unit="USD" />
-	      <costType name="contents" type="per_asset" unit="USD" />
-	      <costType name="business_interruption" type="per_asset" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" number="2" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="7500" />
-	        <cost type="nonstructural" value="11250" />
-	        <cost type="contents" value="3750" />
-	        <cost type="business_interruption" value="1500" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per building for each asset
+      </description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_asset" unit="USD" />
+          <costType name="nonstructural" type="per_asset" unit="USD" />
+          <costType name="contents" type="per_asset" unit="USD" />
+          <costType name="business_interruption" type="per_asset" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" number="2" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="7500" />
+            <cost type="nonstructural" value="11250" />
+            <cost type="contents" value="3750" />
+            <cost type="business_interruption" value="1500" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 For this case, the cost ``type`` has been set to ``per_asset``. Then, the information from each asset can be stored 
 following the format shown in the listing below:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per building for each asset
-	  </description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_asset" unit="USD" />
-	      <costType name="nonstructural" type="per_asset" unit="USD" />
-	      <costType name="contents" type="per_asset" unit="USD" />
-	      <costType name="business_interruption" type="per_asset" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" number="2" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="7500" />
-	        <cost type="nonstructural" value="11250" />
-	        <cost type="contents" value="3750" />
-	        <cost type="business_interruption" value="1500" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per building for each asset
+      </description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_asset" unit="USD" />
+          <costType name="nonstructural" type="per_asset" unit="USD" />
+          <costType name="contents" type="per_asset" unit="USD" />
+          <costType name="business_interruption" type="per_asset" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" number="2" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="7500" />
+            <cost type="nonstructural" value="11250" />
+            <cost type="contents" value="3750" />
+            <cost type="business_interruption" value="1500" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 In this example, the various costs for each asset is not provided directly, as in the previous example. In order to carry 
 out the risk calculations in which the economic cost of each asset is provided, the OpenQuake engine multiplies, for each 
@@ -555,40 +555,40 @@ associated costs are provided per unit area:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per unit area;
-	    and areas provided as aggregated values for each asset
-	  </description>
-	  <conversions>
-	    <area type="aggregated" unit="SQM" />
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	      <costType name="nonstructural" type="per_area" unit="USD" />
-	      <costType name="contents" type="per_area" unit="USD" />
-	      <costType name="business_interruption" type="per_area" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" area="1000" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="5" />
-	        <cost type="nonstructural" value="7.5" />
-	        <cost type="contents" value="2.5" />
-	        <cost type="business_interruption" value="1" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per unit area;
+        and areas provided as aggregated values for each asset
+      </description>
+      <conversions>
+        <area type="aggregated" unit="SQM" />
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+          <costType name="nonstructural" type="per_area" unit="USD" />
+          <costType name="contents" type="per_area" unit="USD" />
+          <costType name="business_interruption" type="per_area" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" area="1000" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="5" />
+            <cost type="nonstructural" value="7.5" />
+            <cost type="contents" value="2.5" />
+            <cost type="business_interruption" value="1" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 In order to compile an *Exposure Model* with this structure, the cost ``type`` should be set to ``per_area``. In addition, 
 it is also necessary to specify if the ``area`` that is being store represents the aggregated area of number of units 
@@ -598,40 +598,40 @@ definition of the assets for this example:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per unit area;
-	    and areas provided as aggregated values for each asset
-	  </description>
-	  <conversions>
-	    <area type="aggregated" unit="SQM" />
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	      <costType name="nonstructural" type="per_area" unit="USD" />
-	      <costType name="contents" type="per_area" unit="USD" />
-	      <costType name="business_interruption" type="per_area" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" area="1000" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="5" />
-	        <cost type="nonstructural" value="7.5" />
-	        <cost type="contents" value="2.5" />
-	        <cost type="business_interruption" value="1" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per unit area;
+        and areas provided as aggregated values for each asset
+      </description>
+      <conversions>
+        <area type="aggregated" unit="SQM" />
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+          <costType name="nonstructural" type="per_area" unit="USD" />
+          <costType name="contents" type="per_area" unit="USD" />
+          <costType name="business_interruption" type="per_area" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" area="1000" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="5" />
+            <cost type="nonstructural" value="7.5" />
+            <cost type="contents" value="2.5" />
+            <cost type="business_interruption" value="1" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 Once again, the OpenQuake engine needs to carry out some calculations in order to compute the different costs per asset. 
 In this case, this value is computed by multiplying the aggregated built up ``area`` of each asset by the associated cost 
@@ -647,40 +647,40 @@ for an *Exposure Model* built in this manner:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per unit area;
-	    and areas provided per building for each asset
-	  </description>
-	  <conversions>
-	    <area type="per_asset" unit="SQM" />
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	      <costType name="nonstructural" type="per_area" unit="USD" />
-	      <costType name="contents" type="per_area" unit="USD" />
-	      <costType name="business_interruption" type="per_area" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" number="3" area="400" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="10" />
-	        <cost type="nonstructural" value="15" />
-	        <cost type="contents" value="5" />
-	        <cost type="business_interruption" value="2" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per unit area;
+        and areas provided per building for each asset
+      </description>
+      <conversions>
+        <area type="per_asset" unit="SQM" />
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+          <costType name="nonstructural" type="per_area" unit="USD" />
+          <costType name="contents" type="per_area" unit="USD" />
+          <costType name="business_interruption" type="per_area" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" number="3" area="400" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="10" />
+            <cost type="nonstructural" value="15" />
+            <cost type="contents" value="5" />
+            <cost type="business_interruption" value="2" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 Similarly to what was described in the previous example, the various costs ``type`` also need to be established as 
 ``per_area``, but the ``type`` of area is now defined as ``per_asset``. The listing below illustrates the definition of 
@@ -688,40 +688,40 @@ the assets for this example:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>
-	    Exposure model with replacement costs per unit area;
-	    and areas provided per building for each asset
-	  </description>
-	  <conversions>
-	    <area type="per_asset" unit="SQM" />
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	      <costType name="nonstructural" type="per_area" unit="USD" />
-	      <costType name="contents" type="per_area" unit="USD" />
-	      <costType name="business_interruption" type="per_area" unit="USD/month"/>
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" number="3" area="400" taxonomy="Adobe" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="10" />
-	        <cost type="nonstructural" value="15" />
-	        <cost type="contents" value="5" />
-	        <cost type="business_interruption" value="2" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>
+        Exposure model with replacement costs per unit area;
+        and areas provided per building for each asset
+      </description>
+      <conversions>
+        <area type="per_asset" unit="SQM" />
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+          <costType name="nonstructural" type="per_area" unit="USD" />
+          <costType name="contents" type="per_area" unit="USD" />
+          <costType name="business_interruption" type="per_area" unit="USD/month"/>
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" number="3" area="400" taxonomy="Adobe" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="10" />
+            <cost type="nonstructural" value="15" />
+            <cost type="contents" value="5" />
+            <cost type="business_interruption" value="2" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 In this example, the OpenQuake engine will make use of all the parameters to estimate the various costs of each asset, by 
 multiplying the number of structural units by its average built up area, and then by the respective cost per unit area.
@@ -739,31 +739,31 @@ below:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure model illustrating retrofit costs</description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD"
-	                retrofittedType="per_asset" retrofittedUnit="USD" />
-	    </costTypes>
-	  </conversions>
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" number="1" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="10000" retrofitted="2000" />
-	      </costs>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure model illustrating retrofit costs</description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD"
+                    retrofittedType="per_asset" retrofittedUnit="USD" />
+        </costTypes>
+      </conversions>
+      <assets>
+        <asset id="a1" taxonomy="Adobe" number="1" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="10000" retrofitted="2000" />
+          </costs>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 Despite the fact that for the demonstration of how the retrofitting cost can be stored the per building type of cost 
 structure described in Example 1 was used, it is important to mention that any of the other cost storing approaches can 
@@ -786,42 +786,42 @@ aggregated values for all of the buildings comprising the asset:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure model example with occupants</description>
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="aggregated" unit="USD" />
-	      <costType name="nonstructural" type="per_area" unit="USD" />
-	      <costType name="contents" type="per_asset" unit="USD" />
-	      <costType name="business_interruption" type="per_asset" unit="USD/month" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" number="5" area="200" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="20000" />
-	        <cost type="nonstructural" value="15" />
-	        <cost type="contents" value="2400" />
-	        <cost type="business_interruption" value="1500" />
-	      </costs>
-	      <occupancies>
-	        <occupancy occupants="6" period="day" />
-	        <occupancy occupants="10" period="transit" />
-	        <occupancy occupants="20" period="night" />
-	      </occupancies>
-	    </asset>
-	  </assets>
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure model example with occupants</description>
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="aggregated" unit="USD" />
+          <costType name="nonstructural" type="per_area" unit="USD" />
+          <costType name="contents" type="per_asset" unit="USD" />
+          <costType name="business_interruption" type="per_asset" unit="USD/month" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
+      <assets>
+        <asset id="a1" taxonomy="Adobe" number="5" area="200" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="20000" />
+            <cost type="nonstructural" value="15" />
+            <cost type="contents" value="2400" />
+            <cost type="business_interruption" value="1500" />
+          </costs>
+          <occupancies>
+            <occupancy occupants="6" period="day" />
+            <occupancy occupants="10" period="transit" />
+            <occupancy occupants="20" period="night" />
+          </occupancies>
+        </asset>
+      </assets>
+    </exposureModel>
+    
+    </nrml>
 
 *************
 Example XML 7
@@ -831,134 +831,134 @@ The example *Exposure Model* shown in the listing below illustrates how one or m
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example_with_tags"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure Model Example with Tags</description>
-	
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
-	
-	  <tagNames>state county tract city zip cresta</tagNames>
-	
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" number="5" area="100" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="10000" />
-	      </costs>
-	      <occupancies>
-	        <occupancy occupants="20" period="day" />
-	      </occupancies>
-	      <tags state="California" county="Solano" tract="252702"
-	            city="Suisun" zip="94585" cresta="A.11"/>
-	    </asset>
-	  </assets>
-	
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example_with_tags"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure Model Example with Tags</description>
+    
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
+    
+      <tagNames>state county tract city zip cresta</tagNames>
+    
+      <assets>
+        <asset id="a1" taxonomy="Adobe" number="5" area="100" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="10000" />
+          </costs>
+          <occupancies>
+            <occupancy occupants="20" period="day" />
+          </occupancies>
+          <tags state="California" county="Solano" tract="252702"
+                city="Suisun" zip="94585" cresta="A.11"/>
+        </asset>
+      </assets>
+    
+    </exposureModel>
+    
+    </nrml>
 
 The list of tag names that will be used in the *Exposure Model* must be provided in the metadata section of the exposure 
 file, as shown in the following snippet from the full file:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
         xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	  <exposureModel id="exposure_example_with_tags"
-	                 category="buildings"
-	                 taxonomySource="GEM_Building_Taxonomy_3.3">
+    
+      <exposureModel id="exposure_example_with_tags"
+                     category="buildings"
+                     taxonomySource="GEM_Building_Taxonomy_3.3">
 
-	    <description>Exposure Model Example with Tags</description>
-	
+        <description>Exposure Model Example with Tags</description>
+    
             <conversions>
 
-	      <costTypes>
+          <costTypes>
 
-	        <costType name="structural" type="per_area" unit="USD" />
+            <costType name="structural" type="per_area" unit="USD" />
 
-	      </costTypes>
-	      <area type="per_asset" unit="SQM" />
+          </costTypes>
+          <area type="per_asset" unit="SQM" />
 
-	    </conversions>
-	
-	    <tagNames>state county tract city zip cresta</tagNames>
-	
-	    <assets>
+        </conversions>
+    
+        <tagNames>state county tract city zip cresta</tagNames>
+    
+        <assets>
 
-	      <asset id="a1" taxonomy="Adobe" number="5" area="100" >
+          <asset id="a1" taxonomy="Adobe" number="5" area="100" >
 
-	        <location lon="-122.000" lat="38.113" />
-	        <costs>
+            <location lon="-122.000" lat="38.113" />
+            <costs>
 
-	          <cost type="structural" value="10000"/>
-	
-	        </costs>
-	        <occupancies>
+              <cost type="structural" value="10000"/>
+    
+            </costs>
+            <occupancies>
 
-	          <occupancy occupants="20" period="day" />
-	
-	        </occupancies>
-	        <tags state="California" county="Solano" tract="252702" city="Suisun" zip="94585" cresta="A.11"/>
+              <occupancy occupants="20" period="day" />
+    
+            </occupancies>
+            <tags state="California" county="Solano" tract="252702" city="Suisun" zip="94585" cresta="A.11"/>
 
-	      </asset>
+          </asset>
 
-	    </assets>
-	
-	</nrml>
-	
+        </assets>
+    
+    </nrml>
+    
 
 The tag values for the different tags can then be specified for each asset as shown in the following snippet from the 
 same file:
 
 .. code-block:: xml
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<exposureModel id="exposure_example_with_tags"
-	               category="buildings"
-	               taxonomySource="GEM_Building_Taxonomy_3.3">
-	  <description>Exposure Model Example with Tags</description>
-	
-	  <conversions>
-	    <costTypes>
-	      <costType name="structural" type="per_area" unit="USD" />
-	    </costTypes>
-	    <area type="per_asset" unit="SQM" />
-	  </conversions>
-	
-	  <tagNames>state county tract city zip cresta</tagNames>
-	
-	  <assets>
-	    <asset id="a1" taxonomy="Adobe" number="5" area="100" >
-	      <location lon="-122.000" lat="38.113" />
-	      <costs>
-	        <cost type="structural" value="10000" />
-	      </costs>
-	      <occupancies>
-	        <occupancy occupants="20" period="day" />
-	      </occupancies>
-	      <tags state="California" county="Solano" tract="252702"
-	            city="Suisun" zip="94585" cresta="A.11"/>
-	    </asset>
-	  </assets>
-	
-	</exposureModel>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <exposureModel id="exposure_example_with_tags"
+                   category="buildings"
+                   taxonomySource="GEM_Building_Taxonomy_3.3">
+      <description>Exposure Model Example with Tags</description>
+    
+      <conversions>
+        <costTypes>
+          <costType name="structural" type="per_area" unit="USD" />
+        </costTypes>
+        <area type="per_asset" unit="SQM" />
+      </conversions>
+    
+      <tagNames>state county tract city zip cresta</tagNames>
+    
+      <assets>
+        <asset id="a1" taxonomy="Adobe" number="5" area="100" >
+          <location lon="-122.000" lat="38.113" />
+          <costs>
+            <cost type="structural" value="10000" />
+          </costs>
+          <occupancies>
+            <occupancy occupants="20" period="day" />
+          </occupancies>
+          <tags state="California" county="Solano" tract="252702"
+                city="Suisun" zip="94585" cresta="A.11"/>
+        </asset>
+      </assets>
+    
+    </exposureModel>
+    
+    </nrml>
 
 Note that it is not mandatory that every tag name specified in the metadata section must be provided with a tag value 
 for each asset.

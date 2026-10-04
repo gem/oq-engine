@@ -121,38 +121,38 @@ Since the demo has 4 taxonomies (“Wood”, “Adobe”, “Stone-Masonry”, �
 possible aggregations; actually, there is also a 9th possibility corresponding to aggregating on all assets by 
 disregarding the tags. You can see the possible values of the the ``agg_id`` field with the following command::
 
-	$ oq show agg_id
-	                          taxonomy       NAME_1
-	agg_id
-	0                             Wood         East
-	1                             Wood  Mid-Western
-	2                            Adobe         East
-	3                            Adobe  Mid-Western
-	4                    Stone-Masonry         East
-	5                    Stone-Masonry  Mid-Western
-	6       Unreinforced-Brick-Masonry         East
-	7       Unreinforced-Brick-Masonry  Mid-Western
-	8                         *total*      *total*
+    $ oq show agg_id
+                              taxonomy       NAME_1
+    agg_id
+    0                             Wood         East
+    1                             Wood  Mid-Western
+    2                            Adobe         East
+    3                            Adobe  Mid-Western
+    4                    Stone-Masonry         East
+    5                    Stone-Masonry  Mid-Western
+    6       Unreinforced-Brick-Masonry         East
+    7       Unreinforced-Brick-Masonry  Mid-Western
+    8                         *total*      *total*
 
 Armed with that knowledge it is pretty easy to understand the ``risk_by_event`` table::
 
-	>> from openquake.commonlib.datastore import read
-	>> dstore = read(-1)  # the latest calculation
-	>> df = dstore.read_df('risk_by_event', 'event_id')
-	          agg_id  loss_id  dmg_1  dmg_2  dmg_3  dmg_4         losses
-	event_id
-	472            0        0    0.0    1.0    0.0    0.0    5260.828125
-	472            8        0    0.0    1.0    0.0    0.0    5260.828125
-	477            0        0    2.0    0.0    1.0    0.0    6368.788574
-	477            8        0    2.0    0.0    1.0    0.0    6368.788574
-	478            0        0    3.0    1.0    1.0    0.0    5453.355469
-	...          ...      ...    ...    ...    ...    ...            ...
-	30687          8        0   56.0   53.0   26.0   16.0  634266.187500
-	30688          0        0    3.0    6.0    1.0    0.0   14515.125000
-	30688          8        0    3.0    6.0    1.0    0.0   14515.125000
-	30690          0        0    2.0    0.0    1.0    0.0    5709.204102
-	30690          8        0    2.0    0.0    1.0    0.0    5709.204102
-	[8066 rows x 7 columns]
+    >> from openquake.commonlib.datastore import read
+    >> dstore = read(-1)  # the latest calculation
+    >> df = dstore.read_df('risk_by_event', 'event_id')
+              agg_id  loss_id  dmg_1  dmg_2  dmg_3  dmg_4         losses
+    event_id
+    472            0        0    0.0    1.0    0.0    0.0    5260.828125
+    472            8        0    0.0    1.0    0.0    0.0    5260.828125
+    477            0        0    2.0    0.0    1.0    0.0    6368.788574
+    477            8        0    2.0    0.0    1.0    0.0    6368.788574
+    478            0        0    3.0    1.0    1.0    0.0    5453.355469
+    ...          ...      ...    ...    ...    ...    ...            ...
+    30687          8        0   56.0   53.0   26.0   16.0  634266.187500
+    30688          0        0    3.0    6.0    1.0    0.0   14515.125000
+    30688          8        0    3.0    6.0    1.0    0.0   14515.125000
+    30690          0        0    2.0    0.0    1.0    0.0    5709.204102
+    30690          8        0    2.0    0.0    1.0    0.0    5709.204102
+    [8066 rows x 7 columns]
 
 The number of buildings in each damage state is integer (even if stored as a float) because the exposure contains only 
 integers and the job.ini is setting explicitly ``discrete_damage_distribution = true``.
@@ -168,24 +168,24 @@ export it to CSV.
 There is instead a CSV exporter for the aggregated damage distributions (together with the aggregated consequences) that 
 you may call with the command ``oq export aggrisk``; you can also see the distributions directly::
 
-	$ oq show aggrisk
-	   agg_id  rlz_id  loss_id        dmg_0     dmg_1     dmg_2     dmg_3     dmg_4        losses
-	0       0       0        0    18.841061  0.077873  0.052915  0.018116  0.010036    459.162567
-	1       3       0        0   172.107361  0.329445  0.591998  0.422925  0.548271  11213.121094
-	2       5       0        0     1.981786  0.003877  0.005539  0.004203  0.004594    104.431755
-	3       6       0        0   797.826111  1.593724  1.680134  0.926167  0.973836  23901.496094
-	4       7       0        0    48.648529  0.120687  0.122120  0.060278  0.048386   1420.059448
-	5       8       0        0  1039.404907  2.125607  2.452706  1.431690  1.585123  37098.269531
+    $ oq show aggrisk
+       agg_id  rlz_id  loss_id        dmg_0     dmg_1     dmg_2     dmg_3     dmg_4        losses
+    0       0       0        0    18.841061  0.077873  0.052915  0.018116  0.010036    459.162567
+    1       3       0        0   172.107361  0.329445  0.591998  0.422925  0.548271  11213.121094
+    2       5       0        0     1.981786  0.003877  0.005539  0.004203  0.004594    104.431755
+    3       6       0        0   797.826111  1.593724  1.680134  0.926167  0.973836  23901.496094
+    4       7       0        0    48.648529  0.120687  0.122120  0.060278  0.048386   1420.059448
+    5       8       0        0  1039.404907  2.125607  2.452706  1.431690  1.585123  37098.269531
 
 By summing on the damage states one gets the total number of buildings for each aggregation level::
 
-	agg_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4 aggkeys
-	0        19.000039 ~ 19                      Wood,East
-	3       173.999639 ~ 174                     Wood,Mid-Western
-	5         2.000004 ~ 2                       Stone-Masonry,Mid-Western
-	6       802.999853 ~ 803                     Unreinforced-Brick-Masonry,East
-	7        48.999971 ~ 49                      Unreinforced-Brick-Masonry,Mid-Western
-	8      1046.995130 ~ 1047                    Total
+    agg_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4 aggkeys
+    0        19.000039 ~ 19                      Wood,East
+    3       173.999639 ~ 174                     Wood,Mid-Western
+    5         2.000004 ~ 2                       Stone-Masonry,Mid-Western
+    6       802.999853 ~ 803                     Unreinforced-Brick-Masonry,East
+    7        48.999971 ~ 49                      Unreinforced-Brick-Masonry,Mid-Western
+    8      1046.995130 ~ 1047                    Total
 
 ***********************
 The ScenarioDamage demo
@@ -207,17 +207,17 @@ The main output of a ``scenario_damage`` calculation is still the ``risk_by_even
 form as for the EventBasedDamage demo. However there is a difference when considering the aggrisk output: since we are 
 using full enumeration we will produce a damage distribution for each realization::
 
-	$ oq show aggrisk
-	   agg_id  rlz_id  loss_id       dmg_0  ...  dmg_4        losses
-	0       0       0        0  4173405.75  ...  452433.40625  7.779261e+09
-	1       0       1        0  3596234.00  ...  633638.37500  1.123458e+10
+    $ oq show aggrisk
+       agg_id  rlz_id  loss_id       dmg_0  ...  dmg_4        losses
+    0       0       0        0  4173405.75  ...  452433.40625  7.779261e+09
+    1       0       1        0  3596234.00  ...  633638.37500  1.123458e+10
 
 The sum over the damage states will still produce the total number of buildings, which will be independent from 
 the realization::
 
-	rlz_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4
-	0      5365761.0
-	1      5365761.0
+    rlz_id dmg_0 + dmg_1 + dmg_2 + dmg_3 + dmg_4
+    0      5365761.0
+    1      5365761.0
 
 In this demo there is no ``aggregate_by`` specified, so the only aggregation which is performed is the total aggregation. 
 You are invited to specify ``aggregate_by`` and study how ``aggrisk`` changes.

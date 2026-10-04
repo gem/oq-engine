@@ -32,9 +32,9 @@ be impossible because of the memory/data transfer requirements, especially in th
 Sometimes it is necessary to reduce your expectations. The examples below will discuss a few concrete cases. But first 
 of all, we must stress an important point::
 
-	Our experience tells us that THE PERFORMANCE BOTTLENECKS OF THE
-	REDUCED CALCULATION ARE OFTEN DIFFERENT FROM THE BOTTLENECKS OF
-	THE FULL CALCULATION. Do not trust your performance intuition.
+    Our experience tells us that THE PERFORMANCE BOTTLENECKS OF THE
+    REDUCED CALCULATION ARE OFTEN DIFFERENT FROM THE BOTTLENECKS OF
+    THE FULL CALCULATION. Do not trust your performance intuition.
 
 *********************************
 Classical PSHA for Europe (SHARE)
@@ -65,18 +65,18 @@ reduces the number of sites, but also reduces the number of intensity measure ty
 the number of realizations to just 1 (it sets ``number_of_logic_tree_samples=1``) and if you are in an event based 
 calculation reduces the parameter ``ses_per_logic_tree_path`` too. For instance the command::
 
-	$ OQ_REDUCE=.01 oq engine --run job.ini
+    $ OQ_REDUCE=.01 oq engine --run job.ini
 
 will reduce the number of sites by 100 times by random sampling, as well a reducing to 1 the number of IMTs and 
 realizations. As a result the calculation will be very fast (say 1 hour instead of 4 days) and it will possible to 
 re-run it multiple times with different parameters. For instance, you can test the impact of the area source 
 discretization parameter by running::
 
-	$ OQ_REDUCE=.01 oq engine --run job.ini --param area_source_discretization=20
+    $ OQ_REDUCE=.01 oq engine --run job.ini --param area_source_discretization=20
 
 Then the engine provides a command oq compare to compare calculations; for instance::
 
-	$ oq compare hmaps PGA -2 -1 --atol .01
+    $ oq compare hmaps PGA -2 -1 --atol .01
 
 will compare the hazard maps for PGA for the original (ID=-2, area_source_discretization=10 km) and the new calculation 
 (ID=-2, area_source_discretization=20 km) on all sites, printing out the sites where the hazard values are different 
@@ -85,7 +85,7 @@ available.
 
 If the call to ``oq compare`` gives a result::
 
-	There are no differences within the tolerances atol=0.01, rtol=0%, sids=[...]
+    There are no differences within the tolerances atol=0.01, rtol=0%, sids=[...]
 
 it means that within the specified tolerance the hazard is the same on all the sites, so you can safely use the area 
 discretization of 20 km. Of course, the complete calculation will contain 100 times more sites, so it could be that in 
@@ -96,27 +96,27 @@ no go and you can try other strategies, like for instance doubling the ``width_o
 
 As of version 3.11, the ``oq compare hmaps`` command will give an output like the following, in case of differences::
 
-	site_id calc_id 0.5     0.1     0.05    0.02    0.01    0.005
-	======= ======= ======= ======= ======= ======= ======= =======
-	767     -2      0.10593 0.28307 0.37808 0.51918 0.63259 0.76299
-	767     -1      0.10390 0.27636 0.36955 0.50503 0.61676 0.74079
-	======= ======= ======= ======= ======= ======= ======= =======
-	===== =========
-	poe   rms-diff
-	===== =========
-	0.5   1.871E-04
-	0.1   4.253E-04
-	0.05  5.307E-04
-	0.02  7.410E-04
-	0.01  8.856E-04
-	0.005 0.00106
-	===== =========
+    site_id calc_id 0.5     0.1     0.05    0.02    0.01    0.005
+    ======= ======= ======= ======= ======= ======= ======= =======
+    767     -2      0.10593 0.28307 0.37808 0.51918 0.63259 0.76299
+    767     -1      0.10390 0.27636 0.36955 0.50503 0.61676 0.74079
+    ======= ======= ======= ======= ======= ======= ======= =======
+    ===== =========
+    poe   rms-diff
+    ===== =========
+    0.5   1.871E-04
+    0.1   4.253E-04
+    0.05  5.307E-04
+    0.02  7.410E-04
+    0.01  8.856E-04
+    0.005 0.00106
+    ===== =========
 
 This is an example with 6 hazard maps, for poe = .5, .1, .05, .02, .01 and .005 respectively. Here the only site that 
 shows some discrepancy if the site number 767. If that site is in Greenland where nobody lives one can decide that the 
 approximation is good anyway ;-) The engine also report the RMS-differences by considering all the sites, i.e.::
 
-	rms-diff = sqrt<(hmap1 - hmap2)^2> # mediating on all the sites
+    rms-diff = sqrt<(hmap1 - hmap2)^2> # mediating on all the sites
 
 As to be expected, the differences are larger for maps with a smaller poe, i.e. a larger return period. But even in the 
 worst case the RMS difference is only of 1E-3 g, which is not much. The complete calculation will have more sites, so 
@@ -147,8 +147,8 @@ ESHM20 model there are the following 6 branchsets:
 
 By setting in the job.ini the following parameters::
 
-	number_of_logic_tree_samples = 0
-	collapse_gsim_logic_tree = Shallow_Def CratonModel BCHydroSubIF BCHydroSubIS BCHydroSubVrancea Volcanic
+    number_of_logic_tree_samples = 0
+    collapse_gsim_logic_tree = Shallow_Def CratonModel BCHydroSubIF BCHydroSubIS BCHydroSubVrancea Volcanic
 
 it is possible to collapse completely the GMPE logic tree, i.e. going from 961,875 realizations to 1. Then the memory 
 issues are solved and one can assess the correct values of the mean hazard curves. Then it is possible to compare with 
@@ -168,19 +168,19 @@ level, source ID). From that it is possible to extract the contribution of each 
 (interested people should look at the code in the function ``check_disagg_by_src``). The ArrayWrapper ``mean_rates_by_src`` 
 can also be converted into a pandas DataFrame, then getting something like the following::
 
-	>> dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
-	               site_id  imt  lvl         value
-	ASCTRAS407           0  PGA    0  9.703749e-02
-	IF-CFS-GRID03        0  PGA    0  3.720510e-02
-	ASCTRAS407           0  PGA    1  6.735009e-02
-	IF-CFS-GRID03        0  PGA    1  2.851081e-02
-	ASCTRAS407           0  PGA    2  4.546237e-02
-	...                ...  ...  ...           ...
-	IF-CFS-GRID03        0  PGA   17  6.830692e-05
-	ASCTRAS407           0  PGA   18  1.072884e-06
-	IF-CFS-GRID03        0  PGA   18  1.275539e-05
-	ASCTRAS407           0  PGA   19  1.192093e-07
-	IF-CFS-GRID03        0  PGA   19  5.960464e-07
+    >> dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
+                   site_id  imt  lvl         value
+    ASCTRAS407           0  PGA    0  9.703749e-02
+    IF-CFS-GRID03        0  PGA    0  3.720510e-02
+    ASCTRAS407           0  PGA    1  6.735009e-02
+    IF-CFS-GRID03        0  PGA    1  2.851081e-02
+    ASCTRAS407           0  PGA    2  4.546237e-02
+    ...                ...  ...  ...           ...
+    IF-CFS-GRID03        0  PGA   17  6.830692e-05
+    ASCTRAS407           0  PGA   18  1.072884e-06
+    IF-CFS-GRID03        0  PGA   18  1.275539e-05
+    ASCTRAS407           0  PGA   19  1.192093e-07
+    IF-CFS-GRID03        0  PGA   19  5.960464e-07
 
 The ``value`` field here is the probability of exceedence in the hazard curve. The ``lvl`` field is an integer 
 corresponding to the intensity measure level in the hazard curve.
@@ -255,8 +255,8 @@ The post-processing framework and Vector-valued PSHA calculations
 Since version 3.17 the OpenQuake engine has special support for custom postprocessors. A postprocessor is a Python 
 module located in the directory ``openquake/calculators/postproc`` and containing a ``main`` function with signature::
 
-	def main(dstore, [csm], ...):
-	    ...
+    def main(dstore, [csm], ...):
+        ...
 
 Post-processors are called after a classical or preclassical calculation: the ``dstore`` parameter is a DataStore 
 instance corresponding to the calculation, while the ``csm`` parameter is a CompositeSourceModel instance (it can be 
@@ -271,22 +271,22 @@ does not require additional arguments with respect to the ones in ``dstore['oqpa
 The post-processing framework was put in place in order to run VPSHA calculations. The user can find an example in 
 ``qa_tests_data/postproc/case_mrd``. In the job.ini file there are the lines::
 
-	postproc_func = compute_mrd.main
-	postproc_args = {
-	  'imt1': 'PGA',
-	  'imt2': 'SA(0.05)',
-	  'cross_correlation': 'BakerJayaram2008',
-	  'seed': 42,
-	  'meabins': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-	  'sigbins': [0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-	  'method': 'indirect'}
+    postproc_func = compute_mrd.main
+    postproc_args = {
+      'imt1': 'PGA',
+      'imt2': 'SA(0.05)',
+      'cross_correlation': 'BakerJayaram2008',
+      'seed': 42,
+      'meabins': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+      'sigbins': [0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+      'method': 'indirect'}
 
 while the postprocessor module ``openquake.calculators.postproc.compute_mrd`` contains the function::
 
-	# inside openquake.calculators.postproc.compute_mrd
-	def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
-	         method='indirect'):
-	    ...
+    # inside openquake.calculators.postproc.compute_mrd
+    def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
+             method='indirect'):
+        ...
 
 Inside ``main`` there is code to create the dataset ``mrd`` which contains the Mean Rate Distribution as an array of 
 shape L1 x L1 x N where L1 is the number of levels per IMT minus 1 and N the number of sites (normally 1).
@@ -302,11 +302,11 @@ The postprocessing framework also integrates very well with interactive developm
 following lines are all you need to create a child datastore where the postprocessing function can store its results 
 after reading the data from the calculation datastore::
 
-	>> from openquake.commonlib.datastore import read, create_job_dstore
-	>> from openquake.calculators.postproc import mypostproc
-	>> log, dstore = create_job_dstore(parent=read(calc_id))
-	>> with log:
-	..     mypostproc.main(dstore)
+    >> from openquake.commonlib.datastore import read, create_job_dstore
+    >> from openquake.calculators.postproc import mypostproc
+    >> log, dstore = create_job_dstore(parent=read(calc_id))
+    >> with log:
+    ..     mypostproc.main(dstore)
 
 ***************************************
 The conditional spectrum post-processor
@@ -335,25 +335,25 @@ spectra. The following restrictions are enforced:
 An example can be found in the engine repository, in the directory openquake/qa_tests_data/conditional_spectrum/case_1. 
 If you run it, you will get something like the following::
 
-	$ oq engine --run job.ini
-	...
-	 id | name
-	261 | Full Report
-	262 | Hazard Curves
-	260 | Mean Conditional Spectra
-	263 | Realizations
-	264 | Uniform Hazard Spectra
+    $ oq engine --run job.ini
+    ...
+     id | name
+    261 | Full Report
+    262 | Hazard Curves
+    260 | Mean Conditional Spectra
+    263 | Realizations
+    264 | Uniform Hazard Spectra
 
 Exporting the output 260 will produce two files ``conditional-spectrum-0.csv`` and ``conditional-spectrum-1.csv``; the 
 first will refer to the first poe, the second to the second poe. Each file will have a structure like the following::
 
-	 #,,,,"generated_by='OpenQuake engine 3.13.0-gitd78d717e66', start_date='2021-10-13T06:15:20', checksum=3067457643, imls=[0.99999, 0.61470], site_id=0, lon=0.0, lat=0.0"
-	sa_period,val0,std0,val1,std1
-	0.00000E+00,1.02252E+00,2.73570E-01,7.53388E-01,2.71038E-01
-	1.00000E-01,1.99455E+00,3.94498E-01,1.50339E+00,3.91337E-01
-	2.00000E-01,2.71828E+00,9.37914E-09,1.84910E+00,9.28588E-09
-	3.00000E-01,1.76504E+00,3.31646E-01,1.21929E+00,3.28540E-01
-	1.00000E+00,3.08985E-01,5.89767E-01,2.36533E-01,5.86448E-01
+     #,,,,"generated_by='OpenQuake engine 3.13.0-gitd78d717e66', start_date='2021-10-13T06:15:20', checksum=3067457643, imls=[0.99999, 0.61470], site_id=0, lon=0.0, lat=0.0"
+    sa_period,val0,std0,val1,std1
+    0.00000E+00,1.02252E+00,2.73570E-01,7.53388E-01,2.71038E-01
+    1.00000E-01,1.99455E+00,3.94498E-01,1.50339E+00,3.91337E-01
+    2.00000E-01,2.71828E+00,9.37914E-09,1.84910E+00,9.28588E-09
+    3.00000E-01,1.76504E+00,3.31646E-01,1.21929E+00,3.28540E-01
+    1.00000E+00,3.08985E-01,5.89767E-01,2.36533E-01,5.86448E-01
 
 The number of columns will depend from the number of sites. The conditional spectrum calculator, like the disaggregation 
 calculator, is meant to be run on a very small number of sites, normally one. In this example there are two sites 0 and 1 
@@ -389,8 +389,8 @@ number of ruptures generated, i.e.
 For instance, if you have ``ses_per_logic_tree_path = 10,000`` reduce it to 10, run the calculation and you will see in 
 the log something like this::
 
-	[2018-12-16 09:09:57,689 #35263 INFO] Received
-	{'gmfdata': '752.18 MB', 'hcurves': '224 B', 'indices': '29.42 MB'}
+    [2018-12-16 09:09:57,689 #35263 INFO] Received
+    {'gmfdata': '752.18 MB', 'hcurves': '224 B', 'indices': '29.42 MB'}
 
 The amount of GMFs generated for the reduced calculation is 752.18 MB; and since the calculation has been reduced by a 
 factor of 1,000, the full computation is likely to generate around 750 GB of GMFs. Even if you have sufficient disk 
@@ -554,12 +554,12 @@ engine is able to compare the mean hazard curves and to see how well they conver
 option ``mean_hazard_curves = true`` is set. Here is an example of how to generate and plot the curves for one of our 
 QA tests (a case with bad convergence was chosen on purpose)::
 
-	$ oq engine --run event_based/case_7/job.ini
-	<snip>
-	WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
-	WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
-	<snip>
-	$ oq plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
+    $ oq engine --run event_based/case_7/job.ini
+    <snip>
+    WARNING:root:Relative difference with the classical mean curves for IMT=SA(0.1): 51%
+    WARNING:root:Relative difference with the classical mean curves for IMT=PGA: 49%
+    <snip>
+    $ oq plot /tmp/cl/hazard.pik /tmp/hazard.pik --sites=0,1,2
 
 .. figure:: _images/ebcl-convergency.png
 

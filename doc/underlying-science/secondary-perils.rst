@@ -81,7 +81,7 @@ The equation that describes this probability is:
 
 .. math::
 
-	P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w} \\ (1)
+    P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w} \\ (1)
 
 :math:`P(L|PGA=a)` is the conditional probability that a site will fail based on the :math:`PGA` and the :math:`LSC`. 
 :math:`P_{ml}` is the fraction of the total mapped area that will experience liquefaction if :math:`P(L|PGA=a)` reaches
@@ -130,13 +130,13 @@ The model is quite simple. An explanatory variable :math:`X` is calculated as:
 
 .. math::
 
-	X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, V_{s30} \\ (2)
+    X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, V_{s30} \\ (2)
 
 and the final probability is the logistic function:
 
 .. math::
 
-	P(L) = \frac{1}{1+e^X} \\ (3)
+    P(L) = \frac{1}{1+e^X} \\ (3)
 
 The term :math:`PGA_{M,SM}` is the :math:`PGA` corrected by magnitude scaling factor, :math:`MSF`, that serves as proxy
 for earthquake duration. The :math:`MSF` is calculated as per `Youd et al. (2001) 
@@ -144,7 +144,7 @@ for earthquake duration. The :math:`MSF` is calculated as per `Youd et al. (2001
 
 .. math::
 
-	MSF = \frac{10^{2.24}}{M^{2.56}} \\ (4)
+    MSF = \frac{10^{2.24}}{M^{2.56}} \\ (4)
 
 Both the :math:`CTI` and the :math:`V_{s30}` may be derived from digital elevation data. The :math:`Vs30` may be
 estimated from the topographic slope through the equations of `Wald and Allen (2007) 
@@ -160,7 +160,7 @@ relation:
 
 .. math::
 
-	CTI = \ln (d_a / \tan \delta) \\ (5)
+    CTI = \ln (d_a / \tan \delta) \\ (5)
 
 where :math:`d_{a}` is the upstream drainage area per unit width through the flow direction (i.e. relating to the DEM 
 resolution). It ranges from :math:`0` to :math:`20`. It was developed for hillslopes, and is not meaningful in certain
@@ -182,7 +182,7 @@ with the ADASYN sampling algorithm. The explanatory variable :math:`X` is comput
 
 .. math::
 
-	X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, V_{s30} \\ (6)
+    X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, V_{s30} \\ (6)
 
 and the probability of liquefaction in calculated using equation (3).
 
@@ -244,7 +244,7 @@ improve the fit. The regression coefficients are given in Table 2.
 
 .. math::
 
-	LSE(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
+    LSE(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
 
 .. raw:: latex
 
@@ -320,7 +320,7 @@ The expected permanent displacement due to lateral spreading given the susceptib
 
 .. math::
 
-	E[PGD_{sc}] = K_{\Delta} \, E[PGD|(PGA/PL_{sc}) = a] \\ (12)
+    E[PGD_{sc}] = K_{\Delta} \, E[PGD|(PGA/PL_{sc}) = a] \\ (12)
 
 Where: :math:`E[PGD|(PGA/PL_{SC})=a]` is the expected ground displacement given the susceptibility category under a 
 specified level of normalised shaking, and is calculated as: 
@@ -430,14 +430,14 @@ for 2270 strong-motion records and by assuming critical acceleration values in t
 Model a
 
 .. math::
-	
-	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
+    
+    \log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
 
 Model b
 
 .. math::
 
-	\log(Disp_{cm}) = -2.710 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.335} \cdot \left( \frac{critaccel}{PGA} \right)^{−1.478}] + 0.424 M \\ (20)
+    \log(Disp_{cm}) = -2.710 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.335} \cdot \left( \frac{critaccel}{PGA} \right)^{−1.478}] + 0.424 M \\ (20)
 
 where :math:`Disp_{cm}` is the predicted co-seismic displacement in cm, but it is converted to m by OQ; :math:`PGA` is the Peak Ground Acceleration in g;
 :math:`critaccel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude of the earthquake. Jibson (2007) recommends using model b
@@ -474,7 +474,7 @@ If :math:`H_{ratio} > 0.6`:
     a_{0} = -4.50 - 1.37 \cdot \ln(critaccel) \\ (24)
 
     a_{1} = 1.51 + 0.10 \cdot \ln(critaccel) \\ (25)
-	
+    
 
 Displacements returned by openquake are converted to m.
 
@@ -562,7 +562,7 @@ previously proposed by `Jibson (1993) <https://onlinepubs.trb.org/Onlinepubs/trr
 
 .. math::
 
-	\log (Disp_{cm}) = 1.521\log (IA) - 1.993 \log (critaccel) - 1.546   \\ (32)
+    \log (Disp_{cm}) = 1.521\log (IA) - 1.993 \log (critaccel) - 1.546   \\ (32)
 
 where :math:`Disp_{cm}` is the co-seismic displacement in cm, then converted to m by OQ, :math:`IA` is the Arias Intensity in m/s and 
 :math:`critaccel` is the landslide critical acceleration in g units.
@@ -610,13 +610,13 @@ Probability of landsliding is then evaluated using logistic regression:
 
 .. math::
 
-	P(L) = \frac{1}{1+e^X} \\ (35)
+    P(L) = \frac{1}{1+e^X} \\ (35)
 
 These probabilities are converted to areal percentages to unbias the predictions:
 
 .. math::
 
-	LSE(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
+    LSE(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
 
 
 *************************************

@@ -5,16 +5,16 @@ Reinsurance losses can be calculated for event-based and scenario risk calculati
 ``job.ini``, needs to specify the parameters presented below, in addition to the parameters generally indicated for these 
 type of calculations::
 
-	[risk_calculation]
-	aggregate_by = policy
-	reinsurance_file = {'structural+contents': 'reinsurance.xml'}
-	total_losses = structural+contents
+    [risk_calculation]
+    aggregate_by = policy
+    reinsurance_file = {'structural+contents': 'reinsurance.xml'}
+    total_losses = structural+contents
 
 **Additional comments:**
 
 - ``aggregate_by``: it is possible to define multiple aggregation keys. However, for reinsurance calculations the ``policy`` key must be present, otherwise an error message will be raised. In the following example, multiple aggregation keys are used::
 
-	aggregate_by = policy; tag1
+    aggregate_by = policy; tag1
 
   In this case, aggregated loss curves will be produced also for ``tag1`` and ``policy``, while reinsurance outputs will only be produced for the policy.
 

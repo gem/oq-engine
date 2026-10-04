@@ -21,11 +21,11 @@ parameters in the signature of the ``__init__`` method:
 
 .. code-block:: python
 
-	from openquake.hazardlib.gsim.base import GMPE
-	
-	class MyGMPE(GMPE):
-	   def __init__(self, param1, param2, ...):
-	       self.param1 = param1
+    from openquake.hazardlib.gsim.base import GMPE
+    
+    class MyGMPE(GMPE):
+       def __init__(self, param1, param2, ...):
+           self.param1 = param1
                self.param2 = param2
                ...
 
@@ -72,58 +72,58 @@ format, containing a tabular representation of the GMPE, numeric rather than ana
 You can find an example of use of GMPETables in the test openquake/qa_tests_data/case_18, which contains three tables 
 in its logic tree::
 
-	<logicTreeBranch branchID="b11">
-	  <uncertaintyModel>
-	    [GMPETable]
-	    gmpe_table = "Wcrust_low_rhypo.hdf5"
-	  </uncertaintyModel>
-	  <uncertaintyWeight>0.16</uncertaintyWeight>
-	</logicTreeBranch>
-	<logicTreeBranch branchID="b12">
-	  <uncertaintyModel>
-	    [GMPETable]
-	    gmpe_table = "Wcrust_med_rhypo.hdf5"
-	  </uncertaintyModel>
-	  <uncertaintyWeight>0.68</uncertaintyWeight>
-	</logicTreeBranch>
-	<logicTreeBranch branchID="b13">
-	  <uncertaintyModel>
-	    [GMPETable]
-	    gmpe_table = "Wcrust_high_rhypo.hdf5"
-	  </uncertaintyModel>
-	  <uncertaintyWeight>0.16</uncertaintyWeight>
-	</logicTreeBranch>
+    <logicTreeBranch branchID="b11">
+      <uncertaintyModel>
+        [GMPETable]
+        gmpe_table = "Wcrust_low_rhypo.hdf5"
+      </uncertaintyModel>
+      <uncertaintyWeight>0.16</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b12">
+      <uncertaintyModel>
+        [GMPETable]
+        gmpe_table = "Wcrust_med_rhypo.hdf5"
+      </uncertaintyModel>
+      <uncertaintyWeight>0.68</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b13">
+      <uncertaintyModel>
+        [GMPETable]
+        gmpe_table = "Wcrust_high_rhypo.hdf5"
+      </uncertaintyModel>
+      <uncertaintyWeight>0.16</uncertaintyWeight>
+    </logicTreeBranch>
 
 As you see, the TOML format is used inside the ``uncertaintyModel`` tag; the text::
 
-	[GMPETable]
-	gmpe_table = "Wcrust_low_rhypo.hdf5"
+    [GMPETable]
+    gmpe_table = "Wcrust_low_rhypo.hdf5"
 
 is automatically translated into a dictionary ``{'GMPETable': {'gmpe_table': "Wcrust_low_rhypo.hdf5"}}`` and the 
 ``.kwargs`` dictionary passed to the GMPE class is simply::
 
-	{'gmpe_table': "Wcrust_low_rhypo.hdf5"}
+    {'gmpe_table': "Wcrust_low_rhypo.hdf5"}
 
 NB: you may see around old GMPE logic files using a different syntax, without TOML::
 
-	<logicTreeBranch branchID="b11">
-	   <uncertaintyModel gmpe_table="Wcrust_low_rhypo.hdf5">
-	      GMPETable
-	   </uncertaintyModel>
-	   <uncertaintyWeight>0.16</uncertaintyWeight>
-	</logicTreeBranch>
-	   <logicTreeBranch branchID="b12">
-	   <uncertaintyModel gmpe_table="Wcrust_med_rhypo.hdf5">
-	      GMPETable
-	   </uncertaintyModel>
-	   <uncertaintyWeight>0.68</uncertaintyWeight>
-	</logicTreeBranch>
-	   <logicTreeBranch branchID="b13">
-	   <uncertaintyModel gmpe_table="Wcrust_high_rhypo.hdf5">
-	      GMPETable
-	   </uncertaintyModel>
-	   <uncertaintyWeight>0.16</uncertaintyWeight>
-	</logicTreeBranch>
+    <logicTreeBranch branchID="b11">
+       <uncertaintyModel gmpe_table="Wcrust_low_rhypo.hdf5">
+          GMPETable
+       </uncertaintyModel>
+       <uncertaintyWeight>0.16</uncertaintyWeight>
+    </logicTreeBranch>
+       <logicTreeBranch branchID="b12">
+       <uncertaintyModel gmpe_table="Wcrust_med_rhypo.hdf5">
+          GMPETable
+       </uncertaintyModel>
+       <uncertaintyWeight>0.68</uncertaintyWeight>
+    </logicTreeBranch>
+       <logicTreeBranch branchID="b13">
+       <uncertaintyModel gmpe_table="Wcrust_high_rhypo.hdf5">
+          GMPETable
+       </uncertaintyModel>
+       <uncertaintyWeight>0.16</uncertaintyWeight>
+    </logicTreeBranch>
 
 This is a legacy syntax, which is still supported and will likely be supported forever, but we recommend to use the new 
 TOML-based syntax, which is more general. The old syntax has the limitation of being non-hierarchic, making it 
@@ -153,10 +153,10 @@ filesystem*. If the files are read after instantiation, you will get a file not 
 For instance, if your GMPE must read 
 a text file with argument name *text_file* you should write the following code::
 
-	class GMPEWithTextFile(GMPE):
-	    def __init__(self, text_file):
-	        with open(text_file) as myfile:
-	            self.text = myfile.read()
+    class GMPEWithTextFile(GMPE):
+        def __init__(self, text_file):
+            with open(text_file) as myfile:
+                self.text = myfile.read()
 
 *********
 MultiGMPE
@@ -166,33 +166,33 @@ Another example of parametric GMPE is the MultiGMPE class. A MultiGMPE is a dict
 Measure Type. It is useful in geotechnical applications and in general in any situation where you have GMPEs depending 
 on the IMTs. You can find an example in our test openquake/qa_tests_data/classical/case_1::
 
-	<logicTreeBranch branchID="b1">
-	   <uncertaintyModel>
-	     [MultiGMPE."PGA".AkkarBommer2010]
-	     [MultiGMPE."SA(0.1)".SadighEtAl1997]
-	   </uncertaintyModel>
-	   <uncertaintyWeight>1.0</uncertaintyWeight>
-	 </logicTreeBranch>
+    <logicTreeBranch branchID="b1">
+       <uncertaintyModel>
+         [MultiGMPE."PGA".AkkarBommer2010]
+         [MultiGMPE."SA(0.1)".SadighEtAl1997]
+       </uncertaintyModel>
+       <uncertaintyWeight>1.0</uncertaintyWeight>
+     </logicTreeBranch>
 
 Here the engine will use the GMPE ``AkkarBommer2010`` for ``PGA`` and ``SadighEtAl1997`` for ``SA(0.1)``. The ``.kwargs`` 
 passed to the ``MultiGMPE`` class will have the form::
 
-	{'PGA': {'AkkarBommer2010': {}},
-	 'SA(0.1)': {'SadighEtAl1997': {}}}
+    {'PGA': {'AkkarBommer2010': {}},
+     'SA(0.1)': {'SadighEtAl1997': {}}}
 
 The beauty of the TOML format is that it is hierarchic, so if we wanted to use parametric GMPEs in a MultiGMPE we could. 
 Here is an example using the GMPETable *Wcrust_low_rhypo.hdf5* for ``PGA`` and *Wcrust_med_rhypo.hdf5* for ``SA(0.1)`` 
 (the example has no physical meaning, it is just an example)::
 
-	<logicTreeBranch branchID="b1">
-	   <uncertaintyModel>
-	     [MultiGMPE."PGA".GMPETable]
-	       gmpe_table = "Wcrust_low_rhypo.hdf5"
-	     [MultiGMPE."SA(0.1)".GMPETable]
-	       gmpe_table = "Wcrust_med_rhypo.hdf5"
-	   </uncertaintyModel>
-	   <uncertaintyWeight>1.0</uncertaintyWeight>
-	 </logicTreeBranch>
+    <logicTreeBranch branchID="b1">
+       <uncertaintyModel>
+         [MultiGMPE."PGA".GMPETable]
+           gmpe_table = "Wcrust_low_rhypo.hdf5"
+         [MultiGMPE."SA(0.1)".GMPETable]
+           gmpe_table = "Wcrust_med_rhypo.hdf5"
+       </uncertaintyModel>
+       <uncertaintyWeight>1.0</uncertaintyWeight>
+     </logicTreeBranch>
 
 ****************
 GenericGmpeAvgSA
@@ -201,23 +201,23 @@ GenericGmpeAvgSA
 In engine 3.4 we introduced a GMPE that manages a range of spectral accelerations and acts in terms of an average 
 spectral acceleration. You can find an example of use in openquake/qa_tests/data/classical/case_34::
 
-	<logicTreeBranch branchID="b1">
-	    <uncertaintyModel>
-	       [GenericGmpeAvgSA]
-	       gmpe_name = "BooreAtkinson2008"
-	       avg_periods = [0.5, 1.0, 2.0]
-	       corr_func = "baker_jayaram"
-	    </uncertaintyModel>
-	    <uncertaintyWeight>1.0</uncertaintyWeight>
-	</logicTreeBranch>
+    <logicTreeBranch branchID="b1">
+        <uncertaintyModel>
+           [GenericGmpeAvgSA]
+           gmpe_name = "BooreAtkinson2008"
+           avg_periods = [0.5, 1.0, 2.0]
+           corr_func = "baker_jayaram"
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
 
 As you see, the format is quite convenient when there are several arguments of different types: here we have two strings 
 (``gmpe_name`` and ``corr_func``) and a list of floats (``avg_periods``). The dictionary passed to the underlying class 
 will be::
 
-	{'gmpe_name': "BooreAtkinson2008",
-	 'avg_periods': [0.5, 1.0, 2.0],
-	 'corr_func': "baker_jayaram"}
+    {'gmpe_name': "BooreAtkinson2008",
+     'avg_periods': [0.5, 1.0, 2.0],
+     'corr_func': "baker_jayaram"}
 
 **************
 ModifiableGMPE
@@ -226,11 +226,11 @@ ModifiableGMPE
 In engine 3.10 we introduced a ``ModifiableGMPE`` class which is able to modify the behavior of an underlying GMPE. 
 Here is an example of use in the logic tree file::
 
-	<uncertaintyModel>
-	    [ModifiableGMPE]
-	    gmpe.AkkarEtAlRjb2014 = {}
-	    set_between_epsilon.epsilon_tau = 0.5
-	</uncertaintyModel>
+    <uncertaintyModel>
+        [ModifiableGMPE]
+        gmpe.AkkarEtAlRjb2014 = {}
+        set_between_epsilon.epsilon_tau = 0.5
+    </uncertaintyModel>
 
 Here *set_between_epsilon* is simply shifting the mean with the formula *mean -> mean + epsilon_tau * inter_event*. In 
 the future ``ModifiableGMPE`` will likely grow more methods. If you want to understand how it works you should look at 

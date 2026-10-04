@@ -328,51 +328,51 @@ Rupture sampling: how does it work?
 In this section we explain how the sampling of ruptures in event based calculations works, at least for the case of 
 Poissonian sources. As an example, consider the following point source::
 
-	>>> from openquake.hazardlib import nrml
-	>>> src = nrml.get('''\
-	... <pointSource id="1" name="Point Source"
-	...             tectonicRegion="Active Shallow Crust">
-	...    <pointGeometry>
-	...        <gml:Point><gml:pos>179.5 0</gml:pos></gml:Point>
-	...        <upperSeismoDepth>0</upperSeismoDepth>
-	...        <lowerSeismoDepth>10</lowerSeismoDepth>
-	...    </pointGeometry>
-	...    <magScaleRel>WC1994</magScaleRel>
-	...    <ruptAspectRatio>1.5</ruptAspectRatio>
-	...    <truncGutenbergRichterMFD aValue="3" bValue="1" minMag="5" maxMag="7"/>
-	...    <nodalPlaneDist>
-	...        <nodalPlane dip="30" probability="1" strike="45" rake="90" />
-	...    </nodalPlaneDist>
-	...    <hypoDepthDist>
-	...        <hypoDepth depth="4" probability="1"/>
-	...    </hypoDepthDist>
-	...</pointSource>''', investigation_time=1, width_of_mfd_bin=1.0)
+    >>> from openquake.hazardlib import nrml
+    >>> src = nrml.get('''\
+    ... <pointSource id="1" name="Point Source"
+    ...             tectonicRegion="Active Shallow Crust">
+    ...    <pointGeometry>
+    ...        <gml:Point><gml:pos>179.5 0</gml:pos></gml:Point>
+    ...        <upperSeismoDepth>0</upperSeismoDepth>
+    ...        <lowerSeismoDepth>10</lowerSeismoDepth>
+    ...    </pointGeometry>
+    ...    <magScaleRel>WC1994</magScaleRel>
+    ...    <ruptAspectRatio>1.5</ruptAspectRatio>
+    ...    <truncGutenbergRichterMFD aValue="3" bValue="1" minMag="5" maxMag="7"/>
+    ...    <nodalPlaneDist>
+    ...        <nodalPlane dip="30" probability="1" strike="45" rake="90" />
+    ...    </nodalPlaneDist>
+    ...    <hypoDepthDist>
+    ...        <hypoDepth depth="4" probability="1"/>
+    ...    </hypoDepthDist>
+    ...</pointSource>''', investigation_time=1, width_of_mfd_bin=1.0)
 
 The source here is particularly simple, with only one seismogenic depth and one nodal plane. It generates two ruptures, 
 because with a ``width_of_mfd_bin`` of 1 there are only two magnitudes in the range from 5 to 7::
 
-	>>> [(mag1, rate1), (mag2, rate2)] = src.get_annual_occurrence_rates()
-	>>> mag1
-	5.5
-	>>> mag2
-	6.5
+    >>> [(mag1, rate1), (mag2, rate2)] = src.get_annual_occurrence_rates()
+    >>> mag1
+    5.5
+    >>> mag2
+    6.5
 
 The occurrence rates are respectively 0.009 and 0.0009. So, if we set the number of stochastic event sets to 1,000,000::
 
-	>>> num_ses = 1_000_000
+    >>> num_ses = 1_000_000
 
 we would expect the first rupture (the one with magnitude 5.5) to occur around 9,000 times and the second rupture (the 
 one with magnitude 6.5) to occur around 900 times. Clearly the exact numbers will depend on the stochastic seed; if we 
 set::
 
-	>>> np.random.seed(42)
+    >>> np.random.seed(42)
 
 then we will have (for ``investigation_time = 1``)::
 
-	>>> np.random.poisson(rate1 * num_ses * 1)
-	8966
-	>>> np.random.poisson(rate2 * num_ses * 1)
-	921
+    >>> np.random.poisson(rate1 * num_ses * 1)
+    8966
+    >>> np.random.poisson(rate2 * num_ses * 1)
+    921
 
 These are the number of occurrences of each rupture in the effective investigation time, i.e. the investigation time 
 multiplied by the number of stochastic event sets and the number of realizations (here we assumed 1 realization).

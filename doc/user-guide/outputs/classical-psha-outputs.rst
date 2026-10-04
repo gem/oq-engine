@@ -7,21 +7,21 @@ When the PSHA input model doesn’t contain epistemic uncertainties the results 
 investigated site). The command below illustrates how it is possible to retrieve the group of hazard curves obtained for 
 a calculation with a given identifier ``<calc_id>`` (see Section :ref:`Exporting results from a hazard calculation <export-hazard-results>`
 for an explanation about how to obtain the list of calculations performed with their corresponding ID)::
-	
-	user@ubuntu:~$ oq engine --lo <calc_id>
-	id | name
-	3  | Hazard Curves
-	4  | Realizations
+    
+    user@ubuntu:~$ oq engine --lo <calc_id>
+    id | name
+    3  | Hazard Curves
+    4  | Realizations
 
 To export from the database the outputs (in this case hazard curves) contained in one of the output identifies, one can 
 do so with the following command::
 
-	user@ubuntu:~$ oq engine --export-output <output_id> <output_directory>
+    user@ubuntu:~$ oq engine --export-output <output_id> <output_directory>
 
 Alternatively, if the user wishes to export all of the outputs associated with a particular calculation then they can 
 use the ``--export-outputs`` with the corresponding calculation key::
 
-	user@ubuntu:~$ oq engine --export-outputs <calc_id> <output_directory>
+    user@ubuntu:~$ oq engine --export-outputs <calc_id> <output_directory>
 
 The exports will produce one or more CSV files containing the seismic
 hazard curves as represented in the listing
@@ -60,23 +60,23 @@ probabilities of exceedance associated with each of the IMLs.
 If the hazard calculation is configured to produce results including seismic hazard maps and uniform hazard spectra, 
 then the list of outputs would display the following::
 
-	user@ubuntu:~$ oq engine --lo <calc_id>
-	id | name
-	2 | Full Report
-	3 | Hazard Curves
-	4 | Hazard Maps
-	5 | Realizations
-	6 | Uniform Hazard Spectra
+    user@ubuntu:~$ oq engine --lo <calc_id>
+    id | name
+    2 | Full Report
+    3 | Hazard Curves
+    4 | Hazard Maps
+    5 | Realizations
+    6 | Uniform Hazard Spectra
 
 :ref:`The first listing <lst:output_hazard_map_csv>` below
 shows a sample of the CSV file used to describe a hazard map, and and
 :ref:`the second listing <lst:output_uhs>` below shows a sample of the
 CSV used to describe a uniform hazard spectrum.
-In both cases, the files contain a commented line as in the 	
+In both cases, the files contain a commented line as in the     
 :ref:`hazard curve <lst:output_hazard_curves_csv>`. The following
-row has the column headers: the site coordinates (*lon, lat*), and then a 	
-set of two-part column names that indicate the IMT and probability	
-of exceedance corresponding to the investigation time; the remaining rows	
+row has the column headers: the site coordinates (*lon, lat*), and then a     
+set of two-part column names that indicate the IMT and probability    
+of exceedance corresponding to the investigation time; the remaining rows    
 give the values for each site. 
 
 .. container:: listing

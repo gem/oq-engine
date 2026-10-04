@@ -15,29 +15,29 @@ ground motion fields for the given rupture model and then calculate damage distr
 motion fields. A minimal job configuration file required for running a scenario damage calculation is shown in the 
 listing below.::
 
-	[general]
-	description = Scenario damage using a single config file
-	calculation_mode = scenario_damage
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[hazard_calculation]
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim = BooreAtkinson2008
-	number_of_ground_motion_fields = 1000
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
+    [general]
+    description = Scenario damage using a single config file
+    calculation_mode = scenario_damage
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [hazard_calculation]
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim = BooreAtkinson2008
+    number_of_ground_motion_fields = 1000
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
 
 The general parameters ``description`` and ``calculation_mode``, and ``exposure_file`` have already been described earlier. 
 The other parameters seen in the above example configuration file are described below:
@@ -50,13 +50,13 @@ In this case, the ground motion fields will be computed at each of the locations
 Ground motion fields will be generated for each of the intensity measure types found in the provided set of fragility 
 models. The above calculation can be run using the command line::
 
-	user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 2680 completed in 13 seconds. Results:
-	  id | name
-	5069 | Average Asset Damages
+    Calculation 2680 completed in 13 seconds. Results:
+      id | name
+    5069 | Average Asset Damages
 
 Note that one or more of the following parameters can be used in the same job configuration file to provide the 
 corresponding fragility model files:
@@ -80,50 +80,50 @@ damage distribution for a portfolio of assets due to the ground motion fields.
 
 **Scenario hazard example**::
 
-	[general]
-	description = Scenario hazard example
-	calculation_mode = scenario
-	
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
-	
-	[sites]
-	sites_csv = sites.csv
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[hazard_calculation]
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim = BooreAtkinson2008
-	intensity_measure_types = PGA, SA(0.3)
-	number_of_ground_motion_fields = 1000
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
+    [general]
+    description = Scenario hazard example
+    calculation_mode = scenario
+    
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
+    
+    [sites]
+    sites_csv = sites.csv
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [hazard_calculation]
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim = BooreAtkinson2008
+    intensity_measure_types = PGA, SA(0.3)
+    number_of_ground_motion_fields = 1000
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
 
 **Scenario damage example**::
 
-	[general]
-	description = Scenario damage example
-	calculation_mode = scenario_damage
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[boundaries]
-	region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
-	
-	[hazard]
-	asset_hazard_distance = 20
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
-	
-	[risk_calculation]
-	time_event = night
+    [general]
+    description = Scenario damage example
+    calculation_mode = scenario_damage
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [boundaries]
+    region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
+    
+    [hazard]
+    asset_hazard_distance = 20
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
+    
+    [risk_calculation]
+    time_event = night
 
 In this example, the set of intensity measure types for which the ground motion fields should be generated is specified 
 explicitly in the configuration file using the parameter ``intensity_measure_types``. If the hazard calculation outputs 
@@ -161,40 +161,40 @@ Now, the above calculations described by the two configuration files “job_haza
 separately. The calculation id for the hazard calculation should be provided to the OpenQuake engine while running the 
 risk calculation using the option ``--hazard-calculation-id`` (or ``--hc``). This is shown below::
 
-	oq engine --run job_hazard.ini
+    oq engine --run job_hazard.ini
 
 After the hazard calculation is completed, a message similar to the one below will be displayed in the terminal::
 
-	Calculation 2681 completed in 4 seconds. Results:
-	  id | name
-	5072 | Ground Motion Fields
+    Calculation 2681 completed in 4 seconds. Results:
+      id | name
+    5072 | Ground Motion Fields
 
 In the example above, the calculation id of the hazard calculation is 2681. There is only one output from this 
 calculation, i.e., the Ground Motion Fields.
 
 The risk calculation for computing the damage distribution statistics for the portfolio of assets can now be run using::
 
-	oq engine --run job_damage.ini --hc 2681
+    oq engine --run job_damage.ini --hc 2681
 
 After the calculation is completed, a message similar to the one listed above in Example 1 will be displayed.
 
 In order to retrieve the calculation id of a previously run hazard calculation, the option ``--list-hazard-calculations`` 
 (or ``--lhc``) can be used to display a list of all previously run hazard calculations::
 
-	job_id |     status |         start_time |         description
-	  2609 | successful | 2015-12-01 14:14:14 | Mid Nepal earthquake
-	  ...
-	  2681 | successful | 2015-12-12 10:00:00 | Scenario hazard example
+    job_id |     status |         start_time |         description
+      2609 | successful | 2015-12-01 14:14:14 | Mid Nepal earthquake
+      ...
+      2681 | successful | 2015-12-12 10:00:00 | Scenario hazard example
 
 The option ``--list-outputs`` (or ``--lo``) can be used to display a list of all outputs generated during a particular 
 calculation. For instance,::
 
-	oq engine --lo 2681
+    oq engine --lo 2681
 
 will produce the following display::
 
-	  id | name
-	5072 | Ground Motion Fields
+      id | name
+    5072 | Ground Motion Fields
 
 **Example 3**
 
@@ -204,18 +204,18 @@ The Ground Motion Fields must be provided in either the Natural hazards’ Risk 
 as presented in Section Outputs from Scenario Hazard Analysis. The damage distribution is computed based on the provided 
 Ground Motion Fields.::
 
-	[general]
-	description = Scenario damage using user-defined ground motion fields (NRML)
-	calculation_mode = scenario_damage
-	
-	[hazard]
-	gmfs_file = gmfs.csv
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
+    [general]
+    description = Scenario damage using user-defined ground motion fields (NRML)
+    calculation_mode = scenario_damage
+    
+    [hazard]
+    gmfs_file = gmfs.csv
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
 
 - ``gmfs_file``: a parameter used to define the path to the Ground Motion Fields file in the Natural hazards’ Risk Markup Language schema. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model.
 
@@ -225,26 +225,26 @@ provided in the csv format, an additional csv file listing the site ids must be 
 See :ref:`this table <sites-csv>` for an example of the sites csv file, which provides the association between the site ids in the 
 Ground Motion Fields csv file with their latitude and longitude coordinates.::
 
-	[general]
-	description = Scenario damage using user-defined ground motion fields (CSV)
-	calculation_mode = scenario_damage
-	
-	[hazard]
-	sites_csv = sites.csv
-	gmfs_csv = gmfs.csv
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
+    [general]
+    description = Scenario damage using user-defined ground motion fields (CSV)
+    calculation_mode = scenario_damage
+    
+    [hazard]
+    sites_csv = sites.csv
+    gmfs_csv = gmfs.csv
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
 
 - ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields file in the csv format. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model. (`Download an example file here <https://github.com/gem/oq-engine/raw/master/doc/manual/input_scenario_gmfs.csv>`__).
 - ``sites_csv``: a parameter used to define the path to the sites file in the csv format. This file must define site id, longitude, and latitude for all of the sites for the Ground Motion Fields file provided using the gmfs_csv parameter. (`Download an example file here <https://github.com/gem/oq-engine/raw/master/doc/manual/input_scenario_sites.csv>`_).
 
 The above calculation(s) can be run using the command line::
 
-	oq engine --run job.ini
+    oq engine --run job.ini
 
 **Example 4**
 
@@ -258,56 +258,56 @@ generated for each set of Ground Motion Field.
 The file shown in the listing below lists the two Ground Motion Prediction Equations to be used for the hazard 
 calculation::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	
-	<logicTree logicTreeID="lt1">
-	    <logicTreeBranchSet uncertaintyType="gmpeModel"
-	                        branchSetID="bs1"
-	                        applyToTectonicRegionType="Active Shallow Crust">
-	
-	      <logicTreeBranch branchID="b1">
-	        <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-	        <uncertaintyWeight>0.75</uncertaintyWeight>
-	      </logicTreeBranch>
-	
-	      <logicTreeBranch branchID="b2">
-	        <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
-	        <uncertaintyWeight>0.25</uncertaintyWeight>
-	      </logicTreeBranch>
-	
-	    </logicTreeBranchSet>
-	</logicTree>
-	
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+    
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Active Shallow Crust">
+    
+          <logicTreeBranch branchID="b1">
+            <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+            <uncertaintyWeight>0.75</uncertaintyWeight>
+          </logicTreeBranch>
+    
+          <logicTreeBranch branchID="b2">
+            <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+            <uncertaintyWeight>0.25</uncertaintyWeight>
+          </logicTreeBranch>
+    
+        </logicTreeBranchSet>
+    </logicTree>
+    
+    </nrml>
 
 The only change that needs to be made in the hazard job configuration file is to replace the ``gsim`` parameter with 
 ``gsim_logic_tree_file``, as demonstrated in the listing below.::
 
-	[general]
-	description = Scenario hazard example using multiple GMPEs
-	calculation_mode = scenario
-	
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
-	
-	[sites]
-	sites_csv = sites.csv
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[hazard_calculation]
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	intensity_measure_types = PGA, SA(0.3)
-	number_of_ground_motion_fields = 1000
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
+    [general]
+    description = Scenario hazard example using multiple GMPEs
+    calculation_mode = scenario
+    
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
+    
+    [sites]
+    sites_csv = sites.csv
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [hazard_calculation]
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    intensity_measure_types = PGA, SA(0.3)
+    number_of_ground_motion_fields = 1000
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
 
 **Example 5**
 
@@ -318,35 +318,35 @@ corresponding losses.
 A minimal job configuration file required for running a scenario damage calculation followed by a consequences analysis 
 is shown in the listing below.::
 
-	[general]
-	description = Scenario damage and consequences
-	calculation_mode = scenario_damage
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[hazard_calculation]
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim = BooreAtkinson2008
-	number_of_ground_motion_fields = 1000
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
-	nonstructural_fragility_file = nonstructural_fragility_model.xml
-	
-	[consequence]
-	consequence_file = {'taxonomy': "consequence_model.csv"}
+    [general]
+    description = Scenario damage and consequences
+    calculation_mode = scenario_damage
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [hazard_calculation]
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim = BooreAtkinson2008
+    number_of_ground_motion_fields = 1000
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
+    nonstructural_fragility_file = nonstructural_fragility_model.xml
+    
+    [consequence]
+    consequence_file = {'taxonomy': "consequence_model.csv"}
 
 Note that the "consequence_model.csv" file will have a structure like the
 following::
@@ -364,14 +364,14 @@ following::
 
 The above calculation can be run using the command line::
 
-	user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 1579 completed in 37 seconds. Results:
-	  id | name
-	8990 | Average Asset Losses
-	8993 | Average Asset Damages
+    Calculation 1579 completed in 37 seconds. Results:
+      id | name
+    8990 | Average Asset Losses
+    8993 | Average Asset Damages
 
 .. _scenario-risk-params:
 
@@ -391,36 +391,36 @@ motion fields for the given rupture model and then calculate loss statistics for
 losses, based on the ground motion fields. The job configuration file required for running this scenario risk calculation 
 is shown in the listing below.::
 
-	[general]
-	description = Scenario risk using a single config file
-	calculation_mode = scenario_risk
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[rupture]
-	rupture_model_file = rupture_model.xml
-	rupture_mesh_spacing = 2.0
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[hazard_calculation]
-	random_seed = 42
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	gsim = BooreAtkinson2008
-	number_of_ground_motion_fields = 1000
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
-	
-	[vulnerability]
-	structural_vulnerability_file = structural_vulnerability_model.xml
-	nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
-	
-	[risk_calculation]
-	master_seed = 24
-	asset_correlation = 1
+    [general]
+    description = Scenario risk using a single config file
+    calculation_mode = scenario_risk
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [rupture]
+    rupture_model_file = rupture_model.xml
+    rupture_mesh_spacing = 2.0
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [hazard_calculation]
+    random_seed = 42
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    gsim = BooreAtkinson2008
+    number_of_ground_motion_fields = 1000
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
+    
+    [vulnerability]
+    structural_vulnerability_file = structural_vulnerability_model.xml
+    nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
+    
+    [risk_calculation]
+    master_seed = 24
+    asset_correlation = 1
 
 Whereas a scenario damage calculation requires one or more fragility and/or consequence models, a scenario risk 
 calculation requires the user to specify one or more vulnerability model files. Note that one or more of the following 
@@ -445,15 +445,15 @@ In this case, the ground motion fields will be computed at each of the locations
 for each of the intensity measure types found in the provided set of vulnerability models. The above calculation can be 
 run using the command line::
 
-	user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 2735 completed in 10 seconds. Results:
-	  id | name
-	5328 | Aggregate Asset Losses
-	5329 | Average Asset Losses
-	5330 | Aggregate Event Losses
+    Calculation 2735 completed in 10 seconds. Results:
+      id | name
+    5328 | Aggregate Asset Losses
+    5329 | Average Asset Losses
+    5330 | Aggregate Event Losses
 
 All of the different ways of running a scenario damage calculation as illustrated through the examples of the previous 
 section are also applicable to the scenario risk calculator, though the examples are not repeated here.

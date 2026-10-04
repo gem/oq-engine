@@ -18,40 +18,40 @@ for the retrofitted structures, then calculate the reduction in average annual l
 calculate the benefit-cost ratio for each asset. A minimal job configuration file required for running a classical 
 probabilistic retrofit benefit-cost ratio calculation is shown in the listing below.::
 
-	[general]
-	description = Classical cost-benefit analysis using a single config file
-	calculation_mode = classical_bcr
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[erf]
-	width_of_mfd_bin = 0.1
-	rupture_mesh_spacing = 2
-	area_source_discretization = 20
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[logic_trees]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	number_of_logic_tree_samples = 0
-	
-	[hazard_calculation]
-	random_seed = 42
-	investigation_time = 1
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	
-	[vulnerability]
-	structural_vulnerability_file = structural_vulnerability_model.xml
-	structural_vulnerability_retrofitted_file = retrofit_vulnerability_model.xml
-	
-	[risk_calculation]
-	interest_rate = 0.05
-	asset_life_expectancy = 50
-	lrem_steps_per_interval = 1
+    [general]
+    description = Classical cost-benefit analysis using a single config file
+    calculation_mode = classical_bcr
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [erf]
+    width_of_mfd_bin = 0.1
+    rupture_mesh_spacing = 2
+    area_source_discretization = 20
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [logic_trees]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    number_of_logic_tree_samples = 0
+    
+    [hazard_calculation]
+    random_seed = 42
+    investigation_time = 1
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    
+    [vulnerability]
+    structural_vulnerability_file = structural_vulnerability_model.xml
+    structural_vulnerability_retrofitted_file = retrofit_vulnerability_model.xml
+    
+    [risk_calculation]
+    interest_rate = 0.05
+    asset_life_expectancy = 50
+    lrem_steps_per_interval = 1
 
 The new parameters introduced in the above example configuration file are described below:
 
@@ -61,10 +61,10 @@ The new parameters introduced in the above example configuration file are descri
 
 The above calculation can be run using the command line::
 
-	user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 2776 completed in 25 seconds. Results:
-	  id | name
-	5422 | Benefit-cost ratio distribution | BCR Map. type=structural, hazard=5420
+    Calculation 2776 completed in 25 seconds. Results:
+      id | name
+    5422 | Benefit-cost ratio distribution | BCR Map. type=structural, hazard=5420

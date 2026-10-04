@@ -40,9 +40,9 @@ The concept of “mean” ground motion field
 The engine has at least three different kinds of mean ground motion field, computed 
 differently and used in different situations:
 
-	- Mean ground motion field by GMPE, used to reduce disk space and make risk calculations faster.
-	- Mean ground motion field by event, used for debugging/plotting purposes.
-	- Single-rupture hazardlib mean ground motion field, used for analysis/plotting purposes.
+    - Mean ground motion field by GMPE, used to reduce disk space and make risk calculations faster.
+    - Mean ground motion field by event, used for debugging/plotting purposes.
+    - Single-rupture hazardlib mean ground motion field, used for analysis/plotting purposes.
 
 Mean ground motion field by GMPE
 ********************************
@@ -132,40 +132,40 @@ type (PGA) and a ``minimum_intensity`` of 0.05g. Suppose there are 1000 simulati
 and that you have a normal distribution of the logarithms with :math:`\mu = -2.0,  \sigma=.5`; 
 then the ground motion values that you could obtain would be as follows::
 
-	>>> import numpy
-	>>> np.random.seed(42) # fix the seed
-	>>> gmvs = np.random.lognormal(mean=-2.0, sigma=.5, size=1000)
+    >>> import numpy
+    >>> np.random.seed(42) # fix the seed
+    >>> gmvs = np.random.lognormal(mean=-2.0, sigma=.5, size=1000)
 
 As expected, the variability of the values is rather large, spanning more than 
 one order of magnitude::
 
-	>>> numpy.round([gmvs.min(), np.median(gmvs), gmvs.max()], 6)
-	array([0.026766, 0.137058, 0.929011])
+    >>> numpy.round([gmvs.min(), np.median(gmvs), gmvs.max()], 6)
+    array([0.026766, 0.137058, 0.929011])
 
 Also mean and standard deviation of the logarithms are very close to the expected 
 values :math:`\mu = -2.0,  \sigma=.5`::
 
-	>>> round(np.log(gmvs).mean(), 6)
-	-1.990334
-	>>> round(np.log(gmvs).std(), 6)
-	0.489363
+    >>> round(np.log(gmvs).mean(), 6)
+    -1.990334
+    >>> round(np.log(gmvs).std(), 6)
+    0.489363
 
 The geometric mean of the values (i.e. the exponential of the mean of the 
 logarithms) is very close to the median, as expected for a lognormal distribution::
 
-	>>> round(np.exp(np.log(gmvs).mean()), 6)
-	0.13665
+    >>> round(np.exp(np.log(gmvs).mean()), 6)
+    0.13665
 
 All these properties are broken when the ground motion values are truncated 
 below the ``minimum_intensity``::
 
-	>>> gmvs[gmvs < .05] = .05
-	>>> round(np.log(gmvs).mean(), 6)
-	-1.987608
-	>>> round(np.log(gmvs).std(), 6)
-	0.4828063
-	>>> round(np.exp(np.log(gmvs).mean()), 6)
-	0.137023
+    >>> gmvs[gmvs < .05] = .05
+    >>> round(np.log(gmvs).mean(), 6)
+    -1.987608
+    >>> round(np.log(gmvs).std(), 6)
+    0.4828063
+    >>> round(np.exp(np.log(gmvs).mean()), 6)
+    0.137023
 
 In this case the difference is minor, but if the number of simulations is small 
 and/or the :math:`\sigma` is large the mean and standard deviation obtained from 
@@ -194,8 +194,8 @@ It should also be noticed that there is a shortcut to compute the single-rupture
 hazardlib “mean” ground motion field without writing any code; just set in your 
 ``job.ini`` the following values::
 
-	truncation_level = 0
-	ground_motion_fields = 1
+    truncation_level = 0
+    ground_motion_fields = 1
 
 Setting ``truncation_level = 0`` effectively replaces the lognormal distribution 
 with a delta function, so the generated ground motion fields will be all equal, 
@@ -217,13 +217,13 @@ but reality can be different.
 
 The relevant parameters are the following::
 
-	N = 707,920 hazard sites
-	E = 10^5 estimated events of magnitude greater then 5.5 in the investigation
-	    time of 100,000 years
-	B = 1 number of branches in the UCERF logic tree
-	G = 5 number of GSIMS in the GMPE logic tree
-	I = 6 number of intensity measure types
-	S1 = 13 number of bytes used by the engine to store a single GMV
+    N = 707,920 hazard sites
+    E = 10^5 estimated events of magnitude greater then 5.5 in the investigation
+        time of 100,000 years
+    B = 1 number of branches in the UCERF logic tree
+    G = 5 number of GSIMS in the GMPE logic tree
+    I = 6 number of intensity measure types
+    S1 = 13 number of bytes used by the engine to store a single GMV
 
 The maximum size of generated GMFs is ``N * E * B * G * I * S1 = 25 TB (terabytes)``
 Storing and sharing 25 TB of data is a big issue, so the problem seems without 
@@ -282,15 +282,15 @@ In order to enable this functionality one has to prepare a parent calculation
 containing the exposure and risk functions for the region of interest, say Peru. 
 To that aim the user will need to write a prepare ``job.ini`` file like this one::
 
-	[general]
-	description = Peru - Preloading exposure and vulnerability
-	calculation_mode = scenario
-	exposure_file = exposure_model.xml
-	structural_vulnerability_file = structural_vulnerability_model.xml
+    [general]
+    description = Peru - Preloading exposure and vulnerability
+    calculation_mode = scenario
+    exposure_file = exposure_model.xml
+    structural_vulnerability_file = structural_vulnerability_model.xml
 
 By running the calculation::
 
-	$ oq engine --run prepare_job.ini
+    $ oq engine --run prepare_job.ini
 
 The exposure and the risk functions will be imported in the datastore.
 
@@ -310,46 +310,46 @@ Let’s suppose that the calculation ID of this ‘pre’ calculation is 1000. W
 now run the risk calculation starting from a ShakeMap. For that, one need a ``job.ini`` 
 file like the following::
 
-	[general]
-	description = Peru - 2007 M8.0 Pisco earthquake losses
-	calculation_mode = scenario_risk
-	number_of_ground_motion_fields = 10
-	truncation_level = 3
-	shakemap_id = usp000fjta
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
-	total_residual_correlation_model = BakerCornell2006
+    [general]
+    description = Peru - 2007 M8.0 Pisco earthquake losses
+    calculation_mode = scenario_risk
+    number_of_ground_motion_fields = 10
+    truncation_level = 3
+    shakemap_id = usp000fjta
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
+    total_residual_correlation_model = BakerCornell2006
 
 This example refers to the 2007 Mw8.0 Pisco earthquake in Peru 
 (see https://earthquake.usgs.gov/earthquakes/eventpage/usp000fjta#shakemap). 
 The risk can be computed by running the risk job file against the prepared 
 calculation::
 
-	$ oq engine --run job.ini --hc 1000
+    $ oq engine --run job.ini --hc 1000
 
 Starting from version 3.12 it is also possible to specify the following sources 
 instead of a *shakemap_id*::
 
-	# (1) from local files:
-	shakemap_uri = {
-	      "kind": "usgs_xml",
-	      "grid_url": "relative/path/file.xml",
-	      "uncertainty_url": "relative/path/file.xml"
-	      }
-	
-	# (2) from remote files:
-	shakemap_uri = {
-	      "kind": "usgs_xml",
-	      "grid_url": "https://url.to/grid.xml",
-	      "uncertainty_url": "https://url.to/uncertainty.zip"
-	      }
-	
-	# (3) both files in a single archive
-	# containing grid.xml, uncertainty.xml:
-	shakemap_uri = {
-	      "kind": "usgs_xml",
-	      "grid_url": "relative/path/grid.zip"
-	      }
+    # (1) from local files:
+    shakemap_uri = {
+          "kind": "usgs_xml",
+          "grid_url": "relative/path/file.xml",
+          "uncertainty_url": "relative/path/file.xml"
+          }
+    
+    # (2) from remote files:
+    shakemap_uri = {
+          "kind": "usgs_xml",
+          "grid_url": "https://url.to/grid.xml",
+          "uncertainty_url": "https://url.to/uncertainty.zip"
+          }
+    
+    # (3) both files in a single archive
+    # containing grid.xml, uncertainty.xml:
+    shakemap_uri = {
+          "kind": "usgs_xml",
+          "grid_url": "relative/path/grid.zip"
+          }
 
 While it is also possible to define absolute paths, it is advised not to do so 
 since using absolute paths will make your calculation not portable across 
@@ -365,10 +365,10 @@ assets/sites will be associated to a polygon if contained by the latter. Sites
 outside of a polygon will be discarded. Shapefile inputs can be specified similar 
 to ShakeMaps::
 
-	shakemap_uri = {
-	   "kind": "shapefile",
-	   "fname": "path_to/file.shp"
-	}
+    shakemap_uri = {
+       "kind": "shapefile",
+       "fname": "path_to/file.shp"
+    }
 
 It is only necessary to specify one of the available files, and the rest of the 
 files will be expected to be in the same location. It is also possible to have 

@@ -20,34 +20,34 @@ compute the hazard curves for the given source model and ground motion model and
 statistics based on the hazard curves. A minimal job configuration file required for running a classical probabilistic 
 damage calculation is shown in the listing below.::
 
-	[general]
-	description = Classical probabilistic damage using a single config file
-	calculation_mode = classical_damage
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[erf]
-	width_of_mfd_bin = 0.1
-	rupture_mesh_spacing = 2
-	area_source_discretization = 20
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[logic_trees]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	number_of_logic_tree_samples = 0
-	
-	[hazard_calculation]
-	random_seed = 42
-	investigation_time = 1
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
+    [general]
+    description = Classical probabilistic damage using a single config file
+    calculation_mode = classical_damage
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [erf]
+    width_of_mfd_bin = 0.1
+    rupture_mesh_spacing = 2
+    area_source_discretization = 20
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [logic_trees]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    number_of_logic_tree_samples = 0
+    
+    [hazard_calculation]
+    random_seed = 42
+    investigation_time = 1
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
 
 The general parameters ``description`` and ``calculation_mode``, and ``exposure_file`` have already been described 
 earlier in Section :ref:`Scenario Damage Calculator <scenario-damage-params>`. The parameters related to the hazard curves computation have been 
@@ -57,13 +57,13 @@ In this case, the hazard curves will be computed at each of the locations of the
 of the intensity measure types found in the provided set of fragility models. The above calculation can be run using the 
 command line::
 
-	oq engine --run job.ini
+    oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 2741 completed in 12 seconds. Results:
-	  id | name
-	5359 | Asset Damage Distribution
+    Calculation 2741 completed in 12 seconds. Results:
+      id | name
+    5359 | Asset Damage Distribution
 
 **Example 2**
 
@@ -71,56 +71,56 @@ This example illustrates a classical probabilistic damage calculation which uses
 hazard and risk parts of a classical probabilistic damage assessment. The first configuration file shown in the listing 
 below contains input models and parameters required for the computation of the hazard curves.::
 
-	[general]
-	description = Classical probabilistic hazard
-	calculation_mode = classical
-	
-	[sites]
-	region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
-	region_grid_spacing = 0.5
-	
-	[erf]
-	width_of_mfd_bin = 0.1
-	rupture_mesh_spacing = 2
-	area_source_discretization = 20
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[logic_trees]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	number_of_logic_tree_samples = 0
-	
-	[hazard_calculation]
-	random_seed = 42
-	investigation_time = 1
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	intensity_measure_types_and_levels = {
-	 "PGA": logscale(0.05, 3.0, 30),
-	 "SA(1.0)": logscale(0.05, 3.0, 30)}
+    [general]
+    description = Classical probabilistic hazard
+    calculation_mode = classical
+    
+    [sites]
+    region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
+    region_grid_spacing = 0.5
+    
+    [erf]
+    width_of_mfd_bin = 0.1
+    rupture_mesh_spacing = 2
+    area_source_discretization = 20
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [logic_trees]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    number_of_logic_tree_samples = 0
+    
+    [hazard_calculation]
+    random_seed = 42
+    investigation_time = 1
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    intensity_measure_types_and_levels = {
+     "PGA": logscale(0.05, 3.0, 30),
+     "SA(1.0)": logscale(0.05, 3.0, 30)}
 
 The second configuration file shown in the listing below contains input models and parameters required for the 
 calculation of the probabilistic damage distribution for a portfolio of assets based on the hazard curves and fragility 
 models.::
 
-	[general]
-	description = Classical probabilistic damage example
-	calculation_mode = classical_damage
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[hazard]
-	asset_hazard_distance = 20
-	
-	[fragility]
-	structural_fragility_file = structural_fragility_model.xml
-	
-	[risk_calculation]
-	risk_investigation_time = 50
-	steps_per_interval = 4
+    [general]
+    description = Classical probabilistic damage example
+    calculation_mode = classical_damage
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [hazard]
+    asset_hazard_distance = 20
+    
+    [fragility]
+    structural_fragility_file = structural_fragility_model.xml
+    
+    [risk_calculation]
+    risk_investigation_time = 50
+    steps_per_interval = 4
 
 Now, the above calculations described by the two configuration files “job_hazard.ini” and “job_damage.ini” can be run 
 sequentially or separately, as illustrated in Example 2 in Section :ref:`Scenario Damage Calculator <scenario-damage-params>`. 
@@ -147,35 +147,35 @@ compute the hazard curves for the given source model and ground motion model and
 based on the hazard curves. An example job configuration file for running a classical probabilistic risk calculation is 
 shown in the listing below.::
 
-	[general]
-	description = Classical probabilistic risk using a single config file
-	calculation_mode = classical_risk
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[erf]
-	width_of_mfd_bin = 0.1
-	rupture_mesh_spacing = 2
-	area_source_discretization = 20
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[logic_trees]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	number_of_logic_tree_samples = 0
-	
-	[hazard_calculation]
-	random_seed = 42
-	investigation_time = 1
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	
-	[vulnerability]
-	structural_vulnerability_file = structural_vulnerability_model.xml
-	nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
+    [general]
+    description = Classical probabilistic risk using a single config file
+    calculation_mode = classical_risk
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [erf]
+    width_of_mfd_bin = 0.1
+    rupture_mesh_spacing = 2
+    area_source_discretization = 20
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [logic_trees]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    number_of_logic_tree_samples = 0
+    
+    [hazard_calculation]
+    random_seed = 42
+    investigation_time = 1
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    
+    [vulnerability]
+    structural_vulnerability_file = structural_vulnerability_model.xml
+    nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
 
 Apart from the calculation mode, the only difference with the example job configuration file shown in Example 1 of 
 Section :ref:`Classical Probabilistic Seismic Damage Calculator <classical-damage-params>` is the use of a 
@@ -198,15 +198,15 @@ In this case, the hazard curves will be computed at each of the locations of the
 each of the intensity measure types found in the provided set of vulnerabilitymodels. The above calculation can be run 
 using the command line::
 
-	oq engine --run job.ini
+    oq engine --run job.ini
 
 After the calculation is completed, a message similar to the following will be displayed::
 
-	Calculation 2749 completed in 24 seconds. Results:
-	  id | name
-	3980 | Asset Loss Curves Statistics
-	3981 | Asset Loss Maps Statistics
-	3983 | Average Asset Loss Statistics
+    Calculation 2749 completed in 24 seconds. Results:
+      id | name
+    3980 | Asset Loss Curves Statistics
+    3981 | Asset Loss Maps Statistics
+    3983 | Average Asset Loss Statistics
 
 **Example 2**
 
@@ -214,61 +214,61 @@ This example illustrates a classical probabilistic risk calculation which uses s
 hazard and risk parts of a classical probabilistic risk assessment. The first configuration file shown in the listing 
 contains input models and parameters required for the computation of the hazard curves.::
 
-	[general]
-	description = Classical probabilistic hazard
-	calculation_mode = classical
-	
-	[sites]
-	region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
-	region_grid_spacing = 0.5
-	
-	[erf]
-	width_of_mfd_bin = 0.1
-	rupture_mesh_spacing = 2
-	area_source_discretization = 20
-	
-	[site_params]
-	site_model_file = site_model.xml
-	
-	[logic_trees]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gsim_logic_tree.xml
-	number_of_logic_tree_samples = 0
-	
-	[hazard_calculation]
-	random_seed = 42
-	investigation_time = 1
-	truncation_level = 3.0
-	maximum_distance = 200.0
-	intensity_measure_types_and_levels = {
-	 "PGA": logscale(0.05, 3.0, 30),
-	 "SA(1.0)": logscale(0.05, 3.0, 30)}
+    [general]
+    description = Classical probabilistic hazard
+    calculation_mode = classical
+    
+    [sites]
+    region = -123.0 38.3, -121.0 38.3, -121.0 36.5, -123.0 36.5
+    region_grid_spacing = 0.5
+    
+    [erf]
+    width_of_mfd_bin = 0.1
+    rupture_mesh_spacing = 2
+    area_source_discretization = 20
+    
+    [site_params]
+    site_model_file = site_model.xml
+    
+    [logic_trees]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gsim_logic_tree.xml
+    number_of_logic_tree_samples = 0
+    
+    [hazard_calculation]
+    random_seed = 42
+    investigation_time = 1
+    truncation_level = 3.0
+    maximum_distance = 200.0
+    intensity_measure_types_and_levels = {
+     "PGA": logscale(0.05, 3.0, 30),
+     "SA(1.0)": logscale(0.05, 3.0, 30)}
 
 The second configuration file shown in the listing below contains input models and parameters required for the 
 calculation of the loss exceedance curves and probabilistic loss maps for a portfolio of assets based on the hazard 
 curves and vulnerability models.::
 
-	[general]
-	description = Classical probabilistic risk
-	calculation_mode = classical_risk
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
-	[hazard]
-	asset_hazard_distance = 20
-	
-	[vulnerability]
-	structural_vulnerability_file = structural_vulnerability_model.xml
-	nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
-	
-	[risk_calculation]
-	risk_investigation_time = 50
-	lrem_steps_per_interval = 2
-	
-	[risk_outputs]
-	quantiles = 0.15, 0.50, 0.85
-	conditional_loss_poes = 0.02, 0.10
+    [general]
+    description = Classical probabilistic risk
+    calculation_mode = classical_risk
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
+    [hazard]
+    asset_hazard_distance = 20
+    
+    [vulnerability]
+    structural_vulnerability_file = structural_vulnerability_model.xml
+    nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
+    
+    [risk_calculation]
+    risk_investigation_time = 50
+    lrem_steps_per_interval = 2
+    
+    [risk_outputs]
+    quantiles = 0.15, 0.50, 0.85
+    conditional_loss_poes = 0.02, 0.10
 
 Now, the above calculations described by the two configuration files “job_hazard.ini” and “job_risk.ini” can be run 
 sequentially or separately, as illustrated in Example 2 in Section :ref:`Scenario Damage Calculator <scenario-damage-params>`. 

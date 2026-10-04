@@ -47,24 +47,24 @@ definition) share the same GSIM logic tree file, which for clarity is provided i
 Since this logic tree considers only one tectonic region (i.e. ``Active Shallow Crust``) all the seismic sources will 
 be considered active shallow crust sources.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <logicTree logicTreeID="lt1">
-	            <logicTreeBranchSet uncertaintyType="gmpeModel"
-	                    branchSetID="bs1"
-	                    applyToTectonicRegionType="Active Shallow Crust">
-	
-	                <logicTreeBranch branchID="b1">
-	                    <uncertaintyModel>
-	                    ChiouYoungs2008
-	                    </uncertaintyModel>
-	                    <uncertaintyWeight>1.0</uncertaintyWeight>
-	                </logicTreeBranch>
-	
-	            </logicTreeBranchSet>
-	    </logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+        <logicTree logicTreeID="lt1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                        branchSetID="bs1"
+                        applyToTectonicRegionType="Active Shallow Crust">
+    
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                        ChiouYoungs2008
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+    
+                </logicTreeBranchSet>
+        </logicTree>
+    </nrml>
 
 ###############################################
 Classical PSHA with different source typologies
@@ -84,51 +84,51 @@ The configuration file in the listing is defined to compute hazard curves for se
 and Spectral acceleration at different periods), hazard maps and uniform hazard spectra for different probabilities of 
 exceedance::
 
-	[general]
-	description = ...
-	calculation_mode = classical
-	random_seed = 23
-	
-	[geometry]
-	region = ...
-	region_grid_spacing = 5.0
-	
-	[logic_tree]
-	number_of_logic_tree_samples = 0
-	
-	[erf]
-	rupture_mesh_spacing = 2
-	width_of_mfd_bin = 0.1
-	area_source_discretization = 5.0
-	
-	[site_params]
-	reference_vs30_type = measured
-	reference_vs30_value = 600.0
-	reference_depth_to_2pt5km_per_sec = 5.0
-	reference_depth_to_1pt0km_per_sec = 100.0
-	
-	[calculation]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gmpe_logic_tree.xml
-	investigation_time = 50.0
-	intensity_measure_types_and_levels = {"PGV": [2, 4, 6 ,8, 10, ...],
-	                                      "PGA": [0.005, 0.007, ...],
-	                                      "SA(0.025)": [...],
-	                                      "SA(0.05)": [...],
-	                                      "SA(0.1)": [...],
-	                                      "SA(0.2)": [...],
-	                                      "SA(0.5)": [...],
-	                                      "SA(1.0)": [...],
-	                                      "SA(2.0)": [...]}
-	truncation_level = 3
-	maximum_distance = 200.0
-	
-	[output]
-	mean = false
-	quantiles = 0.15, 0.50, 0.85
-	hazard_maps = true
-	uniform_hazard_spectra = true
-	poes = 0.10, 0.02
+    [general]
+    description = ...
+    calculation_mode = classical
+    random_seed = 23
+    
+    [geometry]
+    region = ...
+    region_grid_spacing = 5.0
+    
+    [logic_tree]
+    number_of_logic_tree_samples = 0
+    
+    [erf]
+    rupture_mesh_spacing = 2
+    width_of_mfd_bin = 0.1
+    area_source_discretization = 5.0
+    
+    [site_params]
+    reference_vs30_type = measured
+    reference_vs30_value = 600.0
+    reference_depth_to_2pt5km_per_sec = 5.0
+    reference_depth_to_1pt0km_per_sec = 100.0
+    
+    [calculation]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gmpe_logic_tree.xml
+    investigation_time = 50.0
+    intensity_measure_types_and_levels = {"PGV": [2, 4, 6 ,8, 10, ...],
+                                          "PGA": [0.005, 0.007, ...],
+                                          "SA(0.025)": [...],
+                                          "SA(0.05)": [...],
+                                          "SA(0.1)": [...],
+                                          "SA(0.2)": [...],
+                                          "SA(0.5)": [...],
+                                          "SA(1.0)": [...],
+                                          "SA(2.0)": [...]}
+    truncation_level = 3
+    maximum_distance = 200.0
+    
+    [output]
+    mean = false
+    quantiles = 0.15, 0.50, 0.85
+    hazard_maps = true
+    uniform_hazard_spectra = true
+    poes = 0.10, 0.02
 
 Hazard maps (for PGA, 10% in 50 years) for the different demos using various oq-engine source typologies are shown in the 
 figures below:
@@ -182,75 +182,75 @@ LogicTreeCase1ClassicalPSHA shows an example of logic tree defining two alternat
 to two different tectonic region types, and with two alternative GMPEs for each tectonic region type. The source model 
 logic tree is therefore defined as shown in the listing below.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <logicTree logicTreeID="lt1">
-	
-	            <logicTreeBranchSet uncertaintyType="sourceModel"
-	                                branchSetID="bs1">
-	                <logicTreeBranch branchID="b1">
-	                    <uncertaintyModel>
-	                      source_model_1.xml
-	                    </uncertaintyModel>
-	                    <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b2">
-	                    <uncertaintyModel>
-	                       source_model_2.xml
-	                    </uncertaintyModel>
-	                    <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	    </logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+        <logicTree logicTreeID="lt1">
+    
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                          source_model_1.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                           source_model_2.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+        </logicTree>
+    </nrml>
 
 The two source models are defined in two separate files: ``source_model_1.xml`` and ``source_model_2.xml`` each one 
 associated to a corresponding weight (0.5 for both).
 
 The GSIM logic tree file contains the structure as shown in the listing below.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <logicTree logicTreeID="lt1">
-	
-	            <logicTreeBranchSet uncertaintyType="gmpeModel"
-	               applyToTectonicRegionType="Active Shallow Crust"
-	               branchSetID="bs1">
-	                <logicTreeBranch branchID="b11">
-	                   <uncertaintyModel>
-	                      BooreAtkinson2008
-	                   </uncertaintyModel>
-	                   <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b12">
-	                   <uncertaintyModel>
-	                      ChiouYoungs2008
-	                   </uncertaintyModel>
-	                   <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="gmpeModel"
-	              applyToTectonicRegionType="Stable Continental Crust"
-	              branchSetID="bs2">
-	              <logicTreeBranch branchID="b21">
-	                <uncertaintyModel>
-	                   ToroEtAl2002</uncertaintyModel>
-	                <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b22">
-	                  <uncertaintyModel>
-	                     Campbell2003</uncertaintyModel>
-	                  <uncertaintyWeight>0.5</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	    </logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+        <logicTree logicTreeID="lt1">
+    
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                   applyToTectonicRegionType="Active Shallow Crust"
+                   branchSetID="bs1">
+                    <logicTreeBranch branchID="b11">
+                       <uncertaintyModel>
+                          BooreAtkinson2008
+                       </uncertaintyModel>
+                       <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b12">
+                       <uncertaintyModel>
+                          ChiouYoungs2008
+                       </uncertaintyModel>
+                       <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                  applyToTectonicRegionType="Stable Continental Crust"
+                  branchSetID="bs2">
+                  <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>
+                       ToroEtAl2002</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b22">
+                      <uncertaintyModel>
+                         Campbell2003</uncertaintyModel>
+                      <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+        </logicTree>
+    </nrml>
 
 The source model contains sources belonging to Active Shallow Crust and Stable Continental Crust, therefore the GSIM 
 logic tree defines two branching levels, one for each considered tectonic region type. Moreover for each tectonic region 
@@ -267,91 +267,91 @@ tectonic region type (two GMPE per region type).
 
 To accommodate such a structure the GSIM logic tree is defined as shown in the listing below.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <logicTree logicTreeID="lt1">
-	
-	            <logicTreeBranchSet uncertaintyType="sourceModel"
-	                                branchSetID="bs1">
-	                <logicTreeBranch branchID="b11">
-	                    <uncertaintyModel>
-	                     source_model.xml
-	                    </uncertaintyModel>
-	                    <uncertaintyWeight>1.0</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-	                                applyToSources="1"
-	                                branchSetID="bs21">
-	                <logicTreeBranch branchID="b21">
-	                    <uncertaintyModel>4.6 1.1</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b22">
-	                    <uncertaintyModel>4.5 1.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b23">
-	                    <uncertaintyModel>4.4 0.9</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-	                                applyToSources="2"
-	                                branchSetID="bs31">
-	                <logicTreeBranch branchID="b31">
-	                    <uncertaintyModel>3.3 1.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b32">
-	                    <uncertaintyModel>3.2 0.9</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b33">
-	                    <uncertaintyModel>3.1 0.8</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-	                                applyToSources="1"
-	                                branchSetID="bs41">
-	                <logicTreeBranch branchID="b41">
-	                    <uncertaintyModel>7.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b42">
-	                    <uncertaintyModel>7.3</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b43">
-	                    <uncertaintyModel>7.6</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-	                                applyToSources="2"
-	                                branchSetID="bs51">
-	                <logicTreeBranch branchID="b51">
-	                    <uncertaintyModel>7.5</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b52">
-	                    <uncertaintyModel>7.8</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b53">
-	                    <uncertaintyModel>8.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	    </logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+        <logicTree logicTreeID="lt1">
+    
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b11">
+                        <uncertaintyModel>
+                         source_model.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    applyToSources="1"
+                                    branchSetID="bs21">
+                    <logicTreeBranch branchID="b21">
+                        <uncertaintyModel>4.6 1.1</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b22">
+                        <uncertaintyModel>4.5 1.0</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b23">
+                        <uncertaintyModel>4.4 0.9</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    applyToSources="2"
+                                    branchSetID="bs31">
+                    <logicTreeBranch branchID="b31">
+                        <uncertaintyModel>3.3 1.0</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b32">
+                        <uncertaintyModel>3.2 0.9</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b33">
+                        <uncertaintyModel>3.1 0.8</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                    applyToSources="1"
+                                    branchSetID="bs41">
+                    <logicTreeBranch branchID="b41">
+                        <uncertaintyModel>7.0</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b42">
+                        <uncertaintyModel>7.3</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b43">
+                        <uncertaintyModel>7.6</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                    applyToSources="2"
+                                    branchSetID="bs51">
+                    <logicTreeBranch branchID="b51">
+                        <uncertaintyModel>7.5</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b52">
+                        <uncertaintyModel>7.8</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b53">
+                        <uncertaintyModel>8.0</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+        </logicTree>
+    </nrml>
 
 The first branching level defines the source model. For each source, two branching levels are created, one defining 
 uncertainties on G-R a and b values (defined by setting ``uncertaintyType="abGRAbsolute"``) and G-R maximum magnitude 
@@ -373,55 +373,55 @@ and b value. A single source model is considered containing two sources belongin
 both characterized by a G-R magnitude frequency distribution. The source model logic tree for this demo is as shown in 
 the listing below.::
 
-	<?xml version="1.0" encoding="UTF-8"?>
-	<nrml xmlns:gml="http://www.opengis.net/gml"
-	      xmlns="http://openquake.org/xmlns/nrml/0.5">
-	    <logicTree logicTreeID="lt1">
-	
-	            <logicTreeBranchSet uncertaintyType="sourceModel"
-	                                branchSetID="bs1">
-	                <logicTreeBranch branchID="b11">
-	                    <uncertaintyModel>
-	                     source_model.xml
-	                    </uncertaintyModel>
-	                    <uncertaintyWeight>1.0</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="bGRRelative"
-	                                branchSetID="bs21">
-	                <logicTreeBranch branchID="b21">
-	                    <uncertaintyModel>+0.1</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b22">
-	                    <uncertaintyModel>0.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b23">
-	                    <uncertaintyModel>-0.1</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	            <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-	                                branchSetID="bs31">
-	                <logicTreeBranch branchID="b31">
-	                    <uncertaintyModel>0.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b32">
-	                    <uncertaintyModel>+0.5</uncertaintyModel>
-	                    <uncertaintyWeight>0.333</uncertaintyWeight>
-	                </logicTreeBranch>
-	                <logicTreeBranch branchID="b33">
-	                    <uncertaintyModel>+1.0</uncertaintyModel>
-	                    <uncertaintyWeight>0.334</uncertaintyWeight>
-	                </logicTreeBranch>
-	            </logicTreeBranchSet>
-	
-	    </logicTree>
-	</nrml>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns:gml="http://www.opengis.net/gml"
+          xmlns="http://openquake.org/xmlns/nrml/0.5">
+        <logicTree logicTreeID="lt1">
+    
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b11">
+                        <uncertaintyModel>
+                         source_model.xml
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs21">
+                    <logicTreeBranch branchID="b21">
+                        <uncertaintyModel>+0.1</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b22">
+                        <uncertaintyModel>0.0</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b23">
+                        <uncertaintyModel>-0.1</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+                <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                                    branchSetID="bs31">
+                    <logicTreeBranch branchID="b31">
+                        <uncertaintyModel>0.0</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b32">
+                        <uncertaintyModel>+0.5</uncertaintyModel>
+                        <uncertaintyWeight>0.333</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b33">
+                        <uncertaintyModel>+1.0</uncertaintyModel>
+                        <uncertaintyWeight>0.334</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+    
+        </logicTree>
+    </nrml>
 
 After the first branching level defining the source model, two additional branching levels are defined, one defining 
 relative uncertainties on b value (``bGRRelative`` applied consistently to all sources in the source model) and the 
@@ -438,45 +438,45 @@ fault) belonging to two different tectonic region types.
 
 The calculation is defined with the following configuration file::
 
-	[general]
-	description = ...
-	calculation_mode = disaggregation
-	random_seed = 23
-	
-	[geometry]
-	sites = 0.5 -0.5
-	
-	[logic_tree]
-	number_of_logic_tree_samples = 0
-	
-	[erf]
-	rupture_mesh_spacing = 2
-	width_of_mfd_bin = 0.1
-	area_source_discretization = 5.0
-	
-	[site_params]
-	reference_vs30_type = measured
-	reference_vs30_value = 600.0
-	reference_depth_to_2pt5km_per_sec = 5.0
-	reference_depth_to_1pt0km_per_sec = 100.0
-	
-	[calculation]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gmpe_logic_tree.xml
-	investigation_time = 50.0
-	intensity_measure_types_and_levels = {"PGA": [...]}
-	truncation_level = 3
-	maximum_distance = 200.0
-	
-	[disaggregation]
-	poes_disagg = 0.1
-	mag_bin_width = 1.0
-	distance_bin_width = 10.0
-	coordinate_bin_width = 0.2
-	num_epsilon_bins = 3
-	
-	[output]
-	export_dir = ...
+    [general]
+    description = ...
+    calculation_mode = disaggregation
+    random_seed = 23
+    
+    [geometry]
+    sites = 0.5 -0.5
+    
+    [logic_tree]
+    number_of_logic_tree_samples = 0
+    
+    [erf]
+    rupture_mesh_spacing = 2
+    width_of_mfd_bin = 0.1
+    area_source_discretization = 5.0
+    
+    [site_params]
+    reference_vs30_type = measured
+    reference_vs30_value = 600.0
+    reference_depth_to_2pt5km_per_sec = 5.0
+    reference_depth_to_1pt0km_per_sec = 100.0
+    
+    [calculation]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gmpe_logic_tree.xml
+    investigation_time = 50.0
+    intensity_measure_types_and_levels = {"PGA": [...]}
+    truncation_level = 3
+    maximum_distance = 200.0
+    
+    [disaggregation]
+    poes_disagg = 0.1
+    mag_bin_width = 1.0
+    distance_bin_width = 10.0
+    coordinate_bin_width = 0.2
+    num_epsilon_bins = 3
+    
+    [output]
+    export_dir = ...
 
 Disaggregation matrices are computed for a single site (located between the two sources) for a ground motion value 
 corresponding to a probability value equal to 0.1 (``poes_disagg = 0.1``). Magnitude values are classified in one 
@@ -489,49 +489,49 @@ Event Based PSHA Demos
 
 A demo showing an example of Event Based PSHA calculation is provided with the following configuration file::
 
-	[general]
-	description = Event Based PSHA using Area Source
-	calculation_mode = event_based
-	random_seed = 23
-	
-	[geometry]
-	sites = 0.5 -0.5
-	
-	[logic_tree]
-	number_of_logic_tree_samples = 0
-	
-	[erf]
-	rupture_mesh_spacing = 2
-	width_of_mfd_bin = 0.1
-	area_source_discretization = 5.0
-	
-	[site_params]
-	reference_vs30_type = measured
-	reference_vs30_value = 600.0
-	reference_depth_to_2pt5km_per_sec = 5.0
-	reference_depth_to_1pt0km_per_sec = 100.0
-	
-	[calculation]
-	source_model_logic_tree_file = source_model_logic_tree.xml
-	gsim_logic_tree_file = gmpe_logic_tree.xml
-	investigation_time = 50.0
-	intensity_measure_types_and_levels = {"PGA": [...]}
-	truncation_level = 3
-	maximum_distance = 200.0
-	
-	[event_based_params]
-	ses_per_logic_tree_path = 100
-	within_event_correlation_model =
-	within_event_correlation_params =
-	
-	[output]
-	export_dir = ...
-	ground_motion_fields = true
-	hazard_curves_from_gmfs = true
-	mean = false
-	quantiles =
-	hazard_maps = true
-	poes = 0.1
+    [general]
+    description = Event Based PSHA using Area Source
+    calculation_mode = event_based
+    random_seed = 23
+    
+    [geometry]
+    sites = 0.5 -0.5
+    
+    [logic_tree]
+    number_of_logic_tree_samples = 0
+    
+    [erf]
+    rupture_mesh_spacing = 2
+    width_of_mfd_bin = 0.1
+    area_source_discretization = 5.0
+    
+    [site_params]
+    reference_vs30_type = measured
+    reference_vs30_value = 600.0
+    reference_depth_to_2pt5km_per_sec = 5.0
+    reference_depth_to_1pt0km_per_sec = 100.0
+    
+    [calculation]
+    source_model_logic_tree_file = source_model_logic_tree.xml
+    gsim_logic_tree_file = gmpe_logic_tree.xml
+    investigation_time = 50.0
+    intensity_measure_types_and_levels = {"PGA": [...]}
+    truncation_level = 3
+    maximum_distance = 200.0
+    
+    [event_based_params]
+    ses_per_logic_tree_path = 100
+    within_event_correlation_model =
+    within_event_correlation_params =
+    
+    [output]
+    export_dir = ...
+    ground_motion_fields = true
+    hazard_curves_from_gmfs = true
+    mean = false
+    quantiles =
+    hazard_maps = true
+    poes = 0.1
 
 The source model consist of one source (area). 100 stochastic event sets are generated (``ses_per_logic_tree_path = 100``) 
 (an example can be seen in :ref:`the figure below <ses>`). Ground motion fields are computed (``ground_motion_fields = true``, :ref:`this figure <gmf-no-corr>` and 
@@ -629,9 +629,9 @@ dip, rake, hypocentre, and seismogenic depths are defined in
 To run the Scenario Damage demo, users should navigate to the folder where the required files have been placed and employ 
 following command::
 
-	user@ubuntu:~$ oq engine --run job_hazard.ini
-	user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job_hazard.ini
+    user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 *******************
 Scenario Risk Demo
@@ -643,8 +643,8 @@ job.ini, is used to specify the configuration parameters for the hazard and risk
 To run the Scenario Risk demo, users should navigate to the folder where the required files have been placed and employ 
 following command::
 
-	user@ubuntu:~$ oq engine --run job.ini
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 .. _classical-psda-demo:
 
@@ -658,13 +658,13 @@ uncertainties are considered in the seismic source model and since only one GMPE
 one possible path in the logic tree. Therefore, only one set of seismic hazard curves will be produced. To run the hazard 
 calculation, the following command needs to be employed::
 
-	oq engine --run job_hazard.ini
+    oq engine --run job_hazard.ini
 
 The risk job calculates the probabilistic damage distribution for each asset in the *Exposure Model* starting from the 
 above generated hazard curves. The following command launches the risk calculations::
 
-	user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 ******************************************
 Classical Probabilistic Seismic Risk Demos
@@ -675,13 +675,13 @@ to produce the set of hazard curves described in Section :ref:`Classical Probabi
 is also valid herein. Then, to run the Classical Probabilistic Risk demo, users should navigate to the folder containing 
 the demo input models and configuration files and employ the following command::
 
-	user@ubuntu:~$ oq engine --run job_hazard.ini
+    user@ubuntu:~$ oq engine --run job_hazard.ini
 
 In this demo, loss exceedance curves for each asset and two probabilistic loss maps (for probabilities of exceedance of 
 1% and 10%) are produced. The following command launches these risk calculations::
 
-	user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job_risk.ini --hc -1
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 **********************************************
 Event Based Probabilistic Seismic Damage Demos
@@ -694,8 +694,8 @@ since there is only one Branch in the logic tree, only one set of ground motion 
 calculations. The hazard and risk jobs are defined in a single configuration file for this demo. To trigger the hazard 
 and risk calculations the following command needs to be used::
 
-	user@ubuntu:~$ oq engine --run job.ini
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 ********************************************
 Event Based Probabilistic Seismic Risk Demos
@@ -708,8 +708,8 @@ since there is only one Branch in the logic tree, only one set of ground motion 
 calculations. The hazard and risk jobs are defined in a single configuration file for this demo. To trigger the hazard 
 and risk calculations the following command needs to be used::
 
-	user@ubuntu:~$ oq engine --run job.ini
-	user@ubuntu:~$ oq engine --list-outputs -1
+    user@ubuntu:~$ oq engine --run job.ini
+    user@ubuntu:~$ oq engine --list-outputs -1
 
 *********************************
 Retrofit Benefit-Cost Ratio Demos
@@ -719,8 +719,8 @@ The loss exceedance curves used within this demo are produced using the Classica
 the process to produce the seismic hazard curves described in Section Classical Probabilistic Seismic Risk Demos can be 
 employed here. Then, the risk calculations can be initiated using the following command::
 
-	oq engine --run job_risk.ini --hc -1
-	oq engine --list-outputs -1
+    oq engine --run job_risk.ini --hc -1
+    oq engine --list-outputs -1
 
 **************************************************
 Infrastructure, reinsurance, and multi-peril demos
@@ -756,13 +756,13 @@ sample data from `here <https://github.com/gem/oq-engine/tree/todorovic-liquefac
 
 First, we need to import the Python modules that we'll use.::
 
-	import pandas as pd
-	import matplotlib.pyplot as plt
-	
-	from openquake.sep.utils import(
-	    sample_raster_at_points,
-	    vs30_from_slope
-	)
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    
+    from openquake.sep.utils import(
+        sample_raster_at_points,
+        vs30_from_slope
+    )
 
 We will be working with different liquefaction models in this analysis. We'll start with the `HAZUS model <https://gemsciencetools.github.io/oq-mbtk/contents/sep_docs/sep_models.html#hazus>`_
 by the US Federal Emergency Management Agency (FEMA). Then we'll test two statistical models by Zhu et al (2015, 2017) 
@@ -792,10 +792,10 @@ The HAZUS model requires that we have liquefaction susceptibility categories and
 get these by mapping the geologic unit to these parameters, and the assigning the parameters to each site based on the 
 geologic unit through a database join.::
 
-	# Read in the sites CSV with pandas
-	sites = pd.read_csv('./tutorial_data/cali_sites_w_units_dr.csv')
-	
-	sites.head()
+    # Read in the sites CSV with pandas
+    sites = pd.read_csv('./tutorial_data/cali_sites_w_units_dr.csv')
+    
+    sites.head()
 
 +-----+------------+----------+-------+-----------+
 | lon | lat        | unit     | dr    |           |
@@ -813,10 +813,10 @@ geologic unit through a database join.::
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5)
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5)
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_1.png
 
@@ -828,9 +828,9 @@ the location of the unit with respect to water bodies (rivers and creeks) from i
 guidelines for this assignment can be found in the `HAZUS Manual <https://www.hsdl.org/?view&did=12760>`_, 
 Section 4-21. If you are uncertain of how to proceed, please contact your local geologist or geotechnical engineer.::
 
-	unit_table = pd.read_csv('./tutorial_data/cali_units.csv')
-	
-	unit_table
+    unit_table = pd.read_csv('./tutorial_data/cali_units.csv')
+    
+    unit_table
 
 +------+--------------+--------------+--------------+--------------+--------------+-------------+-------------+------+----------------------------------------+------------------------------------------+----------+
 |      | unit         | friction_mid | friction_unc | cohesion_mid | cohesion_unc | saturation  | dry_density | uscs | type                                   | description                              | susc_cat |
@@ -873,17 +873,17 @@ Section 4-21. If you are uncertain of how to proceed, please contact your local 
 Let's make a new table with just the information that we need, which is the liquefaction susceptibility category 
 (called susc_cat in this table).::
 
-	liq_susc_cat = unit_table[['unit', 'susc_cat']]
-	
-	# set the index to be the unit, for the join below.
-	liq_susc_cat = liq_susc_cat.set_index('unit')
+    liq_susc_cat = unit_table[['unit', 'susc_cat']]
+    
+    # set the index to be the unit, for the join below.
+    liq_susc_cat = liq_susc_cat.set_index('unit')
 
 We'll do a database join on the two tables using Pandas, which will let us take the attributes for each geologic unit 
 and append them to each site based on the geologic unit for that site.::
 
-	sites = sites.join(liq_susc_cat, on='unit')
-	
-	sites.head()
+    sites = sites.join(liq_susc_cat, on='unit')
+    
+    sites.head()
 
 +---+------------+----------+-------+----------+-----------+
 |   | lon        | lat      | unit  | dr       | susc_cat  |
@@ -907,30 +907,30 @@ approximation this is. Another possibility is to use global dataset proposed by 
 
 We'll use a simply Python dictionary with the unit as the key and estimates for groundwater depth in meters as the value.::
 
-	gwd_map = {'Q1': 0.65,
-	           'Q2': 0.3,
-	           'Q3': 0.2,
-	           'Q4': 0.3,
-	           'Q5': 0.2,
-	           'Q6': 0.1,
-	           'Q7': 0.15,
-	           'Cono': 1.75,
-	           'Qt': 1.,
-	           'Qc': 2.,
-	           'Qd': 1.25,
-	           'QvT': 1.2,
-	           'QvK': 1.2,
-	           'Q/Kv': 2.5,
-	           'T': 3.,
-	           'TQplp': 3.,
-	           'Kv': 4.
-	           }
-	
-	sites['gwd'] = sites.apply(lambda x: gwd_map[x.unit], axis=1)
+    gwd_map = {'Q1': 0.65,
+               'Q2': 0.3,
+               'Q3': 0.2,
+               'Q4': 0.3,
+               'Q5': 0.2,
+               'Q6': 0.1,
+               'Q7': 0.15,
+               'Cono': 1.75,
+               'Qt': 1.,
+               'Qc': 2.,
+               'Qd': 1.25,
+               'QvT': 1.2,
+               'QvK': 1.2,
+               'Q/Kv': 2.5,
+               'T': 3.,
+               'TQplp': 3.,
+               'Kv': 4.
+               }
+    
+    sites['gwd'] = sites.apply(lambda x: gwd_map[x.unit], axis=1)
 
 ::
 
-	sites.head()
+    sites.head()
 
 +---+------------+----------+-------+----------+----------+------+
 |   | lon        | lat      | unit  | dr       | susc_cat | gwd  |
@@ -948,11 +948,11 @@ We'll use a simply Python dictionary with the unit as the key and estimates for 
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=sites.gwd)
-	plt.colorbar(label='groundwater depth (m)')
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=sites.gwd)
+    plt.colorbar(label='groundwater depth (m)')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_2.png
 
@@ -970,26 +970,26 @@ from the slope using Wald and Allen's methods `(2007) <https://pubs.geosciencewo
 The ``openquake.sep.utils`` module has some functions to calculate Vs30 from slope, and to get the values of a raster at any 
 point. We'll use these functions to get the Vs30 values from a slope raster for each of our sites.::
 
-	slo = sample_raster_at_points('./tutorial_data/cali_slope_srtm_1km.tiff', sites.lon, sites.lat)
+    slo = sample_raster_at_points('./tutorial_data/cali_slope_srtm_1km.tiff', sites.lon, sites.lat)
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=slo)
-	plt.colorbar(label='slope (deg)')
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=slo)
+    plt.colorbar(label='slope (deg)')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_3.png
 
 ::
 
-	sites['vs30'] = vs30_from_slope(slo, slope_unit='deg', tectonic_region_type='active')
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=sites.vs30)
-	plt.colorbar(label='Vs30 [m/s]')
-	plt.show()
+    sites['vs30'] = vs30_from_slope(slo, slope_unit='deg', tectonic_region_type='active')
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=sites.vs30)
+    plt.colorbar(label='Vs30 [m/s]')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_4.png
 
@@ -999,30 +999,30 @@ practice the range of the resulting CTI values is incompatible with the CTI valu
 calibration. Therefore it is strongly advised to obtain CTI data from a dataset that has a global range of 0-20; we 
 recommend `Marthews et al., 2015 <https://www.hydrol-earth-syst-sci.net/19/91/2015/>`_).::
 
-	sites['cti'] = sample_raster_at_points("./tutorial_data/ga2_cti_cali.tiff", sites.lon, sites.lat)
+    sites['cti'] = sample_raster_at_points("./tutorial_data/ga2_cti_cali.tiff", sites.lon, sites.lat)
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=sites.cti)
-	plt.colorbar(label='CTI')
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=sites.cti)
+    plt.colorbar(label='CTI')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_5.png
 
 We also need mean annual precipitation and the global dataset (raster), is publically available `here <https://worldclim.org/data/worldclim21.html>`__.
 It was developed by interpolating from over 40,000 weather stations across the world and averaging over 1970-2000.::
 
-	sites['precip'] = sample_raster_at_points("./tutorial_data/precip.tif", sites.lon, sites.lat)
+    sites['precip'] = sample_raster_at_points("./tutorial_data/precip.tif", sites.lon, sites.lat)
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=sites.precip)
-	plt.colorbar(label='Precipitation [mm]')
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=sites.precip)
+    plt.colorbar(label='Precipitation [mm]')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_6.png
 
@@ -1032,15 +1032,15 @@ liquefaction, to be located near the coast. The available raster can be found `h
 Distance is measured in kilometers, with uncertainty of 1 km. Zero values represent the coast line, > 0 is ocean, < 0 
 is land.::
 
-	sites['dc'] = -1 * sample_raster_at_points("./tutorial_data/dc.tif", sites.lon, sites.lat)
+    sites['dc'] = -1 * sample_raster_at_points("./tutorial_data/dc.tif", sites.lon, sites.lat)
 
 ::
 
-	plt.figure(figsize=(6,6))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=sites.dc)
-	plt.colorbar(label='Coast distance [km]')
-	plt.show()
+    plt.figure(figsize=(6,6))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=sites.dc)
+    plt.colorbar(label='Coast distance [km]')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_7.png
 
@@ -1054,7 +1054,7 @@ Saving and cleaning up
 
 That's basically it. We just need to save the file and then proceed to the liquefaction analysis which is the next tutorial.
 
-	sites.to_csv('./tutorial_data/liquefaction_sites.csv', index=False)
+    sites.to_csv('./tutorial_data/liquefaction_sites.csv', index=False)
 
 ***************************************************
 Tutorial: Single earthquake liquefaction assessment
@@ -1068,25 +1068,25 @@ models use DEM derived inputs that serve as first-order proxies to characterise 
 
 These functions are quite easy to use and the calculations are very rapid.::
 
-	import pandas as pd
-	import matplotlib.pyplot as plt
-	
-	from openquake.sep.liquefaction import (
-	    zhu_etal_2015_general,
-	    zhu_etal_2017_general,
-	    hazus_liquefaction_probability,
-	    todorovic_silva_2022_nonparametric_general
-	)
-	
-	from openquake.sep.liquefaction.lateral_spreading import (
-	    hazus_lateral_spreading_displacement
-	)
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    
+    from openquake.sep.liquefaction import (
+        zhu_etal_2015_general,
+        zhu_etal_2017_general,
+        hazus_liquefaction_probability,
+        todorovic_silva_2022_nonparametric_general
+    )
+    
+    from openquake.sep.liquefaction.lateral_spreading import (
+        hazus_lateral_spreading_displacement
+    )
 
 ::
 
-	sites = pd.read_csv("./tutorial_data/liquefaction_sites.csv")
+    sites = pd.read_csv("./tutorial_data/liquefaction_sites.csv")
 
-	sites.head()
+    sites.head()
 
 +---+------------+----------+-------+----------+----------+-----+-------+----------+--------+-----+
 |   | lon        | lat      | unit  | dr       | susc_cat | gwd | vs30  | cti      | precip | dc  |
@@ -1104,9 +1104,9 @@ These functions are quite easy to use and the calculations are very rapid.::
 
 ::
 
-	event_mag = 7.2
-	event_shaking = pd.read_csv("./tutorial_data/example_pga_pgv.csv")
-	event_shaking.head(5)
+    event_mag = 7.2
+    event_shaking = pd.read_csv("./tutorial_data/example_pga_pgv.csv")
+    event_shaking.head(5)
 
 +---+------------+----------+----------+------+
 |   | lon        | lat      | pga      | pgv  |
@@ -1129,21 +1129,21 @@ Liquefaction probabilities using the HAZUS model
 The HAZUS model calculates the probabilities of liquefaction given the magnitude and PGA of an earthquake, the 
 liquefaction category of the site, and the depth to groundwater at that site.::
 
-	hazus_liq_prob = hazus_liquefaction_probability(pga=event_shaking["pga"], mag=event_mag,
-	                                                liq_susc_cat=sites["susc_cat"],
-	                                                groundwater_depth=sites["gwd"])
+    hazus_liq_prob = hazus_liquefaction_probability(pga=event_shaking["pga"], mag=event_mag,
+                                                    liq_susc_cat=sites["susc_cat"],
+                                                    groundwater_depth=sites["gwd"])
 
 ::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=hazus_liq_prob)
-	plt.colorbar(label='Probability of liquefaction (HAZUS model)')
-	plt.title('Example liquefaction probabilities for Cali, Colombia')
-	plt.xlabel('Longitude')
-	plt.ylabel('Latitude')
-	
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=hazus_liq_prob)
+    plt.colorbar(label='Probability of liquefaction (HAZUS model)')
+    plt.title('Example liquefaction probabilities for Cali, Colombia')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_8.png
 
@@ -1154,16 +1154,16 @@ Liquefaction probabilities using the model from Zhu et al. (2015)
 The liquefaction probability model by Zhu et al (2015) is based on a multivariate logistic regression. The dependent 
 variables are the magnitude and PGA from an earthquake, and the Vs30 and Compound topographic Index (CTI) at each site.::
 
-	zhu15_liq_prob = zhu_etal_2015_general(pga=event_shaking["pga"], mag=event_mag, cti=sites["cti"], vs30=sites["vs30"])[0]
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=zhu15_liq_prob)
-	plt.colorbar(label='Probability of liquefaction (Zhu 2015 model)')
-	plt.title('Example liquefaction probabilities for Cali, Colombia')
-	plt.xlabel('Longitude')
-	plt.ylabel('Latitude')
-	
-	plt.show()
+    zhu15_liq_prob = zhu_etal_2015_general(pga=event_shaking["pga"], mag=event_mag, cti=sites["cti"], vs30=sites["vs30"])[0]
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=zhu15_liq_prob)
+    plt.colorbar(label='Probability of liquefaction (Zhu 2015 model)')
+    plt.title('Example liquefaction probabilities for Cali, Colombia')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_9.png
 
@@ -1171,44 +1171,44 @@ variables are the magnitude and PGA from an earthquake, and the Vs30 and Compoun
 Liquefaction probabilities using the model from Zhu et al. (2017) general
 *************************************************************************
 ::
-	sites['dw'] = sites[['dr','dc']].min(axis=1)
+    sites['dw'] = sites[['dr','dc']].min(axis=1)
 
 ::
 
-	zhu17_liq_prob = zhu_etal_2017_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
-	                                    precip=sites["precip"], wtd=sites["gwd"])[0]
+    zhu17_liq_prob = zhu_etal_2017_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
+                                        precip=sites["precip"], wtd=sites["gwd"])[0]
 
 ::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=zhu17_liq_prob)
-	plt.colorbar(label='Probability of liquefaction (Zhu 2017 model)')
-	plt.title('Example liquefaction probabilities for Cali, Colombia')
-	plt.xlabel('Longitude')
-	plt.ylabel('Latitude')
-	
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=zhu17_liq_prob)
+    plt.colorbar(label='Probability of liquefaction (Zhu 2017 model)')
+    plt.title('Example liquefaction probabilities for Cali, Colombia')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_10.png
 
 We can also compute the liquefaction spatial extent. After an earthquake LSE is the spatial area covered by surface 
 manifestations of liquefaction reported as a percentage of liquefied material within that pixel.::
 
-	zhu17_LSE = zhu_etal_2017_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
-	                                    precip=sites["precip"], wtd=sites["gwd"])[2]
+    zhu17_LSE = zhu_etal_2017_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
+                                        precip=sites["precip"], wtd=sites["gwd"])[2]
 
 ::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, c=zhu17_liq_prob)
-	plt.colorbar(label='LSE [%] (Zhu 2017 model)')
-	plt.title('Example Liquefaction Spatial Extent (LSE) for Cali, Colombia')
-	plt.xlabel('Longitude')
-	plt.ylabel('Latitude')
-	
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, c=zhu17_liq_prob)
+    plt.colorbar(label='LSE [%] (Zhu 2017 model)')
+    plt.title('Example Liquefaction Spatial Extent (LSE) for Cali, Colombia')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_11.png
 
@@ -1220,8 +1220,8 @@ A nonparametric model can be used to predict liquefaction occurrence given the i
 variables to be: strain_proxy defined as the ratio between PGV and Vs30, distance to the nearest water body, average 
 precipitation and water table depth::
 
-	occurrence = todorovic_silva_2022_nonparametric_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
-	                                    precip=sites["precip"], wtd=sites["gwd"])[0]
+    occurrence = todorovic_silva_2022_nonparametric_general(pgv=event_shaking["pgv"], vs30=sites["vs30"], dw=sites["dw"],
+                                        precip=sites["precip"], wtd=sites["gwd"])[0]
 
 **********
 Comparison
@@ -1230,33 +1230,33 @@ Comparison
 The liquefaction models here are based on different types of data and were developed quite intependently. It is 
 instructive to compare them.::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, 
-	            c=zhu15_liq_prob-hazus_liq_prob,
-	            vmin=-1., vmax=1.,
-	            cmap='RdBu_r')
-	plt.colorbar(label='Liquefaction prob. difference (Zhu 2015 - Hazus)')
-	plt.title('Comparison of liquefaction probabilities for Cali, Colombia')
-	plt.xlabel('Longitude')
-	plt.ylabel('Latitude')
-	
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, 
+                c=zhu15_liq_prob-hazus_liq_prob,
+                vmin=-1., vmax=1.,
+                cmap='RdBu_r')
+    plt.colorbar(label='Liquefaction prob. difference (Zhu 2015 - Hazus)')
+    plt.title('Comparison of liquefaction probabilities for Cali, Colombia')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_12.png
 
 ::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(hazus_liq_prob, zhu15_liq_prob, c=event_shaking["pga"])
-	plt.plot([0,1],[0,1], 'k--', lw=0.5)
-	
-	plt.title('Example liquefaction probabilities for Cali, Colombia')
-	plt.xlabel('Hazus liquefaction probability')
-	plt.ylabel('Zhu liquefaction probability')
-	
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(hazus_liq_prob, zhu15_liq_prob, c=event_shaking["pga"])
+    plt.plot([0,1],[0,1], 'k--', lw=0.5)
+    
+    plt.title('Example liquefaction probabilities for Cali, Colombia')
+    plt.xlabel('Hazus liquefaction probability')
+    plt.ylabel('Zhu liquefaction probability')
+    
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_13.png
 
@@ -1274,17 +1274,17 @@ Lateral spreading displacements
 Displacements due to lateral spreading associated with liquefaction can be calculated given the earthquake's PGA, 
 magnitude, and the liquefaction susceptibility of each site. The model currently implemented is from HAZUS.::
 
-	hazus_displacements = hazus_lateral_spreading_displacement(event_mag, event_shaking["pga"], sites["susc_cat"])
+    hazus_displacements = hazus_lateral_spreading_displacement(event_mag, event_shaking["pga"], sites["susc_cat"])
 
 ::
 
-	plt.figure(figsize=(8,8))
-	plt.axis('equal')
-	plt.scatter(sites.lon, sites.lat, s=5, 
-	            c=hazus_displacements,
-	            )
-	plt.colorbar(label='Displacements from Lateral Spreading (m)')
-	plt.show()
+    plt.figure(figsize=(8,8))
+    plt.axis('equal')
+    plt.scatter(sites.lon, sites.lat, s=5, 
+                c=hazus_displacements,
+                )
+    plt.colorbar(label='Displacements from Lateral Spreading (m)')
+    plt.show()
 
 .. figure:: _images/liquefaction_tutorial_14.png
 

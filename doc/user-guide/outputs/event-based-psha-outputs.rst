@@ -8,15 +8,15 @@ PSHA calculator. The inset below shows an example of the list of
 results provided by the OpenQuake engine at the end of an event-based
 PSHA calculation::
 
-	user@ubuntu:~$ oq engine --lo <calc_id>
-	id | name
-	10 | Ground Motion Fields
-	11 | Hazard Curves
-	12 | Hazard Maps
-	13 | Realizations
-	14 | Earthquake Ruptures
-	15 | Events
-	16 | Uniform Hazard Spectra
+    user@ubuntu:~$ oq engine --lo <calc_id>
+    id | name
+    10 | Ground Motion Fields
+    11 | Hazard Curves
+    12 | Hazard Maps
+    13 | Realizations
+    14 | Earthquake Ruptures
+    15 | Events
+    16 | Uniform Hazard Spectra
 
 Exporting the outputs from the ruptures will produce a CSV file with
 the following columns:

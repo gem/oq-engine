@@ -36,7 +36,7 @@ Linux and macOS from installers or from sources
 
 In a terminal type::
 
-	$ oq webui start
+    $ oq webui start
 
 Using the OpenQuake engine WebUI
 --------------------------------

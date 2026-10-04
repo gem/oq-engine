@@ -274,7 +274,7 @@ parameters of kind "Absolute":
    <!-- this is invalid -->
    <logicTreeBranchSet branchSetID="bs31"
                        uncertaintyType="abGRAbsolute"
-		       applyToSources="1 2">
+               applyToSources="1 2">
 ```
 2. There is an additional check in the `uncertaintyModel` tag of the source
 model logic tree file, to forbid accidentally duplicated source model files.

@@ -14,9 +14,9 @@ This part is almost identical to the corresponding one described in Section :ref
 
 Note the setting of the ``calculation_mode`` parameter which now corresponds to ``event_based``.::
 
-	[general]
-	description = A demo OpenQuake-engine .ini file for event based PSHA
-	calculation_mode = event_based
+    [general]
+    description = A demo OpenQuake-engine .ini file for event based PSHA
+    calculation_mode = event_based
 
 **********************
 event based parameters
@@ -27,9 +27,9 @@ This section is used to specify the number of stochastic event sets to be genera
 in the ``calculation_configuration`` part). Additionally, in this section the user can specify the spatial correlation 
 model to be used for the generation of ground motion fields.::
 
-	ses_per_logic_tree_path = 5
-	within_event_correlation_model = JayaramBaker2009
-	within_event_correlation_params = {"vs30_clustering": True}
+    ses_per_logic_tree_path = 5
+    within_event_correlation_model = JayaramBaker2009
+    within_event_correlation_params = {"vs30_clustering": True}
 
 The acceptable flags for the parameter ``vs30_clustering`` are ``False`` and ``True``, with a capital ``F`` and ``T`` 
 respectively. ``0`` and ``1`` are also acceptable flags.
@@ -47,8 +47,8 @@ be controlled with:
 Otherwise, if only ``truncation_level`` is specified, the
 engine assumes::
 
-	truncation_level_between = truncation_level
-	truncation_level_within = truncation_level
+    truncation_level_between = truncation_level
+    truncation_level_within = truncation_level
 
 If both new parameters are provided, they are used for GMF sampling.
 
@@ -59,15 +59,15 @@ output
 This part substitutes the ``Output`` part described in the
 configuration file example described in the Section :ref:`Classical PSHA <classical-psha-params>`.::
 
-	[output]
-	export_dir = /tmp/xxx
-	ground_motion_fields = true
-	# post-process ground motion fields into hazard curves,
-	# given the specified `intensity_measure_types_and_levels`
-	hazard_curves_from_gmfs = true
-	mean = true
-	quantiles = 0.15, 0.50, 0.85
-	poes = 0.1, 0.2
+    [output]
+    export_dir = /tmp/xxx
+    ground_motion_fields = true
+    # post-process ground motion fields into hazard curves,
+    # given the specified `intensity_measure_types_and_levels`
+    hazard_curves_from_gmfs = true
+    mean = true
+    quantiles = 0.15, 0.50, 0.85
+    poes = 0.1, 0.2
 
 Starting from OpenQuake engine v2.2, it is now possible to export
 information about the ruptures directly in CSV format.
@@ -90,9 +90,9 @@ AkkarBommer2010 (with weight 0.9) and SadighEtAl1997 (with weight 0.1).
 
 The parameters in the job.ini are::
 
-	investigation_time = 1
-	ses_per_logic_tree_path = 5_000
-	number_of_logic_tree_paths = 0
+    investigation_time = 1
+    ses_per_logic_tree_path = 5_000
+    number_of_logic_tree_paths = 0
 
 Since there are 2 realizations, the effective investigation time is 10,000 years. If you run the calculation, you will 
 generate (at least with version 3.13 of the engine, though the details may change with the version) 10,121 events, since 
@@ -107,9 +107,9 @@ one has to keep the two realizations distinct, and only at the end to perform th
 The situation is the opposite when sampling is used. In order to get the same effective investigation time of 10,000 
 years you should change the parameters in the job.ini to::
 
-	investigation_time = 1
-	ses_per_logic_tree_path = 1
-	number_of_logic_tree_paths = 10_000
+    investigation_time = 1
+    ses_per_logic_tree_path = 1
+    number_of_logic_tree_paths = 10_000
 
 Now there are 10,000 realizations, not 2, and they all have the same weight .0001. The number of events per realization 
 is still roughly constant (around 1) and there are still 10,121 events, however now *the original weights are reflected 

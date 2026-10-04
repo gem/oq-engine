@@ -22,35 +22,35 @@ Parameters: None
 
 Response::
 
-	[{"description": "Hazard Calculation for end-to-end hazard+risk",
-	  "id": 1,
-	  "status": "executing",
-	  "calculation_mode": "classical",
-	  "is_running": true,
-	  "owner: "michele",
-	  "url": "http://localhost:8800/v1/calc/1",
-	  "abortable": true,
-	  "size_mb": 2.34},
-	 {"description": "Event based calculation",
-	  "id": 2,
-	  "status": "complete",
-	  "calculation_mode": "event_based",
-	  "is_running": false,
-	  "owner: "armando",
-	  "url": "http://localhost:8800/v1/calc/2",
-	  "abortable": false,
-	  "size_mb": 12.34},
-	 {"description": "ScenarioRisk calculation",
-	  "id": 3,
-	  "status": "complete",
-	  "calculation_mode": "scenario_risk",
-	  "is_running": false,
-	  "owner: "armando",
-	  "url": "http://localhost:8800/v1/calc/3",
-	  "abortable": false,
-	  "parent_id": null,
-	  "size_mb": 1.23}
-	  ]
+    [{"description": "Hazard Calculation for end-to-end hazard+risk",
+      "id": 1,
+      "status": "executing",
+      "calculation_mode": "classical",
+      "is_running": true,
+      "owner: "michele",
+      "url": "http://localhost:8800/v1/calc/1",
+      "abortable": true,
+      "size_mb": 2.34},
+     {"description": "Event based calculation",
+      "id": 2,
+      "status": "complete",
+      "calculation_mode": "event_based",
+      "is_running": false,
+      "owner: "armando",
+      "url": "http://localhost:8800/v1/calc/2",
+      "abortable": false,
+      "size_mb": 12.34},
+     {"description": "ScenarioRisk calculation",
+      "id": 3,
+      "status": "complete",
+      "calculation_mode": "scenario_risk",
+      "is_running": false,
+      "owner: "armando",
+      "url": "http://localhost:8800/v1/calc/3",
+      "abortable": false,
+      "parent_id": null,
+      "size_mb": 1.23}
+      ]
 
 ****************************
 POST /v1/calc/:calc_id/abort
@@ -62,10 +62,10 @@ Parameters: None
 
 Response::
 
-	{'error': 'Job <id> is not running'}
-	{'error': 'User <user> has no permission to kill job <id>'}
-	{'error': 'PID for job <id> not found in the database'}
-	{'success': 'Killing job <id>'}
+    {'error': 'Job <id> is not running'}
+    {'error': 'User <user> has no permission to kill job <id>'}
+    {'error': 'PID for job <id> not found in the database'}
+    {'success': 'Killing job <id>'}
 
 ****************************
 GET /v1/calc/:calc_id/status
@@ -77,14 +77,14 @@ Parameters: None
 
 Response::
 
-	{"description": "Hazard Calculation for end-to-end hazard+risk",
-	  "id": 1,
-	  "status": "executing",
-	  "calculation_mode": "classical",
-	  "is_running": true,
-	  "owner: "michele",
-	  "parent_id": "42",
-	  "url": "http://localhost:8800/v1/calc/1"}
+    {"description": "Hazard Calculation for end-to-end hazard+risk",
+      "id": 1,
+      "status": "executing",
+      "calculation_mode": "classical",
+      "is_running": true,
+      "owner: "michele",
+      "parent_id": "42",
+      "url": "http://localhost:8800/v1/calc/1"}
 
 *********************
 GET /v1/calc/:calc_id
@@ -96,11 +96,11 @@ Parameters: None
 
 Response::
 
-	{"user_name": "michele",
-	"is_running": 0,
-	"stop_time": "2017-06-05 12:01:28.575776",
-	"status": "failed",
-	"start_time": "2017-06-05 12:01:26"}
+    {"user_name": "michele",
+    "is_running": 0,
+    "stop_time": "2017-06-05 12:01:28.575776",
+    "status": "failed",
+    "start_time": "2017-06-05 12:01:26"}
 
 ***********************************************
 GET /v1/calc/:calc_id/model_provenance
@@ -115,17 +115,17 @@ Parameters: None
 
 Response when provenance is available::
 
-	{"available": true,
-	 "summary": {
-	   "schema_version": 1,
-	   "generated_at": "2026-06-25T14:32:10+00:00",
-	   "repositories": []
-	 }}
+    {"available": true,
+     "summary": {
+       "schema_version": 1,
+       "generated_at": "2026-06-25T14:32:10+00:00",
+       "repositories": []
+     }}
 
 For old datastores without provenance metadata, the endpoint returns::
 
-	{"available": false,
-	 "reason": "Model provenance metadata is not available"}
+    {"available": false,
+     "reason": "Model provenance metadata is not available"}
 
 *******************************
 GET /v1/calc/:calc_id/traceback
@@ -230,36 +230,36 @@ Parameters: None
 
 Response::
 
-	   [{'id': 27,
-	     'name': 'Full Report',
-	     'outtypes': ['rst'],
-	     'size_mb': None,
-	     'type': 'fullreport',
-	     'url': 'http://127.0.0.1:8800/v1/calc/result/27'},
-	    {'id': 28,
-	     'name': 'Ground Motion Fields',
-	     'outtypes': ['xml', 'csv', 'npz'],
-	     'size_mb': 0.00884246826171875,
-	     'type': 'gmf_data',
-	     'url': 'http://127.0.0.1:8800/v1/calc/result/28'},
-	    {'id': 29,
-	     'name': 'Hazard Curves',
-	     'outtypes': ['csv', 'xml', 'npz'],
-	     'size_mb': 0.027740478515625,
-	     'type': 'hcurves',
-	     'url': 'http://127.0.0.1:8800/v1/calc/result/29'},
-	    {'id': 30,
-	     'name': 'Earthquake Ruptures',
-	     'outtypes': ['xml', 'csv'],
-	     'size_mb': 0.008056640625,
-	     'type': 'ruptures',
-	     'url': 'http://127.0.0.1:8800/v1/calc/result/30'},
-	    {'id': 31,
-	     'name': 'Events',
-	     'outtypes': ['csv'],
-	     'size_mb': None,
-	     'type': 'events',
-	     'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
+       [{'id': 27,
+         'name': 'Full Report',
+         'outtypes': ['rst'],
+         'size_mb': None,
+         'type': 'fullreport',
+         'url': 'http://127.0.0.1:8800/v1/calc/result/27'},
+        {'id': 28,
+         'name': 'Ground Motion Fields',
+         'outtypes': ['xml', 'csv', 'npz'],
+         'size_mb': 0.00884246826171875,
+         'type': 'gmf_data',
+         'url': 'http://127.0.0.1:8800/v1/calc/result/28'},
+        {'id': 29,
+         'name': 'Hazard Curves',
+         'outtypes': ['csv', 'xml', 'npz'],
+         'size_mb': 0.027740478515625,
+         'type': 'hcurves',
+         'url': 'http://127.0.0.1:8800/v1/calc/result/29'},
+        {'id': 30,
+         'name': 'Earthquake Ruptures',
+         'outtypes': ['xml', 'csv'],
+         'size_mb': 0.008056640625,
+         'type': 'ruptures',
+         'url': 'http://127.0.0.1:8800/v1/calc/result/30'},
+        {'id': 31,
+         'name': 'Events',
+         'outtypes': ['csv'],
+         'size_mb': None,
+         'type': 'events',
+         'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
 
 *********************************
 GET /v1/calc/:calc_id/result/list
@@ -275,8 +275,8 @@ Get the full content of a calculation result for the given ``result_id``.
 
 Parameters::
 
-	* export_type: the desired format for the result (`xml`, `geojson`, etc.)
-	* dload: `true` to force download, not `true` try to open in browser window
+    * export_type: the desired format for the result (`xml`, `geojson`, etc.)
+    * dload: `true` to force download, not `true` try to open in browser window
 
 Response:
 
@@ -334,8 +334,8 @@ Run a new calculation with the specified files (or a single job.zip).
 
 Parameters::
 
-	* hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
-	* hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
+    * hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
+    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
 
 Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
 
@@ -348,7 +348,7 @@ the server).
 
 Parameters::
 
-	* job_ini: full path to the job.ini file in the server
+    * job_ini: full path to the job.ini file in the server
 
 Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
 
@@ -360,29 +360,29 @@ Run a new aelo calculation for a site with the specified parameters.
 
 Parameters::
 
-	* lon: the longitude of the site (a float in the interval [-180, +180])
-	* lat: the latitude of the site (a float in the interval [-90.0, +90.0])
-	* vs30: the time-averaged shear-wave velocity from the surface to a depth of 30 meters (a positive float)
-	* siteid: an ID to assign to the site (the only accepted chars are a-zA-Z0-9_-:)
+    * lon: the longitude of the site (a float in the interval [-180, +180])
+    * lat: the latitude of the site (a float in the interval [-90.0, +90.0])
+    * vs30: the time-averaged shear-wave velocity from the surface to a depth of 30 meters (a positive float)
+    * siteid: an ID to assign to the site (the only accepted chars are a-zA-Z0-9_-:)
 
 Response::
 
-	The input values are validated and a `400 Bad Request` response is returned
-	in case any invalid input is found, specifying the reason of the failure.
-	If inputs are valid, the engine will first attempt to identify a Mosaic
-	model that covers the given site, returning a `400 Bad Request` response in
-	case the site does not belong to any of the Mosaic models. Otherwise, a new
-	job is created and a `200 OK` response is returned, like:
+    The input values are validated and a `400 Bad Request` response is returned
+    in case any invalid input is found, specifying the reason of the failure.
+    If inputs are valid, the engine will first attempt to identify a Mosaic
+    model that covers the given site, returning a `400 Bad Request` response in
+    case the site does not belong to any of the Mosaic models. Otherwise, a new
+    job is created and a `200 OK` response is returned, like:
 
-	{"status": "created",
-	 "job_id": 1,
-	 "outputs_uri": "http://localhost:8800/v1/calc/1/results",
-	 "log_uri": "http://localhost:8800/v1/calc/1/log/0:",
-	 "traceback_uri": "http://localhost:8800/v1/calc/1/traceback"}
+    {"status": "created",
+     "job_id": 1,
+     "outputs_uri": "http://localhost:8800/v1/calc/1/results",
+     "log_uri": "http://localhost:8800/v1/calc/1/log/0:",
+     "traceback_uri": "http://localhost:8800/v1/calc/1/traceback"}
 
-	`outputs_uri` can be used later to retrieve calculation results, after the job is complete.
-	`log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
-	`traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
+    `outputs_uri` can be used later to retrieve calculation results, after the job is complete.
+    `log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
+    `traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
 
 As soon as the job is complete, a notification is automatically sent via email to the user who launched it. In case of
 success, the message will contain a link to the web page showing the outputs of the calculation; otherwise, it will
@@ -396,14 +396,14 @@ Check if a given job.ini local file is valid
 
 Parameters::
 
-	* job_ini: the local file to be validated
+    * job_ini: the local file to be validated
 
 Response:
 
 a JSON object, containing::
 
-	* valid: a boolean indicating if the provided file is valid
-	* error_msg: the error message, if any error was found (None otherwise)
+    * valid: a boolean indicating if the provided file is valid
+    * error_msg: the error message, if any error was found (None otherwise)
 
 **************************
 POST /v1/calc/validate_zip
@@ -413,14 +413,14 @@ Check if a given job.zip archive is valid
 
 Parameters::
 
-	* archive: the zip file to be validated
+    * archive: the zip file to be validated
 
 Response:
 
 a JSON object, containing::
 
-	* valid: a boolean indicating if the provided archive is a valid job.zip
-	* error_msg: the error message, if any error was found (None otherwise)
+    * valid: a boolean indicating if the provided archive is a valid job.zip
+    * error_msg: the error message, if any error was found (None otherwise)
 
 ***************
 POST /v1/valid/
@@ -430,15 +430,15 @@ Check if a given XML text is a valid NRML.
 
 Parameters::
 
-	* xml_text: the text of the xml to be validated as nrml
+    * xml_text: the text of the xml to be validated as nrml
 
 Response:
 
 a JSON object, containing::
 
-	* valid: a boolean indicating if the provided text is a valid NRML
-	* error_msg: the error message, if any error was found (None otherwise)
-	* error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
+    * valid: a boolean indicating if the provided text is a valid NRML
+    * error_msg: the error message, if any error was found (None otherwise)
+    * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
 
 *******************
 POST /v1/on_same_fs
@@ -450,14 +450,14 @@ Check if a given filename exists and if the first 32 bytes of its content have t
 
 Parameters::
 
-	* filename: filename (with path) of file to be checked
-	* checksum: expected checksum of first 32 bytes of the file
+    * filename: filename (with path) of file to be checked
+    * checksum: expected checksum of first 32 bytes of the file
 
 Response:
 
 a JSON object, containing::
 
-	* success: a boolean indicating that filename is accessible by engine server and that calculated checksum matches passed parameter
+    * success: a boolean indicating that filename is accessible by engine server and that calculated checksum matches passed parameter
 
 ********************
 GET /v1/ini_defaults
@@ -471,18 +471,18 @@ Parameters: None
 
 Response::
 
-	{"aggregate_by": [],
-	 "area_source_discretization": null,
-	 "ash_wet_amplification_factor": 1.0,
-	 "asset_correlation": 0,
-	 "asset_hazard_distance": {"default": 15},
-	 "asset_loss_table": false,
-	 "assets_per_site_limit": 1000,
-	 "avg_losses": true,
-	 "base_path": ".",
-	 "calculation_mode": "",
-	 ...
-	 }
+    {"aggregate_by": [],
+     "area_source_discretization": null,
+     "ash_wet_amplification_factor": 1.0,
+     "asset_correlation": 0,
+     "asset_hazard_distance": {"default": 15},
+     "asset_loss_table": false,
+     "assets_per_site_limit": 1000,
+     "avg_losses": true,
+     "base_path": ".",
+     "calculation_mode": "",
+     ...
+     }
 
 **************************
 POST /accounts/ajax_login/
@@ -534,7 +534,7 @@ Parameters: 'ini', list of pathnames
 
 Example of Response::
 
-	[0, 0, 42]  # if the first two inis are new and the third one is old
+    [0, 0, 42]  # if the first two inis are new and the third one is old
 
 
 Extracting data from calculations
@@ -564,22 +564,22 @@ requires direct access to the datastore.
 
 Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves::
 
-	>> from openquake.calculators.extract import Extractor
-	>> calc_id = 42  # for example
-	>> extractor = Extractor(calc_id)
-	>> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
-	>> obj.mean.shape  # an example with 10,000 sites, 20 levels per PGA
-	(10000, 1, 20)
-	>> extractor.close()
+    >> from openquake.calculators.extract import Extractor
+    >> calc_id = 42  # for example
+    >> extractor = Extractor(calc_id)
+    >> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
+    >> obj.mean.shape  # an example with 10,000 sites, 20 levels per PGA
+    (10000, 1, 20)
+    >> extractor.close()
 
 If in the calculation you specified the flag ``individual_rlzs=true``, then it is also possible to retrieve a specific
 realization
 
-	>> dic = vars(extractor.get(‘hcurves?kind=rlz-0’)) >> dic[‘rlz-000’] # array of shape (num_sites, num_imts, num_levels)
+    >> dic = vars(extractor.get(‘hcurves?kind=rlz-0’)) >> dic[‘rlz-000’] # array of shape (num_sites, num_imts, num_levels)
 
 or even all realizations:
 
-	>> dic = vars(extractor.get(‘hcurves?kind=rlzs’))
+    >> dic = vars(extractor.get(‘hcurves?kind=rlzs’))
 
 Here is an example of using the *WebExtractor* to retrieve hazard maps. Here we assume that in a remote machine there is
 a WebAPI server running, a.k.a. the Engine Server. The first thing to is to set up the credentials to access the WebAPI.
@@ -590,10 +590,10 @@ There are two cases:
 
 In both case you need to create a file called ``openquake.cfg`` with the following format::
 
-	[webapi]
-	server = http(s)://the-url-of-the-server(:port)
-	username = my-username
-	password = my-password
+    [webapi]
+    server = http(s)://the-url-of-the-server(:port)
+    username = my-username
+    password = my-password
 
 ``username`` and ``password`` can be left empty if the authentication is not enabled in the server, which is the
 recommended way, if the server is in your own secure LAN. Otherwise you must set the right credentials. The difference
@@ -602,17 +602,17 @@ your $HOME, if you have a development installation, put it in your virtualenv di
 
 The usage then is the same as the regular extractor::
 
-	>> from openquake.calculators.extract import WebExtractor
-	>> extractor = WebExtractor(calc_id)
-	>> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
-	>> obj.mean.shape  # an example with 10,000 sites and 4 PoEs
-	(10000, 1, 4)
-	>> extractor.close()
+    >> from openquake.calculators.extract import WebExtractor
+    >> extractor = WebExtractor(calc_id)
+    >> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
+    >> obj.mean.shape  # an example with 10,000 sites and 4 PoEs
+    (10000, 1, 4)
+    >> extractor.close()
 
 If you do not want to put your credentials in the ``openquake.cfg`` file, you can do so, but then you need to pass them
 explicitly to the WebExtractor::
 
-	>> extractor = WebExtractor(calc_id, server, username, password)
+    >> extractor = WebExtractor(calc_id, server, username, password)
 
 If you have a scenario calculation you may want to exact the
 ``avg_gmf`` output. This can be done simply with a call like::
@@ -631,32 +631,32 @@ Plotting
 The (Web)Extractor is used in the oq plot command: by configuring ``openquake.cfg`` it is possible to plot things like
 hazard curves, hazard maps and uniform hazard spectra for remote (or local) calculations. Here are three examples of use::
 
-	$ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0' <calc_id>
-	$ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
-	$ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
+    $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0' <calc_id>
+    $ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
+    $ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
 
 The ``site_id`` is optional; if missing, only the first site (``site_id=0``) will be plotted. If you want to plot all
 the realizations you can do::
 
-	$ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
+    $ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
 
 If you want to plot all statistics you can do::
 
-	$ oq plot 'hcurves?kind=stats&imt=PGA' <calc_id>
+    $ oq plot 'hcurves?kind=stats&imt=PGA' <calc_id>
 
 It is also possible to combine plots. For instance if you want to plot all realizations and also the mean the command to
 give is::
 
-	$ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
+    $ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
 
 If you want to plot the median and the mean the command is::
 
-	$ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
+    $ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
 
 assuming the median (i.e. *quantile-0.5*) is available in the calculation. If you want to compare say rlz-0 with rlz-2
 and rlz-5 you can just just say so::
 
-	$ oq plot 'hcurves?kind=rlz-0&kind=rlz-2&kind=rlz-5&imt=PGA' <calc_id>
+    $ oq plot 'hcurves?kind=rlz-0&kind=rlz-2&kind=rlz-5&imt=PGA' <calc_id>
 
 You can combine as many kinds of curves as you want. Clearly if your are specifying a kind that is not available you
 will get an error.
@@ -676,7 +676,7 @@ Such outputs can be exported as usual in CSV format and will generate several fi
 extracting a subset of the outputs programmatically, thus avoiding the overhead of exporting more data than needed and
 having to read the CSV. The way to go is to define an extractor::
 
-	>> extractor = Extractor(calc_id)
+    >> extractor = Extractor(calc_id)
 
 and five parameters:
 
@@ -688,18 +688,18 @@ and five parameters:
 
 Here is an example::
 
-	>> ex = 'disagg?kind=Mag_Dist&imt=PGA&site_id=0&poe_id=0&spec=rlzs-traditional'
-	>> dic = extractor.get(ex)
+    >> ex = 'disagg?kind=Mag_Dist&imt=PGA&site_id=0&poe_id=0&spec=rlzs-traditional'
+    >> dic = extractor.get(ex)
 
 The dictionary here contains the following keys::
 
-	>> dic["mag"] # lenght 4
-	array([5., 6., 7., 8.])
-	>> dic["dist"] # lenght 21
-	array([  0.,  10.,  20.,  30.,  40.,  50.,  60.,  70.,  80.,  90., 100.,
-	       110., 120., 130., 140., 150., 160., 170., 180., 190., 200.])
-	>> dic["array"].shape
-	(4, 21, 1, 1)
+    >> dic["mag"] # lenght 4
+    array([5., 6., 7., 8.])
+    >> dic["dist"] # lenght 21
+    array([  0.,  10.,  20.,  30.,  40.,  50.,  60.,  70.,  80.,  90., 100.,
+           110., 120., 130., 140., 150., 160., 170., 180., 190., 200.])
+    >> dic["array"].shape
+    (4, 21, 1, 1)
 
 *******************
 Extracting ruptures
@@ -707,25 +707,25 @@ Extracting ruptures
 
 Here is an example for the event based demo::
 
-	$ cd oq-engine/demos/hazard/EventBasedPSHA/
-	$ oq engine --run job.ini
-	$ oq shell
-	IPython shell with a global object "o"
-	In [1]: from openquake.calculators.extract import Extractor
-	In [2]: extractor = Extractor(calc_id=-1)
-	In [3]: aw = extractor.get('rupture_info?min_mag=5')
-	In [4]: aw
-	Out[4]: <ArrayWrapper(1511,)>
-	In [5]: aw.array
-	Out[5]:
-	array([(   0, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
-	       (   1, 1, 5.05, 0.08456119,  0.15503392, 5., b'Active Shallow Crust', 4.4999969e+01, 90.      , 0.),
-	       (   2, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 3.5999997e+02, 49.999985, 0.),
-	       ...,
-	       (1508, 2, 6.15, 0.26448786, -0.7442877 , 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
-	       (1509, 1, 6.15, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 2.2499924e+02, 50.000004, 0.),
-	       (1510, 1, 6.85, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 4.9094699e-04, 50.000046, 0.)],
-	      dtype=[('rup_id', '<i8'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
-	             ('centroid_lat', '<f4'), ('centroid_depth', '<f4'), ('trt', 'S50'), ('strike', '<f4'),
-	             ('dip', '<f4'), ('rake', '<f4')])
-	In [6]: extractor.close()
+    $ cd oq-engine/demos/hazard/EventBasedPSHA/
+    $ oq engine --run job.ini
+    $ oq shell
+    IPython shell with a global object "o"
+    In [1]: from openquake.calculators.extract import Extractor
+    In [2]: extractor = Extractor(calc_id=-1)
+    In [3]: aw = extractor.get('rupture_info?min_mag=5')
+    In [4]: aw
+    Out[4]: <ArrayWrapper(1511,)>
+    In [5]: aw.array
+    Out[5]:
+    array([(   0, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
+           (   1, 1, 5.05, 0.08456119,  0.15503392, 5., b'Active Shallow Crust', 4.4999969e+01, 90.      , 0.),
+           (   2, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 3.5999997e+02, 49.999985, 0.),
+           ...,
+           (1508, 2, 6.15, 0.26448786, -0.7442877 , 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
+           (1509, 1, 6.15, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 2.2499924e+02, 50.000004, 0.),
+           (1510, 1, 6.85, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 4.9094699e-04, 50.000046, 0.)],
+          dtype=[('rup_id', '<i8'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
+                 ('centroid_lat', '<f4'), ('centroid_depth', '<f4'), ('trt', 'S50'), ('strike', '<f4'),
+                 ('dip', '<f4'), ('rake', '<f4')])
+    In [6]: extractor.close()

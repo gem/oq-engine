@@ -9,7 +9,7 @@ exporting them from the internal OpenQuake engine database once a calculation is
 To export outputs directly through the calculation, it is possible to use the flag ``–exports xml``, 
 as shown in the example below::
 
-	user@ubuntu:~$ oq engine --run job.ini --exports xml
+    user@ubuntu:~$ oq engine --run job.ini --exports xml
 
 This will export the results to the ``results`` directory specified in the ``job.ini`` file.
 
@@ -35,16 +35,16 @@ Which will display a list of hazard calculations as presented below.
 
 .. code:: shell-session
 
-	user@ubuntu:~$ oq engine --lhc
-	job_id | status | start_time | description
-	1 | failed | 2013-03-01 09:49:34 | Classical PSHA
-	2 | successful | 2013-03-01 09:49:56 | Classical PSHA
-	3 | failed | 2013-03-01 10:24:04 | Classical PSHA
-	4 | failed | 2013-03-01 10:28:16 | Classical PSHA
-	5 | failed | 2013-03-01 10:30:04 | Classical PSHA
-	6 | successful | 2013-03-01 10:31:53 | Classical PSHA
-	7 | failed | 2013-03-09 08:15:14 | Classical PSHA
-	8 | successful | 2013-03-09 08:18:04 | Classical PSHA
+    user@ubuntu:~$ oq engine --lhc
+    job_id | status | start_time | description
+    1 | failed | 2013-03-01 09:49:34 | Classical PSHA
+    2 | successful | 2013-03-01 09:49:56 | Classical PSHA
+    3 | failed | 2013-03-01 10:24:04 | Classical PSHA
+    4 | failed | 2013-03-01 10:28:16 | Classical PSHA
+    5 | failed | 2013-03-01 10:30:04 | Classical PSHA
+    6 | successful | 2013-03-01 10:31:53 | Classical PSHA
+    7 | failed | 2013-03-09 08:15:14 | Classical PSHA
+    8 | successful | 2013-03-09 08:18:04 | Classical PSHA
 
 *******************************************
 Notes on outputs from hazard calculation

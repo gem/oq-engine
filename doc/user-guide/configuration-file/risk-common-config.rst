@@ -32,13 +32,13 @@ consequence, or vulnerability models) as well as the parameters governing the ri
 Some initial mandatory parameters of the configuration file common to all of the risk calculators are presented in the listing. 
 The remaining parameters that are specific to each risk calculator are discussed in subsequent sections::
 
-	[general]
-	description = Example risk calculation
-	calculation_mode = scenario_risk
-	
-	[exposure]
-	exposure_file = exposure_model.xml
-	
+    [general]
+    description = Example risk calculation
+    calculation_mode = scenario_risk
+    
+    [exposure]
+    exposure_file = exposure_model.xml
+    
 
 - ``description``: a parameter that can be used to include some information about the type of calculations that are going to be performed.
 - ``calculation_mode``: this parameter specifies the type of calculation to

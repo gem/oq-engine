@@ -57,8 +57,8 @@ This is another way to save memory. If you are on a single machine,
 the way to do it is to edit the file `openquake.cfg` and add the lines
 (if for instance you want to use 8 cores)::
 
-	[distribution]
-	num_cores = 8
+    [distribution]
+    num_cores = 8
 
 If you are on a cluster you must edit the section [zworkers] and the
 parameter ``host_cores``, replacing the ``-1`` with the number of
@@ -101,7 +101,7 @@ When you install the engine using the ``install.py`` script, you may specify the
 directory the engine virtual environment must be stored. On an existing installation of the engine, you can run the
 command::
 
-	$ oq info venv
+    $ oq info venv
 
 to retrieve the path of its virtual environment.
 
@@ -114,7 +114,7 @@ engine working on a same computer. Each HDF5 dataset is independent from all oth
 identifier. It is possible to determine the version of the engine that produced each HDF5 file (``calc_<calc_id>.hdf5``)
 using the command::
 
-	$ oq show_attrs / <calc_id>
+    $ oq show_attrs / <calc_id>
 
 where ``/`` indicates the root attributes (date, engine_version, etc.) and ``<calc_id>`` (an integer number) is the
 calculation identifier. In case the calculation id is not specified, the attributes are retrieved for the latest
@@ -195,9 +195,9 @@ If a third party python script (or a Jupyter notebook) needs to import openquake
 (as an example: ``from openquake.commonlib import readinput``) you must use a virtual environment and install a local
 copy of the Engine::
 
-	$ python3 -m venv </path/to/myvenv>
-	$ . /path/to/myvenv/bin/activate
-	$ pip3 install openquake.engine
+    $ python3 -m venv </path/to/myvenv>
+    $ . /path/to/myvenv/bin/activate
+    $ pip3 install openquake.engine
 
 
 ##########################################################
@@ -220,55 +220,55 @@ Certificate verification on macOS
 
 On macOS you can get the following error::
 
-	Traceback (most recent call last):
-	  File "/Users/openquake/py36/bin/oq", line 11, in <module>
-	    load_entry_point('openquake.engine', 'console_scripts', 'oq')()
-	  File "/Users/openquake/openquake/oq-engine/openquake/commands/__main__.py", line 53, in oq
-	    parser.callfunc()
-	  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 181, in callfunc
-	    return self.func(**vars(namespace))
-	  File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 251, in main
-	    return func(**kw)
-	  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 210, in engine
-	    exports, hazard_calculation_id=hc_id)
-	  File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 70, in run_job
-	    eng.run_calc(job_id, oqparam, exports, **kw)
-	  File "/Users/openquake/openquake/oq-engine/openquake/engine/engine.py", line 341, in run_calc
-	    close=False, **kw)
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 192, in run
-	    self.pre_execute()
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/scenario_damage.py", line 85, in pre_execute
-	    super().pre_execute()
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 465, in pre_execute
-	    self.read_inputs()
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 398, in read_inputs
-	    self._read_risk_data()
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 655, in _read_risk_data
-	    haz_sitecol, assetcol)
-	  File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 821, in read_shakemap
-	    oq.discard_assets)
-	  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 100, in get_sitecol_shakemap
-	    array = download_array(array_or_id)
-	  File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
-	    contents = json.loads(urlopen(url).read())[
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 223, in urlopen
-	    return opener.open(url, data, timeout)
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 526, in open
-	    response = self._open(req, data)
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 544, in _open
-	    '_open', req)
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 504, in _call_chain
-	    result = func(*args)
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1361, in https_open
-	    context=self._context, check_hostname=self._check_hostname)
-	  File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1320, in do_open
-	    raise URLError(err)
-	urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
+    Traceback (most recent call last):
+      File "/Users/openquake/py36/bin/oq", line 11, in <module>
+        load_entry_point('openquake.engine', 'console_scripts', 'oq')()
+      File "/Users/openquake/openquake/oq-engine/openquake/commands/__main__.py", line 53, in oq
+        parser.callfunc()
+      File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 181, in callfunc
+        return self.func(**vars(namespace))
+      File "/Users/openquake/openquake/oq-engine/openquake/baselib/sap.py", line 251, in main
+        return func(**kw)
+      File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 210, in engine
+        exports, hazard_calculation_id=hc_id)
+      File "/Users/openquake/openquake/oq-engine/openquake/commands/engine.py", line 70, in run_job
+        eng.run_calc(job_id, oqparam, exports, **kw)
+      File "/Users/openquake/openquake/oq-engine/openquake/engine/engine.py", line 341, in run_calc
+        close=False, **kw)
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 192, in run
+        self.pre_execute()
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/scenario_damage.py", line 85, in pre_execute
+        super().pre_execute()
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 465, in pre_execute
+        self.read_inputs()
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 398, in read_inputs
+        self._read_risk_data()
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 655, in _read_risk_data
+        haz_sitecol, assetcol)
+      File "/Users/openquake/openquake/oq-engine/openquake/calculators/base.py", line 821, in read_shakemap
+        oq.discard_assets)
+      File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 100, in get_sitecol_shakemap
+        array = download_array(array_or_id)
+      File "/Users/openquake/openquake/oq-engine/openquake/hazardlib/shakemap.py", line 74, in download_array
+        contents = json.loads(urlopen(url).read())[
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 223, in urlopen
+        return opener.open(url, data, timeout)
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 526, in open
+        response = self._open(req, data)
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 544, in _open
+        '_open', req)
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 504, in _call_chain
+        result = func(*args)
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1361, in https_open
+        context=self._context, check_hostname=self._check_hostname)
+      File "/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/urllib/request.py", line 1320, in do_open
+        raise URLError(err)
+    urllib.error.URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:852)>
 
 Please have a look at ``/Applications/Python 3.8/ReadMe.rtf`` for possible solutions. If unsure run from a terminal the
 following command::
 
-	sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
+    sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
 
 .. _faq-hazard:
 
@@ -340,13 +340,13 @@ Can I estimate the runtime of a classical calculation without running it?
 
 Since engine v3.15 you can. The trick is to run a reduced calculation first, by using the command::
 
-	$ oq engine --run job.ini --sample-sources=0.01
+    $ oq engine --run job.ini --sample-sources=0.01
 
 This will reduce the number of ruptures by ~100 times so that the reduced calculation will complete in a reasonable
 amount of time. Then in the log you will see the estimate runtime for the full calculation. For instance for the SHARE
 model on a computer with an i7 processor you will see something like this::
 
-	[2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
+    [2022-04-19 08:57:05 #4054 INFO] Estimated time 72.3 hours
 
 The estimate is rather rough, so do not take it at the letter. The runtime can be reduced by orders of magnitude by
 tuning parameters like the ``pointsource_distance`` and ``ps_grid_spacing``, discussed at length in the advanced manual.
@@ -430,7 +430,7 @@ Argh, I forgot to set ``individual_rlzs``! Must I repeat the calculation?
 
 No, just set ``individual_rlzs=true`` in the job.ini and run::
 
-	$ oq engine --run job.ini --hc=<ID> --exports csv
+    $ oq engine --run job.ini --hc=<ID> --exports csv
 
 where ``<ID>`` must be replaced with the ID of the original calculation. The individual outputs will be regenerated by
 reusing the result of the previous calculation: it will be a lot faster than repeating the calculation from scratch.
@@ -441,7 +441,7 @@ Argh, I set the wrong poes in the job.ini? Must I repeat the calculation?
 
 No, set the right poes in the job.ini and as before run::
 
-	$ oq engine --run job.ini --hc=<ID> --exports csv
+    $ oq engine --run job.ini --hc=<ID> --exports csv
 
 where ``<ID>`` must be replaced with the ID of the original calculation. Hazard maps and UHS can be regenerated from an
 existing calculation quite efficiently.
@@ -479,12 +479,12 @@ to run them interactively. Scenarios are an exception, since they are usually fa
 with a lot of sites. Assuming the parameters of the calculation are in a ``job.ini`` file you can run the following lines
 in the notebook::
 
-	In[1]: from openquake.calculators.base import run_calc
-	In[2]: calc = run_calc('job.ini')
+    In[1]: from openquake.calculators.base import run_calc
+    In[2]: calc = run_calc('job.ini')
 
 Then you can inspect the contents of the datastore and perform your postprocessing::
 
-	In[3]: calc.datastore.open('r')  # open the datastore for reading
+    In[3]: calc.datastore.open('r')  # open the datastore for reading
 
 The inner format of the datastore is not guaranteed to be the same across releases and it is not documented, so this
 approach is recommended to the most adventurous people.
@@ -586,28 +586,28 @@ calculation settings would produce statistically equivalent risk results:
 
 ::
 
-	number_of_logic_tree_samples = 0
-	investigation_time = 1
-	ses_per_logic_tree_path = 10000
-	risk_investigation_time = 1
+    number_of_logic_tree_samples = 0
+    investigation_time = 1
+    ses_per_logic_tree_path = 10000
+    risk_investigation_time = 1
 
 **Calculation 2**
 
 ::
 
-	number_of_logic_tree_samples = 0
-	investigation_time = 50
-	ses_per_logic_tree_path = 200
-	risk_investigation_time = 1
+    number_of_logic_tree_samples = 0
+    investigation_time = 50
+    ses_per_logic_tree_path = 200
+    risk_investigation_time = 1
 
 **Calculation 3**
 
 ::
 
-	number_of_logic_tree_samples = 0
-	investigation_time = 10000
-	ses_per_logic_tree_path = 1
-	risk_investigation_time = 1
+    number_of_logic_tree_samples = 0
+    investigation_time = 10000
+    ses_per_logic_tree_path = 1
+    risk_investigation_time = 1
 
 The effective catalog length per branch in such cases is ``investigation_time × ses_per_logic_tree_path``. The choice of
 how to split the effective catalog length amongst the two parameters is up to the modeller/analyst's preferrence, and
@@ -697,7 +697,7 @@ Can I disaggregate my losses by source?
 Starting from engine v3.10 you can get a summary of the total losses across your portfolio of assets arising from each
 seismic source, over the effective investigation time. For instance run the event based risk demo as follows::
 
-	$ oq engine --run job.ini
+    $ oq engine --run job.ini
 
 and export the output "Source Loss Table". You should see a table like the one below:
 
@@ -783,23 +783,23 @@ error: OSError: Unable to open file
 
 A more detailed stack trace::
 
-	OSError:
-	  File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 312, in new
-	    val = func(*args)
-	  File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
-	    yield func(*args)
-	  File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
-	    pgetter.init()  # if not already initialized
-	  File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/getters.py", line 69, in init
-	    self.dstore = hdf5.File(self.dstore, 'r')
-	  File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 312, in __init__
-	    fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
-	  File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 142, in make_fid
-	    fid = h5f.open(name, flags, fapl=fapl)
-	  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
-	  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
-	  File "h5py/h5f.pyx", line 78, in h5py.h5f.open
-	OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
+    OSError:
+      File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 312, in new
+        val = func(*args)
+      File "/opt/openquake/lib/python3.8/site-packages/openquake/baselib/parallel.py", line 376, in gfunc
+        yield func(*args)
+      File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/classical.py", line 301, in build_hazard_stats
+        pgetter.init()  # if not already initialized
+      File "/opt/openquake/lib/python3.8/site-packages/openquake/calculators/getters.py", line 69, in init
+        self.dstore = hdf5.File(self.dstore, 'r')
+      File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 312, in __init__
+        fid = make_fid(name, mode, userblock_size, fapl, swmr=swmr)
+      File "/opt/openquake/lib64/python3.8/site-packages/h5py/_hl/files.py", line 142, in make_fid
+        fid = h5f.open(name, flags, fapl=fapl)
+      File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+      File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+      File "h5py/h5f.pyx", line 78, in h5py.h5f.open
+    OSError: Unable to open file (unable to open file: name = '/home/openquake/oqdata/cache_1.hdf5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)
 
 This happens when the :ref:`shared dir <cluster>`
 is not configured properly and workers cannot access data from the master node. Please note that starting with OpenQuake

@@ -49,11 +49,11 @@ Maximum distance
 The engine gives users a lot of control on the maximum distance parameter. For instance, you can have a different 
 maximum distance depending on the tectonic region, like in the following example::
 
-	maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
+    maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
 
 You can also have a magnitude-dependent maximum distance::
 
-	maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
+    maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
 
 In this case, given a site, the engine will completely discard ruptures with magnitude below 5, keep ruptures up to 100 
 km for magnitudes between 5 and 6 (the maximum distance in this magnitude range will vary linearly between 0 and 100), 
@@ -63,20 +63,20 @@ increasing linearly from 200 to 300 km from magnitude 7 to magnitude 8) and disc
 
 You can have both trt-dependent and mag-dependent maximum distance::
 
-	maximum_distance = {
-	   'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
-	   'Subduction': [(6.5, 300), (9, 500)]}
+    maximum_distance = {
+       'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
+       'Subduction': [(6.5, 300), (9, 500)]}
 
 Given a rupture with tectonic region type ``trt`` and magnitude ``mag``, the engine will ignore all sites over the 
 maximum distance ``md(trt, mag)``. The precise value is given via linear interpolation of the values listed in the 
 job.ini; you can determine the distance as follows::
 
-	from openquake.hazardlib.calc.filters import IntegrationDistance
-	idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
-	interp = idist('TRT')
-	interp([4.5, 5.5, 6.5, 7.5, 8])
-	array([ 25.        ,  75.        , 150.        , 233.33333333,
-	       266.66666667])
+    from openquake.hazardlib.calc.filters import IntegrationDistance
+    idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
+    interp = idist('TRT')
+    interp([4.5, 5.5, 6.5, 7.5, 8])
+    array([ 25.        ,  75.        , 150.        , 233.33333333,
+           266.66666667])
 
 pointsource_distance
 --------------------
@@ -147,10 +147,10 @@ raise it from 0.1 to 0.2 you will reduce by half the number of ruptures and doub
 linear parameter, at least approximately. Classical calculations are also roughly linear in the number of intensity 
 measure types and levels. A common mistake is to use too many levels. For instance a configuration like the following one::
 
-	intensity_measure_types_and_levels = {
-	  "PGA":  logscale(0.001,4.0, 100),
-	  "SA(0.3)":  logscale(0.001,4.0, 100),
-	  "SA(1.0)":  logscale(0.001,4.0, 100)}
+    intensity_measure_types_and_levels = {
+      "PGA":  logscale(0.001,4.0, 100),
+      "SA(0.3)":  logscale(0.001,4.0, 100),
+      "SA(1.0)":  logscale(0.001,4.0, 100)}
 
 requires computing the PoEs on 300 levels. Is that really what the user wants? It could very well be that using only 20 
 levels per each intensity measure type produces good enough results, while potentially reducing the computation time by 
@@ -190,56 +190,56 @@ should *first sample and then filter*.
 
 Here is the long version. Consider the following code emulating rupture sampling for poissonian ruptures::
 
-	import numpy
-	
-	class FakeRupture:
-	    def __init__(self, mag, rate):
-	        self.mag = mag
-	        self.rate = rate
-	
-	def calc_n_occ(ruptures, eff_time, seed):
-	    rates = numpy.array([rup.rate for rup in ruptures])
-	    return numpy.random.default_rng(seed).poisson(rates * eff_time)
-	
-	mag_rates = [(5.0, 1e-5), (5.1, 2e-5), (5.2, 1e-5), (5.3, 2e-5),
-	             (5.4, 1e-5), (5.5, 2e-5), (5.6, 1e-5), (5.7, 2e-5)]
-	fake_ruptures = [FakeRupture(mag, rate) for mag, rate in mag_rates]
-	eff_time = 50 * 10_000
-	seed = 42
+    import numpy
+    
+    class FakeRupture:
+        def __init__(self, mag, rate):
+            self.mag = mag
+            self.rate = rate
+    
+    def calc_n_occ(ruptures, eff_time, seed):
+        rates = numpy.array([rup.rate for rup in ruptures])
+        return numpy.random.default_rng(seed).poisson(rates * eff_time)
+    
+    mag_rates = [(5.0, 1e-5), (5.1, 2e-5), (5.2, 1e-5), (5.3, 2e-5),
+                 (5.4, 1e-5), (5.5, 2e-5), (5.6, 1e-5), (5.7, 2e-5)]
+    fake_ruptures = [FakeRupture(mag, rate) for mag, rate in mag_rates]
+    eff_time = 50 * 10_000
+    seed = 42
 
 Running this code will give you the following numbers of occurrence for the 8 ruptures considered::
 
-	>> calc_n_occ(fake_ruptures, eff_time, seed)
-	[ 8  9  6 13  7  6  6 10]
+    >> calc_n_occ(fake_ruptures, eff_time, seed)
+    [ 8  9  6 13  7  6  6 10]
 
 Here we did not consider the fact that engine has a ``minimum_magnitude`` feature and it is able to discard ruptures 
 below the minimum magnitude. But how should it work? The natural approach to follow, for performance-oriented 
 applications, would be to first discard the low magnitudes and then perform the sampling. However, that would 
 have effects that would be surprising for most users. Consider the following two alternative::
 
-	def calc_n_occ_after_filtering(ruptures, eff_time, seed, min_mag):
-	    mags = numpy.array([rup.mag for rup in ruptures])
-	    rates = numpy.array([rup.rate for rup in ruptures])
-	    return numpy.random.default_rng(seed).poisson(
-	        rates[mags >= min_mag] * eff_time)
-	
-	def calc_n_occ_before_filtering(ruptures, eff_time, seed, min_mag):
-	    mags = numpy.array([rup.mag for rup in ruptures])
-	    rates = numpy.array([rup.rate for rup in ruptures])
-	    n_occ = numpy.random.default_rng(seed).poisson(rates * eff_time)
-	    return n_occ[mags >= min_mag]
+    def calc_n_occ_after_filtering(ruptures, eff_time, seed, min_mag):
+        mags = numpy.array([rup.mag for rup in ruptures])
+        rates = numpy.array([rup.rate for rup in ruptures])
+        return numpy.random.default_rng(seed).poisson(
+            rates[mags >= min_mag] * eff_time)
+    
+    def calc_n_occ_before_filtering(ruptures, eff_time, seed, min_mag):
+        mags = numpy.array([rup.mag for rup in ruptures])
+        rates = numpy.array([rup.rate for rup in ruptures])
+        n_occ = numpy.random.default_rng(seed).poisson(rates * eff_time)
+        return n_occ[mags >= min_mag]
 
 Most users would expect that removing a little number of ruptures has a little effect; for instance, if we set 
 ``min_mag = 5.1`` such that only the first rupture is removed from the total 8 ruptures, we would expect a minor change. 
 However, if we follow the filter-early approach the user would get completely different occupation numbers::
 
-	>> calc_n_occ_after_filtering(fake_ruptures, eff_time, seed, min_mag)
-	[13  6  9  6 13  7  6]
+    >> calc_n_occ_after_filtering(fake_ruptures, eff_time, seed, min_mag)
+    [13  6  9  6 13  7  6]
 
 It is only by using the filter-late approach that the occupation numbers are consistent with the no-filtering case::
 
-	>> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
-	[ 9  6 13  7  6  6 10]
+    >> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
+    [ 9  6 13  7  6  6 10]
 
 The problem with the filtering is absolutely general and not restricted only to the magnitude filtering: it is exactly 
 the same also for distance filtering. Suppose you have a ``maximum_distance`` of 300 km and than you decide that you 

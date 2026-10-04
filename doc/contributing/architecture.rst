@@ -135,17 +135,17 @@ In OpenQuake engine a task is just a Python function (or generator) with positio
 ``Monitor`` instance. For instance the rupture generator task in an event based calculation is coded more or less like 
 this::
 
-	def sample_ruptures(sources, num_samples, monitor):  # simplified code
-	    ebruptures = []
-	    for src in sources:
-	        for ebr in src.sample_ruptures(num_samples):
-	            eb_ruptures.append(ebr)
-	        if len(eb_ruptures) > MAX_RUPTURES:
-	            # yield partial result to avoid running out of memory
-	            yield eb_ruptures
-	            eb_ruptures.clear()
-	    if ebruptures:
-	        yield eb_ruptures
+    def sample_ruptures(sources, num_samples, monitor):  # simplified code
+        ebruptures = []
+        for src in sources:
+            for ebr in src.sample_ruptures(num_samples):
+                eb_ruptures.append(ebr)
+            if len(eb_ruptures) > MAX_RUPTURES:
+                # yield partial result to avoid running out of memory
+                yield eb_ruptures
+                eb_ruptures.clear()
+        if ebruptures:
+            yield eb_ruptures
 
 If you know that there is no risk of running out of memory and/or passing the pickle limit you can just use a regular 
 function and return a single result instead of yielding partial results. This is the case when computing the hazard 
@@ -159,7 +159,7 @@ differently. You can also set an environment variable ``OQ_DISTRIBUTE``, which t
 to specify which kind of distribution you want to use (``zmq`` or ``processpool``): this is mostly used when debugging, 
 when you typically insert a breakpoint in the task and then run the calculation with::
 
-	$ OQ_DISTRIBUTE=no oq run job.ini
+    $ OQ_DISTRIBUTE=no oq run job.ini
 
 ``no`` is a perfectly valid distribution mechanism in which there is actually no distribution and all the tasks run 
 sequentially in the same core. Having this functionality is invaluable for debugging.
@@ -205,45 +205,45 @@ class, as well as the utility ``openquake.baselib.commonlib.create_job_dstore`` 
 that, the ``openquake.baselib.parallel.Starmap`` class can take care of the parallelization for you as in the following 
 example::
 
-	import os
-	import sys
-	import pathlib
-	import collections
-	from openquake.baselib.performance import Monitor
-	from openquake.baselib.parallel import Starmap
-	from openquake.commonlib.datastore import create_job_dstore
-	
-		
-	def count(text):
-	    c = collections.Counter()
-	    for word in text.split():
-	        c += collections.Counter(word)
-	    return c
-	
-	
-	def main(dirname):
-	    dname = pathlib.Path(dirname)
+    import os
+    import sys
+    import pathlib
+    import collections
+    from openquake.baselib.performance import Monitor
+    from openquake.baselib.parallel import Starmap
+    from openquake.commonlib.datastore import create_job_dstore
+    
+        
+    def count(text):
+        c = collections.Counter()
+        for word in text.split():
+            c += collections.Counter(word)
+        return c
+    
+    
+    def main(dirname):
+        dname = pathlib.Path(dirname)
             log, dstore = create_job_dstore()
             # create a log context object and a new datastore
-	    with dstore, log:
-	        monitor = Monitor('count', dstore)  # create a new monitor
-	        iterargs = ((open(dname/fname, encoding='utf-8').read(),)
-	                    for fname in os.listdir(dname)
-	                    if fname.endswith('.rst'))  # read the docs
-	        c = collections.Counter()  # intially empty counter
-	        for counter in Starmap(count, iterargs, monitor):
-	            c += counter
-	        print(c)  # total counts
-	        print('Performance info stored in', dstore)
-	
-	
-	if __name__ == '__main__':
-	    main(sys.argv[1])  # pass the directory where the .rst files are
+        with dstore, log:
+            monitor = Monitor('count', dstore)  # create a new monitor
+            iterargs = ((open(dname/fname, encoding='utf-8').read(),)
+                        for fname in os.listdir(dname)
+                        if fname.endswith('.rst'))  # read the docs
+            c = collections.Counter()  # intially empty counter
+            for counter in Starmap(count, iterargs, monitor):
+                c += counter
+            print(c)  # total counts
+            print('Performance info stored in', dstore)
+    
+    
+    if __name__ == '__main__':
+        main(sys.argv[1])  # pass the directory where the .rst files are
 
 The name ``Starmap`` was chosen because it looks very similar to how ``multiprocessing.Pool.starmap`` works, the only 
 apparent difference being in the additional monitor argument::
 
-	pool.starmap(func, iterargs) ->  Starmap(func, iterargs, monitor)
+    pool.starmap(func, iterargs) ->  Starmap(func, iterargs, monitor)
 
 In reality the ``Starmap`` has a few other differences:
 
@@ -253,17 +253,17 @@ In reality the ``Starmap`` has a few other differences:
 
 Here is how you would write the same example by using ``.submit``::
 
-	def main(dirname):
-	    dname = pathlib.Path(dirname)
+    def main(dirname):
+        dname = pathlib.Path(dirname)
             log, dstore = create_job_dstore()
-	    with dstore, log:
-	        smap = Starmap(count, monitor=Monitor('count', dstore))
-	        for fname in os.listdir(dname):
-	            if fname.endswith('.rst'):
-	                smap.submit(open(dname/fname, encoding='utf-8').read())
-	        c = collections.Counter()
-	        for counter in smap:
-	            c += counter
+        with dstore, log:
+            smap = Starmap(count, monitor=Monitor('count', dstore))
+            for fname in os.listdir(dname):
+                if fname.endswith('.rst'):
+                    smap.submit(open(dname/fname, encoding='utf-8').read())
+            c = collections.Counter()
+            for counter in smap:
+                c += counter
 
 The difference with ``concurrent.futures`` is that the ``Starmap`` takes care for of all submitted tasks, so you do not 
 need to use something like ``concurrent.futures.completed``, you can just loop on the ``Starmap`` object to get the 
