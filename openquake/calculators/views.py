@@ -859,17 +859,6 @@ def view_task_cl(token, dstore):
     return view_task(token, dstore, 'classical')
 
 
-@view.add('task_cd')
-def view_task_cd(token, dstore):
-    """
-    Display info about a given task. Here are a few examples of usage::
-
-     $ oq show task_cd:0  # the fastest task
-     $ oq show task_cd:-1  # the slowest task
-    """
-    return view_task(token, dstore, 'classical_disagg')
-
-
 @view.add('source_data')
 def view_source_data(token, dstore):
     """
@@ -1458,6 +1447,9 @@ def view_gids(token, dstore):
     """
     Show the meaning of the gids indices
     """
+    # NB: these are the gsim_idx of the cmakers, i.e. the ids of the
+    # gsims of each group, see ContextMaker.gsim_idx; they are not the
+    # gids of the columns of the rates, see trt_smrs_gid
     full_lt = dstore['full_lt']
     ws = dstore['weights'][:]
     all_trt_smrs = dstore['trt_smrs'][:]

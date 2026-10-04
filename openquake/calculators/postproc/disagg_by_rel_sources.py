@@ -26,6 +26,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.source_reader import (
+    get_bset_values, modified_groups)
 from openquake.calculators import extract
 
 
@@ -138,7 +140,14 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                     lambda pair: id(pair[0])).values():
                 grp = copy.copy(pairs[0][0])
                 grp.sources = [src for _grp, src in pairs]
-                groups.append(grp)
+                # the sources in the csm are not modified by the
+                # uncertainties (they are modified in the classical
+                # workers), so we have to do it here too, one set of
+                # realizations at a time, since the source can have
+                # different uncertainties in different branches
+                bset_values = get_bset_values(csm.full_lt, grp)
+                groups.extend(sg for _trt_smrs, sg
+                              in modified_groups(grp, bset_values))
             assert groups, 'No groups for %s' % source_id
             rupts = sum(src.num_ruptures for group in groups for src in group)
             logging.info('(%.1f,%.1f) source %s (%d groups, %d rupts)',
