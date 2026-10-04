@@ -608,7 +608,8 @@ class ContextMaker(object):
                               betw_ratio)
         # NB: gsim_idx is the index of each gsim in the list, i.e. the id
         # identifying a gsim of the group; it is used to label the GMFs
-        # (see calc.gmf) and the contexts (see the ctx_gid dataset)
+        # (see calc.gmf) and the contexts (see the gid column of the rup
+        # dataframe)
         self.gsim_idx = numpy.arange(len(gsims), dtype=numpy.uint16)
         self._gid = None  # set by restrict_trt_smrs, see the gid property
         self.oq = oq
@@ -2233,13 +2234,10 @@ def read_ctx_by_grp(dstore):
     :returns: dictionary grp_id -> ctx
     """
     sitecol = dstore['sitecol'].complete.array
+    # NB: the gid of each context, i.e. of the index of rate attribution
+    # it was computed for, is a column of the rup dataframe; the gids are
+    # the gsim_idx, see gmf.py
     params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
-    if 'ctx_gid' in dstore:
-        # the contexts of a group contain the sources with different
-        # uncertainties, so the gid of the index of rate attribution of
-        # each context is stored in a separate dataset, see store_ctxs;
-        # NB: the gids here are the gsim_idx, see gmf.py
-        params['gid'] = dstore['ctx_gid'][:]
     dtlist = []
     for par, val in params.items():
         if len(val) == 0:

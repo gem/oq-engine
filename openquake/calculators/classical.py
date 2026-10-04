@@ -120,18 +120,18 @@ def store_ctxs(dstore, rupdata, grp_id, gid):
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
-            rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
-            hdf5.extend(dstore['rup/rup_id'], rup_id)
+            hdf5.extend(dstore['rup/rup_id'],
+                         I64(rupdata['src_id']) * TWO30 + rupdata['rup_id'])
         elif par == 'grp_id':
             hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
+        elif par == 'gid':
+            hdf5.extend(dstore['rup/gid'], numpy.full(nr, gid, U32))
         elif par == 'probs_occur':
             dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
         elif par in known:
             hdf5.extend(dstore['rup/' + par], rupdata[par])
         else:
             hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
-    if 'ctx_gid' in dstore:
-        hdf5.extend(dstore['ctx_gid'], numpy.full(nr, gid, U32))
 
 
 #  ########################### task functions ############################ #
@@ -631,7 +631,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Create the rup datasets *before* starting the calculation
         """
-        params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
+        params = {'grp_id', 'gid', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         for label, cmakers in self.cmdict.items():
             for cm in cmakers:
@@ -644,7 +644,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'gid'):
                     dt = U32
                 elif param == 'rup_id':
                     dt = I64
@@ -654,10 +654,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-            # the contexts of a group contain the sources with different
-            # uncertainties, so the gid of the unit of rate attribution of
-            # each context is stored in a separate dataset, see store_ctxs
-            self.datastore.create_dset('ctx_gid', U32)
+            # NB: the gid is the gid of the index of rate attribution,
+            # stored since the contexts of a group have different gids,
+            # i.e. the same rupture is stored once per index of rate
+            # attribution, see store_ctxs
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
 
