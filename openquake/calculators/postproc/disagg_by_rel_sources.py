@@ -27,7 +27,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.source_reader import (
-    apply_unc_by_src, restrict_sampling, sig_subsets)
+    get_bset_values, modified_groups)
 from openquake.calculators import extract
 
 
@@ -145,12 +145,9 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                 # workers), so we have to do it here too, one set of
                 # realizations at a time, since the source can have
                 # different uncertainties in different branches
-                for trt_smrs in sig_subsets(grp[0]):
-                    subgrp = copy.copy(grp)
-                    subgrp.sources = [restrict_sampling(src, trt_smrs)
-                                      for src in grp]
-                    groups.append(apply_unc_by_src(
-                        csm.full_lt, trt_smrs, subgrp))
+                bset_values = get_bset_values(csm.full_lt, grp)
+                groups.extend(sg for _trt_smrs, sg
+                              in modified_groups(grp, bset_values))
             assert groups, 'No groups for %s' % source_id
             rupts = sum(src.num_ruptures for group in groups for src in group)
             logging.info('(%.1f,%.1f) source %s (%d groups, %d rupts)',

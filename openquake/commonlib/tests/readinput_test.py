@@ -26,7 +26,6 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
-from openquake.hazardlib import valid
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
@@ -518,21 +517,17 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         self.assertIn("Invalid source code 'Z' in 'PAZ'", str(ctx.exception))
 
     def test_no_uncertainties(self):
-        # with apply_unc=False the uncertainties are not applied, so there
-        # is a group per source group in the source model files with the
-        # trt_smrs of all the realizations, instead of a group per set of
-        # uncertainties (see _bysrc_groups)
+        # the uncertainties are not applied at build time, but in the
+        # workers, one set of realizations at a time; therefore there is a
+        # group per source group in the source model files, with the trt_smrs
+        # of all the realizations, and not a group per set of uncertainties
+        # (see build_groups)
         oq = readinput.get_oqparam('job.ini', case_25)
         csm = readinput.get_composite_source_model(oq)
-        self.assertEqual(len(csm.src_groups), 27)  # many groups :-(
-        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 59)
-        ids1 = {s.source_id for s in csm.get_sources()}
-        csm = readinput.get_composite_source_model(oq, apply_unc=False)
-        self.assertEqual(len(csm.src_groups), 6)  # fewer groups :-)
-        # the source IDs have no ';' suffix, since the uncertainties are
-        # applied later, in the classical workers
-        self.assertEqual({valid.basename(s, ':;') for s in ids1},
-                         {s.source_id for s in csm.get_sources()})
+        self.assertEqual(len(csm.src_groups), 6)  # one per source group
+        # the source IDs have no ';' suffix, since the sources are not
+        # duplicated by the uncertainties applied in the workers
+        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 22)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

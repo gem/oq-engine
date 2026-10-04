@@ -49,7 +49,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    LogicTreeError, parse_uncertainty, attach_branches)
+    LogicTreeError, parse_uncertainty, attach_branches, get_bset_values)
 
 
 U16 = numpy.uint16
@@ -1305,6 +1305,15 @@ class FullLogicTree(object):
         if len(self.trts) == 1:
             return self.trts[0]
         return self.trts[trt_smr // TWO24]
+
+    def get_bset_values(self, ordinal):
+        """
+        :param ordinal: the ordinal of a source model realization
+        :returns: the list of (branchset, value) pairs whose uncertainties
+            must be applied in the given realization, see build_groups
+        """
+        return get_bset_values(self.sm_rlzs[ordinal].lt_path,
+                               self.source_model_lt)
 
     @property
     def seed(self):

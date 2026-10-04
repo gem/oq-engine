@@ -33,7 +33,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    apply_unc_by_src, read_trt_smrs_gid, sig_subsets)
+    get_bset_values, modified_groups, read_trt_smrs_gid)
+from openquake.hazardlib.lt import unc_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -112,25 +113,25 @@ def store_ctxs(dstore, rupdata, grp_id, gid):
     """
     Store contexts in the datastore
 
-    :param gid: the gid of the unit of rate attribution, stored since the
+    :param gid: the gid of the index of rate attribution, stored since the
         contexts of a group have different gids
     """
     nr = len(rupdata)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
-            rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
-            hdf5.extend(dstore['rup/rup_id'], rup_id)
+            hdf5.extend(dstore['rup/rup_id'],
+                         I64(rupdata['src_id']) * TWO30 + rupdata['rup_id'])
         elif par == 'grp_id':
             hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
+        elif par == 'gid':
+            hdf5.extend(dstore['rup/gid'], numpy.full(nr, gid, U32))
         elif par == 'probs_occur':
             dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
         elif par in known:
             hdf5.extend(dstore['rup/' + par], rupdata[par])
         else:
             hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
-    if 'ctx_gid' in dstore:
-        hdf5.extend(dstore['ctx_gid'], numpy.full(nr, gid, U32))
 
 
 #  ########################### task functions ############################ #
@@ -231,7 +232,7 @@ def group_gids(src_groups, gid_dic):
     for grp in src_groups:
         gids = set()
         for src in grp:
-            for trt_smrs in sig_subsets(src):
+            for trt_smrs in unc_subsets(src):
                 gids.update(gid_dic[trt_smrs][0])
         out[grp.grp_id] = U32(sorted(gids))
     return out
@@ -248,17 +249,14 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     :returns: a generator of (cmaker, group) pairs, one per set of
         realizations, with the uncertainties applied to the sources
     """
-    subsets = sig_subsets(srcs[0])
-    for src in srcs[1:]:
-        assert sig_subsets(src) == subsets, (src.source_id, subsets)
     # NB: the uncertainties are applied to the whole group, since
     # correlated branchsets (applyToSources='*') refer to sources outside
     # the base source
     subgrp = copy.copy(grp)
     subgrp.sources = list(srcs)
-    for trt_smrs in subsets:
-        sg = preclassical.split_modified(
-            apply_unc_by_src(full_lt, trt_smrs, subgrp))
+    bset_values = get_bset_values(full_lt, subgrp)
+    for trt_smrs, sg in modified_groups(subgrp, bset_values):
+        sg = preclassical.split_modified(sg)
         # the sources modified by the uncertainties are filtered here and
         # not in the preclassical (see filter_mag), since the uncertainties
         # can change the max magnitude
@@ -293,9 +291,12 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     if len(grps) > 1:
         # the atomic groups collapsed in a single task (see get_allargs)
         # contribute to the same RateMap in the master, so they must be
-        # returned in a single result; the uncertainties are not applied,
-        # since the sources of an atomic group are mutually exclusive and
-        # must be computed together
+        # returned in a single result, with the gids of all the
+        # realizations; the uncertainties are not applied, which is fine
+        # because the sources of an atomic group are nonparametric (the
+        # mutex ones must be, since mutually exclusive ruptures are
+        # modelled with nonparametric sources) and no uncertainty can be
+        # applied to a nonparametric source (the calculation would fail)
         yield baseclassical(grps, sites, cmaker, remove_zeros, as_rmap=as_rmap)
         return
     grp = grps[0]
@@ -315,7 +316,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
         srcblocks = groupby(
-            grp, lambda src: tuple(sig_subsets(src))).values()
+            grp, lambda src: tuple(unc_subsets(src))).values()
     for srcs in srcblocks:
         for cmaker_, sg in cmakers_groups(
                 srcs, grp, cmaker, gid_dic, full_lt):
@@ -387,7 +388,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     remove_zeros = True  # reduce the size of the arrays of rates
     as_rmap = any('-' in grp_key for grp_key in grp_keys)
     unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
-    bysrc = any(getattr(src, 'bysrc_unc', False) for src in grps[0])
+    bysrc = any(src.bysrc_unc for src in grps[0])
     # NB: the sources are split in blocks by time only if the rates are
     # accumulated in a RateMap in the master, i.e. if the groups are
     # already split in blocks, and not with tiling, where each tile is
@@ -630,7 +631,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Create the rup datasets *before* starting the calculation
         """
-        params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
+        params = {'grp_id', 'gid', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         for label, cmakers in self.cmdict.items():
             for cm in cmakers:
@@ -643,7 +644,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'gid'):
                     dt = U32
                 elif param == 'rup_id':
                     dt = I64
@@ -653,10 +654,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
-            # the contexts of a group contain the sources with different
-            # uncertainties, so the gid of the unit of rate attribution of
-            # each context is stored in a separate dataset, see store_ctxs
-            self.datastore.create_dset('ctx_gid', U32)
+            # NB: the gid is the gid of the index of rate attribution,
+            # stored since the contexts of a group have different gids,
+            # i.e. the same rupture is stored once per index of rate
+            # attribution, see store_ctxs
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
 

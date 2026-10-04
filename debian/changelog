@@ -4,6 +4,13 @@
     polygon assignment to speedup the compute method.
     
   [Michele Simionato]
+  * The uncertainties are no longer applied at build time in the
+    CompositeSourceModel, but in the workers, one set of realizations with
+    the same uncertainties at a time, both for the classical and the
+    event_based calculations. In the event_based case the seeds are
+    generated differently, so the events and the results can change for the
+    same random_seed, but they are statistically consistent; a few expected
+    files have been regenerated.
   * Using a better source weighting algorithm reducing the slow tasks
 
   [Christopher Brooks]

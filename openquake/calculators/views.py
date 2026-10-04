@@ -1447,6 +1447,9 @@ def view_gids(token, dstore):
     """
     Show the meaning of the gids indices
     """
+    # NB: these are the gsim_idx of the cmakers, i.e. the ids of the
+    # gsims of each group, see ContextMaker.gsim_idx; they are not the
+    # gids of the columns of the rates, see trt_smrs_gid
     full_lt = dstore['full_lt']
     ws = dstore['weights'][:]
     all_trt_smrs = dstore['trt_smrs'][:]
