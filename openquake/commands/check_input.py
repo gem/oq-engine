@@ -27,19 +27,6 @@ from openquake.risklib.asset import Exposure
 from openquake.engine import engine, workflow
 
 
-def print_unc_signatures(calc_id):
-    """
-    Print the uncertainty signatures of the sources, i.e. the sets of
-    realizations with the same uncertainties, which are the indices of rate
-    attribution of the rates; they are stored in the datastore by
-    source_reader.build_groups and shown by the unc_signatures view.
-    """
-    with datastore.read(calc_id) as ds:
-        if 'unc_signatures' in ds:
-            print('\nUncertainty signatures of calc_%s\n%s' % (
-                calc_id, views.view('unc_signatures', ds)))
-
-
 def main(fnames):
     """
     Check the validity of job.ini files, job.zip files and .xml files.
@@ -64,8 +51,15 @@ def main(fnames):
     with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
         if inis:
             jobctxs = engine.run_jobs(engine.create_jobs(inis))
+            # print the uncertainty signatures of the sources, i.e. the
+            # sets of realizations with the same uncertainties, stored in
+            # the datastore by source_reader.build_groups
             for jobctx in jobctxs:
-                print_unc_signatures(jobctx.calc_id)
+                with datastore.read(jobctx.calc_id) as ds:
+                    if 'unc_signatures' in ds:
+                        print('\nUncertainty signatures of calc_%s\n%s' % (
+                            jobctx.calc_id,
+                            views.view('unc_signatures', ds)))
         for toml in tomls:
             workflow.run_workflow(toml, {})
 
