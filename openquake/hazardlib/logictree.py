@@ -1210,16 +1210,6 @@ class FullLogicTree(object):
         self.gsim_lt.wget.weights = ws
         return self
 
-    def gfull(self, unique_trt_smrs):
-        """
-        :returns: the total Gt = Σ_i G_i
-        """
-        Gt = 0
-        for trt_smrs in unique_trt_smrs:
-            trt = self.trts[trt_smrs[0] // TWO24]
-            Gt += len(self.gsim_lt.values[trt])
-        return Gt
-
     def get_gids(self, unique_trt_smrs):
         """
         :returns: list of of arrays of gids, one for each source group

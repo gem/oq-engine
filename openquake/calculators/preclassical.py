@@ -29,7 +29,8 @@ from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
-from openquake.hazardlib.source_reader import get_trt_smrs_gid
+from openquake.hazardlib.source_reader import (
+    get_trt_smrs_gid, read_trt_smrs_gid)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -344,24 +345,21 @@ class PreClassicalCalculator(base.HazardCalculator):
         trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
-        # the units of rate attribution are the sets of realizations with
-        # the same uncertainties, not the trt_smrs of the groups, since the
-        # groups are not split by the uncertainties, which are applied in
-        # the workers
-        self.datastore.hdf5.save_vlen('trt_smrs_gid', get_trt_smrs_gid(csm))
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
 
-        L = oq.imtls.size
-        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
-        Gt = sum(len(cm.gsims) for cm in self.cmakers)
-        extra = f'<{Gfull}' if Gt < Gfull else ''
-        if sites is not None:
-            nbytes = 4 * len(self.sitecol) * L * Gt
-            # Gt is known before starting the preclassical
-            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
-                            general.humansize(nbytes), extra)
+        # NB: trt_smrs_gid is stored by source_reader.build_groups, i.e.
+        # before the preclassical; the core size Gt, i.e. the number of
+        # columns of the global RateMap, is known already at build time
+        # (see source_reader.store_unc_signatures)
+        if 'trt_smrs_gid' not in self.datastore:
+            # this happens if the groups were read from the parent
+            # calculation, so the units are taken from the parent
+            parent = self.datastore.parent
+            gid = (read_trt_smrs_gid(parent) if 'trt_smrs_gid' in parent
+                   else get_trt_smrs_gid(csm.src_groups))
+            self.datastore.hdf5.save_vlen('trt_smrs_gid', gid)
 
         if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a dataset `unc_signatures` and a corresponding view
   * The uncertainties are no longer applied at build time in the
     CompositeSourceModel, but in the workers, one set of realizations with
     the same uncertainties at a time, both for the classical and the
