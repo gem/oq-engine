@@ -1606,8 +1606,8 @@ def fmt_realizations(counts):
         for size, num in sorted(cnt.items()))
 
 
-@view.add('unc_signatures')
-def view_unc_signatures(token, dstore):
+@view.add('usignatures')
+def view_usignatures(token, dstore):
     """
     Show the uncertainty signatures of the sources, i.e. the sets of
     realizations with the same uncertainties, which are the realization

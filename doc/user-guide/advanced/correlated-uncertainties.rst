@@ -94,7 +94,7 @@ Realizations per signature
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The signatures of a source can be inspected with the command
-``oq show unc_signatures``: there is a row for each pair (source,
+``oq show usignatures``: there is a row for each pair (source,
 branchset) and the column ``num_rlzs`` contains the number of realizations in
 each *realization set* of the source, i.e. in each set of
 realizations with the same uncertainties, in ascending order.
@@ -106,7 +106,7 @@ realization sets of different sizes, for instance the source
 
 .. code-block:: text
 
-    $ oq show unc_signatures
+    $ oq show usignatures
     | alt2-NVA-NVA-EF1    | 1, 2                   | alt2_rset             | (TE, west, central, 6.8)                                                                         |
     |                     |                        | alt2_rspl_132         | (0.05, 0.95), (0.15, 0.85)                                                                       |
     |                     |                        | alt2_rrow_132_scn1    | (0.8, 3.25, 0.371113)                                                                            |
