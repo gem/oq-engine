@@ -39,6 +39,7 @@ from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+TWO32 = 2**32
 
 # the calculations building the rates with RateMap\s, i.e. the ones
 # attributing the rates to the indices of rate attribution (trt_smrs_gid)
@@ -574,6 +575,12 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
     if dstore is not None:
         dstore.hdf5.save_vlen('trt_smrs_gid', gid)
     Gt = get_core_size(gid, full_lt)
+    if Gt >= TWO32:
+        # NB: the gids are stored as uint32 in the _rates dataset, so
+        # there cannot be more than 2**32 columns in the RateMap
+        raise InvalidFile(
+            '%s: the core size Gt=%d is too large (the maximum is %d), '
+            'you must reduce the logic tree' % (oq.calculation_mode, Gt, TWO32))
     logging.warning('Core size Gt=%d out of R=%d realizations',
                     Gt, full_lt.get_num_paths())
     if dstore is not None and 'sitecol' in dstore:
