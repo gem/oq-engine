@@ -87,12 +87,12 @@ and the check gives::
     Global RateMap of 2.67 KB for 1 sites and 19 levels
     ...
     Uncertainty signatures of calc_172129
-    | source_id | counts  | branchset | values                             |
-    |-----------+---------+-----------+------------------------------------|
-    | first     | 1 (x9)  | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
-    |           |         | bs4       | 7.0, 7.3, 7.6                      |
-    | second    | 1 (x9)  | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
-    |           |         | bs5       | 7.5, 7.8, 8.0                      |
+    | source_id | counts       | branchset | values                             |
+    |-----------+--------------+-----------+------------------------------------|
+    | first     | 1 (x9 units) | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
+    |           |              | bs4       | 7.0, 7.3, 7.6                      |
+    | second    | 1 (x9 units) | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
+    |           |              | bs5       | 7.5, 7.8, 8.0                      |
 
 Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
 ``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
@@ -158,11 +158,11 @@ The signatures are printed by the check command::
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128
-    | source_id | counts  | branchset | values           |
-    |-----------+---------+-----------+------------------|
-    | BG_10     | 3       | -         | no uncertainties |
-    | SC_10:124 | 1 (x9)  | bval      | 0.0, 0.05, -0.05 |
-    |           |         | mmax      | 0.0, 0.2, -0.2   |
+    | source_id | counts       | branchset | values           |
+    |-----------+--------------+-----------+------------------|
+    | BG_10     | 3            | -         | no uncertainties |
+    | SC_10:124 | 1 (x9 units) | bval      | 0.0, 0.05, -0.05 |
+    |           |              | mmax      | 0.0, 0.2, -0.2   |
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
@@ -194,10 +194,12 @@ within the same sector of the logic tree, i.e. to the branches selected by
 the filters.
 
 The ``counts`` column contains the number of realizations in each unit
-of rate attribution of the source, with the multiplicities: ``1 (x9)``
-means that the source has 9 units with one realization each, i.e. 9
-signatures covering 9 realizations, while ``3`` means a single unit
-covering 3 realizations. This is particularly relevant for correlated
-uncertainties, where the sources of a group can have different
-signatures and a realization can belong to more than one unit of rate
-attribution: see :ref:`correlated-uncertainties`.
+of rate attribution of the source, with the multiplicities: ``1 (x9
+units)`` means that the source has 9 units with one realization each,
+i.e. 9 signatures covering 9 realizations, while ``3`` means a single
+unit covering 3 realizations (the marker is displayed only when there is
+more than one unit with the same count, so a bare count is never
+ambiguous). This is particularly relevant for correlated uncertainties,
+where the sources of a group can have different signatures and a
+realization can belong to more than one unit of rate attribution: see
+:ref:`correlated-uncertainties`.

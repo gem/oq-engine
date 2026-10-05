@@ -1586,13 +1586,16 @@ def fmt_counts(counts):
     :param counts: the number of realizations in each unit of rate
         attribution of a source
     :returns: the distinct counts with their multiplicities, i.e.
-        `1 (x9)` if the source has nine units with one realization each
-        and `1, 2` if it has one unit with one realization and another
-        one with two realizations
+        `1 (x9 units)` if the source has nine units with one realization
+        each and `1, 2` if it has one unit with one realization and
+        another one with two realizations; since the marker is displayed
+        only if there is more than one unit with the same count, a bare
+        count like `3` means a single unit with 3 realizations
     """
     cnt = collections.Counter(counts)
-    return ', '.join('%d (x%d)' % (count, num) if num > 1 else '%d' % count
-                     for count, num in sorted(cnt.items()))
+    return ', '.join(
+        '%d (x%d units)' % (count, num) if num > 1 else '%d' % count
+        for count, num in sorted(cnt.items()))
 
 
 @view.add('unc_signatures')

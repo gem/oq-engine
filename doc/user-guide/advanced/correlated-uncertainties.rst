@@ -105,11 +105,11 @@ different sizes, for instance the source ``alt2-NVA-NVA-EF1``
 .. code-block:: text
 
     $ oq show unc_signatures
-    | alt2-NVA-NVA-EF1    | 1, 2      | alt2_rset          | (TE, west, central, 6.8)     |
-    |                     |           | alt2_rspl_132      | (0.05, 0.95), (0.15, 0.85)   |
-    |                     |           | alt2_rrow_132_scn1 | (0.8, 3.25, 0.371113)        |
-    |                     |           | alt2_dip           | 45.0                          |
-    |                     |           | alt2_rrow_132_scn2 | (0.8, 3.25, 0.371113)        |
+    | alt2-NVA-NVA-EF1    | 1, 2                   | alt2_rset          | (TE, west, central, 6.8)     |
+    |                     |                        | alt2_rspl_132      | (0.05, 0.95), (0.15, 0.85)   |
+    |                     |                        | alt2_rrow_132_scn1 | (0.8, 3.25, 0.371113)        |
+    |                     |                        | alt2_dip           | 45.0                          |
+    |                     |                        | alt2_rrow_132_scn2 | (0.8, 3.25, 0.371113)        |
 
 i.e. one of the 3 realizations of the source is in a unit of size 1 and
 two are in a unit of size 2. NB: the two branchsets carry the *same*
