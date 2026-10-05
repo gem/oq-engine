@@ -483,7 +483,8 @@ class Disaggregator(object):
     Internally the attributes .mea and .std are set, with shape (G, M, U),
     for each magnitude bin.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges,
+                 gid_by_rlz=None):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -494,6 +495,7 @@ class Disaggregator(object):
         self.sid = sid = self.sitecol.sids[0]
 
         self.cmaker = cmaker
+        self.gid_by_rlz = gid_by_rlz
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
                           bin_edges[1],  # dist
@@ -569,6 +571,24 @@ class Disaggregator(object):
             return sum(self.weights)
         return 1.
 
+    def _ctx_for_rlz(self, rlz):
+        """Return contexts and mean/std arrays for one realization."""
+        ctx = self.ctx
+        mea, std = self.mea[self.magi], self.std[self.magi]
+        if self.gid_by_rlz and 'gid' in (ctx.dtype.names or ()):
+            gids = self.gid_by_rlz.get(rlz, ())
+            mask = numpy.isin(ctx.gid, gids)
+            ctx, mea, std = ctx[mask], mea[:, :, mask], std[:, :, mask]
+        return ctx, mea, std
+
+    def _mutex_weight_for_rlz(self, rlz):
+        if not self.src_mutex:
+            return 1.
+        ctx, _mea, _std = self._ctx_for_rlz(rlz)
+        weights = dict(zip(self.src_mutex['src_id'],
+                           self.src_mutex['weight']))
+        return sum(weights[s] for s in numpy.unique(ctx.src_id) if s in weights)
+
     def _disagg6D(self, imldic, g, rlz):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
@@ -579,7 +599,10 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
-        mea, std = self.mea[self.magi], self.std[self.magi]
+        ctx, mea, std = self._ctx_for_rlz(rlz)
+        if len(ctx) == 0:
+            return numpy.zeros((self.D, self.Lo, self.La, self.E,
+                                len(imldic), len(next(iter(imldic.values())))))
         gp = self.src_mutex.get('grp_probability', 1.)
         amp = None
         if self.amplifier is not None:
@@ -593,13 +616,13 @@ class Disaggregator(object):
         if not self.src_mutex:
             if amp is not None:
                 poes = _disaggregate_amp(
-                    self.ctx, mea, std, self.cmaker, g, imlog2,
+                    ctx, mea, std, self.cmaker, g, imlog2,
                     self.bin_edges, gp,
                     self.cmaker.oq.infer_occur_rates,
                     amp, self.ampcode,
                     self.mon1, self.mon2, self.mon3)
             else:
-                poes = _disaggregate(self.ctx, mea, std, self.cmaker,
+                poes = _disaggregate(ctx, mea, std, self.cmaker,
                                      g, imlog2, self.bin_edges, self.eps4,
                                      self.epsstar, gp,
                                      self.cmaker.oq.infer_occur_rates,
@@ -607,17 +630,22 @@ class Disaggregator(object):
             return to_rates(poes)
 
         # else average on the src_mutex weights
+        mat = idx_start_stop(ctx.src_id)
+        src_weights = dict(zip(self.src_mutex['src_id'],
+                               self.src_mutex['weight']))
+        weights = [src_weights[s] for s in mat[:, 0] if s in src_weights]
         mats = []
-        for s1, s2 in zip(self.src_mutex['start'], self.src_mutex['stop']):
-            ctx = self.ctx[s1:s2]
-            mea = self.mea[self.magi][:, :, s1:s2]  # shape (G, M, U)
-            std = self.std[self.magi][:, :, s1:s2]  # shape (G, M, U)
-            mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.eps4, self.epsstar, gp,
-                                self.cmaker.oq.infer_occur_rates,
-                                self.mon1, self.mon2, self.mon3)
-            mats.append(mat)
-        poes = numpy.einsum('i,i...', self.weights, mats)
+        for s1, s2 in mat[:, 1:]:
+            subctx = ctx[s1:s2]
+            submea = mea[:, :, s1:s2]  # shape (G, M, U)
+            substd = std[:, :, s1:s2]  # shape (G, M, U)
+            submat = _disaggregate(subctx, submea, substd, self.cmaker, g,
+                                   imlog2, self.bin_edges, self.eps4,
+                                   self.epsstar, gp,
+                                   self.cmaker.oq.infer_occur_rates,
+                                   self.mon1, self.mon2, self.mon3)
+            mats.append(submat)
+        poes = numpy.einsum('i,i...', weights, mats)
         return poes
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
@@ -636,7 +664,7 @@ class Disaggregator(object):
         """
         for magi in range(self.Ma):
             try:
-                mw = self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except FarAwayRupture:
                 continue
             res = {'trti': self.cmaker.trti,
@@ -650,10 +678,11 @@ class Disaggregator(object):
                 arr6D = self._disagg6D(imtls, g, rlz)
                 res[rlz] = to_rates(arr6D) if src_mutex else arr6D
                 if rwdic:  # compute mean rates (mean poes for src_mutex)
+                    mw_rlz = self._mutex_weight_for_rlz(rlz)
                     if 'mean' not in res:
-                        res['mean'] = arr6D * rwdic[rlz] * mw
+                        res['mean'] = arr6D * rwdic[rlz] * mw_rlz
                     else:
-                        res['mean'] += arr6D * rwdic[rlz] * mw
+                        res['mean'] += arr6D * rwdic[rlz] * mw_rlz
             if rwdic and src_mutex:
                 res['mean'] = to_rates(res['mean'])
             yield res
