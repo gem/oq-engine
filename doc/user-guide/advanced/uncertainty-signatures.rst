@@ -62,6 +62,13 @@ running a full calculation; just run the command ``oq check_input job.ini`` and 
 be printed at the end; they can be also inspected in any calculation with
 the command ``oq show unc_signatures``.
 
+NB: for branchsets with parameters the ``values`` column contains a
+tuple per distinct value, i.e. the fields of the value, and the fields
+changing across the values are listed in brackets at the end, i.e.
+``(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666) [rate: 0.371113,
+0.29666]``; this is how the table can stay readable for models with
+many sources and branchsets.
+
 An example with applyToSources
 ------------------------------
 
@@ -83,9 +90,9 @@ and the check gives::
     | source_id | realizations | signatures | counts | branchset | values                             |
     |-----------+--------------+------------+--------+-----------+------------------------------------|
     | first     | 81           | 9          | 9      | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
-    | first     | 81           | 9          | 9      | bs4       | 7.0, 7.3, 7.6                      |
+    |           |              |            |        | bs4       | 7.0, 7.3, 7.6                      |
     | second    | 81           | 9          | 9      | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
-    | second    | 81           | 9          | 9      | bs5       | 7.5, 7.8, 8.0                      |
+    |           |              |            |        | bs5       | 7.5, 7.8, 8.0                      |
 
 Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
 ``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
@@ -155,11 +162,13 @@ The signatures are printed by the check command::
     |-----------+--------------+------------+--------+-----------+------------------|
     | BG_10     | 3            | 1          | 3      | -         | no uncertainties |
     | SC_10:124 | 9            | 9          | 1      | bval      | 0.0, 0.05, -0.05 |
-    | SC_10:124 | 9            | 9          | 1      | mmax      | 0.0, 0.2, -0.2   |
+    |           |              |            |        | mmax      | 0.0, 0.2, -0.2   |
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
-with no uncertainties at all.
+with no uncertainties at all. The ``source_id`` and the columns before
+``branchset`` are printed only on the first row of each source, so that
+the rows belonging to the same source are visually grouped.
 
 The source ``BG_10`` is in the ``fault_background`` source model, to which
 the branchset ``bval`` does not apply, so it has a single signature

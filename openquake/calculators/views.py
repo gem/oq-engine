@@ -1543,17 +1543,66 @@ def view_sm_rlzs(token, dstore):
     return text_table(map(row, sm_rlzs), header, ext='org')
 
 
+def parse_sig_value(value):
+    """
+    :param value: a signature value, i.e. a string
+    :returns: the corresponding dictionary if the string contains a
+        dictionary (this happens for the branchsets with parameters),
+        otherwise the string itself
+    """
+    if isinstance(value, str) and value[:1] == '{':
+        return ast.literal_eval(value)
+    return value
+
+
+def fmt_sig_values(values):
+    """
+    :param values: the values taken by a branchset in the signatures of a
+        source, in order of appearance
+    :returns: a compact representation of the distinct values
+
+    For a branchset without parameters (i.e. the dip) the values are
+    listed as they are, i.e. `60.0, 45.0`; for a branchset with
+    parameters the field names are constant, so each value is reduced to
+    a tuple of its fields and only the fields changing across the values
+    are listed in brackets, i.e.
+    `(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666) [rate: 0.371113, 0.29666]`
+    """
+    # remove the duplicates, keeping the order of appearance
+    uniq = []
+    for value in values:
+        if value not in uniq:
+            uniq.append(value)
+    if not isinstance(uniq[0], dict):
+        return ', '.join(map(str, uniq))
+    keys = list(uniq[0])
+    tuples = ['(%s)' % ', '.join(str(uniq[0][k]) for k in keys)]
+    for value in uniq[1:]:
+        tuples.append('(%s)' % ', '.join(str(value.get(k, '-')) for k in keys))
+    # NB: the fields not changing across the values are not repeated
+    varying = [k for k in keys
+               if any(u.get(k) != uniq[0][k] for u in uniq[1:])]
+    out = ', '.join(tuples)
+    if varying:
+        out += ' [%s]' % '; '.join(
+            '%s: %s' % (k, ', '.join(str(u.get(k, '-')) for u in uniq))
+            for k in varying)
+    return out
+
+
 @view.add('unc_signatures')
 def view_unc_signatures(token, dstore):
     """
     Show the uncertainty signatures of the sources, i.e. the sets of
-    realizations with the same uncertainties, which are the indices of
-    rate attribution of the rates (see source_reader.build_groups).
+    realizations with the same uncertainties, which are the units of rate
+    attribution of the rates (see source_reader.build_groups).
 
     There is a row for each pair (source, branchset) with the distinct
     values taken by the branchset, instead of a column per branchset,
     since the table would be too wide for models with many branchsets.
-    NB: `signatures` is the number of indices of rate attribution of the
+    NB: the columns before `branchset` are filled only on the first row
+    of each source, so that the rows of a source are visually grouped.
+    `signatures` is the number of units of rate attribution of the
     source and `counts` the numbers of realizations per signature. The
     sources with no uncertainties at all have a single `-` row.
     """
@@ -1561,23 +1610,26 @@ def view_unc_signatures(token, dstore):
     rows = []
     for source_id, grp in df.groupby('source_id'):
         sigs = [json.loads(sig) for sig in grp['signature']]
-        head = dict(source_id=source_id,
-                    realizations=grp['realizations'].iloc[0],
-                    signatures=len(sigs),
-                    counts=', '.join(map(str, dict.fromkeys(grp['count']))))
         # NB: the branchsets are in the order they appear in the signature
         vals = {}  # branchset -> list of values
         for sig in sigs:
             for bset, value in sig.items():
-                vals.setdefault(bset, []).append(value)
+                vals.setdefault(bset, []).append(parse_sig_value(value))
         if not vals:
             # the sources with no uncertainties have a single signature
             # covering all their realizations
-            rows.append(dict(head, branchset='-', values='no uncertainties'))
-        for bset, value_list in vals.items():
-            unique = dict.fromkeys(value_list)  # remove duplicates
-            rows.append(dict(head, branchset=bset,
-                             values=', '.join(unique)))
+            vals['-'] = ['no uncertainties']
+        cells = [(bset, fmt_sig_values(value_list))
+                 for bset, value_list in vals.items()]
+        for i, (bset, values) in enumerate(cells):
+            head = dict(source_id=source_id,
+                        realizations=grp['realizations'].iloc[0],
+                        signatures=len(sigs),
+                        counts=', '.join(map(str, dict.fromkeys(grp['count']))))
+            rows.append(dict(head, branchset=bset, values=values)
+                        if i == 0 else
+                        dict(source_id='', realizations='', signatures='',
+                             counts='', branchset=bset, values=values))
     header = ['source_id', 'realizations', 'signatures', 'counts',
               'branchset', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
