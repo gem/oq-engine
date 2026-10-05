@@ -146,9 +146,9 @@ class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
         expected_val = np.array([-0.609876182476899, -0.589902644476899,
             -0.609876182476899, -0.530099285476899, -1.065428170476899])
         site_feat_idx = _assign_feature_indices(
-            f.att_shapes, sctx.lon.values, sctx.lat.values)
+            f.att_tree, sctx.lon.values, sctx.lat.values)
         target = get_distance_coefficients_3(
-            f.att_props, site_feat_idx, delta_c3_epsilon, C, imt_key)
+            f.att_vals, site_feat_idx, delta_c3_epsilon, C, imt_key)
         np.testing.assert_array_equal(target, expected_val)
 
     def test_get_dl2l_coefficients(self):
@@ -162,8 +162,8 @@ class KothaEtAl2020regionalcoefficientsTestCase(unittest.TestCase):
         ## values retireved manually from the author provided csv files
         expected_val = np.array([0., -0.1490727,  0., -0.28239376, -0.2107627 ])
         tec_feat_idx = _assign_feature_indices(
-            f.tec_shapes, ctx.hypo_lon.values, ctx.hypo_lat.values)
-        dl2l = get_dl2l(f.tec_props, tec_feat_idx, imt_key, delta_l2l_epsilon)
+            f.tec_tree, ctx.hypo_lon.values, ctx.hypo_lat.values)
+        dl2l = get_dl2l(f.tec_vals, tec_feat_idx, imt_key, delta_l2l_epsilon)
         np.testing.assert_array_equal(dl2l, expected_val)
     
 

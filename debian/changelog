@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Within the KothaEtAl2020regional GSIM class, cache the per-polygon
+    lookup table at instantiation, and use a spatial index for point in
+    polygon assignment to speedup the compute method.
+    
   [Michele Simionato]
   * Renamed the dataset `trt_smrs_gid` into `core_trt_smrs`, since it has
     one row per realization set and not one row per gid
