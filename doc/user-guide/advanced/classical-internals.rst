@@ -310,6 +310,8 @@ the uncertainties:
   performed in the workers (``preclassical.filter_mag``) together with
   the check on the maximum number of ruptures
 
+.. _ratemap:
+
 The RateMap
 ~~~~~~~~~~~
 
