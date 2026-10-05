@@ -492,8 +492,9 @@ def genctxs_Pp(src, sitecol, cmaker):
         else:
             pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
-                              pla, sites, src.id, src.offset, tom)
+        with cmaker.ctx_mon:
+            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+                                  pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
@@ -714,6 +715,12 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        # NB: building the contexts (distances + rupture parameters +
+        # recarray) is by far the most expensive operation of the classical
+        # calculator, so it is monitored even if the monitor is entered
+        # once per rupture; the counts tell how many ruptures were
+        # considered (the ruptures beyond the integration time included)
+        self.ctx_mon = monitor('building contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1056,85 +1063,98 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        dparam = self.dparam
         for rup in same_mag_rups:
-            if dparam:
-                rrups = _get(rup.surface.surfaces, 'rrup', dparam)
-                rrup = numpy.min(rrups, axis=0)
-            else:
-                rrup = get_distances(rup, sites, 'rrup')
-            mask = rrup <= magdist
-            if not mask.any():
+            # NB: the monitor is entered once per rupture, since the
+            # building of the contexts is the critical section
+            with self.ctx_mon:
+                yield from self._genctx(rup, sites, src_id, magdist)
+
+    def _genctx(self, rup, sites, src_id, magdist):
+        """
+        :param rup: a rupture
+        :param sites: a (filtered) site collection
+        :param src_id: source index
+        :param magdist: integration time, i.e. the maximum distance
+        :yields: a context array for the given rupture
+        """
+        dparam = self.dparam
+        if dparam:
+            rrups = _get(rup.surface.surfaces, 'rrup', dparam)
+            rrup = numpy.min(rrups, axis=0)
+        else:
+            rrup = get_distances(rup, sites, 'rrup')
+        mask = rrup <= magdist
+        if not mask.any():
+            return
+
+        r_sites = sites.filter(mask)
+        # to debug you can insert here
+        # print(rup.surface.tor.get_tuw_df(r_sites))
+        # import pdb; pdb.set_trace()
+
+        ''' # sanity check
+        true_rrup = rup.surface.get_min_distance(r_sites)
+        numpy.testing.assert_allclose(true_rrup, rrup[mask])
+        '''
+        rparams = self.get_rparams(rup)
+        dd = self.defaultdict.copy()
+        try:
+            po = rparams['probs_occur']
+        except KeyError:
+            dd['probs_occur'] = numpy.zeros(0)
+        else:
+            L = len(po) if len(po.shape) == 1 else po.shape[1]
+            dd['probs_occur'] = numpy.zeros(L)
+        ctx = RecordBuilder(**dd).zeros(len(r_sites))
+        for par, val in rparams.items():
+            ctx[par] = val
+
+        ctx.rrup = rrup[mask]
+        ctx.sids = r_sites.sids
+        params = self.REQUIRES_DISTANCES - {'rrup'}
+        if self.fewsites or 'clon' in params or 'clat' in params:
+            params.add('clon_clat')
+
+        # compute tu only once
+        if dparam and ('rx' in params or 'ry0' in params):
+            tu = _get_tu(rup, dparam, mask)
+        else:
+            tu = None
+        for param in params - {'clon', 'clat'}:
+            set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+
+        # PFD multi-fault reference-line metrics: fill only the methods
+        # the configured PFD models declare (cmaker.pfd_methods); single
+        # surfaces fall back to the canonical trace-based metrics
+        for method in getattr(self, 'pfd_methods', ()):
+            if method == 'segments':
                 continue
-
-            r_sites = sites.filter(mask)
-            # to debug you can insert here
-            # print(rup.surface.tor.get_tuw_df(r_sites))
-            # import pdb; pdb.set_trace()
-
-            ''' # sanity check
-            true_rrup = rup.surface.get_min_distance(r_sites)
-            numpy.testing.assert_allclose(true_rrup, rrup[mask])
-            '''
-            rparams = self.get_rparams(rup)
-            dd = self.defaultdict.copy()
-            try:
-                po = rparams['probs_occur']
-            except KeyError:
-                dd['probs_occur'] = numpy.zeros(0)
+            if rup.surface is not None and hasattr(
+                    rup.surface, 'get_ref_metrics'):
+                r_km, x_l, l_km = rup.surface.get_ref_metrics(
+                    method, r_sites)
             else:
-                L = len(po) if len(po.shape) == 1 else po.shape[1]
-                dd['probs_occur'] = numpy.zeros(L)
-            ctx = RecordBuilder(**dd).zeros(len(r_sites))
-            for par, val in rparams.items():
-                ctx[par] = val
+                r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
+            ctx['rtor_' + method] = r_km
+            ctx['x_l_' + method] = x_l
+            ctx['length_' + method] = l_km
 
-            ctx.rrup = rrup[mask]
-            ctx.sids = r_sites.sids
-            params = self.REQUIRES_DISTANCES - {'rrup'}
-            if self.fewsites or 'clon' in params or 'clat' in params:
-                params.add('clon_clat')
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
-            # compute tu only once
-            if dparam and ('rx' in params or 'ry0' in params):
-                tu = _get_tu(rup, dparam, mask)
-            else:
-                tu = None
-            for param in params - {'clon', 'clat'}:
-                set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+        for name in r_sites.array.dtype.names:
+            setattr(ctx, name, r_sites[name])
 
-            # PFD multi-fault reference-line metrics: fill only the methods
-            # the configured PFD models declare (cmaker.pfd_methods); single
-            # surfaces fall back to the canonical trace-based metrics
-            for method in getattr(self, 'pfd_methods', ()):
-                if method == 'segments':
-                    continue
-                if rup.surface is not None and hasattr(
-                        rup.surface, 'get_ref_metrics'):
-                    r_km, x_l, l_km = rup.surface.get_ref_metrics(
-                        method, r_sites)
-                else:
-                    r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
-                ctx['rtor_' + method] = r_km
-                ctx['x_l_' + method] = x_l
-                ctx['length_' + method] = l_km
-
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and not rup.surface:  # PointRuptures have no surface
-                reqv = reqv_obj.get(ctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    ctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
-
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
-
-            ctx.src_id = src_id
-            if src_id >= 0:
-                ctx.rup_id = rup.rup_id
-            yield ctx
+        ctx.src_id = src_id
+        if src_id >= 0:
+            ctx.rup_id = rup.rup_id
+        yield ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
