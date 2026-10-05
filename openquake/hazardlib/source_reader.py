@@ -571,10 +571,10 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
         # the event based calculators attribute the rates to the
         # realizations of the group, not to the subsets
         return
-    gid = get_trt_smrs_gid(groups)
+    trt_smrs_gid = get_trt_smrs_gid(groups)
     if dstore is not None:
-        dstore.hdf5.save_vlen('trt_smrs_gid', gid)
-    Gt = get_core_size(gid, full_lt)
+        dstore.hdf5.save_vlen('trt_smrs_gid', trt_smrs_gid)
+    Gt = get_core_size(trt_smrs_gid, full_lt)
     if Gt >= TWO32:
         # NB: the gids are stored as uint32 in the _rates dataset, so
         # there cannot be more than 2**32 columns in the RateMap
@@ -615,25 +615,24 @@ def get_trt_smrs_gid(groups):
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
-def get_core_size(gid, full_lt):
+def get_core_size(trt_smrs_gid, full_lt):
     """
-    :param gid: the indices of rate attribution, as returned by
-        get_trt_smrs_gid (already deduplicated)
+    :param trt_smrs_gid: the sets of realizations with the same
+        uncertainties, i.e. the indices of rate attribution, as returned
+        by get_trt_smrs_gid (already deduplicated)
     :param full_lt: a FullLogicTree instance
     :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
         number of distinct rate components, one for each index of rate
         attribution and GMM (i.e. of gids, see FullLogicTree.get_gids)
     """
     return sum(len(full_lt.gsim_lt.values[full_lt.trts[t[0] // TWO24]])
-               for t in gid)
+               for t in trt_smrs_gid)
 
 
 def read_trt_smrs_gid(dstore):
     """
     :param dstore: a DataStore instance, possibly closed
-    :returns: the units of rate attribution stored by the preclassical,
-        i.e. the sets of realizations with the same uncertainties, as a
-        list of tuples (the inverse of get_trt_smrs_gid)
+    :returns: a list of Gt trt_smrs tuples
     """
     with dstore:  # NB: the datastore is closed when passed to a task
         return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
