@@ -1554,7 +1554,8 @@ def view_unc_signatures(token, dstore):
     values taken by the branchset, instead of a column per branchset,
     since the table would be too wide for models with many branchsets.
     NB: `signatures` is the number of indices of rate attribution of the
-    source and `counts` the numbers of realizations per signature.
+    source and `counts` the numbers of realizations per signature. The
+    sources with no uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
     rows = []
@@ -1569,6 +1570,10 @@ def view_unc_signatures(token, dstore):
         for sig in sigs:
             for bset, value in sig.items():
                 vals.setdefault(bset, []).append(value)
+        if not vals:
+            # the sources with no uncertainties have a single signature
+            # covering all their realizations
+            rows.append(dict(head, branchset='-', values='no uncertainties'))
         for bset, value_list in vals.items():
             unique = dict.fromkeys(value_list)  # remove duplicates
             rows.append(dict(head, branchset=bset,

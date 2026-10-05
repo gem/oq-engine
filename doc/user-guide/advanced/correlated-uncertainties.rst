@@ -108,7 +108,7 @@ realizations, i.e. the size of the logic tree is ``R = 144``::
 
 Each group has its own ``trt_smrs`` in the ``trt_smrs`` dataset
 (8, 8, 48, 48, 16, 16 realizations) and its own indices of rate
-attribution in ``trt_smrs_gid``, one per realization (8, 8, 48, 48, 16,
+attribution in ``core_trt_smrs``, one per realization (8, 8, 48, 48, 16,
 16): the realizations of a group are *not* grouped together, since the
 uncertainties of its sources differ from realization to realization.
 The core size of the logic tree is therefore as large as the logic tree
@@ -164,7 +164,7 @@ The datasets involved are:
 .. code-block:: text
 
     $ oq show trt_smrs          # the realizations of each source group
-    $ oq show trt_smrs_gid      # the indices of rate attribution
+    $ oq show core_trt_smrs    # the units of rate attribution
     $ oq show composite_source_model
 
 The correspondence between the realizations and the columns of the
