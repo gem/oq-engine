@@ -70,7 +70,7 @@ def test_registry_aliases_and_metadata():
         'JayaramBaker2009'
     ].intensity_measure_type_approximations == {PGV: SA(1.0)}
     assert specs['JayaramBaker2009'].period_range == (0.01, 10.0)
-    assert specs['JayaramBaker2009'].sa_damping == 5.0
+    assert specs['JayaramBaker2009'].damping == 5.0
     cross_imt = get_model_specs('cross_imt')
     assert cross_imt['BakerCornell2006'].supported_imts == {
         PGA, PGV, SA}
@@ -81,7 +81,7 @@ def test_registry_aliases_and_metadata():
         PGA, PGV, RSD575, RSD595, SA}
     assert cross_imt['BakerBradley2017'].imc is None
     assert cross_imt['BakerBradley2017'].period_range == (0.01, 10.0)
-    assert cross_imt['BakerBradley2017'].sa_damping == 5.0
+    assert cross_imt['BakerBradley2017'].damping == 5.0
     assert cross_imt['BakerCornell2006'].calibrated_imts == {SA}
     assert cross_imt[
         'BakerCornell2006'
