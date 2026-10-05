@@ -38,6 +38,11 @@ from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+
+# the calculations building the rates with RateMap\s, i.e. the ones
+# attributing the rates to the indices of rate attribution (trt_smrs_gid)
+CLASSICAL_MODES = ('classical', 'classical_risk', 'classical_damage',
+                   'classical_bcr', 'disaggregation', 'preclassical')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -409,7 +414,7 @@ def unc_signature(bset_values, src):
     return tuple(sig)
 
 
-def build_groups(full_lt, rlz_groups, oq):
+def build_groups(full_lt, rlz_groups, oq, dstore=None):
     """
     Build the source groups without applying the uncertainties, as needed
     by the workers. There is one group per source group in the source
@@ -419,6 +424,10 @@ def build_groups(full_lt, rlz_groups, oq):
     of uncertainties: this way the number of groups (and of associated
     cmakers) depends on the source models only and not on the
     uncertainties.
+
+    :param dstore: a DataStore instance or None; if given, the indices of
+        rate attribution are saved in it (the event based calculations do
+        not use them)
 
     The uncertainties to be applied in each realization are not known
     until the workers, so the realizations with different uncertainties
@@ -499,13 +508,24 @@ def build_groups(full_lt, rlz_groups, oq):
     for grp in out:
         splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
+    if oq.calculation_mode in CLASSICAL_MODES:
+        # the indices of rate attribution and the core size of the logic
+        # tree are known already at build time, since they depend only on
+        # the groups and on the uncertainties, so they are computed (and
+        # saved) here, before the preclassical; the other calculators
+        # (i.e. the event based ones) attribute the rates to the
+        # realizations of the group, not to the subsets
+        gid = get_trt_smrs_gid(out)
+        if dstore is not None:
+            dstore.hdf5.save_vlen('trt_smrs_gid', gid)
+        log_core_size(gid, out, full_lt, oq, dstore)
     return out
 
 
-def get_trt_smrs_gid(csm):
+def get_trt_smrs_gid(groups):
     """
-    :param csm: a CompositeSourceModel built without applying the
-        uncertainties
+    :param groups: a list of SourceGroups built without applying the
+        uncertainties (i.e. the src_groups of a CompositeSourceModel)
     :returns: a sorted list of trt_smrs, the indices of rate attribution
         (to be stored as an hdf5.vuint32 array)
 
@@ -514,12 +534,63 @@ def get_trt_smrs_gid(csm):
     build_groups). The rates are nevertheless computed separately for each
     set of uncertainties and must be attributed to the right
     realizations, hence this extra list; the gid of a rate is the index
-    of its trt_smrs in it.
+    of its trt_smrs in it. NB: the subsets are deduplicated, i.e. groups
+    with the same trt_smrs (for instance the same trt with different TOMs)
+    share the same indices of rate attribution.
     """
-    all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
+    all_trt_smrs = [trt_smrs for sg in groups for src in sg
                     for trt_smrs in unc_subsets(src)]
     unique, _ = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
+
+
+def get_core_size(gid, groups, full_lt):
+    """
+    :param gid: the indices of rate attribution, as returned by
+        get_trt_smrs_gid
+    :param groups: a list of SourceGroups built without the uncertainties
+    :param full_lt: a FullLogicTree instance
+    :returns: (Gt, Gfull), the core size of the logic tree, i.e. the
+        number Gt = Σ_i G(trt_i) of distinct rate components, and the core
+        size Gfull it would have without epistemic uncertainties
+    """
+    ngmm = [len(gsims) for gsims in full_lt.gsim_lt.values.values()]
+    uniq, _ = get_unique_inverse(gid)
+    Gt = sum(ngmm[t[0] // TWO24] for t in uniq)
+    # NB: the groups with the same trt_smrs have the same cmaker, see
+    # contexts.get_cmakers, so they contribute only once
+    uniq, _ = get_unique_inverse([sg.trt_smrs for sg in groups])
+    Gfull = sum(ngmm[t[0] // TWO24] for t in uniq)
+    return Gt, Gfull
+
+
+def log_core_size(gid, groups, full_lt, oq, dstore=None):
+    """
+    Log the size R of the logic tree, its core size Gt and the size of the
+    global RateMap of shape (N, L, Gt). NB: the sites are read after the
+    sources, so the size in bytes is logged only if they are already in
+    the datastore.
+
+    :param gid: the indices of rate attribution, as returned by
+        get_trt_smrs_gid
+    :param groups: a list of SourceGroups built without the uncertainties
+    :param full_lt: a FullLogicTree instance
+    :param oq: an OqParam instance
+    :param dstore: a DataStore instance or None
+    :returns: the core size Gt
+    """
+    Gt, Gfull = get_core_size(gid, groups, full_lt)
+    extra = (f' (Gfull={Gfull} without epistemic uncertainties)'
+             if Gfull < Gt else '')
+    logging.warning('Core size Gt=%d out of R=%d realizations%s',
+                    Gt, full_lt.get_num_paths(), extra)
+    if dstore is not None and 'sitecol' in dstore:
+        N = len(dstore['sitecol'])
+        imtls = oq.imtls
+        L = imtls.size if hasattr(imtls, 'size') else len(imtls)
+        logging.warning('Global RateMap of %s for %d sites and %d levels',
+                        general.humansize(4 * N * L * Gt), N, L)
+    return Gt
 
 
 def read_trt_smrs_gid(dstore):
@@ -550,7 +621,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    groups = build_groups(full_lt, rlz_groups, oq)
+    groups = build_groups(full_lt, rlz_groups, oq, dstore)
     csm = CompositeSourceModel(oq, full_lt, groups)
     store_data(oq, smdict, csm, dstore)
     return csm
