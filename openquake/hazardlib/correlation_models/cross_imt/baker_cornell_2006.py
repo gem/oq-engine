@@ -46,7 +46,7 @@ class BakerCornell2006(CrossIMTCorrelationModel):
         PGA: SA(0.05),
         PGV: SA(0.05),
     }
-    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_DAMPING = 5.0
     DEFINED_FOR_PERIOD_RANGE = (0.05, 5.0)
 
     def _rho(self, from_imt, to_imt, context=None):

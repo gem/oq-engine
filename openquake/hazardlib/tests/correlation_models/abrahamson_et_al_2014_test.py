@@ -131,7 +131,7 @@ def test_metadata():
         assert spec.calibrated_imts == {PGA, PGV, SA}
         assert spec.imc is const.IMC.RotD50
         assert spec.sa_damping == 5.0
-        assert spec.sa_period_range == (0.02, 10.0)
+        assert spec.period_range == (0.02, 10.0)
 
 
 @pytest.mark.parametrize(('imt', 'message'), [

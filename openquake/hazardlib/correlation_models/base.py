@@ -104,7 +104,7 @@ class CorrelationModel:
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = None
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {}
-    DEFINED_FOR_SA_DAMPING = None
+    DEFINED_FOR_DAMPING = None
     DEFINED_FOR_PERIOD_RANGE = None
     DEFINED_FOR_REGION = None
 
@@ -146,7 +146,7 @@ class CorrelationModel:
                     f'{model_name} does not support '
                     f'{", ".join(unsupported)}')
         for imt in imts:
-            damping = self.DEFINED_FOR_SA_DAMPING
+            damping = self.DEFINED_FOR_DAMPING
             if (imt.name == 'SA' and damping is not None and
                     imt.damping != damping):
                 raise ValueError(

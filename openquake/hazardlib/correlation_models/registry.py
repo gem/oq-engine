@@ -55,10 +55,10 @@ class ModelSpec:
 
     @property
     def sa_damping(self):
-        return self.cls.DEFINED_FOR_SA_DAMPING
+        return self.cls.DEFINED_FOR_DAMPING
 
     @property
-    def sa_period_range(self):
+    def period_range(self):
         return self.cls.DEFINED_FOR_PERIOD_RANGE
 
     @property

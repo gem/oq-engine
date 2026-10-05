@@ -55,7 +55,7 @@ class HeresiMiranda2019(SpatialCorrelationModel):
 
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
-    DEFINED_FOR_SA_DAMPING = 5.0
+    DEFINED_FOR_DAMPING = 5.0
     DEFINED_FOR_PERIOD_RANGE = (0.0, 10.0)
 
     def __init__(self, uncertainty_multiplier=0):
