@@ -1097,20 +1097,8 @@ class ContextMaker(object):
         numpy.testing.assert_allclose(true_rrup, rrup[mask])
         '''
         rparams = self.get_rparams(rup)
-        dd = self.defaultdict.copy()
-        try:
-            po = rparams['probs_occur']
-        except KeyError:
-            dd['probs_occur'] = numpy.zeros(0)
-        else:
-            L = len(po) if len(po.shape) == 1 else po.shape[1]
-            dd['probs_occur'] = numpy.zeros(L)
-        ctx = RecordBuilder(**dd).zeros(len(r_sites))
-        for par, val in rparams.items():
-            ctx[par] = val
+        ctx = self._make_ctx(rparams, r_sites, rrup, mask)
 
-        ctx.rrup = rrup[mask]
-        ctx.sids = r_sites.sids
         params = self.REQUIRES_DISTANCES - {'rrup'}
         if self.fewsites or 'clon' in params or 'clat' in params:
             params.add('clon_clat')
@@ -1155,6 +1143,30 @@ class ContextMaker(object):
         if src_id >= 0:
             ctx.rup_id = rup.rup_id
         yield ctx
+
+    def _make_ctx(self, rparams, r_sites, rrup, mask):
+        """
+        :param rparams: a dictionary of rupture parameters
+        :param r_sites: a (filtered) site collection
+        :param rrup: rupture distances, one per site
+        :param mask: boolean mask of the sites within the integration time
+        :returns: a context recarray with shape (len(r_sites),)
+        """
+        dd = self.defaultdict.copy()
+        try:
+            po = rparams['probs_occur']
+        except KeyError:
+            dd['probs_occur'] = numpy.zeros(0)
+        else:
+            L = len(po) if len(po.shape) == 1 else po.shape[1]
+            dd['probs_occur'] = numpy.zeros(L)
+        ctx = RecordBuilder(**dd).zeros(len(r_sites))
+        for par, val in rparams.items():
+            ctx[par] = val
+
+        ctx.rrup = rrup[mask]
+        ctx.sids = r_sites.sids
+        return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
