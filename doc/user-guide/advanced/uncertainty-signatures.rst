@@ -60,7 +60,7 @@ the sum of the number of GSIMs for each tectonic region type::
 In the nontrivial case the engine can determine the signatures and the core size without
 running a full calculation; just run the command ``oq check_input job.ini`` and they will
 be printed at the end; they can be also inspected in any calculation with
-the command ``oq show unc_signatures``.
+the command ``oq show usignatures``.
 
 NB: for branchsets with parameters the ``values`` column contains a
 tuple per distinct value, i.e. the fields of the value; since the field

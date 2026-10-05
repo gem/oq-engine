@@ -59,7 +59,7 @@ def main(fnames):
                     if 'unc_signatures' in ds:
                         print('\nUncertainty signatures of calc_%s\n%s' % (
                             jobctx.calc_id,
-                            views.view('unc_signatures', ds)))
+                            views.view('usignatures', ds)))
         for toml in tomls:
             workflow.run_workflow(toml, {})
 
