@@ -758,9 +758,6 @@ class GmfComputer(object):
         if (self.tlw <= TRUNCATION_THRESHOLD and
                 self.tlb <= TRUNCATION_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
-            if self.within_event_model:
-                raise ValueError('truncation_level_within=0 requires '
-                                 'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, np.newaxis].repeat(
                 len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
