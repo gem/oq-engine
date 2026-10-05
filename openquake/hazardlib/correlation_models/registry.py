@@ -54,7 +54,7 @@ class ModelSpec:
         return self.cls.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     @property
-    def sa_damping(self):
+    def damping(self):
         return self.cls.DEFINED_FOR_DAMPING
 
     @property
