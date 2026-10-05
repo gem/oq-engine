@@ -1581,6 +1581,20 @@ def fmt_sig_values(values):
                      for u in uniq)
 
 
+def fmt_counts(counts):
+    """
+    :param counts: the number of realizations in each unit of rate
+        attribution of a source
+    :returns: the distinct counts with their multiplicities, i.e.
+        `1 (x9)` if the source has nine units with one realization each
+        and `1, 2` if it has one unit with one realization and another
+        one with two realizations
+    """
+    cnt = collections.Counter(counts)
+    return ', '.join('%d (x%d)' % (count, num) if num > 1 else '%d' % count
+                     for count, num in sorted(cnt.items()))
+
+
 @view.add('unc_signatures')
 def view_unc_signatures(token, dstore):
     """
@@ -1591,11 +1605,13 @@ def view_unc_signatures(token, dstore):
     There is a row for each pair (source, branchset) with the distinct
     values taken by the branchset, instead of a column per branchset,
     since the table would be too wide for models with many branchsets.
-    NB: the columns before `branchset` are filled only on the first row
-    of each source, so that the rows of a source are visually grouped.
-    `signatures` is the number of units of rate attribution of the
-    source and `counts` the numbers of realizations per signature. The
-    sources with no uncertainties at all have a single `-` row.
+    NB: `counts` is the number of realizations in each unit of rate
+    attribution of the source, with the multiplicities; summing the
+    counts gives the number of realizations of the source and counting
+    the units gives its number of signatures. The columns before
+    `branchset` are filled only on the first row of each source, so that
+    the rows of a source are visually grouped. The sources with no
+    uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
     rows = []
@@ -1614,15 +1630,12 @@ def view_unc_signatures(token, dstore):
                  for bset, value_list in vals.items()]
         for i, (bset, values) in enumerate(cells):
             head = dict(source_id=source_id,
-                        realizations=grp['realizations'].iloc[0],
-                        signatures=len(sigs),
-                        counts=', '.join(map(str, dict.fromkeys(grp['count']))))
+                        counts=fmt_counts(grp['count']))
             rows.append(dict(head, branchset=bset, values=values)
                         if i == 0 else
-                        dict(source_id='', realizations='', signatures='',
-                             counts='', branchset=bset, values=values))
-    header = ['source_id', 'realizations', 'signatures', 'counts',
-              'branchset', 'values']
+                        dict(source_id='', counts='',
+                             branchset=bset, values=values))
+    header = ['source_id', 'counts', 'branchset', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
