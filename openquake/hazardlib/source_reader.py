@@ -518,7 +518,7 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
         gid = get_trt_smrs_gid(out)
         if dstore is not None:
             dstore.hdf5.save_vlen('trt_smrs_gid', gid)
-        log_core_size(gid, out, full_lt, oq, dstore)
+        log_core_size(gid, full_lt, oq, dstore)
     return out
 
 
@@ -544,24 +544,20 @@ def get_trt_smrs_gid(groups):
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
-def get_core_size(gid, groups, full_lt):
+def get_core_size(gid, full_lt):
     """
     :param gid: the indices of rate attribution, as returned by
-        get_trt_smrs_gid
-    :param groups: a list of SourceGroups built without the uncertainties
+        get_trt_smrs_gid (already deduplicated)
     :param full_lt: a FullLogicTree instance
-    :returns: (Gt, Gfull), the core size of the logic tree, i.e. the
-        number Gt = Σ_i G(trt_i) of distinct rate components (i.e. of gids,
-        see FullLogicTree.get_gids) and the core size Gfull it would have
-        without epistemic uncertainties
+    :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
+        number of distinct rate components, one for each index of rate
+        attribution and GMM (i.e. of gids, see FullLogicTree.get_gids)
     """
-    # NB: the groups with the same trt_smrs have the same cmaker, see
-    # contexts.get_cmakers, so they are counted only once
-    uniq, _ = get_unique_inverse([sg.trt_smrs for sg in groups])
-    return full_lt.gfull(gid), full_lt.gfull(uniq)
+    return sum(len(full_lt.gsim_lt.values[full_lt.trts[t[0] // TWO24]])
+               for t in gid)
 
 
-def log_core_size(gid, groups, full_lt, oq, dstore=None):
+def log_core_size(gid, full_lt, oq, dstore=None):
     """
     Log the size R of the logic tree, its core size Gt and the size of the
     global RateMap of shape (N, L, Gt). NB: the sites are read after the
@@ -570,16 +566,13 @@ def log_core_size(gid, groups, full_lt, oq, dstore=None):
 
     :param gid: the indices of rate attribution, as returned by
         get_trt_smrs_gid
-    :param groups: a list of SourceGroups built without the uncertainties
     :param full_lt: a FullLogicTree instance
     :param oq: an OqParam instance
     :param dstore: a DataStore instance or None
     """
-    Gt, Gfull = get_core_size(gid, groups, full_lt)
-    extra = (f' (Gfull={Gfull} without epistemic uncertainties)'
-             if Gfull < Gt else '')
-    logging.warning('Core size Gt=%d out of R=%d realizations%s',
-                    Gt, full_lt.get_num_paths(), extra)
+    Gt = get_core_size(gid, full_lt)
+    logging.warning('Core size Gt=%d out of R=%d realizations',
+                    Gt, full_lt.get_num_paths())
     if dstore is not None and 'sitecol' in dstore:
         N = len(dstore['sitecol'])
         imtls = oq.imtls
