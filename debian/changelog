@@ -1,6 +1,12 @@
   [Michele Simionato]
+  * Renamed the dataset `trt_smrs_gid` into `core_trt_smrs`, since it has
+    one row per realization set and not one row per gid
   * Added a dataset `unc_signatures` and then corresponding view,
-    then documented how source uncertainties are managed in v3.27
+    then documented how source uncertainties are managed in v3.27; made
+    the `unc_signatures` view more compact, displaying the values of the
+    branchsets with parameters as tuples of fields, reporting the
+    realizations in each realization set in a single
+    `num_rlzs` column and grouping the rows of each source
   * The uncertainties are no longer applied at build time in the
     CompositeSourceModel, but in the workers, one set of realizations with
     the same uncertainties at a time, both for the classical and the

@@ -62,6 +62,13 @@ running a full calculation; just run the command ``oq check_input job.ini`` and 
 be printed at the end; they can be also inspected in any calculation with
 the command ``oq show unc_signatures``.
 
+NB: for branchsets with parameters the ``values`` column contains a
+tuple per distinct value, i.e. the fields of the value; since the field
+names are the same for all the values of a branchset they are not
+repeated, i.e. ``(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666)``; this is
+how the table can stay readable for models with many sources and
+branchsets.
+
 An example with applyToSources
 ------------------------------
 
@@ -80,12 +87,12 @@ and the check gives::
     Global RateMap of 2.67 KB for 1 sites and 19 levels
     ...
     Uncertainty signatures of calc_172129
-    | source_id | realizations | signatures | counts | branchset | values                             |
-    |-----------+--------------+------------+--------+-----------+------------------------------------|
-    | first     | 81           | 9          | 9      | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
-    | first     | 81           | 9          | 9      | bs4       | 7.0, 7.3, 7.6                      |
-    | second    | 81           | 9          | 9      | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
-    | second    | 81           | 9          | 9      | bs5       | 7.5, 7.8, 8.0                      |
+    | source_id | num_rlzs                  | branchset | values                             |
+    |-----------+---------------------------+-----------+------------------------------------|
+    | first     | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
+    |           |                           | bs4       | 7.0, 7.3, 7.6                      |
+    | second    | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
+    |           |                           | bs5       | 7.5, 7.8, 8.0                      |
 
 Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
 ``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
@@ -151,15 +158,17 @@ The signatures are printed by the check command::
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128
-    | source_id | realizations | signatures | counts | branchset | values           |
-    |-----------+--------------+------------+--------+-----------+------------------|
-    | BG_10     | 3            | 1          | 3      | -         | no uncertainties |
-    | SC_10:124 | 9            | 9          | 1      | bval      | 0.0, 0.05, -0.05 |
-    | SC_10:124 | 9            | 9          | 1      | mmax      | 0.0, 0.2, -0.2   |
+    | source_id | num_rlzs                  | branchset | values           |
+    |-----------+---------------------------+-----------+------------------|
+    | BG_10     | 3                         | -         | no uncertainties |
+    | SC_10:124 | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bval      | 0.0, 0.05, -0.05 |
+    |           |                           | mmax      | 0.0, 0.2, -0.2   |
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
-with no uncertainties at all.
+with no uncertainties at all. The ``source_id`` and the ``num_rlzs``
+column are printed only on the first row of each source, so that the
+rows belonging to the same source are visually grouped.
 
 The source ``BG_10`` is in the ``fault_background`` source model, to which
 the branchset ``bval`` does not apply, so it has a single signature
@@ -184,10 +193,15 @@ either, since a branchset following a branchset with filters applies only
 within the same sector of the logic tree, i.e. to the branches selected by
 the filters.
 
-The ``signatures`` column contains the number of signatures of the source
-and the ``counts`` column the number of realizations per signature; they
-are reported as a set, since the signatures do not necessarily contain
-the same number of realizations. This is particularly relevant for
-correlated uncertainties, where the sources of a group can have
-different signatures and a realization can belong to more than one index
-of rate attribution: see :ref:`correlated-uncertainties`.
+The ``num_rlzs`` column contains the number of realizations in
+each *realization set* of the source, i.e. in each set of realizations
+with the same uncertainties, in ascending order: ``1, 1, 1`` means
+three realization sets with one realization each, while ``3`` means a
+single realization set covering 3 realizations; summing them gives the
+total number of realizations of the source and counting them gives its
+number of signatures. As long as there are at most 10 realization sets
+the values are listed one by one, otherwise the repeated ones are
+replaced by their multiplicity, i.e. ``1 (x81 sets)``. This is particularly
+relevant for correlated uncertainties, where the sources of a group can
+have different signatures and a realization can belong to more than one
+realization set: see :ref:`correlated-uncertainties`.

@@ -190,8 +190,8 @@ codes (``S`` simple fault, ``A`` area source).
    have a different meaning. ``trt_smrs`` has one row per source group,
    with the ``trt_smrs`` of all the realizations of the group, and it is
    used to build the cmakers and the tasks; ``core_trt_smrs`` has one row
-   per *subset* of realizations with the same uncertainties, i.e. per
-   unit of rate attribution, so it has more rows and they are
+   per *realization set*, i.e. per subset of realizations with the same
+   uncertainties, so it has more rows and they are
    shorter::
 
        >> from openquake.commonlib import datastore
@@ -204,11 +204,12 @@ codes (``S`` simple fault, ``A`` area source).
        [array([ 0,  3,  6, 27, 30, 33, 54, 57, 60], dtype=uint32)
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
-   Every unit of rate attribution is contained in exactly one row of
+   Every realization set is contained in exactly one row of
    ``trt_smrs``, but the converse does not hold: the trt_smrs of a group
-   can be spread over several units, since the sources of a group can
-   be affected by different uncertainties (see the page on correlated
-   uncertainties), so a realization can belong to more than one index.
+   can be spread over several realization sets, since the sources of a
+   group can be affected by different uncertainties (see the page on
+   correlated uncertainties), so a realization can belong to more than
+   one index.
    The rates cannot be attributed to a whole group, since the
    uncertainties change within it, hence the attribution happens at the
    level of the indices; see the section on the uncertainties below.
@@ -453,7 +454,7 @@ in the ``hcurves-rlzs`` and ``hcurves-stats`` datasets, and the maps in
    the *core size* of the logic tree, i.e. the number of distinct rate
    components, each one standing for a set of realizations with the same
    uncertainties and the same GMM, as shown by the rows of
-   ``oq show core_trt_smrs`` (18 units of 9 realizations, one per GMM,
+   ``oq show core_trt_smrs`` (18 realization sets of 9 realizations, one per GMM,
    since the demo has two GMMs per tectonic region type).
    In general the core size is much smaller than the size of the logic
    tree, since with a sampled logic tree many realizations share the same
