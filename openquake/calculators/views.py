@@ -1581,40 +1581,48 @@ def fmt_sig_values(values):
                      for u in uniq)
 
 
-def fmt_counts(counts):
+MAX_LISTED_SETS = 10
+
+
+def fmt_realizations(counts):
     """
-    :param counts: the number of realizations in each unit of rate
-        attribution of a source
-    :returns: the distinct counts with their multiplicities, i.e.
-        `1 (x9 units)` if the source has nine units with one realization
-        each and `1, 2` if it has one unit with one realization and
-        another one with two realizations; since the marker is displayed
-        only if there is more than one unit with the same count, a bare
-        count like `3` means a single unit with 3 realizations
+    :param counts: the number of realizations in each realization set
+        of a source
+    :returns: the sizes of the sets in ascending order, i.e. `1, 2` for
+        a source with a realization set of size 1 and another one of
+        size 2
+
+    NB: the sizes are listed one by one as long as there are at most
+    MAX_LISTED_SETS sets, otherwise the repeated sizes are replaced by
+    their multiplicity, i.e. `1 (x9 sets)`, since the number of sets can
+    be large (it is the number of distinct signatures of the source).
     """
-    cnt = collections.Counter(counts)
+    sizes = sorted(counts)
+    if len(sizes) <= MAX_LISTED_SETS:
+        return ', '.join(map(str, sizes))
+    cnt = collections.Counter(sizes)
     return ', '.join(
-        '%d (x%d units)' % (count, num) if num > 1 else '%d' % count
-        for count, num in sorted(cnt.items()))
+        '%d (x%d sets)' % (size, num) if num > 1 else '%d' % size
+        for size, num in sorted(cnt.items()))
 
 
 @view.add('unc_signatures')
 def view_unc_signatures(token, dstore):
     """
     Show the uncertainty signatures of the sources, i.e. the sets of
-    realizations with the same uncertainties, which are the units of rate
-    attribution of the rates (see source_reader.build_groups).
+    realizations with the same uncertainties, which are the realization
+    sets the rates are attributed to (see source_reader.build_groups).
 
     There is a row for each pair (source, branchset) with the distinct
     values taken by the branchset, instead of a column per branchset,
     since the table would be too wide for models with many branchsets.
-    NB: `counts` is the number of realizations in each unit of rate
-    attribution of the source, with the multiplicities; summing the
-    counts gives the number of realizations of the source and counting
-    the units gives its number of signatures. The columns before
-    `branchset` are filled only on the first row of each source, so that
-    the rows of a source are visually grouped. The sources with no
-    uncertainties at all have a single `-` row.
+    NB: `realizations` is the number of realizations in each realization
+    set of the source, in ascending order; summing them gives the total
+    number of realizations of the source and counting them gives its
+    number of signatures.
+    The columns before `branchset` are filled only on the first row of
+    each source, so that the rows of a source are visually grouped. The
+    sources with no uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
     rows = []
@@ -1633,12 +1641,12 @@ def view_unc_signatures(token, dstore):
                  for bset, value_list in vals.items()]
         for i, (bset, values) in enumerate(cells):
             head = dict(source_id=source_id,
-                        counts=fmt_counts(grp['count']))
+                        realizations=fmt_realizations(grp['count']))
             rows.append(dict(head, branchset=bset, values=values)
                         if i == 0 else
-                        dict(source_id='', counts='',
+                        dict(source_id='', realizations='',
                              branchset=bset, values=values))
-    header = ['source_id', 'counts', 'branchset', 'values']
+    header = ['source_id', 'realizations', 'branchset', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 

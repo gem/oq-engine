@@ -204,12 +204,12 @@ def read_gid_dic(dstore, full_lt=None):
     :param dstore: a DataStore instance
     :param full_lt: a FullLogicTree instance, read from the datastore if None
     :returns: a dictionary trt_smrs -> (gids, weights), associating to each
-        unit of rate attribution its gids and the weights of the
-        corresponding realizations
+        realization set its gids and the weights of the corresponding
+        realizations
 
-    The units of rate attribution are the sets of realizations with the
-    same uncertainties applied (see get_core_trt_smrs) and the gid of a
-    rate is the index of its trt_smrs in the corresponding list, see
+    The realization sets are the sets of realizations with the same
+    uncertainties applied (see get_core_trt_smrs) and the gids of a
+    realization set are the indices of its trt_smrs, see
     get_rmap_gb.
     """
     trt_smrs = read_core_trt_smrs(dstore)
