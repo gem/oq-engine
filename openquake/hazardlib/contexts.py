@@ -2000,20 +2000,6 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
-    @property
-    def gids(self):
-        """
-        :returns: concatenation of gid arrays, one for each underlying cmaker
-        """
-        return numpy.concatenate([cm.gid for cm in self.cmakers])
-
-    def gsim_idxs(self):
-        """
-        :returns: concatenation of gsim_idx arrays, one for each
-            underlying cmaker
-        """
-        return numpy.concatenate([cm.gsim_idx for cm in self.cmakers])
-
     def __getitem__(self, idx):
         return self.cmakers[idx]
 

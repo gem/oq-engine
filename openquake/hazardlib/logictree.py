@@ -44,7 +44,6 @@ from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
-from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
@@ -249,25 +248,6 @@ def get_effective_rlzs(rlzs):
     return effective
 
 
-def get_eff_rlzs(sm_rlzs, gsim_rlzs):
-    """
-    Group together realizations with the same path
-    and yield the first representative of each group
-    """
-    triples = []  # pid, sm_rlz, gsim_rlz
-    for sm_rlz, gsim_rlz in zip(sm_rlzs, gsim_rlzs):
-        triples.append((sm_rlz.pid + '~' + gsim_rlz.pid, sm_rlz, gsim_rlz))
-    ordinal = 0
-    effective = []
-    for rows in groupby(triples, operator.itemgetter(0)).values():
-        _pid, sm_rlz, gsim_rlz = rows[0]
-        weight = numpy.array([len(rows) / len(triples)])
-        effective.append(
-            LtRealization(ordinal, sm_rlz.lt_path, gsim_rlz, weight))
-        ordinal += 1
-    return effective
-
-
 Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
@@ -352,23 +332,6 @@ def prune_files(bset, files):
         last = zeros[-1]
         keep.append(Branch(last.branch_id, '', weight, last.bs_id))
     bset.branches = keep
-
-
-def read_source_groups(fname):
-    """
-    :param fname: a path to a source model XML file
-    :return: a list of SourceGroup objects containing source nodes
-    """
-    smodel = nrml.read(fname).sourceModel
-    src_groups = []
-    if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
-        for sg_node in smodel:
-            sg = SourceGroup(sg_node['tectonicRegion'])
-            sg.sources = sg_node.nodes
-            src_groups.append(sg)
-    else:  # NRML 0.4 format: smodel is a list of source nodes
-        src_groups.extend(SourceGroup.collect(smodel))
-    return src_groups
 
 
 def shorten(path_tuple, shortener, kind):
@@ -1041,15 +1004,6 @@ class SourceModelLogicTree(object):
                 brnodes.append(brnode)
             bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
         return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
-
-    def get_duplicated_sources(self):
-        """
-        :returns: {src_id: affected branches}
-        """
-        sd = group_array(self.source_data, 'source')
-        u, c = numpy.unique(self.source_data['source'], return_counts=1)
-        # AUS event based was hanging with a slower implementation
-        return {src: sd[src]['branch'] for src in u[c > 1]}
 
     # SourceModelLogicTree
     def __toh5__(self):
