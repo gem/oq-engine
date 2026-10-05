@@ -43,7 +43,7 @@ signature covering all its realizations and there is nothing to sign.
 You can determine the signatures and the core size without running a full
 calculation; just run the command ``oq check_input job.ini`` and they will
 be printed at the end; they can be also inspected in any calculation with
-the commands ``oq show unc_signatures`` and ``oq show trt_smrs_gid``.
+the command ``oq show unc_signatures``.
 
 An example with applyToBranches
 -------------------------------
