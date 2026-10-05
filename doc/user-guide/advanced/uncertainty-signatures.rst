@@ -89,17 +89,19 @@ and the check gives::
     Uncertainty signatures of calc_172129
     | source_id | num_rlzs                  | branchset | values                             |
     |-----------+---------------------------+-----------+------------------------------------|
-    | first     | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
+    | first     | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
     |           |                           | bs4       | 7.0, 7.3, 7.6                      |
-    | second    | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
+    | second    | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
     |           |                           | bs5       | 7.5, 7.8, 8.0                      |
 
 Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
 ``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
-source has 9 signatures covering the 9 realizations obtained by varying
-the uncertainties of the other source, i.e. 18 indices of rate
-attribution in total, 9 per source. Since there are two GMMs per tectonic
-region type, Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
+source has 3 x 3 = 9 signatures; each source is in the 81 source model
+realizations (the GMM logic tree has 4 branches, so R = 81 x 4 = 324),
+hence each signature covers 9 realizations, i.e. the ones differing
+only in the uncertainties of the other source. In total there are 18
+realization sets, 9 per source, so that with two GMMs per tectonic
+region type Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
 tree are reduced to 36 columns of the global RateMap.
 
 Since the core size Gt determines the size of the global RateMap, the
@@ -158,11 +160,12 @@ The signatures are printed by the check command::
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128
-    | source_id | num_rlzs                  | branchset | values           |
-    |-----------+---------------------------+-----------+------------------|
-    | BG_10     | 3                         | -         | no uncertainties |
-    | SC_10:124 | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bval      | 0.0, 0.05, -0.05 |
-    |           |                           | mmax      | 0.0, 0.2, -0.2   |
+    | source_id | num_rlzs                  | branchset | values                             |
+    |-----------+---------------------------+-----------+------------------------------------|
+    | first     | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
+    |           |                           | bs4       | 7.0, 7.3, 7.6                      |
+    | second    | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
+    |           |                           | bs5       | 7.5, 7.8, 8.0                      |
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
