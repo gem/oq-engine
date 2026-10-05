@@ -349,13 +349,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        # NB: the units of rate attribution (stored in trt_smrs_gid by
-        # source_reader.build_groups, i.e. before the preclassical) are the
-        # sets of realizations with the same uncertainties, not the
-        # trt_smrs of the groups, since the groups are not split by the
-        # uncertainties, which are applied in the workers; the core size
-        # Gt, i.e. the number of columns of the global RateMap, is known
-        # already at build time (see source_reader.log_core_size)
+        # NB: trt_smrs_gid is stored by source_reader.build_groups, i.e.
+        # before the preclassical; the core size Gt, i.e. the number of
+        # columns of the global RateMap, is known already at build time
+        # (see source_reader.store_unc_signatures)
         if 'trt_smrs_gid' not in self.datastore:
             # this happens if the groups were read from the parent
             # calculation, so the units are taken from the parent

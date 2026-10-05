@@ -1550,17 +1550,11 @@ def view_unc_signatures(token, dstore):
     realizations with the same uncertainties, which are the indices of
     rate attribution of the rates (see source_reader.build_groups).
 
-    A signature is a combination of values of branchsets, so instead of a
-    table with a column per branchset (which becomes very wide for
-    models with many branchsets) there is a row for each pair (source,
-    branchset) with the distinct values taken by the branchset. NB:
-    `signatures` is the number of distinct signatures of the source, i.e.
-    its number of indices of rate attribution, and `counts` are the
-    numbers of realizations per signature (as a set, since the signatures
-    do not necessarily contain the same number of realizations). The
-    sources not affected by any uncertainty (e.g. because the
-    uncertainties do not apply to their source type) have a single
-    signature with no branchset and appear with a single `-` row.
+    There is a row for each pair (source, branchset) with the distinct
+    values taken by the branchset, instead of a column per branchset,
+    since the table would be too wide for models with many branchsets.
+    NB: `signatures` is the number of indices of rate attribution of the
+    source and `counts` the numbers of realizations per signature.
     """
     df = dstore.read_df('unc_signatures')
     rows = []
@@ -1575,8 +1569,6 @@ def view_unc_signatures(token, dstore):
         for sig in sigs:
             for bset, value in sig.items():
                 vals.setdefault(bset, []).append(value)
-        if not vals:
-            rows.append(dict(head, branchset='-', values='no uncertainties'))
         for bset, value_list in vals.items():
             unique = dict.fromkeys(value_list)  # remove duplicates
             rows.append(dict(head, branchset=bset,
