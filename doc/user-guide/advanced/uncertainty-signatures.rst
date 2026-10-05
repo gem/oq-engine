@@ -45,6 +45,39 @@ calculation; just run the command ``oq check_input job.ini`` and they will
 be printed at the end; they can be also inspected in any calculation with
 the command ``oq show unc_signatures``.
 
+An example with applyToSources
+------------------------------
+
+The demo ``LogicTreeCase2ClassicalPSHA`` has a ``sourceModel`` branchset
+and four uncertainty branchsets, ``abGRAbsolute`` and
+``maxMagGRAbsolute`` applied to the first and to the second source, each
+with three branches::
+
+    sourceModel(1) x abGRAbsolute first(3) x maxMagGRAbsolute first(3)
+                 x abGRAbsolute second(3) x maxMagGRAbsolute second(3)
+                 = 81 source model paths
+
+and the check gives::
+
+    Core size Gt=36 out of R=324 realizations
+    Global RateMap of 2.67 KB for 1 sites and 19 levels
+    ...
+    Uncertainty signatures of calc_172129
+    | source_id | realizations | signatures | counts | branchset | values                             |
+    |-----------+--------------+------------+--------+-----------+------------------------------------|
+    | first     | 81           | 9          | 9      | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
+    | first     | 81           | 9          | 9      | bs4       | 7.0, 7.3, 7.6                      |
+    | second    | 81           | 9          | 9      | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
+    | second    | 81           | 9          | 9      | bs5       | 7.5, 7.8, 8.0                      |
+
+Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
+``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
+source has 9 signatures covering the 9 realizations obtained by varying
+the uncertainties of the other source, i.e. 18 indices of rate
+attribution in total, 9 per source. Since there are two GMMs per tectonic
+region type, Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
+tree are reduced to 36 columns of the global RateMap.
+
 An example with applyToBranches
 -------------------------------
 
@@ -86,39 +119,6 @@ NB: even though ``mmax`` has no filters, it is not applied to ``BG_10``
 either, since a branchset following a branchset with filters applies only
 within the same sector of the logic tree, i.e. to the branches selected by
 the filters.
-
-An example with applyToSources
-------------------------------
-
-The demo ``LogicTreeCase2ClassicalPSHA`` has a ``sourceModel`` branchset
-and four uncertainty branchsets, ``abGRAbsolute`` and
-``maxMagGRAbsolute`` applied to the first and to the second source, each
-with three branches::
-
-    sourceModel(1) x abGRAbsolute first(3) x maxMagGRAbsolute first(3)
-                 x abGRAbsolute second(3) x maxMagGRAbsolute second(3)
-                 = 81 source model paths
-
-and the check gives::
-
-    Core size Gt=36 out of R=324 realizations
-    Global RateMap of 2.67 KB for 1 sites and 19 levels
-    ...
-    Uncertainty signatures of calc_172129
-    | source_id | realizations | signatures | counts | branchset | values                             |
-    |-----------+--------------+------------+--------+-----------+------------------------------------|
-    | first     | 81           | 9          | 9      | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
-    | first     | 81           | 9          | 9      | bs4       | 7.0, 7.3, 7.6                      |
-    | second    | 81           | 9          | 9      | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
-    | second    | 81           | 9          | 9      | bs5       | 7.5, 7.8, 8.0                      |
-
-Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
-``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
-source has 9 signatures covering the 9 realizations obtained by varying
-the uncertainties of the other source, i.e. 18 indices of rate
-attribution in total, 9 per source. Since there are two GMMs per tectonic
-region type, Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
-tree are reduced to 36 columns of the global RateMap.
 
 The ``signatures`` column contains the number of signatures of the source
 and the ``counts`` column the number of realizations per signature; they
