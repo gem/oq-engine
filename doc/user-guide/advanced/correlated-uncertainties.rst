@@ -95,11 +95,11 @@ Realizations per signature
 
 The signatures of a source can be inspected with the command
 ``oq show unc_signatures``: there is a row for each pair (source,
-branchset) and the column ``realizations`` contains the number of realizations in
+branchset) and the column ``num_rlzs`` contains the number of realizations in
 each *realization set* of the source, i.e. in each set of
 realizations with the same uncertainties, in ascending order.
 Since the realization sets of a source can have different sizes,
-``realizations`` can contain more than a single number: in the sampled version
+``num_rlzs`` can contain more than a single number: in the sampled version
 of the case (``R = 50``, see below) 9 of the 22 sources have
 realization sets of different sizes, for instance the source
 ``alt2-NVA-NVA-EF1``
@@ -121,7 +121,7 @@ they are considered different; this is why there are two realization
 sets of sizes 1 and 2 rather than a single realization set of size 3.
 
 For a given source the realization sets are disjoint and cover all its
-realizations, so summing the ``realizations`` gives the number of realizations
+realizations, so summing the ``num_rlzs`` gives the number of realizations
 of the source and counting the sets gives its number of signatures; the
 sets of *different* sources of the same group do overlap instead, since
 a realization can have more than one index of rate attribution, as

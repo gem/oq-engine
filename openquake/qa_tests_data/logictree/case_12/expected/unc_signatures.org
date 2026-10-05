@@ -1,4 +1,4 @@
-| source_id | realizations              | branchset | values           |
+| source_id | num_rlzs                  | branchset | values           |
 |-----------+---------------------------+-----------+------------------|
 | BG_10     | 3                         | -         | no uncertainties |
 | SC_10:124 | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bval      | 0.0, 0.05, -0.05 |

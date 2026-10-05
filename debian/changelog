@@ -6,7 +6,7 @@
     the `unc_signatures` view more compact, displaying the values of the
     branchsets with parameters as tuples of fields, reporting the
     realizations in each realization set in a single
-    `realizations` column and grouping the rows of each source
+    `num_rlzs` column and grouping the rows of each source
   * The uncertainties are no longer applied at build time in the
     CompositeSourceModel, but in the workers, one set of realizations with
     the same uncertainties at a time, both for the classical and the

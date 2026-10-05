@@ -1616,8 +1616,8 @@ def view_unc_signatures(token, dstore):
     There is a row for each pair (source, branchset) with the distinct
     values taken by the branchset, instead of a column per branchset,
     since the table would be too wide for models with many branchsets.
-    NB: `realizations` is the number of realizations in each realization
-    set of the source, in ascending order; summing them gives the total
+    NB: `num_rlzs` is the number of realizations in each realization set
+    of the source, in ascending order; summing them gives the total
     number of realizations of the source and counting them gives its
     number of signatures.
     The columns before `branchset` are filled only on the first row of
@@ -1641,12 +1641,12 @@ def view_unc_signatures(token, dstore):
                  for bset, value_list in vals.items()]
         for i, (bset, values) in enumerate(cells):
             head = dict(source_id=source_id,
-                        realizations=fmt_realizations(grp['count']))
+                        num_rlzs=fmt_realizations(grp['count']))
             rows.append(dict(head, branchset=bset, values=values)
                         if i == 0 else
-                        dict(source_id='', realizations='',
+                        dict(source_id='', num_rlzs='',
                              branchset=bset, values=values))
-    header = ['source_id', 'realizations', 'branchset', 'values']
+    header = ['source_id', 'num_rlzs', 'branchset', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 

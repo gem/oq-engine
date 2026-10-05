@@ -87,7 +87,7 @@ and the check gives::
     Global RateMap of 2.67 KB for 1 sites and 19 levels
     ...
     Uncertainty signatures of calc_172129
-    | source_id | realizations              | branchset | values                             |
+    | source_id | num_rlzs                  | branchset | values                             |
     |-----------+---------------------------+-----------+------------------------------------|
     | first     | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
     |           |                           | bs4       | 7.0, 7.3, 7.6                      |
@@ -158,7 +158,7 @@ The signatures are printed by the check command::
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128
-    | source_id | realizations              | branchset | values           |
+    | source_id | num_rlzs                  | branchset | values           |
     |-----------+---------------------------+-----------+------------------|
     | BG_10     | 3                         | -         | no uncertainties |
     | SC_10:124 | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bval      | 0.0, 0.05, -0.05 |
@@ -166,7 +166,7 @@ The signatures are printed by the check command::
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
-with no uncertainties at all. The ``source_id`` and the ``realizations``
+with no uncertainties at all. The ``source_id`` and the ``num_rlzs``
 column are printed only on the first row of each source, so that the
 rows belonging to the same source are visually grouped.
 
@@ -193,7 +193,7 @@ either, since a branchset following a branchset with filters applies only
 within the same sector of the logic tree, i.e. to the branches selected by
 the filters.
 
-The ``realizations`` column contains the number of realizations in
+The ``num_rlzs`` column contains the number of realizations in
 each *realization set* of the source, i.e. in each set of realizations
 with the same uncertainties, in ascending order: ``1, 1, 1`` means
 three realization sets with one realization each, while ``3`` means a
