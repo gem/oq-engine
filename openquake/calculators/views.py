@@ -1563,10 +1563,9 @@ def fmt_sig_values(values):
 
     For a branchset without parameters (i.e. the dip) the values are
     listed as they are, i.e. `60.0, 45.0`; for a branchset with
-    parameters the field names are constant, so each value is reduced to
-    a tuple of its fields and only the fields changing across the values
-    are listed in brackets, i.e.
-    `(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666) [rate: 0.371113, 0.29666]`
+    parameters the field names are constant across the values, so each
+    value is reduced to a tuple of its fields, i.e.
+    `(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666)`
     """
     # remove the duplicates, keeping the order of appearance
     uniq = []
@@ -1576,18 +1575,10 @@ def fmt_sig_values(values):
     if not isinstance(uniq[0], dict):
         return ', '.join(map(str, uniq))
     keys = list(uniq[0])
-    tuples = ['(%s)' % ', '.join(str(uniq[0][k]) for k in keys)]
-    for value in uniq[1:]:
-        tuples.append('(%s)' % ', '.join(str(value.get(k, '-')) for k in keys))
-    # NB: the fields not changing across the values are not repeated
-    varying = [k for k in keys
-               if any(u.get(k) != uniq[0][k] for u in uniq[1:])]
-    out = ', '.join(tuples)
-    if varying:
-        out += ' [%s]' % '; '.join(
-            '%s: %s' % (k, ', '.join(str(u.get(k, '-')) for u in uniq))
-            for k in varying)
-    return out
+    # NB: the field names are not repeated, since they are the same for
+    # all the values of the branchset
+    return ', '.join('(%s)' % ', '.join(str(u.get(k, '-')) for k in keys)
+                     for u in uniq)
 
 
 @view.add('unc_signatures')

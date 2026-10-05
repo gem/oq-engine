@@ -63,11 +63,11 @@ be printed at the end; they can be also inspected in any calculation with
 the command ``oq show unc_signatures``.
 
 NB: for branchsets with parameters the ``values`` column contains a
-tuple per distinct value, i.e. the fields of the value, and the fields
-changing across the values are listed in brackets at the end, i.e.
-``(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666) [rate: 0.371113,
-0.29666]``; this is how the table can stay readable for models with
-many sources and branchsets.
+tuple per distinct value, i.e. the fields of the value; since the field
+names are the same for all the values of a branchset they are not
+repeated, i.e. ``(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666)``; this is
+how the table can stay readable for models with many sources and
+branchsets.
 
 An example with applyToSources
 ------------------------------
