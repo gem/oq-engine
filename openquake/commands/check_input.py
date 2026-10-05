@@ -20,6 +20,8 @@ import logging
 from unittest import mock
 
 from openquake.hazardlib import nrml
+from openquake.commonlib import datastore
+from openquake.calculators import views
 from openquake.risklib import read_nrml  # noqa
 from openquake.risklib.asset import Exposure
 from openquake.engine import engine, workflow
@@ -48,7 +50,16 @@ def main(fnames):
             tomls.append(fname)
     with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
         if inis:
-            engine.run_jobs(engine.create_jobs(inis))
+            jobctxs = engine.run_jobs(engine.create_jobs(inis))
+            # print the uncertainty signatures of the sources, i.e. the
+            # sets of realizations with the same uncertainties, stored in
+            # the datastore by source_reader.build_groups
+            for jobctx in jobctxs:
+                with datastore.read(jobctx.calc_id) as ds:
+                    if 'unc_signatures' in ds:
+                        print('\nUncertainty signatures of calc_%s\n%s' % (
+                            jobctx.calc_id,
+                            views.view('unc_signatures', ds)))
         for toml in tomls:
             workflow.run_workflow(toml, {})
 

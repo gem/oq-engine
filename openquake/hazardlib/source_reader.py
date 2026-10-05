@@ -19,6 +19,7 @@
 import time
 import zlib
 import copy
+import json
 import os.path
 import pickle
 import operator
@@ -38,6 +39,11 @@ from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+
+# the calculations building the rates with RateMap\s, i.e. the ones
+# attributing the rates to the indices of rate attribution (trt_smrs_gid)
+CLASSICAL_MODES = ('classical', 'classical_risk', 'classical_damage',
+                   'classical_bcr', 'disaggregation', 'preclassical')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -409,29 +415,15 @@ def unc_signature(bset_values, src):
     return tuple(sig)
 
 
-def build_groups(full_lt, rlz_groups, oq):
+def collect_sources(full_lt, rlz_groups):
     """
-    Build the source groups without applying the uncertainties, as needed
-    by the workers. There is one group per source group in the source
-    model files, as expected in a CompositeSourceModel, and the
-    sources keep the trt_smrs of all the realizations they belong to (i.e.
-    the full trt_smrs of their group), not just the ones with a given set
-    of uncertainties: this way the number of groups (and of associated
-    cmakers) depends on the source models only and not on the
-    uncertainties.
-
-    The uncertainties to be applied in each realization are not known
-    until the workers, so the realizations with different uncertainties
-    are stored in the bysrc_subsets attribute of each source (see
-    unc_subsets), and the rates are computed and attributed one set at a
-    time.
-
-    NB: the same source_id can be used by different sources, i.e. in
-    different source models, so the sources are keyed by id(src) and not
-    by source_id; the ids are disambiguated at the end, by adding a
-    semicolon, see add_semicolons
+    :param full_lt: a FullLogicTree instance
+    :param rlz_groups: an iterator of (sm_rlz, source group) pairs
+    :returns: a dictionary id(grp) -> [grp, {id(src): (src, pairs)}], where
+        pairs is a list of (trt_smr, samples, signature) tuples, one per
+        realization of the source
     """
-    dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
+    dic = {}
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
@@ -451,31 +443,78 @@ def build_groups(full_lt, rlz_groups, oq):
             sig = unc_signature(bset_values, src)
             pairs = srcs.setdefault(id(src), (src, []))[1]
             pairs.append((trt_smr, rlz.samples, sig))
+    return dic
+
+
+def source_with_subsets(src, pairs, sigrows):
+    """
+    :param src: a source
+    :param pairs: a list of (trt_smr, samples, signature) tuples, one per
+        realization of the source
+    :param sigrows: a list of rows describing the uncertainty signatures,
+        extended with the signatures of the source
+    :returns: a copy of the source with the attributes sampling,
+        bysrc_subsets and bysrc_unc set, i.e. the sets of realizations
+        with the same uncertainties
+    """
+    arrays, sigdict = [], {}
+    for trt_smr, samples, sig in pairs:
+        arrays.append((trt_smr, samples))
+        sigdict.setdefault(sig, []).append(trt_smr)
+    new_src = copy.copy(src)
+    new_src.sampling = numpy.array(
+        sorted(arrays), sampling_dt)  # sorted by trt_smr
+    # NB: the subsets are stored only if the uncertainties are not the
+    # same in all the realizations; a source with no uncertainties (or with
+    # the same uncertainties everywhere) keeps its sampling as it is
+    new_src.bysrc_subsets = [
+        numpy.array(sorted(t), U32) for t in sigdict.values()
+        ] if len(sigdict) > 1 else []
+    # flag the sources which will be modified in the workers: they must
+    # not be split in the preclassical, since the splitting destroys the
+    # geometry (and the MFD of the fault sources)
+    new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
+    # the uncertainty signatures of the source, i.e. the sets of
+    # realizations with the same uncertainties, which are the indices of
+    # rate attribution for its rates (see unc_subsets)
+    for sig, trt_smrs in sigdict.items():
+        sigrows.append(dict(source_id=src.source_id, realizations=len(arrays),
+                            signature=dict(sig), count=len(trt_smrs)))
+    return new_src
+
+
+def build_groups(full_lt, rlz_groups, oq, dstore=None):
+    """
+    Build the source groups without applying the uncertainties, as needed
+    by the workers: there is one group per source group in the source
+    model files, and the sources keep the trt_smrs of all the realizations
+    they belong to, not just the ones with a given set of uncertainties, so
+    that the number of groups depends on the source models only.
+
+    :param dstore: a DataStore instance or None; if given, the indices of
+        rate attribution are saved in it (the event based calculations do
+        not use them)
+
+    The uncertainties to be applied in each realization are not known
+    until the workers, so the realizations with different uncertainties are
+    stored in the bysrc_subsets attribute of each source (see
+    unc_subsets), and the rates are computed and attributed one set at a
+    time.
+
+    NB: the same source_id can be used by different sources, i.e. in
+    different source models, so the sources are keyed by id(src) and not
+    by source_id; the ids are disambiguated at the end, by adding a
+    semicolon, see add_semicolons
+    """
+    # NB: the uncertainty signatures are stored in the datastore, so that
+    # `oq check_input` can print them, see store_unc_signatures
+    sigrows = []  # dicts with keys source_id, realizations, signature, count
+    dic = collect_sources(full_lt, rlz_groups)
 
     out, atomic, acc = [], [], general.AccumDict(accum=[])
     for grp, srcs in dic.values():
-        new_srcs = []
-        for src, pairs in srcs.values():
-            arrays, sigdict = [], {}
-            for trt_smr, samples, sig in pairs:
-                arrays.append((trt_smr, samples))
-                sigdict.setdefault(sig, []).append(trt_smr)
-            new_src = copy.copy(src)
-            new_src.sampling = numpy.array(
-                sorted(arrays), sampling_dt)  # sorted by trt_smr
-            # NB: the subsets are stored only if the uncertainties are not
-            # the same in all the realizations; a source with no
-            # uncertainties (or with the same uncertainties everywhere)
-            # keeps its sampling as it is
-            new_src.bysrc_subsets = [
-                numpy.array(sorted(t), U32) for t in sigdict.values()
-                ] if len(sigdict) > 1 else []
-            # flag the sources which will be modified in the workers:
-            # they must not be split in the preclassical, since the
-            # splitting destroys the geometry (and the MFD of the fault
-            # sources)
-            new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
-            new_srcs.append(new_src)
+        new_srcs = [source_with_subsets(src, pairs, sigrows)
+                    for src, pairs in srcs.values()]
         if grp.atomic:
             # the atomic groups are never merged with the other groups,
             # since their sources must be computed together
@@ -499,13 +538,58 @@ def build_groups(full_lt, rlz_groups, oq):
     for grp in out:
         splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
+    store_unc_signatures(out, sigrows, full_lt, oq, dstore)
     return out
 
 
-def get_trt_smrs_gid(csm):
+def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
     """
-    :param csm: a CompositeSourceModel built without applying the
-        uncertainties
+    Store the uncertainty signatures of the sources in the datastore, so
+    that they can be printed by `oq check_input` (see the check_input
+    command) and read back with `oq show unc_signatures`. NB: the
+    signatures are stored as JSON objects, so that the unc_signatures view
+    can display a column for each branchset.
+
+    :param groups: a list of SourceGroups built without the uncertainties
+    :param sigrows: a list of dicts with keys source_id, realizations,
+        signature (a dictionary branchset_id -> value) and count
+    :param full_lt: a FullLogicTree instance
+    :param oq: an OqParam instance
+    :param dstore: a DataStore instance or None
+    """
+    if dstore is not None and any(row['signature'] for row in sigrows):
+        # NB: the signatures are stored only if there are uncertainties,
+        # i.e. only if the rates must be split in indices of rate
+        # attribution
+        dt = [('source_id', hdf5.vstr), ('realizations', int),
+              ('signature', hdf5.vstr), ('count', int)]
+        data = [(row['source_id'], row['realizations'], json.dumps(
+            row['signature']), row['count']) for row in sigrows]
+        dstore.create_df('unc_signatures', numpy.array(data, dt))
+    if oq.calculation_mode not in CLASSICAL_MODES:
+        # the event based calculators attribute the rates to the
+        # realizations of the group, not to the subsets
+        return
+    gid = get_trt_smrs_gid(groups)
+    if dstore is not None:
+        dstore.hdf5.save_vlen('trt_smrs_gid', gid)
+    Gt = get_core_size(gid, full_lt)
+    logging.warning('Core size Gt=%d out of R=%d realizations',
+                    Gt, full_lt.get_num_paths())
+    if dstore is not None and 'sitecol' in dstore:
+        # NB: the sites are read after the sources, so the size in bytes
+        # is logged only if they are already in the datastore
+        N = len(dstore['sitecol'])
+        imtls = oq.imtls
+        L = imtls.size if hasattr(imtls, 'size') else len(imtls)
+        logging.warning('Global RateMap of %s for %d sites and %d levels',
+                        general.humansize(4 * N * L * Gt), N, L)
+
+
+def get_trt_smrs_gid(groups):
+    """
+    :param groups: a list of SourceGroups built without applying the
+        uncertainties (i.e. the src_groups of a CompositeSourceModel)
     :returns: a sorted list of trt_smrs, the indices of rate attribution
         (to be stored as an hdf5.vuint32 array)
 
@@ -514,12 +598,27 @@ def get_trt_smrs_gid(csm):
     build_groups). The rates are nevertheless computed separately for each
     set of uncertainties and must be attributed to the right
     realizations, hence this extra list; the gid of a rate is the index
-    of its trt_smrs in it.
+    of its trt_smrs in it. NB: the subsets are deduplicated, i.e. groups
+    with the same trt_smrs (for instance the same trt with different TOMs)
+    share the same indices of rate attribution.
     """
-    all_trt_smrs = [trt_smrs for sg in csm.src_groups for src in sg
+    all_trt_smrs = [trt_smrs for sg in groups for src in sg
                     for trt_smrs in unc_subsets(src)]
     unique, _ = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
+
+
+def get_core_size(gid, full_lt):
+    """
+    :param gid: the indices of rate attribution, as returned by
+        get_trt_smrs_gid (already deduplicated)
+    :param full_lt: a FullLogicTree instance
+    :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
+        number of distinct rate components, one for each index of rate
+        attribution and GMM (i.e. of gids, see FullLogicTree.get_gids)
+    """
+    return sum(len(full_lt.gsim_lt.values[full_lt.trts[t[0] // TWO24]])
+               for t in gid)
 
 
 def read_trt_smrs_gid(dstore):
@@ -550,7 +649,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     logging.info(mon)
 
     logging.info('Building CompositeSourceModel')
-    groups = build_groups(full_lt, rlz_groups, oq)
+    groups = build_groups(full_lt, rlz_groups, oq, dstore)
     csm = CompositeSourceModel(oq, full_lt, groups)
     store_data(oq, smdict, csm, dstore)
     return csm

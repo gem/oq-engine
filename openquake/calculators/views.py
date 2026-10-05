@@ -39,6 +39,7 @@ from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
+from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
@@ -1435,36 +1436,19 @@ def view_composite_source_model(token, dstore):
     """
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
+    # NB: the TRT of a group is taken from the source_groups dataset,
+    # since the source_info has no trti field
+    try:
+        trt_by_grp = {rec['grp_id']: decode(rec['trt'])
+                      for rec in dstore['source_groups'][:]}
+    except KeyError:  # preclassical without sites, see store_csm
+        csm = read_csm(dstore)
+        trt_by_grp = {grp_id: sg.trt for grp_id, sg
+                       in enumerate(csm.src_groups)}
     lst = []
-    full_lt = dstore['full_lt'].init()
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
+        lst.append((str(grp_id), trt_by_grp[grp_id], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
-
-
-@view.add('gids')
-def view_gids(token, dstore):
-    """
-    Show the meaning of the gids indices
-    """
-    # NB: these are the gsim_idx of the cmakers, i.e. the ids of the
-    # gsims of each group, see ContextMaker.gsim_idx; they are not the
-    # gids of the columns of the rates, see trt_smrs_gid
-    full_lt = dstore['full_lt']
-    ws = dstore['weights'][:]
-    all_trt_smrs = dstore['trt_smrs'][:]
-    gid = 0
-    data = []
-    for trt_smrs in all_trt_smrs:
-        for g, (gsim, rlzs) in enumerate(
-                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
-            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
-            if len(ts) == 1:
-                ts = ts[0]
-            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
-                         ws[rlzs].sum(), len(rlzs)))
-            gid += 1
-    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
@@ -1557,6 +1541,41 @@ def view_sm_rlzs(token, dstore):
                 value, rlz.samples, rlz.weight)
 
     return text_table(map(row, sm_rlzs), header, ext='org')
+
+
+@view.add('unc_signatures')
+def view_unc_signatures(token, dstore):
+    """
+    Show the uncertainty signatures of the sources, i.e. the sets of
+    realizations with the same uncertainties, which are the indices of
+    rate attribution of the rates (see source_reader.build_groups).
+
+    There is a row for each pair (source, branchset) with the distinct
+    values taken by the branchset, instead of a column per branchset,
+    since the table would be too wide for models with many branchsets.
+    NB: `signatures` is the number of indices of rate attribution of the
+    source and `counts` the numbers of realizations per signature.
+    """
+    df = dstore.read_df('unc_signatures')
+    rows = []
+    for source_id, grp in df.groupby('source_id'):
+        sigs = [json.loads(sig) for sig in grp['signature']]
+        head = dict(source_id=source_id,
+                    realizations=grp['realizations'].iloc[0],
+                    signatures=len(sigs),
+                    counts=', '.join(map(str, dict.fromkeys(grp['count']))))
+        # NB: the branchsets are in the order they appear in the signature
+        vals = {}  # branchset -> list of values
+        for sig in sigs:
+            for bset, value in sig.items():
+                vals.setdefault(bset, []).append(value)
+        for bset, value_list in vals.items():
+            unique = dict.fromkeys(value_list)  # remove duplicates
+            rows.append(dict(head, branchset=bset,
+                             values=', '.join(unique)))
+    header = ['source_id', 'realizations', 'signatures', 'counts',
+              'branchset', 'values']
+    return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
 @view.add('rupture')
