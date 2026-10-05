@@ -7,10 +7,32 @@ The epistemic uncertainties are applied one set of realizations at a time;
 the sets of realizations having the same uncertainties for a given source
 are called *uncertainty signatures* (see :ref:`the section on the
 management of the uncertainties in the classical calculator
-<classical-internals>`). Since the signatures are fully determined by the
-logic tree and by the source model, they are computed while building the
-CompositeSourceModel, i.e. before the preclassical, and stored in the
-datastore in the ``unc_signatures`` dataset.
+<classical-internals>`).
+
+.. note::
+
+   The crucial consequence is that the rates are stored per signature,
+   i.e. per *index of rate attribution* (gid), and **not** per
+   realization. The number of indices of rate attribution (gid) is the
+   *core size* of the logic tree, i.e. the number of columns of the
+   global RateMap of shape (N, L, Gt)::
+
+      Gt = Σ_i G(trt_i)
+
+   where the sum is over the indices of rate attribution and G(trt) is
+   the number of GMMs for the tectonic region type. Since many
+   realizations have the same uncertainties, the core size is typically
+   **much smaller** than the number R of realizations of the logic tree:
+   in the demo described below there are 324 realizations but only 36
+   columns of rates, i.e. 9 times less data than one would store with a
+   column per realization. This is what makes it possible to run large
+   logic trees; see :ref:`large-calculations`.
+
+Since the signatures are fully determined by the logic tree and by the
+source model, they are computed while building the CompositeSourceModel,
+i.e. before the preclassical, and stored in the datastore in the
+``unc_signatures`` dataset; the core size is logged at the same time,
+together with the size in bytes of the global RateMap.
 
 NB: the concept of uncertainty signatures is relevant only if your logic
 tree contains ``applyToSources`` or ``applyToBranches``, i.e. only if some
@@ -18,27 +40,10 @@ uncertainties are applied to a subset of the sources. If all the
 uncertainties are applied to all the sources, each source has a single
 signature covering all its realizations and there is nothing to sign.
 
-The number of indices of rate attribution (gid) is the *core size* of the
-logic tree, i.e. the number of columns of the global RateMap of shape
-(N, L, Gt); since each index of rate attribution has one gid per GMM of
-its tectonic region type, the core size is
-
-.. code-block:: text
-
-    Gt = Σ_i G(trt_i)
-
-where the sum is over the indices of rate attribution and G(trt) is the
-number of GMMs for the tectonic region type. The core size is much
-smaller than the number R of realizations of the logic tree, since many
-realizations have the same uncertainties: it is computed at build time
-and logged together with the size in bytes of the global RateMap, so you
-can check it without running a full calculation.
-
-You can determine the signatures without running a full calculation; just
-run the command ``oq check_input job.ini`` and the core size and the
-signatures of the calculation will be printed at the end; they can be also
-inspected in any calculation with the commands ``oq show unc_signatures``
-and ``oq show trt_smrs_gid``.
+You can determine the signatures and the core size without running a full
+calculation; just run the command ``oq check_input job.ini`` and they will
+be printed at the end; they can be also inspected in any calculation with
+the commands ``oq show unc_signatures`` and ``oq show trt_smrs_gid``.
 
 An example with applyToBranches
 -------------------------------
