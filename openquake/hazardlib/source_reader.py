@@ -39,9 +39,10 @@ from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
+TWO32 = 2**32
 
 # the calculations building the rates with RateMap\s, i.e. the ones
-# attributing the rates to the indices of rate attribution (trt_smrs_gid)
+# attributing the rates to the core trt_smrs (core_trt_smrs)
 CLASSICAL_MODES = ('classical', 'classical_risk', 'classical_damage',
                    'classical_bcr', 'disaggregation', 'preclassical')
 U16 = numpy.uint16
@@ -570,10 +571,16 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
         # the event based calculators attribute the rates to the
         # realizations of the group, not to the subsets
         return
-    gid = get_trt_smrs_gid(groups)
+    core_trt_smrs = get_core_trt_smrs(groups)
     if dstore is not None:
-        dstore.hdf5.save_vlen('trt_smrs_gid', gid)
-    Gt = get_core_size(gid, full_lt)
+        dstore.hdf5.save_vlen('core_trt_smrs', core_trt_smrs)
+    Gt = get_core_size(core_trt_smrs, full_lt)
+    if Gt >= TWO32:
+        # NB: the gids are stored as uint32 in the _rates dataset, so
+        # there cannot be more than 2**32 columns in the RateMap
+        raise ValueError(
+            'The core size Gt=%d is too large (the maximum is %d), '
+            'you must reduce the logic tree' % (Gt, TWO32))
     logging.warning('Core size Gt=%d out of R=%d realizations',
                     Gt, full_lt.get_num_paths())
     if dstore is not None and 'sitecol' in dstore:
@@ -586,19 +593,19 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
                         general.humansize(4 * N * L * Gt), N, L)
 
 
-def get_trt_smrs_gid(groups):
+def get_core_trt_smrs(groups):
     """
     :param groups: a list of SourceGroups built without applying the
         uncertainties (i.e. the src_groups of a CompositeSourceModel)
-    :returns: a sorted list of trt_smrs, the indices of rate attribution
+    :returns: a sorted list of trt_smrs, the units of rate attribution
         (to be stored as an hdf5.vuint32 array)
 
     The uncertainties are applied in the workers, so the realizations
     with different uncertainties are not separated at build time (see
     build_groups). The rates are nevertheless computed separately for each
     set of uncertainties and must be attributed to the right
-    realizations, hence this extra list; the gid of a rate is the index
-    of its trt_smrs in it. NB: the subsets are deduplicated, i.e. groups
+    realizations, hence this extra list; a rate is attributed to the unit
+    containing its trt_smrs. NB: the subsets are deduplicated, i.e. groups
     with the same trt_smrs (for instance the same trt with different TOMs)
     share the same indices of rate attribution.
     """
@@ -608,28 +615,29 @@ def get_trt_smrs_gid(groups):
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
-def get_core_size(gid, full_lt):
+def get_core_size(core_trt_smrs, full_lt):
     """
-    :param gid: the indices of rate attribution, as returned by
-        get_trt_smrs_gid (already deduplicated)
+    :param core_trt_smrs: the sets of realizations with the same
+        uncertainties, i.e. the units of rate attribution, as returned
+        by get_core_trt_smrs (already deduplicated)
     :param full_lt: a FullLogicTree instance
     :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
-        number of distinct rate components, one for each index of rate
-        attribution and GMM (i.e. of gids, see FullLogicTree.get_gids)
+        number of distinct rate components, i.e. of gids (see
+        FullLogicTree.get_gids), which is >= len(core_trt_smrs) since
+        each unit contributes G(trt_i) >= 1 gids
     """
     return sum(len(full_lt.gsim_lt.values[full_lt.trts[t[0] // TWO24]])
-               for t in gid)
+               for t in core_trt_smrs)
 
 
-def read_trt_smrs_gid(dstore):
+def read_core_trt_smrs(dstore):
     """
     :param dstore: a DataStore instance, possibly closed
-    :returns: the units of rate attribution stored by the preclassical,
-        i.e. the sets of realizations with the same uncertainties, as a
-        list of tuples (the inverse of get_trt_smrs_gid)
+    :returns: a list of trt_smrs tuples, one per unit of rate attribution,
+        i.e. len(dstore['core_trt_smrs']) tuples, less than the core size Gt
     """
     with dstore:  # NB: the datastore is closed when passed to a task
-        return [tuple(t) for t in dstore['trt_smrs_gid'][:]]
+        return [tuple(t) for t in dstore['core_trt_smrs'][:]]
 
 
 def build_csm(oq, full_lt, smdict, dstore):

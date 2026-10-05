@@ -58,7 +58,7 @@ then works on the sources, group by group:
 
 - it builds the ``cmakers``, i.e. one ``ContextMaker`` per source group,
   and saves the ``trt_smrs`` of the groups in the ``trt_smrs`` dataset
-  and the *indices of rate attribution* in the ``trt_smrs_gid`` dataset,
+  and the *indices of rate attribution* in the ``core_trt_smrs`` dataset,
   i.e. the sets of realizations the rates are attributed to (see the
   section on the uncertainties)
 - it pre-filters the sources against the sites, using a coarse site
@@ -186,27 +186,27 @@ codes (``S`` simple fault, ``A`` area source).
 .. note::
 
    The datastore contains two datasets with the realizations of the
-   groups, ``trt_smrs`` and ``trt_smrs_gid``, which look similar but
+   groups, ``trt_smrs`` and ``core_trt_smrs``, which look similar but
    have a different meaning. ``trt_smrs`` has one row per source group,
    with the ``trt_smrs`` of all the realizations of the group, and it is
-   used to build the cmakers and the tasks; ``trt_smrs_gid`` has one row
+   used to build the cmakers and the tasks; ``core_trt_smrs`` has one row
    per *subset* of realizations with the same uncertainties, i.e. per
-   index of rate attribution, so it has more rows and they are
+   unit of rate attribution, so it has more rows and they are
    shorter::
 
        >> from openquake.commonlib import datastore
        >> ds = datastore.read(calc_id)
        >> [len(t) for t in ds['trt_smrs'][:]]
        [81, 81]
-       >> [len(t) for t in ds['trt_smrs_gid'][:]]
+       >> [len(t) for t in ds['core_trt_smrs'][:]]
        [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-       >> ds['trt_smrs_gid'][:2]
+       >> ds['core_trt_smrs'][:2]
        [array([ 0,  3,  6, 27, 30, 33, 54, 57, 60], dtype=uint32)
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
-   Every index of rate attribution is contained in exactly one row of
+   Every unit of rate attribution is contained in exactly one row of
    ``trt_smrs``, but the converse does not hold: the trt_smrs of a group
-   can be spread over several indices, since the sources of a group can
+   can be spread over several units, since the sources of a group can
    be affected by different uncertainties (see the page on correlated
    uncertainties), so a realization can belong to more than one index.
    The rates cannot be attributed to a whole group, since the
@@ -228,7 +228,7 @@ one set of realizations at a time. The mechanism is the following.
    signature and stored in the ``bysrc_subsets`` attribute; the sets of
    realizations sharing the same uncertainties are called *subsets*.
    They are read back with ``lt.unc_subsets(src)``.
-3. In the preclassical the subsets are stored in the ``trt_smrs_gid``
+3. In the preclassical the subsets are stored in the ``core_trt_smrs``
    dataset, one row per subset: these are the *indices of rate
    attribution*, i.e. the indices the rates are computed and attributed
    with, as opposed to the ``trt_smrs`` of a group, which contain all
@@ -286,7 +286,7 @@ do not apply to ``first``: the ordinals of each row are the 3x3
 combinations of the branches of ``bs3`` and ``bs5``. The fault source
 ``second`` has the analogous 9 signatures, built from ``bs3`` and
 ``bs5``, therefore there are 18 indices of rate attribution, 9 per
-source, stored in the ``trt_smrs_gid`` dataset.
+source, stored in the ``core_trt_smrs`` dataset.
 
 The advantage is visible in the size of the CSM and in the number of
 tasks: if the uncertainties were applied when reading the source models,
@@ -309,6 +309,8 @@ the uncertainties:
   the occurrence rates, which the uncertainties modify; the filtering is
   performed in the workers (``preclassical.filter_mag``) together with
   the check on the maximum number of ruptures
+
+.. _ratemap:
 
 The RateMap
 ~~~~~~~~~~~
@@ -451,7 +453,7 @@ in the ``hcurves-rlzs`` and ``hcurves-stats`` datasets, and the maps in
    the *core size* of the logic tree, i.e. the number of distinct rate
    components, each one standing for a set of realizations with the same
    uncertainties and the same GMM, as shown by the rows of
-   ``oq show trt_smrs_gid`` (18 indices of 9 realizations, one per GMM,
+   ``oq show core_trt_smrs`` (18 units of 9 realizations, one per GMM,
    since the demo has two GMMs per tectonic region type).
    In general the core size is much smaller than the size of the logic
    tree, since with a sampled logic tree many realizations share the same
