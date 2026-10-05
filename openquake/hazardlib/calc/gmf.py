@@ -80,6 +80,22 @@ def _site_positions(complete, selected):
     return order[positions]
 
 
+def _ce_layout(sites):
+    """Fit the complete grid, falling back to the affected sites."""
+    complete = sites.complete
+    try:
+        return complete, RegularGridLayout.from_sites(complete)
+    except ValueError as complete_error:
+        if sites is complete:
+            raise
+        layout = RegularGridLayout.from_sites(sites)
+        logging.warning(
+            'Using %d affected sites for circulant embedding because the '
+            'complete collection of %d sites cannot be used: %s',
+            len(sites), len(complete), complete_error)
+        return sites, layout
+
+
 def _truncated_normals(shape, level, rng):
     """Draw truncated standard normals with one in-place work array."""
     samples = rng.random(shape)
@@ -644,8 +660,7 @@ class GmfComputer(object):
             return None
 
         try:
-            complete = self.sites.complete
-            layout = RegularGridLayout.from_sites(complete)
+            complete, layout = _ce_layout(self.sites)
             positions = _site_positions(complete, self.sites)
             site_indices = layout.site_indices[positions]
             self._ce_factor = CirculantEmbeddingFactor.build(

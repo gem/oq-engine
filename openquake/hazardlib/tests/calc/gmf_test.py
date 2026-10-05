@@ -113,6 +113,24 @@ def test_ce_selection():
     numpy.testing.assert_array_equal(factor.site_indices, [4, 0, 2])
 
 
+def test_ce_selection_with_off_grid_complete_sites():
+    # Station data extends the complete collection even when distant stations
+    # are absent from the sites affected by the rupture.
+    complete = regular_sites((3, 4))
+    sites = complete.filtered(numpy.arange(11))
+    complete.extend(
+        [float(complete.lons[0]) + 2],
+        [float(complete.lats[0]) + 2])
+    computer = build_computer(sites)
+
+    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1):
+        factor = computer._get_ce_factor()
+
+    assert factor.grid_shape == (3, 4)
+    assert factor.output_size == len(IMTS) * len(sites)
+    numpy.testing.assert_array_equal(factor.site_indices, numpy.arange(11))
+
+
 def test_ce_batches():
     # Event-major random draws make the result independent of how the
     # configured workspace divides the realizations into FFT batches.
