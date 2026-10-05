@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-"""Stress hcurves exports through concurrent OpenQuake API requests.
+"""Stress hazard output exports through concurrent OpenQuake API requests.
 
 Example:
 
     python -X faulthandler bin/repro_hdf5_thread_segfault_http.py \\
         --job-id 123 --concurrency 4 --iterations 100
 
-The script discovers the hcurves result for the job and concurrently downloads
-its CSV export from the API. The engine API must be running and the caller must
-have permission to access the job.
+The script discovers the requested output for the job and concurrently
+requests its CSV export from the API. The engine API must be running and the
+caller must have permission to access the job.
 """
 
 import argparse
@@ -44,9 +44,9 @@ def login(session, base_url, username, password, timeout):
         raise RuntimeError(f'Engine API login failed: {response.text}')
 
 
-def get_hcurves_export_url(base_url, job_id, headers, timeout,
-                           username, password):
-    """Find the API URL for the job's hcurves result export."""
+def get_export_url(base_url, job_id, dataset, headers, timeout,
+                   username, password):
+    """Find the API URL for the requested job output export."""
     endpoint = urljoin(base_url.rstrip('/') + '/',
                        f'v1/calc/{job_id}/results')
     with requests.Session() as session:
@@ -55,9 +55,11 @@ def get_hcurves_export_url(base_url, job_id, headers, timeout,
         response = session.get(endpoint, timeout=timeout)
         response.raise_for_status()
         results = response.json()
-    matches = [result for result in results if result['type'] == 'hcurves']
+    matches = [result for result in results
+               if result['type'] == dataset]
     if not matches:
-        raise RuntimeError(f'Job {job_id} has no exportable hcurves result')
+        raise RuntimeError(
+            f'Job {job_id} has no exportable {dataset} result')
     return urljoin(base_url.rstrip('/') + '/',
                    f"v1/calc/result/{matches[0]['id']}")
 
@@ -129,7 +131,10 @@ def main():
     parser.add_argument('--base-url', default='http://127.0.0.1:8800',
                         help='engine API base URL')
     parser.add_argument('--job-id', type=int, required=True,
-                        help='job ID containing hazard curves')
+                        help='job ID containing the requested output')
+    parser.add_argument('--dataset', choices=('hcurves', 'gmf_data'),
+                        default='hcurves',
+                        help='output to export (default: hcurves)')
     parser.add_argument('--username', help='engine API login username')
     parser.add_argument('--password', help='engine API login password')
     parser.add_argument('--concurrency', type=int, default=2,
@@ -154,10 +159,11 @@ def main():
         parser.error(str(exc))
 
     faulthandler.enable()
-    url = get_hcurves_export_url(
-        args.base_url, args.job_id, headers, args.timeout,
+    url = get_export_url(
+        args.base_url, args.job_id, args.dataset, headers, args.timeout,
         args.username, args.password)
-    print(f'Exporting hcurves for job {args.job_id} from {url}', flush=True)
+    print(f'Exporting {args.dataset} for job {args.job_id} from {url}',
+          flush=True)
     average, header_average, wall_elapsed, average_bytes, content_type = (
         stress_requests(url, args.base_url, headers, args.username,
                         args.password, args.timeout, args.iterations,
