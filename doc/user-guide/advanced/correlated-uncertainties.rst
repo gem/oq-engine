@@ -90,6 +90,43 @@ at a time, by ``source_reader.modified_groups``; the correlated
 branchsets are validated at build time instead
 (``lt.check_correlated``), since the groups are still whole there.
 
+Realizations per signature
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The signatures of a source can be inspected with the command
+``oq show unc_signatures``: there is a row for each pair (source,
+branchset) and the column ``num_rlzs`` contains the number of realizations in
+each *realization set* of the source, i.e. in each set of
+realizations with the same uncertainties, in ascending order.
+Since the realization sets of a source can have different sizes,
+``num_rlzs`` can contain more than a single number: in the sampled version
+of the case (``R = 50``, see below) 9 of the 22 sources have
+realization sets of different sizes, for instance the source
+``alt2-NVA-NVA-EF1``
+
+.. code-block:: text
+
+    $ oq show unc_signatures
+    | alt2-NVA-NVA-EF1    | 1, 2                   | alt2_rset             | (TE, west, central, 6.8)                                                                         |
+    |                     |                        | alt2_rspl_132         | (0.05, 0.95), (0.15, 0.85)                                                                       |
+    |                     |                        | alt2_rrow_132_scn1    | (0.8, 3.25, 0.371113)                                                                            |
+    |                     |                        | alt2_dip              | 45.0                                                                                             |
+    |                     |                        | alt2_rrow_132_scn2    | (0.8, 3.25, 0.371113)                                                                            |
+
+i.e. one of the 3 realizations of the source is in a realization set of
+size 1 and two are in a realization set of size 2. NB: the two
+branchsets carry the *same* values (``b_value 0.8, ref_mag 3.25, rate
+0.371113``), but since a signature is a dictionary keyed by branchset id
+they are considered different; this is why there are two realization
+sets of sizes 1 and 2 rather than a single realization set of size 3.
+
+For a given source the realization sets are disjoint and cover all its
+realizations, so summing the ``num_rlzs`` gives the number of realizations
+of the source and counting the sets gives its number of signatures; the
+sets of *different* sources of the same group do overlap instead, since
+a realization can have more than one index of rate attribution, as
+explained above.
+
 Full enumeration
 ~~~~~~~~~~~~~~~~
 
@@ -164,7 +201,7 @@ The datasets involved are:
 .. code-block:: text
 
     $ oq show trt_smrs          # the realizations of each source group
-    $ oq show core_trt_smrs    # the units of rate attribution
+    $ oq show core_trt_smrs    # the realization sets
     $ oq show composite_source_model
 
 The correspondence between the realizations and the columns of the

@@ -71,8 +71,8 @@ def store_spectra(dstore, name, R, oq, spectra):
 def get_blocks(dstore, oq, cmakers, ctx_by_grp):
     """
     :returns: a pair (blocks, trt_rlzs) where blocks is a list of
-        (cmaker, ctx, tom) tuples, one per unit of rate attribution, i.e.
-        per set of realizations with the same uncertainties, and trt_rlzs
+        (cmaker, ctx, tom) tuples, one per realization set, i.e. per set
+        of realizations with the same uncertainties, and trt_rlzs
         is the list of the realizations associated to the gid of each block
 
     NB: the contexts of a group contain the sources with different

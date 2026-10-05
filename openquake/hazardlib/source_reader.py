@@ -633,8 +633,8 @@ def get_core_size(core_trt_smrs, full_lt):
 def read_core_trt_smrs(dstore):
     """
     :param dstore: a DataStore instance, possibly closed
-    :returns: a list of trt_smrs tuples, one per unit of rate attribution,
-        i.e. len(dstore['core_trt_smrs']) tuples, less than the core size Gt
+    :returns: a list of trt_smrs tuples, one per realization set, i.e.
+        len(dstore['core_trt_smrs']) tuples, less than the core size Gt
     """
     with dstore:  # NB: the datastore is closed when passed to a task
         return [tuple(t) for t in dstore['core_trt_smrs'][:]]
