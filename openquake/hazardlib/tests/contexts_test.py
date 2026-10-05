@@ -26,7 +26,8 @@ from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    Effect, ContextMaker, get_distances, _collapse_point_planars)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -172,6 +173,37 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         self.assertTrue(abs(dsts[1, 0]+0.1666) < 1e-2, msg)
         msg = 'The latitude of the second point is wrong'
         self.assertTrue(abs(dsts[1, 1]-0.0) < 1e-2, msg)
+
+
+class PointSourceCollapseTestCase(unittest.TestCase):
+    def test_rate_sum_and_circular_orientation(self):
+        mfd = ArbitraryMFD([6.0501, 6.0502, 6.2], [2., 3., 1.])
+        npd = PMF([
+            (0.2, NodalPlane(359., 60., 179.)),
+            (0.2, NodalPlane(1., 60., -179.)),
+            (0.6, NodalPlane(10., 60., 170.))])
+        src = PointSource(
+            'src', 'test', TRT.ACTIVE_SHALLOW_CRUST, mfd, 2.5, WC1994(),
+            1., tom, 0., 20., Point(0., 0.), npd,
+            PMF([(0.5, 10.0001), (0.5, 10.0004)]))
+        raw = src.get_planar()
+        rates = dict(src.get_annual_occurrence_rates())
+
+        entries = _collapse_point_planars(raw, rates, 6.1)
+        self.assertEqual([entry[0] for entry in entries], [6.05, 6.2])
+        mag, rate, planars, _idx = entries[0]
+        self.assertEqual(mag, 6.05)
+        self.assertAlmostEqual(rate, 5.)
+        self.assertEqual(len(planars[0]), 1)
+        self.assertAlmostEqual(planars[0].wlr[0, 2], 1.)
+        # The circular mean selects strike=10, rake=170, not their
+        # misleading arithmetic means near 124 and 57 degrees.
+        self.assertAlmostEqual(planars[0].sdr[0, 0], 10.)
+        self.assertAlmostEqual(planars[0].sdr[0, 1], 60.)
+        self.assertAlmostEqual(planars[0].sdr[0, 2], 170.)
+        _mag, high_rate, high_planars, _idx = entries[1]
+        self.assertAlmostEqual(high_rate, 1.)
+        self.assertEqual(len(high_planars[0]), 6)
 
 
 class EffectTestCase(unittest.TestCase):

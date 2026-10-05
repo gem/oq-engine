@@ -66,6 +66,7 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
 EPS = 1E-3
+POINTSOURCE_COLLAPSE_PRECISION = 3
 #: How many (rupture, site) pairs are as expensive as a single surviving
 #: context, i.e. how much a discarded pair costs with respect to a context
 #: on which the GSIMs are actually evaluated. Determined heuristically
@@ -331,24 +332,121 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-# generator of quintets (rup_index, mag, magdist, planars, sites)
-# called first in preclassical with a reduced sitecol and then in classical
+def _circular_mean(values, weights, group_ids, ngroups):
+    radians = numpy.radians(values)
+    sine = numpy.bincount(group_ids, weights=weights * numpy.sin(radians),
+                          minlength=ngroups)
+    cosine = numpy.bincount(group_ids, weights=weights * numpy.cos(radians),
+                            minlength=ngroups)
+    return numpy.degrees(numpy.arctan2(sine, cosine)) % 360
+
+
+def _collapse_planar_arrays(planars, mags, row_rates, source_idx):
+    planar = numpy.concatenate(planars).view(numpy.recarray)
+    mags = numpy.concatenate(mags)
+    rates = numpy.concatenate(row_rates)
+    if not len(planar):
+        return []
+    unique_mags, mag_ids = numpy.unique(mags, return_inverse=True)
+    keys = numpy.empty(len(planar), dtype=[('mag', F64), ('lon', F64),
+                                           ('lat', F64), ('dep', F64)])
+    keys['mag'] = mags
+    keys['lon'], keys['lat'], keys['dep'] = numpy.round(
+        planar.hypo, POINTSOURCE_COLLAPSE_PRECISION).T
+    _keys, group_ids = numpy.unique(keys, return_inverse=True)
+    ngroups = len(_keys)
+    group_rates = numpy.bincount(group_ids, weights=rates, minlength=ngroups)
+    mag_rates = numpy.bincount(mag_ids, weights=rates,
+                               minlength=len(unique_mags))
+    sdr = planar.sdr
+    strikes = _circular_mean(sdr[:, 0], rates, group_ids, ngroups)
+    rakes = _circular_mean(sdr[:, 2], rates, group_ids, ngroups)
+    dips = numpy.bincount(group_ids, weights=rates * sdr[:, 1],
+                          minlength=ngroups) / group_rates
+    dstrike = (sdr[:, 0] - strikes[group_ids] + 180) % 360 - 180
+    drake = (sdr[:, 2] - rakes[group_ids] + 180) % 360 - 180
+    cost = dstrike**2 + drake**2 + (sdr[:, 1] - dips[group_ids])**2
+    order = numpy.lexsort((-rates, cost, group_ids))
+    ordered_groups = group_ids[order]
+    first = numpy.r_[True, ordered_groups[1:] != ordered_groups[:-1]]
+    chosen = order[first]
+    collapsed = planar[chosen].copy().view(numpy.recarray)
+    collapsed.wlr[:, 2] = group_rates / mag_rates[mag_ids[chosen]]
+    entries = []
+    collapsed_mags = mags[chosen]
+    for magid, mag in enumerate(unique_mags):
+        mask = collapsed_mags == mag
+        if mask.any():
+            entries.append((mag, mag_rates[magid],
+                            [collapsed[mask]], source_idx[mag]))
+    return entries
+
+
+def _collapse_point_planars(planardict, rates, max_mag):
+    planar_arrays, magnitudes, row_rates = [], [], []
+    source_idx, entries = {}, []
+    for idx, (mag, planars) in enumerate(planardict.items()):
+        rounded_mag = round(float(mag), POINTSOURCE_COLLAPSE_PRECISION)
+        if rounded_mag <= max_mag:
+            source_idx[rounded_mag] = max(idx, source_idx.get(rounded_mag, -1))
+            for planar in planars:
+                planar_arrays.append(planar)
+                magnitudes.append(numpy.full(len(planar), rounded_mag))
+                row_rates.append(rates[mag] * planar.wlr[:, 2])
+        else:
+            entries.append((mag, rates[mag], planars, idx))
+    if planar_arrays:
+        entries.extend(_collapse_planar_arrays(
+            planar_arrays, magnitudes, row_rates, source_idx))
+    return sorted(entries, key=lambda item: item[0])
+
+
+def _quintets_for_rup(cmaker, src, cdist, mask, sites, magdist,
+                      magi, mag, mrate, planars, rup):
+    magdist1 = magdist[mag]
+    meanpla = [rup.surface.array.reshape(-1, 3)]
+    psdist = src.get_psdist(magi, mag, cmaker.pointsource_distance, magdist)
+    close = sites.filter(cdist[mask] <= psdist)
+    far = sites.filter(cdist[mask] > psdist)
+    if cmaker.fewsites:
+        if close is None:  # all is far, common for small mag
+            yield magi, mag, magdist1, meanpla, sites, mrate
+        else:  # something is close
+            yield magi, mag, magdist1, planars, sites, mrate
+    elif close is None:  # all is far
+        yield magi, mag, magdist1, meanpla, far, mrate
+    elif far is None:  # all is close
+        yield magi, mag, magdist1, planars, close, mrate
+    else:  # some sites are far, some are close
+        yield magi, mag, magdist1, meanpla, far, mrate
+        yield magi, mag, magdist1, planars, close, mrate
+
+
 def _quintets(cmaker, src, sitecol):
+    """Yield magnitude-specific planar contexts and their rates."""
     with cmaker.ir_mon:
         # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
-    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
+        planardict = src.get_planar(
+            cmaker.shift_hypo,
+            collapse_max_mag=cmaker.pointsource_collapse_max_mag,
+            collapse_precision=POINTSOURCE_COLLAPSE_PRECISION)
+    rates = dict(src.get_annual_occurrence_rates())
+    max_mag = cmaker.pointsource_collapse_max_mag
+    if max_mag is None:
+        entries = [(mag, rates[mag], planars, i)
+                   for i, (mag, planars) in enumerate(planardict.items())]
+    else:
+        entries = _collapse_point_planars(planardict, rates, max_mag)
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, _rate, _planars, _idx in entries}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
     # it is 0 for all the magnitudes if the source has no magnitude inside
-    # the range, which can happen since for the sources modified by the
-    # uncertainties the magnitude filtering is performed in the classical
-    # workers and not in the preclassical (see filter_mag)
+    # the range, which can happen since the magnitude filtering is performed
+    # in the classical workers and not in the preclassical (see filter_mag)
     valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
     if not valid:  # the source is irrelevant, no site is in range
         return
-    maxmag = max(valid)
-    maxdist = valid[maxmag]
+    maxdist = max(valid.values())
     cdist = sitecol.get_cdist(src.location)
     # NB: having a decent max_radius is essential for performance!
     mask = cdist <= maxdist + src.max_radius(maxdist)
@@ -358,40 +456,30 @@ def _quintets(cmaker, src, sitecol):
 
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
-    # splitting by magnitude
+    entries = [(mag, rate, planars, idx) for mag, rate, planars, idx in entries
+               if minmag <= mag <= maxmag]
     if src.count_nphc() == 1:
         # one rupture per magnitude
-        for m, (mag, pla) in enumerate(planardict.items()):
-            if minmag <= mag <= maxmag:
-                yield m, mag, magdist[mag], pla, sites
-    else:
-        for m, rup in enumerate(src.iruptures()):
+        for mag, rate, planars, idx in entries:
+            yield idx, mag, magdist[mag], planars, sites, rate
+    elif max_mag is None:
+        planars_by_mag = dict((mag, (rate, planars, idx))
+                              for mag, rate, planars, idx in entries)
+        for magi, rup in enumerate(src.iruptures()):
             mag = rup.mag
-            if mag > maxmag or mag < minmag:
+            if mag not in planars_by_mag:
                 continue
-            mdist = magdist[mag]
-            # far sites use the mean rupture from src.iruptures(),
-            # close sites use all the nodal planes/hypocenters
-            meanpla = [rup.surface.array.reshape(-1, 3)]
-            allpla = planardict[mag]
-            # NB: having a good psdist is essential for performance!
-            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
-            close = sites.filter(cdist[mask] <= psdist)
-            far = sites.filter(cdist[mask] > psdist)
-            if cmaker.fewsites:
-                if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, meanpla, sites
-                else:  # something is close
-                    yield m, mag, mdist, allpla, sites
-            else:  # many sites
-                if close is None:  # all is far
-                    yield m, mag, mdist, meanpla, far
-                elif far is None:  # all is close
-                    yield m, mag, mdist, allpla, close
-                else:  # some sites are far, some are close
-                    yield m, mag, mdist, meanpla, far
-                    yield m, mag, mdist, allpla, close
+            rate, planars, idx = planars_by_mag[mag]
+            yield from _quintets_for_rup(
+                cmaker, src, cdist, mask, sites, magdist, magi, mag, rate,
+                planars, rup)
+    else:
+        mean_rups = list(src.iruptures())
+        for mag, rate, planars, idx in entries:
+            rup = mean_rups[idx]
+            yield from _quintets_for_rup(
+                cmaker, src, cdist, mask, sites, magdist, idx, mag, rate,
+                planars, rup)
 
 
 # helper used to populate contexts for planar ruptures
@@ -481,8 +569,8 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    mrate = dict(src.get_annual_occurrence_rates())
-    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    for magi, mag, magdist, planars, sites, mrate in _quintets(
+            cmaker, src, sitecol):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing, case_43
@@ -493,7 +581,7 @@ def genctxs_Pp(src, sitecol, cmaker):
             pla = planars[0]
         # building contexts
         with cmaker.ctx_mon:
-            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+            ctx = _get_ctx_planar(cmaker, builder, mag, mrate, magi,
                                   pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
@@ -635,6 +723,8 @@ class ContextMaker(object):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = int(param.get('collapse_level', -1))
+        self.pointsource_collapse_max_mag = param.get(
+            'pointsource_collapse_max_mag')
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)

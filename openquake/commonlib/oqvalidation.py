@@ -660,6 +660,14 @@ poes:
 poes_disagg:
    Alias for poes.
 
+pointsource_collapse_max_mag:
+  In classical calculations, approximately collapse point-source ruptures up
+  to this magnitude when their magnitudes and hypocenters match to 3 decimal
+  places. The occurrence rates are summed and the representative orientation
+  is selected using circular means. Higher-magnitude ruptures are unchanged.
+  Example: *pointsource_collapse_max_mag = 6.5*.
+  Default: None (no point-source collapse)
+
 pointsource_distance:
   Used in classical calculations to collapse the point sources. Don't set
   it when using *ps_grid_spacing*, since it will be set automatically.
@@ -1272,6 +1280,8 @@ class OqParam(valid.ParamSet):
     oversampling = valid.Param(valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
+    pointsource_collapse_max_mag = valid.Param(
+        valid.NoneOr(valid.positivefloat), None)
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.mod_func, '')
     postproc_args = valid.Param(valid.dictionary, {})

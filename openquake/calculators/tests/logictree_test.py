@@ -508,6 +508,20 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
+    def test_case_25_pointsource_collapse(self):
+        self.run_calc(case_25.__file__, 'job.ini', concurrent_tasks='4')
+        base = self.calc.datastore['hcurves-stats'][:].ravel()
+        base_ctxs = len(self.calc.datastore['rup/mag'])
+
+        self.run_calc(case_25.__file__, 'job.ini', concurrent_tasks='4',
+                      pointsource_collapse_max_mag='5.5')
+        ds = self.calc.datastore
+        got = ds['hcurves-stats'][:].ravel()
+        rel = (got - base) / base
+        self.assertLess(numpy.abs(rel[:4]).max(), 0.004)
+        numpy.testing.assert_allclose(got[4:], base[4:], rtol=1e-7, atol=1e-12)
+        self.assertLess(len(ds['rup/mag']), base_ctxs * 0.90)
+
     def test_case_26(self):
         # 3-branch amp LT, classical, full enumeration and sampling
         for kwargs, prefix, nrlz in [

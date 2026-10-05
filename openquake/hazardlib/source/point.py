@@ -46,6 +46,28 @@ def msr_name(src):
         return 'Undefined'
 
 
+def _circular_average(values, weights):
+    values = numpy.asarray(values, dtype=float)
+    weights = numpy.asarray(weights, dtype=float)
+    total = weights.sum()
+    radians = numpy.radians(values)
+    sine = numpy.sum(numpy.sin(radians) * weights)
+    cosine = numpy.sum(numpy.cos(radians) * weights)
+    if numpy.hypot(sine, cosine) <= 1e-8 * total:
+        return numpy.average(values, weights=weights)
+    return angular_mean(values, weights / total)
+
+
+def _average_nodal_plane(npd):
+    weights, planes = zip(*npd)
+    weights = numpy.asarray(weights, dtype=float)
+    strike = _circular_average([plane.strike for plane in planes], weights)
+    dip = numpy.average([plane.dip for plane in planes], weights=weights)
+    rake = _circular_average([plane.rake for plane in planes], weights)
+    strike %= 360
+    return NodalPlane(strike, dip, rake)
+
+
 def calc_average(pointsources):
     """
     :returns:
@@ -279,7 +301,24 @@ class PointSource(ParametricSeismicSource):
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
-    def get_planar(self, shift_hypo=False, iruptures=False):
+    def _build_planars(self, magd, hdd, shift_hypo, npd=None):
+        planin = self.get_planin(magd, npd)
+        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
+            rar = numpy.array([[self.get_aspect_ratio(planin.mag[m, n])
+                                for n in range(planin.shape[1])]
+                               for m in range(planin.shape[0])])
+        else:
+            rar = self.rupture_aspect_ratio
+        dip_fracs = (None if self.hypo_dip_fracs is None else
+                     numpy.array([0.5 if f is None else f
+                                  for f in self.hypo_dip_fracs]))
+        return build_planar(planin, hdd, self.location.x, self.location.y,
+                            self.upper_seismogenic_depth,
+                            self.lower_seismogenic_depth, rar, shift_hypo,
+                            dip_fracs)
+
+    def get_planar(self, shift_hypo=False, iruptures=False,
+                   collapse_max_mag=None, collapse_precision=3):
         """
         :returns: a dictionary mag -> list of arrays of shape (U, 3)
         """
@@ -289,7 +328,9 @@ class PointSource(ParametricSeismicSource):
             total_rates = dict(self.get_annual_occurrence_rates())
             for src in self.pointsources:
                 src_rates = dict(src.get_annual_occurrence_rates())
-                for mag, [pla] in src.get_planar(shift_hypo).items():
+                for mag, [pla] in src.get_planar(
+                        shift_hypo, collapse_max_mag=collapse_max_mag,
+                        collapse_precision=collapse_precision).items():
                     # The context builder applies the aggregate magnitude
                     # rate. Normalize each source block by its own rate.
                     pla.wlr[:, 2] *= src_rates[mag] / total_rates[mag]
@@ -297,26 +338,28 @@ class PointSource(ParametricSeismicSource):
             return out
 
         hdd = numpy.array(self.hypocenter_distribution.data)
-        clon, clat = self.location.x, self.location.y
-        usd = self.upper_seismogenic_depth
-        lsd = self.lower_seismogenic_depth
-        planin = self.get_planin()
-        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
-            # Get the mag-dependent aratio for each rup
-            rar = numpy.array([[self.get_aspect_ratio(planin.mag[m, n])
-                                for n in range(planin.shape[1])]
-                                for m in range(planin.shape[0])])
-        else:
-            # Regular aratio
-            rar = self.rupture_aspect_ratio
-        dip_fracs = (None if self.hypo_dip_fracs is None else
-                     numpy.array([0.5 if f is None else f
-                                  for f in self.hypo_dip_fracs]))
-        planar = build_planar(
-            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo, dip_fracs)
-        dic = {mag: [pla.reshape(-1, 3)]   # MND3
-               for (_rate, mag), pla in zip(magd, planar)}
-        return dic
+        if collapse_max_mag is not None and not shift_hypo and not iruptures:
+            plane = _average_nodal_plane(
+                self.nodal_plane_distribution.data)
+            magd1 = [(rate, mag) for rate, mag in magd
+                     if round(mag, collapse_precision) <= collapse_max_mag]
+            magd2 = [(rate, mag) for rate, mag in magd
+                     if round(mag, collapse_precision) > collapse_max_mag]
+            out = {}
+            if magd1:
+                planar = self._build_planars(
+                    magd1, hdd, shift_hypo, [(1., plane)])
+                out.update({mag: [pla.reshape(-1, 3)]
+                            for (_rate, mag), pla in zip(magd1, planar)})
+            if magd2:
+                planar = self._build_planars(magd2, hdd, shift_hypo)
+                out.update({mag: [pla.reshape(-1, 3)]
+                            for (_rate, mag), pla in zip(magd2, planar)})
+            return out
+
+        planar = self._build_planars(magd, hdd, shift_hypo)
+        return {mag: [pla.reshape(-1, 3)]
+                for (_rate, mag), pla in zip(magd, planar)}
 
     def _gen_ruptures(self, shift_hypo=False, iruptures=False):
         magrate = dict(self.get_annual_occurrence_rates())
