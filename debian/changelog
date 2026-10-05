@@ -1,3 +1,14 @@
+  [Michele Simionato]
+  * Added a dataset `unc_signatures` and a corresponding view
+  * The uncertainties are no longer applied at build time in the
+    CompositeSourceModel, but in the workers, one set of realizations with
+    the same uncertainties at a time, both for the classical and the
+    event_based calculations. In the event_based case the seeds are
+    generated differently, so the events and the results can change for the
+    same random_seed, but they are statistically consistent; a few expected
+    files have been regenerated.
+  * Using a better source weighting algorithm reducing the slow tasks
+
   [Christopher Brooks]
   * Split the Campbell and Bozorgnia 2019 GSIM for CAV and IA into its
     own dedicated GSIM module and fix a units error reported by Ozan
@@ -6,7 +17,7 @@
 
   [Catarina Costa]
   * Optimized and parallelized network calculations in connectivity.py.
-	
+
   [Michele Simionato]
   * Fixed a bug in the ps_grid_spacing approximation: the grid used to collapse
     the point sources was anchored in the bounding box of the sources in the
@@ -15,49 +26,38 @@
     all the sites. Now the grid is global and anchored in the (0, 0) point
   * Improved the precision of the ps_grid_spacing approximation at the cost of a
     minor slow down (~20%)
-  * Fixed a subtle bug affecting the logic tree reduction in the Taiwan model for AELO
   * Improved the precision of the pointsource_distance approximations by using circular
     averages for the angles and weighted averages for the rates
   * Fixed a crash in the ASCE7 postprocessors (i.e. compute_rtgm) occurring when
     a source belongs to a different number of logic tree realizations in the
     original and in the reduced logic tree: the trt_smrs of the source were
     assigned to a sampling array of incompatible length
-  * The ASCE7 postprocessors do not reduce the logic tree anymore: they use
-    the trt_smrs stored in the sources and the GSIM weights computed by the
-    full logic tree. This removes a few corner cases and fixes the weighted
-    sigmas in the deterministic MCE, which were wrong (too large by a factor
-    of 1.5-3) when the source model logic tree spanned multiple tectonic
-    region types, as in the AELO models
   * The export of the calculation results (i.e. GET /v1/calc/result/:id) is
     now performed by FastAPI and proxied by Django, like many other
     endpoints; the export logic lives in openquake/server/services.py
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
-    source, i.e. when there is no deterministic scenario for that IMT
+    source, i.e. when there is no deterministic scenario for that IMT.
   * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are
     now combined in the variance domain, i.e. in quadrature, and not
     linearly, since they are dispersions. Combined with the fix above, the
     MCE spectra of the AELO models increase (by 34% for the PGA in the
     PAC model, by 0.8% in the KOR model), since the previous values were
     based on sigmas which were too large and thus underestimated the
-    deterministic MCE, i.e. they were not conservative
+    deterministic MCE
   * The reduction of a source model logic tree to a single source (i.e. the
     `source_id` parameter and the `reduce_smlt` command) is now performed on
     the already parsed logic tree instead of re-reading the XML files: this
-    removes a few corner cases, in particular the source IDs were matched by
-    prefix, so that reducing to the source 13 in a model with the sources
-    1, 13, 14 was also including the sources 13 and 14 in other tectonic
-    region types. The uncertainties which cannot be applied to the source
-    at all are now replaced by a single empty branch
+    removes a few corner cases
 
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories
     used to build the global exposure HDF5, propagating that information into
     impact calculation datastores. Authorized users can use a new API endpoint
-    to extract that summary.
+    to extract that summary
   * Added pagination to WebUI calculation list, showing 10 items by default,
-    configurable via the CALC_LIST_PAGE_SIZE setting.
+    configurable via the CALC_LIST_PAGE_SIZE setting
   * Added client-side sorting by clicking on the headers of tables presented
-    via the extract_html_table endpoint (e.g. impact tables).
+    via the extract_html_table endpoint (e.g. impact tables)
 
   [Christopher Brooks]
   * Fixed a bug which occurred when using `with_betw_ratio` in the job file

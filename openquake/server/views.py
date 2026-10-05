@@ -221,11 +221,14 @@ class AsyncFileResponse(FileResponse):
             yield chunk
 
 
-def stream_response(fname, content_type, exportname=''):
+def stream_response(fname, content_type, exportname='', cleanup_dir=False):
     """
-    Stream a file stored in a temporary directory via Django
+    Stream a file stored in a temporary directory via Django.
+
+    Remove only `fname` by default, since single-file exports can live in a
+    shared temporary directory. Set `cleanup_dir` for files in a request-owned
+    directory, such as a ZIP archive with intermediate export files.
     """
-    ext = os.path.splitext(fname)[-1]
     exportname = exportname or os.path.basename(fname)
     tmpdir = os.path.dirname(fname)
     fileobj = open(fname, 'rb')  # 'b' is needed on Windows
@@ -233,11 +236,12 @@ def stream_response(fname, content_type, exportname=''):
 
     def close_stream():
         fileobj.close()
-        if ext == '.npz':
-            if os.path.exists(fname):
-                os.remove(fname)
-        else:
+        if cleanup_dir:
+            # The caller owns this private directory and all its contents.
             shutil.rmtree(tmpdir, ignore_errors=True)
+        elif os.path.exists(fname):
+            # Do not remove a shared temp directory for a single-file export.
+            os.remove(fname)
 
     stream.close = close_stream
     response = AsyncFileResponse(stream, content_type=content_type)
@@ -2039,7 +2043,8 @@ def calc_zip(request, job_id):
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     archname = f'job_{job_id}.zip'
     zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-    return stream_response(os.path.join(tmpdir, archname), ZIP)
+    return stream_response(os.path.join(tmpdir, archname), ZIP,
+                           cleanup_dir=True)
 
 
 def web_engine(request, **kwargs):

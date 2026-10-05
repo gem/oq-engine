@@ -44,7 +44,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95)
+    case_95, case_96)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -526,11 +526,13 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_epistemic_error.xml'))
-        self.assertEqual(
-            str(ctx.exception),
+        # NB: the error is raised in the classical workers, i.e. inside a
+        # parallel task, so the exception message is prefixed by the
+        # traceback
+        self.assertIn(
             "Cannot apply set_aspect_ratio to source '1': epistemic "
             "uncertainties on aspect ratio are not compatible with "
-            "aspectRatioFunction")
+            "aspectRatioFunction", str(ctx.exception))
 
         # Check that aspectRatioFunction is rejected for kiteFaultSource
         with self.assertRaises(InvalidFile) as ctx:
@@ -1234,6 +1236,17 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurves2 = self.calc.datastore['hcurves-stats'][:]
         aac(hcurves1, hcurves2, rtol=1E-6)
 
+    def test_case_96(self):
+        # a source with an uncertainty and magnitudes partially outside
+        # the integration distance: the magnitudes with zero integration
+        # distance must be ignored, not raise a KeyError (see _quintets).
+        # The source is weighted in the preclassical before the
+        # uncertainties are applied, i.e. before the magnitude filtering,
+        # which is performed in the classical workers (see filter_mag)
+        self.run_calc(case_96.__file__, 'job.ini')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+
 
 class FakeDatastoreCalculator:
     """
@@ -1243,9 +1256,10 @@ class FakeDatastoreCalculator:
     SLOW_TASK_ERROR = True
 
     def __init__(self, h5):
-        self.datastore = mock.Mock(calc_id=1)
+        self.datastore = mock.MagicMock(calc_id=1)
         self.datastore.read_df.side_effect = (
             lambda key, index=None: h5.read_df(key, index))
+        self.datastore.__getitem__.side_effect = lambda key: h5[key]
 
 
 class SlowTasksTestCase(unittest.TestCase):
@@ -1286,8 +1300,8 @@ class SlowTasksTestCase(unittest.TestCase):
           ('baseclassical', 10., 4., 4., 16.)], False),
         ([('classical', 10., 5., 5., 15.),
           ('baseclassical', 10., 5., 5., 15.)], True),
-        # a disaggregation calculation has no classical Starmap
-        ([('classical_disagg', 12., 9., 3., 21.)], False),
+        # a calculation with no classical Starmap has no slow tasks
+        ([('postclassical', 12., 9., 3., 21.)], False),
     ]
 
     def check(self, rows):
@@ -1295,6 +1309,9 @@ class SlowTasksTestCase(unittest.TestCase):
         fname = gettemp(suffix='.hdf5')
         performance.init_performance(fname)
         with hdf5.File(fname, 'a') as h5:
+            # enough tasks to fill the workers, so that the check for
+            # slow tasks is performed
+            h5['grp_keys'] = numpy.array([b'%d' % i for i in range(100)])
             if rows:
                 hdf5.extend(h5['starmap_info'],
                             numpy.array(rows, performance.starmap_info_dt))
