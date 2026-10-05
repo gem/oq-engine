@@ -3,6 +3,8 @@
 Uncertainty signatures
 ----------------------
 
+NB: *new in version 3.27*
+
 In the OpenQuake engine the epistemic uncertainties are applied to the
 sources one set of realizations at a time; realizations having the
 same uncertainties for a given source are identified by a so-called
