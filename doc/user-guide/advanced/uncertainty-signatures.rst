@@ -5,13 +5,12 @@ Uncertainty signatures
 
 The epistemic uncertainties are applied one set of realizations at a time;
 the sets of realizations having the same uncertainties for a given source
-are called *uncertainty signatures* and they are the units of rate
-attribution of the rates (see :ref:`the section on the management of the
-uncertainties in the classical calculator <classical-internals>`). Since
-the signatures are fully determined by the logic tree and by the source
-model, they are computed while building the CompositeSourceModel, i.e.
-before the preclassical, and stored in the datastore in the
-``unc_signatures`` dataset.
+are called *uncertainty signatures* (see :ref:`the section on the
+management of the uncertainties in the classical calculator
+<classical-internals>`). Since the signatures are fully determined by the
+logic tree and by the source model, they are computed while building the
+CompositeSourceModel, i.e. before the preclassical, and stored in the
+datastore in the ``unc_signatures`` dataset.
 
 NB: the concept of uncertainty signatures is relevant only if your logic
 tree contains ``applyToSources`` or ``applyToBranches``, i.e. only if some
@@ -19,10 +18,27 @@ uncertainties are applied to a subset of the sources. If all the
 uncertainties are applied to all the sources, each source has a single
 signature covering all its realizations and there is nothing to sign.
 
+The number of indices of rate attribution (gid) is the *core size* of the
+logic tree, i.e. the number of columns of the global RateMap of shape
+(N, L, Gt); since each index of rate attribution has one gid per GMM of
+its tectonic region type, the core size is
+
+.. code-block:: text
+
+    Gt = Σ_i G(trt_i)
+
+where the sum is over the indices of rate attribution and G(trt) is the
+number of GMMs for the tectonic region type. The core size is much
+smaller than the number R of realizations of the logic tree, since many
+realizations have the same uncertainties: it is computed at build time
+and logged together with the size in bytes of the global RateMap, so you
+can check it without running a full calculation.
+
 You can determine the signatures without running a full calculation; just
-run the command ``oq check_input job.ini`` and the signatures of the
-calculation will be printed at the end; they can be also inspected in any
-calculation with the command ``oq show unc_signatures``.
+run the command ``oq check_input job.ini`` and the core size and the
+signatures of the calculation will be printed at the end; they can be also
+inspected in any calculation with the commands ``oq show unc_signatures``
+and ``oq show trt_smrs_gid``.
 
 An example with applyToBranches
 -------------------------------
@@ -35,7 +51,12 @@ branchset with three branches::
 
     $ oq check_input openquake/qa_tests_data/logictree/case_12/job.ini
     ...
-    Uncertainty signatures of calc_171539
+    Building 12 realizations
+    ...
+    Core size Gt=10 out of R=12 realizations
+    Global RateMap of 400 B for 1 sites and 10 levels
+    ...
+    Uncertainty signatures of calc_172128
     | source_id | realizations | signatures | counts | branchset | values           |
     |-----------+--------------+------------+--------+-----------+------------------|
     | BG_10     | 3            | 1          | 3      | -         | no uncertainties |
@@ -50,7 +71,11 @@ The source ``BG_10`` is in the ``fault_background`` source model, to which
 the branchset ``bval`` does not apply, so it has a single signature
 covering its 3 realizations; the source ``SC_10:124`` is in the
 ``smooth_collapsed`` model, to which both ``bval`` and ``mmax`` apply, so
-it has 3 x 3 = 9 signatures with one realization each.
+it has 3 x 3 = 9 signatures with one realization each. Since the GMM
+logic tree of the case has a single GMM, there are 1 + 9 = 10 indices of
+rate attribution and Gt = 10: notice that Gt is smaller than R = 12 since
+the 3 realizations of the ``fault_background`` model have the same (empty)
+signature, i.e. they produce the same rates.
 
 NB: even though ``mmax`` has no filters, it is not applied to ``BG_10``
 either, since a branchset following a branchset with filters applies only
@@ -69,9 +94,12 @@ with three branches::
                  x abGRAbsolute second(3) x maxMagGRAbsolute second(3)
                  = 81 source model paths
 
-with the following signatures::
+and the check gives::
 
-    Uncertainty signatures of calc_171537
+    Core size Gt=36 out of R=324 realizations
+    Global RateMap of 2.67 KB for 1 sites and 19 levels
+    ...
+    Uncertainty signatures of calc_172129
     | source_id | realizations | signatures | counts | branchset | values                             |
     |-----------+--------------+------------+--------+-----------+------------------------------------|
     | first     | 81           | 9          | 9      | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
@@ -82,20 +110,19 @@ with the following signatures::
 Only ``bs2`` and ``bs4`` apply to the area source ``first`` and only
 ``bs3`` and ``bs5`` apply to the fault source ``second``, therefore each
 source has 9 signatures covering the 9 realizations obtained by varying
-the uncertainties of the other source, i.e. 18 units of rate attribution
-in total (9 per source, one for each of the two GMMs of its tectonic
-region type).
+the uncertainties of the other source, i.e. 18 indices of rate
+attribution in total, 9 per source. Since there are two GMMs per tectonic
+region type, Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
+tree are reduced to 36 columns of the global RateMap.
 
 The ``signatures`` column contains the number of signatures of the source
 and the ``counts`` column the number of realizations per signature; they
 are reported as a set, since the signatures do not necessarily contain
 the same number of realizations. This is particularly relevant for
 correlated uncertainties, where the sources of a group can have
-different signatures and a realization can belong to more than one unit
+different signatures and a realization can belong to more than one index
 of rate attribution: see :ref:`correlated-uncertainties`.
 
-Since the number of signatures determines the number of columns of the
-global RateMap, i.e. the *core size* of the logic tree (324
-realizations but 36 rate components in the demo), the signatures are also
-a way to understand why a calculation is large; see
+Since the core size Gt determines the size of the global RateMap, the
+signatures are also a way to understand why a calculation is large; see
 :ref:`large-calculations`.
