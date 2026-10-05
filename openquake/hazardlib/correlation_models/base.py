@@ -29,6 +29,8 @@ from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 
 EPS = 1E-12
+PERIOD_DEP_IMTS = ['SA', 'Sa_avg2', 'Sa_avg3', 'FIV3']
+
 
 class ResidualComponent(str, Enum):
     """Residual components for which a model can be calibrated."""
@@ -147,14 +149,13 @@ class CorrelationModel:
                     f'{", ".join(unsupported)}')
         for imt in imts:
             damping = self.DEFINED_FOR_DAMPING
-            if (imt.name == 'SA' and damping is not None and
+            if (imt.name in PERIOD_DEP_IMTS and damping is not None and
                     imt.damping != damping):
                 raise ValueError(
                     f'{model_name} supports only '
                     f'{damping:g}%-damped SA')
             period_range = self.DEFINED_FOR_PERIOD_RANGE
-            if imt.name in ['SA', 'Sa_avg2', 'Sa_avg3', 'FIV3'
-                            ] and period_range is not None:
+            if imt.name in PERIOD_DEP_IMTS and period_range is not None:
                 minimum, maximum = period_range
                 if not minimum <= imt.period <= maximum:
                     raise ValueError(
