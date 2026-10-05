@@ -1548,10 +1548,37 @@ def view_unc_signatures(token, dstore):
     """
     Show the uncertainty signatures of the sources, i.e. the sets of
     realizations with the same uncertainties, which are the indices of
-    rate attribution of the rates (see source_reader.build_groups)
+    rate attribution of the rates (see source_reader.build_groups).
+
+    A signature is a combination of values of branchsets, so instead of a
+    table with a column per branchset (which becomes very wide for
+    models with many branchsets) there is a row for each pair (source,
+    branchset) with the distinct values taken by the branchset. NB:
+    `signatures` is the number of distinct signatures of the source, i.e.
+    its number of indices of rate attribution, and `counts` are the
+    numbers of realizations per signature (as a set, since the signatures
+    do not necessarily contain the same number of realizations).
     """
-    header = ['source_id', 'realizations', 'signature', 'count']
-    return text_table(dstore.read_df('unc_signatures'), header, ext='org')
+    df = dstore.read_df('unc_signatures')
+    rows = []
+    for source_id, grp in df.groupby('source_id'):
+        sigs = [json.loads(sig) for sig in grp['signature']]
+        head = dict(source_id=source_id,
+                    realizations=grp['realizations'].iloc[0],
+                    signatures=len(sigs),
+                    counts=', '.join(map(str, dict.fromkeys(grp['count']))))
+        # NB: the branchsets are in the order they appear in the signature
+        vals = {}  # branchset -> list of values
+        for sig in sigs:
+            for bset, value in sig.items():
+                vals.setdefault(bset, []).append(value)
+        for bset, value_list in vals.items():
+            unique = dict.fromkeys(value_list)  # remove duplicates
+            rows.append(dict(head, branchset=bset,
+                             values=', '.join(unique)))
+    header = ['source_id', 'realizations', 'signatures', 'counts',
+              'branchset', 'values']
+    return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
 @view.add('rupture')

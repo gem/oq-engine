@@ -19,6 +19,7 @@
 import time
 import zlib
 import copy
+import json
 import os.path
 import pickle
 import operator
@@ -442,7 +443,7 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     """
     # NB: the uncertainty signatures are stored in the datastore, so that
     # `oq check_input` can print them, see store_unc_signatures
-    sigrows = []  # (source_id, realizations, signature, count) rows
+    sigrows = []  # dicts with keys source_id, realizations, signature, count
     dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
@@ -512,7 +513,7 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     for grp in out:
         splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
-    if dstore is not None and any(row[2] != 'none' for row in sigrows):
+    if dstore is not None and any(row['signature'] for row in sigrows):
         # NB: the signatures are stored only if there are uncertainties,
         # i.e. only if the rates must be split in indices of rate
         # attribution; they are printed by `oq check_input`
@@ -535,30 +536,36 @@ def signature_rows(src, arrays, sigdict):
     """
     Describe the uncertainty signatures of a source, i.e. the sets of
     realizations with the same uncertainties, which are the indices of
-    rate attribution for the rates of the source (see unc_subsets).
+    rate attribution for the rates of the source (see unc_subsets). Each
+    signature is a dictionary branchset_id -> value.
 
     :param src: a source
     :param arrays: a list of (trt_smr, samples) pairs, one per realization
     :param sigdict: a dictionary signature -> list of trt_smrs
-    :returns: a list of (source_id, nrealizations, signature, count) rows
+    :returns: a list of dictionaries with keys source_id, realizations,
+        signature and count
     """
-    return [(src.source_id, len(arrays),
-             ', '.join('%s=%s' % pair for pair in sig) or 'none',
-             len(trt_smrs)) for sig, trt_smrs in sigdict.items()]
+    return [dict(source_id=src.source_id, realizations=len(arrays),
+                 signature=dict(sig), count=len(trt_smrs))
+            for sig, trt_smrs in sigdict.items()]
 
 
 def store_unc_signatures(dstore, sigrows):
     """
     Store the uncertainty signatures of the sources in the datastore, so
     that they can be printed by `oq check_input` (see the check_input
-    command) and read back with `oq show unc_signatures`.
+    command) and read back with `oq show unc_signatures`. NB: the
+    signatures are stored as JSON objects, so that the unc_signatures view
+    can display a column for each branchset.
 
     :param dstore: a DataStore instance
     :param sigrows: the rows returned by signature_rows
     """
     dt = [('source_id', hdf5.vstr), ('realizations', int),
           ('signature', hdf5.vstr), ('count', int)]
-    dstore.create_df('unc_signatures', numpy.array(sigrows, dt))
+    data = [(row['source_id'], row['realizations'], json.dumps(
+        row['signature']), row['count']) for row in sigrows]
+    dstore.create_df('unc_signatures', numpy.array(data, dt))
 
 
 def get_trt_smrs_gid(groups):
