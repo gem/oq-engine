@@ -29,7 +29,8 @@ from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
-from openquake.hazardlib.source_reader import get_trt_smrs_gid
+from openquake.hazardlib.source_reader import (
+    get_trt_smrs_gid, read_trt_smrs_gid)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -357,7 +358,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         # already at build time (see source_reader.log_core_size)
         if 'trt_smrs_gid' not in self.datastore:
             # this happens if the groups were read from the parent
-            gid = get_trt_smrs_gid(csm.src_groups)
+            # calculation, so the units are taken from the parent
+            parent = self.datastore.parent
+            gid = (read_trt_smrs_gid(parent) if 'trt_smrs_gid' in parent
+                   else get_trt_smrs_gid(csm.src_groups))
             self.datastore.hdf5.save_vlen('trt_smrs_gid', gid)
 
         if sites and not self.few_sites:

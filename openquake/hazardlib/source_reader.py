@@ -551,17 +551,14 @@ def get_core_size(gid, groups, full_lt):
     :param groups: a list of SourceGroups built without the uncertainties
     :param full_lt: a FullLogicTree instance
     :returns: (Gt, Gfull), the core size of the logic tree, i.e. the
-        number Gt = Σ_i G(trt_i) of distinct rate components, and the core
-        size Gfull it would have without epistemic uncertainties
+        number Gt = Σ_i G(trt_i) of distinct rate components (i.e. of gids,
+        see FullLogicTree.get_gids) and the core size Gfull it would have
+        without epistemic uncertainties
     """
-    ngmm = [len(gsims) for gsims in full_lt.gsim_lt.values.values()]
-    uniq, _ = get_unique_inverse(gid)
-    Gt = sum(ngmm[t[0] // TWO24] for t in uniq)
     # NB: the groups with the same trt_smrs have the same cmaker, see
-    # contexts.get_cmakers, so they contribute only once
+    # contexts.get_cmakers, so they are counted only once
     uniq, _ = get_unique_inverse([sg.trt_smrs for sg in groups])
-    Gfull = sum(ngmm[t[0] // TWO24] for t in uniq)
-    return Gt, Gfull
+    return full_lt.gfull(gid), full_lt.gfull(uniq)
 
 
 def log_core_size(gid, groups, full_lt, oq, dstore=None):
@@ -577,7 +574,6 @@ def log_core_size(gid, groups, full_lt, oq, dstore=None):
     :param full_lt: a FullLogicTree instance
     :param oq: an OqParam instance
     :param dstore: a DataStore instance or None
-    :returns: the core size Gt
     """
     Gt, Gfull = get_core_size(gid, groups, full_lt)
     extra = (f' (Gfull={Gfull} without epistemic uncertainties)'
@@ -590,7 +586,6 @@ def log_core_size(gid, groups, full_lt, oq, dstore=None):
         L = imtls.size if hasattr(imtls, 'size') else len(imtls)
         logging.warning('Global RateMap of %s for %d sites and %d levels',
                         general.humansize(4 * N * L * Gt), N, L)
-    return Gt
 
 
 def read_trt_smrs_gid(dstore):
