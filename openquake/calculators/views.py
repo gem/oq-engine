@@ -1543,6 +1543,17 @@ def view_sm_rlzs(token, dstore):
     return text_table(map(row, sm_rlzs), header, ext='org')
 
 
+@view.add('unc_signatures')
+def view_unc_signatures(token, dstore):
+    """
+    Show the uncertainty signatures of the sources, i.e. the sets of
+    realizations with the same uncertainties, which are the indices of
+    rate attribution of the rates (see source_reader.build_groups)
+    """
+    header = ['source_id', 'realizations', 'signature', 'count']
+    return text_table(dstore.read_df('unc_signatures'), header, ext='org')
+
+
 @view.add('rupture')
 def view_rupture(token, dstore):
     """

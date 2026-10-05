@@ -440,6 +440,9 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     by source_id; the ids are disambiguated at the end, by adding a
     semicolon, see add_semicolons
     """
+    # NB: the uncertainty signatures are stored in the datastore, so that
+    # `oq check_input` can print them, see store_unc_signatures
+    sigrows = []  # (source_id, realizations, signature, count) rows
     dic = {}  # id(grp) -> [group, {id(src): (src, [(trt_smr, samples, sig)])}]
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
@@ -484,6 +487,7 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
             # splitting destroys the geometry (and the MFD of the fault
             # sources)
             new_src.bysrc_unc = any(sigdict)  # NB: () means no uncertainty
+            sigrows.extend(signature_rows(src, arrays, sigdict))
             new_srcs.append(new_src)
         if grp.atomic:
             # the atomic groups are never merged with the other groups,
@@ -508,6 +512,11 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     for grp in out:
         splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
+    if dstore is not None and any(row[2] != 'none' for row in sigrows):
+        # NB: the signatures are stored only if there are uncertainties,
+        # i.e. only if the rates must be split in indices of rate
+        # attribution; they are printed by `oq check_input`
+        store_unc_signatures(dstore, sigrows)
     if oq.calculation_mode in CLASSICAL_MODES:
         # the indices of rate attribution and the core size of the logic
         # tree are known already at build time, since they depend only on
@@ -520,6 +529,36 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
             dstore.hdf5.save_vlen('trt_smrs_gid', gid)
         log_core_size(gid, full_lt, oq, dstore)
     return out
+
+
+def signature_rows(src, arrays, sigdict):
+    """
+    Describe the uncertainty signatures of a source, i.e. the sets of
+    realizations with the same uncertainties, which are the indices of
+    rate attribution for the rates of the source (see unc_subsets).
+
+    :param src: a source
+    :param arrays: a list of (trt_smr, samples) pairs, one per realization
+    :param sigdict: a dictionary signature -> list of trt_smrs
+    :returns: a list of (source_id, nrealizations, signature, count) rows
+    """
+    return [(src.source_id, len(arrays),
+             ', '.join('%s=%s' % pair for pair in sig) or 'none',
+             len(trt_smrs)) for sig, trt_smrs in sigdict.items()]
+
+
+def store_unc_signatures(dstore, sigrows):
+    """
+    Store the uncertainty signatures of the sources in the datastore, so
+    that they can be printed by `oq check_input` (see the check_input
+    command) and read back with `oq show unc_signatures`.
+
+    :param dstore: a DataStore instance
+    :param sigrows: the rows returned by signature_rows
+    """
+    dt = [('source_id', hdf5.vstr), ('realizations', int),
+          ('signature', hdf5.vstr), ('count', int)]
+    dstore.create_df('unc_signatures', numpy.array(sigrows, dt))
 
 
 def get_trt_smrs_gid(groups):
