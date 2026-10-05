@@ -52,7 +52,7 @@ class AldeaEtAl2022(SpatialCorrelationModel):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 10.0)
+    DEFINED_FOR_PERIOD_RANGE = (0.1, 10.0)
     DEFINED_FOR_REGION = 'Chilean subduction zone'
 
     def _correlation_matrix(self, distances, imt, context=None):

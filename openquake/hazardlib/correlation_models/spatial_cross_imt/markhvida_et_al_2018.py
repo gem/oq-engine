@@ -267,7 +267,7 @@ class MarkhvidaEtAl2018(SpatialCrossIMTCorrelationModel):
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 5.0)
 
     def _validate_imt_combination(self, imts):
         if (any(imt.name == 'PGA' for imt in imts) and

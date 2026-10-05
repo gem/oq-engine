@@ -48,7 +48,7 @@ class BakerJayaram2008(CrossIMTCorrelationModel):
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
     DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
 
     def _rho(self, from_imt, to_imt, context=None):
         from_period = from_imt.period or 0.01

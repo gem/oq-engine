@@ -46,7 +46,7 @@ class _SchiappapietraEtAl2022(SpatialCorrelationModel):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 2.0)
+    DEFINED_FOR_PERIOD_RANGE = (0.1, 2.0)
     DEFINED_FOR_REGION = None
     range_coefficients = None
 

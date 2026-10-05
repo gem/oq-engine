@@ -59,7 +59,7 @@ class ModelSpec:
 
     @property
     def sa_period_range(self):
-        return self.cls.DEFINED_FOR_SA_PERIOD_RANGE
+        return self.cls.DEFINED_FOR_PERIOD_RANGE
 
     @property
     def region(self):
