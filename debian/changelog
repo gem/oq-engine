@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Added a dataset `unc_signatures` and a corresponding view
+  * Added a dataset `unc_signatures` and then corresponding view,
+    then documented how source uncertainties are managed in v3.27
   * The uncertainties are no longer applied at build time in the
     CompositeSourceModel, but in the workers, one set of realizations with
     the same uncertainties at a time, both for the classical and the

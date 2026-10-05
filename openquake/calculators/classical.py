@@ -33,7 +33,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    get_bset_values, modified_groups, read_trt_smrs_gid)
+    get_bset_values, modified_groups, read_core_trt_smrs)
 from openquake.hazardlib.lt import unc_subsets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
@@ -208,11 +208,11 @@ def read_gid_dic(dstore, full_lt=None):
         corresponding realizations
 
     The units of rate attribution are the sets of realizations with the
-    same uncertainties applied (see get_trt_smrs_gid) and the gid of a
+    same uncertainties applied (see get_core_trt_smrs) and the gid of a
     rate is the index of its trt_smrs in the corresponding list, see
     get_rmap_gb.
     """
-    trt_smrs = read_trt_smrs_gid(dstore)
+    trt_smrs = read_core_trt_smrs(dstore)
     full_lt = full_lt or read_full_lt(dstore)
     gweights = full_lt.g_weights(trt_smrs)[:, -1]  # shape Gt
     return {trt_smr: (gids, gweights[gids])

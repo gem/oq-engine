@@ -145,12 +145,12 @@ def get_rmap_gb(dstore, full_lt=None):
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
-    if 'trt_smrs_gid' in dstore:
+    if 'core_trt_smrs' in dstore:
         # for classical calculations the rates are attributed to the sets of
         # realizations with the same uncertainties, not to the trt_smrs of
         # the groups, since the groups are not split by the uncertainties,
         # which are applied in the workers
-        key = 'trt_smrs_gid'
+        key = 'core_trt_smrs'
     else:
         key = 'trt_smrs'
     if key not in dstore:  # starting from hazard_curves.csv
