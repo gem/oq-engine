@@ -21,8 +21,8 @@ the source models (i.e. ``sourceModel/extendModel``).
 .. note::
 
    Since many realizations have the same uncertainties, the true cost
-   of a calculation (in terms both computational and of disk space
-   required to store the results), the so called *core size*
+   of a calculation (both computational and of disk space) is proportional
+   to the *core size*
 
       :math:`G_t = \sum_i G(\mathrm{trt}_i)`
 
@@ -33,7 +33,7 @@ the source models (i.e. ``sourceModel/extendModel``).
    makes it possible to run large logic trees; see
    :ref:`large-calculations`.
 
-In the trivial case ``Gt`` can be computed trivially as
+In the trivial case of no source uncertainties, ``Gt`` can be computed as
 the sum of the number of GSIMs for each tectonic region type:
 
   :math:`G_t = \sum_i \mathrm{num\_gsims}_i(\mathrm{trt}_i)`
