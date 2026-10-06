@@ -479,7 +479,7 @@ def source_with_subsets(src, pairs, sigrows):
     # realizations with the same uncertainties, which are the indices of
     # rate attribution for its rates (see unc_subsets)
     for sig, trt_smrs in sigdict.items():
-        sigrows.append(dict(source_id=src.source_id, realizations=len(arrays),
+        sigrows.append(dict(source_id=src.source_id,
                             signature=dict(sig), count=len(trt_smrs)))
     return new_src
 
@@ -509,7 +509,7 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     """
     # NB: the uncertainty signatures are stored in the datastore, so that
     # `oq check_input` can print them, see store_unc_signatures
-    sigrows = []  # dicts with keys source_id, realizations, signature, count
+    sigrows = []  # dicts with keys source_id, signature, count
     dic = collect_sources(full_lt, rlz_groups)
 
     out, atomic, acc = [], [], general.AccumDict(accum=[])
@@ -552,8 +552,8 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
     can display a column for each branchset.
 
     :param groups: a list of SourceGroups built without the uncertainties
-    :param sigrows: a list of dicts with keys source_id, realizations,
-        signature (a dictionary branchset_id -> value) and count
+    :param sigrows: a list of dicts with keys source_id, signature (a
+        dictionary branchset_id -> value) and count
     :param full_lt: a FullLogicTree instance
     :param oq: an OqParam instance
     :param dstore: a DataStore instance or None
@@ -562,10 +562,10 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
         # NB: the signatures are stored only if there are uncertainties,
         # i.e. only if the rates must be split in indices of rate
         # attribution
-        dt = [('source_id', hdf5.vstr), ('realizations', int),
-              ('signature', hdf5.vstr), ('count', int)]
-        data = [(row['source_id'], row['realizations'], json.dumps(
-            row['signature']), row['count']) for row in sigrows]
+        dt = [('source_id', hdf5.vstr), ('signature', hdf5.vstr),
+              ('count', int)]
+        data = [(row['source_id'], json.dumps(row['signature']),
+                 row['count']) for row in sigrows]
         dstore.create_df('unc_signatures', numpy.array(data, dt))
     if oq.calculation_mode not in CLASSICAL_MODES:
         # the event based calculators attribute the rates to the

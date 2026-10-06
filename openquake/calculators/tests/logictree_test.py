@@ -216,6 +216,8 @@ class LogictreeTestCase(CalculatorTestCase):
     def test_case_12(self):
         # akin to NAF model
         self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+        columns = self.calc.datastore.read_df('unc_signatures').columns
+        self.assertEqual(tuple(columns), ('source_id', 'signature', 'count'))
         # the bval branchset has applyToBranches=smooth_collapsed, i.e. it
         # applies to the source SC_10:124 only and not to BG_10
         fname = general.gettemp(view('usignatures', self.calc.datastore))
