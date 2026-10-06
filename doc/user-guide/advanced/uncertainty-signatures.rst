@@ -13,10 +13,10 @@ computed while building the ``CompositeSourceModel``, and stored in
 the datastore in the ``unc_signatures`` dataset.
 
 Notice that the concept of uncertainty signatures is relevant only if your logic
-tree contains ``applyToSources`` or ``applyToBranches``, i.e. only if some
-uncertainties are applied to a subset of the sources. The uncertainties
+tree contains source uncertainties. The uncertainties
 on the GSIMs (``applyToTectonicRegionType``) are considered trivial
-and not stored in ``unc_signatures``.
+and not stored in ``unc_signatures``. Same for uncertainties on
+the source models (i.e. ``sourceModel/extendModel``).
 
 .. note::
 
