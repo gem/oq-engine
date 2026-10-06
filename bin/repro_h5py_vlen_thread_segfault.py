@@ -39,8 +39,8 @@ def make_file(path, rows):
 
 def read_selected_fields(dataset):
     """Read fixed-width members from the VLEN-containing compound dataset."""
-    model = dataset['model']
-    trt = dataset['trt']
+    model = dataset['model'][:]
+    trt = dataset['trt'][:]
     return model, trt
 
 
