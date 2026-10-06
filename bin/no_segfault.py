@@ -17,10 +17,12 @@ import faulthandler
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier, Lock
+from threading import Barrier
 
 import h5py
 import numpy
+
+from openquake.baselib import hdf5
 
 
 def make_file(path, rows):
@@ -33,14 +35,14 @@ def make_file(path, rows):
     records['trt'] = b'Active'
     records['gsim'] = 'ExampleGSIM'
     records['weight'] = 1.0
-    with h5py.File(path, 'w') as h5:
-        h5.create_dataset('records', data=records)
+    with hdf5.File(path, 'w') as h5:
+        h5.create_df('records', records)
 
 
 def read_selected_fields(dataset):
     """Read fixed-width members from the VLEN-containing compound dataset."""
-    model = dataset['model']
-    trt = dataset['trt']
+    model = dataset['model'][:]
+    trt = dataset['trt'][:]
     return model, trt
 
 
@@ -50,19 +52,14 @@ def read_file(path):
         return read_selected_fields(h5['records'])
 
 
-def stress(path, concurrency, iterations, guarded):
+def stress(path, concurrency, iterations):
     """Concurrently open one file and read selected compound members."""
     start = Barrier(concurrency)
-    lock = Lock() if guarded else None
 
     def reader(_):
         start.wait()
         for _ in range(iterations):
-            if lock:
-                with lock:
-                    model, trt = read_file(path)
-            else:
-                model, trt = read_file(path)
+            model, trt = read_file(path)
             if len(model) != len(trt):
                 raise RuntimeError('Inconsistent field lengths')
         return len(model)
@@ -81,8 +78,6 @@ def main():
     parser.add_argument('--rows', type=int, default=1176,
                         help='records in the synthetic dataset (default: '
                         '1176)')
-    parser.add_argument('--guard', action='store_true',
-                        help='serialize complete file operations with a lock')
     args = parser.parse_args()
     if args.concurrency < 2 or args.iterations < 1 or args.rows < 1:
         parser.error('concurrency must be >= 2; iterations and rows must '
@@ -91,13 +86,12 @@ def main():
     faulthandler.enable()
     print(f'h5py {h5py.__version__}, HDF5 {h5py.version.hdf5_version}',
           flush=True)
-    guard_status = 'with' if args.guard else 'without'
     print(f'Starting {args.concurrency} threads x {args.iterations} reads '
-          f'{guard_status} the guard', flush=True)
+          , flush=True)
     with tempfile.TemporaryDirectory(prefix='h5py-vlen-thread-') as tmpdir:
         path = os.path.join(tmpdir, 'records.h5')
         make_file(path, args.rows)
-        result = stress(path, args.concurrency, args.iterations, args.guard)
+        result = stress(path, args.concurrency, args.iterations)
     print(f'Completed without a segfault: {result}', flush=True)
 
 
