@@ -1,7 +1,7 @@
 .. _classical-internals:
 
-How the classical calculator really works
--------------------------------------------
+How the classical calculator works
+----------------------------------
 
 This page is for GEM personnel and for users willing to dig into the
 implementation of the engine. It is *not* needed to run the engine: if
@@ -9,7 +9,7 @@ you only want to compute hazard curves, read the sections on the
 :ref:`configuration file <configuration-file>` and on the
 :ref:`outputs <outputs>` instead. Here we explain how a classical
 calculation is actually organized, i.e. how the sources and the logic
-tree are turned into a CompositeSourceModel, how the epistemic
+tree are turned into a ``CompositeSourceModel``, how the epistemic
 uncertainties are managed and how the hazard rates are accumulated.
 
 Throughout the page we use the demo
@@ -57,10 +57,8 @@ The preclassical proper, i.e. ``PreClassicalCalculator.populate_csm``,
 then works on the sources, group by group:
 
 - it builds the ``cmakers``, i.e. one ``ContextMaker`` per source group,
-  and saves the ``trt_smrs`` of the groups in the ``trt_smrs`` dataset
-  and the *indices of rate attribution* in the ``core_trt_smrs`` dataset,
-  i.e. the sets of realizations the rates are attributed to (see the
-  section on the uncertainties)
+  and saves the ``trt_smrs`` and ``core_trt_smrs`` datasets, which
+  will be explained below
 - it pre-filters the sources against the sites, using a coarse site
   grid when there are many sites (with ``res = 4``, i.e. 40km), since
   the pre-filters are only used to estimate the cost of each source
@@ -110,15 +108,15 @@ The CompositeSourceModel
 
 .. note::
 
-   The structure of the CompositeSourceModel changed completely in
+   The structure of the ``CompositeSourceModel`` changed completely in
    version 3.27: before, the uncertainties were applied when reading the
-   source models, i.e. there was a copy of the sources for each set of
+   source models, i.e. there was a modified copy of each source for each set of
    uncertainties and consequently a group (and a ``ContextMaker``) per
    set of uncertainties; now the uncertainties are applied in the workers
    and the structure of the CSM depends on the source models only, as
    described below.
 
-The CompositeSourceModel (CSM) is the in-memory representation of the
+The ``CompositeSourceModel`` (CSM) is the in-memory representation of the
 source models for a given logic tree. It is a list of ``SourceGroup``
 instances, each containing a list of sources; the groups are the unit of
 task generation, the sources the unit of computation.
@@ -205,7 +203,7 @@ codes (``S`` simple fault, ``A`` area source).
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
    Every realization set is contained in exactly one row of
-   ``trt_smrs``, but the converse does not hold: the trt_smrs of a group
+   ``trt_smrs``, but the converse does not hold: the ``trt_smrs`` of a group
    can be spread over several realization sets, since the sources of a
    group can be affected by different uncertainties (see the page on
    correlated uncertainties), so a realization can belong to more than
@@ -226,24 +224,21 @@ one set of realizations at a time. The mechanism is the following.
    ``source_reader.unc_signature``). Sources not affected by a
    branchset have an empty signature.
 2. When building the CSM, the ``trt_smrs`` of a source are grouped by
-   signature and stored in the ``bysrc_subsets`` attribute; the sets of
-   realizations sharing the same uncertainties are called *subsets*.
-   They are read back with ``lt.unc_subsets(src)``.
-3. In the preclassical the subsets are stored in the ``core_trt_smrs``
-   dataset, one row per subset: these are the *indices of rate
-   attribution*, i.e. the indices the rates are computed and attributed
-   with, as opposed to the ``trt_smrs`` of a group, which contain all
-   the realizations. Concretely, a subset is turned into a set of
-   ``gids``, i.e. the (realization, GMM) pairs of the subset, and the
+   signature and stored in the ``bysrc_ts_sets`` attribute; the sets of
+   realizations sharing the same uncertainties are called *ts sets*.
+   They are read back with ``lt.ts_sets(src)``.
+3. In the preclassical the ts sets are stored in the ``core_trt_smrs``
+   dataset, one row per ts set. Concretely, a ts set is turned into a set of
+   ``gids``, i.e. the (realization, GMM) pairs of the ts set, and the
    rates computed for it are associated to those ``gids``; see the
    section on the ``RateMap`` below.
-4. In the workers, for each subset the engine restricts the sampling of
-   the sources to the realizations of the subset
-   (``lt.restrict_sampling``) and applies the uncertainties of the first
-   realization of the subset (``lt.apply_uncertainties``, called by
-   ``source_reader.modified_groups``). The resulting sources are then
+4. In the workers, for each ts set the engine restricts the sampling of
+   the sources to its realizations (``lt.restrict_sampling``) and applies
+   the uncertainties of its first realization
+   (``lt.apply_uncertainties``, called by ``source_reader.modified_groups``).
+   The resulting sources are then
    split (if needed), filtered by magnitude and used to compute the
-   rates, which are attributed to the ``gids`` of the subset.
+   rates, which are attributed to the ``gids`` of the ts set.
 
 For the demo each source has 81 ``trt_smrs`` organized in **9 subsets of
 9 realizations**. In the logic tree the branchset ``bs1`` is the
@@ -320,7 +315,7 @@ The classical calculator computes *rates* (annual exceedance rates) and
 not probabilities of exceedance, so that the contributions of the
 sources can be summed linearly; the conversion to PoEs happens at the
 end, in ``build_curves_maps``. A ``RateMap`` is a wrapper around an
-array of shape ``(N, L, G)`` of float32 rates, plus a dictionary
+array of shape ``(N, L, G)`` of ``float32`` rates, plus a dictionary
 mapping the ``gids`` to the columns of the array:
 
 .. code-block:: python
@@ -334,18 +329,7 @@ mapping the ``gids`` to the columns of the array:
 
 Each task returns the ``RateMap`` of one subset of realizations, i.e. with
 ``G = 2`` columns for the demo (the two GMMs of the tectonic region
-type), and the master accumulates it into the ``RateMap`` of the group:
-
-.. code-block:: python
-
-    # openquake/hazardlib/map_array.py
-        def __iadd__(self, other):
-            sidx = self.sidx[other.sids]
-            for i, g in enumerate(other.gid):
-                oarray = other.array[:, :, i]
-                self.array[sidx, :, self.gdic[g]] += oarray
-            return self
-
+type), and the master accumulates it into the ``RateMap`` of the group.
 The group ``RateMap``\ s are allocated once in the master, with the
 ``gids`` of all the subsets of the group, so that the accumulation is a
 ``(N, L, G)`` array addition.
@@ -355,26 +339,29 @@ upfront that there is enough memory, logging a line like::
 
     Requiring 12.3 GB for the RateMaps
 
-and refusing to start if the required memory is not available. The
-check is not a global one, since a ``RateMap`` is allocated in the
-master only in three cases: when there are few sites, i.e. no more than
-``max_sites_disagg`` (10 by default), when ``disagg_by_src`` is set and
-when the sources of a group are split in blocks. The estimate in
-``preclassical.get_req_gb`` is ``N * L * gsims * 4`` bytes and it is
-computed for the groups falling in the last two cases only, i.e. exactly
-the ones with many sites.
+It should be noticed that the global ``RateMap`` is not always kept
+in memory: it is materialized in the master node only when the rates
+must be accumulated there, i.e. when there are few sites, or when
+``disagg_by_src`` is set, or when the source groups are split in
+blocks. In this latter case with many sites the ``RateMap`` may
+actually require a large amount of RAM, but then the calculation
+can be performed by tiling the sites (i.e. splitting the sites
+in blocks).
+
+From the rates stored in the datastore one can reconstruct the
+global ``RateMap`` and from that one can rebuild the full hazard
+curves for all realizations (the engine does that in postclassical by
+splitting in blocks of sites so that it does not need to keep the full
+``RateMap`` in memory).
 
 With many sites, no ``disagg_by_src`` and a single block per group there
 is nothing to accumulate in the master, so the tasks return arrays of
 rates which are stored right away (``baseclassical`` with
 ``as_rmap = false``). In all cases the rates end up in the ``_rates``
-dataset as a table of ``(sid, lid, gid, rate)`` rows, using the *global*
-``gids``, and are then converted into hazard curves::
-
-    >> from openquake.commonlib import datastore
-    >> ds = datastore.read(calc_id)
-    >> df = ds.read_df('_rates')
-    >> len(df)  # 579 rows for 36 gids and 19 IMLs in the demo
+dataset as a table of ``(sid, lid, gid, rate)`` rows (``sid`` is
+a site index in the range 0..N-1, ``lid`` a level index in the range
+0..L-1, ``gid`` a rate index in the range 0..Gt-1 and ``rate`` is
+the value of the rate as a 32 bit floating point number).
 
 Two final remarks about the rates: the sites with zero rate are removed
 in the worker before the rates are returned (``remove_zeros``), which
@@ -395,14 +382,14 @@ The rates are stored in the ``_rates`` dataset as a table of
     >> df = ds.read_df('_rates')
     >> len(df)  # 579 rows for 36 gids and 19 IMLs in the demo
 
-A gid is just a global index, i.e. the number of a column of the rates:
+A ``gid`` is just a global index to identify the rates;
 ``FullLogicTree.get_gids`` allocates one consecutive gid per index of
 rate attribution and per GMM, so there are 36 ``gids`` for the 18 indices
-of the demo, and a gid carries no information by itself. The
-realizations behind a gid are given by
+of the demo, and a ``gid`` carries no information by itself. The
+realizations behind a ``gid`` are given by
 ``FullLogicTree.get_trt_rlzs``, which associates to each gid an array
 of ``rlz + 2**24 * trti``, i.e. the realizations having that GMM in
-that tectonic region type: in the demo each gid is shared by 18
+that tectonic region type: in the demo each ``gid`` is shared by 18
 realizations and each realization has 2 ``gids``, since the GMM logic
 tree of the demo has a branching level per tectonic region type.
 
@@ -444,44 +431,6 @@ The task ``postclassical`` loops over the sites of its chunk, calls
 by the weights of the GMM logic tree) with
 ``getters.build_stat_curve``; with ``fastmean = true`` the weighted mean
 is computed directly from the rates by ``MapGetter.get_fast_mean``,
-skipping the per-realization curves. The resulting MapArrays are stored
+skipping the per-realization curves. The resulting ``MapArrays`` are stored
 in the ``hcurves-rlzs`` and ``hcurves-stats`` datasets, and the maps in
 ``hmaps-rlzs`` and ``hmaps-stats``.
-
-.. note::
-
-   The logic tree of the demo has 324 realizations but only 36 gids: 36 is
-   the *core size* of the logic tree, i.e. the number of distinct rate
-   components, each one standing for a set of realizations with the same
-   uncertainties and the same GMM, as shown by the rows of
-   ``oq show core_trt_smrs`` (18 realization sets of 9 realizations, one per GMM,
-   since the demo has two GMMs per tectonic region type).
-   In general the core size is much smaller than the size of the logic
-   tree, since with a sampled logic tree many realizations share the same
-   set of uncertainties; in the extreme case of a single GMM and no
-   uncertainties the two are equal.
-
-   The rates of all the realizations can be reconstructed from the core
-   ``RateMap``, since each realization is the sum of the columns of its
-   gids; that is exactly what ``MapGetter.init`` and ``get_hcurve`` do::
-
-       >> from openquake.commonlib import datastore
-       >> from openquake.calculators import getters
-       >> ds = datastore.read(calc_id)
-       >> full_lt = ds['full_lt'].init()
-       >> oq = ds['oqparam']
-       >> full_lt.get_num_paths(), getters.get_rmap_gb(ds, full_lt)[1] \
-       ...     # (324, [36 arrays of realizations])
-       (324, [array([0, 1, 12, ...], dtype=uint32), ...])
-       >> getter = getters.map_getters(ds, full_lt, oq)[0]
-       >> rates = getter.init()  # (N, L, Gt) core RateMap of rates
-       >>> rates.shape
-       (1, 19, 36)
-       >> hcurves = getter.get_hcurve(getter.sids[0])  # (L, R)
-       >>> hcurves.shape
-       (19, 324)
-
-   i.e. the core ``RateMap`` of shape ``(N, L, Gt)`` contains all the
-   rates of the ``Gt`` components, and the ``R`` columns of the hazard
-   curves are obtained by summing the ``G(rlz)`` columns belonging to
-   each realization.

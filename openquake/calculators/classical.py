@@ -34,7 +34,7 @@ from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups, read_core_trt_smrs)
-from openquake.hazardlib.lt import unc_subsets
+from openquake.hazardlib.lt import get_ts_sets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -232,7 +232,7 @@ def group_gids(src_groups, gid_dic):
     for grp in src_groups:
         gids = set()
         for src in grp:
-            for trt_smrs in unc_subsets(src):
+            for trt_smrs in get_ts_sets(src):
                 gids.update(gid_dic[trt_smrs][0])
         out[grp.grp_id] = U32(sorted(gids))
     return out
@@ -316,7 +316,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
         srcblocks = groupby(
-            grp, lambda src: tuple(unc_subsets(src))).values()
+            grp, lambda src: tuple(get_ts_sets(src))).values()
     for srcs in srcblocks:
         for cmaker_, sg in cmakers_groups(
                 srcs, grp, cmaker, gid_dic, full_lt):

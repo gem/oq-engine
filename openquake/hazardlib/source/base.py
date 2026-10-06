@@ -227,7 +227,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     dt = 0  # set by the engine
     # set in build_groups for the sources modified by the uncertainties
     bysrc_unc = False
-    bysrc_subsets = []
+    bysrc_ts_sets = []
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
