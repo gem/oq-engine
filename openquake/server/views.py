@@ -77,6 +77,7 @@ from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
+from django.core.handlers.asgi import ASGIRequest
 from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
@@ -96,6 +97,7 @@ ZIP = 'application/x-zip'
 
 #: Size of the chunks streamed by the file proxying views.
 _CHUNK_SIZE = 64 * 1024
+_STREAM_END = object()
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -204,49 +206,20 @@ def _get_bool_param(obj, name, default=False):
     return str(val).lower() in ('1', 'true', 'yes', '')
 
 
-class ReadableFileWrapper(FileWrapper):
-    """FileWrapper that also exposes the file-like read method."""
-    def read(self, size):
-        return self.filelike.read(size)
-
-
-class AsyncFileResponse(FileResponse):
-    """Stream file chunks asynchronously under ASGI."""
-    async def __aiter__(self):
-        filelike = self.file_to_stream
-        while True:
-            chunk = await asyncio.to_thread(filelike.read, self.block_size)
-            if not chunk:
-                break
-            yield chunk
-
-
-def stream_response(fname, content_type, exportname='', cleanup_dir=False):
+def stream_response(fname, content_type, exportname=''):
     """
-    Stream a file stored in a temporary directory via Django.
-
-    Remove only `fname` by default, since single-file exports can live in a
-    shared temporary directory. Set `cleanup_dir` for files in a request-owned
-    directory, such as a ZIP archive with intermediate export files.
+    Stream a file stored in a temporary directory via Django
     """
+    ext = os.path.splitext(fname)[-1]
     exportname = exportname or os.path.basename(fname)
     tmpdir = os.path.dirname(fname)
-    fileobj = open(fname, 'rb')  # 'b' is needed on Windows
-    stream = ReadableFileWrapper(fileobj)
-
-    def close_stream():
-        fileobj.close()
-        if cleanup_dir:
-            # The caller owns this private directory and all its contents.
-            shutil.rmtree(tmpdir, ignore_errors=True)
-        elif os.path.exists(fname):
-            # Do not remove a shared temp directory for a single-file export.
-            os.remove(fname)
-
-    stream.close = close_stream
-    response = AsyncFileResponse(stream, content_type=content_type)
+    stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
+    response = FileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = 'attachment; filename=%s' % exportname
     response['Content-Length'] = str(os.path.getsize(fname))
+    stream.close = lambda: (
+        FileWrapper.close(stream),
+        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
     return response
 
 
@@ -567,21 +540,13 @@ def _stream_content(response, chunk_size):
         response.close()
 
 
-def _next_chunk(iterator):
-    """Get the next chunk, returning None at end-of-stream."""
-    try:
-        return next(iterator)
-    except StopIteration:
-        return None
-
-
 async def _astream_content(response, chunk_size):
     """Asynchronously yield internal response chunks, then close it."""
     chunks = iter(response.iter_content(chunk_size))
     try:
         while True:
-            chunk = await asyncio.to_thread(_next_chunk, chunks)
-            if chunk is None:
+            chunk = await asyncio.to_thread(next, chunks, _STREAM_END)
+            if chunk is _STREAM_END:
                 break
             yield chunk
     finally:
@@ -614,7 +579,8 @@ def _call_api_file(request, endpoint, params=None):
     if request.method == 'HEAD':  # the client wants the headers only
         response.close()
         return HttpResponse(status=200, headers=headers)
-    if hasattr(request, 'scope'):  # ASGI request
+    # Django buffers synchronous iterators when serving through ASGI.
+    if isinstance(request, ASGIRequest):
         content = _astream_content(response, _CHUNK_SIZE)
     else:  # WSGI request
         content = _stream_content(response, _CHUNK_SIZE)
@@ -2043,8 +2009,7 @@ def calc_zip(request, job_id):
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     archname = f'job_{job_id}.zip'
     zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-    return stream_response(os.path.join(tmpdir, archname), ZIP,
-                           cleanup_dir=True)
+    return stream_response(os.path.join(tmpdir, archname), ZIP)
 
 
 def web_engine(request, **kwargs):
