@@ -4,7 +4,7 @@ Advanced Features
 -----------------
 
 This section is for advanced users, i.e. people who already know how to use the engine and are already familiar
-with the basic features of the OpenQuake engine calculator. If you have just started on your journey of using
+with the basic features of the OpenQuake engine. If you have just started on your journey of using
 and working with the OpenQuake engine, this section is probably NOT for you. Beginners should study the previous
 sections first.
 

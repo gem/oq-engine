@@ -6,68 +6,48 @@ Uncertainty signatures
 NB: *new in version 3.27*
 
 In the OpenQuake engine the epistemic uncertainties are applied to the
-sources one set of realizations at a time; realizations having the
-same uncertainties for a given source are identified by a so-called
-*uncertainty signature*.
+sources by sets of realizations; realizations having the same
+uncertainties for a given source are identified by their *uncertainty
+signature*. The signatures are fully determined by the logic tree,
+computed while building the ``CompositeSourceModel``, and stored in
+the datastore in the ``unc_signatures`` dataset.
 
-In particular for classical calculations there is a global RateMap,
-i.e. an array of float32 numbers of shape (N, L, Gt), where N is the
-total number of hazard sites, L the total number of intensity measure
-levels and Gt is the total number of uncertainty signatures summed over
-all the tectonic region types::
+Notice that the concept of uncertainty signatures is relevant only if your logic
+tree contains source uncertainties. The uncertainties
+on the GSIMs (``applyToTectonicRegionType``) are considered trivial
+and not stored in ``unc_signatures``. Same for uncertainties on
+the source models (i.e. ``sourceModel/extendModel``).
 
-      Gt = Σ_i G(trt_i)
-
- ``Gt`` is also called the *core size* of the logic tree.
- 
 .. note::
 
-   Since many realizations have the same uncertainties, the core size
-   is typically **much smaller** than the number R of realizations of
-   the logic tree: in the demo described below there are 324
-   realizations but only 36 uncertainty signatures, i.e. 9 times less data
-   than one would store naively. This is what
+   Since many realizations have the same uncertainties, the true cost
+   of a calculation (in terms both computational and of disk space
+   required to store the results), the so called *core size*
+
+      :math:`G_t = \sum_i G(\mathrm{trt}_i)`
+
+   of the logic tree, is typically **much smaller** than the number
+   ``R`` of realizations: in the demo ``LogicTreeCase1ClassicalPSHA``
+   there are 324 realizations but only 36 uncertainty signatures,
+   i.e. 9 times less data than one would store naively. This is what
    makes it possible to run large logic trees; see
    :ref:`large-calculations`.
 
-   The global RateMap is usually not kept in memory: it
-   is materialized in the master node only when the rates must be accumulated
-   there, i.e. when there are few sites, or when ``disagg_by_src`` is
-   set, or when the sources of a group are split in blocks. It is still
-   a useful concept, since the rates stored in the datastore are enough
-   to reconstruct it and from the global RateMap one can rebuild the
-   full hazard curves for all realizations (the engine does that in
-   postclassical by splitting in blocks of sites so that it does
-   not need to keep the full RateMap in memory).
+In the trivial case ``Gt`` can be computed trivially as
+the sum of the number of GSIMs for each tectonic region type:
 
-Since the signatures are fully determined by the logic tree and by the
-source model, they are computed while building the CompositeSourceModel,
-i.e. before the preclassical, and stored in the datastore in the
-``unc_signatures`` dataset; the core size is logged at the same time,
-together with the size in bytes of the global RateMap.
+  :math:`G_t = \sum_i \mathrm{num\_gsims}_i(\mathrm{trt}_i)`
 
-The concept of uncertainty signatures is relevant only if your logic
-tree contains ``applyToSources`` or ``applyToBranches``, i.e. only if some
-uncertainties are applied to a subset of the sources. If all the
-uncertainties are applied to all the sources, each source has a single
-signature covering all its realizations and there is nothing to sign.
-
-In that case (the trivial case) ``Gt`` can be computed trivially as
-the sum of the number of GSIMs for each tectonic region type::
-
-  Gt = Σ_i num_gsims(trt_i)
+Notice that identical tectonic region types appearing in different source models
+are considered distinct. For instance in the ``LogicTreeCase1ClassicalPSHA``
+demo there are 2 GSIMs per tectonic region type, 2 tectonic
+region types from the first source model and 2 from the second source model
+(identical but considered distinct) and therefore Gt = 2*2 + 2*2 = 8.
 
 In the nontrivial case the engine can determine the signatures and the core size without
 running a full calculation; just run the command ``oq check_input job.ini`` and they will
 be printed at the end; they can be also inspected in any calculation with
 the command ``oq show usignatures``.
-
-NB: for branchsets with parameters the ``values`` column contains a
-tuple per distinct value, i.e. the fields of the value; since the field
-names are the same for all the values of a branchset they are not
-repeated, i.e. ``(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666)``; this is
-how the table can stay readable for models with many sources and
-branchsets.
 
 An example with applyToSources
 ------------------------------
@@ -81,7 +61,8 @@ with three branches::
                  x abGRAbsolute second(3) x maxMagGRAbsolute second(3)
                  = 81 source model paths
 
-and the check gives::
+The total number of realizations must be multipled by 4 since there are 2 tectonic region
+types with 2 GSIMs each. The check gives::
 
     Core size Gt=36 out of R=324 realizations
     Global RateMap of 2.67 KB for 1 sites and 19 levels
@@ -102,11 +83,14 @@ hence each signature covers 9 realizations, i.e. the ones differing
 only in the uncertainties of the other source. In total there are 18
 realization sets, 9 per source, so that with two GMMs per tectonic
 region type Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
-tree are reduced to 36 columns of the global RateMap.
+tree are reduced to 36 columns of the global ``RateMap``.
 
-Since the core size Gt determines the size of the global RateMap, the
-signatures are also a way to understand why a calculation is large; see
-:ref:`large-calculations`.
+NB: the global ``RateMap``, is an array of float32 numbers of shape (N, L,
+Gt), where N is the total number of hazard sites, L the total number
+of intensity measure levels and Gt is the core size of the logic tree.
+From the global ``RateMap`` it is possible to reconstruct the full set
+of hazard curves for every possible realization, as we will discuss
+later on.
 
 An example with applyToBranches
 -------------------------------
@@ -160,12 +144,11 @@ The signatures are printed by the check command::
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128
-    | source_id | num_rlzs                  | branchset | values                             |
-    |-----------+---------------------------+-----------+------------------------------------|
-    | first     | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs2       | (4.6, 1.1), (4.5, 1.0), (4.4, 0.9) |
-    |           |                           | bs4       | 7.0, 7.3, 7.6                      |
-    | second    | 9, 9, 9, 9, 9, 9, 9, 9, 9 | bs3       | (3.3, 1.0), (3.2, 0.9), (3.1, 0.8) |
-    |           |                           | bs5       | 7.5, 7.8, 8.0                      |
+    | source_id | num_rlzs                  | branchset | values           |
+    |-----------+---------------------------+-----------+------------------|
+    | BG_10     | 3                         | -         | no uncertainties |
+    | SC_10:124 | 1, 1, 1, 1, 1, 1, 1, 1, 1 | bval      | 0.0, 0.05, -0.05 |
+    |           |                           | mmax      | 0.0, 0.2, -0.2   |
 
 There is a row for each pair (source, branchset), since a signature is a
 combination of values of branchsets, and a row with ``-`` for the sources
@@ -179,15 +162,14 @@ covering its 3 realizations; the source ``SC_10:124`` is in the
 ``smooth_collapsed`` model, to which both ``bval`` and ``mmax`` apply, so
 it has 3 x 3 = 9 signatures with one realization each.
 
-The core size ``Gt=10`` of the global RateMap can be read directly from
+The core size ``Gt=10`` of the global ``RateMap`` can be read directly from
 the table: ``BG_10`` contributes a single index of rate attribution (its
 only signature covers the 3 realizations) and ``SC_10:124`` contributes
-9, for a total of 1 + 9 = 10; since the GMM logic tree of the case has a
-single GMM there is one column per index of rate attribution, i.e.::
+9, for a total of 1 + 9 = 10:
 
-    Gt = (1 + 9) x G(trt) = 10 x 1 = 10   with   R = 12 realizations
+    Gt = (1 + 9) x G(trt) = 10 x 1 = 10
 
-i.e. Gt is smaller than R because the 3 realizations of the
+i.e. Gt is smaller than R=12 because the 3 realizations of the
 ``fault_background`` model have the same (empty) signature, so they have
 the same rates and share a single column.
 
