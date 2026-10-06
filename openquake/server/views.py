@@ -77,6 +77,7 @@ from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
+from django.core.handlers.asgi import ASGIRequest
 from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
@@ -552,20 +553,6 @@ async def _astream_content(response, chunk_size):
         await asyncio.to_thread(response.close)
 
 
-class _AsyncResponseContent:
-    """Expose async chunks and sync cleanup to StreamingHttpResponse."""
-
-    def __init__(self, response, chunk_size):
-        self.response = response
-        self.chunk_size = chunk_size
-
-    def __aiter__(self):
-        return _astream_content(self.response, self.chunk_size)
-
-    def close(self):
-        self.response.close()
-
-
 def _call_api_file(request, endpoint, params=None):
     """
     Call an internal FastAPI endpoint returning a file and proxy its content,
@@ -593,8 +580,8 @@ def _call_api_file(request, endpoint, params=None):
         response.close()
         return HttpResponse(status=200, headers=headers)
     # Django buffers synchronous iterators when serving through ASGI.
-    if hasattr(request, 'scope'):
-        content = _AsyncResponseContent(response, _CHUNK_SIZE)
+    if isinstance(request, ASGIRequest):
+        content = _astream_content(response, _CHUNK_SIZE)
     else:  # WSGI request
         content = _stream_content(response, _CHUNK_SIZE)
     return StreamingHttpResponse(content, headers=headers, status=200)
