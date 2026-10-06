@@ -701,8 +701,8 @@ def get_ts_sets(src):
         modified by the uncertainties; the sources without uncertainties
         have a single set, given by the sampling.
     """
-    if src.bysrc_ts_sets:
-        return [tuple(t) for t in src.bysrc_ts_sets]
+    if src.ts_sets:
+        return [tuple(t) for t in src.ts_sets]
     return [tuple(_sampling_array(src)['trt_smr'])]
 
 

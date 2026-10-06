@@ -41,8 +41,6 @@ from openquake.hazardlib.valid import basename
 TWO24 = 2**24
 TWO32 = 2**32
 
-# the calculations building the rates with RateMap\s, i.e. the ones
-# attributing the rates to the core trt_smrs (core_trt_smrs)
 CLASSICAL_MODES = ('classical', 'classical_risk', 'classical_damage',
                    'classical_bcr', 'disaggregation', 'preclassical')
 U16 = numpy.uint16
@@ -447,7 +445,7 @@ def collect_sources(full_lt, rlz_groups):
     return dic
 
 
-def source_with_subsets(src, pairs, sigrows):
+def source_with_ts_sets(src, pairs, sigrows):
     """
     :param src: a source
     :param pairs: a list of (trt_smr, samples, signature) tuples, one per
@@ -455,7 +453,7 @@ def source_with_subsets(src, pairs, sigrows):
     :param sigrows: a list of rows describing the uncertainty signatures,
         extended with the signatures of the source
     :returns: a copy of the source with the attributes sampling,
-        bysrc_ts_sets and bysrc_unc set, i.e. the sets of realizations
+        ts_sets and bysrc_unc set, i.e. the sets of realizations
         with the same uncertainties
     """
     arrays, sigdict = [], {}
@@ -468,7 +466,7 @@ def source_with_subsets(src, pairs, sigrows):
     # NB: the subsets are stored only if the uncertainties are not the
     # same in all the realizations; a source with no uncertainties (or with
     # the same uncertainties everywhere) keeps its sampling as it is
-    new_src.bysrc_ts_sets = [
+    new_src.ts_sets = [
         numpy.array(sorted(t), U32) for t in sigdict.values()
         ] if len(sigdict) > 1 else []
     # flag the sources which will be modified in the workers: they must
@@ -486,35 +484,24 @@ def source_with_subsets(src, pairs, sigrows):
 
 def build_groups(full_lt, rlz_groups, oq, dstore=None):
     """
-    Build the source groups without applying the uncertainties, as needed
-    by the workers: there is one group per source group in the source
-    model files, and the sources keep the trt_smrs of all the realizations
-    they belong to, not just the ones with a given set of uncertainties, so
-    that the number of groups depends on the source models only.
-
-    :param dstore: a DataStore instance or None; if given, the indices of
-        rate attribution are saved in it (the event based calculations do
-        not use them)
-
-    The uncertainties to be applied in each realization are not known
-    until the workers, so the realizations with different uncertainties are
-    stored in the bysrc_ts_sets attribute of each source (see
-    get_ts_sets), and the rates are computed and attributed one set at a
-    time.
-
-    NB: the same source_id can be used by different sources, i.e. in
-    different source models, so the sources are keyed by id(src) and not
-    by source_id; the ids are disambiguated at the end, by adding a
-    semicolon, see add_semicolons
+    Build the source groups without applying the uncertainties, as
+    needed by the workers.  The uncertainties to be applied in each
+    realization are not known until the workers, so the realizations
+    with different uncertainties are stored in the ts_sets attribute
+    of each source (see get_ts_sets).
     """
     # NB: the uncertainty signatures are stored in the datastore, so that
     # `oq check_input` can print them, see store_unc_signatures
+    # NB: the same source_id can be used by different sources, i.e. in
+    # different source models, so the sources are keyed by id(src) and not
+    # by source_id; the ids are disambiguated at the end, by adding a
+    # semicolon, see add_semicolons
     sigrows = []  # dicts with keys source_id, realizations, signature, count
     dic = collect_sources(full_lt, rlz_groups)
 
     out, atomic, acc = [], [], general.AccumDict(accum=[])
     for grp, srcs in dic.values():
-        new_srcs = [source_with_subsets(src, pairs, sigrows)
+        new_srcs = [source_with_ts_sets(src, pairs, sigrows)
                     for src, pairs in srcs.values()]
         if grp.atomic:
             # the atomic groups are never merged with the other groups,
@@ -597,29 +584,25 @@ def get_core_trt_smrs(groups):
     """
     :param groups: a list of SourceGroups built without applying the
         uncertainties (i.e. the src_groups of a CompositeSourceModel)
-    :returns: a sorted list of trt_smrs, the units of rate attribution
-        (to be stored as an hdf5.vuint32 array)
+    :returns: a sorted list of trt_smrs (to be stored as hdf5.vuint32)
 
     The uncertainties are applied in the workers, so the realizations
     with different uncertainties are not separated at build time (see
     build_groups). The rates are nevertheless computed separately for each
     set of uncertainties and must be attributed to the right
     realizations, hence this extra list; a rate is attributed to the unit
-    containing its trt_smrs. NB: the subsets are deduplicated, i.e. groups
-    with the same trt_smrs (for instance the same trt with different TOMs)
-    share the same indices of rate attribution.
+    containing its trt_smrs.
     """
     all_trt_smrs = [trt_smrs for sg in groups for src in sg
                     for trt_smrs in get_ts_sets(src)]
-    unique, _ = get_unique_inverse(all_trt_smrs)
+    unique, _inverse = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
 def get_core_size(core_trt_smrs, full_lt):
     """
     :param core_trt_smrs: the sets of realizations with the same
-        uncertainties, i.e. the units of rate attribution, as returned
-        by get_core_trt_smrs (already deduplicated)
+        uncertainties, as returned by get_core_trt_smrs
     :param full_lt: a FullLogicTree instance
     :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
         number of distinct rate components, i.e. of gids (see
@@ -648,8 +631,7 @@ def build_csm(oq, full_lt, smdict, dstore):
     :param dstore: DataStore instance
     :returns: a CompositeSourceModel instance
     """
-    mon = performance.Monitor('_build_groups', measuremem=True)
-    with mon:
+    with performance.Monitor('_build_groups', measuremem=True) as mon:
         rlz_groups = []
         for rlz in full_lt.sm_rlzs:
             rlz_groups.extend((rlz, grp) for grp in

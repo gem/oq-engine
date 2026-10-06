@@ -224,7 +224,7 @@ one set of realizations at a time. The mechanism is the following.
    ``source_reader.unc_signature``). Sources not affected by a
    branchset have an empty signature.
 2. When building the CSM, the ``trt_smrs`` of a source are grouped by
-   signature and stored in the ``bysrc_ts_sets`` attribute; the sets of
+   signature and stored in the ``ts_sets`` attribute; the sets of
    realizations sharing the same uncertainties are called *ts sets*.
    They are read back with ``lt.ts_sets(src)``.
 3. In the preclassical the ts sets are stored in the ``core_trt_smrs``
