@@ -18,7 +18,7 @@ from openquake.server import views
 
 
 class UpstreamResponse:
-    """Small requests-response stand-in for file proxy tests."""
+    """Fake upstream that records reads and cleanup for proxy tests."""
 
     def __init__(self):
         self.status_code = 200
@@ -38,6 +38,7 @@ class UpstreamResponse:
 
 
 def _request(asgi):
+    # Use Django's real ASGI request type to exercise request detection.
     if asgi:
         scope = {
             'type': 'http',
@@ -55,6 +56,7 @@ def _request(asgi):
 
 
 def _proxy_response(monkeypatch, asgi):
+    # Stub requests so the test needs neither the API server nor a database.
     upstream = UpstreamResponse()
     monkeypatch.setattr(
         views.requests, 'request', lambda *args, **kwargs: upstream)
@@ -63,8 +65,10 @@ def _proxy_response(monkeypatch, asgi):
 
 
 async def _consume_asgi(response, upstream):
+    # Exercise the async iteration entry point Django uses under ASGI.
     iterator = response.__aiter__()
     chunks = [await iterator.__anext__()]
+    # A synchronous fallback would already have read both chunks here.
     chunks_read_after_first = upstream.chunks_read
     chunks.extend([chunk async for chunk in iterator])
     return chunks, chunks_read_after_first
@@ -81,11 +85,13 @@ def test_call_api_file_streams_asgi_response_incrementally(monkeypatch):
     assert chunks == [b'first chunk', b'second chunk']
     assert upstream.chunk_sizes == [views._CHUNK_SIZE]
     assert upstream.close_calls == 1
+    # Django closes the response after sending; EOF already closed upstream.
     response.close()
     assert upstream.close_calls == 1
 
 
 def test_call_api_file_keeps_wsgi_response_synchronous(monkeypatch):
+    # WSGI should continue to use the existing synchronous iterator.
     response, upstream = _proxy_response(monkeypatch, asgi=False)
 
     assert not response.is_async
