@@ -9,7 +9,7 @@ you only want to compute hazard curves, read the sections on the
 :ref:`configuration file <configuration-file>` and on the
 :ref:`outputs <outputs>` instead. Here we explain how a classical
 calculation is actually organized, i.e. how the sources and the logic
-tree are turned into a CompositeSourceModel, how the epistemic
+tree are turned into a ``CompositeSourceModel``, how the epistemic
 uncertainties are managed and how the hazard rates are accumulated.
 
 Throughout the page we use the demo
@@ -57,10 +57,8 @@ The preclassical proper, i.e. ``PreClassicalCalculator.populate_csm``,
 then works on the sources, group by group:
 
 - it builds the ``cmakers``, i.e. one ``ContextMaker`` per source group,
-  and saves the ``trt_smrs`` of the groups in the ``trt_smrs`` dataset
-  and the *indices of rate attribution* in the ``core_trt_smrs`` dataset,
-  i.e. the sets of realizations the rates are attributed to (see the
-  section on the uncertainties)
+  and saves the ``trt_smrs`` and ``core_trt_smrs`` datasets, which
+  will be explained below
 - it pre-filters the sources against the sites, using a coarse site
   grid when there are many sites (with ``res = 4``, i.e. 40km), since
   the pre-filters are only used to estimate the cost of each source
@@ -110,15 +108,15 @@ The CompositeSourceModel
 
 .. note::
 
-   The structure of the CompositeSourceModel changed completely in
+   The structure of the ``CompositeSourceModel`` changed completely in
    version 3.27: before, the uncertainties were applied when reading the
-   source models, i.e. there was a copy of the sources for each set of
+   source models, i.e. there was a modified copy of each source for each set of
    uncertainties and consequently a group (and a ``ContextMaker``) per
    set of uncertainties; now the uncertainties are applied in the workers
    and the structure of the CSM depends on the source models only, as
    described below.
 
-The CompositeSourceModel (CSM) is the in-memory representation of the
+The ``CompositeSourceModel`` (CSM) is the in-memory representation of the
 source models for a given logic tree. It is a list of ``SourceGroup``
 instances, each containing a list of sources; the groups are the unit of
 task generation, the sources the unit of computation.
@@ -205,7 +203,7 @@ codes (``S`` simple fault, ``A`` area source).
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
    Every realization set is contained in exactly one row of
-   ``trt_smrs``, but the converse does not hold: the trt_smrs of a group
+   ``trt_smrs``, but the converse does not hold: the ``trt_smrs`` of a group
    can be spread over several realization sets, since the sources of a
    group can be affected by different uncertainties (see the page on
    correlated uncertainties), so a realization can belong to more than
@@ -230,10 +228,7 @@ one set of realizations at a time. The mechanism is the following.
    realizations sharing the same uncertainties are called *subsets*.
    They are read back with ``lt.unc_subsets(src)``.
 3. In the preclassical the subsets are stored in the ``core_trt_smrs``
-   dataset, one row per subset: these are the *indices of rate
-   attribution*, i.e. the indices the rates are computed and attributed
-   with, as opposed to the ``trt_smrs`` of a group, which contain all
-   the realizations. Concretely, a subset is turned into a set of
+   dataset, one row per subset. Concretely, a subset is turned into a set of
    ``gids``, i.e. the (realization, GMM) pairs of the subset, and the
    rates computed for it are associated to those ``gids``; see the
    section on the ``RateMap`` below.
@@ -384,6 +379,17 @@ by source (``oq show mean_rates_by_src``) and, with ``disagg_by_src``,
 the disaggregations are attributed to the individual sources via the
 ``basename`` key of the ``RateMap``.
 
+
+The global RateMap is usually not kept in memory: it is materialized
+in the master node only when the rates must be accumulated there,
+i.e. when there are few sites, or when ``disagg_by_src`` is set, or
+when the sources of a group are split in blocks. It is still a useful
+concept, since the rates stored in the datastore are enough to
+reconstruct it and from the global RateMap one can rebuild the full
+hazard curves for all realizations (the engine does that in
+postclassical by splitting in blocks of sites so that it does not need
+to keep the full RateMap in memory).
+
 From the rates to the hazard curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -449,17 +455,6 @@ in the ``hcurves-rlzs`` and ``hcurves-stats`` datasets, and the maps in
 ``hmaps-rlzs`` and ``hmaps-stats``.
 
 .. note::
-
-   The logic tree of the demo has 324 realizations but only 36 gids: 36 is
-   the *core size* of the logic tree, i.e. the number of distinct rate
-   components, each one standing for a set of realizations with the same
-   uncertainties and the same GMM, as shown by the rows of
-   ``oq show core_trt_smrs`` (18 realization sets of 9 realizations, one per GMM,
-   since the demo has two GMMs per tectonic region type).
-   In general the core size is much smaller than the size of the logic
-   tree, since with a sampled logic tree many realizations share the same
-   set of uncertainties; in the extreme case of a single GMM and no
-   uncertainties the two are equal.
 
    The rates of all the realizations can be reconstructed from the core
    ``RateMap``, since each realization is the sum of the columns of its

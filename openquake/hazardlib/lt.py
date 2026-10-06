@@ -691,18 +691,18 @@ def _sampling_array(src):
     return sampling
 
 
-def unc_subsets(src):
+def ts_sets(src):
     """
     :returns: a list of tuples of trt_smr, the sets of realizations with
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
-    NB: the subsets are stored by build_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
+    NB: the sets are stored by build_groups, i.e. for the sources modified
+        by the uncertainties; the sources without uncertainties have a
+        single set, given by the sampling.
     """
-    if src.bysrc_subsets:
-        return [tuple(t) for t in src.bysrc_subsets]
+    if src.bysrc_ts_sets:
+        return [tuple(t) for t in src.bysrc_ts_sets]
     return [tuple(_sampling_array(src)['trt_smr'])]
 
 
