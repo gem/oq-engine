@@ -76,10 +76,11 @@ def regular_sites(shape):
     return SiteCollection.from_points(lons, lats)
 
 
-def build_full_computer(num_events=5):
+def build_full_computer(num_events=5, truncation_level=99):
     """Return a small, fully operational CE GMF computer."""
     cmaker = simple_cmaker(
-        [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'])
+        [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'],
+        truncation_level=truncation_level)
     cmaker.oq.calculation_mode = 'scenario'
     cmaker.gmf_mon = Monitor()
     cmaker.gid = numpy.array([0])
@@ -111,6 +112,24 @@ def test_ce_selection():
     assert factor.grid_shape == (2, 3)
     assert factor.output_size == len(IMTS) * len(sites)
     numpy.testing.assert_array_equal(factor.site_indices, [4, 0, 2])
+
+
+def test_ce_selection_with_off_grid_complete_sites():
+    # Station data extends the complete collection even when distant stations
+    # are absent from the sites affected by the rupture.
+    complete = regular_sites((3, 4))
+    sites = complete.filtered(numpy.arange(11))
+    complete.extend(
+        [float(complete.lons[0]) + 2],
+        [float(complete.lats[0]) + 2])
+    computer = build_computer(sites)
+
+    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1):
+        factor = computer._get_ce_factor()
+
+    assert factor.grid_shape == (3, 4)
+    assert factor.output_size == len(IMTS) * len(sites)
+    numpy.testing.assert_array_equal(factor.site_indices, numpy.arange(11))
 
 
 def test_ce_batches():
@@ -163,6 +182,17 @@ def test_gmf_batches():
         single[['PGA', 'SA(0.3)']], chunked[['PGA', 'SA(0.3)']])
     numpy.testing.assert_array_equal(
         chunked.eid, numpy.repeat(numpy.arange(5), 6))
+
+
+def test_median_ignores_correlation_model():
+    computer = build_full_computer(truncation_level=0)
+    with mock.patch.object(
+            computer.within_event_model, 'factor',
+            side_effect=AssertionError('correlation model was used')):
+        gmfs = computer.compute_all()
+
+    assert len(gmfs) == 30
+    numpy.testing.assert_array_equal(gmfs[['PGA', 'SA(0.3)']], 1.)
 
 
 def test_empty_gsim():
