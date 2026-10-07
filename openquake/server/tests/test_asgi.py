@@ -8,8 +8,10 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+from io import BytesIO
 from pathlib import Path
 import time
+import zipfile
 
 import pytest
 from django.conf import settings
@@ -107,6 +109,47 @@ def test_calc_result_missing(uvicorn_client):
             settings.WEBUI_PATHPREFIX.rstrip('/') + '/v1/calc/result/0')
         assert response.status_code == 404
         assert response.headers['access-control-allow-origin'] == '*'
+
+
+def test_new_file_routes_return_not_found(uvicorn_client):
+    """Handle the migrated file routes directly in FastAPI."""
+    paths = (
+        '/v1/calc/0/datastore',
+        '/v1/calc/0/job_zip',
+        '/v1/calc/0/extract/oqparam',
+    )
+    for path in paths:
+        response = uvicorn_client.get(path)
+        assert response.status_code == 404
+        assert response.headers['access-control-allow-origin'] == '*'
+        if settings.WEBUI_PATHPREFIX:
+            response = uvicorn_client.get(
+                settings.WEBUI_PATHPREFIX.rstrip('/') + path)
+            assert response.status_code == 404
+            assert response.headers['access-control-allow-origin'] == '*'
+
+
+def test_datastore_job_zip_and_extract_downloads(
+        uvicorn_client, classical_result):
+    """Serve datastore, job archive, and extracted NPZ files via FastAPI."""
+    job_id = dbcmd('get_result', classical_result['id'])[0]
+
+    datastore_response = uvicorn_client.get(
+        f'/v1/calc/{job_id}/datastore')
+    assert datastore_response.status_code == 200
+    assert datastore_response.content.startswith(b'\x89HDF\r\n\x1a\n')
+    assert datastore_response.headers['content-disposition'].endswith(
+        '.hdf5')
+
+    zip_response = uvicorn_client.get(f'/v1/calc/{job_id}/job_zip')
+    assert zip_response.status_code == 200
+    assert zipfile.is_zipfile(BytesIO(zip_response.content))
+
+    extract_response = uvicorn_client.get(
+        f'/v1/calc/{job_id}/extract/oqparam')
+    assert extract_response.status_code == 200
+    assert zipfile.is_zipfile(BytesIO(extract_response.content))
+    assert extract_response.headers['content-type'] == 'application/x-zip'
 
 
 def test_calc_result_downloads_the_file(uvicorn_client, classical_result):

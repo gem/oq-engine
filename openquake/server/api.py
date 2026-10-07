@@ -31,7 +31,7 @@ import zlib
 from datetime import datetime
 from unittest.mock import patch
 from types import SimpleNamespace
-from urllib.parse import parse_qs, urljoin
+from urllib.parse import parse_qs, unquote_plus, urljoin
 from xml.parsers.expat import ExpatError
 
 import numpy
@@ -56,8 +56,9 @@ from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
-    create_impact_job, export_result, get_impact_rupture_data,
-    get_papers_job_ctx, remove_exported, submit_job)
+    create_extract_file, create_impact_job, create_job_zip, export_result,
+    get_impact_rupture_data, get_papers_job_ctx, remove_exported,
+    remove_temp_file, submit_job)
 app = FastAPI(title='OpenQuake API')
 app.state.adapters = {}
 
@@ -530,17 +531,125 @@ def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
         raise HTTPException(status_code=404) from exc
 
 
-_RESULT_ACCESS_HEADERS = {
+_ACCESS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Max-Age': '1000',
     'Access-Control-Allow-Headers': '*',
 }
+HDF5 = 'application/x-hdf'
+ZIP = 'application/x-zip'
 
 
-def _with_result_access_headers(response):
-    """Add the CORS headers used by the public result endpoint."""
-    response.headers.update(_RESULT_ACCESS_HEADERS)
+def _with_access_headers(response):
+    """Add the CORS headers used by the public calculation endpoints."""
+    response.headers.update(_ACCESS_HEADERS)
+    return response
+
+
+def _file_access_error(status_code, content=None):
+    """Build a CORS-enabled error response for a file endpoint."""
+    if content is None:
+        content = {403: 'Forbidden', 404: 'Not Found'}.get(
+            status_code, '')
+    return _with_access_headers(Response(
+        content=content, status_code=status_code, media_type='text/html'))
+
+
+def _application_is_tools_only():
+    # api.py loads before Django settings are initialized by the ASGI app.
+    from django.conf import settings
+
+    return settings.APPLICATION_MODE == 'TOOLS_ONLY'
+
+
+def _with_request_user(request, authorize, *args):
+    """Resolve the Django session and run a short authorization check."""
+    # api.py loads before the Django ASGI application is initialized.
+    from django.conf import settings
+    from django.db import close_old_connections
+    from openquake.server import utils
+
+    if settings.LOCKDOWN:
+        close_old_connections()
+    try:
+        if settings.LOCKDOWN:
+            user = utils.get_user_from_session(
+                request.cookies.get(settings.SESSION_COOKIE_NAME))
+            if not user.is_authenticated:
+                return 403, None
+        else:
+            user = None
+        auth_request = (SimpleNamespace(user=user) if settings.LOCKDOWN
+                        else SimpleNamespace())
+        return authorize(auth_request, settings, utils, *args)
+    finally:
+        if settings.LOCKDOWN:
+            close_old_connections()
+
+
+def _authorize_result_download(auth_request, settings, utils, result_id):
+    """Check whether a user can download a calculation result."""
+    try:
+        _, job_status, owner, _, ds_key = logs.dbcmd(
+            'get_result', result_id)
+    except dbapi.NotFound:
+        return 404, None
+    if not utils.user_can_view_result(
+            auth_request, owner, job_status, ds_key):
+        return 403, None
+    return 200, None
+
+
+def _authorize_datastore_download(auth_request, settings, utils, job_id):
+    """Check access to a calculation datastore download."""
+    user_level = utils.get_user_level(auth_request)
+    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
+        detail = '%s, %s' % (
+            f'{user_level=}', f'{settings.ALLOW_DATASTORE_DOWNLOAD=}')
+        return 403, detail
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        return 404, None
+    if not utils.user_has_permission(
+            auth_request, job.user_name, job.status):
+        return 403, None
+    return 200, job
+
+
+def _authorize_job_zip(auth_request, settings, utils, job_id):
+    """Check access to a job archive download."""
+    if utils.get_user_level(auth_request) < 2:
+        return 403, None
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        return 404, None
+    return 200, job
+
+
+def _authorize_extract(
+        auth_request, settings, utils, calc_id, what, resource):
+    """Check job and resource permissions for an extract download."""
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return 404, None
+    if not utils.user_has_permission(
+            auth_request, job.user_name, job.status):
+        return 403, None
+    if (not utils.user_can_extract(auth_request, what)
+            and not utils.user_can_extract(auth_request, resource)):
+        return 403, None
+    return 200, job
+
+
+def _file_download_response(
+        fname, content_type, exportname, background=None):
+    """Create an attachment response for a file on disk."""
+    response = FileResponse(
+        fname, media_type=content_type, background=background)
+    # Set the name explicitly to preserve the existing download headers.
+    response.headers['content-disposition'] = (
+        'attachment; filename=%s' % exportname)
     return response
 
 
@@ -558,46 +667,9 @@ def _result_file_response(result_id, export_type):
     if exported is None:  # the requested format is not supported
         raise HTTPException(status_code=404)
     fname, content_type, exportname = exported
-    response = FileResponse(
-        fname, media_type=content_type,
-        background=BackgroundTask(remove_exported, fname))
-    # NB: the Content-Disposition is set manually, since the one generated
-    # by FileResponse would quote the file name
-    response.headers['content-disposition'] = (
-        'attachment; filename=%s' % exportname)
-    return response
-
-
-def _authorize_result_download(request, result_id):
-    """Check the Django session and result permissions for a download."""
-    # api.py loads before the Django ASGI application is initialized.
-    from django.conf import settings
-    from django.db import close_old_connections
-    from openquake.server import utils
-
-    if settings.LOCKDOWN:
-        close_old_connections()
-    try:
-        if settings.LOCKDOWN:
-            user = utils.get_user_from_session(
-                request.cookies.get(settings.SESSION_COOKIE_NAME))
-            if not user.is_authenticated:
-                return 403
-        else:
-            user = None
-        try:
-            _, job_status, owner, _, ds_key = logs.dbcmd(
-                'get_result', result_id)
-        except dbapi.NotFound:
-            return 404
-        auth_request = SimpleNamespace(user=user)
-        if not utils.user_can_view_result(
-                auth_request, owner, job_status, ds_key):
-            return 403
-        return 200
-    finally:
-        if settings.LOCKDOWN:
-            close_old_connections()
+    return _file_download_response(
+        fname, content_type, exportname,
+        BackgroundTask(remove_exported, fname))
 
 
 @app.api_route('/v1/calc/result/{result_id}',
@@ -605,22 +677,15 @@ def _authorize_result_download(request, result_id):
 def public_calc_result(
         result_id: int, request: Request, export_type: str | None = None):
     """Authorize and download a calculation result for a WebUI user."""
-    # api.py loads before the Django ASGI application is initialized.
-    from django.conf import settings
-
-    if settings.APPLICATION_MODE == 'TOOLS_ONLY':
-        return _with_result_access_headers(Response(
-            content='Not Found', status_code=404, media_type='text/html'))
+    if _application_is_tools_only():
+        return _file_access_error(404)
     if request.method == 'OPTIONS':
-        return _with_result_access_headers(Response())
+        return _with_access_headers(Response())
 
-    status = _authorize_result_download(request, result_id)
-    if status == 403:
-        return _with_result_access_headers(Response(
-            content='Forbidden', status_code=403, media_type='text/html'))
-    if status == 404:
-        return _with_result_access_headers(Response(
-            content='Not Found', status_code=404, media_type='text/html'))
+    status, _ = _with_request_user(
+        request, _authorize_result_download, result_id)
+    if status != 200:
+        return _file_access_error(status)
 
     try:
         response = _result_file_response(result_id, export_type)
@@ -636,7 +701,84 @@ def public_calc_result(
         logging.exception('Could not export result %s', result_id)
         response = PlainTextResponse(
             'Internal Server Error', status_code=500)
-    return _with_result_access_headers(response)
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{job_id}/datastore',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_calc_datastore(job_id: int, request: Request):
+    """Download the HDF5 datastore after checking its owner permissions."""
+    if _application_is_tools_only():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, data = _with_request_user(
+        request, _authorize_datastore_download, job_id)
+    if status != 200:
+        return _file_access_error(status, data)
+    job = data
+    fname = job.ds_calc_dir + '.hdf5'
+    response = _file_download_response(
+        fname, HDF5, os.path.basename(fname))
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{job_id}/job_zip',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_calc_job_zip(job_id: int, request: Request):
+    """Create and download a job archive."""
+    if _application_is_tools_only():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_zip, job_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        fname = create_job_zip(job.ds_calc_dir + '.hdf5', job_id)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        content = '%s: %s in job_zip\n%s' % (
+            exc.__class__.__name__, exc, tb)
+        return _with_access_headers(PlainTextResponse(
+            content, status_code=400))
+    response = _file_download_response(
+        fname, ZIP, os.path.basename(fname),
+        BackgroundTask(remove_exported, fname))
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{calc_id}/extract/{what:path}',
+               methods=['GET', 'HEAD', 'OPTIONS'], include_in_schema=False)
+def public_calc_extract(calc_id: int, what: str, request: Request):
+    """Extract a datastore resource and send it as an NPZ archive."""
+    if _application_is_tools_only():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    query = request.url.query
+    resource = what + ('?' + unquote_plus(query) if query else '')
+    status, job = _with_request_user(
+        request, _authorize_extract, calc_id, what, resource)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        fname = create_extract_file(
+            job.ds_calc_dir + '.hdf5', resource)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        path = request.url.path
+        if query:
+            path += '?' + query
+        content = '%s: %s in %s\n%s' % (
+            exc.__class__.__name__, exc, path, tb)
+        return _with_access_headers(PlainTextResponse(
+            content, status_code=500))
+    response = _file_download_response(
+        fname, ZIP, os.path.basename(fname),
+        BackgroundTask(remove_temp_file, fname))
+    return _with_access_headers(response)
 
 
 @app.api_route('/v0/calc/result/{result_id}', methods=['GET', 'HEAD'])

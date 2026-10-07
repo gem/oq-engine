@@ -15,10 +15,12 @@ import tempfile
 import traceback
 from datetime import datetime, timezone
 
-from openquake.baselib import config, parallel
+from openquake.baselib import config, hdf5, parallel
 from openquake.baselib.general import zipfiles
+from openquake.calculators.export import export
+from openquake.calculators.extract import extract as _extract
 from openquake.calculators.getters import NotFound
-from openquake.commonlib import logs, oqvalidation, readinput
+from openquake.commonlib import datastore, logs, oqvalidation, readinput
 from openquake.engine import aelo, engine, impact
 from openquake.engine.aelo import get_params_from
 from openquake.engine.export.core import export_from_db
@@ -73,6 +75,47 @@ DEFAULT_CONTENT_TYPE = 'text/plain'
 def remove_exported(fname):
     """Remove the temporary directory containing an exported file."""
     shutil.rmtree(os.path.dirname(fname), ignore_errors=True)
+
+
+def remove_temp_file(fname):
+    """Remove a temporary output file after it has been sent."""
+    try:
+        os.remove(fname)
+    except FileNotFoundError:
+        pass
+
+
+def create_job_zip(ds_path, job_id):
+    """Create a job archive in a temporary directory and return its path."""
+    with datastore.read(ds_path) as ds:
+        exported = export(('job', 'zip'), ds)
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
+    fname = os.path.join(tmpdir, 'job_%s.zip' % job_id)
+    try:
+        zipfiles(exported, fname, cleanup=True)
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+    return fname
+
+
+def create_extract_file(ds_path, resource):
+    """Extract a datastore resource to a temporary NPZ file."""
+    # NOTE: TMPDIR is sometimes ignored, so prefer custom_tmp when configured.
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    prefix = resource.split('?', 1)[0].replace('/', '-')
+    fd, fname = tempfile.mkstemp(
+        prefix=prefix, suffix='.npz', dir=temp_dir)
+    os.close(fd)
+    try:
+        with datastore.read(ds_path) as ds:
+            extracted = _extract(ds, resource)
+            hdf5.save_npz(extracted, fname)
+    except Exception:
+        remove_temp_file(fname)
+        raise
+    return fname
 
 
 def export_result(result_id, export_type=None):

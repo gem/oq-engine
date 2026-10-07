@@ -31,6 +31,40 @@ from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
+EXTRACTABLE_RESOURCES = [
+    'agg_curves',
+    'agg_damages',
+    'agg_losses',
+    'agg_risk',
+    'aggrisk_tags',
+    'asset_risk',
+    'asset_tags',
+    'composite_risk_model',
+    'damages-rlzs',
+    'damages-stats',
+    'disagg_layer',
+    'events',
+    'exposure_metadata',
+    'exposure_by_location',
+    'exposure_by_lse?secondary_peril=liquefaction',
+    'exposure_by_lse?secondary_peril=landslide',
+    'gmf_data',
+    'hcurves',
+    'hmaps',
+    'losses_by_asset',
+    'losses_by_location',
+    'losses_by_site',
+    'mmi_tags',
+    'oqparam',
+    'realizations',
+    'risk_by_event',
+    'rupture_info',
+    'sitecol',
+    'uhs',
+]
+# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in
+# the datastore, and can_view_exposure grants access to both.
+MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 
 def is_superuser(request):
@@ -80,6 +114,17 @@ def get_valid_users(request):
     return users
 
 
+def get_user_level(request):
+    """Return the user's UI level, or level 2 in public mode."""
+    if settings.LOCKDOWN:
+        try:
+            return request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            return 0
+    # Without authentication, the UI assumes the maximum user level.
+    return 2
+
+
 def get_acl_on(request):
     """
     Returns `True` if ACL should be honorated, returns otherwise `False`.
@@ -103,6 +148,27 @@ def user_has_permission(request, owner, job_status):
         return True
     else:
         return owner in get_valid_users(request) or not get_acl_on(request)
+
+
+def user_can_extract(request, resource):
+    """Return whether a user may extract a datastore resource."""
+    try:
+        user = request.user
+    except AttributeError:
+        # Without authentication, all datastore resources are visible.
+        return True
+    if (any(resource == allowed
+            or resource.startswith(allowed + '/')
+            or resource.startswith(allowed + '.')
+            for allowed in EXTRACTABLE_RESOURCES)
+            or user.level >= 2
+            or user.has_perm(f'auth.can_view_{resource}')):
+        return True
+    if resource in MAP_RESOURCE_OUTPUT:
+        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
+        if user.has_perm(f'auth.can_view_{corresponding_output}'):
+            return True
+    return False
 
 
 def user_can_view_result(request, owner, job_status, ds_key):

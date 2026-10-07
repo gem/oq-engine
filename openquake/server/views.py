@@ -19,7 +19,6 @@
 import sys
 import ast
 import csv
-import shutil
 import json
 import string
 import pickle
@@ -36,7 +35,7 @@ import requests
 from threading import Event
 from collections import defaultdict
 from datetime import datetime, timezone
-from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
+from urllib.parse import urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -50,8 +49,8 @@ from django.shortcuts import render
 from django.utils.html import urlize
 import numpy
 
-from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles, mp, decode
+from openquake.baselib import config
+from openquake.baselib.general import groupby, gettemp, mp, decode
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
@@ -76,9 +75,7 @@ from openquake.server.services import store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
-from django.http import FileResponse
 from django.urls import reverse
-from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
@@ -90,8 +87,6 @@ NOT_IMPLEMENTED = 501
 
 XML = 'application/xml'
 JSON = 'application/json'
-HDF5 = 'application/x-hdf'
-ZIP = 'application/x-zip'
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -123,41 +118,8 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 HIDDEN_OUTPUTS = utils.HIDDEN_OUTPUTS
-EXTRACTABLE_RESOURCES = [
-    'agg_curves',
-    'agg_damages',
-    'agg_losses',
-    'agg_risk',
-    'aggrisk_tags',
-    'asset_risk',
-    'asset_tags',
-    'composite_risk_model',
-    'damages-rlzs',
-    'damages-stats',
-    'disagg_layer',
-    'events',
-    'exposure_metadata',
-    'exposure_by_location',
-    'exposure_by_lse?secondary_peril=liquefaction',
-    'exposure_by_lse?secondary_peril=landslide',
-    'gmf_data',
-    'hcurves',
-    'hmaps',
-    'losses_by_asset',
-    'losses_by_location',
-    'losses_by_site',
-    'mmi_tags',
-    'oqparam',
-    'realizations',
-    'risk_by_event',
-    'rupture_info',
-    'sitecol',
-    'uhs',
-]
-# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
-# datastore, and the can_view_exposure permission gives access both to the
-# 'exposure' output and to the 'assetcol' item in the datastore
-MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
+EXTRACTABLE_RESOURCES = utils.EXTRACTABLE_RESOURCES
+MAP_RESOURCE_OUTPUT = utils.MAP_RESOURCE_OUTPUT
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -198,23 +160,6 @@ def _get_bool_param(obj, name, default=False):
     if val is None:
         return default
     return str(val).lower() in ('1', 'true', 'yes', '')
-
-
-def stream_response(fname, content_type, exportname=''):
-    """
-    Stream a file stored in a temporary directory via Django
-    """
-    ext = os.path.splitext(fname)[-1]
-    exportname = exportname or os.path.basename(fname)
-    tmpdir = os.path.dirname(fname)
-    stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
-    response = FileResponse(stream, content_type=content_type)
-    response['Content-Disposition'] = 'attachment; filename=%s' % exportname
-    response['Content-Length'] = str(os.path.getsize(fname))
-    stream.close = lambda: (
-        FileWrapper.close(stream),
-        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
-    return response
 
 
 def infer_site_class(asce_version, vs30):
@@ -685,15 +630,7 @@ def share_job(user_level, calc_id, share):
 
 
 def get_user_level(request):
-    if settings.LOCKDOWN:
-        try:
-            return request.user.level
-        except AttributeError:  # e.g. AnonymousUser (not authenticated)
-            return 0
-    else:
-        # NOTE: when authentication is not required, the user interface
-        # can assume the user to have the maximum level
-        return 2
+    return utils.get_user_level(request)
 
 
 def check_db_response(resp):
@@ -1766,47 +1703,6 @@ def exposure_by_lse(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def extract(request, calc_id, what):
-    """
-    Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
-    only calculations owned by the current user can be retrieved.
-    """
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    path = request.get_full_path()
-    n = len(request.path_info)
-    query_string = unquote_plus(path[n:])
-    if not (can_extract(request, what)
-            or can_extract(request, what + query_string)):
-        return HttpResponseForbidden()
-    try:
-        # read the data and save them on a temporary .npz file
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            # NOTE: for some reason, in some cases the environment
-            # variable TMPDIR is ignored, so we need to use
-            # config.directory.custom_tmp if defined
-            temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-            fd, fname = tempfile.mkstemp(
-                prefix=what.replace('/', '-'), suffix='.npz', dir=temp_dir)
-            os.close(fd)
-            obj = _extract(ds, what + query_string)
-            hdf5.save_npz(obj, fname)
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, path, tb),
-            content_type='text/plain', status=500)
-
-    # stream the data back
-    return stream_response(fname, ZIP)
-
-
-@cross_domain_ajax
-@require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
     """Authenticate and proxy model provenance to FastAPI."""
     if get_user_level(request) < 2:
@@ -1821,39 +1717,6 @@ def model_provenance(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def calc_datastore(request, job_id):
-    """
-    Download a full datastore file.
-
-    :param request:
-        `django.http.HttpRequest` object.
-    :param job_id:
-        The id of the requested datastore
-    :returns:
-        A `django.http.HttpResponse` containing the content
-        of the requested artifact, if present, else throws a 404
-    """
-    user_level = get_user_level(request)
-    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
-        err_msg = f'{user_level=}, {settings.ALLOW_DATASTORE_DOWNLOAD=}'
-        return HttpResponseForbidden(err_msg)
-    job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-
-    fname = job.ds_calc_dir + '.hdf5'
-    response = FileResponse(
-        FileWrapper(open(fname, 'rb')), content_type=HDF5)
-    response['Content-Disposition'] = (
-        'attachment; filename=%s' % os.path.basename(fname))
-    response['Content-Length'] = str(os.path.getsize(fname))
-    return response
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
 def jobs_from_inis(request):
     """
     :returns:
@@ -1864,42 +1727,6 @@ def jobs_from_inis(request):
         logging.error(dic['error'])
         return JsonResponse(dic, status=500)
     return HttpResponse(content=json.dumps(dic), content_type=JSON)
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_zip(request, job_id):
-    """
-    Download job.zip file
-
-    :param request:
-        `django.http.HttpRequest` object.
-    :param job_id:
-        The id of the requested datastore
-    :returns:
-        A `django.http.HttpResponse` containing the content
-        of the requested artifact, if present, else throws a 404
-    """
-    if get_user_level(request) < 2:
-        return HttpResponseForbidden()
-    job = logs.dbcmd('get_job', int(job_id))
-    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
-        return HttpResponseNotFound()
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            exported = export(('job', 'zip'), ds)
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'job_zip', tb),
-            content_type='text/plain', status=400)
-    # zipping the files
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    tmpdir = tempfile.mkdtemp(dir=temp_dir)
-    archname = f'job_{job_id}.zip'
-    zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-    return stream_response(os.path.join(tmpdir, archname), ZIP)
 
 
 def web_engine(request, **kwargs):
@@ -2356,23 +2183,7 @@ def download_aggrisk(request, calc_id):
 
 
 def can_extract(request, resource):
-    try:
-        user = request.user
-    except AttributeError:
-        # without authentication
-        return True
-    if (any(resource == allowed
-            or resource.startswith(allowed + "/")
-            or resource.startswith(allowed + ".")
-            for allowed in EXTRACTABLE_RESOURCES)
-            or user.level >= 2
-            or user.has_perm(f'auth.can_view_{resource}')):
-        return True
-    if resource in MAP_RESOURCE_OUTPUT:
-        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
-        if user.has_perm(f'auth.can_view_{corresponding_output}'):
-            return True
-    return False
+    return utils.user_can_extract(request, resource)
 
 
 @cross_domain_ajax

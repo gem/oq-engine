@@ -72,13 +72,21 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(response.json(), {'authentication_required': True})
 
     def test_result_download_uses_django_session(self):
+        paths = (
+            '/v1/calc/result/0',
+            '/v1/calc/0/datastore',
+            '/v1/calc/0/job_zip',
+            '/v1/calc/0/extract/oqparam',
+        )
         self.c.session.cookies.clear()
-        response = self.c.get('/v1/calc/result/0')
-        self.assertEqual(response.status_code, 403)
+        for path in paths:
+            response = self.c.get(path)
+            self.assertEqual(response.status_code, 403)
 
         self.c.login(username=self.user2.username, password=self.password2)
-        response = self.c.get('/v1/calc/result/0')
-        self.assertEqual(response.status_code, 404)
+        for path in paths:
+            response = self.c.get(path)
+            self.assertEqual(response.status_code, 404)
 
     def test_result_download_checks_job_owner(self):
         [job] = create_jobs(

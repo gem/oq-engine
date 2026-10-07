@@ -23,7 +23,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
 setproctitle('oq-webui')
 
 from openquake.server.api import (  # noqa: E402
-    app, configure_adapters, public_calc_result)
+    app, configure_adapters, public_calc_datastore, public_calc_extract,
+    public_calc_job_zip, public_calc_result)
 
 # Initialize the database before starting the ASGI application.
 actions.upgrade_db(dbapi.db)
@@ -40,10 +41,20 @@ configure_adapters(
     papers=papers)
 path_prefix = settings.WEBUI_PATHPREFIX.strip('/')
 if path_prefix:
-    app.add_api_route(
-        '/%s/v1/calc/result/{result_id}' % path_prefix,
-        public_calc_result, methods=['GET', 'HEAD', 'OPTIONS'],
-        include_in_schema=False, name='prefixed_public_calc_result')
+    prefixed_routes = (
+        ('/v1/calc/result/{result_id}', public_calc_result,
+         ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_result'),
+        ('/v1/calc/{job_id}/datastore', public_calc_datastore,
+         ('GET', 'OPTIONS'), 'prefixed_public_calc_datastore'),
+        ('/v1/calc/{job_id}/job_zip', public_calc_job_zip,
+         ('GET', 'OPTIONS'), 'prefixed_public_calc_job_zip'),
+        ('/v1/calc/{calc_id}/extract/{what:path}', public_calc_extract,
+         ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_extract'),
+    )
+    for route_path, endpoint, methods, name in prefixed_routes:
+        app.add_api_route(
+            '/%s%s' % (path_prefix, route_path), endpoint,
+            methods=methods, include_in_schema=False, name=name)
 static_dir = settings.STATICFILES_DIRS[0]
 static_packages = []
 # Include the static directories supplied by installed Django apps.  The
