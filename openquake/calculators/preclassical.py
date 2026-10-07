@@ -140,10 +140,7 @@ def split_modified(grp, cmaker):
             out.extend(split_source(src))
         else:
             out.append(src)
-    if cmaker.ps_grid_spacing:
-        grp.sources = grid_point_sources(grp, cmaker.ps_grid_spacing)
-    else:
-        grp.sources = out
+    grp.sources = grid_point_sources(out, cmaker.ps_grid_spacing)
     return grp
 
 
