@@ -21,7 +21,7 @@ import logging
 
 from openquake.baselib import sap
 from openquake.commonlib import datastore, logs
-from openquake.calculators.base import run_calc, expose_outputs
+from openquake.calculators.base import run_calc
 
 # The infrastructure connectivity analysis is performed by the damage
 # calculators (see `connectivity` in openquake/risklib) when the job.ini
@@ -60,12 +60,20 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     oq.inputs['exposure'] = os.path.join(oq.base_path, road_exposure_xml)
     oq.inputs['interdependencies'] = os.path.join(oq.base_path, interdependencies_csv)
     oq.infrastructure_connectivity_analysis = True
+    # Delete postrisk_func and postrisk_args from the oqparam to avoid
+    # passing them to the child calculation
+    oq.__dict__.pop('postrisk_func', None)
+    oq.__dict__.pop('postrisk_args', None)
     ini = oq.to_ini()
     child_ini = os.path.join(oq.base_path, 'child.ini')
     with open(child_ini, 'w') as f:
         f.write(ini)
     calc = run_calc(child_ini, hazard_calculation_id=dstore.calc_id)
-    expose_outputs(calc.datastore)
+    # Save the child calc_id to the parent's oqparam so it can be accessed
+    # through any datastore with the same calc_id
+    oq = dstore['oqparam']
+    oq.child_calc_id = calc.datastore.calc_id
+    dstore['oqparam'] = oq
     calc.datastore.close()
     outs = '\n'.join(logs.dbcmd('list_outputs', calc.datastore.calc_id, False))
     logging.info(outs)
