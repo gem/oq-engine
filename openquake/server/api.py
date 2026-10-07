@@ -57,7 +57,7 @@ from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
-    create_impact_report_file,
+    create_impact_report_file, create_png_file,
     create_job_zip, export_result,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
@@ -832,6 +832,31 @@ def public_impact_report(calc_id: int, request: Request):
         background=BackgroundTask(remove_temp_file, fname))
     response.headers['content-disposition'] = (
         f'inline; filename=impact_report_{iso3}.{file_format}')
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{calc_id}/download_png/{what:path}',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_download_png(calc_id: int, what: str, request: Request):
+    """Render a datastore PNG resource and return it as a file."""
+    if _application_is_tools_only():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        fname = create_png_file(job.ds_calc_dir + '.hdf5', what, calc_id)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        content = '%s: %s\n%s' % (exc.__class__.__name__, exc, tb)
+        return _with_access_headers(PlainTextResponse(
+            content, status_code=500))
+    response = FileResponse(
+        fname, media_type='image/png',
+        background=BackgroundTask(remove_temp_file, fname))
     return _with_access_headers(response)
 
 

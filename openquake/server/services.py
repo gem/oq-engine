@@ -87,6 +87,25 @@ def remove_temp_file(fname):
         pass
 
 
+def create_png_file(ds_path, what, calc_id):
+    """Render a stored PNG resource to a temporary file."""
+    # Pillow is optional and only needed when this endpoint is called.
+    from PIL import Image
+
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    fd, fname = tempfile.mkstemp(
+        prefix='calc_%s_' % calc_id, suffix='.png', dir=temp_dir)
+    os.close(fd)
+    try:
+        with datastore.read(ds_path) as dstore:
+            arr = dstore['png/%s' % what][:]
+        Image.fromarray(arr).save(fname, format='png')
+    except Exception:
+        remove_temp_file(fname)
+        raise
+    return fname
+
+
 def create_impact_report_file(ds_path, iso3, file_format):
     """Copy a stored country report to a temporary file."""
     with datastore.read(ds_path) as dstore:

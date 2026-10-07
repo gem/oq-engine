@@ -427,31 +427,6 @@ def validate_zip(request):
         request, 'v0/calc/validate_zip', request.POST.dict())
 
 
-@require_http_methods(['GET'])
-@cross_domain_ajax
-def download_png(request, calc_id, what):
-    """
-    Get a PNG image with the relevant name, if available
-    """
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    try:
-        from PIL import Image
-        response = HttpResponse(content_type="image/png")
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            arr = ds['png/%s' % what][:]
-        Image.fromarray(arr).save(response, format='png')
-        return response
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
-            content_type='text/plain', status=500)
-
-
 def _call_api(request, endpoint, params=None, headers=None):
     """Call an internal FastAPI endpoint and return its JSON response."""
     url = '%s/%s' % (_get_base_url(request), endpoint)

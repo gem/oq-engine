@@ -162,11 +162,17 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         # outputs pages do not raise any exceptions
         self.c.get(f'/engine/{job_id}/outputs')
         self.c.get(f'/engine/{job_id}/outputs_aelo')
-        self.c.get(f'/v1/calc/{job_id}/download_png/hcurves.png')
-        self.c.get(f'/v1/calc/{job_id}/download_png/site.png')
-        self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
-        self.c.get(
-            f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
+        png_paths = (
+            f'/v1/calc/{job_id}/download_png/hcurves.png',
+            f'/v1/calc/{job_id}/download_png/site.png',
+            f'/v1/calc/{job_id}/download_png/mce.png',
+            f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png',
+        )
+        for path in png_paths:
+            response = self.c.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['content-type'], 'image/png')
+            self.assertTrue(response.content.startswith(b'\x89PNG'))
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
