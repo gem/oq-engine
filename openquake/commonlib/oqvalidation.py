@@ -2796,23 +2796,6 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    def to_dict(self, **inputs):
-        """
-        Converts the parameters into a flat dictionary of string
-        parameters, mirroring what readinput.get_params produces when
-        reading a job.ini file back: every value is a string, and the
-        input files are stored as ``<name>_file`` keys. It is the
-        in-memory counterpart of to_ini and can be fed to run_calc.
-        """
-        dic = self._param_dict(**inputs)
-        out = {}
-        for key, val in dic.items():
-            for line in to_ini(key, val).split('\n'):  # multi-line values
-                k, sep, v = line.partition('=')
-                if sep:
-                    out[k.strip()] = v.strip()
-        return out
-
     def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
