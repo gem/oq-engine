@@ -315,6 +315,9 @@ class MonteiroEtAl2026(SpatialCrossIMTCorrelationModel):
 
     SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
+    # Note: aside from FIV3, all intensity measures are defined for RotD50
+    # (FIV3 is defined for the geometric mean), therefore
+    # DEFINED_FOR_INTENSITY_MEASURE_COMPONENT cannot be uniformly specific as RotD50 for this model
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
         SA, PGA, PGV, Sa_avg2, Sa_avg3, FIV3}
     DEFINED_FOR_SA_DAMPING = 5.0
