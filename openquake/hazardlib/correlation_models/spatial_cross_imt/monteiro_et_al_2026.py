@@ -1,3 +1,18 @@
+# The Hazard Library
+# Copyright (C) 2026 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Monteiro et al. (2026) spatial cross-IMT correlation model.
 
 The principal-component coefficients use the full precision distributed
@@ -10,6 +25,10 @@ References
 Monteiro, V.A, Aristeidou, S., and O'Reilly, G. J. (2026). Spatial Cross-Correlation
 Models for Next-Generation Amplitude and Cumulative Intensity Measures.
 Earthquake Spectra 2026, 42, e70076. https://doi.org/10.1002/esp4.70076
+
+Author-maintained Python implementation
+---------------------------------------
+https://github.com/vitorazevedomonteiro/cross-spatial-correlation-model.git
 """
 
 import numpy
