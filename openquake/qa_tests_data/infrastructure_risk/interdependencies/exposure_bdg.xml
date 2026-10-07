@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+		<description>Demo_Building</description>
+		<conversions>
+			<costTypes>
+			</costTypes>
+		</conversions>
+		<tagNames></tagNames>
+		<occupancyPeriods></occupancyPeriods>
+		<assets>
+			exposure_demo_bdg.csv
+		</assets>
+	</exposureModel>
+</nrml>

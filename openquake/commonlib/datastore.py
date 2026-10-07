@@ -119,7 +119,10 @@ def new(calc_id, oqparam, datadir=None, mode=None):
         a DataStore instance associated to the given calc_id
     """
     dstore = _read(calc_id, mode, datadir)
-    if 'oqparam' not in dstore:
+    # Always save the oqparam to the child's datastore if it's not already
+    # saved there (even if the parent has one, we want to keep the child's
+    # own oqparam separate from the parent's)
+    if 'oqparam' not in dstore.hdf5:
         dstore['oqparam'] = oqparam
     if oqparam.hazard_calculation_id:
         dstore.ppath = read(calc_id, 'r', datadir).ppath

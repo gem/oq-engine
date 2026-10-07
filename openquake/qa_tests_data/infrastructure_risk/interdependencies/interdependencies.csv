@@ -1,0 +1,7 @@
+source_asset_id,source_damage_state,target_asset_id,target_state
+BDG1,collapse,E1,non_operational
+BDG2,collapse,E1,non_operational
+BDG3,collapse,E2,non_operational
+BDG4,collapse,E2,non_operational
+BDG9,collapse,E5,non_operational
+BDG10,collapse,E5,non_operational
