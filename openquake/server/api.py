@@ -58,7 +58,8 @@ from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
     create_impact_report_file, create_png_file,
-    create_job_zip, export_result, get_impact_results,
+    create_job_zip, export_result, get_exposure_by_mmi,
+    get_impact_results,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
 app = FastAPI(title='OpenQuake API')
@@ -800,6 +801,25 @@ def public_impact_results(calc_id: int, request: Request):
         data = get_impact_results(job.ds_calc_dir + '.hdf5')
     except Exception as exc:
         return _retrieval_error_response(exc, 'aggrisk_tags')
+    return _json_data_response(data, request)
+
+
+@app.api_route('/v1/calc/{calc_id}/exposure_by_mmi',
+               methods=['GET', 'HEAD', 'OPTIONS'], include_in_schema=False)
+def public_exposure_by_mmi(calc_id: int, request: Request):
+    """Return exposure aggregated by MMI region and tags."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        data = get_exposure_by_mmi(job.ds_calc_dir + '.hdf5')
+    except Exception as exc:
+        return _retrieval_error_response(exc, 'mmi_tags')
     return _json_data_response(data, request)
 
 
