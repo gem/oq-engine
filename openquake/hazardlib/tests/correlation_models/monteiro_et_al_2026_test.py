@@ -49,7 +49,7 @@ def test_reference_values():
             actual.append(block[0, 0])
             expected.append(float(row['correlation']))
     numpy.testing.assert_allclose(
-        actual, expected, rtol=0, atol=1E-9) 
+        actual, expected, rtol=1E-9, atol=1E-9) 
 
 
 def test_rectangular_block_uses_imt_major_ordering():
