@@ -31,6 +31,7 @@ from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.source_reader import read_core_trt_smrs
 from openquake.commonlib import util
 from openquake.calculators import base, getters
 
@@ -47,7 +48,7 @@ F32 = numpy.float32
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                   amplifier, monitor):
+                   amplifier, gid_by_rlz, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -79,7 +80,8 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     out = []
     for site in sitecol:
         try:
-            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges,
+                                       gid_by_rlz)
         except disagg.FarAwayRupture:
             continue
         if amplifier is not None:
@@ -119,14 +121,25 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
+def gids_by_rlz(ctx, gid_to_rlzs):
+    """Map realization IDs to context gids available in an array."""
+    if not gid_to_rlzs or 'gid' not in (ctx.dtype.names or ()):
+        return None
+    out = {}
+    for gid in numpy.unique(ctx.gid):
+        for rlz in gid_to_rlzs.get(int(gid), ()):
+            out.setdefault(int(rlz), []).append(int(gid))
+    return out
+
+
 def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-           amplifier):
+           amplifier, gid_by_rlz):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
     smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                 amplifier))
+                 amplifier, gid_by_rlz))
 
 
 def check_memory(N, Z, shape8D):
@@ -261,6 +274,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         return self.compute()
 
     def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp):
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         # compute the total weight of the contexts and the maxsize
         ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
@@ -271,8 +286,18 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
+        gid_to_rlzs = {}
+        if 'core_trt_smrs' in dstore:
+            full_lt = dstore['full_lt'].init()
+            core_trt_smrs = read_core_trt_smrs(dstore)
+            for trt_smrs, gids in zip(
+                    core_trt_smrs, full_lt.get_gids(core_trt_smrs)):
+                rlzs = full_lt.get_rlzs_by_gsim(trt_smrs).values()
+                gid_to_rlzs[int(gids[0])] = numpy.concatenate(list(rlzs))
+
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            gid_by_rlz = gids_by_rlz(ctxt, gid_to_rlzs)
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
@@ -294,7 +319,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic, self.amplifier)
+                       self.bin_edges, src_mutex, rwdic, self.amplifier,
+                       gid_by_rlz)
                 continue
 
             # split by tiles
@@ -307,11 +333,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
                                self.bin_edges, src_mutex, rwdic,
-                               self.amplifier)
+                               self.amplifier, gid_by_rlz)
                 elif len(ctx):
                     # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, rwdic, self.amplifier)
+                           self.bin_edges, src_mutex, rwdic, self.amplifier,
+                           gid_by_rlz)
 
     def compute(self):
         """

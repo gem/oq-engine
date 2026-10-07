@@ -599,6 +599,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
     def check_overflow(self):

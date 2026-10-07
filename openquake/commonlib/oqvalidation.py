@@ -909,7 +909,8 @@ split_sources:
   INTERNAL
 
 split_time:
-  After how much time starts splitting classical tasks
+  After how much time starts splitting the classical tasks with many
+  sites; the tasks with few sites are never split
   Example: *split_time = 600*
   Default: None, meaning the split_time is automatically determined
 
@@ -2471,15 +2472,6 @@ class OqParam(valid.ParamSet):
         for name, _params, component in models:
             self._validate_correlation_model(name, component)
         return True
-
-    def is_valid_truncation_level(self):
-        """
-        In presence of a correlation model the truncation level must be nonzero
-        """
-        if self.within_event_correlation_model:
-            return self.truncation_level_within != 0
-        else:
-            return True
 
     def is_valid_geometry(self):
         """

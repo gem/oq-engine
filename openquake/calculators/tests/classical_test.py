@@ -18,15 +18,17 @@
 
 import sys
 import gzip
+import unittest
 import numpy
 from unittest import mock
 
-from openquake.baselib import parallel, general, config
-from openquake.baselib.general import decode
+from openquake.baselib import parallel, general, config, hdf5, performance
+from openquake.baselib.general import decode, gettemp
 from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -42,7 +44,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95)
+    case_95, case_96)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -524,11 +526,13 @@ class ClassicalTestCase(CalculatorTestCase):
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
                     'source_model_logic_tree_epistemic_error.xml'))
-        self.assertEqual(
-            str(ctx.exception),
+        # NB: the error is raised in the classical workers, i.e. inside a
+        # parallel task, so the exception message is prefixed by the
+        # traceback
+        self.assertIn(
             "Cannot apply set_aspect_ratio to source '1': epistemic "
             "uncertainties on aspect ratio are not compatible with "
-            "aspectRatioFunction")
+            "aspectRatioFunction", str(ctx.exception))
 
         # Check that aspectRatioFunction is rejected for kiteFaultSource
         with self.assertRaises(InvalidFile) as ctx:
@@ -1232,3 +1236,94 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurves2 = self.calc.datastore['hcurves-stats'][:]
         aac(hcurves1, hcurves2, rtol=1E-6)
 
+    def test_case_96(self):
+        # a source with an uncertainty and magnitudes partially outside
+        # the integration distance: the magnitudes with zero integration
+        # distance must be ignored, not raise a KeyError (see _quintets).
+        # The source is weighted in the preclassical before the
+        # uncertainties are applied, i.e. before the magnitude filtering,
+        # which is performed in the classical workers (see filter_mag)
+        self.run_calc(case_96.__file__, 'job.ini')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+
+
+class FakeDatastoreCalculator:
+    """
+    Minimal object with the attributes read by
+    ClassicalCalculator.post_execute
+    """
+    SLOW_TASK_ERROR = True
+
+    def __init__(self, h5):
+        self.datastore = mock.MagicMock(calc_id=1)
+        self.datastore.read_df.side_effect = (
+            lambda key, index=None: h5.read_df(key, index))
+        self.datastore.__getitem__.side_effect = lambda key: h5[key]
+
+
+class SlowTasksTestCase(unittest.TestCase):
+    """
+    Check the detection of slow tasks in ClassicalCalculator.post_execute.
+    The Starmap can generate subtasks with a different name (classical ->
+    baseclassical) when the tasks are too slow, and the rows must be
+    combined and not compared, since they are components of the busy time
+    of the same workers. NB: this cannot be tested by running a
+    calculation, since starmap_info is written only if there is more than
+    one core, and with OQ_DISTRIBUTE=no there is a single core.
+    """
+    # each case is a list of (taskname, mean, std, min, max) rows in the
+    # starmap_info, followed by the expected outcome
+    CASES = [
+        # no info at all
+        ([], False),
+        # a single row, as in a classical calculation without splitting
+        ([('classical', 10., 1., 9., 11.)], False),
+        ([('classical', 10., 4., 4., 16.)], True),
+        # tasks so fast that the busy times are dominated by the startup
+        # of the workers: the ratio 1.5 is meaningless (see eshm20)
+        ([('classical', .15, .225, .1, .4)], False),
+        # a split Starmap: the classical tasks only decide to split, so
+        # they are fast and must be discarded, while the baseclassical
+        # ones do the actual work
+        ([('classical', .05, .001, .05, .05),
+          ('baseclassical', 12., 3., 9., 15.)], False),
+        ([('classical', .05, .001, .05, .05),
+          ('baseclassical', 12., 9., 3., 21.)], True),
+        # a fast but noisy row must not trigger the alarm, since the rows
+        # are combined: sqrt(3**2 + .6**2) / 31.5 = 0.097
+        ([('classical', 30., 3., 27., 33.),
+          ('baseclassical', 1.5, .6, .9, 2.1)], False),
+        # combining two equally noisy rows divides the relative spread
+        # by sqrt(2), so a spread of .4 per row is not enough
+        ([('classical', 10., 4., 4., 16.),
+          ('baseclassical', 10., 4., 4., 16.)], False),
+        ([('classical', 10., 5., 5., 15.),
+          ('baseclassical', 10., 5., 5., 15.)], True),
+        # a calculation with no classical Starmap has no slow tasks
+        ([('postclassical', 12., 9., 3., 21.)], False),
+    ]
+
+    def check(self, rows):
+        # call post_execute on a Starmap with the given starmap_info
+        fname = gettemp(suffix='.hdf5')
+        performance.init_performance(fname)
+        with hdf5.File(fname, 'a') as h5:
+            # enough tasks to fill the workers, so that the check for
+            # slow tasks is performed
+            h5['grp_keys'] = numpy.array([b'%d' % i for i in range(100)])
+            if rows:
+                hdf5.extend(h5['starmap_info'],
+                            numpy.array(rows, performance.starmap_info_dt))
+        with hdf5.File(fname, 'r') as h5:
+            ClassicalCalculator.post_execute(
+                FakeDatastoreCalculator(h5), None)
+
+    def test_slow_tasks(self):
+        for rows, expected in self.CASES:
+            with self.subTest(rows=rows):
+                if expected:
+                    with self.assertRaises(RuntimeError):
+                        self.check(rows)
+                else:
+                    self.check(rows)  # must not raise
