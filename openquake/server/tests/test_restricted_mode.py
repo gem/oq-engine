@@ -24,7 +24,7 @@ import random
 import tempfile
 from unittest import skipIf
 import django
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from openquake.commonlib import logs
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
@@ -435,7 +435,8 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         # change the older timestamp to be one day older
         times = {r.id: r.start_time for r in rows}
         newer_ts = times[newer_job.calc_id]
-        older_start_time = (datetime.utcnow() - timedelta(days=1)).isoformat()
+        older_start_time = (
+            datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         db("UPDATE job SET start_time=?x WHERE id=?x",
            older_start_time, older_job.calc_id)
 
