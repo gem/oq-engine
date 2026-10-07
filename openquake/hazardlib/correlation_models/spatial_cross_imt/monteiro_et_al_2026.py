@@ -38,6 +38,7 @@ from openquake.hazardlib.correlation_models.base import (
 from openquake.hazardlib.correlation_models.registry import register_model
 from openquake.hazardlib.imt import PGA, SA, Sa_avg2, Sa_avg3, PGV, FIV3
 
+
 _PERIODS = numpy.array([
     0.1, 0.5, 1.0, 2.0, 3.0], dtype=numpy.float64)
 
@@ -234,7 +235,6 @@ _PCA_COEFFICIENTS = numpy.array([
      0.000237981],
 ])
 
-
 # Full-precision values from variogramModel_19PC.mat. Only the first four
 # components have short- and long-range structure; the rest are nugget.
 _NUGGET = numpy.array([
@@ -286,6 +286,7 @@ def _interpolate_coefficients(imts):
                 numpy.interp(imt.period, _PERIODS, coefficients)
                 for coefficients in block.T
             ])
+
     return numpy.array(rows)
 
 
@@ -297,6 +298,7 @@ def _principal_component_covariances(distances):
         -3 * distances / _SHORT_RANGE[:, numpy.newaxis, numpy.newaxis])
     long_range = numpy.exp(
         -3 * distances / _LONG_RANGE[:, numpy.newaxis, numpy.newaxis])
+
     return (
         _NUGGET[:, numpy.newaxis, numpy.newaxis] * same_site +
         _SHORT_SILL[:, numpy.newaxis, numpy.newaxis] * short_range +
@@ -306,6 +308,7 @@ def _principal_component_covariances(distances):
 def _normalized_coefficients(imts):
     coefficients = _interpolate_coefficients(imts)
     variances = (coefficients ** 2) @ _SILLS
+
     return coefficients / numpy.sqrt(variances[:, numpy.newaxis])
 
 
@@ -340,6 +343,7 @@ class MonteiroEtAl2026(SpatialCrossIMTCorrelationModel):
         correlation = numpy.einsum(
             'ik,kab,jk->iajb', coefficients1, pc_covariances,
             coefficients2)
+
         return correlation.reshape(
             len(imts1) * distances.shape[0],
             len(imts2) * distances.shape[1])
