@@ -13,8 +13,6 @@ Earthquake Spectra 2026, 42, e70076. https://doi.org/10.1002/esp4.70076
 """
 
 import numpy
-
-from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
