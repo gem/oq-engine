@@ -799,7 +799,7 @@ class HazardCalculator(BaseCalculator):
                 'max_weight amplifier policy_df treaty_df '
                 'full_lt exported trt_rlzs gids interdep_df'
             ).split():
-                if hasattr(calc, name) and not hasattr(self, name):
+                if hasattr(calc, name) and name not in self.__dict__:
                     setattr(self, name, getattr(calc, name))
         else:
             with self.monitor('importing inputs', measuremem=True):
