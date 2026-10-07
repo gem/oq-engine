@@ -315,10 +315,15 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                     ret = self.c.get(
                         f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
                     self.assertEqual(ret.status_code, 200)
+                    self.assertEqual(ret.headers['content-type'],
+                                     'application/pdf')
+                    self.assertTrue(ret.content.startswith(b'%PDF'))
                     ret = self.c.get(
                         f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
                         f'&format=png')
                     self.assertEqual(ret.status_code, 200)
+                    self.assertEqual(ret.headers['content-type'], 'image/png')
+                    self.assertTrue(ret.content.startswith(b'\x89PNG'))
 
             # Run the command-line extractor against the datastore generated
             # by this test.  Hide xdg-open from PATH so the test does not

@@ -87,6 +87,25 @@ def remove_temp_file(fname):
         pass
 
 
+def create_impact_report_file(ds_path, iso3, file_format):
+    """Copy a stored country report to a temporary file."""
+    with datastore.read(ds_path) as dstore:
+        impact_group = dstore['impact']
+        if iso3 not in impact_group:
+            raise ValueError("ISO3 '%s' not found" % iso3)
+        report = bytes(impact_group[iso3][f'report_{file_format}'][()])
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    fd, fname = tempfile.mkstemp(
+        prefix='impact_report_', suffix='.' + file_format, dir=temp_dir)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(report)
+    except Exception:
+        remove_temp_file(fname)
+        raise
+    return fname
+
+
 def create_aggrisk_csv(ds_path, calc_id):
     """Write aggregate risk data to a temporary CSV file."""
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()

@@ -57,6 +57,7 @@ from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
+    create_impact_report_file,
     create_job_zip, export_result,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
@@ -790,6 +791,47 @@ def public_download_aggrisk(calc_id: int, request: Request):
         background=BackgroundTask(remove_temp_file, fname))
     response.headers['content-disposition'] = (
         'attachment; filename="aggrisk_%s.csv"' % calc_id)
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{calc_id}/impact_report',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_impact_report(calc_id: int, request: Request):
+    """Stream a generated IMPACT country report."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    iso3 = request.query_params.get('iso3')
+    if not iso3:
+        return _with_access_headers(Response(
+            content='Missing iso3 parameter', status_code=400,
+            media_type='text/html'))
+    file_format = request.query_params.get('format', 'pdf').lower()
+    if file_format not in ('pdf', 'png'):
+        content = (f'Invalid format parameter "{file_format}".'
+                   ' Choose "pdf" or "png".')
+        return _with_access_headers(Response(
+            content=content, status_code=400, media_type='text/html'))
+    try:
+        fname = create_impact_report_file(
+            job.ds_calc_dir + '.hdf5', iso3, file_format)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        content = f'{exc.__class__.__name__}: {exc}\n{tb}'
+        return _with_access_headers(PlainTextResponse(
+            content, status_code=400))
+    content_type = (
+        'image/png' if file_format == 'png' else 'application/pdf')
+    response = FileResponse(
+        fname, media_type=content_type,
+        background=BackgroundTask(remove_temp_file, fname))
+    response.headers['content-disposition'] = (
+        f'inline; filename=impact_report_{iso3}.{file_format}')
     return _with_access_headers(response)
 
 

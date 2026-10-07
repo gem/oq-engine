@@ -69,7 +69,6 @@ elif settings.APPLICATION_MODE == 'IMPACT':
         re_path(r'^(\d+)/exposure_by_lse$', views.exposure_by_lse),
         re_path(r'^(\d+)/extract_html_table/([-/_\.\(\)\w]+)$',
                 views.extract_html_table),
-        re_path(r'^(\d+)/impact_report$', views.impact_report),
     ])
 elif settings.APPLICATION_MODE != 'READ_ONLY':
     urlpatterns.extend([

@@ -1243,52 +1243,6 @@ def impact_run_with_shakemap(request):
     return _post_api(request, 'v0/calc/impact_run', post, timeout=300)
 
 
-def extract_report_from_datastore(dstore, iso3, file_format):
-    impact_group = dstore['impact']
-    if iso3 not in impact_group:
-        raise ValueError(f"ISO3 '{iso3}' not found")
-    data = impact_group[iso3][f'report_{file_format}'][()]
-    return bytes(data)
-
-
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def impact_report(request, calc_id):
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    iso3 = request.GET.get("iso3")
-    if not iso3:
-        return HttpResponse("Missing iso3 parameter", status=400)
-    file_format = request.GET.get("format", "pdf").lower()
-    if file_format not in ["pdf", "png"]:
-        return HttpResponse(
-            f'Invalid format parameter "{file_format}".'
-            f' Choose "pdf" or "png".', status=400)
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content=f'{exc.__class__.__name__}: {exc}\n{tb}',
-            content_type='text/plain',
-            status=400
-        )
-    if file_format == "png":
-        response = HttpResponse(report_bytes, content_type="image/png")
-        response["Content-Disposition"] = (
-            f"inline; filename=impact_report_{iso3}.png")
-    else:
-        response = HttpResponse(report_bytes, content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f"inline; filename=impact_report_{iso3}.pdf")
-    return response
-
-
 def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
