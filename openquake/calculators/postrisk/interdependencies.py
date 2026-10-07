@@ -24,9 +24,9 @@ from openquake.commonlib import datastore, logs, readinput
 from openquake.calculators.base import run_calc
 
 
-def main(dstore, road_exposure_xml, interdependencies_csv):
+def main(dstore, child_exposure_xml, interdependencies_csv):
     """
-    Run a connectivity analysis on road_exposure_xml by taking
+    Run a connectivity analysis on child_exposure_xml by taking
     into account the damages caused by a scenario_damage parent
     calculation via the interdependencies file connecting child assets
     with parent assets. For an example, see the test
@@ -35,7 +35,7 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     if isinstance(dstore, str):  # calc_id or path
         dstore = datastore.read(int(dstore) if dstore.isdigit() else dstore)
     oq = dstore['oqparam']
-    oq.inputs['exposure'] = os.path.join(oq.base_path, road_exposure_xml)
+    oq.inputs['exposure'] = os.path.join(oq.base_path, child_exposure_xml)
     oq.inputs['interdependencies'] = os.path.join(oq.base_path, interdependencies_csv)
     oq.infrastructure_connectivity_analysis = True
     # Delete postrisk_func and postrisk_args from the oqparam to avoid
