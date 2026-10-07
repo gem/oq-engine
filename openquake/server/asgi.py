@@ -25,7 +25,7 @@ setproctitle('oq-webui')
 from openquake.server.api import (  # noqa: E402
     app, configure_adapters, public_calc_datastore, public_calc_extract,
     public_calc_job_zip, public_calc_result, public_download_aggrisk,
-    public_download_png, public_impact_report)
+    public_download_png, public_impact_report, public_impact_results)
 
 # Initialize the database before starting the ASGI application.
 actions.upgrade_db(dbapi.db)
@@ -53,6 +53,8 @@ if path_prefix:
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_extract'),
         ('/v1/calc/{calc_id}/download_aggrisk', public_download_aggrisk,
          ('GET', 'OPTIONS'), 'prefixed_public_download_aggrisk'),
+        ('/v1/calc/{calc_id}/impact', public_impact_results,
+         ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_impact_results'),
         ('/v1/calc/{calc_id}/impact_report', public_impact_report,
          ('GET', 'OPTIONS'), 'prefixed_public_impact_report'),
         ('/v1/calc/{calc_id}/download_png/{what:path}', public_download_png,

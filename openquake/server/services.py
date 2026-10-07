@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from openquake.baselib import config, hdf5, parallel
 from openquake.baselib.general import zipfiles
 from openquake.calculators import views as calculator_views
-from openquake.calculators.export import export
+from openquake.calculators.export import AGGRISK_FIELD_DESCRIPTION, export
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.getters import NotFound
 from openquake.commonlib import datastore, logs, oqvalidation, readinput
@@ -123,6 +123,16 @@ def create_impact_report_file(ds_path, iso3, file_format):
         remove_temp_file(fname)
         raise
     return fname
+
+
+def get_impact_results(ds_path):
+    """Return the aggregate-risk data and its column descriptions."""
+    with datastore.read(ds_path) as dstore:
+        impact = _extract(dstore, 'aggrisk_tags')
+    return {
+        'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
+        'impact': impact.to_dict(),
+    }
 
 
 def create_aggrisk_csv(ds_path, calc_id):

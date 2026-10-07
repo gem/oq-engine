@@ -58,7 +58,7 @@ from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
     create_impact_report_file, create_png_file,
-    create_job_zip, export_result,
+    create_job_zip, export_result, get_impact_results,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
 app = FastAPI(title='OpenQuake API')
@@ -558,6 +558,24 @@ def _file_access_error(status_code, content=None):
         content=content, status_code=status_code, media_type='text/html'))
 
 
+def _retrieval_error_response(exc, resource, status_code=400):
+    """Build the text error response used by datastore retrieval routes."""
+    tb = ''.join(traceback.format_tb(exc.__traceback__))
+    content = '%s: %s in %s\n%s' % (
+        exc.__class__.__name__, exc, resource, tb)
+    return _with_access_headers(PlainTextResponse(
+        content, status_code=status_code))
+
+
+def _json_data_response(data, request):
+    """Serialize legacy API data, including non-finite float values."""
+    content = json.dumps(_json_value(data), allow_nan=True)
+    response = Response(content=content, media_type='application/json')
+    if request.method == 'HEAD':
+        response.body = b''
+    return _with_access_headers(response)
+
+
 def _application_mode():
     # api.py loads before Django settings are initialized by the ASGI app.
     from django.conf import settings
@@ -764,6 +782,25 @@ def public_calc_job_zip(job_id: int, request: Request):
         fname, ZIP, os.path.basename(fname),
         BackgroundTask(remove_exported, fname))
     return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{calc_id}/impact',
+               methods=['GET', 'HEAD', 'OPTIONS'], include_in_schema=False)
+def public_impact_results(calc_id: int, request: Request):
+    """Return IMPACT aggregate-risk data as JSON."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        data = get_impact_results(job.ds_calc_dir + '.hdf5')
+    except Exception as exc:
+        return _retrieval_error_response(exc, 'aggrisk_tags')
+    return _json_data_response(data, request)
 
 
 @app.api_route('/v1/calc/{calc_id}/download_aggrisk',

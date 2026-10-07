@@ -1522,38 +1522,6 @@ def calc_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def impact_results(request, calc_id):
-    """
-    Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
-
-    :param request:
-        `django.http.HttpRequest` object.
-    :param calc_id:
-        The id of the requested calculation.
-    :returns:
-        a JSON object as documented in rest-api.rst
-    """
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            df = _extract(ds, 'aggrisk_tags')
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
-            content_type='text/plain', status=400)
-    response_data = {'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
-                     'impact': df.to_dict()}
-    return JsonResponse(response_data)
-
-
-@cross_domain_ajax
-@require_http_methods(['GET', 'HEAD'])
 def exposure_by_mmi(request, calc_id):
     """
     Return exposure aggregated by MMI regions and tags (mmi_tags),
