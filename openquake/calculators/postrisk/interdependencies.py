@@ -64,11 +64,9 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     # passing them to the child calculation
     oq.__dict__.pop('postrisk_func', None)
     oq.__dict__.pop('postrisk_args', None)
-    ini = oq.to_ini()
-    child_ini = os.path.join(oq.base_path, 'child.ini')
-    with open(child_ini, 'w') as f:
-        f.write(ini)
-    calc = run_calc(child_ini, hazard_calculation_id=dstore.calc_id)
+    # Run the child calculation in-memory, passing a job_dict derived
+    # from the oqparam instead of writing a child.ini file on disk
+    calc = run_calc(oq.to_dict(), hazard_calculation_id=dstore.calc_id)
     # Save the child calc_id to the parent's oqparam so it can be accessed
     # through any datastore with the same calc_id
     oq = dstore['oqparam']

@@ -191,6 +191,24 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
+        self._check_no_damage()
+        if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
+            return
+        prc = self._run_postrisk()
+        self._fix_no_damage(prc)
+        self._store_damages()
+        if oq.infrastructure_connectivity_analysis:
+            self._run_connectivity()
+        if 'interdependencies' in oq.inputs:  # we are in the child
+            self._store_interdependencies(oq)
+            if oq.infrastructure_connectivity_analysis:
+                self._run_connectivity(prefix='inter')
+
+    def _check_no_damage(self):
+        """
+        Raise or warn if the sites in gmf_data are disjoint from the site
+        collection, i.e. there is no damage at all
+        """
         # no damage check, perhaps the sites where disjoint from gmf_data
         if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
             haz_sids = self.datastore['gmf_data/sid'][:]
@@ -198,20 +216,28 @@ class DamageCalculator(EventBasedRiskCalculator):
             if count == 0:
                 raise ValueError('The sites in gmf_data are disjoint from the '
                                  'site collection!?')
-            else:
-                logging.warning(
-                    'There is no damage, perhaps the hazard is too small?')
-            return
+            logging.warning(
+                'There is no damage, perhaps the hazard is too small?')
 
+    def _run_postrisk(self):
+        """
+        Run the postrisk calculator to compute aggrisk and aggcurves
+        """
+        oq = self.oqparam
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-
         prc.pre_execute()
         res = prc.execute()
         prc.post_execute(res)
+        return prc
 
+    def _fix_no_damage(self, prc):
+        """
+        Fix the no_damage distribution for events with zero damage and
+        correct the small negative damages arising from numeric errors
+        """
         P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
@@ -224,12 +250,17 @@ class DamageCalculator(EventBasedRiskCalculator):
                 for li in range(L):
                     # set no_damage
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
-
         # due numeric errors we can have small negative damages; we fix them
         small = self.dmgcsq < 0
         assert (small > -1E-6).all()
         self.dmgcsq[small] = 0
 
+    def _store_damages(self):
+        """
+        Store the damages-rlzs and, when there are multiple realizations,
+        the mean damages-stats
+        """
+        oq = self.oqparam
         self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
             self.dmgcsq)
         self.datastore.set_shape_descr(
@@ -243,95 +274,94 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=['mean'])
 
+    def _run_connectivity(self, prefix='infra'):
+        """
+        Run the infrastructure connectivity analysis and store its results
+        """
+        logging.info('Running connectivity analysis')
+        results = connectivity.analysis(self.datastore)
+        self._store_connectivity_analysis_results(results, prefix)
 
+    def _store_interdependencies(self, oq):
+        """
+        Build the interdependencies graph between the parent (hazard) and
+        the child (damage) calculations and store the resulting
+        non_operational columns in the child's risk_by_event dataset
+        """
+        asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
+            self.datastore.parent['assetcol']['id'])}
+        asset2id_child = {a.decode('ascii'): i for i, a in enumerate(
+            self.assetcol['id'])}
 
-        if oq.infrastructure_connectivity_analysis:
-            logging.info('Running connectivity analysis')
-            results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(results)
-            
-            
-        # put the interdependencies logic here
-        if 'interdependencies' in oq.inputs:  # we are in the child
-            asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
-                self.datastore.parent['assetcol']['id'])}
-            asset2id_child = {a.decode('ascii'): i for i, a in enumerate(
-                self.assetcol['id'])}
+        state2column = dict(zip(self.crmodel.damage_states[1:],
+                                self.crmodel.get_dmg_csq()))
+        # Allow non_operational as source state too
+        state2column['non_operational'] = 'non_operational'
 
-            state2column = dict(zip(self.crmodel.damage_states[1:],
-                                    self.crmodel.get_dmg_csq()))
-            # Allow non_operational as source state too
-            state2column['non_operational'] = 'non_operational'
-            
-            self.interdep_df['col'] = [state2column[s] for s in self.interdep_df.source_damage_state]
-            self.interdep_df['parent_id'] = [asset2id_parent[a] for a in self.interdep_df.source_asset_id]
-            self.interdep_df['child_id'] = [asset2id_child[a] for a in self.interdep_df.target_asset_id]
-            parent_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
-            child_df = self.datastore.read_df('risk_by_event', 'event_id')
+        self.interdep_df['col'] = [state2column[s] for s in
+                                   self.interdep_df.source_damage_state]
+        self.interdep_df['parent_id'] = [asset2id_parent[a] for a in
+                                         self.interdep_df.source_asset_id]
+        self.interdep_df['child_id'] = [asset2id_child[a] for a in
+                                        self.interdep_df.target_asset_id]
+        parent_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
+        child_df = self.datastore.read_df('risk_by_event', 'event_id')
 
-            print(parent_df)
-            print(child_df)
-            
-            child_df = child_df.rename(columns={'non_operational': 'non_operational_orig'})
-            child_df['non_operational_inter'] = 0
-            
-            for i, row in self.interdep_df.iterrows():
-                # Find events where the source assets in in the 
-                # triggering damage/functionality state
-                source_mask = (
-                    (parent_df.agg_id == row.parent_id) &
-                    (parent_df[row.col] == 1)
-                    )
-                selected_events = parent_df.index[source_mask].unique()
-                
-                # Set the target asset as non-operational for those events
-                target_mask = (
-                    (child_df.agg_id == row.child_id) &
-                    child_df.index.isin(selected_events)
-                    )
-                child_df.loc[target_mask, 'non_operational_inter'] = 1
+        child_df = child_df.rename(
+            columns={'non_operational': 'non_operational_orig'})
+        child_df['non_operational_inter'] = 0
 
-            child_df['non_operational'] = numpy.maximum(
-                child_df['non_operational_orig'].to_numpy(), 
-                child_df['non_operational_inter'].to_numpy())
+        for i, row in self.interdep_df.iterrows():
+            # Find events where the source assets in in the
+            # triggering damage/functionality state
+            source_mask = (
+                (parent_df.agg_id == row.parent_id) &
+                (parent_df[row.col] == 1)
+                )
+            selected_events = parent_df.index[source_mask].unique()
 
-            # Correct the total values per event
-            total_agg_id = child_df.agg_id.max()
-            asset_mask = child_df.agg_id != total_agg_id
-            total_mask = child_df.agg_id == total_agg_id
+            # Set the target asset as non-operational for those events
+            target_mask = (
+                (child_df.agg_id == row.child_id) &
+                child_df.index.isin(selected_events)
+                )
+            child_df.loc[target_mask, 'non_operational_inter'] = 1
 
-            inter_totals = (
-                child_df.loc[asset_mask]
-                .groupby(level='event_id')['non_operational_inter']
-                .sum()
-            )
-            nonop_totals = (
-                child_df.loc[asset_mask]
-                .groupby(level='event_id')['non_operational']
-                .sum()
-            )
+        child_df['non_operational'] = numpy.maximum(
+            child_df['non_operational_orig'].to_numpy(),
+            child_df['non_operational_inter'].to_numpy())
 
-            child_df.loc[total_mask, 'non_operational_inter'] = (
-                child_df.loc[total_mask].index.map(inter_totals)
-            )
+        # Correct the total values per event
+        total_agg_id = child_df.agg_id.max()
+        asset_mask = child_df.agg_id != total_agg_id
+        total_mask = child_df.agg_id == total_agg_id
 
-            child_df.loc[total_mask, 'non_operational'] = (
-                child_df.loc[total_mask].index.map(nonop_totals)
-            )
+        inter_totals = (
+            child_df.loc[asset_mask]
+            .groupby(level='event_id')['non_operational_inter']
+            .sum()
+        )
+        nonop_totals = (
+            child_df.loc[asset_mask]
+            .groupby(level='event_id')['non_operational']
+            .sum()
+        )
 
-            # Storing new columns in the dstore
-            self.datastore['risk_by_event/non_operational'][:] = (
-                child_df['non_operational'])
-            self.datastore['risk_by_event/non_operational_orig'] = (
-                child_df['non_operational_orig'])
-            self.datastore['risk_by_event/non_operational_inter'] = (
-                child_df['non_operational_inter'])
-            
-            if oq.infrastructure_connectivity_analysis:
-                logging.info('Running connectivity analysis')
-                results = connectivity.analysis(self.datastore)
-                self._store_connectivity_analysis_results(results, 'inter')
-            
+        child_df.loc[total_mask, 'non_operational_inter'] = (
+            child_df.loc[total_mask].index.map(inter_totals)
+        )
+
+        child_df.loc[total_mask, 'non_operational'] = (
+            child_df.loc[total_mask].index.map(nonop_totals)
+        )
+
+        # Storing new columns in the dstore
+        self.datastore['risk_by_event/non_operational'][:] = (
+            child_df['non_operational'])
+        self.datastore['risk_by_event/non_operational_orig'] = (
+            child_df['non_operational_orig'])
+        self.datastore['risk_by_event/non_operational_inter'] = (
+            child_df['non_operational_inter'])
 
     def _store_connectivity_analysis_results(self, conn_results, prefix='infra'):
         avg_dict = {}

@@ -2796,10 +2796,37 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in run-demos.sh
+    def to_dict(self, **inputs):
+        """
+        Converts the parameters into a flat dictionary of string
+        parameters, mirroring what readinput.get_params produces when
+        reading a job.ini file back: every value is a string, and the
+        input files are stored as ``<name>_file`` keys. It is the
+        in-memory counterpart of to_ini and can be fed to run_calc.
+        """
+        dic = self._param_dict(**inputs)
+        out = {}
+        for key, val in dic.items():
+            for line in to_ini(key, val).split('\n'):  # multi-line values
+                k, sep, v = line.partition('=')
+                if sep:
+                    out[k.strip()] = v.strip()
+        return out
+
     def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
+        """
+        ini = '[general]\n' + '\n'.join(
+            to_ini(k, v) for k, v in self._param_dict(**inputs).items())
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
+
+    def _param_dict(self, **inputs):
+        """
+        Build the dictionary of parameters to serialize, applying the
+        usual normalization (legacy cross-correlation rename, removal of
+        the internal fields, joining of the list-valued parameters, ...).
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         if (getattr(self, '_legacy_cross_correlation_role', None) ==
@@ -2815,7 +2842,6 @@ class OqParam(valid.ParamSet):
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
                 split():
             dic.pop(k, None)
-
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'limit_states' in dic:
@@ -2825,19 +2851,16 @@ class OqParam(valid.ParamSet):
                 ','.join(keys) for keys in dic['aggregate_by'])
         if 'cache' not in dic:
             dic['cache'] = 'false'
-        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        # newlines can break the checksum, so we remove them
-        return ini.strip().replace('\n\n', '\n')
+        return dic
 
     def from_parent(self, oqparent, new=False):
         """
         :returns:
             updated instance with missing parameters copied from oqparent
         """
-        params = {name: value for name, value in
-                  vars(oqparent).items()
-                  if name not in vars(self)
-                  and name != 'ground_motion_fields'}
+        params = {name: value for name, value in vars(oqparent).items()
+                  if name not in vars(self) and name not in (
+                  'ground_motion_fields', 'postrisk_func', 'postrisk_args')}
         if new:
             oqc = copy.copy(self)
             vars(oqc).update(params)
