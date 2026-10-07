@@ -310,7 +310,7 @@ class MonteiroEtAl2026(SpatialCrossIMTCorrelationModel):
     The model uses all twenty two principal components, following the authors'
     current reference implementation, and was calibrated for 5%-damped SA,
     average spectral acceleration (Sa_avg2 and Sa_avg3), filtered incremental
-    velocity (FIV3) from 0.1 to 5 seconds. PGA and PGV are also suported in this study.
+    velocity (FIV3) from 0.1 to 3 seconds. PGA and PGV are also suported in this study.
     """
 
     SUPPORTS_CIRCULANT_EMBEDDING = True
