@@ -243,6 +243,14 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=['mean'])
 
+
+
+        if oq.infrastructure_connectivity_analysis:
+            logging.info('Running connectivity analysis')
+            results = connectivity.analysis(self.datastore)
+            self._store_connectivity_analysis_results(results)
+            
+            
         # put the interdependencies logic here
         if 'interdependencies' in oq.inputs:  # we are in the child
             asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
@@ -252,42 +260,80 @@ class DamageCalculator(EventBasedRiskCalculator):
 
             state2column = dict(zip(self.crmodel.damage_states[1:],
                                     self.crmodel.get_dmg_csq()))
+            # Allow non_operational as source state too
+            state2column['non_operational'] = 'non_operational'
+            
             self.interdep_df['col'] = [state2column[s] for s in self.interdep_df.source_damage_state]
             self.interdep_df['parent_id'] = [asset2id_parent[a] for a in self.interdep_df.source_asset_id]
             self.interdep_df['child_id'] = [asset2id_child[a] for a in self.interdep_df.target_asset_id]
-            bdg_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
-            road_df = self.datastore.read_df('risk_by_event', 'event_id')
-            # for building
-            print(bdg_df)
-            print(road_df)
-            road_df = road_df.rename(columns={'non_operational': 'non_operational_orig'})
-            road_df['non_operational_inter'] = 0
-            road_dfs = []
+            parent_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
+            child_df = self.datastore.read_df('risk_by_event', 'event_id')
+
+            print(parent_df)
+            print(child_df)
+            
+            child_df = child_df.rename(columns={'non_operational': 'non_operational_orig'})
+            child_df['non_operational_inter'] = 0
             
             for i, row in self.interdep_df.iterrows():
-                bdf_df = bdg_df[bdg_df.agg_id==row['parent_id']]
-                rdf_df = road_df[road_df.agg_id==row['child_id']]
-                rdf_df['non_operational_inter'] = (bdf_df[row['col']].to_numpy()==1).astype(numpy.float32)
-                road_dfs.append(rdf_df)
-            
-            rdf = pandas.concat(road_dfs)
-            rdf['non_operational'] = numpy.maximum(rdf['non_operational_orig'].to_numpy(), rdf['non_operational_inter'].to_numpy())
+                # Find events where the source assets in in the 
+                # triggering damage/functionality state
+                source_mask = (
+                    (parent_df.agg_id == row.parent_id) &
+                    (parent_df[row.col] == 1)
+                    )
+                selected_events = parent_df.index[source_mask].unique()
+                
+                # Set the target asset as non-operational for those events
+                target_mask = (
+                    (child_df.agg_id == row.child_id) &
+                    child_df.index.isin(selected_events)
+                    )
+                child_df.loc[target_mask, 'non_operational_inter'] = 1
+
+            child_df['non_operational'] = numpy.maximum(
+                child_df['non_operational_orig'].to_numpy(), 
+                child_df['non_operational_inter'].to_numpy())
+
+            # Correct the total values per event
+            total_agg_id = child_df.agg_id.max()
+            asset_mask = child_df.agg_id != total_agg_id
+            total_mask = child_df.agg_id == total_agg_id
+
+            inter_totals = (
+                child_df.loc[asset_mask]
+                .groupby(level='event_id')['non_operational_inter']
+                .sum()
+            )
+            nonop_totals = (
+                child_df.loc[asset_mask]
+                .groupby(level='event_id')['non_operational']
+                .sum()
+            )
+
+            child_df.loc[total_mask, 'non_operational_inter'] = (
+                child_df.loc[total_mask].index.map(inter_totals)
+            )
+
+            child_df.loc[total_mask, 'non_operational'] = (
+                child_df.loc[total_mask].index.map(nonop_totals)
+            )
 
             # Storing new columns in the dstore
-            # del self.datastore['risk_by_event/non_operational']
-            self.datastore['risk_by_event/non_operational'][:] = rdf['non_operational']
-            self.datastore['risk_by_event/non_operational_orig'] = rdf['non_operational_orig']
-            self.datastore['risk_by_event/non_operational_inter'] = rdf['non_operational_inter']
+            self.datastore['risk_by_event/non_operational'][:] = (
+                child_df['non_operational'])
+            self.datastore['risk_by_event/non_operational_orig'] = (
+                child_df['non_operational_orig'])
+            self.datastore['risk_by_event/non_operational_inter'] = (
+                child_df['non_operational_inter'])
             
-            breakpoint()
+            if oq.infrastructure_connectivity_analysis:
+                logging.info('Running connectivity analysis')
+                results = connectivity.analysis(self.datastore)
+                self._store_connectivity_analysis_results(results, 'inter')
+            
 
-
-        if oq.infrastructure_connectivity_analysis:
-            logging.info('Running connectivity analysis')
-            results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(results)
-
-    def _store_connectivity_analysis_results(self, conn_results):
+    def _store_connectivity_analysis_results(self, conn_results, prefix='infra'):
         avg_dict = {}
         if 'avg_connectivity_loss_eff' in conn_results:
             avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
@@ -299,40 +345,40 @@ class DamageCalculator(EventBasedRiskCalculator):
             avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
         if avg_dict:
             self.datastore.create_df(
-                'infra-avg_loss', pandas.DataFrame(data=avg_dict),
+                prefix+'-avg_loss', pandas.DataFrame(data=avg_dict),
                 display_name=DISPLAY_NAME['infra-avg_loss'])
         if 'event_connectivity_loss_eff' in conn_results:
             self.datastore.create_df(
-                'infra-event_efl',
+                prefix+'-event_efl',
                 conn_results['event_connectivity_loss_eff'],
                 display_name=DISPLAY_NAME['infra-event_efl'])
         if 'event_connectivity_loss_pcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_pcl',
+                prefix+'-event_pcl',
                 conn_results['event_connectivity_loss_pcl'],
                 display_name=DISPLAY_NAME['infra-event_pcl'])
         if 'event_connectivity_loss_wcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_wcl',
+                prefix+'-event_wcl',
                 conn_results['event_connectivity_loss_wcl'],
                 display_name=DISPLAY_NAME['infra-event_wcl'])
         if 'event_connectivity_loss_ccl' in conn_results:
             self.datastore.create_df(
-                'infra-event_ccl',
+                prefix+'-event_ccl',
                 conn_results['event_connectivity_loss_ccl'],
                 display_name=DISPLAY_NAME['infra-event_ccl'])
         if 'taz_cl' in conn_results:
             self.datastore.create_df(
-                'infra-taz_cl',
+                prefix+'-taz_cl',
                 conn_results['taz_cl'],
                 display_name=DISPLAY_NAME['infra-taz_cl'])
         if 'dem_cl' in conn_results:
             self.datastore.create_df(
-                'infra-dem_cl',
+                prefix+'-dem_cl',
                 conn_results['dem_cl'],
                 display_name=DISPLAY_NAME['infra-dem_cl'])
         if 'node_el' in conn_results:
             self.datastore.create_df(
-                'infra-node_el',
+                prefix+'-node_el',
                 conn_results['node_el'],
                 display_name=DISPLAY_NAME['infra-node_el'])

@@ -17,10 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
 
 from openquake.baselib import sap
-from openquake.commonlib import datastore
-from openquake.calculators.base import run_calc
+from openquake.commonlib import datastore, logs
+from openquake.calculators.base import run_calc, expose_outputs
 
 # The infrastructure connectivity analysis is performed by the damage
 # calculators (see `connectivity` in openquake/risklib) when the job.ini
@@ -58,11 +59,16 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     oq = dstore['oqparam']
     oq.inputs['exposure'] = os.path.join(oq.base_path, road_exposure_xml)
     oq.inputs['interdependencies'] = os.path.join(oq.base_path, interdependencies_csv)
+    oq.infrastructure_connectivity_analysis = True
     ini = oq.to_ini()
     child_ini = os.path.join(oq.base_path, 'child.ini')
     with open(child_ini, 'w') as f:
         f.write(ini)
-    run_calc(child_ini, hazard_calculation_id=dstore.calc_id)
+    calc = run_calc(child_ini, hazard_calculation_id=dstore.calc_id)
+    expose_outputs(calc.datastore)
+    calc.datastore.close()
+    outs = '\n'.join(logs.dbcmd('list_outputs', calc.datastore.calc_id, False))
+    logging.info(outs)
 
 
 if __name__ == '__main__':
