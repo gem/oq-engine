@@ -321,6 +321,7 @@ def split_source(src):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
         split.sampling = src.sampling
+        split.ts_sets = src.ts_sets
         split.grp_id = grp_id
         split.id = src.id
         if has_hdf5:

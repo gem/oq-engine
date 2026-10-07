@@ -256,7 +256,7 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     subgrp.sources = list(srcs)
     bset_values = get_bset_values(full_lt, subgrp)
     for trt_smrs, sg in modified_groups(subgrp, bset_values):
-        sg = preclassical.split_modified(sg)
+        sg = preclassical.split_modified(sg, cmaker)
         # the sources modified by the uncertainties are filtered here and
         # not in the preclassical (see filter_mag), since the uncertainties
         # can change the max magnitude
@@ -315,9 +315,10 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # same uncertainties, are computed together; otherwise there
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
-        srcblocks = groupby(
-            grp, lambda src: tuple(get_ts_sets(src))).values()
+        srcblocks = groupby(grp, get_ts_sets).values()
     for srcs in srcblocks:
+        # for the demo LogicTreeCase2ClassicalPSHA srcs is
+        # [<AreaSource first>] and then [<SimpleFaultSource second>]
         for cmaker_, sg in cmakers_groups(
                 srcs, grp, cmaker, gid_dic, full_lt):
             yield baseclassical(

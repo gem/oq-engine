@@ -21,6 +21,7 @@ import math
 import pickle
 import itertools
 import operator
+import logging
 import toml
 import numpy
 
@@ -693,7 +694,7 @@ def _sampling_array(src):
 
 def get_ts_sets(src):
     """
-    :returns: a list of tuples of trt_smr, the sets of realizations with
+    :returns: a tuple of tuples of trt_smr, the sets of realizations with
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
@@ -702,8 +703,8 @@ def get_ts_sets(src):
         have a single set, given by the sampling.
     """
     if src.ts_sets:
-        return [tuple(t) for t in src.ts_sets]
-    return [tuple(_sampling_array(src)['trt_smr'])]
+        return tuple(tuple(t) for t in src.ts_sets)
+    return tuple(_sampling_array(src)['trt_smr']),
 
 
 def restrict_sampling(src, trt_smrs):

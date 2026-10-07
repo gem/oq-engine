@@ -118,7 +118,7 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     return out
 
 
-def split_modified(grp):
+def split_modified(grp, cmaker):
     """
     Split the sources modified by the uncertainties, which were not split
     in the preclassical (see filter_weight). This is called after the
@@ -140,7 +140,10 @@ def split_modified(grp):
             out.extend(split_source(src))
         else:
             out.append(src)
-    grp.sources = out
+    if cmaker.ps_grid_spacing:
+        grp.sources = grid_point_sources(grp, cmaker.ps_grid_spacing)
+    else:
+        grp.sources = out
     return grp
 
 

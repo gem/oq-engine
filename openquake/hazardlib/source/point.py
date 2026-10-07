@@ -628,6 +628,7 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
             name = 'cps-%03d-%04d' % (grp_id, cnt)
             cps = CollapsedPointSource(name, points[idxs])  # slow part
             cps.grp_id = points[0].grp_id
+            cps.ts_sets = points[0].ts_sets
             cps.sampling = points[0].sampling
             cps.ps_grid_spacing = ps_grid_spacing
             out.append(cps)
