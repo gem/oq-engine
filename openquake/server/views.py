@@ -1522,50 +1522,6 @@ def calc_traceback(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def exposure_by_lse(request, calc_id):
-    """
-    Return exposure aggregated by secondary peril LSE tiers and tags,
-    by ``calc_id``, as JSON.
-
-    :param request:
-        `django.http.HttpRequest` object.
-    :param calc_id:
-        The id of the requested calculation.
-    :returns:
-        a JSON object as documented in rest-api.rst
-    """
-    job = logs.dbcmd('get_job', int(calc_id))
-    secondary_peril = request.GET.get('secondary_peril')
-    assert secondary_peril in ['liquefaction', 'landslide'], (
-        'Please specify secondary_peril: "landslide" or "liquefaction"')
-    discard_empty = request.GET.get('discard_empty', ['1'])[0] == '1'
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            df = _extract(
-                ds,
-                f'exposure_by_lse?secondary_peril={secondary_peril}'
-                f'&discard_empty={discard_empty}')
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'exposure_by_lse', tb),
-            content_type='text/plain', status=400)
-    column_description = {
-        col: description
-        for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
-        if col in df.columns}
-    response_data = {'column_descriptions': column_description,
-                     'exposure_by_lse': df.to_dict()}
-    return JsonResponse(response_data)
-
-
-@cross_domain_ajax
-@require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
     """Authenticate and proxy model provenance to FastAPI."""
     if get_user_level(request) < 2:

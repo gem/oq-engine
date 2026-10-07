@@ -58,7 +58,8 @@ from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
     create_impact_report_file, create_png_file,
-    create_job_zip, export_result, get_exposure_by_mmi,
+    create_job_zip, export_result, get_exposure_by_lse,
+    get_exposure_by_mmi,
     get_impact_results,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
@@ -177,7 +178,9 @@ def _json_value(value):
     if isinstance(value, (list, tuple)):
         return [_json_value(item) for item in value]
     if isinstance(value, numpy.generic):
-        return value.item()
+        return _json_value(value.item())
+    if isinstance(value, bytes):
+        return value.decode('utf-8')
     return value
 
 
@@ -820,6 +823,33 @@ def public_exposure_by_mmi(calc_id: int, request: Request):
         data = get_exposure_by_mmi(job.ds_calc_dir + '.hdf5')
     except Exception as exc:
         return _retrieval_error_response(exc, 'mmi_tags')
+    return _json_data_response(data, request)
+
+
+@app.api_route('/v1/calc/{calc_id}/exposure_by_lse',
+               methods=['GET', 'HEAD', 'OPTIONS'], include_in_schema=False)
+def public_exposure_by_lse(calc_id: int, request: Request):
+    """Return exposure aggregated by secondary-peril tiers."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    secondary_peril = request.query_params.get('secondary_peril')
+    if secondary_peril not in ('liquefaction', 'landslide'):
+        return _with_access_headers(PlainTextResponse(
+            'Please specify secondary_peril: "landslide" or "liquefaction"',
+            status_code=400))
+    discard_value = request.query_params.get('discard_empty', '1')
+    discard_empty = bool(discard_value) and discard_value[0] == '1'
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        data = get_exposure_by_lse(
+            job.ds_calc_dir + '.hdf5', secondary_peril, discard_empty)
+    except Exception as exc:
+        return _retrieval_error_response(exc, 'exposure_by_lse')
     return _json_data_response(data, request)
 
 

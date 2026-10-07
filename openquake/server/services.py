@@ -126,6 +126,23 @@ def create_impact_report_file(ds_path, iso3, file_format):
     return fname
 
 
+def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
+    """Return exposure by secondary-peril tiers and selected columns."""
+    resource = (
+        f'exposure_by_lse?secondary_peril={secondary_peril}'
+        f'&discard_empty={discard_empty}')
+    with datastore.read(ds_path) as dstore:
+        exposure = _extract(dstore, resource)
+    column_descriptions = {
+        col: description
+        for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
+        if col in exposure.columns}
+    return {
+        'column_descriptions': column_descriptions,
+        'exposure_by_lse': exposure.to_dict(),
+    }
+
+
 def get_exposure_by_mmi(ds_path):
     """Return MMI-aggregated exposure data and column descriptions."""
     with datastore.read(ds_path) as dstore:

@@ -263,6 +263,12 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
         ret = self.get_json('%s/exposure_by_mmi' % job_id)
         self.assertEqual(list(ret), ['column_descriptions', 'exposure_by_mmi'])
+        for secondary_peril in ['liquefaction', 'landslide']:
+            ret = self.get_json(
+                '%s/exposure_by_lse' % job_id,
+                secondary_peril=secondary_peril)
+            self.assertEqual(list(ret), [
+                'column_descriptions', 'exposure_by_lse'])
         ret = self.get('%s/download_aggrisk' % job_id)
         self.assertTrue(ret.content)
         self.assertTrue(ret.headers['Content-Type'].startswith('text/csv'))
