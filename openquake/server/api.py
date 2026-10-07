@@ -36,7 +36,8 @@ from xml.parsers.expat import ExpatError
 
 import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import (
+    FileResponse, JSONResponse, PlainTextResponse, Response)
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
@@ -529,11 +530,22 @@ def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
         raise HTTPException(status_code=404) from exc
 
 
-@app.api_route('/v0/calc/result/{result_id}', methods=['GET', 'HEAD'])
-def calc_result(result_id: int, export_type: str | None = None,
-                x_api_key: str | None = Header(default=None)):
-    """Export a calculation result in the requested format."""
-    _check_api_key(x_api_key)
+_RESULT_ACCESS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Max-Age': '1000',
+    'Access-Control-Allow-Headers': '*',
+}
+
+
+def _with_result_access_headers(response):
+    """Add the CORS headers used by the public result endpoint."""
+    response.headers.update(_RESULT_ACCESS_HEADERS)
+    return response
+
+
+def _result_file_response(result_id, export_type):
+    """Build a file response for a calculation result."""
     try:
         exported = export_result(result_id, export_type)
     except dbapi.NotFound as exc:
@@ -554,6 +566,85 @@ def calc_result(result_id: int, export_type: str | None = None,
     response.headers['content-disposition'] = (
         'attachment; filename=%s' % exportname)
     return response
+
+
+def _authorize_result_download(request, result_id):
+    """Check the Django session and result permissions for a download."""
+    # api.py loads before the Django ASGI application is initialized.
+    from django.conf import settings
+    from django.db import close_old_connections
+    from openquake.server import utils
+
+    if settings.LOCKDOWN:
+        close_old_connections()
+    try:
+        if settings.LOCKDOWN:
+            user = utils.get_user_from_session(
+                request.cookies.get(settings.SESSION_COOKIE_NAME))
+            if not user.is_authenticated:
+                return 403
+        else:
+            user = None
+        try:
+            _, job_status, owner, _, ds_key = logs.dbcmd(
+                'get_result', result_id)
+        except dbapi.NotFound:
+            return 404
+        auth_request = SimpleNamespace(user=user)
+        if not utils.user_can_view_result(
+                auth_request, owner, job_status, ds_key):
+            return 403
+        return 200
+    finally:
+        if settings.LOCKDOWN:
+            close_old_connections()
+
+
+@app.api_route('/v1/calc/result/{result_id}',
+               methods=['GET', 'HEAD', 'OPTIONS'], include_in_schema=False)
+def public_calc_result(
+        result_id: int, request: Request, export_type: str | None = None):
+    """Authorize and download a calculation result for a WebUI user."""
+    # api.py loads before the Django ASGI application is initialized.
+    from django.conf import settings
+
+    if settings.APPLICATION_MODE == 'TOOLS_ONLY':
+        return _with_result_access_headers(Response(
+            content='Not Found', status_code=404, media_type='text/html'))
+    if request.method == 'OPTIONS':
+        return _with_result_access_headers(Response())
+
+    status = _authorize_result_download(request, result_id)
+    if status == 403:
+        return _with_result_access_headers(Response(
+            content='Forbidden', status_code=403, media_type='text/html'))
+    if status == 404:
+        return _with_result_access_headers(Response(
+            content='Not Found', status_code=404, media_type='text/html'))
+
+    try:
+        response = _result_file_response(result_id, export_type)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            response = Response(
+                content='Not Found', status_code=404, media_type='text/html')
+        else:
+            response = JSONResponse(
+                content={'detail': exc.detail}, status_code=exc.status_code)
+            response.headers['content-type'] = 'text/plain'
+    except Exception:
+        logging.exception('Could not export result %s', result_id)
+        response = PlainTextResponse(
+            'Internal Server Error', status_code=500)
+    return _with_result_access_headers(response)
+
+
+@app.api_route('/v0/calc/result/{result_id}', methods=['GET', 'HEAD'])
+def calc_result(result_id: int, export_type: str | None = None,
+                x_api_key: str | None = Header(default=None)):
+    """Export a calculation result in the requested format."""
+    _check_api_key(x_api_key)
+    return _result_file_response(result_id, export_type)
 
 
 @app.get('/v1/engine_version', response_class=PlainTextResponse)

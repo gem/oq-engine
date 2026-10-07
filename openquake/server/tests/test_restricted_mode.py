@@ -71,6 +71,34 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authentication_required': True})
 
+    def test_result_download_uses_django_session(self):
+        self.c.session.cookies.clear()
+        response = self.c.get('/v1/calc/result/0')
+        self.assertEqual(response.status_code, 403)
+
+        self.c.login(username=self.user2.username, password=self.password2)
+        response = self.c.get('/v1/calc/result/0')
+        self.assertEqual(response.status_code, 404)
+
+    def test_result_download_checks_job_owner(self):
+        [job] = create_jobs(
+            [dict(calculation_mode='classical',
+                  description='test_result_download_owner')],
+            user_name=self.user2.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        result_id = db(
+            'INSERT INTO output (oq_job_id, display_name, ds_key) '
+            'VALUES (?x, ?x, ?x)', job.calc_id, 'Test output', 'hmaps'
+        ).lastrowid
+        try:
+            self.c.login(username=self.user1.username,
+                         password=self.password1)
+            response = self.c.get('/v1/calc/result/%s' % result_id)
+            self.assertEqual(response.status_code, 403)
+        finally:
+            logs.dbcmd('del_calc', job.calc_id, self.user2.username)
+
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_share_complete_job')

@@ -20,6 +20,8 @@ import os
 import getpass
 import requests
 import logging
+from importlib import import_module
+from types import SimpleNamespace
 
 from time import sleep
 from django.conf import settings
@@ -27,6 +29,8 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
+
+HIDDEN_OUTPUTS = ['exposure', 'job']
 
 
 def is_superuser(request):
@@ -99,6 +103,31 @@ def user_has_permission(request, owner, job_status):
         return True
     else:
         return owner in get_valid_users(request) or not get_acl_on(request)
+
+
+def user_can_view_result(request, owner, job_status, ds_key):
+    """Return whether a user can download a calculation result."""
+    if not user_has_permission(request, owner, job_status):
+        return False
+    if (settings.LOCKDOWN and ds_key in HIDDEN_OUTPUTS
+            and not request.user.has_perm(f'auth.can_view_{ds_key}')
+            and not request.user.level >= 2):
+        return False
+    return True
+
+
+def get_user_from_session(session_key):
+    """Resolve a Django user from a session key, or return AnonymousUser."""
+    # Auth models are installed only in lockdown mode.
+    from django.contrib.auth import get_user
+    from django.contrib.auth.models import AnonymousUser
+
+    if not session_key:
+        return AnonymousUser()
+    session_backend = import_module(settings.SESSION_ENGINE)
+    request = SimpleNamespace(
+        session=session_backend.SessionStore(session_key))
+    return get_user(request)
 
 
 def oq_server_context_processor(request):

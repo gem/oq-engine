@@ -40,7 +40,7 @@ from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden, JsonResponse, StreamingHttpResponse)
+    HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
 from django.core.mail.backends.filebased import (
     EmailBackend as FileEmailBackend)
@@ -72,7 +72,7 @@ from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.server import utils
-from openquake.server.services import DEFAULT_EXPORT_TYPE, store
+from openquake.server.services import store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
@@ -92,9 +92,6 @@ XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 ZIP = 'application/x-zip'
-
-#: Size of the chunks streamed by the file proxying views.
-_CHUNK_SIZE = 64 * 1024
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -125,7 +122,7 @@ AELO_FORM_PLACEHOLDERS = {
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['exposure', 'job']
+HIDDEN_OUTPUTS = utils.HIDDEN_OUTPUTS
 EXTRACTABLE_RESOURCES = [
     'agg_curves',
     'agg_damages',
@@ -527,44 +524,6 @@ def _call_api(request, endpoint, params=None, headers=None):
     if response.status_code != 200:
         return HttpResponse(status=502)
     return HttpResponse(content=response.content, content_type=JSON)
-
-
-def _stream_content(response, chunk_size):
-    """Yield the content of an internal response in chunks, then close it."""
-    try:
-        yield from response.iter_content(chunk_size)
-    finally:
-        response.close()
-
-
-def _call_api_file(request, endpoint, params=None):
-    """
-    Call an internal FastAPI endpoint returning a file and proxy its content,
-    preserving the HTTP method (i.e. support HEAD), the content type, the
-    content length and the download name.
-    """
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    try:
-        response = requests.request(
-            request.method, url, params=params,
-            headers={'X-API-Key': API_KEY}, stream=True, timeout=300)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code != 200:
-        # forward the error message, if any
-        return HttpResponse(
-            content=response.content, content_type='text/plain',
-            status=response.status_code)
-    headers = {name: response.headers[name] for name in
-               ('Content-Type', 'Content-Length', 'Content-Disposition')
-               if name in response.headers}
-    if request.method == 'HEAD':  # the client wants the headers only
-        response.close()
-        return HttpResponse(status=200, headers=headers)
-    return StreamingHttpResponse(
-        _stream_content(response, _CHUNK_SIZE), headers=headers, status=200)
 
 
 def _post_api(request, endpoint, data, timeout=10):
@@ -1694,55 +1653,6 @@ def calc_traceback(request, calc_id):
     Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
     return _call_api(request, 'v0/calc/%s/traceback' % calc_id)
-
-
-@cross_domain_ajax
-@require_http_methods(['GET', 'HEAD'])
-def calc_result(request, result_id):
-    """
-    Download a specific result, by ``result_id``, by proxying the export to
-    the internal FastAPI endpoint.
-
-    The common abstracted functionality for getting hazard or risk results.
-
-    :param request:
-        `django.http.HttpRequest` object. Can contain a `export_type` GET
-        param (the default is 'xml' if no param is specified).
-    :param result_id:
-        The id of the requested artifact.
-    :returns:
-        If the requested ``result_id`` is not available in the format
-        designated by the `export_type`.
-
-        Otherwise, return a `django.http.HttpResponse` containing the content
-        of the requested artifact.
-
-    Parameters for the GET request can include an `export_type`, such as 'xml',
-    'geojson', 'csv', etc.
-    """
-    # If the result for the requested ID doesn't exist, OR
-    # the job which it is related too is not complete,
-    # throw back a 404. Django remains responsible for the user and ACL
-    # checks, while the internal FastAPI endpoint performs the export.
-    try:
-        _, job_status, job_user, _, ds_key = logs.dbcmd(
-            'get_result', result_id)
-        if not utils.user_has_permission(request, job_user, job_status):
-            return HttpResponseForbidden()
-        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to
-        # users with level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
-        if (settings.LOCKDOWN
-                and ds_key in HIDDEN_OUTPUTS
-                and not request.user.has_perm(f'auth.can_view_{ds_key}')
-                and not request.user.level >= 2):
-            return HttpResponseForbidden()
-    except dbapi.NotFound:
-        return HttpResponseNotFound()
-
-    export_type = request.GET.get('export_type') or DEFAULT_EXPORT_TYPE
-    return _call_api_file(
-        request, 'v0/calc/result/%s' % result_id,
-        params={'export_type': export_type})
 
 
 @cross_domain_ajax

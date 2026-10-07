@@ -22,7 +22,8 @@ from openquake.server.db import actions
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
 setproctitle('oq-webui')
 
-from openquake.server.api import app, configure_adapters  # noqa: E402
+from openquake.server.api import (  # noqa: E402
+    app, configure_adapters, public_calc_result)
 
 # Initialize the database before starting the ASGI application.
 actions.upgrade_db(dbapi.db)
@@ -37,6 +38,12 @@ configure_adapters(
     run_aelo=_run_aelo,
     impact_callback=impact_callback,
     papers=papers)
+path_prefix = settings.WEBUI_PATHPREFIX.strip('/')
+if path_prefix:
+    app.add_api_route(
+        '/%s/v1/calc/result/{result_id}' % path_prefix,
+        public_calc_result, methods=['GET', 'HEAD', 'OPTIONS'],
+        include_in_schema=False, name='prefixed_public_calc_result')
 static_dir = settings.STATICFILES_DIRS[0]
 static_packages = []
 # Include the static directories supplied by installed Django apps.  The

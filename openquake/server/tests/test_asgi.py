@@ -93,14 +93,24 @@ def test_calc_result_requires_internal_api_key(uvicorn_client):
 
 
 def test_calc_result_missing(uvicorn_client):
-    """Return a 404 for a non-existing result."""
+    """Return a 404 for a non-existing result on both API routes."""
     response = uvicorn_client.get(
         '/v0/calc/result/0', headers={'X-API-Key': API_KEY})
     assert response.status_code == 404
 
+    response = uvicorn_client.get('/v1/calc/result/0')
+    assert response.status_code == 404
+    assert response.headers['access-control-allow-origin'] == '*'
+
+    if settings.WEBUI_PATHPREFIX:
+        response = uvicorn_client.get(
+            settings.WEBUI_PATHPREFIX.rstrip('/') + '/v1/calc/result/0')
+        assert response.status_code == 404
+        assert response.headers['access-control-allow-origin'] == '*'
+
 
 def test_calc_result_downloads_the_file(uvicorn_client, classical_result):
-    """Export a result through the FastAPI route and through the Django one."""
+    """Download a result through the internal and public FastAPI routes."""
     path = '/v0/calc/result/%d' % classical_result['id']
     headers = {'X-API-Key': API_KEY}
     response = uvicorn_client.get(path, dict(export_type='csv'),
@@ -109,18 +119,25 @@ def test_calc_result_downloads_the_file(uvicorn_client, classical_result):
     assert response.content
     assert response.headers['content-disposition'].startswith(
         'attachment; filename=output-%d-' % classical_result['id'])
-    # the same file must be downloadable from the public Django endpoint
-    response = uvicorn_client.get(
-        '/v1/calc/result/%d' % classical_result['id'],
-        dict(export_type='csv'))
+    # The same file is downloadable from the public FastAPI endpoint.
+    public_path = '/v1/calc/result/%d' % classical_result['id']
+    response = uvicorn_client.get(public_path, dict(export_type='csv'))
     assert response.status_code == 200
-    assert response.content == (  # streamed by the Django proxy
-        uvicorn_client.get(path, dict(export_type='csv'),
-                           headers=headers).content)
-    # a failing export is a 500, propagated by the Django proxy as well
+    assert response.content == uvicorn_client.get(
+        path, dict(export_type='csv'), headers=headers).content
+    assert response.headers['content-disposition'].startswith(
+        'attachment; filename=output-%d-' % classical_result['id'])
+    assert response.headers['access-control-allow-origin'] == '*'
+
+    head = uvicorn_client.head(public_path + '?export_type=csv')
+    assert head.status_code == 200
+    assert not head.content
+    assert head.headers['content-disposition'] == (
+        response.headers['content-disposition'])
+
+    # A failing export retains its public and internal error status.
     assert uvicorn_client.get(
         path, dict(export_type='gibberish'), headers=headers
     ).status_code == 500
     assert uvicorn_client.get(
-        '/v1/calc/result/%d' % classical_result['id'],
-        dict(export_type='gibberish')).status_code == 500
+        public_path, dict(export_type='gibberish')).status_code == 500
