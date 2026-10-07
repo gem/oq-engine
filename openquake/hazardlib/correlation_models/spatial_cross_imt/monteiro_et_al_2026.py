@@ -320,9 +320,8 @@ class MonteiroEtAl2026(SpatialCrossIMTCorrelationModel):
     # DEFINED_FOR_INTENSITY_MEASURE_COMPONENT cannot be uniformly specific as RotD50 for this model
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
         SA, PGA, PGV, Sa_avg2, Sa_avg3, FIV3}
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 3.0)
-    DEFINED_FOR_Sa_avg_PERIOD_RANGE = (0.1, 3.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.1, 3.0)
 
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
