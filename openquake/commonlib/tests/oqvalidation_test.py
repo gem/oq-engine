@@ -373,6 +373,15 @@ class OqParamTestCase(unittest.TestCase):
         self.assertEqual(oq.truncation_level_between, 2.0)
         self.assertEqual(oq.truncation_level_within, 3.0)
 
+    def test_zero_truncation_with_correlation_model(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='0', intensity_measure_types='PGA',
+            within_event_correlation_model='JayaramBaker2009')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_within, 1E-9)
+
     def test_ambiguous_gsim(self):
         with self.assertRaises(InvalidFile) as ctx:
             OqParam(

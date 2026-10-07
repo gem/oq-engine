@@ -36,8 +36,8 @@ class Bradley2012(TruncatedCrossIMTCorrelationModel):
 
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.TOTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
 
     def _validate_imt_combination(self, imts):
         unique = tuple(dict.fromkeys(imts))

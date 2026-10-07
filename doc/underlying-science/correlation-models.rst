@@ -279,7 +279,7 @@ Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,
 :ref:`event-based PSHA <event-based-psha-params>`,
 :ref:`ShakeMap workflows <scenarios-from-shakemaps>`, and
-:ref:`advanced calculations <advanced-calculations>`. The implemented model
+:ref:`large calculations <large-calculations>`. The implemented model
 classes and interfaces are listed in the
 :ref:`hazardlib API reference <openquake-hazardlib-correlation-models>`.
 

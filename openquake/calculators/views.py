@@ -39,6 +39,7 @@ from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker, read_cmakers
+from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
@@ -859,17 +860,6 @@ def view_task_cl(token, dstore):
     return view_task(token, dstore, 'classical')
 
 
-@view.add('task_cd')
-def view_task_cd(token, dstore):
-    """
-    Display info about a given task. Here are a few examples of usage::
-
-     $ oq show task_cd:0  # the fastest task
-     $ oq show task_cd:-1  # the slowest task
-    """
-    return view_task(token, dstore, 'classical_disagg')
-
-
 @view.add('source_data')
 def view_source_data(token, dstore):
     """
@@ -1446,33 +1436,19 @@ def view_composite_source_model(token, dstore):
     """
     Show the structure of the CompositeSourceModel in terms of grp_id
     """
+    # NB: the TRT of a group is taken from the source_groups dataset,
+    # since the source_info has no trti field
+    try:
+        trt_by_grp = {rec['grp_id']: decode(rec['trt'])
+                      for rec in dstore['source_groups'][:]}
+    except KeyError:  # preclassical without sites, see store_csm
+        csm = read_csm(dstore)
+        trt_by_grp = {grp_id: sg.trt for grp_id, sg
+                       in enumerate(csm.src_groups)}
     lst = []
-    full_lt = dstore['full_lt'].init()
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
-        lst.append((str(grp_id), full_lt.trts[df.trti.unique()[0]], len(df)))
+        lst.append((str(grp_id), trt_by_grp[grp_id], len(df)))
     return numpy.array(lst, dt('grp_id trt num_sources'))
-
-
-@view.add('gids')
-def view_gids(token, dstore):
-    """
-    Show the meaning of the gids indices
-    """
-    full_lt = dstore['full_lt']
-    ws = dstore['weights'][:]
-    all_trt_smrs = dstore['trt_smrs'][:]
-    gid = 0
-    data = []
-    for trt_smrs in all_trt_smrs:
-        for g, (gsim, rlzs) in enumerate(
-                full_lt.get_rlzs_by_gsim(trt_smrs).items()):
-            ts = ['%s_%s' % divmod(trt_smr, TWO24) for trt_smr in trt_smrs]
-            if len(ts) == 1:
-                ts = ts[0]
-            data.append((gid, ts, '%s[%d]' % (gsim.__class__.__name__, g),
-                         ws[rlzs].sum(), len(rlzs)))
-            gid += 1
-    return numpy.array(data, dt('gid trt_smrs gsim weight num_rlzs'))
 
 
 @view.add('branches')
@@ -1565,6 +1541,113 @@ def view_sm_rlzs(token, dstore):
                 value, rlz.samples, rlz.weight)
 
     return text_table(map(row, sm_rlzs), header, ext='org')
+
+
+def parse_sig_value(value):
+    """
+    :param value: a signature value, i.e. a string
+    :returns: the corresponding dictionary if the string contains a
+        dictionary (this happens for the branchsets with parameters),
+        otherwise the string itself
+    """
+    if isinstance(value, str) and value[:1] == '{':
+        return ast.literal_eval(value)
+    return value
+
+
+def fmt_sig_values(values):
+    """
+    :param values: the values taken by a branchset in the signatures of a
+        source, in order of appearance
+    :returns: a compact representation of the distinct values
+
+    For a branchset without parameters (i.e. the dip) the values are
+    listed as they are, i.e. `60.0, 45.0`; for a branchset with
+    parameters the field names are constant across the values, so each
+    value is reduced to a tuple of its fields, i.e.
+    `(0.8, 3.25, 0.371113), (0.8, 3.25, 0.29666)`
+    """
+    # remove the duplicates, keeping the order of appearance
+    uniq = []
+    for value in values:
+        if value not in uniq:
+            uniq.append(value)
+    if not isinstance(uniq[0], dict):
+        return ', '.join(map(str, uniq))
+    keys = list(uniq[0])
+    # NB: the field names are not repeated, since they are the same for
+    # all the values of the branchset
+    return ', '.join('(%s)' % ', '.join(str(u.get(k, '-')) for k in keys)
+                     for u in uniq)
+
+
+MAX_LISTED_SETS = 10
+
+
+def fmt_realizations(counts):
+    """
+    :param counts: the number of realizations in each realization set
+        of a source
+    :returns: the sizes of the sets in ascending order, i.e. `1, 2` for
+        a source with a realization set of size 1 and another one of
+        size 2
+
+    NB: the sizes are listed one by one as long as there are at most
+    MAX_LISTED_SETS sets, otherwise the repeated sizes are replaced by
+    their multiplicity, i.e. `1 (x9 sets)`, since the number of sets can
+    be large (it is the number of distinct signatures of the source).
+    """
+    sizes = sorted(counts)
+    if len(sizes) <= MAX_LISTED_SETS:
+        return ', '.join(map(str, sizes))
+    cnt = collections.Counter(sizes)
+    return ', '.join(
+        '%d (x%d sets)' % (size, num) if num > 1 else '%d' % size
+        for size, num in sorted(cnt.items()))
+
+
+@view.add('usignatures')
+def view_usignatures(token, dstore):
+    """
+    Show the uncertainty signatures of the sources, i.e. the sets of
+    realizations with the same uncertainties, which are the realization
+    sets the rates are attributed to (see source_reader.build_groups).
+
+    There is a row for each pair (source, branchset) with the distinct
+    values taken by the branchset, instead of a column per branchset,
+    since the table would be too wide for models with many branchsets.
+    NB: `num_rlzs` is the number of realizations in each realization set
+    of the source, in ascending order; summing them gives the total
+    number of realizations of the source and counting them gives its
+    number of signatures.
+    The columns before `branchset` are filled only on the first row of
+    each source, so that the rows of a source are visually grouped. The
+    sources with no uncertainties at all have a single `-` row.
+    """
+    df = dstore.read_df('unc_signatures')
+    rows = []
+    for source_id, grp in df.groupby('source_id'):
+        sigs = [json.loads(sig) for sig in grp['signature']]
+        # NB: the branchsets are in the order they appear in the signature
+        vals = {}  # branchset -> list of values
+        for sig in sigs:
+            for bset, value in sig.items():
+                vals.setdefault(bset, []).append(parse_sig_value(value))
+        if not vals:
+            # the sources with no uncertainties have a single signature
+            # covering all their realizations
+            vals['-'] = ['no uncertainties']
+        cells = [(bset, fmt_sig_values(value_list))
+                 for bset, value_list in vals.items()]
+        for i, (bset, values) in enumerate(cells):
+            head = dict(source_id=source_id,
+                        num_rlzs=fmt_realizations(grp['count']))
+            rows.append(dict(head, branchset=bset, values=values)
+                        if i == 0 else
+                        dict(source_id='', num_rlzs='',
+                             branchset=bset, values=values))
+    header = ['source_id', 'num_rlzs', 'branchset', 'values']
+    return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
 @view.add('rupture')
