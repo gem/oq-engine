@@ -14,19 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 from pathlib import Path
 from types import SimpleNamespace
-
 import numpy
 import pytest
 
-import csv
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
-    monteiro_et_al_2026 import MonteiroEtAl2026
-from openquake.hazardlib.correlation_models.spatial_cross_imt.\
-    monteiro_et_al_2026 import _PERIODS
-from openquake.hazardlib.imt import PGA, PGV, SA, Sa_avg2, Sa_avg3, FIV3, from_string
+    monteiro_et_al_2026 import MonteiroEtAl2026, _PERIODS
+from openquake.hazardlib.imt import (
+    PGA, PGV, SA, Sa_avg2, Sa_avg3, FIV3, from_string)
 
 
 DATA = Path(__file__).with_name('data') / 'MONTEIRO_ET_AL_2026'
