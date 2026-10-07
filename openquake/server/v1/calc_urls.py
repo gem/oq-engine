@@ -63,8 +63,6 @@ elif settings.APPLICATION_MODE == 'IMPACT':
         re_path(r'^impact_run_with_shakemap$', views.impact_run_with_shakemap),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
-        re_path(r'^(\d+)/extract_html_table/([-/_\.\(\)\w]+)$',
-                views.extract_html_table),
     ])
 elif settings.APPLICATION_MODE != 'READ_ONLY':
     urlpatterns.extend([

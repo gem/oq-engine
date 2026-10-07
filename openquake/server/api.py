@@ -37,7 +37,7 @@ from xml.parsers.expat import ExpatError
 import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import (
-    FileResponse, JSONResponse, PlainTextResponse, Response)
+    FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response)
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
@@ -58,8 +58,8 @@ from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
     create_impact_report_file, create_png_file,
-    create_job_zip, export_result, get_exposure_by_lse,
-    get_exposure_by_mmi,
+    create_job_zip, export_result, extract_datastore_table,
+    get_exposure_by_lse, get_exposure_by_mmi,
     get_impact_results,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
@@ -681,6 +681,45 @@ def _authorize_extract(
     return 200, job
 
 
+def _authorize_extract_html_table(
+        auth_request, settings, utils, calc_id, what, resource):
+    """Check access to an HTML table and return its user context."""
+    status, job = _authorize_extract(
+        auth_request, settings, utils, calc_id, what, resource)
+    if status != 200:
+        return status, None
+    return 200, (job, getattr(auth_request, 'user', None))
+
+
+def _render_django_template(request, template_name, context, user):
+    """Render an existing Django template from a FastAPI request."""
+    # Django's ASGI initialization completes after api.py is imported.
+    from django.http import HttpRequest
+    from django.template.loader import render_to_string
+
+    host = request.headers.get('host', 'localhost:8800')
+    host_name, sep, host_port = host.rpartition(':')
+    if not sep:
+        host_name, host_port = host, (
+            '443' if request.url.scheme == 'https' else '80')
+    django_request = HttpRequest()
+    django_request.method = request.method
+    django_request.path = request.url.path
+    django_request.path_info = request.url.path
+    django_request.META = {
+        'HTTP_HOST': host,
+        'SERVER_NAME': host_name,
+        'SERVER_PORT': host_port,
+        'QUERY_STRING': request.url.query,
+        'wsgi.url_scheme': request.url.scheme,
+    }
+    django_request.COOKIES = dict(request.cookies)
+    django_request.session = {}
+    if user is not None:
+        django_request.user = user
+    return render_to_string(template_name, context, request=django_request)
+
+
 def _file_download_response(
         fname, content_type, exportname, background=None):
     """Create an attachment response for a file on disk."""
@@ -920,6 +959,41 @@ def public_impact_report(calc_id: int, request: Request):
     response.headers['content-disposition'] = (
         f'inline; filename=impact_report_{iso3}.{file_format}')
     return _with_access_headers(response)
+
+
+@app.api_route(
+        '/v1/calc/{calc_id}/extract_html_table/{name:path}',
+        methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_extract_html_table(calc_id: int, name: str, request: Request):
+    """Render an extracted IMPACT table after FastAPI retrieves its data."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    resource = name
+    secondary_peril = request.query_params.get('secondary_peril')
+    if secondary_peril:
+        resource += '?secondary_peril=' + secondary_peril
+    status, data = _with_request_user(
+        request, _authorize_extract_html_table,
+        calc_id, name, resource)
+    if status != 200:
+        return _file_access_error(status)
+    job, user = data
+    try:
+        table = extract_datastore_table(job.ds_calc_dir + '.hdf5', resource)
+    except Exception as exc:
+        return _retrieval_error_response(exc, name)
+    summarize_value = request.query_params.get('summarize')
+    summarize = (summarize_value is not None and
+                 str(summarize_value).lower() in ('1', 'true', 'yes', ''))
+    # Reuse the presentation formatter after Django has completed setup.
+    from openquake.server.views import build_extract_html_table_context
+    context = build_extract_html_table_context(
+        calc_id, resource, table, summarize)
+    html = _render_django_template(
+        request, 'engine/show_table.html', context, user)
+    return _with_access_headers(HTMLResponse(html))
 
 
 @app.api_route('/v1/calc/{calc_id}/download_png/{what:path}',

@@ -1980,30 +1980,9 @@ def can_extract(request, resource):
     return utils.user_can_extract(request, resource)
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def extract_html_table(request, calc_id, name):
-    summarize = _get_bool_param(request.GET, 'summarize')
-    secondary_peril = request.GET.get('secondary_peril')
-    if secondary_peril:
-        name += f'?secondary_peril={secondary_peril}'
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    if not can_extract(request, name):
-        return HttpResponseForbidden()
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            table = _extract(ds, name)
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, name, tb),
-            content_type='text/plain', status=400)
-    # Using display names of the exporters if available
+def _extract_table_headers(name, table, summarize):
+    """Build display names and sorting metadata for extracted columns."""
+    # Use display names from the exporters when they are available.
     display_names = DISPLAY_NAME.copy()
     display_names.update({
         'aggrisk_tags': 'Impact',
@@ -2016,159 +1995,143 @@ def extract_html_table(request, calc_id, name):
             'Exposure grouped by Region and by Landslide LSE',
     })
     loss_names = ['aggrisk_tags', 'losses_by_site', 'losses_by_location']
-    exposure_names = ['mmi_tags', 'exposure_by_location',
-                      'exposure_by_lse?secondary_peril=liquefaction',
-                      'exposure_by_lse?secondary_peril=landslide']
-    table_name = display_names[name] if name in display_names else name
-
-    # Identify string columns from dtype before formatting the headers.
+    exposure_names = [
+        'mmi_tags', 'exposure_by_location',
+        'exposure_by_lse?secondary_peril=liquefaction',
+        'exposure_by_lse?secondary_peril=landslide']
+    table_name = display_names.get(name, name)
     # dtype.kind: 'S' = bytes, 'U' = unicode, 'O' = object
     string_short_names = {
         col for col in table.columns
-        if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object
-    }
+        if table[col].dtype.kind in ('S', 'U') or table[col].dtype == object}
     column_sort_types = [
         'string' if col in string_short_names else 'number'
-        for col in table.columns
-    ]
-
+        for col in table.columns]
     table_header = []
     for short_name in table.columns:
         display_name = ''
         if name in loss_names and short_name in AGGRISK_FIELD_DESCRIPTION:
             display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
         elif name in exposure_names:
-            clean_name = short_name
-            if short_name.startswith('value-'):
-                clean_name = short_name.split('value-')[1]
-            if clean_name in EXPOSURE_FIELD_DESCRIPTION:
-                display_name = EXPOSURE_FIELD_DESCRIPTION[clean_name]
-        # avoiding to show the internal short names when showing
-        # the summary table
+            clean_name = (short_name.split('value-')[1]
+                          if short_name.startswith('value-') else short_name)
+            display_name = EXPOSURE_FIELD_DESCRIPTION.get(clean_name, '')
+        # Avoid showing internal short names in the summary impact table.
         if summarize and name == 'aggrisk_tags':
             table_header.append(display_name)
         else:
-            table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
-
-    # string_columns must contain the formatted header strings that actually
-    # appear in table_header so that `header in string_columns` in the
-    # template matches correctly.
+            table_header.append(
+                f'{short_name}<br><br><i>{display_name}</i>')
+    # Sort by the raw values, not the formatted column headers.
     string_columns = {
-        header
-        for header, short_name in zip(table_header, table.columns)
-        if short_name in string_short_names
+        header for header, short_name in zip(table_header, table.columns)
+        if short_name in string_short_names}
+    return table_name, table_header, column_sort_types, string_columns
+
+
+def _impact_table_explanations():
+    """Build the definitions shown below the summary impact table."""
+    loss_types = '<ul>' + ''.join(
+        '<li><strong>%s:</strong> %s%s</li>' % (
+            AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
+            '<span>.</span>' if key == 'injured' else '.')
+        for key, explanation in AGGRISK_FIELD_EXPLANATION.items()) + '</ul>'
+    details = {
+        'value': (
+            'The exposed value depends on the impact metric. Below we '
+            'describe the meaning of the exposed value per impact metric:'
+            '<ul><li><strong>Affected population and Rendered homeless:'
+            '</strong> Population that lives in the area included in the '
+            'impact analysis.</li><li><strong>Floor area lost (m²):'
+            '</strong> Total floor area of buildings, including all storeys, '
+            'in the area included in the impact analysis.</li>'
+            '<li><strong>Number of injured people and fatalities:'
+            '</strong> Population assumed to be inside the building stock '
+            'in the area included in the impact analysis when the event '
+            'occurs.</li><li><strong>Buildings destroyed:</strong> Number of '
+            'buildings in the area included in the impact analysis.</li>'
+            '<li><strong>Economic loss (USD):</strong> Replacement value of '
+            'buildings and their contents in the area included in the impact '
+            'analysis.</li></ul>'),
+        'Reported values': (
+            '<ul><li><strong>Mean:</strong> Arithmetic mean of the estimated '
+            'impact values, accounting for the uncertainties propagated '
+            'through the impact analysis.</li><li><strong>Median:</strong> '
+            'The 50th percentile of the estimated impact distribution. Half '
+            'of the estimated impact values are below the median and half '
+            'are above it.</li><li><strong>5th percentile:</strong> Value '
+            'below which 5% of the estimated impact values fall. It '
+            'represents the lower end of the range of plausible impacts.'
+            '</li><li><strong>95th percentile:</strong> Value below which '
+            '95% of the estimated impact values fall. It represents the '
+            'upper end of the range of plausible impacts.</li></ul>'),
     }
+    explanations = {'Loss types': loss_types, **details}
+    return [
+        {'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
+         'explanation': urlize(value)}
+        for key, value in explanations.items()]
 
-    table_contents = table.to_numpy()
-    field_explanations = {}
-    if summarize and name == 'aggrisk_tags':  # the impact table
-        # keep only rows with '*total*' and discard first and last 2 columns
-        # (ID_0, ID and NAME)
-        table_header = table_header[1:-2]
-        column_sort_types = column_sort_types[1:-2]
-        table_contents = table_contents[table_contents[:, 0] == '*total*'][
-            :, 1:-2]
 
-        # NOTE: Intentionally excluding embodied_carbon from this summary
-        table_contents = table_contents[
-            table_contents[:, 0] != 'embodied_carbon']
+def _summarize_impact_table(table_contents, table_header, column_sort_types):
+    """Reduce the impact table to total values and their explanations."""
+    # Keep only rows with '*total*' and discard ID_0, ID and NAME columns.
+    table_header = table_header[1:-2]
+    column_sort_types = column_sort_types[1:-2]
+    table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-2]
+    # NOTE: Intentionally excluding embodied_carbon from this summary.
+    table_contents = table_contents[
+        table_contents[:, 0] != 'embodied_carbon']
+    rows_to_sum = ['structural', 'nonstructural', 'contents']
+    mask = numpy.isin(table_contents[:, 0], rows_to_sum)
+    summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
+    economic = numpy.concatenate(([numpy.str_('economic')], summed))
+    table_contents = numpy.vstack([table_contents[~mask], economic])
+    for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+        table_contents[table_contents == key] = value
+    return (table_contents, table_header, column_sort_types,
+            _impact_table_explanations())
 
-        # replace the following rows with their sum (economic loss)
-        rows_to_sum = ['structural', 'nonstructural', 'contents']
-        mask = numpy.isin(table_contents[:, 0], rows_to_sum)
-        summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
-        economic_loss_row = numpy.concatenate(
-            ([numpy.str_('economic')], summed))
-        remaining = table_contents[~mask]
-        table_contents = numpy.vstack([remaining, economic_loss_row])
-        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
-            table_contents[table_contents == key] = value
-        loss_types = '<ul>' + ''.join(
-            '<li><strong>%s:</strong> %s%s</li>' % (
-                AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
-                '<span>.</span>' if key == 'injured' else '.')
-            for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
-        ) + '</ul>'
-        additional_explanations = {
-            'value': (
-                'The exposed value depends on the impact metric. Below we '
-                'describe the meaning of the exposed value per impact metric:'
-                '<ul>'
-                '<li><strong>Affected population and Rendered homeless:'
-                '</strong> Population that lives in the area included in the '
-                'impact analysis.</li>'
-                '<li><strong>Floor area lost (m²):</strong> Total floor area '
-                'of buildings, including all storeys, in the area included in '
-                'the impact analysis.</li>'
-                '<li><strong>Number of injured people and fatalities:'
-                '</strong> Population assumed to be inside the building stock '
-                'in the area included in the impact analysis when the event '
-                'occurs.</li>'
-                '<li><strong>Buildings destroyed:</strong> Number of buildings '
-                'in the area included in the impact analysis.</li>'
-                '<li><strong>Economic loss (USD):</strong> Replacement value '
-                'of buildings and their contents in the area included in the '
-                'impact analysis.'
-                '</li></ul>'
-            ),
-            'Reported values': (
-                '<ul>'
-                '<li><strong>Mean:</strong> Arithmetic mean of the estimated '
-                'impact values, accounting for the uncertainties propagated '
-                'through the impact analysis.</li>'
-                '<li><strong>Median:</strong> The 50th percentile of the '
-                'estimated impact distribution. Half of the estimated impact '
-                'values are below the median and half are above it.</li>'
-                '<li><strong>5th percentile:</strong> Value below which 5% '
-                'of the estimated impact values fall. It represents the lower '
-                'end of the range of plausible impacts.</li>'
-                '<li><strong>95th percentile:</strong> Value below which 95% '
-                'of the estimated impact values fall. It represents the upper '
-                'end of the range of plausible impacts.</li>'
-                '</ul>'
-            ),
-        }
-        explanations = {
-            'Loss types': loss_types,
-            **additional_explanations,
-        }
-        field_explanations = [
-            {
-                'description': AGGRISK_FIELD_DESCRIPTION.get(key, key),
-                'explanation': urlize(explanation),
-            }
-            for key, explanation in explanations.items()
-        ]
 
-    # Decode byte strings to plain str, while preserving the original values
-    # for client-side sorting. In particular, numbers can be humanized in the
-    # template, so sorting the displayed text would give incorrect results.
+def _extract_table_rows(table_contents, table_header, column_sort_types,
+                        string_columns):
+    """Format cells while preserving raw values for client-side sorting."""
     table_rows = []
     for raw_row in table_contents:
         display_row = decode(raw_row)
         cells = []
         for index, (header, display_value) in enumerate(
                 zip(table_header, display_row)):
-            sort_type = column_sort_types[index]
-            sort_value = decode(raw_row[index])
             cells.append({
                 'display_value': display_value,
-                'is_string': (sort_type == 'string'
+                'is_string': (column_sort_types[index] == 'string'
                               or header in string_columns),
-                'sort_type': sort_type,
-                'sort_value': sort_value,
+                'sort_type': column_sort_types[index],
+                'sort_value': decode(raw_row[index]),
             })
         table_rows.append(cells)
+    return table_rows
 
-    return render(request, 'engine/show_table.html',
-                  {'calc_id': calc_id,
-                   'is_summary': summarize,
-                   'internal_name': name,
-                   'table_name': table_name,
-                   'table_header': table_header,
-                   'table_rows': table_rows,
-                   'string_columns': string_columns,
-                   'field_explanations': field_explanations})
+
+def build_extract_html_table_context(calc_id, name, table, summarize):
+    """Build context for the HTML table without accessing the datastore."""
+    table_name, header, sort_types, string_columns = _extract_table_headers(
+        name, table, summarize)
+    table_contents = table.to_numpy()
+    field_explanations = []
+    if summarize and name == 'aggrisk_tags':
+        (table_contents, header, sort_types,
+         field_explanations) = _summarize_impact_table(
+            table_contents, header, sort_types)
+    table_rows = _extract_table_rows(
+        table_contents, header, sort_types, string_columns)
+    return {
+        'calc_id': calc_id, 'is_summary': summarize,
+        'internal_name': name, 'table_name': table_name,
+        'table_header': header, 'table_rows': table_rows,
+        'string_columns': string_columns,
+        'field_explanations': field_explanations,
+    }
 
 
 @csrf_exempt

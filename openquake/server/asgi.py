@@ -25,6 +25,7 @@ setproctitle('oq-webui')
 from openquake.server.api import (  # noqa: E402
     app, configure_adapters, public_calc_datastore, public_calc_extract,
     public_calc_job_zip, public_calc_result, public_download_aggrisk,
+    public_extract_html_table,
     public_download_png, public_exposure_by_lse, public_exposure_by_mmi,
     public_impact_report,
     public_impact_results)
@@ -61,6 +62,9 @@ if path_prefix:
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_exposure_by_mmi'),
         ('/v1/calc/{calc_id}/exposure_by_lse', public_exposure_by_lse,
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_exposure_by_lse'),
+        ('/v1/calc/{calc_id}/extract_html_table/{name:path}',
+         public_extract_html_table, ('GET', 'OPTIONS'),
+         'prefixed_public_extract_html_table'),
         ('/v1/calc/{calc_id}/impact_report', public_impact_report,
          ('GET', 'OPTIONS'), 'prefixed_public_impact_report'),
         ('/v1/calc/{calc_id}/download_png/{what:path}', public_download_png,

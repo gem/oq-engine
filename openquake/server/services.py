@@ -126,6 +126,12 @@ def create_impact_report_file(ds_path, iso3, file_format):
     return fname
 
 
+def extract_datastore_table(ds_path, resource):
+    """Extract a table from the calculation datastore."""
+    with datastore.read(ds_path) as dstore:
+        return _extract(dstore, resource)
+
+
 def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
     """Return exposure by secondary-peril tiers and selected columns."""
     resource = (
