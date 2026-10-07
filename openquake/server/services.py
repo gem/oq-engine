@@ -2,6 +2,7 @@
 """Framework-neutral server services shared by API adapters."""
 
 import ast
+import csv
 import json
 import logging
 import multiprocessing as mp
@@ -17,6 +18,7 @@ from datetime import datetime, timezone
 
 from openquake.baselib import config, hdf5, parallel
 from openquake.baselib.general import zipfiles
+from openquake.calculators import views as calculator_views
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.getters import NotFound
@@ -83,6 +85,25 @@ def remove_temp_file(fname):
         os.remove(fname)
     except FileNotFoundError:
         pass
+
+
+def create_aggrisk_csv(ds_path, calc_id):
+    """Write aggregate risk data to a temporary CSV file."""
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    fd, fname = tempfile.mkstemp(
+        prefix='aggrisk_%s_' % calc_id, suffix='.csv', dir=temp_dir)
+    os.close(fd)
+    try:
+        with datastore.read(ds_path) as ds:
+            losses = calculator_views.view('aggrisk', ds)
+        with open(fname, 'w', encoding='utf-8', newline='') as stream:
+            writer = csv.writer(stream)
+            writer.writerow(losses.dtype.names)
+            writer.writerows(losses)
+    except Exception:
+        remove_temp_file(fname)
+        raise
+    return fname
 
 
 def create_job_zip(ds_path, job_id):

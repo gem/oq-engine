@@ -24,7 +24,7 @@ setproctitle('oq-webui')
 
 from openquake.server.api import (  # noqa: E402
     app, configure_adapters, public_calc_datastore, public_calc_extract,
-    public_calc_job_zip, public_calc_result)
+    public_calc_job_zip, public_calc_result, public_download_aggrisk)
 
 # Initialize the database before starting the ASGI application.
 actions.upgrade_db(dbapi.db)
@@ -50,6 +50,8 @@ if path_prefix:
          ('GET', 'OPTIONS'), 'prefixed_public_calc_job_zip'),
         ('/v1/calc/{calc_id}/extract/{what:path}', public_calc_extract,
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_extract'),
+        ('/v1/calc/{calc_id}/download_aggrisk', public_download_aggrisk,
+         ('GET', 'OPTIONS'), 'prefixed_public_download_aggrisk'),
     )
     for route_path, endpoint, methods, name in prefixed_routes:
         app.add_api_route(

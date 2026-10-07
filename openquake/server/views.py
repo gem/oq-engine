@@ -18,7 +18,6 @@
 
 import sys
 import ast
-import csv
 import json
 import string
 import pickle
@@ -2155,31 +2154,6 @@ def web_engine_get_outputs_impact(request, calc_id):
                        exposure_by_land_lse=exposure_by_land_lse,
                        usgs_id=usgs_id, input_params=input_params)
                   )
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def download_aggrisk(request, calc_id):
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name, job.status):
-        return HttpResponseForbidden()
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        losses = views.view('aggrisk', ds)
-    # Create the HttpResponse object with the appropriate CSV header.
-    response = HttpResponse(
-        content_type="text/csv",
-        headers={
-            "Content-Disposition":
-                'attachment; filename="aggrisk_%s.csv"' % calc_id
-        },
-    )
-    writer = csv.writer(response)
-    writer.writerow(losses.dtype.names)
-    for row in losses:
-        writer.writerow(row)
-    return response
 
 
 def can_extract(request, resource):

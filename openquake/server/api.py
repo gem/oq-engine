@@ -56,7 +56,8 @@ from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
-    create_extract_file, create_impact_job, create_job_zip, export_result,
+    create_aggrisk_csv, create_extract_file, create_impact_job,
+    create_job_zip, export_result,
     get_impact_rupture_data, get_papers_job_ctx, remove_exported,
     remove_temp_file, submit_job)
 app = FastAPI(title='OpenQuake API')
@@ -556,11 +557,15 @@ def _file_access_error(status_code, content=None):
         content=content, status_code=status_code, media_type='text/html'))
 
 
-def _application_is_tools_only():
+def _application_mode():
     # api.py loads before Django settings are initialized by the ASGI app.
     from django.conf import settings
 
-    return settings.APPLICATION_MODE == 'TOOLS_ONLY'
+    return settings.APPLICATION_MODE
+
+
+def _application_is_tools_only():
+    return _application_mode() == 'TOOLS_ONLY'
 
 
 def _with_request_user(request, authorize, *args):
@@ -624,6 +629,17 @@ def _authorize_job_zip(auth_request, settings, utils, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return 404, None
+    return 200, job
+
+
+def _authorize_job_access(auth_request, settings, utils, calc_id):
+    """Check whether the current user can access a calculation."""
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return 404, None
+    if not utils.user_has_permission(
+            auth_request, job.user_name, job.status):
+        return 403, None
     return 200, job
 
 
@@ -746,6 +762,34 @@ def public_calc_job_zip(job_id: int, request: Request):
     response = _file_download_response(
         fname, ZIP, os.path.basename(fname),
         BackgroundTask(remove_exported, fname))
+    return _with_access_headers(response)
+
+
+@app.api_route('/v1/calc/{calc_id}/download_aggrisk',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_download_aggrisk(calc_id: int, request: Request):
+    """Generate and download the aggregate-risk CSV."""
+    if _application_mode() != 'IMPACT':
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, job = _with_request_user(
+        request, _authorize_job_access, calc_id)
+    if status != 200:
+        return _file_access_error(status)
+    try:
+        fname = create_aggrisk_csv(job.ds_calc_dir + '.hdf5', calc_id)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        content = '%s: %s in aggrisk_tags\n%s' % (
+            exc.__class__.__name__, exc, tb)
+        return _with_access_headers(PlainTextResponse(
+            content, status_code=400))
+    response = FileResponse(
+        fname, media_type='text/csv',
+        background=BackgroundTask(remove_temp_file, fname))
+    response.headers['content-disposition'] = (
+        'attachment; filename="aggrisk_%s.csv"' % calc_id)
     return _with_access_headers(response)
 
 
