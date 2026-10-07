@@ -52,7 +52,7 @@ _IMT_ROWS = {
     'PGV': 21,
 }
 
-# Full-precision PCA loadings from PCA_coefficients.mat. All nineteen
+# Full-precision PCA loadings from PCA_coefficients.mat. All twenty-two
 # components are used by the authors' current reference implementation.
 _PCA_COEFFICIENTS = numpy.array([
     [0.135925640, 0.425895839, -0.304606915,
