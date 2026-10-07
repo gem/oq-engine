@@ -28,7 +28,7 @@ from openquake.server.api import (  # noqa: E402
     public_extract_html_table,
     public_download_png, public_exposure_by_lse, public_exposure_by_mmi,
     public_engine_get_outputs, public_engine_outputs_aelo,
-    public_impact_report,
+    public_engine_outputs_impact, public_impact_report,
     public_impact_results)
 
 # Initialize the database before starting the ASGI application.
@@ -51,6 +51,8 @@ if path_prefix:
          ('GET', 'OPTIONS'), 'prefixed_public_engine_get_outputs'),
         ('/engine/{calc_id}/outputs_aelo', public_engine_outputs_aelo,
          ('GET', 'OPTIONS'), 'prefixed_public_engine_outputs_aelo'),
+        ('/engine/{calc_id}/outputs_impact', public_engine_outputs_impact,
+         ('GET', 'OPTIONS'), 'prefixed_public_engine_outputs_impact'),
         ('/v1/calc/result/{result_id}', public_calc_result,
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_result'),
         ('/v1/calc/{job_id}/datastore', public_calc_datastore,

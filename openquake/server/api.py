@@ -28,7 +28,7 @@ import signal
 import tempfile
 import traceback
 import zlib
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 from types import SimpleNamespace
 from urllib.parse import parse_qs, unquote_plus, urljoin
@@ -55,6 +55,7 @@ from openquake.commonlib import (
     dbapi, datastore, logs, oqvalidation, readinput)
 from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
+from openquake.calculators.export import AGGRISK_FIELD_DESCRIPTION
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
     create_aggrisk_csv, create_extract_file, create_impact_job,
@@ -821,6 +822,89 @@ def _result_file_response(result_id, export_type):
         BackgroundTask(remove_exported, fname))
 
 
+def _read_impact_output_data(job):
+    """Read the datastore values needed by the IMPACT output page."""
+    # Django helpers load after the ASGI app initializes; these only format data.
+    from openquake.calculators import views as calculator_views
+    from openquake.calculators.extract import extract as extract_resource
+    from openquake.server.views import (
+        determine_precision, format_oqparam, get_impact_warnings)
+
+    pngs = {}
+    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+        try:
+            losses = calculator_views.view('aggrisk', dstore)
+        except KeyError:
+            max_avg_gmf = dstore['avg_gmf'][0].max()
+            losses = (
+                'The risk can not be computed since the hazard is too low:'
+                ' the maximum value of the average GMF is '
+                f'{max_avg_gmf:.5f}')
+            losses_header = weights_precision = None
+        else:
+            losses_header = [
+                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
+                if field in AGGRISK_FIELD_DESCRIPTION
+                else field.capitalize()
+                for field in losses.dtype.names]
+            weights_precision = determine_precision(losses['weight'])
+        if 'png' in dstore:
+            pngs['avg_gmf'] = [
+                key for key in dstore['png'] if key.startswith('avg_gmf-')]
+            pngs['assets'] = 'assets.png' in dstore['png']
+        oqparam = dstore['oqparam']
+        local_timestamp = getattr(oqparam, 'local_timestamp', None)
+        return {
+            'losses': losses, 'losses_header': losses_header,
+            'weights_precision': weights_precision, 'pngs': pngs,
+            'warnings': get_impact_warnings(dstore),
+            'mmi_tags': 'mmi_tags' in dstore,
+            'exposure_by_liq_lse': (
+                'exposure_by_liquefaction_lse' in dstore),
+            'exposure_by_land_lse': (
+                'exposure_by_landslide_lse' in dstore),
+            'aggrisk_tags': _has_aggrisk_tags(dstore, extract_resource),
+            'impact_iso3_list': (
+                list(dstore['impact']) if 'impact' in dstore else []),
+            'usgs_id': getattr(oqparam.rupture_dict, 'usgs_id', None),
+            'local_timestamp': (
+                None if local_timestamp == 'None' else local_timestamp),
+            'input_params': format_oqparam(oqparam),
+        }
+
+
+def _has_aggrisk_tags(dstore, extract_resource):
+    """Check whether aggrisk_tags can be extracted from a datastore."""
+    try:
+        extract_resource(dstore, 'aggrisk_tags')
+    except KeyError:
+        return False
+    return True
+
+
+def _build_impact_output_context(job):
+    """Add job timing and identity data to the IMPACT page context."""
+    # Import view helpers after the Django ASGI app has initialized.
+    from openquake.server.views import format_time_delta
+
+    data = _read_impact_output_data(job)
+    start_time = job.start_time
+    after_event = None
+    if data['local_timestamp'] is not None:
+        local_timestamp = datetime.strptime(
+            data['local_timestamp'], '%Y-%m-%d %H:%M:%S%z')
+        after_event = format_time_delta(
+            start_time.replace(tzinfo=timezone.utc) - local_timestamp)
+    return {
+        'calc_id': job.id, 'description': job.description,
+        'local_timestamp': data['local_timestamp'],
+        'job_start_time': start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+        'time_job_after_event': after_event,
+        'size_mb': '?' if job.size_mb is None else '%.2f' % job.size_mb,
+        **data,
+    }
+
+
 def _build_aelo_output_context(job):
     """Extract the fields needed by the simplified AELO output page."""
     # api.py is imported before Django's ASGI app finishes setup.
@@ -896,6 +980,27 @@ def _build_aelo_output_context(job):
         'asce_version': oqvalidation.ASCE_VERSIONS[asce_version],
         'warnings': warnings, 'notes': notes,
     }
+
+
+@app.api_route('/engine/{calc_id}/outputs_impact',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_engine_outputs_impact(calc_id: int, request: Request):
+    """Render the IMPACT output page from FastAPI datastore data."""
+    if _application_mode() != 'IMPACT' or not _webui_enabled():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, data = _with_request_user(
+        request, _authorize_output_page, calc_id)
+    if status == 403:
+        return _login_redirect_response()
+    if status != 200:
+        return _file_access_error(status)
+    job, user = data
+    context = _build_impact_output_context(job)
+    html = _render_django_template(
+        request, 'engine/get_outputs_impact.html', context, user)
+    return _with_access_headers(HTMLResponse(html))
 
 
 @app.api_route('/engine/{calc_id}/outputs_aelo',

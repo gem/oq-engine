@@ -57,12 +57,11 @@ from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
-from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.calculators import base, views
+from openquake.commonlib import readinput, oqvalidation, logs, dbapi
+from openquake.calculators import base
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
-from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -1755,90 +1754,6 @@ def format_oqparam(oqparam):
     #     ret_dict[IMPACT_FORM_LABELS['rupture_file']] = rupdic['rupture_file']
 
     return ret_dict
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def web_engine_get_outputs_impact(request, calc_id):
-    job = logs.dbcmd('get_job', calc_id)
-    if job is None:
-        return HttpResponseNotFound()
-    description = job.description
-    job_start_time = job.start_time
-    job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
-    local_timestamp_str = None
-    time_job_after_event = None
-    time_job_after_event_str = None
-    pngs = {}
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            losses = views.view('aggrisk', ds)
-        except KeyError:
-            max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (
-                f'The risk can not be computed since the hazard is too low:'
-                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
-            losses_header = None
-            weights_precision = None
-        else:
-            losses_header = [
-                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
-                if field in AGGRISK_FIELD_DESCRIPTION
-                else field.capitalize()
-                for field in losses.dtype.names]
-            weights_precision = determine_precision(losses['weight'])
-        if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png']
-                               if k.startswith('avg_gmf-')]
-            pngs['assets'] = 'assets.png' in ds['png']
-        oqparam = ds['oqparam']
-        input_params = format_oqparam(oqparam)
-        usgs_id = None
-        if hasattr(oqparam.rupture_dict, 'usgs_id'):
-            usgs_id = oqparam.rupture_dict['usgs_id']
-        if hasattr(oqparam, 'local_timestamp'):
-            local_timestamp_str = (
-                oqparam.local_timestamp if oqparam.local_timestamp != 'None'
-                else None)
-        if 'impact' in ds:
-            impact_iso3_list = list(ds['impact'])
-        else:
-            impact_iso3_list = []
-    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    warnings = get_impact_warnings(ds)
-    mmi_tags = 'mmi_tags' in ds
-    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
-    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
-    # NOTE: aggrisk_tags is not available as an attribute of the datastore
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            _extract(ds, 'aggrisk_tags')
-    except KeyError:
-        aggrisk_tags = False
-    else:
-        aggrisk_tags = True
-    if local_timestamp_str is not None:
-        local_timestamp = datetime.strptime(
-            local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
-        time_job_after_event = (
-            job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
-        time_job_after_event_str = format_time_delta(time_job_after_event)
-    return render(request, "engine/get_outputs_impact.html",
-                  dict(calc_id=calc_id, description=description,
-                       local_timestamp=local_timestamp_str,
-                       job_start_time=job_start_time_str,
-                       time_job_after_event=time_job_after_event_str,
-                       size_mb=size_mb, losses=losses,
-                       losses_header=losses_header,
-                       weights_precision=weights_precision,
-                       pngs=pngs,
-                       warnings=warnings, mmi_tags=mmi_tags,
-                       impact_iso3_list=impact_iso3_list,
-                       aggrisk_tags=aggrisk_tags,
-                       exposure_by_liq_lse=exposure_by_liq_lse,
-                       exposure_by_land_lse=exposure_by_land_lse,
-                       usgs_id=usgs_id, input_params=input_params)
-                  )
 
 
 def can_extract(request, resource):

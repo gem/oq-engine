@@ -67,7 +67,7 @@ if settings.WEBUI:
     elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
-                    views.web_engine_get_outputs_impact,
+                    views.asgi_only_output_page,
                     name="outputs_impact"),
             re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
                     name="impact_form_defaults"),
