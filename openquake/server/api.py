@@ -37,7 +37,8 @@ from xml.parsers.expat import ExpatError
 import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import (
-    FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response)
+    FileResponse, HTMLResponse, JSONResponse, PlainTextResponse,
+    RedirectResponse, Response)
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
@@ -591,6 +592,28 @@ def _application_is_tools_only():
     return _application_mode() == 'TOOLS_ONLY'
 
 
+def _webui_enabled():
+    # api.py loads before Django settings are initialized by the ASGI app.
+    from django.conf import settings
+
+    return settings.WEBUI
+
+
+def _login_redirect_response():
+    # api.py loads before Django settings are initialized by the ASGI app.
+    from django.conf import settings
+
+    return RedirectResponse(settings.LOGIN_URL)
+
+
+def _authorize_output_page(auth_request, settings, utils, calc_id):
+    """Check that an output page's calculation exists."""
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return 404, None
+    return 200, (job, getattr(auth_request, 'user', None))
+
+
 def _with_request_user(request, authorize, *args):
     """Resolve the Django session and run a short authorization check."""
     # api.py loads before the Django ASGI application is initialized.
@@ -720,6 +743,54 @@ def _render_django_template(request, template_name, context, user):
     return render_to_string(template_name, context, request=django_request)
 
 
+def _build_engine_output_context(job, application_mode):
+    """Extract the data needed by the generic calculation output page."""
+    # api.py is imported before Django setup completes in the ASGI app.
+    from openquake.server.views import (
+        get_aelo_notes_and_warnings, get_impact_warnings,
+        get_site_class_display_name)
+
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    pngs = dict(hmaps=False)
+    context = dict(calc_id=job.id, size_mb=size_mb)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+        if 'png' in dstore:
+            pngs['hmaps'] = any(
+                key.startswith('hmap') for key in dstore['png'])
+            if application_mode == 'IMPACT':
+                pngs['avg_gmf'] = [
+                    key for key in dstore['png']
+                    if key.startswith('avg_gmf-')]
+                pngs['assets'] = 'assets.png' in dstore['png']
+            elif application_mode == 'AELO':
+                pngs['hcurves'] = 'hcurves.png' in dstore['png']
+                pngs['disagg_by_src'] = [
+                    key for key in dstore['png']
+                    if key.startswith('disagg_by_src-') and 'All' in key]
+                pngs['mce'] = 'mce.png' in dstore['png']
+                pngs['mce_spectra'] = 'mce_spectra.png' in dstore['png']
+        if application_mode == 'AELO':
+            context['lon'], context['lat'] = dstore['oqparam'].sites[0][:2]
+            context['site_class'] = get_site_class_display_name(dstore)
+            context['site_name'] = dstore['oqparam'].description[9:]
+            try:
+                asce_version = dstore['oqparam'].asce_version
+            except AttributeError:
+                asce_version = oqvalidation.OqParam.asce_version.default
+            context['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
+            try:
+                context['calc_aelo_version'] = dstore.get_attr(
+                    '/', 'aelo_version')
+            except KeyError:
+                context['calc_aelo_version'] = '1.0.0'
+            context['notes'], context['warnings'] = (
+                get_aelo_notes_and_warnings(dstore))
+        elif application_mode == 'IMPACT':
+            context['warnings'] = get_impact_warnings(dstore)
+    context['pngs'] = pngs
+    return context
+
+
 def _file_download_response(
         fname, content_type, exportname, background=None):
     """Create an attachment response for a file on disk."""
@@ -748,6 +819,27 @@ def _result_file_response(result_id, export_type):
     return _file_download_response(
         fname, content_type, exportname,
         BackgroundTask(remove_exported, fname))
+
+
+@app.api_route('/engine/{calc_id}/outputs',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_engine_get_outputs(calc_id: int, request: Request):
+    """Render the generic calculation output page from FastAPI data."""
+    if _application_is_tools_only() or not _webui_enabled():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, data = _with_request_user(
+        request, _authorize_output_page, calc_id)
+    if status == 403:
+        return _login_redirect_response()
+    if status != 200:
+        return _file_access_error(status)
+    job, user = data
+    context = _build_engine_output_context(job, _application_mode())
+    html = _render_django_template(
+        request, 'engine/get_outputs.html', context, user)
+    return _with_access_headers(HTMLResponse(html))
 
 
 @app.api_route('/v1/calc/result/{result_id}',

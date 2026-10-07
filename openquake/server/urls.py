@@ -41,8 +41,6 @@ if settings.WEBUI:
             url='%s/engine/' % settings.WEBUI_PATHPREFIX,
             permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
-        re_path(r'^engine/(\d+)/outputs$',
-                views.web_engine_get_outputs, name="outputs"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
         re_path(r'^v1/valid/', views.validate_nrml),
@@ -115,8 +113,6 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
                 url='%s/engine/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
             re_path(r'^engine/?$', views.web_engine, name="index"),
-            re_path(r'^engine/(\d+)/outputs$',
-                    views.web_engine_get_outputs, name="outputs"),
         ]
         if settings.APPLICATION_MODE == 'AELO':
             urlpatterns.append(

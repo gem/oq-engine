@@ -27,7 +27,7 @@ from openquake.server.api import (  # noqa: E402
     public_calc_job_zip, public_calc_result, public_download_aggrisk,
     public_extract_html_table,
     public_download_png, public_exposure_by_lse, public_exposure_by_mmi,
-    public_impact_report,
+    public_engine_get_outputs, public_impact_report,
     public_impact_results)
 
 # Initialize the database before starting the ASGI application.
@@ -46,6 +46,8 @@ configure_adapters(
 path_prefix = settings.WEBUI_PATHPREFIX.strip('/')
 if path_prefix:
     prefixed_routes = (
+        ('/engine/{calc_id}/outputs', public_engine_get_outputs,
+         ('GET', 'OPTIONS'), 'prefixed_public_engine_get_outputs'),
         ('/v1/calc/result/{result_id}', public_calc_result,
          ('GET', 'HEAD', 'OPTIONS'), 'prefixed_public_calc_result'),
         ('/v1/calc/{job_id}/datastore', public_calc_datastore,

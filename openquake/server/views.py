@@ -1575,56 +1575,6 @@ def web_engine(request, **kwargs):
         request, "engine/index.html", params)
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def web_engine_get_outputs(request, calc_id, **kwargs):
-    application_mode = settings.APPLICATION_MODE
-    job = logs.dbcmd('get_job', calc_id)
-    if job is None:
-        return HttpResponseNotFound()
-    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    kwargs = dict(calc_id=calc_id, size_mb=size_mb)
-    pngs = dict(hmaps=False)
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        if 'png' in ds:
-            # NOTE: only one hmap can be visualized currently
-            pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
-            if application_mode == 'IMPACT':
-                pngs['avg_gmf'] = [
-                    k for k in ds['png'] if k.startswith('avg_gmf-')]
-                pngs['assets'] = 'assets.png' in ds['png']
-            if application_mode == 'AELO':
-                pngs['hcurves'] = 'hcurves.png' in ds['png']
-                # NOTE: remove "and 'All' in k" to show the individual plots
-                pngs['disagg_by_src'] = [
-                    k for k in ds['png']
-                    if k.startswith('disagg_by_src-') and 'All' in k]
-                pngs['mce'] = 'mce.png' in ds['png']
-                pngs['mce_spectra'] = 'mce_spectra.png' in ds['png']
-    kwargs['pngs'] = pngs
-    if application_mode == 'AELO':
-        # e.g. [[-61.071, 14.686, 0.0]]
-        kwargs['lon'], kwargs['lat'] = ds['oqparam'].sites[0][:2]
-        kwargs['site_class'] = get_site_class_display_name(ds)
-        # e.g. 'AELO for CCA'->'CCA'
-        kwargs['site_name'] = ds['oqparam'].description[9:]
-        try:
-            asce_version = ds['oqparam'].asce_version
-        except AttributeError:
-            # for backwards compatibility on old calculations
-            asce_version = oqvalidation.OqParam.asce_version.default
-        kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
-        try:
-            kwargs['calc_aelo_version'] = ds.get_attr('/', 'aelo_version')
-        except KeyError:
-            kwargs['calc_aelo_version'] = '1.0.0'
-        kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
-        kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
-    elif application_mode == 'IMPACT':
-        kwargs['warnings'] = get_impact_warnings(ds)
-    return render(request, "engine/get_outputs.html", kwargs)
-
-
 def is_model_preliminary(ds):
     # NOTE: recently the mosaic_model has been added as an attribute of
     # oqparam, but we are getting it from base_path for backwards compatibility
