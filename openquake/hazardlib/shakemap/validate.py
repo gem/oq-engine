@@ -19,6 +19,7 @@
 import logging
 import os
 import threading
+from contextlib import nullcontext
 from dataclasses import dataclass
 import numpy
 
@@ -44,6 +45,14 @@ def _reset_hdf5_read_lock():
     """Replace the lock in a forked child process."""
     global _HDF5_READ_LOCK
     _HDF5_READ_LOCK = threading.RLock()
+
+
+def _hdf5_read_lock():
+    """Return the read lock unless disabled with OQ_HDF5_READ_LOCK."""
+    disabled = os.environ.get('OQ_HDF5_READ_LOCK', '').lower()
+    if disabled in ('0', 'false', 'no', 'off'):
+        return nullcontext()
+    return _HDF5_READ_LOCK
 
 
 if hasattr(os, 'register_at_fork'):
@@ -332,7 +341,7 @@ def get_trts_around(mosaic_model, exposure_hdf5):
     """
     :returns: list of TRTs for the given mosaic model
     """
-    with _HDF5_READ_LOCK:
+    with _hdf5_read_lock():
         with hdf5.File(exposure_hdf5) as f:
             df = f.read_df('model_trt_gsim_weight',
                            sel={'model': mosaic_model.encode()})

@@ -30,6 +30,8 @@ Here are a few codes with interesting errors:
 import ast
 import os
 import unittest
+from unittest.mock import patch
+import openquake.hazardlib.shakemap.validate as validate
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import impact_validate
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -38,6 +40,16 @@ user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
 class ImpactValidateTestCase(unittest.TestCase):
+    def test_hdf5_read_lock_can_be_disabled(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertIs(validate._hdf5_read_lock(),
+                          validate._HDF5_READ_LOCK)
+        for value in ('0', 'false', 'no', 'off'):
+            with patch.dict(os.environ,
+                            {'OQ_HDF5_READ_LOCK': value}):
+                self.assertIsNot(validate._hdf5_read_lock(),
+                                 validate._HDF5_READ_LOCK)
+
     @classmethod
     def setUp(cls):
         try:
