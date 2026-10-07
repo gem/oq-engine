@@ -1548,6 +1548,11 @@ def jobs_from_inis(request):
     return HttpResponse(content=json.dumps(dic), content_type=JSON)
 
 
+def asgi_only_output_page(request, *args, **kwargs):
+    """Placeholder for output URLs handled directly by FastAPI."""
+    return HttpResponseNotFound()
+
+
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
@@ -1659,96 +1664,6 @@ def get_aelo_notes_and_warnings(ds):
     notes_str = '\n'.join([note for note in notes.values()])
     warnings_str = '\n'.join([warning for warning in warnings.values()])
     return notes_str, warnings_str
-
-
-# this is extracting only the first site and it is okay
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
-    job = logs.dbcmd('get_job', calc_id)
-    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = None
-    asce07_with_units = {}
-    asce41_with_units = {}
-    notes_str = warnings_str = ''
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            asce_version = ds['oqparam'].asce_version
-        except AttributeError:
-            # for backwards compatibility on old calculations
-            asce_version = oqvalidation.OqParam.asce_version.default
-        try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
-        except KeyError:
-            calc_aelo_version = '1.0.0'
-        if 'asce07' in ds:
-            try:
-                asce07_js = ds['asce07'][0].decode('utf8')
-            except ValueError:
-                # NOTE: for backwards compatibility, read scalar
-                asce07_js = ds['asce07'][()].decode('utf8')
-            asce07 = json.loads(asce07_js)
-            asce07_key_mapping = {}
-            if asce_version != 'ASCE7-16':
-                asce07_key_mapping = {
-                    'PGA': 'PGAm',
-                }
-            asce07_m = {asce07_key_mapping.get(k, k): v
-                        for k, v in asce07.items()}
-            for key, value in asce07_m.items():
-                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
-                    continue
-                if not isinstance(value, float):
-                    asce07_with_units[key] = value
-                elif key in ('CRs', 'CR1'):
-                    # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = get_disp_val(value)
-                else:
-                    asce07_with_units[key + ' (g)'] = get_disp_val(value)
-        if 'asce41' in ds:
-            try:
-                asce41_js = ds['asce41'][0].decode('utf8')
-            except ValueError:
-                # NOTE: for backwards compatibility, read scalar
-                asce41_js = ds['asce41'][()].decode('utf8')
-            asce41 = json.loads(asce41_js)
-            asce41_key_mapping = {}
-            if asce_version != 'ASCE7-16':
-                asce41_key_mapping = {
-                    'BSE2N_Ss': 'BSE2N_Sxs',
-                    'BSE2E_Ss': 'BSE2E_Sxs',
-                    'BSE1N_Ss': 'BSE1N_Sxs',
-                    'BSE1E_Ss': 'BSE1E_Sxs',
-                    'BSE2N_S1': 'BSE2N_Sx1',
-                    'BSE2E_S1': 'BSE2E_Sx1',
-                    'BSE1N_S1': 'BSE1N_Sx1',
-                    'BSE1E_S1': 'BSE1E_Sx1',
-                }
-            asce41_m = {asce41_key_mapping.get(k, k): v
-                        for k, v in asce41.items()}
-            for key, value in asce41_m.items():
-                if not key.startswith('BSE'):
-                    continue
-                if not isinstance(value, float):
-                    asce41_with_units[key] = value
-                else:
-                    asce41_with_units[key + ' (g)'] = get_disp_val(value)
-        pngs = {}
-        if 'png' in ds:
-            pngs['site'] = 'site.png' in ds['png']
-            pngs['governing_mce'] = 'governing_mce.png' in ds['png']
-        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        site_class_str = get_site_class_display_name(ds)
-        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        notes_str, warnings_str = get_aelo_notes_and_warnings(ds)
-    return render(request, "engine/get_outputs_aelo.html",
-                  dict(calc_id=calc_id, size_mb=size_mb,
-                       asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, site_class=site_class_str,
-                       site_name=site_name, pngs=pngs,
-                       calc_aelo_version=calc_aelo_version,
-                       asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
-                       warnings=warnings_str, notes=notes_str))
 
 
 def format_time_delta(td):

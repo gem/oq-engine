@@ -160,8 +160,11 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 self.assertIn(f'engine/{job_id}/outputs', email_content)
         # Check that the Django views to visualize simplified and advanced
         # outputs pages do not raise any exceptions
-        self.c.get(f'/engine/{job_id}/outputs')
-        self.c.get(f'/engine/{job_id}/outputs_aelo')
+        for path in (
+                f'/engine/{job_id}/outputs',
+                f'/engine/{job_id}/outputs_aelo'):
+            response = self.c.get(path)
+            self.assertEqual(response.status_code, 200)
         png_paths = (
             f'/v1/calc/{job_id}/download_png/hcurves.png',
             f'/v1/calc/{job_id}/download_png/site.png',

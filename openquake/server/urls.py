@@ -41,6 +41,8 @@ if settings.WEBUI:
             url='%s/engine/' % settings.WEBUI_PATHPREFIX,
             permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
+        re_path(r'^engine/(\d+)/outputs$',
+                views.asgi_only_output_page, name="outputs"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
         re_path(r'^v1/valid/', views.validate_nrml),
@@ -55,7 +57,7 @@ if settings.WEBUI:
     if settings.APPLICATION_MODE == 'AELO':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_aelo$',
-                    views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+                    views.asgi_only_output_page, name="outputs_aelo"),
             re_path(r'^engine/aelo_changelog$',
                     views.aelo_changelog,
                     name="aelo_changelog"),
@@ -114,11 +116,6 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
                 permanent=True)),
             re_path(r'^engine/?$', views.web_engine, name="index"),
         ]
-        if settings.APPLICATION_MODE == 'AELO':
-            urlpatterns.append(
-                re_path(r'^engine/(\d+)/outputs_aelo$',
-                        views.web_engine_get_outputs_aelo,
-                        name="outputs_aelo"))
 
     if settings.LOCKDOWN:
         from django.contrib import admin

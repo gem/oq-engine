@@ -821,6 +821,104 @@ def _result_file_response(result_id, export_type):
         BackgroundTask(remove_exported, fname))
 
 
+def _build_aelo_output_context(job):
+    """Extract the fields needed by the simplified AELO output page."""
+    # api.py is imported before Django's ASGI app finishes setup.
+    from openquake.server.views import (
+        get_aelo_notes_and_warnings, get_disp_val,
+        get_site_class_display_name)
+
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    asce07_with_units = {}
+    asce41_with_units = {}
+    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+        try:
+            asce_version = dstore['oqparam'].asce_version
+        except AttributeError:
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = dstore.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
+        if 'asce07' in dstore:
+            try:
+                asce07_js = dstore['asce07'][0].decode('utf8')
+            except ValueError:
+                asce07_js = dstore['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
+            mapping = {} if asce_version == 'ASCE7-16' else {'PGA': 'PGAm'}
+            for key, value in asce07.items():
+                key = mapping.get(key, key)
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
+                    continue
+                if not isinstance(value, float):
+                    asce07_with_units[key] = value
+                elif key in ('CRs', 'CR1'):
+                    asce07_with_units[key + ' (-)'] = get_disp_val(value)
+                else:
+                    asce07_with_units[key + ' (g)'] = get_disp_val(value)
+        if 'asce41' in dstore:
+            try:
+                asce41_js = dstore['asce41'][0].decode('utf8')
+            except ValueError:
+                asce41_js = dstore['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
+            mapping = {}
+            if asce_version != 'ASCE7-16':
+                mapping = {
+                    'BSE2N_Ss': 'BSE2N_Sxs', 'BSE2E_Ss': 'BSE2E_Sxs',
+                    'BSE1N_Ss': 'BSE1N_Sxs', 'BSE1E_Ss': 'BSE1E_Sxs',
+                    'BSE2N_S1': 'BSE2N_Sx1', 'BSE2E_S1': 'BSE2E_Sx1',
+                    'BSE1N_S1': 'BSE1N_Sx1', 'BSE1E_S1': 'BSE1E_Sx1',
+                }
+            for key, value in asce41.items():
+                key = mapping.get(key, key)
+                if not key.startswith('BSE'):
+                    continue
+                if not isinstance(value, float):
+                    asce41_with_units[key] = value
+                else:
+                    asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        pngs = {}
+        if 'png' in dstore:
+            pngs['site'] = 'site.png' in dstore['png']
+            pngs['governing_mce'] = 'governing_mce.png' in dstore['png']
+        lon, lat = dstore['oqparam'].sites[0][:2]
+        site_class = get_site_class_display_name(dstore)
+        site_name = dstore['oqparam'].description[9:]
+        notes, warnings = get_aelo_notes_and_warnings(dstore)
+    return {
+        'calc_id': job.id, 'size_mb': size_mb,
+        'asce07': asce07_with_units, 'asce41': asce41_with_units,
+        'lon': lon, 'lat': lat, 'site_class': site_class,
+        'site_name': site_name, 'pngs': pngs,
+        'calc_aelo_version': calc_aelo_version,
+        'asce_version': oqvalidation.ASCE_VERSIONS[asce_version],
+        'warnings': warnings, 'notes': notes,
+    }
+
+
+@app.api_route('/engine/{calc_id}/outputs_aelo',
+               methods=['GET', 'OPTIONS'], include_in_schema=False)
+def public_engine_outputs_aelo(calc_id: int, request: Request):
+    """Render the simplified AELO output page from FastAPI data."""
+    if _application_mode() != 'AELO' or not _webui_enabled():
+        return _file_access_error(404)
+    if request.method == 'OPTIONS':
+        return _with_access_headers(Response())
+    status, data = _with_request_user(
+        request, _authorize_output_page, calc_id)
+    if status == 403:
+        return _login_redirect_response()
+    if status != 200:
+        return _file_access_error(status)
+    job, user = data
+    context = _build_aelo_output_context(job)
+    html = _render_django_template(
+        request, 'engine/get_outputs_aelo.html', context, user)
+    return _with_access_headers(HTMLResponse(html))
+
+
 @app.api_route('/engine/{calc_id}/outputs',
                methods=['GET', 'OPTIONS'], include_in_schema=False)
 def public_engine_get_outputs(calc_id: int, request: Request):
