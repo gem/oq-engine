@@ -47,10 +47,15 @@ def _reset_hdf5_read_lock():
     _HDF5_READ_LOCK = threading.RLock()
 
 
+def hdf5_read_lock_enabled():
+    """Return whether the HDF5 read lock is enabled by the environment."""
+    disabled = os.environ.get('OQ_HDF5_READ_LOCK', '').lower()
+    return disabled not in ('0', 'false', 'no', 'off')
+
+
 def _hdf5_read_lock():
     """Return the read lock unless disabled with OQ_HDF5_READ_LOCK."""
-    disabled = os.environ.get('OQ_HDF5_READ_LOCK', '').lower()
-    if disabled in ('0', 'false', 'no', 'off'):
+    if not hdf5_read_lock_enabled():
         return nullcontext()
     return _HDF5_READ_LOCK
 

@@ -19,7 +19,8 @@ from time import perf_counter
 from openquake.calculators.export import export
 import openquake.calculators.export.hazard as hazard_export  # noqa: F401
 from openquake.commonlib import datastore
-from openquake.hazardlib.shakemap.validate import MOSAIC_DIR, get_trts_around
+from openquake.hazardlib.shakemap.validate import (
+    MOSAIC_DIR, get_trts_around, hdf5_read_lock_enabled)
 
 
 def get_operation(args):
@@ -103,6 +104,9 @@ def main():
 
     faulthandler.enable()
     operation = get_operation(args)
+    if args.operation == 'get_trts_around':
+        state = 'enabled' if hdf5_read_lock_enabled() else 'disabled'
+        print(f'HDF5 read lock is {state}', flush=True)
     print(f'Stressing {args.operation} concurrently', flush=True)
     average = stress_reads(operation, args.iterations, args.progress_every,
                            args.concurrency)

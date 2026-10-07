@@ -42,11 +42,13 @@ user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 class ImpactValidateTestCase(unittest.TestCase):
     def test_hdf5_read_lock_can_be_disabled(self):
         with patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(validate.hdf5_read_lock_enabled())
             self.assertIs(validate._hdf5_read_lock(),
                           validate._HDF5_READ_LOCK)
         for value in ('0', 'false', 'no', 'off'):
             with patch.dict(os.environ,
                             {'OQ_HDF5_READ_LOCK': value}):
+                self.assertFalse(validate.hdf5_read_lock_enabled())
                 self.assertIsNot(validate._hdf5_read_lock(),
                                  validate._HDF5_READ_LOCK)
 
