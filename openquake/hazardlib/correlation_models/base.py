@@ -29,6 +29,8 @@ from openquake.hazardlib.truncated_mvn import TruncatedMVN
 
 
 EPS = 1E-12
+PERIOD_DEP_IMTS = ['SA', 'Sa_avg2', 'Sa_avg3', 'FIV3']
+
 
 class ResidualComponent(str, Enum):
     """Residual components for which a model can be calibrated."""
@@ -104,8 +106,8 @@ class CorrelationModel:
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = None
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {}
-    DEFINED_FOR_SA_DAMPING = None
-    DEFINED_FOR_SA_PERIOD_RANGE = None
+    DEFINED_FOR_DAMPING = None
+    DEFINED_FOR_PERIOD_RANGE = None
     DEFINED_FOR_REGION = None
 
     def validate(self):
@@ -146,14 +148,14 @@ class CorrelationModel:
                     f'{model_name} does not support '
                     f'{", ".join(unsupported)}')
         for imt in imts:
-            damping = self.DEFINED_FOR_SA_DAMPING
-            if (imt.name == 'SA' and damping is not None and
+            damping = self.DEFINED_FOR_DAMPING
+            if (imt.name in PERIOD_DEP_IMTS and damping is not None and
                     imt.damping != damping):
                 raise ValueError(
                     f'{model_name} supports only '
                     f'{damping:g}%-damped SA')
-            period_range = self.DEFINED_FOR_SA_PERIOD_RANGE
-            if imt.name == 'SA' and period_range is not None:
+            period_range = self.DEFINED_FOR_PERIOD_RANGE
+            if imt.name in PERIOD_DEP_IMTS and period_range is not None:
                 minimum, maximum = period_range
                 if not minimum <= imt.period <= maximum:
                     raise ValueError(

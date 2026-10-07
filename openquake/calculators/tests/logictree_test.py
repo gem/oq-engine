@@ -216,6 +216,10 @@ class LogictreeTestCase(CalculatorTestCase):
     def test_case_12(self):
         # akin to NAF model
         self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+        # the bval branchset has applyToBranches=smooth_collapsed, i.e. it
+        # applies to the source SC_10:124 only and not to BG_10
+        fname = general.gettemp(view('usignatures', self.calc.datastore))
+        self.assertEqualFiles('expected/unc_signatures.org', fname)
 
     def test_case_12_bis(self):
         # test reduction with empty branches
@@ -661,6 +665,11 @@ hazard_uhs-std.csv
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
                               delta=1E-6)
+        # the branchset B has applyToBranches=a2 and the branchset C has
+        # applyToBranches="b1 b2", i.e. C applies only to two of the three
+        # branches of B, so the source 2 has 7 signatures and not 9
+        fname = general.gettemp(view('usignatures', self.calc.datastore))
+        self.assertEqualFiles('expected/unc_signatures.org', fname)
 
     def test_case_52(self):
         # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples

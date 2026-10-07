@@ -691,7 +691,7 @@ def _sampling_array(src):
     return sampling
 
 
-def unc_subsets(src):
+def get_ts_sets(src):
     """
     :returns: a list of tuples of trt_smr, the sets of realizations with
         the same uncertainties applied to the source; there is a single set
@@ -701,8 +701,8 @@ def unc_subsets(src):
         modified by the uncertainties; the sources without uncertainties
         have a single set, given by the sampling.
     """
-    if src.bysrc_subsets:
-        return [tuple(t) for t in src.bysrc_subsets]
+    if src.ts_sets:
+        return [tuple(t) for t in src.ts_sets]
     return [tuple(_sampling_array(src)['trt_smr'])]
 
 

@@ -30,7 +30,7 @@ from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.source_reader import (
-    get_trt_smrs_gid, read_trt_smrs_gid)
+    get_core_trt_smrs, read_core_trt_smrs)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -349,17 +349,17 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        # NB: trt_smrs_gid is stored by source_reader.build_groups, i.e.
+        # NB: core_trt_smrs is stored by source_reader.build_groups, i.e.
         # before the preclassical; the core size Gt, i.e. the number of
         # columns of the global RateMap, is known already at build time
         # (see source_reader.store_unc_signatures)
-        if 'trt_smrs_gid' not in self.datastore:
+        if 'core_trt_smrs' not in self.datastore:
             # this happens if the groups were read from the parent
             # calculation, so the units are taken from the parent
             parent = self.datastore.parent
-            gid = (read_trt_smrs_gid(parent) if 'trt_smrs_gid' in parent
-                   else get_trt_smrs_gid(csm.src_groups))
-            self.datastore.hdf5.save_vlen('trt_smrs_gid', gid)
+            gid = (read_core_trt_smrs(parent) if 'core_trt_smrs' in parent
+                   else get_core_trt_smrs(csm.src_groups))
+            self.datastore.hdf5.save_vlen('core_trt_smrs', gid)
 
         if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites

@@ -2472,15 +2472,6 @@ class OqParam(valid.ParamSet):
             self._validate_correlation_model(name, component)
         return True
 
-    def is_valid_truncation_level(self):
-        """
-        In presence of a correlation model the truncation level must be nonzero
-        """
-        if self.within_event_correlation_model:
-            return self.truncation_level_within != 0
-        else:
-            return True
-
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly

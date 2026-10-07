@@ -33,8 +33,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    get_bset_values, modified_groups, read_trt_smrs_gid)
-from openquake.hazardlib.lt import unc_subsets
+    get_bset_values, modified_groups, read_core_trt_smrs)
+from openquake.hazardlib.lt import get_ts_sets
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -204,15 +204,15 @@ def read_gid_dic(dstore, full_lt=None):
     :param dstore: a DataStore instance
     :param full_lt: a FullLogicTree instance, read from the datastore if None
     :returns: a dictionary trt_smrs -> (gids, weights), associating to each
-        unit of rate attribution its gids and the weights of the
-        corresponding realizations
+        realization set its gids and the weights of the corresponding
+        realizations
 
-    The units of rate attribution are the sets of realizations with the
-    same uncertainties applied (see get_trt_smrs_gid) and the gid of a
-    rate is the index of its trt_smrs in the corresponding list, see
+    The realization sets are the sets of realizations with the same
+    uncertainties applied (see get_core_trt_smrs) and the gids of a
+    realization set are the indices of its trt_smrs, see
     get_rmap_gb.
     """
-    trt_smrs = read_trt_smrs_gid(dstore)
+    trt_smrs = read_core_trt_smrs(dstore)
     full_lt = full_lt or read_full_lt(dstore)
     gweights = full_lt.g_weights(trt_smrs)[:, -1]  # shape Gt
     return {trt_smr: (gids, gweights[gids])
@@ -232,7 +232,7 @@ def group_gids(src_groups, gid_dic):
     for grp in src_groups:
         gids = set()
         for src in grp:
-            for trt_smrs in unc_subsets(src):
+            for trt_smrs in get_ts_sets(src):
                 gids.update(gid_dic[trt_smrs][0])
         out[grp.grp_id] = U32(sorted(gids))
     return out
@@ -316,7 +316,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
         srcblocks = groupby(
-            grp, lambda src: tuple(unc_subsets(src))).values()
+            grp, lambda src: tuple(get_ts_sets(src))).values()
     for srcs in srcblocks:
         for cmaker_, sg in cmakers_groups(
                 srcs, grp, cmaker, gid_dic, full_lt):

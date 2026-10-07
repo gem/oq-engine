@@ -26,7 +26,7 @@ from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
-from openquake.hazardlib.source_reader import read_trt_smrs_gid
+from openquake.hazardlib.source_reader import read_core_trt_smrs
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -71,8 +71,8 @@ def store_spectra(dstore, name, R, oq, spectra):
 def get_blocks(dstore, oq, cmakers, ctx_by_grp):
     """
     :returns: a pair (blocks, trt_rlzs) where blocks is a list of
-        (cmaker, ctx, tom) tuples, one per unit of rate attribution, i.e.
-        per set of realizations with the same uncertainties, and trt_rlzs
+        (cmaker, ctx, tom) tuples, one per realization set, i.e. per set
+        of realizations with the same uncertainties, and trt_rlzs
         is the list of the realizations associated to the gid of each block
 
     NB: the contexts of a group contain the sources with different
@@ -81,7 +81,7 @@ def get_blocks(dstore, oq, cmakers, ctx_by_grp):
     """
     full_lt = dstore['full_lt'].init()
     toms = decode(dstore['toms'][:])
-    units = read_trt_smrs_gid(dstore)
+    units = read_core_trt_smrs(dstore)
     gids = full_lt.get_gids(units)  # one array per unit
     unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
     blocks = []
