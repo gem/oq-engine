@@ -187,9 +187,6 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         self.calc.pre_execute()
         result = self.calc.execute()
         self.calc.post_execute(result)
-        # Access the child's datastore using the child_calc_id from the parent's oqparam
-        child_calc_id = self.calc.datastore['oqparam'].child_calc_id
-        child_dstore = datastore.read(child_calc_id)
-        self._check_csv_outputs('avg_loss event_efl event_pcl event_wcl node_el'.split(),
-                                child_dstore, interdependencies)
-        child_dstore.close()
+        with datastore.read(self.calc.child_id) as child_dstore:
+            outs = 'avg_loss event_efl event_pcl event_wcl node_el'.split()
+            self._check_csv_outputs(outs, child_dstore, interdependencies)

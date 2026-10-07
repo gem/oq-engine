@@ -23,36 +23,14 @@ from openquake.baselib import sap
 from openquake.commonlib import datastore, logs, readinput
 from openquake.calculators.base import run_calc
 
-# The infrastructure connectivity analysis is performed by the damage
-# calculators (see `connectivity` in openquake/risklib) when the job.ini
-# contains `infrastructure_connectivity_analysis = true`. It stores the
-# average losses in `infra-avg_loss`, with one column per metric and a single
-# row, and the per-event losses in `infra-event_<metric>`, with the loss in
-# the column given here.
-#
-# To get a calculation to summarize, run the test case below and then pass
-# its ID (the job printed by the engine) to this module:
-#
-#   oq engine --run \
-#       openquake/qa_tests_data/infrastructure_risk/demand_supply/job.ini
-#   python -m openquake.calculators.postrisk.connectivity <calc_id>
-#
-# The same case is run by the test
-# openquake/calculators/tests/infrastructure_risk_test.py
-# (test_demand_supply), which checks the `infra-*` outputs.
-
 
 def main(dstore, road_exposure_xml, interdependencies_csv):
     """
-    Summarize the infrastructure connectivity analysis of a finished damage
-    calculation, i.e. one run with
-    `infrastructure_connectivity_analysis = true`. `dstore` is the
-    calculation holding that analysis: a calculation ID (as an int, or as
-    the string of digits the command line produces), the name of an HDF5
-    file, or an open datastore. The summary, a dataframe with one row per
-    connectivity metric, is stored in a new calculation with its own
-    datastore, whose `parent` attribute points to the given one, which is
-    therefore left untouched.
+    Run a connectivity analysis on road_exposure_xml by taking
+    into account the damages caused by a scenario_damage parent
+    calculation via the interdependencies file connecting child assets
+    with parent assets. For an example, see the test
+    infrastructure_risk/interdependencies/job.ini
     """
     if isinstance(dstore, str):  # calc_id or path
         dstore = datastore.read(int(dstore) if dstore.isdigit() else dstore)
@@ -66,15 +44,11 @@ def main(dstore, road_exposure_xml, interdependencies_csv):
     oq.__dict__.pop('postrisk_args', None)
     # Run the child calculation in-memory, passing a job_dict derived
     # from the oqparam instead of writing a child.ini file on disk
-    calc = run_calc(readinput.to_dict(oq), hazard_calculation_id=dstore.calc_id)
-    # Save the child calc_id to the parent's oqparam so it can be accessed
-    # through any datastore with the same calc_id
-    oq = dstore['oqparam']
-    oq.child_calc_id = calc.datastore.calc_id
-    dstore['oqparam'] = oq
-    calc.datastore.close()
+    job_ini = readinput.to_dict(oq)
+    calc = run_calc(job_ini, hazard_calculation_id=dstore.calc_id)
     outs = '\n'.join(logs.dbcmd('list_outputs', calc.datastore.calc_id, False))
     logging.info(outs)
+    return calc.datastore.calc_id  # child ID
 
 
 if __name__ == '__main__':

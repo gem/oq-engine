@@ -194,7 +194,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         self._check_no_damage()
         if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
             return
-        prc = self._run_postrisk()
+
+        # run postrisk
+        prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        prc.assetcol = self.assetcol
+        if hasattr(self, 'exported'):
+            prc.exported = self.exported
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)
+        self.child_id = prc.result
         self._fix_no_damage(prc)
         self._store_damages()
         if oq.infrastructure_connectivity_analysis:
@@ -218,20 +227,6 @@ class DamageCalculator(EventBasedRiskCalculator):
                                  'site collection!?')
             logging.warning(
                 'There is no damage, perhaps the hazard is too small?')
-
-    def _run_postrisk(self):
-        """
-        Run the postrisk calculator to compute aggrisk and aggcurves
-        """
-        oq = self.oqparam
-        prc = PostRiskCalculator(oq, self.datastore.calc_id)
-        prc.assetcol = self.assetcol
-        if hasattr(self, 'exported'):
-            prc.exported = self.exported
-        prc.pre_execute()
-        res = prc.execute()
-        prc.post_execute(res)
-        return prc
 
     def _fix_no_damage(self, prc):
         """
