@@ -760,7 +760,16 @@ def export_reinsurance(ekey, dstore):
             ('infra-event_ccl', 'csv'),
             ('infra-event_pcl', 'csv'),
             ('infra-event_wcl', 'csv'),
-            ('infra-event_efl', 'csv'))
+            ('infra-event_efl', 'csv'),
+            ('inter-avg_loss', 'csv'),
+            ('inter-node_el', 'csv'),
+            ('inter-taz_cl', 'csv'),
+            ('inter-dem_cl', 'csv'),
+            ('inter-event_ccl', 'csv'),
+            ('inter-event_pcl', 'csv'),
+            ('inter-event_wcl', 'csv'),
+            ('inter-event_efl', 'csv'))
+
 def export_node_el(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])

@@ -89,6 +89,14 @@ DISPLAY_NAME = {
     'infra-event_pcl': 'Partial Connectivity Loss By Event',
     'infra-event_wcl': 'Weighted Connectivity Loss By Event',
     'infra-event_efl': 'Efficiency Loss by Event',
+    'inter-avg_loss': 'Average Infrastructure Loss with Interdependencies',
+    'inter-node_el': 'Efficiency Loss Of Nodes with Interdependencies',
+    'inter-taz_cl': 'Connectivity Loss Of TAZ Nodes with Interdependencies',
+    'inter-dem_cl': 'Connectivity Loss Of Demand Nodes with Interdependencies',
+    'inter-event_ccl': 'Complete Connectivity Loss By Event with Interdependencies',
+    'inter-event_pcl': 'Partial Connectivity Loss By Event with Interdependencies',
+    'inter-event_wcl': 'Weighted Connectivity Loss By Event with Interdependencies',
+    'inter-event_efl': 'Efficiency Loss by Event with Interdependencies',
 }
 
 

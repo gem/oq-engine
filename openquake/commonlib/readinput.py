@@ -411,6 +411,23 @@ def get_params(job_ini, kw={}):
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
+    params = _params_from_cp(cp, base_path, job_ini)
+    try:
+        update(params, kw.items(), base_path)  # override on demand
+    except Exception:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
+    return params
+
+
+def _params_from_cp(cp, base_path, job_ini):
+    """
+    Build a parameters dictionary from an already parsed .ini file,
+    converting the ``<name>_file`` keys into the ``inputs`` subdictionary
+    with absolute paths (see update). Shared by get_params and to_dict.
+    """
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
@@ -429,13 +446,30 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     try:
         update(params, items, base_path)
-        update(params, kw.items(), base_path)  # override on demand
     except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
     return params
+
+
+def to_dict(oqparam, **inputs):
+    """
+    Convert an OqParam into a parameters dictionary with the same structure
+    produced by get_params, so it can be fed directly to run_calc without
+    writing a job.ini file on disk. The input files are stored in the
+    'inputs' subdictionary with absolute paths.
+
+    :param oqparam:
+        an OqParam instance
+    :param inputs:
+        optionally override some input files (e.g. exposure='x.xml')
+    :returns:
+        a dictionary of parameters
+    """
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.read_string(oqparam.to_ini(**inputs))
+    base_path = getattr(oqparam, 'base_path', '') or '<in-memory>'
+    return _params_from_cp(cp, base_path, '<in-memory>')
 
 
 def is_fraction(string):
@@ -1344,6 +1378,13 @@ def concat_if_different(values):
     # If all values are identical, return the single unique value,
     # otherwise join with "|"
     return '|'.join(unique_values)
+
+
+def get_interdependencies(oqparam):
+    """
+    Read the interdependencies.csv file used in composite infrastructure risk calculations
+    """
+    return pandas.read_csv(oqparam.inputs['interdependencies'])
 
 
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):

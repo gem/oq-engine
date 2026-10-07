@@ -797,9 +797,9 @@ class HazardCalculator(BaseCalculator):
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
                 'max_weight amplifier policy_df treaty_df '
-                'full_lt exported trt_rlzs gids'
+                'full_lt exported trt_rlzs gids interdep_df'
             ).split():
-                if hasattr(calc, name):
+                if hasattr(calc, name) and name not in self.__dict__:
                     setattr(self, name, getattr(calc, name))
         else:
             with self.monitor('importing inputs', measuremem=True):
@@ -1060,7 +1060,8 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
-        if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        # if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['exposure'] = exposure
@@ -1145,6 +1146,48 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
+            # read interpendencies if any
+            if 'interdependencies' in oq.inputs: # we are in the child
+                self.interdep_df = readinput.get_interdependencies(oq)
+                
+                # check if source_damage_state is valid
+                valid_states = set(self.crmodel.damage_states) | {'non_operational'}
+                interdep_states = self.interdep_df.source_damage_state.unique()
+                for state in interdep_states:
+                    if state not in valid_states:
+                        raise InvalidFile(
+                            f'{oq.inputs["interdependencies"]}\n'
+                            f'source_damage_state={state!r} not in the fragili'
+                            f'ty functions {self.crmodel.damage_states}')
+                
+                # check if source_asset_ids exist
+                parent_assetcol = self.datastore.parent['assetcol']
+                asset2id = {
+                    general.decode(asset_id): i
+                    for i, asset_id in enumerate(parent_assetcol['id'])
+                }
+                interdep_assets = set(self.interdep_df.source_asset_id.unique())
+                missing_assets = interdep_assets - set(asset2id)
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'source_asset_id(s) {sorted(missing_assets)!r} do not'
+                        f' exist in the source exposure model')                
+                
+                # check if target_asset_ids exist
+                interdep_assets_child = set(self.interdep_df.target_asset_id.unique())
+                target_asset_ids = {
+                    general.decode(asset_id)
+                    for asset_id in self.assetcol['id']
+                }
+                missing_assets = interdep_assets_child - target_asset_ids
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'target_asset_id(s) {sorted(missing_assets)!r} do not exist '
+                        f'in the target exposure model'
+                    )
+                
     def _read_risk3(self):
         oq = self.oqparam
         station_sids = set()
