@@ -15,6 +15,7 @@ import sys
 import tempfile
 import traceback
 from datetime import datetime, timezone
+from threading import RLock
 
 from openquake.baselib import config, hdf5, parallel
 from openquake.baselib.general import zipfiles
@@ -34,7 +35,17 @@ from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 UTC = timezone.utc
 
 # FastAPI sync handlers use a threadpool; serialize HDF5 reads per process.
-HDF5_READ_LOCK = mp.RLock()
+HDF5_READ_LOCK = RLock()
+
+
+def _reset_hdf5_read_lock():
+    """Reset the lock in forked children if another thread held it."""
+    global HDF5_READ_LOCK
+    HDF5_READ_LOCK = RLock()
+
+
+if hasattr(os, 'register_at_fork'):
+    os.register_at_fork(after_in_child=_reset_hdf5_read_lock)
 
 
 def get_impact_rupture_data(post, user, rupture_path):
