@@ -350,8 +350,10 @@ def _quintets(cmaker, src, sitecol):
     maxmag = max(valid)
     maxdist = valid[maxmag]
     cdist = sitecol.get_cdist(src.location)
-    # NB: having a decent max_radius is essential for performance!
-    mask = cdist <= maxdist + src.max_radius(maxdist)
+    # Reuse the rupture radii while handling this source; get_psdist is
+    # called once per rupture and recomputing the whole vector is expensive.
+    radii = src._get_rupture_projection_radii()
+    mask = cdist <= maxdist + src.max_radius(maxdist, radii)
     sites = sitecol.filter(mask)
     if sites is None:
         return
@@ -376,7 +378,7 @@ def _quintets(cmaker, src, sitecol):
             allpla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
+                                    magdist, radii)
             close = sites.filter(cdist[mask] <= psdist)
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
