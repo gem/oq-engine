@@ -634,11 +634,10 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_map-mean-PGA.csv", fname)
 
-        # check CollapsedPointSources in source_info
-        info = self.calc.datastore.read_df('source_info')
-        source_ids = decode(list(info.source_id))
-        num_cps = sum(1 for s in source_ids if s.startswith('cps-'))
-        self.assertEqual(num_cps, 158)
+        # there is a single CollapsedPointSources in source_info
+        [info] = self.calc.datastore['source_info'][:]
+        self.assertEqual(info['source_id'], b'156')
+        self.assertEqual(info['code'], b'p')
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results

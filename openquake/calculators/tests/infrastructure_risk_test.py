@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.commonlib import datastore
@@ -39,16 +38,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
     def _check_csv_outputs(self, outputs_list, datastore, testcase):
         for output in outputs_list:
             expected_fname = 'expected/infra-' + output + '.csv'
-            expected_path = os.path.join(
-                os.path.dirname(testcase.__file__), expected_fname)
             [got_path] = export(('infra-' + output, 'csv'), datastore)
-            # Copy the generated file to the expected directory for future runs
-            if os.path.exists(got_path):
-                import shutil
-                expected_dir = os.path.dirname(expected_path)
-                if not os.path.exists(expected_dir):
-                    os.makedirs(expected_dir)
-                shutil.copy(got_path, expected_path)
             self.assertEqualFiles(expected_fname, got_path)
 
     def test_case_1(self):
