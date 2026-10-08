@@ -458,31 +458,25 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
 
     # skip split when pointsource_distance is non-scalar: no collapse
     if close is None and far is None:
-        u32mags = U32([rup.mag * 100 for rup in allrups])
-        return [(list(rups), sitecol)
-                for rups in split_array(numpy.array(allrups), u32mags)]
+        return [(list(allrups), sitecol)]
 
-    u32mags = U32([rup.mag * 100 for rup in allrups])
-    groups = split_array(numpy.array(allrups), u32mags)
-
+    # representative rupture = the one nearest the mean hypocenter
+    cen = numpy.array(
+        [(rup.hypocenter.longitude, rup.hypocenter.latitude)
+         for rup in allrups])
+    idx = numpy.argmin(
+        numpy.hypot(cen[:, 0] - mean_hypo[0], cen[:, 1] - mean_hypo[1]))
+    rep = copy.copy(allrups[idx])  # copy so the close sites are untouched
+    # use rate-weighted mean hypocenter for more precise distances
+    rep.hypocenter = GeoPoint(
+        float(mean_hypo[0]), float(mean_hypo[1]), float(mean_hypo[2]))
+    rep.occurrence_rate = float(numpy.sum(
+        [rup.occurrence_rate for rup in allrups]))  # full mag rate
     rups_sites = []
-    for rups in groups:
-        # representative rupture = the one nearest the mean hypocenter
-        cen = numpy.array(
-            [(rup.hypocenter.longitude, rup.hypocenter.latitude)
-             for rup in rups])
-        idx = numpy.argmin(
-            numpy.hypot(cen[:, 0] - mean_hypo[0], cen[:, 1] - mean_hypo[1]))
-        rep = copy.copy(rups[idx])  # copy so the close sites are untouched
-        # use rate-weighted mean hypocenter for more precise distances
-        rep.hypocenter = GeoPoint(
-            float(mean_hypo[0]), float(mean_hypo[1]), float(mean_hypo[2]))
-        rep.occurrence_rate = float(numpy.sum(
-            [rup.occurrence_rate for rup in rups]))  # full mag rate
-        if far is not None:
-            rups_sites.append(([rep], far))
-        if close is not None:
-            rups_sites.append((list(rups), close))
+    if far is not None:
+        rups_sites.append(([rep], far))
+    if close is not None:
+        rups_sites.append((list(allrups), close))
     return rups_sites
 
 
@@ -1316,16 +1310,17 @@ class ContextMaker(object):
                                  key=bymag)
                 if not allrups:
                     return iter([])
-                if src.code in (b'F', b'S', b'C') and step == 1:
-                    # collapse the rupture grid for far sites
-                    rups_sites = _fault_rups_sites(
-                        self, src, sitecol, allrups)
-                else:
-                    # sorted by mag by construction
-                    u32mags = U32([rup.mag * 100 for rup in allrups])
-                    rups_sites = [(list(rups), sitecol)
-                                  for rups in split_array(
-                                      numpy.array(allrups), u32mags)]
+                # split by magnitude first
+                u32mags = U32([rup.mag * 100 for rup in allrups])
+                groups = split_array(numpy.array(allrups), u32mags)
+                rups_sites = []
+                for rups_list in groups:
+                    rups_list = list(rups_list)
+                    if src.code in (b'F', b'S', b'C') and step == 1:
+                        rups_sites.extend(_fault_rups_sites(
+                            self, src, sitecol, rups_list))
+                    else:
+                        rups_sites.append((rups_list, sitecol))
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
