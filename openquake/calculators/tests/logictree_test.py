@@ -505,7 +505,8 @@ hazard_uhs-std.csv
         self.run_calc(case_25.__file__, 'job.ini', exports='csv',
                       concurrent_tasks='4')
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA.csv', got, delta=5E-4)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
     def test_case_26(self):

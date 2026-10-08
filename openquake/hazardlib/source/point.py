@@ -508,11 +508,13 @@ class CollapsedPointSource(PointSource):
     temporal_occurrence_model.
     """
     code = COLLAPSED_POINT
-    MODIFICATIONS = set()
+    MODIFICATIONS = PointSource.MODIFICATIONS | {'set_recurrow'}
 
     def __init__(self, source_id, pointsources):
         self.source_id = source_id
         self.pdata = psources_to_pdata(pointsources, source_id)
+        if hasattr(pointsources[0], 'mmax_offset'):
+            self.mmax_offset = pointsources[0].mmax_offset
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
@@ -563,6 +565,45 @@ class CollapsedPointSource(PointSource):
         yield from self.restrict(
             np, self.location.z, self.hypo_dip_frac)._gen_ruptures(
             iruptures=True)
+
+    def modify(self, modification, parameters):
+        if modification == 'set_recurrow':
+            self.modify_set_recurrow(**parameters)
+            return
+        super().modify(modification, parameters)
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.modify(modification, parameters)
+        self._update_pointsources(pointsources)
+
+    def modify_set_recurrow(self, recurrow):
+        """Apply an area-source recurrence row to the underlying points."""
+        from openquake.hazardlib.source.area import AreaSource
+        from openquake.hazardlib.mfd.evenly_discretized import (
+            EvenlyDiscretizedMFD)
+
+        row = dict(recurrow)
+        rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'
+        fraction = getattr(self, 'source_fraction', 1.)
+        row[rate_key] = float(row[rate_key]) * fraction
+        AreaSource.modify_set_recurrow(self, row)
+        rates = self.mfd.get_annual_occurrence_rates()
+        share = 1. / len(self.pdata['array'])
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.mfd = EvenlyDiscretizedMFD(
+                rates[0][0], .1, [rate * share for _mag, rate in rates])
+            src._num_ruptures = 0
+        self._update_pointsources(pointsources)
+
+    def _update_pointsources(self, pointsources):
+        self.pdata = psources_to_pdata(pointsources, self.source_id)
+        vars(self).update(calc_average(pointsources))
+        self.location = Point(self.lon, self.lat, self.dep)
+        self.nodal_plane_distribution = PMF(
+            [(1., NodalPlane(self.strike, self.dip, self.rake))])
+        self.hypocenter_distribution = PMF([(1., self.dep)])
+        self.hypo_dip_fracs = (self.hypo_dip_frac,)
 
     def count_ruptures(self):
         """
@@ -623,12 +664,11 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
         grid[ij].append(k)
     out = []
     unique_ids = set(src.source_id.rsplit('.', 1)[0] for src in points)
-    if len(unique_ids) == 1:  # all come from the same source
-        src_id = unique_ids.pop()
-    else:
-        src_id = ''
+    same_source = len(unique_ids) == 1
+    src_id = next(iter(unique_ids)) if same_source else ''
     for idxs in grid.values():
-        if len(idxs) > 1:
+        bysrc = same_source and getattr(points[0], 'bysrc_unc', False)
+        if len(idxs) > 1 or bysrc:
             cnt += 1
             cps = CollapsedPointSource(  # slow part
                 src_id or 'cps-%03d-%04d' % (grp_id, cnt), points[idxs])
@@ -636,6 +676,8 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
             cps.ts_sets = points[0].ts_sets
             cps.sampling = points[0].sampling
             cps.ps_grid_spacing = ps_grid_spacing
+            if same_source:
+                cps.source_fraction = len(idxs) / len(points)
             out.append(cps)
         else:  # there is a single source
             out.append(points[idxs[0]])

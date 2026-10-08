@@ -259,13 +259,8 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
         sources = []
         for src in sg:
             if src.bysrc_unc and src.code in b'AM':
-                # if not split already, happens only in case_67
                 sources.extend(preclassical.split_source(src))
             else:
-                # NB: the sources not modified by the uncertainties are not split,
-                # since they were already split by the preclassical; the fault sources
-                # are still not split, since their splitting requires recomputing the
-                # rupture counts, see also filter_weight
                 sources.append(src)
         sg.sources = sources
         # the sources modified by the uncertainties are filtered here and

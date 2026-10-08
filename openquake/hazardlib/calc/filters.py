@@ -322,6 +322,8 @@ def split_source(src):
         split.source_id = '%s.%s' % (src.source_id, i)
         split.sampling = src.sampling
         split.ts_sets = src.ts_sets
+        if hasattr(src, 'bysrc_unc'):
+            split.bysrc_unc = src.bysrc_unc
         split.grp_id = grp_id
         split.id = src.id
         if has_hdf5:

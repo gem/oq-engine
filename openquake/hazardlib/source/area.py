@@ -292,6 +292,8 @@ class AreaSource(ParametricSeismicSource):
                 hypocenter_distribution=self.hypocenter_distribution,
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt._num_ruptures = pt.count_ruptures()
+            if hasattr(self, 'mmax_offset'):
+                pt.mmax_offset = self.mmax_offset
             yield pt
 
     def wkt(self):
