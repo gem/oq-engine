@@ -95,9 +95,10 @@ def _get_site_scaling(C, vs30):
         FS = s0 + s1 / (log10(Vs30) - log10(150))
 
     Calibrated for 220 <= Vs30 <= 800 m/s using topographic-proxy
-    Vs30 estimates (Wald and Allen, 2007). The denominator is zero at
-    Vs30 = 150 m/s; the caller must respect the model applicability range.
+    Vs30 estimates (Wald and Allen, 2007), so we clamp input Vs30
+    values to this range.
     """
+    vs30 = np.clip(vs30, 220, 800)
     return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.0))
 
 

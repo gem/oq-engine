@@ -1,3 +1,7 @@
+  [Anthony Carapetis]
+  * Fix for Allen (2022) GSIM: Vs30 inputs are now clamped to the calibrated
+    range of the model to avoid the singularity at Vs30=150.
+
   [Michele Simionato]
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
