@@ -446,8 +446,19 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     # NB: having a decent psdist is essential for performance!
     psdist = getattr(cmaker, 'pointsource_distance',
                      float(config.performance.pointsource_distance))
-    close = sitecol.filter(cdist <= psdist)
-    far = sitecol.filter(cdist > psdist)
+    # skip the split when pointsource_distance is not a scalar
+    if numpy.isscalar(psdist) and not isinstance(psdist, (numpy.ndarray, list, tuple, dict)):
+        close = sitecol.filter(cdist <= psdist)
+        far = sitecol.filter(cdist > psdist)
+    else:
+        close = None
+        far = None
+
+    # skip split when pointsource_distance is non-scalar: no collapse
+    if close is None and far is None:
+        u32mags = U32([rup.mag * 100 for rup in allrups])
+        return [(list(rups), sitecol)
+                for rups in split_array(numpy.array(allrups), u32mags)]
 
     u32mags = U32([rup.mag * 100 for rup in allrups])
     groups = split_array(numpy.array(allrups), u32mags)
@@ -1300,9 +1311,16 @@ class ContextMaker(object):
                                  key=bymag)
                 if not allrups:
                     return iter([])
-                # collapse the rupture grid for far sites (see _fault_rups_sites)
-                rups_sites = _fault_rups_sites(
-                    self, src, sitecol, allrups)
+                if src.code in (b'F', b'S') and step == 1:
+                    # collapse the rupture grid for far sites
+                    rups_sites = _fault_rups_sites(
+                        self, src, sitecol, allrups)
+                else:
+                    # sorted by mag by construction
+                    u32mags = U32([rup.mag * 100 for rup in allrups])
+                    rups_sites = [(list(rups), sitecol)
+                                  for rups in split_array(
+                                      numpy.array(allrups), u32mags)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
