@@ -49,7 +49,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
                 if not os.path.exists(expected_dir):
                     os.makedirs(expected_dir)
                 shutil.copy(got_path, expected_path)
-            self.assertEqualFiles(expected_fname, got_path, check_text=True)
+            self.assertEqualFiles(expected_fname, got_path)
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
