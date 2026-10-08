@@ -396,6 +396,74 @@ def _quintets(cmaker, src, sitecol):
                     yield m, mag, mdist, allpla, close
 
 
+# reference location to split fault sites into close/far (get_cdist
+# interface of a hazardlib Point): x, y, z = lon, lat, depth
+_FaultHypo = collections.namedtuple('_FaultHypo', 'x y z')
+
+
+def _fault_rups_sites(cmaker, src, sitecol, allrups):
+    """
+    Build the (rups, sites) pairs for a fault source (code 'F'), collapsing
+    the along-strike/down-dip rupture grid onto a single representative
+    rupture for the far sites (cdist > psdist) while keeping the full grid
+    for the close sites (cdist <= psdist). This mirrors the point-source
+    collapse implemented in _quintets and speeds up the classical calc when
+    a fault affects many far-away sites.
+
+    The representative carries the full magnitude occurrence rate (the sum
+    of the grid rates), so the total rate is preserved exactly.
+
+    The collapse is only valid for a Poisson process (rates add linearly),
+    so it is skipped for non-Poisson temporal occurrence models (e.g.
+    NegativeBinomial/ETAS), where the temporal clustering must be kept.
+    """
+    tom = getattr(src, 'temporal_occurrence_model', None)
+    if tom is not None and not isinstance(tom, PoissonTOM):
+        # non-Poisson TOM: keep the full rupture grid, no collapse
+        u32mags = U32([rup.mag * 100 for rup in allrups])
+        return [(list(rups), sitecol)
+                for rups in split_array(numpy.array(allrups), u32mags)]
+
+    # rate-weighted mean hypocenter, used as the reference location
+    hyps = numpy.array(
+        [(rup.hypocenter.longitude, rup.hypocenter.latitude,
+          rup.hypocenter.depth, rup.occurrence_rate)
+         for rup in allrups])
+    mean_hypo = numpy.average(hyps[:, :3], axis=0, weights=hyps[:, 3])
+
+    if cmaker.fewsites:  # a single rupture grid for all sites, no collapse
+        u32mags = U32([rup.mag * 100 for rup in allrups])
+        return [(list(rups), sitecol)
+                for rups in split_array(numpy.array(allrups), u32mags)]
+
+    cdist = sitecol.get_cdist(_FaultHypo(*mean_hypo))
+    # NB: having a decent psdist is essential for performance!
+    psdist = getattr(cmaker, 'pointsource_distance',
+                     float(config.performance.pointsource_distance))
+    close = sitecol.filter(cdist <= psdist)
+    far = sitecol.filter(cdist > psdist)
+
+    u32mags = U32([rup.mag * 100 for rup in allrups])
+    groups = split_array(numpy.array(allrups), u32mags)
+
+    rups_sites = []
+    for rups in groups:
+        # representative rupture = the one nearest the mean hypocenter
+        cen = numpy.array(
+            [(rup.hypocenter.longitude, rup.hypocenter.latitude)
+             for rup in rups])
+        idx = numpy.argmin(
+            numpy.hypot(cen[:, 0] - mean_hypo[0], cen[:, 1] - mean_hypo[1]))
+        rep = copy.copy(rups[idx])  # copy so the close sites are untouched
+        rep.occurrence_rate = float(numpy.sum(
+            [rup.occurrence_rate for rup in rups]))  # full mag rate
+        if far is not None:
+            rups_sites.append(([rep], far))
+        if close is not None:
+            rups_sites.append((list(rups), close))
+    return rups_sites
+
+
 # helper used to populate contexts for planar ruptures
 def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
                     src_id, src_offset, tom):
@@ -1226,10 +1294,9 @@ class ContextMaker(object):
                                  key=bymag)
                 if not allrups:
                     return iter([])
-                # sorted by mag by construction
-                u32mags = U32([rup.mag * 100 for rup in allrups])
-                rups_sites = [(rups, sitecol) for rups in split_array(
-                    numpy.array(allrups), u32mags)]
+                # collapse the rupture grid for far sites (see _fault_rups_sites)
+                rups_sites = _fault_rups_sites(
+                    self, src, sitecol, allrups)
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
