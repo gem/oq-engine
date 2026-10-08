@@ -22,9 +22,12 @@ import sys
 import json
 import subprocess
 import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 import numpy
 import pandas
+import requests
 from io import BytesIO
 
 import django
@@ -142,6 +145,44 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 time.sleep(2)
                 return job_dic
 
+    def stress_hdf5_datastore(self, job_id, results):
+        """Issue concurrent reads of one HDF5 file through Uvicorn."""
+        [gmf_output] = [
+            output for output in results if output['type'] == 'gmf_data']
+        self.user.profile.level = 2
+        self.user.profile.save()
+        sessionid = self.c.session.cookies.get('sessionid')
+        headers = {'Cookie': 'sessionid=' + sessionid}
+        paths = (
+            '/v1/calc/result/%s?export_type=csv' % gmf_output['id'],
+            '/v1/calc/%s/datastore' % job_id,
+            '/v1/calc/%s/job_zip' % job_id,
+            '/v1/calc/%s/extract/gmf_data' % job_id,
+            '/v1/calc/%s/download_aggrisk' % job_id,
+            '/engine/%s/outputs_impact' % job_id,
+        )
+        barrier = threading.Barrier(len(paths))
+
+        def fetch(path):
+            responses = []
+            with requests.Session() as session:
+                session.headers.update(headers)
+                for _ in range(2):
+                    barrier.wait(timeout=60)
+                    response = session.get(
+                        self.c.base_url + path, timeout=300)
+                    response.raise_for_status()
+                    responses.append(response)
+            return responses
+
+        try:
+            with ThreadPoolExecutor(max_workers=len(paths)) as pool:
+                batches = list(pool.map(fetch, paths))
+            self.assertEqual(len(batches), len(paths))
+            self.assertTrue(all(len(batch) == 2 for batch in batches))
+        finally:
+            self.set_user_level_and_remove_groups(1)
+
     @classmethod
     def get_response_content(cls, response):
         """
@@ -197,7 +238,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.user.save()
 
     def impact_run_then_remove(
-            self, endpoint, data, expected_error=None):
+            self, endpoint, data, expected_error=None, stress_hdf5=False):
         # NOTE: We make Django filebased.EmailBackend write each email
         # notification into a separate directory, so afterwards we can
         # retrieve a single file from it, corresponding to the tested job
@@ -254,6 +295,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             self.assertGreater(
                 len(results), 0,
                 'The job produced no outputs!')
+            if stress_hdf5:
+                self.stress_hdf5_datastore(job_id, results)
         # Check that the Django views to visualize simplified and advanced
         # outputs pages do not raise any exceptions
         self.get(f'/engine/{job_id}/outputs', prefix='')
@@ -494,7 +537,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100')
-        self.impact_run_then_remove('impact_run_with_shakemap', data)
+        self.impact_run_then_remove(
+            'impact_run_with_shakemap', data, stress_hdf5=True)
 
     def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
         self.set_user_level_and_remove_groups(1)
