@@ -677,6 +677,9 @@ def _authorize_job_zip(auth_request, settings, utils, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return 404, None
+    if not utils.user_has_permission(
+            auth_request, job.user_name, job.status):
+        return 403, None
     return 200, job
 
 

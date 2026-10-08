@@ -143,10 +143,10 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
             finally:
                 logs.dbcmd('del_calc', job.calc_id, self.user2.username)
 
-    def test_job_zip_remains_level_gated(self):
+    def test_job_zip_checks_level_and_job_permissions(self):
         [job] = create_jobs(
             [dict(calculation_mode='classical',
-                  description='test_job_zip_level_gate')],
+                  description='test_job_zip_permissions')],
             user_name=self.user1.username)
         db("UPDATE job SET ?D WHERE id=?x",
            {'status': 'complete', 'is_running': 0}, job.calc_id)
@@ -161,9 +161,29 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
                              password=self.password2)
                 response = self.c.get(
                     '/v1/calc/%s/job_zip' % job.calc_id)
-                # Level 2 permits this even though user2 does not own the job.
+                self.assertEqual(response.status_code, 403)
+
+                db("UPDATE job SET status='shared' WHERE id=?x", job.calc_id)
+                response = self.c.get(
+                    '/v1/calc/%s/job_zip' % job.calc_id)
+                self.assertEqual(response.status_code, 400)
+
+                self.c.login(username=self.user1.username,
+                             password=self.password1)
+                response = self.c.get(
+                    '/v1/calc/%s/job_zip' % job.calc_id)
+                self.assertEqual(response.status_code, 403)
+
+                self.user1.profile.level = 2
+                self.user1.profile.save()
+                self.c.login(username=self.user1.username,
+                             password=self.password1)
+                response = self.c.get(
+                    '/v1/calc/%s/job_zip' % job.calc_id)
                 self.assertEqual(response.status_code, 400)
             finally:
+                self.user1.profile.level = 1
+                self.user1.profile.save()
                 logs.dbcmd('del_calc', job.calc_id, self.user1.username)
 
     def test_share_complete_job(self):
