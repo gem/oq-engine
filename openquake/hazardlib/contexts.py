@@ -1311,7 +1311,7 @@ class ContextMaker(object):
                                  key=bymag)
                 if not allrups:
                     return iter([])
-                if src.code in (b'F', b'S') and step == 1:
+                if src.code in (b'F', b'S', b'C') and step == 1:
                     # collapse the rupture grid for far sites
                     rups_sites = _fault_rups_sites(
                         self, src, sitecol, allrups)
