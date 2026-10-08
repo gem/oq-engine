@@ -33,6 +33,9 @@ from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 
 UTC = timezone.utc
 
+# FastAPI sync handlers use a threadpool; serialize HDF5 reads per process.
+HDF5_READ_LOCK = mp.RLock()
+
 
 def get_impact_rupture_data(post, user, rupture_path):
     """Validate a rupture and build the data needed by the IMPACT UI."""
@@ -98,8 +101,9 @@ def create_png_file(ds_path, what, calc_id):
         prefix='calc_%s_' % calc_id, suffix='.png', dir=temp_dir)
     os.close(fd)
     try:
-        with datastore.read(ds_path) as dstore:
-            arr = dstore['png/%s' % what][:]
+        with HDF5_READ_LOCK:
+            with datastore.read(ds_path) as dstore:
+                arr = dstore['png/%s' % what][:]
         Image.fromarray(arr).save(fname, format='png')
     except Exception:
         remove_temp_file(fname)
@@ -109,11 +113,12 @@ def create_png_file(ds_path, what, calc_id):
 
 def create_impact_report_file(ds_path, iso3, file_format):
     """Copy a stored country report to a temporary file."""
-    with datastore.read(ds_path) as dstore:
-        impact_group = dstore['impact']
-        if iso3 not in impact_group:
-            raise ValueError("ISO3 '%s' not found" % iso3)
-        report = bytes(impact_group[iso3][f'report_{file_format}'][()])
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as dstore:
+            impact_group = dstore['impact']
+            if iso3 not in impact_group:
+                raise ValueError("ISO3 '%s' not found" % iso3)
+            report = bytes(impact_group[iso3][f'report_{file_format}'][()])
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     fd, fname = tempfile.mkstemp(
         prefix='impact_report_', suffix='.' + file_format, dir=temp_dir)
@@ -128,8 +133,9 @@ def create_impact_report_file(ds_path, iso3, file_format):
 
 def extract_datastore_table(ds_path, resource):
     """Extract a table from the calculation datastore."""
-    with datastore.read(ds_path) as dstore:
-        return _extract(dstore, resource)
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as dstore:
+            return _extract(dstore, resource)
 
 
 def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
@@ -137,8 +143,9 @@ def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
     resource = (
         f'exposure_by_lse?secondary_peril={secondary_peril}'
         f'&discard_empty={discard_empty}')
-    with datastore.read(ds_path) as dstore:
-        exposure = _extract(dstore, resource)
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as dstore:
+            exposure = _extract(dstore, resource)
     column_descriptions = {
         col: description
         for col, description in EXPOSURE_FIELD_DESCRIPTION.items()
@@ -151,8 +158,9 @@ def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
 
 def get_exposure_by_mmi(ds_path):
     """Return MMI-aggregated exposure data and column descriptions."""
-    with datastore.read(ds_path) as dstore:
-        exposure = _extract(dstore, 'mmi_tags')
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as dstore:
+            exposure = _extract(dstore, 'mmi_tags')
     return {
         'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
         'exposure_by_mmi': exposure.to_dict(),
@@ -161,8 +169,9 @@ def get_exposure_by_mmi(ds_path):
 
 def get_impact_results(ds_path):
     """Return the aggregate-risk data and its column descriptions."""
-    with datastore.read(ds_path) as dstore:
-        impact = _extract(dstore, 'aggrisk_tags')
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as dstore:
+            impact = _extract(dstore, 'aggrisk_tags')
     return {
         'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
         'impact': impact.to_dict(),
@@ -176,8 +185,9 @@ def create_aggrisk_csv(ds_path, calc_id):
         prefix='aggrisk_%s_' % calc_id, suffix='.csv', dir=temp_dir)
     os.close(fd)
     try:
-        with datastore.read(ds_path) as ds:
-            losses = calculator_views.view('aggrisk', ds)
+        with HDF5_READ_LOCK:
+            with datastore.read(ds_path) as ds:
+                losses = calculator_views.view('aggrisk', ds)
         with open(fname, 'w', encoding='utf-8', newline='') as stream:
             writer = csv.writer(stream)
             writer.writerow(losses.dtype.names)
@@ -190,8 +200,9 @@ def create_aggrisk_csv(ds_path, calc_id):
 
 def create_job_zip(ds_path, job_id):
     """Create a job archive in a temporary directory and return its path."""
-    with datastore.read(ds_path) as ds:
-        exported = export(('job', 'zip'), ds)
+    with HDF5_READ_LOCK:
+        with datastore.read(ds_path) as ds:
+            exported = export(('job', 'zip'), ds)
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     fname = os.path.join(tmpdir, 'job_%s.zip' % job_id)
@@ -212,9 +223,10 @@ def create_extract_file(ds_path, resource):
         prefix=prefix, suffix='.npz', dir=temp_dir)
     os.close(fd)
     try:
-        with datastore.read(ds_path) as ds:
-            extracted = _extract(ds, resource)
-            hdf5.save_npz(extracted, fname)
+        with HDF5_READ_LOCK:
+            with datastore.read(ds_path) as ds:
+                extracted = _extract(ds, resource)
+                hdf5.save_npz(extracted, fname)
     except Exception:
         remove_temp_file(fname)
         raise
@@ -239,8 +251,9 @@ def export_result(result_id, export_type=None):
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
-        exported = export_from_db(
-            (ds_key, export_type), job_id, datadir, tmpdir)
+        with HDF5_READ_LOCK:
+            exported = export_from_db(
+                (ds_key, export_type), job_id, datadir, tmpdir)
         if not exported:
             shutil.rmtree(tmpdir, ignore_errors=True)
             return None

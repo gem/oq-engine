@@ -8,12 +8,15 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from pathlib import Path
+import threading
 import time
 import zipfile
 
 import pytest
+import requests
 from django.conf import settings
 from django.contrib.staticfiles.finders import get_finders
 
@@ -150,6 +153,41 @@ def test_datastore_job_zip_and_extract_downloads(
     assert extract_response.status_code == 200
     assert zipfile.is_zipfile(BytesIO(extract_response.content))
     assert extract_response.headers['content-type'] == 'application/x-zip'
+
+
+def test_concurrent_hdf5_reads(uvicorn_client, classical_result):
+    """Exercise datastore reads concurrently in one Uvicorn process."""
+    job_id = dbcmd('get_result', classical_result['id'])[0]
+    paths = (
+        '/v1/calc/result/%s?export_type=csv' % classical_result['id'],
+        '/v1/calc/%s/datastore' % job_id,
+        '/v1/calc/%s/job_zip' % job_id,
+        '/v1/calc/%s/extract/oqparam' % job_id,
+        '/engine/%s/outputs' % job_id,
+    )
+    barrier = threading.Barrier(len(paths))
+
+    def download(path):
+        response = None
+        try:
+            for _ in range(3):
+                barrier.wait(timeout=30)
+                response = requests.get(
+                    uvicorn_client.base_url + path, timeout=300)
+                response.raise_for_status()
+        except Exception:
+            barrier.abort()
+            raise
+        return response
+
+    with ThreadPoolExecutor(max_workers=len(paths)) as pool:
+        responses = list(pool.map(download, paths))
+
+    assert all(response.status_code == 200 for response in responses)
+    assert all(response.content for response in responses)
+    assert responses[1].content.startswith(b'\x89HDF\r\n\x1a\n')
+    assert zipfile.is_zipfile(BytesIO(responses[2].content))
+    assert zipfile.is_zipfile(BytesIO(responses[3].content))
 
 
 def test_calc_result_downloads_the_file(uvicorn_client, classical_result):

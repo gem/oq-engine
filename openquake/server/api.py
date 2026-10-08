@@ -63,7 +63,8 @@ from openquake.server.services import (
     create_job_zip, export_result, extract_datastore_table,
     get_exposure_by_lse, get_exposure_by_mmi,
     get_impact_results,
-    get_impact_rupture_data, get_papers_job_ctx, remove_exported,
+    get_impact_rupture_data, get_papers_job_ctx, HDF5_READ_LOCK,
+    remove_exported,
     remove_temp_file, submit_job)
 app = FastAPI(title='OpenQuake API')
 app.state.adapters = {}
@@ -144,7 +145,7 @@ def v0_model_provenance(
             'reason': 'Model provenance metadata is not available',
         }
     try:
-        with datastore.read(path) as dstore:
+        with HDF5_READ_LOCK, datastore.read(path) as dstore:
             summary = read_model_provenance(dstore)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         logging.exception('Could not read model provenance')
@@ -754,7 +755,8 @@ def _build_engine_output_context(job, application_mode):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     pngs = dict(hmaps=False)
     context = dict(calc_id=job.id, size_mb=size_mb)
-    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+    with HDF5_READ_LOCK, datastore.read(
+            job.ds_calc_dir + '.hdf5') as dstore:
         if 'png' in dstore:
             pngs['hmaps'] = any(
                 key.startswith('hmap') for key in dstore['png'])
@@ -831,7 +833,8 @@ def _read_impact_output_data(job):
         determine_precision, format_oqparam, get_impact_warnings)
 
     pngs = {}
-    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+    with HDF5_READ_LOCK, datastore.read(
+            job.ds_calc_dir + '.hdf5') as dstore:
         try:
             losses = calculator_views.view('aggrisk', dstore)
         except KeyError:
@@ -915,7 +918,8 @@ def _build_aelo_output_context(job):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     asce07_with_units = {}
     asce41_with_units = {}
-    with datastore.read(job.ds_calc_dir + '.hdf5') as dstore:
+    with HDF5_READ_LOCK, datastore.read(
+            job.ds_calc_dir + '.hdf5') as dstore:
         try:
             asce_version = dstore['oqparam'].asce_version
         except AttributeError:
