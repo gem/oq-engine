@@ -823,8 +823,11 @@ def view_task(token, dstore, taskname):
     _, index = token.split(':')
     if 'source_data' not in dstore:
         return 'Missing source_data'
-    data = get_array(dstore['task_info'][()],
-                     taskname=taskname.encode('ascii'))
+    raw = dstore['task_info'][()]
+    tasknames = [t.decode('ascii') if isinstance(t, bytes) else t for t in raw['taskname']]
+    tn_str = taskname.decode('ascii') if isinstance(taskname, bytes) else taskname
+    mask = numpy.array([tn_str in name or name in tn_str for name in tasknames])
+    data = raw[mask]
     if len(data) == 0:
         raise RuntimeError('No task_info for classical')
     data.sort(order='duration')
