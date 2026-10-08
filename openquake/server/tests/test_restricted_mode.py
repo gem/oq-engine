@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import zlib
 import json
@@ -106,6 +107,64 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
             self.assertEqual(response.status_code, 403)
         finally:
             logs.dbcmd('del_calc', job.calc_id, self.user2.username)
+
+    def test_datastore_and_extract_check_owner_and_shared_acl(self):
+        [job] = create_jobs(
+            [dict(calculation_mode='classical',
+                  description='test_file_download_acl')],
+            user_name=self.user2.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ds_calc_dir = os.path.join(tmpdir, 'calc_%s' % job.calc_id)
+            ds_path = ds_calc_dir + '.hdf5'
+            with open(ds_path, 'wb') as stream:
+                stream.write(b'not an HDF5 file')
+            db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
+               ds_calc_dir, job.calc_id)
+            try:
+                self.c.login(username=self.user1.username,
+                             password=self.password1)
+                response = self.c.get(
+                    '/v1/calc/%s/datastore' % job.calc_id)
+                self.assertEqual(response.status_code, 403)
+                response = self.c.get(
+                    '/v1/calc/%s/extract/assetcol' % job.calc_id)
+                self.assertEqual(response.status_code, 403)
+
+                db("UPDATE job SET status='shared' WHERE id=?x", job.calc_id)
+                response = self.c.get(
+                    '/v1/calc/%s/datastore' % job.calc_id)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content, b'not an HDF5 file')
+                response = self.c.get(
+                    '/v1/calc/%s/extract/oqparam' % job.calc_id)
+                self.assertEqual(response.status_code, 500)
+            finally:
+                logs.dbcmd('del_calc', job.calc_id, self.user2.username)
+
+    def test_job_zip_remains_level_gated(self):
+        [job] = create_jobs(
+            [dict(calculation_mode='classical',
+                  description='test_job_zip_level_gate')],
+            user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ds_calc_dir = os.path.join(tmpdir, 'calc_%s' % job.calc_id)
+            with open(ds_calc_dir + '.hdf5', 'wb') as stream:
+                stream.write(b'not an HDF5 file')
+            db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
+               ds_calc_dir, job.calc_id)
+            try:
+                self.c.login(username=self.user2.username,
+                             password=self.password2)
+                response = self.c.get(
+                    '/v1/calc/%s/job_zip' % job.calc_id)
+                # Level 2 permits this even though user2 does not own the job.
+                self.assertEqual(response.status_code, 400)
+            finally:
+                logs.dbcmd('del_calc', job.calc_id, self.user1.username)
 
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
