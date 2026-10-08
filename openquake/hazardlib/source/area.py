@@ -171,15 +171,13 @@ class AreaSource(ParametricSeismicSource):
             a_val = math.log10(rate) + bval * ref_mag
             self.mfd = TruncatedGRMFD(
                 min_mag=ref_mag, max_mag=mmax,
-                bin_width=bin_width, a_val=a_val, b_val=bval,
-                )
+                bin_width=bin_width, a_val=a_val, b_val=bval)
         else:
             assert recur_model == "AC"
             self.mfd = AlternativeCharacteristicMFD(
                 min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
                 bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
-                total_rate=rate,
-                )
+                total_rate=rate)
 
         # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
         bg_frac = getattr(self, 'rate_split_bg_frac', None)

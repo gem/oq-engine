@@ -593,7 +593,6 @@ class CollapsedPointSource(PointSource):
         for src in pointsources:
             src.mfd = EvenlyDiscretizedMFD(
                 rates[0][0], .1, [rate * share for _mag, rate in rates])
-            src._num_ruptures = 0
         self._update_pointsources(pointsources)
 
     def _update_pointsources(self, pointsources):
