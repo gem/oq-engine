@@ -448,8 +448,8 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
                      float(config.performance.pointsource_distance))
     # skip the split when pointsource_distance is not a scalar
     if numpy.isscalar(psdist) and not isinstance(psdist, (numpy.ndarray, list, tuple, dict)):
-        close = sitecol.filter(cdist <= psdist / 2)
-        far = sitecol.filter(cdist > psdist / 2)
+        close = sitecol.filter(cdist <= psdist)
+        far = sitecol.filter(cdist > psdist)
     else:
         close = None
         far = None
