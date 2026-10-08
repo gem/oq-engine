@@ -405,11 +405,6 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     if not all(hasattr(rup, 'occurrence_rate') for rup in allrups):
         return [(allrups, sitecol)]
 
-    tom = getattr(src, 'temporal_occurrence_model', None)
-    if tom is not None and not isinstance(tom, PoissonTOM):
-        # non-Poisson TOM: keep the full rupture grid, no collapse
-        return [(allrups, sitecol)]
-
     # rate-weighted mean hypocenter, used as the reference location
     hyps = numpy.array(
         [(rup.hypocenter.longitude, rup.hypocenter.latitude,
@@ -421,7 +416,7 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
         return [(allrups, sitecol)]
 
     cdist = sitecol.get_cdist(GeoPoint(
-        float(mean_hypo[0]), float(mean_hypo[1]), float(mean_hypo[2])))
+        mean_hypo[0], mean_hypo[1], mean_hypo[2]))
     # NB: having a decent psdist is essential for performance!
     psdist = getattr(cmaker, 'pointsource_distance',
                      float(config.performance.pointsource_distance))
@@ -446,14 +441,14 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     rep = copy.copy(allrups[idx])  # copy so the close sites are untouched
     # use rate-weighted mean hypocenter for more precise distances
     rep.hypocenter = GeoPoint(
-        float(mean_hypo[0]), float(mean_hypo[1]), float(mean_hypo[2]))
+        mean_hypo[0], mean_hypo[1], mean_hypo[2])
     rep.occurrence_rate = float(numpy.sum(
         [rup.occurrence_rate for rup in allrups]))  # full mag rate
     rups_sites = []
     if far is not None:
         rups_sites.append(([rep], far))
     if close is not None:
-        rups_sites.append((list(allrups), close))
+        rups_sites.append((allrups, close))
     return rups_sites
 
 
@@ -1153,12 +1148,6 @@ class ContextMaker(object):
         r_sites = sites.filter(mask)
         # to debug you can insert here
         # print(rup.surface.tor.get_tuw_df(r_sites))
-        # import pdb; pdb.set_trace()
-
-        ''' # sanity check
-        true_rrup = rup.surface.get_min_distance(r_sites)
-        numpy.testing.assert_allclose(true_rrup, rrup[mask])
-        '''
         rparams = self.get_rparams(rup)
         ctx = self._make_ctx(rparams, r_sites, rrup, mask)
 
@@ -1291,13 +1280,12 @@ class ContextMaker(object):
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 groups = split_array(numpy.array(allrups), u32mags)
                 rups_sites = []
-                for rups_list in groups:
-                    rups_list = list(rups_list)
+                for rups in groups:
                     if src.code in (b'F', b'S', b'C') and step == 1:
                         rups_sites.extend(_fault_rups_sites(
-                            self, src, sitecol, rups_list))
+                            self, src, sitecol, rups))
                     else:
-                        rups_sites.append((rups_list, sitecol))
+                        rups_sites.append((rups, sitecol))
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
