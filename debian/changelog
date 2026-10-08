@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Extended the ps_grid_spacing approximation to the case of few sites
+
   [Catarina Costa, Michele Simionato]
   * Implemented interdependencies in the connectivity calculator
     as a postprocessor; see the test infrastructure_risk/interdependencies
