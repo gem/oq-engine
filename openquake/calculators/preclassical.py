@@ -118,32 +118,6 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     return out
 
 
-def split_modified(grp, cmaker):
-    """
-    Split the sources modified by the uncertainties, which were not split
-    in the preclassical (see filter_weight). This is called after the
-    uncertainties have been applied: not splitting would mean using the
-    area sources whole, without building the planar ruptures, thus
-    returning different hazard curves (see logictree/case_67).
-
-    NB: the sources not modified by the uncertainties are not split, since
-    they were already split (or not) by the preclassical as usual; and the
-    fault sources are still not split, since their splitting requires
-    recomputing the rupture counts, see also filter_weight.
-
-    :param grp: a SourceGroup of modified sources
-    :returns: a SourceGroup with split sources
-    """
-    out = []
-    for src in grp:
-        if src.bysrc_unc and src.code in b'AM':
-            out.extend(split_source(src))
-        else:
-            out.append(src)
-    grp.sources = grid_point_sources(out, cmaker.ps_grid_spacing)
-    return grp
-
-
 def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
@@ -153,8 +127,8 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
-    modified in the workers; there they are split (see split_modified) and
-    filtered (see filter_mag).
+    modified in the workers; there they are split (see cmakers_groups
+    in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
