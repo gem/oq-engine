@@ -27,10 +27,13 @@ from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    monteiro_et_al_2026 import MonteiroEtAl2026
 from openquake.hazardlib.imt import PGA, SA
 
 
 IMTS = [PGA(), SA(0.3)]
+MODELS = [DuNing2021, MonteiroEtAl2026]
 
 
 EPS = 1E-10
@@ -65,12 +68,13 @@ def dense_covariance(model, imts, shape, spacing):
         distances, imts, component=ResidualComponent.WITHIN_EVENT)
 
 
+@pytest.mark.parametrize('model_cls', MODELS)
 @pytest.mark.parametrize('shape', [(2, 3), (2, 14)])
-def test_exact_covariance(shape):
+def test_exact_covariance(model_cls, shape):
     # Applying the factor to an identity basis recovers its covariance
     # deterministically, without a Monte Carlo tolerance. The second grid
     # also exercises an odd FFT-efficient embedding dimension.
-    model = DuNing2021()
+    model = model_cls()
     spacing = (2.0, 3.0)
     factor = CirculantEmbeddingFactor.build(
         model, IMTS, shape, spacing,
@@ -96,10 +100,11 @@ def test_spatial_covariance():
     numpy.testing.assert_allclose(actual, expected, atol=EPS)
 
 
-def test_mask():
+@pytest.mark.parametrize('model_cls', MODELS)
+def test_mask(model_cls):
     # A filtered grid retains both the requested cell order and IMT-major
     # output ordering.
-    model = DuNing2021()
+    model = model_cls()
     shape = (2, 3)
     full = CirculantEmbeddingFactor.build(model, IMTS, shape, 1.0)
     masked = CirculantEmbeddingFactor.build(
@@ -169,16 +174,18 @@ def test_indefinite():
             (12, 11), 10.0, max_multiplier=1)
 
 
-def test_input_shape():
+@pytest.mark.parametrize('model_cls', MODELS)
+def test_input_shape(model_cls):
     factor = CirculantEmbeddingFactor.build(
-        DuNing2021(), IMTS, (2, 3), 1.0)
+        model_cls(), IMTS, (2, 3), 1.0)
     with pytest.raises(ValueError, match='Expected samples with shape'):
         factor.apply(numpy.ones((factor.input_size - 1, 2)))
 
 
-def test_batch_size():
+@pytest.mark.parametrize('model_cls', MODELS)
+def test_batch_size(model_cls):
     factor = CirculantEmbeddingFactor.build(
-        DuNing2021(), IMTS, (2, 3), 1.0)
+        model_cls(), IMTS, (2, 3), 1.0)
     fixed = factor.spectral_root.nbytes
     per_realization = factor.workspace_bytes_per_realization
 
@@ -187,15 +194,16 @@ def test_batch_size():
         factor.batch_size(fixed + per_realization - 1)
 
 
+@pytest.mark.parametrize('model_cls', MODELS)
 @pytest.mark.parametrize('kwargs, message', [
     ({'grid_shape': (2, 0)}, 'grid_shape values must be positive'),
     ({'spacing': (1, 0)}, 'spacing values must be positive'),
     ({'site_indices': [0, 0]}, 'must not contain duplicates'),
     ({'site_indices': [6]}, 'out-of-grid cell'),
 ])
-def test_grid_validation(kwargs, message):
+def test_grid_validation(model_cls, kwargs, message):
     arguments = dict(
-        model=DuNing2021(), imts=IMTS, grid_shape=(2, 3), spacing=1.0)
+        model=model_cls(), imts=IMTS, grid_shape=(2, 3), spacing=1.0)
     arguments.update(kwargs)
     with pytest.raises(ValueError, match=message):
         CirculantEmbeddingFactor.build(**arguments)
