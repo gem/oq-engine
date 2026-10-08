@@ -613,10 +613,14 @@ def _authorize_output_page(auth_request, settings, utils, calc_id):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return 404, None
+    if not utils.user_has_permission(
+            auth_request, job.user_name, job.status):
+        return 403, None
     return 200, (job, getattr(auth_request, 'user', None))
 
 
-def _with_request_user(request, authorize, *args):
+def _with_request_user(
+        request, authorize, *args, unauthenticated_status=403):
     """Resolve the Django session and run a short authorization check."""
     # api.py loads before the Django ASGI application is initialized.
     from django.conf import settings
@@ -630,7 +634,7 @@ def _with_request_user(request, authorize, *args):
             user = utils.get_user_from_session(
                 request.cookies.get(settings.SESSION_COOKIE_NAME))
             if not user.is_authenticated:
-                return 403, None
+                return unauthenticated_status, None
         else:
             user = None
         auth_request = (SimpleNamespace(user=user) if settings.LOCKDOWN
@@ -998,8 +1002,9 @@ def public_engine_outputs_impact(calc_id: int, request: Request):
     if request.method == 'OPTIONS':
         return _with_access_headers(Response())
     status, data = _with_request_user(
-        request, _authorize_output_page, calc_id)
-    if status == 403:
+        request, _authorize_output_page, calc_id,
+        unauthenticated_status=401)
+    if status == 401:
         return _login_redirect_response()
     if status != 200:
         return _file_access_error(status)
@@ -1019,8 +1024,9 @@ def public_engine_outputs_aelo(calc_id: int, request: Request):
     if request.method == 'OPTIONS':
         return _with_access_headers(Response())
     status, data = _with_request_user(
-        request, _authorize_output_page, calc_id)
-    if status == 403:
+        request, _authorize_output_page, calc_id,
+        unauthenticated_status=401)
+    if status == 401:
         return _login_redirect_response()
     if status != 200:
         return _file_access_error(status)
@@ -1040,8 +1046,9 @@ def public_engine_get_outputs(calc_id: int, request: Request):
     if request.method == 'OPTIONS':
         return _with_access_headers(Response())
     status, data = _with_request_user(
-        request, _authorize_output_page, calc_id)
-    if status == 403:
+        request, _authorize_output_page, calc_id,
+        unauthenticated_status=401)
+    if status == 401:
         return _login_redirect_response()
     if status != 200:
         return _file_access_error(status)

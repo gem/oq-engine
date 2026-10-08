@@ -25,11 +25,15 @@ import random
 import tempfile
 from unittest import skipIf
 import django
+from django.apps import apps
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+from openquake.baselib import hdf5
 from openquake.commonlib import logs
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
+from openquake.server import utils
 from openquake.server.tests.views_test import (
     get_or_create_user, random_string, start_uvicorn, stop_uvicorn)
 
@@ -88,6 +92,49 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         for path in paths:
             response = self.c.get(path)
             self.assertEqual(response.status_code, 404)
+
+    def test_output_page_honors_owner_group_and_shared_acl(self):
+        self.user1.groups.clear()
+        self.user1.is_superuser = False
+        self.user1.save()
+        [job] = create_jobs(
+            [dict(calculation_mode='classical',
+                  description='test_output_page_acl')],
+            user_name=self.user2.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        Group = apps.get_model('auth', 'Group')
+        group, _created = Group.objects.get_or_create(
+            name='output-page-acl-%s' % job.calc_id)
+        group.user_set.add(self.user1, self.user2)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ds_calc_dir = os.path.join(tmpdir, 'calc_%s' % job.calc_id)
+            with hdf5.File(ds_calc_dir + '.hdf5', 'w'):
+                pass
+            db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
+               ds_calc_dir, job.calc_id)
+            try:
+                self.c.login(username=self.user1.username,
+                             password=self.password1)
+                response = self.c.get(
+                    '/engine/%s/outputs' % job.calc_id)
+                self.assertEqual(response.status_code, 200)
+
+                group.user_set.remove(self.user1)
+                self.assertFalse(utils.user_has_permission(
+                    SimpleNamespace(user=self.user1), self.user2.username,
+                    'complete'))
+                response = self.c.get(
+                    '/engine/%s/outputs' % job.calc_id)
+                self.assertEqual(response.status_code, 403)
+
+                db("UPDATE job SET status='shared' WHERE id=?x", job.calc_id)
+                response = self.c.get(
+                    '/engine/%s/outputs' % job.calc_id)
+                self.assertEqual(response.status_code, 200)
+            finally:
+                group.delete()
+                logs.dbcmd('del_calc', job.calc_id, self.user2.username)
 
     def test_result_download_checks_job_owner(self):
         [job] = create_jobs(
