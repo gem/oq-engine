@@ -267,6 +267,7 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
                 # are still not split, since their splitting requires recomputing the
                 # rupture counts, see also filter_weight
                 sources.append(src)
+        sg.sources = sources
         # the sources modified by the uncertainties are filtered here and
         # not in the preclassical (see filter_mag), since the uncertainties
         # can change the max magnitude
