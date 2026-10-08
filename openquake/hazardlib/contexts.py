@@ -44,9 +44,11 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
+from openquake.hazardlib.geo import Point as GeoPoint
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.base import surface_to_arrays, to_arrays
 from openquake.hazardlib.geo.surface.planar import (
-    project, project_back, get_distances_planar)
+    project, project_back, get_distances_planar, PlanarSurface)
 
 U8 = numpy.uint8
 I32 = numpy.int32
@@ -472,6 +474,9 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
         idx = numpy.argmin(
             numpy.hypot(cen[:, 0] - mean_hypo[0], cen[:, 1] - mean_hypo[1]))
         rep = copy.copy(rups[idx])  # copy so the close sites are untouched
+        # use rate-weighted mean hypocenter for more precise distances
+        rep.hypocenter = GeoPoint(
+            float(mean_hypo[0]), float(mean_hypo[1]), float(mean_hypo[2]))
         rep.occurrence_rate = float(numpy.sum(
             [rup.occurrence_rate for rup in rups]))  # full mag rate
         if far is not None:
