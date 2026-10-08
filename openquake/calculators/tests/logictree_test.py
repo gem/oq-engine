@@ -754,24 +754,15 @@ hazard_uhs-std.csv
 
     def test_case_67(self):
         # source specific logic tree with the following structure:
-        # <CompositeSourceModel
-        # grp_id=0 ['10;0']
-        # grp_id=1 ['16']
-        # grp_id=2 ['11;0']
-        # grp_id=3 ['11;1']
-        # grp_id=4 ['11;2']
-        # grp_id=5 ['10;1']
-        # grp_id=6 ['ACC;0']
-        # grp_id=7 ['ALS;0']
-        # grp_id=8 ['BMS;0']
-        # grp_id=9 ['BMS;1']
-        # grp_id=10 ['BMS;2']
-        # grp_id=11 ['BMS;3']
-        # grp_id=12 ['ALS;1']
-        # grp_id=13 ['ALS;2']
-        # grp_id=14 ['ACC;1']>
-        # there are 2x2x3x2x3x4=288 realizations and 2+2+3+2+3+4=16 groups
-        # 1 group has no sources so the engine sees 15 groups
+        # | source_id | grp_id | code | num_ctxs |num_ruptures |mul |
+        # |-----------+--------+------|----------|-------------|----|
+        # | 10        | 0      | A    | 76       |260_352      |144 |
+        # | 11        | 0      | A    | 335      |13_920       |144 |
+        # | 16        | 0      | P    | 89       |252_000      |144 |
+        # | ACC       | 1      | A    | 131      |17_280       |144 |
+        # | ALS       | 1      | A    | 392      |16_128       |144 |
+        # | BMS       | 1      | A    | 50       |55_680       |144 |
+        # there are 2x2x3x2x3x4=288 realizations and 2 groups
         self.run_calc(case_67.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
