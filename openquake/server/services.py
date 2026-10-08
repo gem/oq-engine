@@ -3,6 +3,7 @@
 
 import ast
 import csv
+from contextlib import contextmanager
 import json
 import logging
 import multiprocessing as mp
@@ -46,6 +47,13 @@ def _reset_hdf5_read_lock():
 
 if hasattr(os, 'register_at_fork'):
     os.register_at_fork(after_in_child=_reset_hdf5_read_lock)
+
+
+@contextmanager
+def hdf5_read_lock():
+    """Acquire the current process's HDF5 read lock."""
+    with HDF5_READ_LOCK:
+        yield
 
 
 def get_impact_rupture_data(post, user, rupture_path):
@@ -112,7 +120,7 @@ def create_png_file(ds_path, what, calc_id):
         prefix='calc_%s_' % calc_id, suffix='.png', dir=temp_dir)
     os.close(fd)
     try:
-        with HDF5_READ_LOCK:
+        with hdf5_read_lock():
             with datastore.read(ds_path) as dstore:
                 arr = dstore['png/%s' % what][:]
         Image.fromarray(arr).save(fname, format='png')
@@ -124,7 +132,7 @@ def create_png_file(ds_path, what, calc_id):
 
 def create_impact_report_file(ds_path, iso3, file_format):
     """Copy a stored country report to a temporary file."""
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as dstore:
             impact_group = dstore['impact']
             if iso3 not in impact_group:
@@ -144,7 +152,7 @@ def create_impact_report_file(ds_path, iso3, file_format):
 
 def extract_datastore_table(ds_path, resource):
     """Extract a table from the calculation datastore."""
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as dstore:
             return _extract(dstore, resource)
 
@@ -154,7 +162,7 @@ def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
     resource = (
         f'exposure_by_lse?secondary_peril={secondary_peril}'
         f'&discard_empty={discard_empty}')
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as dstore:
             exposure = _extract(dstore, resource)
     column_descriptions = {
@@ -169,7 +177,7 @@ def get_exposure_by_lse(ds_path, secondary_peril, discard_empty=True):
 
 def get_exposure_by_mmi(ds_path):
     """Return MMI-aggregated exposure data and column descriptions."""
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as dstore:
             exposure = _extract(dstore, 'mmi_tags')
     return {
@@ -180,7 +188,7 @@ def get_exposure_by_mmi(ds_path):
 
 def get_impact_results(ds_path):
     """Return the aggregate-risk data and its column descriptions."""
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as dstore:
             impact = _extract(dstore, 'aggrisk_tags')
     return {
@@ -196,7 +204,7 @@ def create_aggrisk_csv(ds_path, calc_id):
         prefix='aggrisk_%s_' % calc_id, suffix='.csv', dir=temp_dir)
     os.close(fd)
     try:
-        with HDF5_READ_LOCK:
+        with hdf5_read_lock():
             with datastore.read(ds_path) as ds:
                 losses = calculator_views.view('aggrisk', ds)
         with open(fname, 'w', encoding='utf-8', newline='') as stream:
@@ -211,7 +219,7 @@ def create_aggrisk_csv(ds_path, calc_id):
 
 def create_job_zip(ds_path, job_id):
     """Create a job archive in a temporary directory and return its path."""
-    with HDF5_READ_LOCK:
+    with hdf5_read_lock():
         with datastore.read(ds_path) as ds:
             exported = export(('job', 'zip'), ds)
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
@@ -234,7 +242,7 @@ def create_extract_file(ds_path, resource):
         prefix=prefix, suffix='.npz', dir=temp_dir)
     os.close(fd)
     try:
-        with HDF5_READ_LOCK:
+        with hdf5_read_lock():
             with datastore.read(ds_path) as ds:
                 extracted = _extract(ds, resource)
                 hdf5.save_npz(extracted, fname)
@@ -262,7 +270,7 @@ def export_result(result_id, export_type=None):
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     try:
-        with HDF5_READ_LOCK:
+        with hdf5_read_lock():
             exported = export_from_db(
                 (ds_key, export_type), job_id, datadir, tmpdir)
         if not exported:

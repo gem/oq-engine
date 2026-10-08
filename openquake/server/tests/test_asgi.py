@@ -26,6 +26,29 @@ from openquake.commonlib.logs import dbcmd
 from .views_test import EngineServerTestCase, start_uvicorn, stop_uvicorn
 
 
+def test_hdf5_lock_accessor_uses_current_lock(monkeypatch):
+    """Use the replaced lock through the stable service accessor."""
+    # Import the API accessor once, then simulate a fork-time lock rebinding.
+    from openquake.server import services
+    from openquake.server.api import hdf5_read_lock
+
+    class LockProbe:
+        entered = False
+
+        def __enter__(self):
+            self.entered = True
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+    probe = LockProbe()
+    monkeypatch.setattr(services, 'HDF5_READ_LOCK', probe)
+    with hdf5_read_lock():
+        pass
+    assert probe.entered
+
+
 @pytest.fixture
 def uvicorn_client():
     """Run the combined ASGI application for the duration of a test."""
