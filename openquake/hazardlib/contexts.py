@@ -421,16 +421,12 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     """
     # the collapse requires parametric ruptures with occurrence_rate
     if not all(hasattr(rup, 'occurrence_rate') for rup in allrups):
-        u32mags = U32([rup.mag * 100 for rup in allrups])
-        return [(list(rups), sitecol)
-                for rups in split_array(numpy.array(allrups), u32mags)]
+        return [(list(allrups), sitecol)]
 
     tom = getattr(src, 'temporal_occurrence_model', None)
     if tom is not None and not isinstance(tom, PoissonTOM):
         # non-Poisson TOM: keep the full rupture grid, no collapse
-        u32mags = U32([rup.mag * 100 for rup in allrups])
-        return [(list(rups), sitecol)
-                for rups in split_array(numpy.array(allrups), u32mags)]
+        return [(list(allrups), sitecol)]
 
     # rate-weighted mean hypocenter, used as the reference location
     hyps = numpy.array(
@@ -440,9 +436,7 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     mean_hypo = numpy.average(hyps[:, :3], axis=0, weights=hyps[:, 3])
 
     if cmaker.fewsites:  # a single rupture grid for all sites, no collapse
-        u32mags = U32([rup.mag * 100 for rup in allrups])
-        return [(list(rups), sitecol)
-                for rups in split_array(numpy.array(allrups), u32mags)]
+        return [(list(allrups), sitecol)]
 
     cdist = sitecol.get_cdist(_FaultHypo(*mean_hypo))
     # NB: having a decent psdist is essential for performance!
