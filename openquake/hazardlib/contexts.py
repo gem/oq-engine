@@ -417,6 +417,12 @@ def _fault_rups_sites(cmaker, src, sitecol, allrups):
     so it is skipped for non-Poisson temporal occurrence models (e.g.
     NegativeBinomial/ETAS), where the temporal clustering must be kept.
     """
+    # the collapse requires parametric ruptures with occurrence_rate
+    if not all(hasattr(rup, 'occurrence_rate') for rup in allrups):
+        u32mags = U32([rup.mag * 100 for rup in allrups])
+        return [(list(rups), sitecol)
+                for rups in split_array(numpy.array(allrups), u32mags)]
+
     tom = getattr(src, 'temporal_occurrence_model', None)
     if tom is not None and not isinstance(tom, PoissonTOM):
         # non-Poisson TOM: keep the full rupture grid, no collapse
