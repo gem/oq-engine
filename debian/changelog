@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Restored support for consequences in XML format
   * Extended the ps_grid_spacing approximation to the case of few sites
 
   [Catarina Costa, Michele Simionato]

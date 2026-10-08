@@ -85,6 +85,17 @@ def get_risk_files(inputs):
     return rfs
 
 
+def get_xml_consequence_files(inputs):
+    """
+    :param inputs: a dictionary key -> path name
+    :returns: the NRML consequence model files, i.e. the inputs like
+        structural_consequence_file = model.xml
+    """
+    return [fname for key, fname in sorted(inputs.items())
+            if key.endswith('_consequence') and isinstance(fname, str)
+            and fname.endswith('.xml')]
+
+
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
@@ -611,10 +622,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         taxonomy mapping are consistent with the fragility functions.
         """
         self.tmap_df = tmap_df
-        if 'consequence' not in self.oqparam.inputs:
-            return
         csq_files = []
-        for fnames in self.oqparam.inputs['consequence'].values():
+        for fnames in self.oqparam.inputs.get('consequence', {}).values():
             if isinstance(fnames, list):
                 csq_files.extend(fnames)
             else:
