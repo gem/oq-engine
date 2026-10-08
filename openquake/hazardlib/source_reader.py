@@ -359,13 +359,6 @@ def modified_groups(sources, bset_values):
         # one (split by weight in the preclassical), so the correlated
         # branchsets were already checked at build time, see build_groups
         grp = apply_uncertainties(bvals, grp, check=False)
-        for src in grp:
-            # the sources are modified after the preclassical, so the
-            # cached geometry must be discarded; it depends on the
-            # occurrence rates (see PointSource.
-            # _get_max_rupture_projection_radius)
-            if hasattr(src, 'radius'):
-                del src.radius
         yield trt_smrs, grp
 
 

@@ -238,46 +238,39 @@ class PointSource(ParametricSeismicSource):
         return planin
 
     # used in the source filtering
-    def max_radius(self, maxdist):
+    def max_radius(self, maxdist, radii=None):
         """
         :returns: max radius, without the ps_grid_spacing half diagonal
         """
-        self._get_max_rupture_projection_radius()
-        eff_radius = min(self.radius[-1], maxdist / 2)
-        return eff_radius
+        if radii is None:
+            radii = self._get_rupture_projection_radii()
+        return min(radii[-1], maxdist / 2)
 
-    def get_psdist(self, m, mag, psdist, magdist):
+    def get_psdist(self, m, mag, psdist, magdist, radii=None):
         """
         :returns: the effective pointsource distance for the given magnitude
         """
-        eff_radius = min(self.radius[m], magdist[mag] / 2)
-        return psdist + eff_radius
+        if radii is None:
+            radii = self._get_rupture_projection_radii()
+        return psdist + min(radii[m], magdist[mag] / 2)
 
-    def _get_max_rupture_projection_radius(self):
+    def _get_rupture_projection_radii(self):
         """
-        Find a maximum radius of a circle on Earth surface enveloping a rupture
-        produced by this source.
-
-        :returns:
-            Half of maximum rupture's diagonal surface projection.
+        Return half the maximum rupture's diagonal surface projection for
+        each magnitude.
         """
-        if hasattr(self, 'radius'):
-            return self.radius[-1]  # max radius
-        if isinstance(self.magnitude_scaling_relationship, PointMSR):
-            M = len(self.get_annual_occurrence_rates())
-            self.radius = numpy.zeros(M)
-            return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        self.radius = numpy.zeros(len(magd))
+        if isinstance(self.magnitude_scaling_relationship, PointMSR):
+            return numpy.zeros(len(magd))
+        radii = numpy.zeros(len(magd))
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         for m, planin in enumerate(self.get_planin()):
             rup_length, rup_width, _ = get_rupdims(
                 usd, lsd, self.get_aspect_ratio(magd[m][1]),
                 planin.area[-1], planin.dip[-1])
-            # the projection radius is half of the rupture diagonal
-            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-        return self.radius[-1]  # max radius
+            radii[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+        return radii
 
     def get_planar(self, shift_hypo=False, iruptures=False):
         """
@@ -407,7 +400,7 @@ class PointSource(ParametricSeismicSource):
         """
         Polygon corresponding to the max_rupture_projection_radius
         """
-        radius = self._get_max_rupture_projection_radius()
+        radius = self._get_rupture_projection_radii()[-1]
         return self.location.to_polygon(radius)
 
     def get_bounding_box(self, maxdist):

@@ -148,7 +148,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         elif src.code in b'pP' and sf.sitecol:
             # special case, compute distances
             distances = sf.sitecol.get_cdist(src.location)
-            radius = src._get_max_rupture_projection_radius()
+            radius = src._get_rupture_projection_radii()[-1]
             src.nsites = (distances <= maxdist + radius).sum()
         elif sf.sitecol:
             # NB: this is approximate, since the sites are sampled
