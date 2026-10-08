@@ -622,7 +622,7 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
                                          ps_grid_spacing)):
         grid[ij].append(k)
     out = []
-    unique_ids = set(src.source_id.rsplit(':', 1)[0] for src in points)
+    unique_ids = set(src.source_id.rsplit('.', 1)[0] for src in points)
     if len(unique_ids) == 1:  # all come from the same source
         src_id = unique_ids.pop()
     else:
