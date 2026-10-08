@@ -5,6 +5,11 @@
   * Implemented interdependencies in the connectivity calculator
     as a postprocessor; see the test infrastructure_risk/interdependencies
 
+  [Vitor Azevedo Monteiro]
+  * Provided an implementation of Monteiro et al. (2026) within-event
+    joint spatial and cross-IMT correlation model and associated unit
+    tests.
+
   [Christopher Brooks]
   * Within the KothaEtAl2020regional GSIM class, cache the per-polygon
     lookup table at instantiation, and use a spatial index for point in
