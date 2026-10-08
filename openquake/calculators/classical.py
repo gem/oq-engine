@@ -256,23 +256,17 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     subgrp.sources = list(srcs)
     bset_values = get_bset_values(full_lt, subgrp)
     for trt_smrs, sg in modified_groups(subgrp, bset_values):
-        # Split the sources modified by the uncertainties, which were not
-        # split in the preclassical (see filter_weight); not splitting would
-        # mean using the area sources whole, without building the planar
-        # ruptures, thus returning different hazard curves. See the
-        # logictree/case_67 example for the impact of not splitting.
-        # NB: the sources not modified by the uncertainties are not split,
-        # since they were already split (or not) by the preclassical as usual;
-        # and the fault sources are still not split, since their splitting
-        # requires recomputing the rupture counts, see also filter_weight.
         sources = []
         for src in sg:
             if src.bysrc_unc and src.code in b'AM':
+                # if not split already, happens only in case_67
                 sources.extend(preclassical.split_source(src))
             else:
+                # NB: the sources not modified by the uncertainties are not split,
+                # since they were already split by the preclassical; the fault sources
+                # are still not split, since their splitting requires recomputing the
+                # rupture counts, see also filter_weight
                 sources.append(src)
-        sg.sources = preclassical.grid_point_sources(
-            sources, cmaker.ps_grid_spacing)
         # the sources modified by the uncertainties are filtered here and
         # not in the preclassical (see filter_mag), since the uncertainties
         # can change the max magnitude

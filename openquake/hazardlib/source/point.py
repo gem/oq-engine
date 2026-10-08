@@ -622,11 +622,16 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
                                          ps_grid_spacing)):
         grid[ij].append(k)
     out = []
+    unique_ids = set(src.source_id.rsplit(':', 1)[0] for src in points)
+    if len(unique_ids) == 1:  # all come from the same source
+        src_id = unique_ids.pop()
+    else:
+        src_id = ''
     for idxs in grid.values():
         if len(idxs) > 1:
             cnt += 1
-            name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, points[idxs])  # slow part
+            cps = CollapsedPointSource(  # slow part
+                src_id or 'cps-%03d-%04d' % (grp_id, cnt), points[idxs])
             cps.grp_id = points[0].grp_id
             cps.ts_sets = points[0].ts_sets
             cps.sampling = points[0].sampling
