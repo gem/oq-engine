@@ -1,14 +1,16 @@
 #!/usr/bin/env python
-"""Stress hazard output exports through concurrent OpenQuake API requests.
+"""Stress OpenQuake API operations through concurrent HTTP requests.
 
-Example:
+Examples:
 
     python -X faulthandler bin/repro_hdf5_thread_segfault_http.py \\
         --job-id 123 --concurrency 4 --iterations 100
+    python -X faulthandler bin/repro_hdf5_thread_segfault_http.py \\
+        --operation get_trts_around --concurrency 4 --iterations 100
 
-The script discovers the requested output for the job and concurrently
-requests its CSV export from the API. The engine API must be running and the
-caller must have permission to access the job.
+The ``get_trts_around`` operation calls the impact rupture-data endpoint,
+which invokes ``get_trts_around`` while validating the supplied rupture. It
+requires an IMPACT-mode engine. The API must be running and accessible.
 """
 
 import argparse
@@ -65,7 +67,7 @@ def get_export_url(base_url, job_id, dataset, headers, timeout,
 
 
 def stress_requests(url, base_url, headers, username, password, timeout,
-                    iterations, progress_every, concurrency):
+                    iterations, progress_every, concurrency, form_data=None):
     """Issue synchronized requests and return average latency and bytes."""
     timing_lock = threading.Lock()
     completed_rounds = 0
@@ -98,8 +100,12 @@ def stress_requests(url, base_url, headers, username, password, timeout,
             for _ in range(iterations):
                 started = perf_counter()
                 try:
-                    response = session.get(
-                        url, params={'export_type': 'csv'}, timeout=timeout)
+                    if form_data is None:
+                        response = session.get(
+                            url, params={'export_type': 'csv'}, timeout=timeout)
+                    else:
+                        response = session.post(
+                            url, data=form_data, timeout=timeout)
                     response.raise_for_status()
                     header_elapsed = response.elapsed.total_seconds()
                     size = len(response.content)
@@ -130,11 +136,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base-url', default='http://127.0.0.1:8800',
                         help='engine API base URL')
-    parser.add_argument('--job-id', type=int, required=True,
+    parser.add_argument('--operation', choices=('export', 'get_trts_around'),
+                        default='export', help='HTTP operation to stress')
+    parser.add_argument('--job-id', type=int,
                         help='job ID containing the requested output')
     parser.add_argument('--dataset', choices=('hcurves', 'gmf_data'),
-                        default='hcurves',
                         help='output to export (default: hcurves)')
+    parser.add_argument('--lon', type=float, default=9.0,
+                        help='longitude for the get_trts_around test')
+    parser.add_argument('--lat', type=float, default=45.0,
+                        help='latitude for the get_trts_around test')
     parser.add_argument('--username', help='engine API login username')
     parser.add_argument('--password', help='engine API login password')
     parser.add_argument('--concurrency', type=int, default=2,
@@ -158,16 +169,39 @@ def main():
     except ValueError as exc:
         parser.error(str(exc))
 
+    if args.operation == 'export' and args.job_id is None:
+        parser.error('--job-id is required for the export operation')
+    if args.operation == 'get_trts_around':
+        if args.job_id is not None or args.dataset is not None:
+            parser.error('--job-id and --dataset only apply to export')
+        if not -180 <= args.lon <= 180 or not -90 <= args.lat <= 90:
+            parser.error('--lon must be in [-180, 180] and --lat in [-90, 90]')
+
     faulthandler.enable()
-    url = get_export_url(
-        args.base_url, args.job_id, args.dataset, headers, args.timeout,
-        args.username, args.password)
-    print(f'Exporting {args.dataset} for job {args.job_id} from {url}',
-          flush=True)
+    form_data = None
+    if args.operation == 'get_trts_around':
+        url = urljoin(args.base_url.rstrip('/') + '/',
+                      'v1/calc/impact_get_rupture_data')
+        form_data = dict(
+            approach='provide_rup_params', rupture_file='undefined',
+            usgs_id='UserProvided', use_shakemap='false',
+            lon=str(args.lon), lat=str(args.lat), dep='100', mag='7.5',
+            rake='-90', dip='30', strike='45', aspect_ratio='2',
+            msr='WC1994')
+        print(f'Calling get_trts_around via {url} at '
+              f'({args.lon}, {args.lat})', flush=True)
+    else:
+        url = get_export_url(
+            args.base_url, args.job_id, args.dataset or 'hcurves', headers,
+            args.timeout,
+            args.username, args.password)
+        dataset = args.dataset or 'hcurves'
+        print(f'Exporting {dataset} for job {args.job_id} from {url}',
+              flush=True)
     average, header_average, wall_elapsed, average_bytes, content_type = (
         stress_requests(url, args.base_url, headers, args.username,
                         args.password, args.timeout, args.iterations,
-                        args.progress_every, args.concurrency))
+                        args.progress_every, args.concurrency, form_data))
     print(f'Average time to response headers: {header_average:.6f} seconds',
           flush=True)
     print(f'Average full request time: {average:.6f} seconds', flush=True)

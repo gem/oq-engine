@@ -80,6 +80,8 @@ def runserver(hostport=None, skip_browser=False):
     # the reload functionality of the Django development server interferes
     # with SIGCHLD and causes zombies, thus it is disabled
     args.append('--noreload')
+    # HDF5 is not safe for concurrent access from server threads
+    # args.append('--nothreading')
     args.append(hostport)
     process = subprocess.Popen(args)
     if not skip_browser and check_webserver_running(url):
