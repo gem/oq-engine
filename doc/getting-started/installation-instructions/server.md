@@ -154,30 +154,17 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* can be installed via `pip` in the venv of the OpenQuake engine. For example:
-
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[webui]"` (it is not installed by default). Please replace the value of
+ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
-sudo su -
-source /opt/openquake/venv/bin/activate
-pip install gunicorn
-deactivate
+ExecStart=/opt/openquake/venv/bin/gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
 ```
+
+Use a single worker process: the WebUI keeps some state in memory, which
+would not be shared among several worker processes. The concurrency is given
+by the threads.
 
 *gunicorn* is usually managed by the OS init system.
-
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
-```console
-WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
-```
-
-*gunicorn* must be started in the `openquake/server` directory with the following syntax:
-
-```console
-gunicorn -w N wsgi:application
-```
-
-where `N` is the number of workers. We suggest `N = 4`.
 
 ### Using Environment Variables in systemd Units
 
@@ -233,12 +220,25 @@ systemctl status  openquake-webui.service
 
 ### nginx
 
-*gunicorn* does not serve static content itself thus a frontend like *nginx* is needed.
+*gunicorn* does not serve static content itself thus a frontend like *nginx* is needed. Static files are collected by `manage.py collectstatic` into `STATIC_ROOT`, and *nginx* must serve them from there.
 
 Please refer to the nginx installation istructions for your operating system.
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static
 content (see [documentation](https://docs.gunicorn.org/en/stable/deploy.html)).
+
+A minimal configuration, where `STATIC_ROOT` is the folder used by `collectstatic`, is:
+```nginx
+location /static/ {
+    alias <STATIC_ROOT>/;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:8800;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
 
 When the reverse proxy is configured, add the following to `openquake/server/local_settings.py`:
 ```python

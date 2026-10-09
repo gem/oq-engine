@@ -105,7 +105,9 @@ class ImpactPageLevel2(ImpactPage):
         self.page.locator("input#strike").fill(str(strike))
 
     def choose_rupture_model(self):
-        expect(self.page.locator("input#rupture_file_input")).to_be_visible()
+        # the input is un-hidden by the approach handler, which may be slow
+        expect(self.page.locator("input#rupture_file_input")).to_be_visible(
+            timeout=50_000)
         rupture_file = (
             files("openquake.hazardlib.tests.shakemap.data")
             / "fault_rupture.xml"
@@ -124,11 +126,13 @@ class ImpactPageLevel2(ImpactPage):
         expect(modal).not_to_be_visible()
 
     def select_nodal_plane(self):
-        expect(self.page.locator('select#nodal_plane')).to_be_visible()
+        # the select is empty (hence not visible) until the nodal planes
+        # are retrieved from the USGS, so wait for the options first
         self.page.wait_for_function(
             "document.querySelector('select#nodal_plane').options.length > 0",
             timeout=30_000
         )
+        expect(self.page.locator('select#nodal_plane')).to_be_visible()
 
     def retrieve_stations_from_usgs(self, expect_no_seismic_stations=False):
         get_stations_btn = self.page.get_by_role("button",

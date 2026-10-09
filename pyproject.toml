@@ -30,9 +30,6 @@ dependencies = [
     "pandas~=2.2",
     "h5py>=3.13",
     "django>=4.2, <5",
-    "fastapi>=0.115",
-    "python-multipart>=0.0.20",
-    "uvicorn>=0.30",
     "psutil",
     "requests",
     "pyzmq~=26.0.3; python_version <= '3.11'",
@@ -56,6 +53,10 @@ dependencies = [
     "geopandas~=1.1.4; sys_platform != 'win32'",
     "fiona~=1.10.1",
 ]
+
+[project.optional-dependencies]
+# needed only by "oq webui start" (see openquake/commands/webui.py)
+webui = ["gunicorn>=26.2"]
 
 [project.urls]
 Homepage = "https://globalquakemodel.org"

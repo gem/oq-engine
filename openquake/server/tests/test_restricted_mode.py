@@ -30,7 +30,7 @@ from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import (
-    get_or_create_user, random_string, start_uvicorn, stop_uvicorn)
+    get_or_create_user, random_string, start_webui, stop_webui)
 
 
 class RestrictedModeTestCase(django.test.TransactionTestCase):
@@ -48,7 +48,7 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
     def setUpClass(cls):
         super().setUpClass()
         (cls.webserver, cls.webserver_thread,
-         cls.c) = start_uvicorn()
+         cls.c) = start_webui()
 
     def setUp(self):
         self.user0, self.password0 = get_or_create_user(0)
@@ -57,7 +57,7 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        stop_uvicorn(cls.webserver, cls.webserver_thread)
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def remove_calc(self, calc_id):

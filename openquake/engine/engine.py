@@ -61,7 +61,6 @@ OQ_API = 'https://api.openquake.org'
 U32 = numpy.uint32
 F32 = numpy.float32
 MB = 1024 ** 2
-_PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
 
@@ -165,7 +164,7 @@ def poll_queue(job_id, poll_time):
             if previous:
                 if first_time:
                     logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': _PID})
+                               {'status': 'submitted', 'pid': os.getpid()})
                     first_time = False
                     # the logging is not yet initialized, so use a print
                     print('Waiting for jobs %s' % ' '.join(map(str, previous)))
@@ -324,7 +323,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         print(f'================ Using {concurrent_jobs=} ==================')
     dist = parallel.oq_distribute()
     for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID,
+        # the PID must be read here: the module is imported before the fork
+        dic = {'status': 'executing', 'pid': os.getpid(),
                'start_time': datetime.now(UTC)}
         logs.dbcmd('update_job', job.calc_id, dic)
     exc = None

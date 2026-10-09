@@ -35,7 +35,7 @@ from openquake.calculators.base import get_aelo_version
 from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import (
-    EngineServerTestCase, start_uvicorn, stop_uvicorn)
+    EngineServerTestCase, start_webui, stop_webui)
 from openquake.server.views import get_disp_val
 
 django.setup()
@@ -61,7 +61,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         cls.username = username
         cls.password = password
         (cls.webserver, cls.webserver_thread,
-         cls.c) = start_uvicorn()
+         cls.c) = start_webui()
 
     def setUp(self):
         self.user, created = User.objects.get_or_create(
@@ -84,7 +84,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         try:
             cls.wait()
         finally:
-            stop_uvicorn(cls.webserver, cls.webserver_thread)
+            stop_webui(cls.webserver, cls.webserver_thread)
             cleanup_user.delete()
         super().tearDownClass()
 
