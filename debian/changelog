@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Temporarily restored consequences in XML format; this is solely to support
+    the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
 
   [Catarina Costa, Michele Simionato]
