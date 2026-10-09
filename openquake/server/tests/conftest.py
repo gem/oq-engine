@@ -231,7 +231,10 @@ def user(django_db_blocker, application_mode, test_credentials, request):
     user.email = test_credentials["email"]
     user.save()
 
-    profile = user.profile
+    # the profile is created by a signal only on user creation, so an
+    # existing test user may lack it
+    from openquake.server.user_profile.models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.level = level
     profile.save()
 
