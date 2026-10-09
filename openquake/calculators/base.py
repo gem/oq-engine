@@ -89,7 +89,7 @@ def get_aelo_changelog():
     """
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
-    if 'pytest' in sys.argv[0]:
+    if 'pytest' in sys.argv[0] or os.environ.get('OQ_TEST'):
         mosaic_dir = mosaic.__path__[0]  # qa_tests_data/mosaic
     else:
         mosaic_dir = config.directory.mosaic_dir

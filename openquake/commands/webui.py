@@ -31,9 +31,13 @@ from openquake.server.utils import check_webserver_running
 
 commands = ['start', 'status', 'stop']
 
+#: Threads serving the requests; a single worker process is used because
+#: the WebUI keeps some state in memory
+THREADS = 16
+
 
 def _find_webui_process(hostport):
-    """Find the Uvicorn process listening on the requested port."""
+    """Find the process listening on the requested port."""
     _host, port = hostport.rsplit(':', 1)
     for connection in psutil.net_connections(kind='tcp'):
         if (connection.status == psutil.CONN_LISTEN and
@@ -54,7 +58,7 @@ def _status(hostport):
 
 
 def _stop(hostport):
-    """Stop the Uvicorn process serving the requested WebUI port."""
+    """Stop the process serving the requested WebUI port."""
     process = _find_webui_process(hostport)
     if process is None:
         print('WebUI is not running')
@@ -69,7 +73,7 @@ def _stop(hostport):
 
 
 def runserver(hostport=None, skip_browser=False):
-    """Start Uvicorn and serve the combined WebUI application."""
+    """Start gunicorn and serve the WebUI application."""
     url = 'http://' + hostport
     if check_webserver_running(url, max_retries=1, warn=False):
         if not skip_browser:
@@ -83,10 +87,13 @@ def runserver(hostport=None, skip_browser=False):
         OQ_API_KEY=API_KEY,
         OQ_WEBAPI_SERVER='http://%s:%s' % (api_host, port))
     process = subprocess.Popen([
-        sys.executable, '-m', 'uvicorn',
-        'openquake.server.asgi:app',
-        '--host', host,
-        '--port', port,
+        sys.executable, '-m', 'gunicorn',
+        'openquake.server.wsgi:application',
+        '--bind', hostport,
+        '--workers', '1',
+        '--worker-class', 'gthread',
+        '--threads', str(THREADS),
+        '--timeout', '1200',
     ], env=env)
     if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)

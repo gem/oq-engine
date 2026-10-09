@@ -28,7 +28,7 @@ import tempfile
 import zipfile
 from django.contrib.auth import get_user_model
 from openquake.baselib import config
-from openquake.server.tests.views_test import start_uvicorn, stop_uvicorn
+from openquake.server.tests.views_test import start_webui, stop_webui
 
 # pytest-playwright starts an asyncio event loop at session startup.
 # Django 4+ forbids synchronous ORM/database operations when an event loop
@@ -251,7 +251,7 @@ def authenticated_session(django_db_blocker, user):
 
 @pytest.fixture
 def authenticated_page(page, authenticated_session, application_mode):
-    server, thread, client = start_uvicorn()
+    server, thread, client = start_webui()
     try:
         page.context.clear_cookies()
         page.context.add_cookies([{
@@ -262,7 +262,7 @@ def authenticated_page(page, authenticated_session, application_mode):
         page.goto(f"{client.base_url}/engine/")
         yield page
     finally:
-        stop_uvicorn(server, thread)
+        stop_webui(server, thread)
 
 
 @pytest.fixture

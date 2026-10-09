@@ -24,19 +24,18 @@ import socket
 import string
 import secrets
 import random
-import multiprocessing
+import subprocess
 
 import django
 import requests
-import uvicorn
 from django.contrib.auth import get_user_model
 from django.test import Client
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
 
 
-class UvicornClient:
-    """Small requests-based client for the combined ASGI application."""
+class WebuiClient:
+    """Small requests-based client for the WebUI test server."""
 
     def __init__(self, base_url):
         self.base_url = base_url
@@ -55,11 +54,11 @@ class UvicornClient:
         return path if path.startswith('http') else self.base_url + path
 
     def get(self, path, data=None, headers=None, **kwargs):
-        """Send a GET request to the Uvicorn server."""
+        """Send a GET request to the WebUI server."""
         return self.session.get(self._url(path), params=data, headers=headers)
 
     def post(self, path, data=None, headers=None, **kwargs):
-        """Send a POST request to the Uvicorn server."""
+        """Send a POST request to the WebUI server."""
         if data is None and kwargs:
             data = kwargs
         data = data or {}
@@ -70,52 +69,45 @@ class UvicornClient:
             self._url(path), data=form, files=files or None, headers=headers)
 
     def head(self, path, **kwargs):
-        """Send a HEAD request to the Uvicorn server."""
+        """Send a HEAD request to the WebUI server."""
         return self.session.head(self._url(path))
 
 
-def _serve_uvicorn(port):
-    """Run the ASGI app in a separate process (see :func:`start_uvicorn`)."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE',
-                          'openquake.server.settings')
-    import django
-    django.setup()
-    uvicorn.Server(uvicorn.Config(
-        'openquake.server.asgi:app', host='127.0.0.1', port=port,
-        log_level='error')).run()
-
-
-def start_uvicorn():
+def start_webui():
     """
-    Start a temporary Uvicorn server in a separate process for integration
-    tests.  Keeping the server out of the test process ensures the engine's
-    ``fork()`` calls do not interact with Playwright's greenlet-based event
-    loop, which would otherwise hang the test session.
+    Start a temporary WebUI server, using the Django development server, in
+    a separate process for integration tests. Keeping the server out of the
+    test process ensures the engine's ``fork()`` calls do not interact with
+    Playwright's greenlet-based event loop, which would otherwise hang the
+    test session. The database is upgraded when the WSGI application loads.
     """
     sock = socket.socket()
     sock.bind(('127.0.0.1', 0))
     port = sock.getsockname()[1]
     sock.close()
-    proc = multiprocessing.get_context('spawn').Process(
-        target=_serve_uvicorn, args=(port,))
-    proc.start()
-    client = UvicornClient('http://127.0.0.1:%d' % port)
+    # OQ_TEST makes the server behave as the test process, even if its
+    # command line does not contain 'pytest'
+    proc = subprocess.Popen([
+        sys.executable, '-m', 'openquake.server.manage', 'runserver',
+        '127.0.0.1:%d' % port, '--noreload', '--nothreading'],
+        env=dict(os.environ, OQ_TEST='1'))
+    client = WebuiClient('http://127.0.0.1:%d' % port)
     for _ in range(200):
+        if proc.poll() is not None:
+            raise RuntimeError('Unable to start the WebUI test server')
         try:
             client.get('/v1/calc/list')
             return proc, None, client
         except Exception:
-            if not proc.is_alive():
-                raise RuntimeError('Unable to start the Uvicorn test server')
-        time.sleep(0.1)
+            time.sleep(0.1)
     proc.terminate()
-    raise RuntimeError('Unable to start the Uvicorn test server')
+    raise RuntimeError('Unable to start the WebUI test server')
 
 
-def stop_uvicorn(proc, _thread):
-    """Stop the temporary Uvicorn server process."""
+def stop_webui(proc, _thread):
+    """Stop the temporary WebUI server process."""
     proc.terminate()
-    proc.join(timeout=10)
+    proc.wait(timeout=10)
 
 
 def random_string(length=10):
@@ -132,9 +124,10 @@ def get_or_create_user(level):
     password = ''.join((secrets.choice(
         string.ascii_letters + string.digits + string.punctuation)
         for i in range(8)))
-    user, created = User.objects.get_or_create(username=username, email=email)
-    if created:
-        user.set_password(password)
+    user, _created = User.objects.get_or_create(
+        username=username, email=email)
+    # always reset the password: an existing user would keep the old one
+    user.set_password(password)
     user.save()
     user.profile.level = level
     user.profile.save()

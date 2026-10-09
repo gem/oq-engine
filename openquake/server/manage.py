@@ -20,7 +20,7 @@ import os
 import sys
 from django.core.management import execute_from_command_line
 # This entrypoint is used for Django management commands, such as migrations
-# and package post-install hooks. The WebUI is served by Uvicorn.
+# and package post-install hooks. The WebUI is served by gunicorn.
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
