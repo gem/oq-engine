@@ -85,6 +85,7 @@ def get_risk_files(inputs):
     return rfs
 
 
+# TOD0: this will be removed once IPT will be replaced
 def get_xml_consequence_files(inputs):
     """
     :param inputs: a dictionary key -> path name
