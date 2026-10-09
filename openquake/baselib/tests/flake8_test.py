@@ -206,6 +206,25 @@ def test_forbid_long_funcs():
         raise RuntimeError(long_funcs)
 
 
+def test_init_files():
+    """
+    All the subdirectories of the openquake package containing Python files
+    (here or in subdirectories) must be packages, i.e. they must contain
+    a file __init__.py; pure data directories do not need it
+    """
+    oq_dir = os.path.join(REPO, 'openquake')
+    missing = []
+    for cwd, dirs, files in os.walk(oq_dir):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        if cwd == oq_dir or '__init__.py' in files:
+            continue  # the root directory is not a package
+        if any(f.endswith('.py') for f in files) or any(
+                os.path.isfile(os.path.join(cwd, d, '__init__.py'))
+                for d in dirs):
+            missing.append(cwd)
+    assert not missing, 'missing __init__.py in\n%s' % '\n'.join(missing)
+
+
 def test_get_basin_term():
     # make sure the basin terms have the right signature
     from openquake.hazardlib.gsim import registry
