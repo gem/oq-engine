@@ -31,10 +31,6 @@ from openquake.server.utils import check_webserver_running
 
 commands = ['start', 'status', 'stop']
 
-#: Threads serving the requests; a single worker process is used because
-#: the WebUI keeps some state in memory
-THREADS = 16
-
 
 def _find_webui_process(hostport):
     """Find the process listening on the requested port."""
@@ -73,28 +69,19 @@ def _stop(hostport):
 
 
 def runserver(hostport=None, skip_browser=False):
-    """Start gunicorn and serve the WebUI application."""
+    """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
     if check_webserver_running(url, max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         return
 
-    host, port = hostport.rsplit(':', 1)
-    api_host = '127.0.0.1' if host == '0.0.0.0' else host
-    env = os.environ.copy()
-    env.update(
-        OQ_API_KEY=API_KEY,
-        OQ_WEBAPI_SERVER='http://%s:%s' % (api_host, port))
-    process = subprocess.Popen([
-        sys.executable, '-m', 'gunicorn',
-        'openquake.server.wsgi:application',
-        '--bind', hostport,
-        '--workers', '1',
-        '--worker-class', 'gthread',
-        '--threads', str(THREADS),
-        '--timeout', '1200',
-    ], env=env)
+    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
+    # the reload functionality of the Django development server interferes
+    # with SIGCHLD and causes zombies, thus it is disabled
+    args.append('--noreload')
+    args.append(hostport)
+    process = subprocess.Popen(args)
     if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)
     try:

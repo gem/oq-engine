@@ -78,4 +78,3 @@ https://wheelhouse.openquake.org/unified/pygments-2.20.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/typing_extensions-4.16.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/idna-3.19-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/click-8.5.0-py3-none-any.whl
-gunicorn==26.2.0

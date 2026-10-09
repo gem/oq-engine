@@ -154,7 +154,7 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* is installed together with the engine. Please replace the value of
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[webui]"` (it is not installed by default). Please replace the value of
 ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
 ExecStart=/opt/openquake/venv/bin/gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
