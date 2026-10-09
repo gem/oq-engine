@@ -105,7 +105,9 @@ class ImpactPageLevel2(ImpactPage):
         self.page.locator("input#strike").fill(str(strike))
 
     def choose_rupture_model(self):
-        expect(self.page.locator("input#rupture_file_input")).to_be_visible()
+        # the input is un-hidden by the approach handler, which may be slow
+        expect(self.page.locator("input#rupture_file_input")).to_be_visible(
+            timeout=50_000)
         rupture_file = (
             files("openquake.hazardlib.tests.shakemap.data")
             / "fault_rupture.xml"
