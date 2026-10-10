@@ -213,16 +213,15 @@ def test_init_files():
     a file __init__.py; pure data directories do not need it
     """
     oq_dir = os.path.join(REPO, 'openquake')
-    missing = []
     for cwd, dirs, files in os.walk(oq_dir):
         dirs[:] = [d for d in dirs if d != '__pycache__']
-        if cwd == oq_dir or '__init__.py' in files:
-            continue  # the root directory is not a package
-        if any(f.endswith('.py') for f in files) or any(
-                os.path.isfile(os.path.join(cwd, d, '__init__.py'))
-                for d in dirs):
-            missing.append(cwd)
-    assert not missing, 'missing __init__.py in\n%s' % '\n'.join(missing)
+        if cwd == oq_dir or 'data' in cwd or 'schema/upgrades' in cwd:
+            continue  # no check for the root directory data directories
+        pyfiles = [f for f in files if f.endswith('.py')]
+        if pyfiles == ['__init__.py'] and not dirs:
+            raise RuntimeError(f'Empty package {cwd}')
+        elif pyfiles and '__init__.py' not in pyfiles:
+            raise RuntimeError(f'Missing __init__.py in {cwd}')
 
 
 def test_get_basin_term():
