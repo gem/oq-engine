@@ -85,7 +85,7 @@ def build_raytrace_grid(cell_ids, mean_vals):
     val_dict = dict(zip(cell_ids, mean_vals))
     imt_pgns = {}
     for cid in cell_ids:
-        pnts = [Point(pnt[0], pnt[1])
+        pnts = [Point(pnt[1], pnt[0])
                 for pnt in h3.cell_to_boundary(cid)]
         # Store (OQ pgn, per km adjustment value) together
         imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
