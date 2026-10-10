@@ -35,7 +35,8 @@ from openquake.hazardlib.source_group import (
 from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups, read_core_trt_smrs)
 from openquake.hazardlib.lt import get_ts_sets
-from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
+from openquake.hazardlib.contexts import (
+    get_cmakers, read_full_lt_by_label, make_variants)
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -238,6 +239,10 @@ def group_gids(src_groups, gid_dic):
     return out
 
 
+# prototype flag: OQ_MFDSET=1 enables make_variants (few sites only)
+MFDSET = os.environ.get('OQ_MFDSET') == '1'
+
+
 def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     """
     :param srcs: the sources of the group grp with the same sets of
@@ -325,8 +330,24 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
-        for cmaker_, sg in cmakers_groups(
-                srcs, grp, cmaker, gid_dic, full_lt):
+        pairs = list(cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt))
+        if MFDSET and len(pairs) > 1:  # prototype, see make_variants
+            try:
+                dics = make_variants([sg for _, sg in pairs],
+                                     [cm for cm, _ in pairs], sites)
+            except ValueError:
+                dics = None
+            if dics is not None:
+                for (cmaker_, _), dic in zip(pairs, dics):
+                    dic['rmap'] = dic['rmap'].remove_zeros() \
+                        if remove_zeros else dic['rmap']
+                    dic['rmap'].gid = cmaker_.gid
+                    dic['rmap'].wei = cmaker_.wei
+                    if not as_rmap:
+                        dic['rmap'] = dic['rmap'].to_array(cmaker_.gid)
+                    yield dic
+                continue
+        for cmaker_, sg in pairs:
             yield baseclassical(
                 sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
 

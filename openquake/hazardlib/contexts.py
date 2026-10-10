@@ -1833,6 +1833,125 @@ class RmapMaker(object):
         return dic
 
 
+def _rates_by_mag(sources):
+    """
+    :param sources: a list of sources
+    :returns: a list of dictionaries mag -> annual occurrence rate, one
+        per source, read from the MFD (cheap, no ruptures enumerated)
+    """
+    out = []
+    for src in sources:
+        dic = {}
+        for mag, rate in src.get_annual_occurrence_rates():
+            dic[round(mag, 3)] = dic.get(round(mag, 3), 0.) + rate
+        out.append(dic)
+    return out
+
+
+def _mag_ratios(base, dic):
+    """
+    :param base: dictionary mag -> rate of a base source
+    :param dic: dictionary mag -> rate of another variant of the source
+    :returns: dictionary mag -> ratio of the rates, i.e. the factor
+        applied to the occurrence rates of the base contexts of that mag;
+        the magnitudes missing in the variant get ratio 0 (see get),
+        the ones missing in the base are not supported
+
+    NB: this assumes that the MFD variants rescale uniformly the
+    ruptures of a magnitude, i.e. the relative weights of the ruptures
+    (hypocenters, nodal planes) do not change, see make_variants
+    """
+    if set(dic) - set(base):
+        raise ValueError('new magnitudes in a variant')
+    return {mag: dic.get(mag, 0.) / rate for mag, rate in base.items()
+            if rate > 0}
+
+
+def make_variants(groups, cmakers, sitecol):
+    """
+    Compute the rates of several variants of the same groups, i.e. groups
+    with the same sources and the same geometry but different MFDs, with
+    the contexts computed only once (see classical.bysrc_results).
+
+    :param groups: a list of V groups, one per variant, with the same
+        sources in the same order
+    :param cmakers: a list of V cmakers, one per variant, with the gids
+    :param sitecol: a SiteCollection instance, with few sites
+    :returns: a list of V dictionaries, as returned by RmapMaker.make
+    :raises ValueError: if the variants cannot be computed this way
+
+    The contexts are generated from the base variant, i.e. the one with
+    the most magnitudes, and for each other variant the occurrence rates
+    of the contexts are rescaled by the ratio of the rates of their
+    magnitude (see _mag_ratios). Only independent Poisson sources with few
+    sites are supported, since the probabilities are then linear in the
+    rates.
+    """
+    rates = [_rates_by_mag(grp) for grp in groups]
+    b = max(range(len(groups)),
+            key=lambda v: sum(len(d) for d in rates[v]))
+    base = groups[b]
+    rmk = RmapMaker(cmakers[b], sitecol, base)
+    if rmk.src_mutex or rmk.rup_mutex or rmk.cluster:
+        raise ValueError('mutually exclusive sources')
+    if not rmk.fewsites:
+        raise ValueError('too many sites')
+    sources = rmk.sources
+    if any(len(grp) != len(sources) for grp in groups):
+        raise ValueError('the variants have different sources')
+    # ratios[v][s] = dictionary mag -> ratio for source s of variant v
+    ratios = [[_mag_ratios(rates[b][s], rates[v][s])
+               for s in range(len(sources))]
+              for v in range(len(groups))]
+    sids = rmk.srcfilter.sitecol.sids
+    cm = rmk.cmaker
+    pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
+                        True).fill(False) for _ in groups]
+    tspan = rmk.tom.time_span
+    rmk.rupdata = []  # used by gen_ctxs with few sites
+    rmk.source_data = AccumDict(accum=[])
+    # NB: the GMPEs are computed once, only the rates change by variant
+    for s, src in enumerate(sources):
+        nctxs = 0
+        t0 = time.time()
+        for ctx in rmk.gen_ctxs(src):
+            for poes, _, _, _, ctxt in cm.gen_poes(ctx):
+                nctxs += len(ctxt)
+                mag = round(float(ctxt.mag[0]), 3)
+                for v, pnemap in enumerate(pnemaps):
+                    rates_v = ctxt.occurrence_rate * ratios[v][s].get(
+                        mag, 0.)
+                    pnemap.update_indep(poes, ctxt, tspan, rates=rates_v)
+        # the source data are recorded only for the first variant, the
+        # others get zeros, otherwise the statistics would be repeated
+        rmk.update_source_data(src, rmk.task_no, time.time() - t0, nctxs)
+    out = []
+    for v, pnemap in enumerate(pnemaps):
+        sdata = rmk.source_data if v == 0 else _zero_source_data(
+            rmk.source_data)
+        dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
+                   rup_data=(), source_data=sdata,
+                   task_no=rmk.task_no, dparam_mb=0.,
+                   source_mb=cm.source_mb)
+        if rmk.disagg_by_src:  # see RmapMaker.make
+            dic['basename'] = valid.basename(sources[0])
+        out.append(dic)
+    return out
+
+
+def _zero_source_data(sdata):
+    """
+    :returns: a copy of the source data with zero counts, i.e. the
+        same grp_id and src_id but no contexts, ruptures or times
+    """
+    out = AccumDict(accum=[])
+    for key in sdata:
+        vals = sdata[key]
+        out[key] = [0 * v if key in ('nctxs', 'nrupts', 'weight',
+                                     'ctimes') else v for v in vals]
+    return out
+
+
 class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
