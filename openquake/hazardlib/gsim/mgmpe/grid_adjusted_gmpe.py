@@ -513,9 +513,11 @@ class GridAdjustedGMPE(GMPE):
         Path to the hdf5 file with gridded adjustments.
 
     :param epsilons:
-        Optional dict scaling the per-term mean adjustment. 0.0 skips
-        the term entirely (mean and sigma reduction both disabled).
-        Terms not in the dict default to 1.0.
+        Optional dict scaling the per-term mean adjustment, e.g.
+        ``{"dL2L": 1.0, "dS2S": 1.0, "dP2P": 0.0}`` applies the fitted
+        dL2L and dS2S but skips dP2P entirely. 0.0 skips a term (mean
+        and sigma reduction both disabled). Terms not in the dict
+        default to 1.0.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
