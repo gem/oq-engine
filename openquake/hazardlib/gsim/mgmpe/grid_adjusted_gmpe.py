@@ -360,8 +360,8 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
 
 def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
     """
-    Return per-ctx adjustment values for one term/IMT. ``key`` is
-    "mean" or "mean_se". Returns None if no data for that key.
+    Return per-ctx adjustment values for one term/IMT. The key input
+    is "mean" or "mean_se". Returns None if no data for that key.
     """
     # Path-based terms are stored in the raytrace grids
     if cfg["location"] == "path":
