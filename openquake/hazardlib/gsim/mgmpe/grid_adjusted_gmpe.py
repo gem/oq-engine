@@ -181,7 +181,7 @@ def load_residual_grids(hdf5_path):
                         )
 
                 # Optional per-cell SE on the mean, only used when a
-                # non-zero epsilon is requested for the term at runtime
+                # non-zero epsilon is set for the term
                 se_key = f"{term}_mean_se"
                 if se_key in grp:
                     se_vals = grp[se_key][:]
