@@ -166,16 +166,16 @@ class GridAdjustedGMPETest(unittest.TestCase):
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
 
-    def test_epsilons_zero_turns_off_mean(self):
-        # epsilon = 0 zeros the mean adjustment but leaves sigma reduced
+    def test_epsilons_zero_skips_term(self):
+        # epsilon = 0 skips both the mean and the sigma adjustment, so
+        # the result must match the base GSIM exactly
         zeros = {"dL2L": 0.0, "dS2S": 0.0, "att_per_km": 0.0}
         mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=zeros)
-        base_mea, base_sig, base_tau, base_phi = self._get_mean_stds(IMTS)
         for m in range(len(IMTS)):
             aae(mea[GRID, m], mea[BASE, m], decimal=DP)
-            aae(sig[GRID, m], base_sig[GRID, m], decimal=DP)
-            aae(tau[GRID, m], base_tau[GRID, m], decimal=DP)
-            aae(phi[GRID, m], base_phi[GRID, m], decimal=DP)
+            aae(sig[GRID, m], sig[BASE, m], decimal=DP)
+            aae(tau[GRID, m], tau[BASE, m], decimal=DP)
+            aae(phi[GRID, m], phi[BASE, m], decimal=DP)
 
     def test_epsilons_scales_mean_linearly(self):
         # Mean shift must be linear in epsilon per term

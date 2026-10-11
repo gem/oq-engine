@@ -343,7 +343,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
     """
     Look up and apply corrections defined in the hdf5. The mean
     adjustment for each term is scaled by its epsilon before being
-    added (epsilon=1 is central, epsilon=0 turns the term off).
+    added. Epsilon = 0 skips both the mean and sigma adjustment for
+    that term.
 
     :param grid_data:
         Dict returned by load_residual_grids
@@ -379,6 +380,11 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
         epsilon = epsilons.get(term, 1.0)
+
+        # Skip the term entirely when epsilon = 0 - leaving sigma reduced
+        # while zeroing the mean would overstate confidence
+        if epsilon == 0.0:
+            continue
 
         # Term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
@@ -507,9 +513,9 @@ class GridAdjustedGMPE(GMPE):
         Path to the hdf5 file with gridded adjustments.
 
     :param epsilons:
-        Optional dict scaling the per-term mean adjustment. 0.0 is
-        ergodic. Terms not in the dict default to 1.0. Sigma reduction
-        is unaffected.
+        Optional dict scaling the per-term mean adjustment. 0.0 skips
+        the term entirely (mean and sigma reduction both disabled).
+        Terms not in the dict default to 1.0.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
