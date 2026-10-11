@@ -180,7 +180,7 @@ def load_residual_grids(hdf5_path):
                         sig_action, cell_ids, grids, sig_scalars
                         )
 
-                # Optional per-cell SE on the mean, only consumed when a
+                # Optional per-cell SE on the mean, only used when a
                 # non-zero epsilon is requested for the term at runtime
                 se_key = f"{term}_mean_se"
                 if se_key in grp:
@@ -360,26 +360,22 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
 
 def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
     """
-    Return per-ctx adjustment values for one term/IMT, hiding the
-    path-vs-hypo-vs-site branching behind a single call. ``key`` is
+    Return per-ctx adjustment values for one term/IMT. ``key`` is
     "mean" or "mean_se". Returns None if no data for that key.
     """
-    # Path-based terms live in a separate pair of raytrace stores
+    # Path-based terms are stored in the raytrace grids
     if cfg["location"] == "path":
         store = "raytrace_grids" if key == "mean" else "raytrace_se_grids"
         grid = grid_data[store].get(term, {}).get(imt)
         if grid is None:
             return None
-        # Raytrace the per-cell values along each hypo-to-site path
         return raytrace_path_adj(
             grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
 
-    # Hypo/site terms live in grids[imt][term][key] as cell_id -> value
+    # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
     if key not in entry:
         return None
-    # Lookup location depends on whether the correction is applied at
-    # the rupture hypocentre or the receiving site
     lats, lons = ((ctx.hypo_lat, ctx.hypo_lon) if cfg["location"] == "hypo"
                   else (ctx.lat, ctx.lon))
     return grid_lookup(entry[key], lats, lons, grid_data["h3_res"])
@@ -569,8 +565,8 @@ class GridAdjustedGMPE(GMPE):
                 f"Unknown term(s) in epsilons: {sorted(unknown)}. "
                 f"Known terms: {sorted(self.grid_data['res_terms'])}.")
 
-        # One pass over all res_terms locations to validate and expand
-        # the required rupture/site parameter sets accordingly
+        # Validate location assignments and expand the required
+        # rupture/site parameter sets accordingly
         locations = {cfg["location"]
                      for cfg in self.grid_data["res_terms"].values()}
         invalid = locations - {"hypo", "site", "path"}
