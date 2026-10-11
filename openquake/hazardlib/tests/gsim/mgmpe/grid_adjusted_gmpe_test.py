@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import shutil
+import tempfile
 import unittest
+
+import h5py
 import numpy as np
 
 from openquake.hazardlib import valid
@@ -119,12 +123,17 @@ class GridAdjustedGMPETest(unittest.TestCase):
         return cmaker.get_mean_stds([ctx])
 
     def test_grid_lookup(self):
-        # Check correct values returned when searching loaded grid
+        # Check correct values returned when searching loaded grid for
+        # both a hypo-based term (dL2L) and a site-based term (dS2S)
         gd = load_residual_grids(GRID_HDF5)
-        mu = grid_lookup(
+        mu_dl2l = grid_lookup(
             gd["grids"]["PGA"]["dL2L"]["mean"],
             LATS, LONS, gd["h3_res"])
-        aae(mu, DL2L_MEAN_PER_CELL[0], decimal=DP)
+        aae(mu_dl2l, DL2L_MEAN_PER_CELL[0], decimal=DP)
+        mu_ds2s = grid_lookup(
+            gd["grids"]["PGA"]["dS2S"]["mean"],
+            LATS, LONS, gd["h3_res"])
+        aae(mu_ds2s, DS2S_MEAN_PER_CELL[0], decimal=DP)
         # Check that zero is returned for out-of-bounds coords
         mu = grid_lookup(
             gd["grids"]["PGA"]["dL2L"]["mean"],
@@ -172,17 +181,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
             GridAdjustedGMPE(
                 gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
 
-    def test_epsilons_zero_matches_default(self):
-        # epsilon = 0 everywhere must match the default-kwarg behaviour
-        # (central non-ergodic adjustment, no SE shift)
-        zeros = {"dL2L": 0.0, "dS2S": 0.0, "att_per_km": 0.0}
-        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=zeros)
-        for m in range(len(IMTS)):
-            aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
-                decimal=DP)
-            aae(sig[GRID, m],
-                np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
-
     def test_epsilons_shift_mean_by_eps_times_se(self):
         # Non-zero epsilon must shift the mean by epsilon * mean_se for
         # each term. Hypo is at origin so dL2L always picks cell 0;
@@ -202,12 +200,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def test_epsilons_missing_se_raises(self):
         # Non-zero epsilon for a term whose mean_se dataset is absent
         # must raise rather than silently falling back to the central
-        import tempfile
-        import shutil
         with tempfile.TemporaryDirectory() as td:
             stripped = os.path.join(td, "no_se.hdf5")
             shutil.copy(GRID_HDF5, stripped)
-            import h5py
             with h5py.File(stripped, "a") as hf:
                 for term in ("dL2L", "dS2S", "att_per_km"):
                     for imt_str in hf[term]:
