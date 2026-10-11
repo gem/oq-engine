@@ -95,19 +95,26 @@ def build_raytrace_grid(cell_ids, mean_vals):
 
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with five keys:
+    Load the hdf5 residual grids into a dict with six keys:
 
     * grids: nested dict of
-      {imt_str: {term: {"mean": {cell_id: float},
-                        "sig":  {cell_id: float}}, ...}}
+      {imt_str: {term: {"mean":    {cell_id: float},
+                        "sig":     {cell_id: float},
+                        "mean_se": {cell_id: float}}, ...}}
       for hypo/site-based terms only. The "sig" key is present only when
       sig_adjustment is not "none" and the sigma is given as a per-cell
-      dataset named "{term}_sig". Per-cell sigma is not supported for
-      path-based terms.
+      dataset named "{term}_sig". The "mean_se" key is present only when
+      the HDF5 includes a per-cell dataset "{term}_mean_se" (consumed by
+      the epsilons kwarg of GridAdjustedGMPE). Per-cell sigma is not
+      supported for path-based terms.
 
     * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
       pgn grids for path-based terms (used in raytracing), stored per term
       per IMT (cell grids can differ across IMTs and across terms).
+
+    * raytrace_se_grids: same structure as raytrace_grids but holding the
+      per-cell SE on the mean for path-based terms. Populated only when
+      the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Populated when sig_adjustment is not "none" and the
@@ -134,6 +141,11 @@ def load_residual_grids(hdf5_path):
       - sig_comp_modified (required when sig_adjustment is not "none"):
         which sigma component to modify - "tau", "phi", or "sig".
 
+    An optional per-cell dataset "{term}_mean_se" may also be present in
+    each IMT group - the SE on the fitted central mean adjustment, used
+    only when a non-zero epsilon is passed to GridAdjustedGMPE for the
+    term.
+
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
     """
@@ -149,7 +161,10 @@ def load_residual_grids(hdf5_path):
             sig_action = res_terms[term].get("sig_adjustment", "none")
             for imt_str in hf[term]: # e.g. SA(0.5)
 
-                # Set stores if not already present
+                # Ensure per-IMT dicts exist in both stores so term entries
+                # can be added below; either may stay empty for a given IMT
+                # (e.g., grids for path-only IMTs, sig_scalars when no scalar
+                # sigma applies)
                 grids.setdefault(imt_str, {})
                 sig_scalars.setdefault(imt_str, {})
 
