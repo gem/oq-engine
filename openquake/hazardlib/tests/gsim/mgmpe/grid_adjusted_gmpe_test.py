@@ -70,7 +70,7 @@ ATT_SIG = [0.00112, 0.00148, 0.00158]  # PGA, SA(0.5), SA(1.0)
 EXPECTED_PATH_ADJ = [
     np.array([0., 1.15658587, 2.2321576, 1.21456404]),  # PGA
     np.array([0., 1.18827316, 2.0120857, 1.33602045]),  # SA(0.5)
-    np.array([0., 0.83971303, 2.13784103, 0.91092302]),  # SA(1.0)
+    np.array([0., 0.83971303, 2.13784103, 0.91092302]), # SA(1.0)
 ]
 
 # Per-IMT expected mean diff: hypo always in cell 0 for dL2L, sites vary
