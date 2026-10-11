@@ -104,9 +104,9 @@ def load_residual_grids(hdf5_path):
       for hypo/site-based terms only. The "sig" key is present only when
       sig_adjustment is not "none" and the sigma is given as a per-cell
       dataset named "{term}_sig". The "mean_se" key is present only when
-      the HDF5 includes a per-cell dataset "{term}_mean_se" (consumed by
-      the epsilons kwarg of GridAdjustedGMPE). Per-cell sigma is not
-      supported for path-based terms.
+      the HDF5 includes a per-cell dataset "{term}_mean_se" (used by the
+      epsilons kwarg of GridAdjustedGMPE). Per-cell sigma is not supported
+      for path-based terms.
 
     * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
       pgn grids for path-based terms (used in raytracing), stored per term
@@ -140,11 +140,6 @@ def load_residual_grids(hdf5_path):
 
       - sig_comp_modified (required when sig_adjustment is not "none"):
         which sigma component to modify - "tau", "phi", or "sig".
-
-    An optional per-cell dataset "{term}_mean_se" may also be present in
-    each IMT group - the SE on the fitted central mean adjustment, used
-    only when a non-zero epsilon is passed to GridAdjustedGMPE for the
-    term.
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.

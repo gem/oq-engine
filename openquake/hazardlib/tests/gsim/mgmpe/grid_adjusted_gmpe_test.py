@@ -85,9 +85,9 @@ EXPECTED_MEAN_DIFFS = [
 ]
 
 # Per-cell SE of the mean for each term/IMT, matching the datasets
-# written to test_grid_adjustments.hdf5. For att_per_km the SE values
-# are exactly 1/10 of the mean values so the raytraced path SE adj
-# equals EXPECTED_PATH_ADJ / 10 (used by the epsilon tests).
+# written to test_grid_adjustments.hdf5
+# NOTE: For att_per_km the SE values are exactly 1/10 of the mean
+# values so the raytraced path SE adj equals EXPECTED_PATH_ADJ/10
 DL2L_SE_PER_CELL = [
     np.array([0.010, 0.015, 0.020, 0.025]),  # PGA
     np.array([0.008, 0.012, 0.016, 0.020]),  # SA(0.5)
@@ -184,7 +184,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def test_epsilons_shift_mean_by_eps_times_se(self):
         # Non-zero epsilon must shift the mean by epsilon * mean_se for
         # each term. Hypo is at origin so dL2L always picks cell 0;
-        # dS2S and dP2P use per-site/per-path SE values from the HDF5.
+        # dS2S and dP2P use per-site/per-path SE values from the HDF5
         for eps in [-1.732, 1.0, 1.732]:
             eps_dict = {"dL2L": eps, "dS2S": eps, "att_per_km": eps}
             mea, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
