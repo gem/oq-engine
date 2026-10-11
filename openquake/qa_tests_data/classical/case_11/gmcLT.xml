@@ -4,8 +4,22 @@
   <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="Active Shallow Crust">
 
-    <!-- Low: no shift applied (ergodic backbone) -->
+    <!-- Low: mean shifted by -1.732 * per-cell SE -->
     <logicTreeBranch branchID="grid_adjusted_low">
+      <uncertaintyModel>
+        [GridAdjustedGMPE]
+        gmpe_name = "AkkarEtAlRjb2014"
+        grid_hdf5_file = "grid_adjustments.hdf5"
+        epsilons.dL2L = -1.732
+        epsilons.dS2S = -1.732
+        epsilons.att_per_km = -1.732
+      </uncertaintyModel>
+      <uncertaintyWeight>0.167</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <!-- Central: fitted per-cell adjustments applied on top of the
+         ergodic backbone, no epistemic SE shift -->
+    <logicTreeBranch branchID="grid_adjusted_central">
       <uncertaintyModel>
         [GridAdjustedGMPE]
         gmpe_name = "AkkarEtAlRjb2014"
@@ -14,33 +28,20 @@
         epsilons.dS2S = 0.0
         epsilons.att_per_km = 0.0
       </uncertaintyModel>
-      <uncertaintyWeight>0.17</uncertaintyWeight>
+      <uncertaintyWeight>0.666</uncertaintyWeight>
     </logicTreeBranch>
 
-    <!-- Central: mean shifted by the fitted adjustment -->
-    <logicTreeBranch branchID="grid_adjusted_central">
-      <uncertaintyModel>
-        [GridAdjustedGMPE]
-        gmpe_name = "AkkarEtAlRjb2014"
-        grid_hdf5_file = "grid_adjustments.hdf5"
-        epsilons.dL2L = 1.0
-        epsilons.dS2S = 1.0
-        epsilons.att_per_km = 1.0
-      </uncertaintyModel>
-      <uncertaintyWeight>0.66</uncertaintyWeight>
-    </logicTreeBranch>
-
-    <!-- High: mean shifted by twice the fitted adjustment -->
+    <!-- High: mean shifted by +1.732 * per-cell SE -->
     <logicTreeBranch branchID="grid_adjusted_high">
       <uncertaintyModel>
         [GridAdjustedGMPE]
         gmpe_name = "AkkarEtAlRjb2014"
         grid_hdf5_file = "grid_adjustments.hdf5"
-        epsilons.dL2L = 2.0
-        epsilons.dS2S = 2.0
-        epsilons.att_per_km = 2.0
+        epsilons.dL2L = 1.732
+        epsilons.dS2S = 1.732
+        epsilons.att_per_km = 1.732
       </uncertaintyModel>
-      <uncertaintyWeight>0.17</uncertaintyWeight>
+      <uncertaintyWeight>0.167</uncertaintyWeight>
     </logicTreeBranch>
 
   </logicTreeBranchSet>

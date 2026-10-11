@@ -75,10 +75,26 @@ EXPECTED_PATH_ADJ = [
 
 # Per-IMT expected mean diff: hypo always in cell 0 for dL2L, sites vary
 EXPECTED_MEAN_DIFFS = [
-    DL2L_MEAN_PER_CELL[m][0] + 
-    DS2S_MEAN_PER_CELL[m] + 
+    DL2L_MEAN_PER_CELL[m][0] +
+    DS2S_MEAN_PER_CELL[m] +
     EXPECTED_PATH_ADJ[m] for m in range(len(IMTS))
 ]
+
+# Per-cell SE of the mean for each term/IMT, matching the datasets
+# written to test_grid_adjustments.hdf5. For att_per_km the SE values
+# are exactly 1/10 of the mean values so the raytraced path SE adj
+# equals EXPECTED_PATH_ADJ / 10 (used by the epsilon tests).
+DL2L_SE_PER_CELL = [
+    np.array([0.010, 0.015, 0.020, 0.025]),  # PGA
+    np.array([0.008, 0.012, 0.016, 0.020]),  # SA(0.5)
+    np.array([0.006, 0.009, 0.012, 0.015]),  # SA(1.0)
+]
+DS2S_SE_PER_CELL = [
+    np.array([0.020, 0.025, 0.030, 0.035]),  # PGA
+    np.array([0.016, 0.020, 0.024, 0.028]),  # SA(0.5)
+    np.array([0.012, 0.015, 0.018, 0.021]),  # SA(1.0)
+]
+EXPECTED_PATH_SE_ADJ = [p / 10. for p in EXPECTED_PATH_ADJ]
 
 
 class GridAdjustedGMPETest(unittest.TestCase):
@@ -156,46 +172,66 @@ class GridAdjustedGMPETest(unittest.TestCase):
             GridAdjustedGMPE(
                 gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
 
-    def test_epsilons_central(self):
-        # epsilon = 1.0 everywhere must match the default-kwarg behaviour
-        central = {"dL2L": 1.0, "dS2S": 1.0, "att_per_km": 1.0}
-        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=central)
+    def test_epsilons_zero_matches_default(self):
+        # epsilon = 0 everywhere must match the default-kwarg behaviour
+        # (central non-ergodic adjustment, no SE shift)
+        zeros = {"dL2L": 0.0, "dS2S": 0.0, "att_per_km": 0.0}
+        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=zeros)
         for m in range(len(IMTS)):
             aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
                 decimal=DP)
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
 
-    def test_epsilons_zero_skips_term(self):
-        # epsilon = 0 skips both the mean and the sigma adjustment, so
-        # the result must match the base GSIM exactly
-        zeros = {"dL2L": 0.0, "dS2S": 0.0, "att_per_km": 0.0}
-        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=zeros)
-        for m in range(len(IMTS)):
-            aae(mea[GRID, m], mea[BASE, m], decimal=DP)
-            aae(sig[GRID, m], sig[BASE, m], decimal=DP)
-            aae(tau[GRID, m], tau[BASE, m], decimal=DP)
-            aae(phi[GRID, m], phi[BASE, m], decimal=DP)
-
-    def test_epsilons_scales_mean_linearly(self):
-        # Mean shift must be linear in epsilon per term
-        mea_cen, *_ = self._get_mean_stds(IMTS,
-                                           epsilons={"dL2L": 1.0,
-                                                     "dS2S": 1.0,
-                                                     "att_per_km": 1.0})
-        mea_zero, *_ = self._get_mean_stds(IMTS,
-                                            epsilons={"dL2L": 0.0,
-                                                      "dS2S": 0.0,
-                                                      "att_per_km": 0.0})
-        for eps in [0.5, 1.5, 2.0]:
-            mea, *_ = self._get_mean_stds(IMTS,
-                                           epsilons={"dL2L": eps,
-                                                     "dS2S": eps,
-                                                     "att_per_km": eps})
+    def test_epsilons_shift_mean_by_eps_times_se(self):
+        # Non-zero epsilon must shift the mean by epsilon * mean_se for
+        # each term. Hypo is at origin so dL2L always picks cell 0;
+        # dS2S and dP2P use per-site/per-path SE values from the HDF5.
+        for eps in [-1.732, 1.0, 1.732]:
+            eps_dict = {"dL2L": eps, "dS2S": eps, "att_per_km": eps}
+            mea, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
+            mea_cen, *_ = self._get_mean_stds(IMTS)
             for m in range(len(IMTS)):
-                expected = mea_zero[GRID, m] + eps * (
-                    mea_cen[GRID, m] - mea_zero[GRID, m])
-                aae(mea[GRID, m], expected, decimal=DP)
+                expected_shift = eps * (
+                    DL2L_SE_PER_CELL[m][0]
+                    + DS2S_SE_PER_CELL[m]
+                    + EXPECTED_PATH_SE_ADJ[m])
+                aae(mea[GRID, m] - mea_cen[GRID, m], expected_shift,
+                    decimal=DP)
+
+    def test_epsilons_missing_se_raises(self):
+        # Non-zero epsilon for a term whose mean_se dataset is absent
+        # must raise rather than silently falling back to the central
+        import tempfile
+        import shutil
+        with tempfile.TemporaryDirectory() as td:
+            stripped = os.path.join(td, "no_se.hdf5")
+            shutil.copy(GRID_HDF5, stripped)
+            import h5py
+            with h5py.File(stripped, "a") as hf:
+                for term in ("dL2L", "dS2S", "att_per_km"):
+                    for imt_str in hf[term]:
+                        key = f"{term}_mean_se"
+                        if key in hf[term][imt_str]:
+                            del hf[term][imt_str][key]
+            base = valid.gsim(BASE_GSIM)
+            adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                   grid_hdf5_file=stripped,
+                                   epsilons={"dL2L": 1.0})
+            cmaker = simple_cmaker([base, adj], ["PGA"])
+            ctx = cmaker.new_ctx(len(LATS))
+            ctx.mag = 6.0
+            ctx.rake = 0.0
+            ctx.hypo_depth = 10.0
+            ctx.vs30 = 760.0
+            ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
+            ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
+            ctx.lat = LATS
+            ctx.lon = LONS
+            ctx.hypo_lat = 0.0
+            ctx.hypo_lon = 0.0
+            with self.assertRaises(ValueError):
+                cmaker.get_mean_stds([ctx])
 
     def test_epsilons_unknown_term_raises(self):
         # Unknown term names must raise rather than silently default

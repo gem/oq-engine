@@ -93,6 +93,32 @@ def build_raytrace_grid(cell_ids, mean_vals):
     return imt_pgns
 
 
+def load_mean_se_for_term(
+        grp, term, imt_str, location, cell_ids,
+        grids, raytrace_se_grids
+        ):
+    """
+    Load the per-cell SE on the mean adjustment for one term/IMT group
+    into grids[imt_str][term]["mean_se"] (hypo/site) OR
+    raytrace_se_grids[term][imt_str] (path). Absence is permitted; the
+    SE is required only when a non-zero epsilon is requested for the
+    term at compute time.
+    """
+    se_key = f"{term}_mean_se"
+    if se_key not in grp:
+        return
+    se_vals = grp[se_key][:]
+    if np.any(se_vals < 0):
+        raise ValueError(
+            f"Negative '{se_key}' for term '{term}', IMT '{imt_str}'")
+    if location == "path":
+        raytrace_se_grids.setdefault(term, {})
+        raytrace_se_grids[term][imt_str] = build_raytrace_grid(
+            cell_ids, se_vals)
+    else:
+        grids[imt_str][term]["mean_se"] = dict(zip(cell_ids, se_vals))
+
+
 def load_residual_grids(hdf5_path):
     """
     Load the hdf5 residual grids into a dict with five keys:
@@ -139,6 +165,7 @@ def load_residual_grids(hdf5_path):
     """
     grids = {}
     raytrace_grids = {}
+    raytrace_se_grids = {}
     sig_scalars = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
@@ -179,8 +206,16 @@ def load_residual_grids(hdf5_path):
                         sig_action, cell_ids, grids, sig_scalars
                         )
 
+                # Optional per-cell SE on the mean, consumed only when a
+                # non-zero epsilon is requested for the term at runtime
+                load_mean_se_for_term(
+                    grp, term, imt_str, location, cell_ids,
+                    grids, raytrace_se_grids
+                    )
+
     return {"grids": grids,
             "raytrace_grids": raytrace_grids, # Cells are OQ pgns instead of h3
+            "raytrace_se_grids": raytrace_se_grids,
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
@@ -341,10 +376,10 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
 
 def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
     """
-    Look up and apply corrections defined in the hdf5. The mean
-    adjustment for each term is scaled by its epsilon before being
-    added. Epsilon = 0 skips both the mean and sigma adjustment for
-    that term.
+    Look up and apply corrections defined in the hdf5. The fitted
+    central mean adjustment for each term is always added; a non-zero
+    epsilon adds a further epsilon * mean_se shift from the per-cell
+    SE stored alongside the mean.
 
     :param grid_data:
         Dict returned by load_residual_grids
@@ -361,8 +396,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
     :param phi:
         Phi (standard 1d numpy array from compute)
     :param epsilons:
-        Per-term scaling of the mean adjustment. Terms not in the dict
-        default to epsilon = 1 (full central adjustment).
+        Per-term epsilon multiplying the per-cell SE on the mean. Terms
+        not in the dict default to epsilon = 0 (central only).
     """
     # Get adjustment data for given imt
     entry = grid_data["grids"].get(imt)
@@ -379,12 +414,7 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
-        epsilon = epsilons.get(term, 1.0)
-
-        # Skip the term entirely when epsilon = 0 - leaving sigma reduced
-        # while zeroing the mean would overstate confidence
-        if epsilon == 0.0:
-            continue
+        epsilon = epsilons.get(term, 0.0)
 
         # Term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
@@ -401,6 +431,21 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
                 ctx.hypo_lon, ctx.hypo_lat,
                 ctx.lon, ctx.lat,
                 )
+
+            if epsilon != 0.0:
+                se_grid = grid_data["raytrace_se_grids"].get(
+                    term, {}).get(imt)
+                if se_grid is None:
+                    raise ValueError(
+                        f"Non-zero epsilon requested for path-based term "
+                        f"'{term}' but per-cell '{term}_mean_se' dataset "
+                        f"is missing for IMT '{imt}'.")
+                se_adj = raytrace_path_adj(
+                    se_grid,
+                    ctx.hypo_lon, ctx.hypo_lat,
+                    ctx.lon, ctx.lat,
+                    )
+                mean_adj = mean_adj + epsilon * se_adj
         else:
             # Skip if this term has no data for the given IMT
             if term not in entry:
@@ -417,8 +462,18 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
             mean_adj = grid_lookup(
                 entry[term]["mean"], lats, lons, grid_data["h3_res"])
 
-        # Apply epsilon-scaled adjustment to mean prediction
-        mean += epsilon * mean_adj
+            if epsilon != 0.0:
+                if "mean_se" not in entry[term]:
+                    raise ValueError(
+                        f"Non-zero epsilon requested for term '{term}' but "
+                        f"per-cell '{term}_mean_se' dataset is missing for "
+                        f"IMT '{imt}'.")
+                se_adj = grid_lookup(
+                    entry[term]["mean_se"], lats, lons, grid_data["h3_res"])
+                mean_adj = mean_adj + epsilon * se_adj
+
+        # Apply adjustment to mean prediction
+        mean += mean_adj
 
         # Skip sigma adjustment if not configured for this term
         if sig_action == "none":
@@ -478,12 +533,17 @@ class GridAdjustedGMPE(GMPE):
 
       * sig_comp_modified (required when sig_adjustment is not "none"): Which
         std-dev component to adjust for the given residual term:
-        
+
         * tau = Adjust inter-event std dev
 
         * phi = Adjust intra-event std dev
-        
+
         * sig = Adjust total std dev
+
+    An optional per-cell dataset "{term}_mean_se" may also be present in
+    each IMT group for a term. This is the SE on the fitted central
+    mean adjustment and is only read when a non-zero epsilon is supplied
+    for that term via the "epsilons" kwarg.
 
     NOTE: The corrective terms (each key in the res_terms dict) are not
     fixed - the user can specify as they wish (e.g. only include dS2S).
@@ -513,11 +573,12 @@ class GridAdjustedGMPE(GMPE):
         Path to the hdf5 file with gridded adjustments.
 
     :param epsilons:
-        Optional dict scaling the per-term mean adjustment, e.g.
-        {"dL2L": 1.0, "dS2S": 1.0, "dP2P": 0.0} applies the fitted
-        dL2L and dS2S but skips dP2P entirely. 0.0 skips a term (mean
-        and sigma reduction both turned off). Terms not in the dict
-        default to 1.0.
+        Optional dict of per-term epsilons, e.g.
+        {"dL2L": -1.732, "dS2S": 0.0, "dP2P": 1.732}. Each term's mean
+        is shifted by epsilon * mean_se using the per-cell SE stored
+        under "{term}_mean_se" in the HDF5. Terms not in the dict
+        default to epsilon = 0 (central only, no shift). A non-zero
+        epsilon raises an error if the matching SE dataset is missing.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
