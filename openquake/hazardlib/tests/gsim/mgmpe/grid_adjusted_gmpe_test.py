@@ -86,8 +86,6 @@ EXPECTED_MEAN_DIFFS = [
 
 # Per-cell SE of the mean for each term/IMT, matching the datasets
 # written to test_grid_adjustments.hdf5
-# NOTE: For att_per_km the SE values are exactly 1/10 of the mean
-# values so the raytraced path SE adj equals EXPECTED_PATH_ADJ/10
 DL2L_SE_PER_CELL = [
     np.array([0.010, 0.015, 0.020, 0.025]),  # PGA
     np.array([0.008, 0.012, 0.016, 0.020]),  # SA(0.5)
@@ -98,7 +96,11 @@ DS2S_SE_PER_CELL = [
     np.array([0.016, 0.020, 0.024, 0.028]),  # SA(0.5)
     np.array([0.012, 0.015, 0.018, 0.021]),  # SA(1.0)
 ]
-EXPECTED_PATH_SE_ADJ = [p / 10. for p in EXPECTED_PATH_ADJ]
+EXPECTED_PATH_SE_ADJ = [
+    np.array([0., 0.115658587, 0.22321576, 0.121456404]),  # PGA
+    np.array([0., 0.118827316, 0.20120857, 0.133602045]),  # SA(0.5)
+    np.array([0., 0.083971303, 0.213784103, 0.091092302]), # SA(1.0)
+]
 
 
 class GridAdjustedGMPETest(unittest.TestCase):
