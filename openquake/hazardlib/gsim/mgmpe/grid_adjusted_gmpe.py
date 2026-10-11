@@ -339,10 +339,11 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
             sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
 
 
-def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
+def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
     """
     Look up and apply corrections defined in the hdf5. The mean
-    adjustment is always added.
+    adjustment for each term is scaled by its epsilon before being
+    added (epsilon=1 is central, epsilon=0 turns the term off).
 
     :param grid_data:
         Dict returned by load_residual_grids
@@ -358,14 +359,17 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
         Tau (standard 1d numpy array from compute)
     :param phi:
         Phi (standard 1d numpy array from compute)
+    :param epsilons:
+        Per-term scaling of the mean adjustment. Terms not in the dict
+        default to epsilon = 1 (full central adjustment).
     """
     # Get adjustment data for given imt
     entry = grid_data["grids"].get(imt)
-    
+
     # Check if no data
     if entry is None:
-        return 
-    
+        return
+
     # Apply each correction
     for term, cfg in grid_data["res_terms"].items():
         # Example of (term, cfg):
@@ -374,10 +378,11 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
 
         # Check sigma adjustment configuration
         sig_action = cfg.get("sig_adjustment", "none")
+        epsilon = epsilons.get(term, 1.0)
 
         # Term can be selected based on hypo or site location or both (path-based)
         if cfg["location"] == "path":
-            
+
             # Travel path based (ray-tracing)
             if (term not in grid_data["raytrace_grids"] or
                 imt not in grid_data["raytrace_grids"][term]):
@@ -406,8 +411,8 @@ def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi):
             mean_adj = grid_lookup(
                 entry[term]["mean"], lats, lons, grid_data["h3_res"])
 
-        # Apply adjustment to mean prediction
-        mean += mean_adj
+        # Apply epsilon-scaled adjustment to mean prediction
+        mean += epsilon * mean_adj
 
         # Skip sigma adjustment if not configured for this term
         if sig_action == "none":
@@ -500,6 +505,11 @@ class GridAdjustedGMPE(GMPE):
 
     :param grid_hdf5_file:
         Path to the hdf5 file with gridded adjustments.
+
+    :param epsilons:
+        Optional dict scaling the per-term mean adjustment. 0.0 is
+        ergodic. Terms not in the dict default to 1.0. Sigma reduction
+        is unaffected.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
@@ -513,14 +523,23 @@ class GridAdjustedGMPE(GMPE):
 
     experimental = True # It's not extensively tested yet
 
-    def __init__(self, gmpe_name, grid_hdf5_file, **kwargs):
-        
+    def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None, **kwargs):
+
         # Instantiate the underlying GMM
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
+
+        # Per-term epsilons for mean-adjustment scaling (default 1.0)
+        self.epsilons = dict(epsilons) if epsilons else {}
+        unknown = set(self.epsilons) - set(self.grid_data["res_terms"])
+        if unknown:
+            # Reject typos rather than silently falling back to default
+            raise ValueError(
+                f"Unknown term(s) in epsilons: {sorted(unknown)}. "
+                f"Known terms: {sorted(self.grid_data['res_terms'])}.")
 
         # Check for any invalid 'location' assignments in res_terms
         if any(cfg['location'] not in ['hypo', 'site', 'path'] for
@@ -565,4 +584,5 @@ class GridAdjustedGMPE(GMPE):
         # Apply grid-based corrections
         for m, imt in enumerate(imts):
             _apply_grid_corrections(self.grid_data, ctx, str(imt),
-                                    mean[m], sig[m], tau[m], phi[m])
+                                    mean[m], sig[m], tau[m], phi[m],
+                                    self.epsilons)

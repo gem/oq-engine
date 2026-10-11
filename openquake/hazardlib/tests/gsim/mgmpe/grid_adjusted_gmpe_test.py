@@ -83,10 +83,11 @@ EXPECTED_MEAN_DIFFS = [
 
 class GridAdjustedGMPETest(unittest.TestCase):
 
-    def _get_mean_stds(self, imts):
+    def _get_mean_stds(self, imts, epsilons=None):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
+                               epsilons=epsilons)
         cmaker = simple_cmaker([base, adj], imts)
         ctx = cmaker.new_ctx(len(LATS))
         ctx.mag = 6.0
@@ -154,3 +155,50 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(
                 gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
+
+    def test_epsilons_central(self):
+        # epsilon = 1.0 everywhere must match the default-kwarg behaviour
+        central = {"dL2L": 1.0, "dS2S": 1.0, "att_per_km": 1.0}
+        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=central)
+        for m in range(len(IMTS)):
+            aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
+                decimal=DP)
+            aae(sig[GRID, m],
+                np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
+
+    def test_epsilons_zero_turns_off_mean(self):
+        # epsilon = 0 zeros the mean adjustment but leaves sigma reduced
+        zeros = {"dL2L": 0.0, "dS2S": 0.0, "att_per_km": 0.0}
+        mea, sig, tau, phi = self._get_mean_stds(IMTS, epsilons=zeros)
+        base_mea, base_sig, base_tau, base_phi = self._get_mean_stds(IMTS)
+        for m in range(len(IMTS)):
+            aae(mea[GRID, m], mea[BASE, m], decimal=DP)
+            aae(sig[GRID, m], base_sig[GRID, m], decimal=DP)
+            aae(tau[GRID, m], base_tau[GRID, m], decimal=DP)
+            aae(phi[GRID, m], base_phi[GRID, m], decimal=DP)
+
+    def test_epsilons_scales_mean_linearly(self):
+        # Mean shift must be linear in epsilon per term
+        mea_cen, *_ = self._get_mean_stds(IMTS,
+                                           epsilons={"dL2L": 1.0,
+                                                     "dS2S": 1.0,
+                                                     "att_per_km": 1.0})
+        mea_zero, *_ = self._get_mean_stds(IMTS,
+                                            epsilons={"dL2L": 0.0,
+                                                      "dS2S": 0.0,
+                                                      "att_per_km": 0.0})
+        for eps in [0.5, 1.5, 2.0]:
+            mea, *_ = self._get_mean_stds(IMTS,
+                                           epsilons={"dL2L": eps,
+                                                     "dS2S": eps,
+                                                     "att_per_km": eps})
+            for m in range(len(IMTS)):
+                expected = mea_zero[GRID, m] + eps * (
+                    mea_cen[GRID, m] - mea_zero[GRID, m])
+                aae(mea[GRID, m], expected, decimal=DP)
+
+    def test_epsilons_unknown_term_raises(self):
+        # Unknown term names must raise rather than silently default
+        with self.assertRaises(ValueError):
+            GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
+                             epsilons={"dL2L": 1.0, "nope": 0.5})
