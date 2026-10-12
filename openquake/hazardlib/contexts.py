@@ -46,9 +46,8 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo import Point as GeoPoint
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.surface.base import surface_to_arrays, to_arrays
 from openquake.hazardlib.geo.surface.planar import (
-    project, project_back, get_distances_planar, PlanarSurface)
+    project, project_back, get_distances_planar)
 
 U8 = numpy.uint8
 I32 = numpy.int32
