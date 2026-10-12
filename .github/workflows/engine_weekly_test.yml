@@ -36,10 +36,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup debugging session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
@@ -60,6 +56,12 @@ jobs:
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
               cp -- "$file" "${file%.default.tmpl}"
           done
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Test WebUI and run https calculation
         run: |
           source ~/openquake/bin/activate
