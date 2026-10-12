@@ -38,6 +38,7 @@ from openquake.hazardlib.lt import (
     get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.contexts import (
     get_cmakers, read_full_lt_by_label, make_results)
+from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -307,21 +308,17 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
     :returns: a list of dictionaries, one per pair, as returned by
         baseclassical, or None if make_results cannot be used
     """
-    # NB: make_results raises a ValueError when the variants cannot be
-    # derived from a single base variant. This is signalled by an exception
-    # and not by a separate pre-check because the conditions depend on the
-    # RmapMaker and on the magnitudes of each source, which are only known
-    # inside make_results. The caller then computes the variants one at a
-    # time (see baseclassical), so the exception is a fallback, not an
-    # error. The cases are: the sources are mutually exclusive or clustered
-    # (src_mutex, rup_mutex, cluster); there are too many sites (not
-    # fewsites); a variant has a magnitude missing in the base (see
-    # _mag_ratios, the base is the one with most magnitudes); the variants
-    # have a different number of sources (see the check in make_results)
     try:
         dics = make_results([sg for _, sg in pairs],
                             [cm for cm, _ in pairs], sites)
-    except ValueError:
+    except (ValueError, FilteredAway):
+        # NB: make_results raises a ValueError when the variants
+        # cannot be derived from a single base. The cases are: the
+        # sources are mutually exclusive or clustered (src_mutex,
+        # rup_mutex, cluster); a variant has a magnitude missing in the base
+        # (see _mag_ratios, the base is the one with most magnitudes);
+        # the variants have a different number of sources, i.e. some
+        # sources were filtered away
         return None
     for (cmaker_, _), dic in zip(pairs, dics):
         dic['rmap'] = dic['rmap'].remove_zeros() \
@@ -390,9 +387,11 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
             bykey.setdefault(gkey, []).append((cm, sg))
         slow = []
         for pairs in bykey.values():
-            # NB: make_results is for few sites only, see _make_results
+            # NB: make_results is for few sites only, see _make_results;
+            # the check avoids calling it when it would raise ValueError
+            few = len(sites.complete) <= cmaker.max_sites_disagg
             dics = _make_results(pairs, sites, remove_zeros, as_rmap) \
-                if len(pairs) > 1 else None
+                if len(pairs) > 1 and few else None
             if dics is None:
                 slow.extend(pairs)
             else:

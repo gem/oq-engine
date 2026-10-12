@@ -41,7 +41,7 @@ from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
-    get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
+    get_dparam, get_distances, getdefault, MINMAG, MAXMAG, FilteredAway)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
@@ -1867,38 +1867,45 @@ def _mag_ratios(base, dic):
             if rate > 0}
 
 
-def make_results(groups, cmakers, sitecol):
+# called only in the few sites case
+def make_results(groups, cmakers, sites):
     """
     Compute the rates of several variants of the same groups, i.e. groups
     with the same sources and the same geometry but different MFDs, with
-    the contexts computed only once (see classical.bysrc_results).
+    the contexts computed only once (called by classical.bysrc_results).
 
     :param groups: a list of V groups, one per variant, with the same
         sources in the same order
     :param cmakers: a list of V cmakers, one per variant, with the gids
-    :param sitecol: a SiteCollection instance, with few sites
+    :param sites: a SiteCollection instance, with few sites
     :returns: a list of V dictionaries, as returned by RmapMaker.make
     :raises ValueError: if the variants cannot be computed this way
+    :raises FilteredAway: if some sources of a variant were filtered away
 
     The contexts are generated from the base variant, i.e. the one with
     the most magnitudes, and for each other variant the occurrence rates
-    of the contexts are rescaled by the ratio of the rates of their
-    magnitude (see _mag_ratios). Only independent Poisson sources with few
-    sites are supported, since the probabilities are then linear in the
-    rates.
+    of the contexts are rescaled by the ratio of the rates of their magnitude
+    (see _mag_ratios). Only independent Poisson sources are supported,
+    since the probabilities are then linear in the rates.
     """
     rates = [_rates_by_mag(grp) for grp in groups]
     b = max(range(len(groups)),
             key=lambda v: sum(len(d) for d in rates[v]))
     base = groups[b]
-    rmaker = RmapMaker(cmakers[b], sitecol, base)
+    rmaker = RmapMaker(cmakers[b], sites, base)
     if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
         raise ValueError('mutually exclusive sources')
-    if not rmaker.fewsites:
-        raise ValueError('too many sites')
+    # NB: the caller checks the number of sites, see classical.bysrc_results
+    assert rmaker.fewsites, 'too many sites'
     sources = rmaker.sources
-    if any(len(grp) != len(sources) for grp in groups):
-        raise ValueError('the variants have different sources')
+    # NB: the variants can have fewer sources than the base, since the
+    # sources are filtered by minimum_magnitude after the uncertainties
+    # are applied, see classical.cmakers_groups
+    nsrcs = [len(grp) for grp in groups]
+    if any(n != len(sources) for n in nsrcs):
+        raise FilteredAway(
+            'the variants have %s sources, expected %d: some sources were '
+            'filtered away by the uncertainties' % (nsrcs, len(sources)))
     # ratios[v][s] = dictionary mag -> ratio for source s of variant v
     # e.g. logictree/case_18_bis: 9 variants (3 abGR x 3 maxMagGR), the base
     # is variant 2 (3 mags, rate 0.115893 at M 5.5); variant 3 has rate
@@ -1921,17 +1928,18 @@ def make_results(groups, cmakers, sitecol):
     for s, src in enumerate(sources):
         nctxs = 0
         t0 = time.time()
-        for ctx in rmaker.gen_ctxs(src):
-            for poes, _, _, _, ctxt in cm.gen_poes(ctx):
+        # NB: the contexts of a source are concatenated, as in
+        # _make_src_indep, otherwise gen_poes is called on tiny arrays
+        # and the mean_stds are computed many more times
+        ctxs = list(rmaker.gen_ctxs(src))
+        if ctxs:
+            for poes, _, _, _, ctxt in cm.gen_poes(concat(ctxs)):
                 nctxs += len(ctxt)
                 mag = round(float(ctxt.mag[0]), 3)
                 for v, pnemap in enumerate(pnemaps):
                     rates_v = ctxt.occurrence_rate * ratios[v][s].get(
                         mag, 0.)
                     pnemap.update_indep(poes, ctxt, tspan, rates=rates_v)
-        # NB: the sum of the rmap of the variants is e.g. 0.04701 for
-        # variant 0, 0.04701 for variant 1, 0.06193 for variant 2 and
-        # 0.14533 for variant 3 in logictree/case_18_bis (first call)
         if cm.oq.keep_rupdata:  # the ruptures of each variant
             for v in range(len(groups)):
                 rups[v].extend(_scale_rups(rmaker.rupdata, ratios[v][s]))

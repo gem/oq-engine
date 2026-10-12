@@ -572,8 +572,7 @@ def _dummy(utype, source, value):
 
 # uncertainties changing only the MFD or the rates, i.e. keeping the geometry
 # of the ruptures; the others (and the unknown ones) are geometry-changing,
-# see classical.geometry_key. recurSet, recurRow and rateSplit were checked
-# against the expected values of logictree case_25
+# see classical.geometry_key.
 GEOMETRY_PRESERVING = frozenset([
     'abGRAbsolute', 'abMaxMagAbsolute', 'bGRAbsolute', 'bACAbsolute',
     'bGRRelative', 'bACRelative', 'maxMagGRRelative',
