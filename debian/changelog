@@ -1,3 +1,7 @@
+  [Claudio Schill, Christopher Brooks]
+  * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
+    and add a small unit test for this feature.
+  
   [Christopher Brooks]
   * Introduced a epsilon scaling capability in GridAdjustedGMPE
     with updated unit tests and QA tests (classical/case_11).
