@@ -13,8 +13,8 @@ calculations. It does not make the resulting GMFs identical when the sites
 are split differently: the ground motions are sampled for the sites in each
 calculation. See :ref:`risk-calculations` for a discussion of this caveat.
 
-Generating a reusable SES file
-------------------------------
+Generating a reusable SES datastore
+-----------------------------------
 
 An event-based hazard job can sample the stochastic event set without
 generating GMFs by setting::
@@ -25,11 +25,25 @@ generating GMFs by setting::
 The job must still define its source model, ground-motion logic tree,
 investigation time, logic-tree sampling, and SES parameters. Running such a
 job creates a normal engine datastore containing the sampled ruptures and
-events.
+events. Like every engine datastore, it is an HDF5 file, normally named
+``calc_<calculation_id>.hdf5``. This is the general approach for both GEM
+models and independently developed hazard models; it does not require a
+``mosaic_model`` setting or a three-letter model code.
 
-To give the SES a chosen filename, or to combine the ruptures from several
-hazard models, use a TOML workflow and the ``build_ses`` postprocessor. For
-example, save the following as ``ses.toml``::
+Run the rupture-only job in the usual way::
+
+  oq run job_ses.ini
+
+Keep the calculation ID printed by the engine. A downstream calculation can
+refer to that ID, or directly to the corresponding HDF5 datastore.
+
+Building a combined GEM Mosaic SES
+----------------------------------
+
+The ``build_ses`` postprocessor can combine ruptures from several GEM Mosaic
+models and give the combined SES a chosen filename. This is a specialised
+multi-model workflow rather than a requirement for using an SES. For example,
+save the following as ``ses.toml``::
 
   [workflow]
   description = "Build a reusable SES"
@@ -60,16 +74,20 @@ the postprocessor merges their site collections, ruptures, events, logic
 trees, and calculation parameters into ``ses.hdf5``. The output path is
 relative to the TOML file.
 
-Each calculation that contributes to a combined SES must have a unique
-three-letter ``mosaic_model`` code. Its TOML job name should end with the
-same code, as in ``EUR`` or ``hazardEUR``. The postprocessor retains the
-ruptures labelled with that model. The modeller remains responsible for
-checking that the models form a scientifically appropriate combination.
+In the current implementation, each calculation contributing to this kind
+of combined SES must have a unique three-letter ``mosaic_model`` code. Its
+TOML job name must end with that code, as in ``EUR`` or ``hazardEUR``. This
+is a constraint of the GEM Mosaic merger, not a general requirement on
+external hazard models or ordinary engine datastores. Do not invent a Mosaic
+code for a single external model; use its rupture-only calculation datastore
+directly instead.
 
-For a single hazard model, use one job table and one ``mosaic_model`` code.
-The ``build_ses`` postprocessor is called only after every unexpected job
-failure has been resolved. Do not treat the output file as complete unless
-the postprocessor has run successfully.
+The postprocessor retains the ruptures labelled with each selected model.
+The modeller remains responsible for checking that the models form a
+scientifically appropriate combination. The ``build_ses`` postprocessor is
+called only after every unexpected job failure has been resolved. Do not
+treat the output file as complete unless the postprocessor has run
+successfully.
 
 Starting a GMF calculation from the SES
 ---------------------------------------
@@ -100,9 +118,16 @@ outline is::
   maximum_distance = 200
   hazard_curves_from_gmfs = true
 
-Pass the SES file with ``--hc``::
+Pass the calculation ID of a rupture-only job with ``--hc``::
 
-  oq run job_gmf.ini --hc /path/to/ses.hdf5
+  oq run job_gmf.ini --hc 42
+
+The HDF5 pathname can be used instead::
+
+  oq run job_gmf.ini --hc /path/to/calc_42.hdf5
+
+For a combined Mosaic SES, pass the generated ``ses.hdf5`` file in the same
+way.
 
 Alternatively, set ``hazard_calculation_id`` to the HDF5 pathname in the
 ``job.ini`` file. An absolute path avoids ambiguity. Within a TOML workflow,
@@ -141,7 +166,12 @@ fragility functions, aggregation settings, and risk outputs. For example::
   minimum_intensity = .02
   maximum_distance = 200
 
-Run it with::
+Run it with the calculation ID of the rupture-only job::
+
+  oq run job_risk.ini --hc 42
+
+Alternatively, use the path to either a regular engine datastore or a
+combined Mosaic SES::
 
   oq run job_risk.ini --hc /path/to/ses.hdf5
 
@@ -177,7 +207,8 @@ workflow settings include ``calculation_mode``, ``ground_motion_fields``,
 ``minimum_magnitude``, and ``hazard_calculation_id``. Relative INI and HDF5
 paths are resolved from the directory containing the TOML file.
 
-The following multi-workflow builds an SES before starting two risk jobs::
+The following Mosaic-specific multi-workflow builds a combined SES before
+starting two risk jobs::
 
   [multi.workflow]
   description = "Build an SES and calculate risk"

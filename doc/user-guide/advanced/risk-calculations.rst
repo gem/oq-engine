@@ -174,12 +174,17 @@ see similar results with and without splitting. But you will
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
 
-Understanding the SES file
---------------------------
+Understanding a combined GEM Mosaic SES file
+--------------------------------------------
 
 The workflow-based procedure for generating an SES HDF5 file and using it
 as the input to GMF or risk calculations is described in
 :ref:`ses-workflows`.
+
+An ordinary rupture-only event-based calculation already produces an HDF5
+datastore that can be reused by an external user without assigning a
+three-letter model code. The remainder of this section describes the
+specialised case in which several GEM Mosaic models are combined.
 
 The command
 
@@ -187,8 +192,10 @@ The command
 
 is able to take multiple hazard models and build a single file containing
 ruptures from all the models. The generated ruptures are labelled by their
-three-letter mosaic model code. Model overlaps and duplicated sources must
-still be reviewed when defining the combined model.
+three-letter Mosaic model code. This code is a constraint of the combined
+Mosaic SES implementation, not a requirement for an independently developed
+hazard model. Model overlaps and duplicated sources must still be reviewed
+when defining the combined model.
 
 The generated ``ses.hdf5`` file contains the ruptures from all the models in
 a single structured array. In particular, the ``model`` field identifies
