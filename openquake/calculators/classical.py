@@ -382,10 +382,26 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # the sets with the same geometry key have the same geometry, so
         # their MFD variants are computed together by make_results (see
         # geometry_key); the other sets are computed one at a time
+        # For case_18/job_bis.ini (one point source, 3x3x2 realizations) all
+        # the 18 pairs are fast and form two groups of 9: the branchset
+        # setLowerSeismDepthAbsolute is not geometry-preserving, so the
+        # depths 10.0 and 20.0 give two geometry keys, each shared by the
+        # 9 sets of the abGR x maxMagGR branches (3 x 3)
+        # sorted(bykey) = [(('bs6', '10.0'),), (('bs6', '20.0'),)]
         bykey = {}
         for cm, sg, gkey in triples:
             bykey.setdefault(gkey, []).append((cm, sg))
         slow = []
+        # for case_25 (one site, so few=True) each pair is a source
+        # restricted to one set of realizations (one gid).
+        # The fast pairs are the ones whose geometry key is shared with
+        # at least one other pair, computed together by _make_results in
+        # groups of 2-4; the slow pairs have a unique geometry key and
+        # are computed one at a time by baseclassical.
+        # Area sources (CollapsedPointSource, alt*-bkg): 20 fast, 3 slow
+        # (alt2-NVA-AB-bkg, alt2-NVA-bkg, alt3-NVA-AB-bkg: 1 slow each).
+        # Fault sources (SimpleFaultSource): 24 fast, 27 slow; they can
+        # fall on either side depending on the other pairs in the group.
         for pairs in bykey.values():
             # NB: _make_results is for few sites only
             few = len(sites.complete) <= cmaker.max_sites_disagg
