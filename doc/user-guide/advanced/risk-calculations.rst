@@ -174,67 +174,44 @@ see similar results with and without splitting. But you will
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
 
-Understanding a combined GEM Mosaic SES file
---------------------------------------------
+Understanding a reusable SES datastore
+--------------------------------------
 
 The workflow-based procedure for generating an SES HDF5 file and using it
 as the input to GMF or risk calculations is described in
 :ref:`ses-workflows`.
 
-An ordinary rupture-only event-based calculation already produces an HDF5
-datastore that can be reused by an external user without assigning a
-three-letter model code. The remainder of this section describes the
-specialised case in which several GEM Mosaic models are combined.
+A rupture-only event-based calculation produces a normal engine datastore.
+The main datasets needed by a downstream calculation are ``ruptures``,
+``rupgeoms``, ``events``, ``full_lt``, ``oqparam``, and ``sitecol``. Users
+normally do not need to inspect these datasets directly.
 
-The command
-
-``$ oq shell openquake.engine.global_ses <mosaic_dir> ses.hdf5``
-
-is able to take multiple hazard models and build a single file containing
-ruptures from all the models. The generated ruptures are labelled by their
-three-letter Mosaic model code. This code is a constraint of the combined
-Mosaic SES implementation, not a requirement for an independently developed
-hazard model. Model overlaps and duplicated sources must still be reviewed
-when defining the combined model.
-
-The generated ``ses.hdf5`` file contains the ruptures from all the models in
-a single structured array. In particular, the ``model`` field identifies
-the model that generated each rupture.
-
-There is also a field called ``trt_smr`` that contains information
-about the tectonic region type and the source model realization to
-which the rupture belongs. Extracting such information is a digestible
-format requires some work and knowledge of the internals of the engine.
-
-Here we will give an explanation. Let's start by saying that the engine
-has a limit of at most 256 tectonic region types, therefore 1 byte is
-enough to identify a tectonic region type. The engine has also a limit
-of 2^24 = 16,777,216 source model realizations, therefore 3 bytes are
-enough to identify uniquely a source model realization. Therefore with
-a 32 bit integer (4 bytes) we can identify uniquely both the tectonic
-region type and the source model realization. That 32 bit integer is
-called ``trt_smr`` and can be used to extract the ``trt`` index and
-the ``smr`` index as follows::
+The ``trt_smr`` field identifies the tectonic region type and source model
+realization to which each rupture belongs. The engine supports at most 256
+tectonic region types, which can be stored in one byte, and 2^24 =
+16,777,216 source model realizations, which can be stored in three bytes.
+It combines both indices in the 32-bit ``trt_smr`` value. Extract them as
+follows::
 
   trt, smr = divmod(trt_smr, 2**24)
 
-From the ``trt`` index one can extract the tectonic region type as follows::
+Use the ``trt`` index to obtain the tectonic region type::
 
    full_lt.trts[trt]
 
-From the ``smr`` index one can extract the source model realization as follows::
+Use the ``smr`` index to obtain the source model realization::
 
   full_lt.sm_rlzs[smr]
 
-You can visualize `sm_rlzs` for a given model as follows::
+You can visualize ``sm_rlzs`` as follows::
 
- $ oq show sm_rlzs:JPN ses.hdf5
+ $ oq show sm_rlzs SES.hdf5
  | ordinal | lt_path | value               | samples | weight |
  |---------+---------+---------------------+---------+--------|
  | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
 
-The ``full_lt`` objects can be extracted from the datastore, one
-for each model. A Python script should get you started:
+The ``full_lt`` object can also be extracted from the datastore. The
+following script counts ruptures by tectonic region type:
 
 .. code-block:: python
 
@@ -243,16 +220,14 @@ for each model. A Python script should get you started:
 
  def main(ses_hdf5):
      """
-     Count the ruptures by model and TRT
+     Count the ruptures by TRT.
      """
      with hdf5.File(ses_hdf5) as f:
          ruptures = f['ruptures'][:]
-         for model in f['full_lt']:
-             full_lt = f['full_lt/' + model]
-             rups = ruptures[ruptures['model'] == model.encode('ascii')]
-             trt_indices = rups['trt_smr'] // TWO24
-             for i, trt in enumerate(full_lt.trts):
-                 print(model, trt, (trt_indices==i).sum())
+         full_lt = f['full_lt']
+         trt_indices = ruptures['trt_smr'] // TWO24
+         for i, trt in enumerate(full_lt.trts):
+             print(trt, (trt_indices == i).sum())
 
  if __name__ == '__main__':
      sap.run(main)
