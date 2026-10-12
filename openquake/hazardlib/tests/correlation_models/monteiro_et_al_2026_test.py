@@ -110,6 +110,9 @@ def test_many_imts_are_positive_definite():
     (SA(0.05), 'periods from 0.1 to 3 s'),
     (SA(5.1), 'periods from 0.1 to 3 s'),
     (SA(1.0, damping=10.0), 'only 5%-damped SA'),
+    (FIV3(3.1), 'periods from 0.1 to 3 s'),
+    (Sa_avg2(0.09), 'periods from 0.1 to 3 s'),
+    (Sa_avg3(3.01), 'periods from 0.1 to 3 s')
 ])
 def test_rejects_imts_outside_calibrated_domain(imt, message):
     with pytest.raises(ValueError, match=message):

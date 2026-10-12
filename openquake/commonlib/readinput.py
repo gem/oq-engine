@@ -1274,7 +1274,8 @@ def get_crmodel(oqparam):
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
 
-    if 'consequence' in oqparam.inputs:
+    if 'consequence' in oqparam.inputs or (
+            riskmodels.get_xml_consequence_files(oqparam.inputs)):
         consdict = read_consdict(oqparam, limit_states, perils)
     else:
         consdict = {}
@@ -1291,22 +1292,25 @@ def read_consdict(oqparam, limit_states, perils):
     if not limit_states:
         raise InvalidFile('Missing fragility functions in %s' %
                           oqparam.inputs['job_ini'])
-    # build consdict of the form consequence_by_tagname -> tag -> array
-    consdict = {}
-    for by, fnames in oqparam.inputs['consequence'].items():
-        if by == 'taxonomy':  # obsolete name
-            by = 'risk_id'
+    # collect (by, fname, dframe) triples, one per consequence source
+    sources = []
+    for by, fnames in oqparam.inputs.get('consequence', {}).items():
         if isinstance(fnames, str):  # single file
             fnames = [fnames]
         # i.e. files collapsed.csv, fatalities.csv, ... with headers like
         # taxonomy,consequence,slight,moderate,extensive
-        dfs = []
         for fname in fnames:
             if os.path.exists(fname):
-                dfs.append(pandas.read_csv(fname))
-        if not dfs:
-            continue
-        df = pandas.concat(dfs)
+                sources.append((by, fname, pandas.read_csv(fname)))
+    # NRML consequence models, i.e. structural_consequence_file = x.xml
+    for fname in riskmodels.get_xml_consequence_files(oqparam.inputs):
+        sources.append(('taxonomy', fname,
+                        _read_xml_consequence(fname, limit_states)))
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    for by, fname, df in sources:
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
         # NB: consequence files depend on loss_type, unlike fragility files
         if 'taxonomy' in df.columns:  # obsolete name
             df['risk_id'] = df['taxonomy']
@@ -1318,13 +1322,32 @@ def read_consdict(oqparam, limit_states, perils):
         for consequence in df.consequence.unique():
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
-                                  (consequence, fnames))
+                                  (consequence, fname))
             if by == 'risk_id':  # by is risk_id or taxonomy
                 key = f'{consequence}_by_{by}'
             else:
                 key = by
-            consdict[key] = df[df.consequence == consequence]
+            sub = df[df.consequence == consequence]
+            if key in consdict:  # same consequence from several sources
+                sub = pandas.concat([consdict[key], sub])
+            consdict[key] = sub
     return consdict
+
+
+def _read_xml_consequence(fname, limit_states):
+    """
+    :returns: a DataFrame with columns risk_id, consequence, loss_type,
+        peril and the limit states, read from a NRML consequenceModel
+    """
+    cmodel = nrml.to_python(fname)
+    if list(cmodel.limitStates) != list(limit_states):
+        raise InvalidFile('%s: the limit states %s do not match the '
+                          'fragility ones %s' % (
+                              fname, cmodel.limitStates, limit_states))
+    rows = [[risk_id, 'losses', cmodel.lossCategory, 'groundshaking',
+             *coeffs] for risk_id, coeffs in cmodel.items()]
+    columns = ['risk_id', 'consequence', 'loss_type', 'peril']
+    return pandas.DataFrame(rows, columns=columns + list(limit_states))
 
 
 def get_exposure(oqparam, h5=None):

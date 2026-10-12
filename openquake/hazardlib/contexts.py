@@ -41,7 +41,7 @@ from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
-    get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
+    get_dparam, get_distances, getdefault, MINMAG, MAXMAG, FilteredAway)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo import Point as GeoPoint
@@ -1887,6 +1887,208 @@ class RmapMaker(object):
             # since in `store_mean_rates_by_src` we use corename
             dic['basename'] = valid.basename(self.sources[0])
         return dic
+
+
+def _rates_by_mag(sources):
+    # :param sources: a list of sources
+    # :returns: a list of dictionaries mag -> annual occurrence rate, one
+    #     per source, read from the MFD (cheap, no ruptures enumerated)
+    out = []
+    for src in sources:
+        dic = {}
+        for mag, rate in src.get_annual_occurrence_rates():
+            mag = round(mag, 3)
+            dic[mag] = dic.get(mag, 0.) + rate
+        out.append(dic)
+    return out
+
+
+def _mag_ratios(base, dic):
+    # :param base: dictionary mag -> rate of a base source
+    # :param dic: dictionary mag -> rate of another variant of the source
+    # :returns: dictionary mag -> ratio of the rates, i.e. the factor
+    #     applied to the occurrence rates of the base contexts of that mag;
+    #     the magnitudes missing in the variant get ratio 0 (see get),
+    #     the ones missing in the base are not supported
+    #
+    # NB: this assumes that the MFD variants rescale uniformly the
+    # ruptures of a magnitude, i.e. the relative weights of the ruptures
+    # (hypocenters, nodal planes) do not change, see make_results
+    if set(dic) - set(base):
+        raise ValueError('new magnitudes in a variant')
+    return {mag: dic.get(mag, 0.) / rate for mag, rate in base.items()
+            if rate > 0}
+
+
+# called only in the few sites case
+def make_results(groups, cmakers, sites):
+    """
+    Compute the rates of several variants of the same groups, i.e. groups
+    with the same sources and the same geometry but different MFDs, with
+    the contexts computed only once (called by classical.bysrc_results).
+
+    :param groups: a list of V groups, one per variant, with the same
+        sources in the same order
+    :param cmakers: a list of V cmakers, one per variant, with the gids
+    :param sites: a SiteCollection instance, with few sites
+    :returns: a list of V dictionaries, as returned by RmapMaker.make
+    :raises ValueError: if the variants cannot be computed this way
+    :raises FilteredAway: if some sources of a variant were filtered away
+
+    The contexts are generated from the base variant, i.e. the one with
+    the most magnitudes, and for each other variant the occurrence rates
+    of the contexts are rescaled by the ratio of the rates of their magnitude
+    (see _mag_ratios). Only independent Poisson sources are supported,
+    since the probabilities are then linear in the rates.
+    """
+    rates = [_rates_by_mag(grp) for grp in groups]
+    b = max(range(len(groups)),
+            key=lambda v: sum(len(d) for d in rates[v]))
+    rmaker = RmapMaker(cmakers[b], sites, groups[b])
+    if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
+        raise ValueError('mutually exclusive sources')
+    # NB: the caller checks the number of sites, see classical.bysrc_results
+    assert rmaker.fewsites, 'too many sites'
+    sources = rmaker.sources
+    # NB: the variants can have fewer sources than the base, since the
+    # sources are filtered by minimum_magnitude after the uncertainties
+    # are applied, see classical.cmakers_groups_gkeys
+    nsrcs = [len(grp) for grp in groups]
+    if any(n != len(sources) for n in nsrcs):
+        raise FilteredAway(
+            'the variants have %s sources, expected %d: some sources were '
+            'filtered away by the uncertainties' % (nsrcs, len(sources)))
+    # ratios[v][s] = dictionary mag -> ratio for source s of variant v
+    # e.g. logictree/case_18_bis: 9 variants (3 abGR x 3 maxMagGR), the base
+    # is variant 2 (3 mags, rate 0.115893 at M 5.5); variant 3 has rate
+    # 0.284605 at M 5.5, i.e. ratio 2.4558, and variant 0 (maxMag 7.0)
+    # has no magnitude 7.5, i.e. ratio 0 for it
+    ratios = [[_mag_ratios(rates[b][s], rates[v][s])
+               for s in range(len(sources))]
+              for v in range(len(groups))]
+    sids = rmaker.srcfilter.sitecol.sids
+    cm = rmaker.cmaker
+    pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
+                        True).fill(False) for _ in groups]
+    rmaker.source_data = AccumDict(accum=[])
+    rups = [[] for _ in groups]  # the rup_data of each variant
+    # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
+    # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
+    t0 = time.time()
+    nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
+    dt = (time.time() - t0) / len(sources)
+    # the source data are recorded only for the first variant, the
+    # others get zeros, otherwise the statistics would be repeated
+    for s, src in enumerate(sources):
+        rmaker.update_source_data(src, rmaker.task_no, dt, nctxs[s])
+    out = []
+    for v, pnemap in enumerate(pnemaps):
+        sdata = rmaker.source_data if v == 0 else _zero_source_data(
+            rmaker.source_data)
+        rup_data = concat(rups[v]) if rups[v] else ()
+        dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
+                   rup_data=rup_data, source_data=sdata,
+                   task_no=rmaker.task_no, dparam_mb=0.,
+                   source_mb=cm.source_mb)
+        if rmaker.disagg_by_src:  # see RmapMaker.make
+            dic['basename'] = valid.basename(sources[0])
+        out.append(dic)
+    return out
+
+
+def _process_sources(rmaker, ratios, pnemaps, rups):
+    # Feed the probability maps of the variants with the contexts of all the
+    # sources, see make_results. The contexts are concatenated in chunks, as
+    # in _make_src_indep, otherwise gen_poes is called on tiny arrays and the
+    # mean_stds are computed many more times; the chunks are processed by
+    # _update_chunk, which computes the GMPEs once per magnitude and chunk.
+    #
+    # :param rmaker: a RmapMaker instance for the base variant
+    # :param ratios: ratios[v][s] as in make_results
+    # :param pnemaps: a list of V MapArrays, one per variant, to update
+    # :param rups: a list of V lists, the rup_data of each variant, to extend
+    # :returns: the number of contexts of each source
+    cm = rmaker.cmaker
+    tspan = rmaker.tom.time_span
+    nctxs = []
+    chunk, sidxs, nrows = [], [], 0
+    rmaker.rupdata = []  # used by gen_ctxs with few sites
+    for s, src in enumerate(rmaker.sources):
+        ctxs = list(rmaker.gen_ctxs(src))
+        rmaker.rupdata = []  # the contexts are kept in ctxs
+        nctxs.append(sum(len(ctx) for ctx in ctxs))
+        if cm.oq.keep_rupdata:  # the ruptures of each variant
+            for v, rup in enumerate(rups):
+                rup.extend(_scale_rups(ctxs, ratios[v][s]))
+        for ctx in ctxs:
+            chunk.append(ctx)
+            sidxs.append(numpy.full(len(ctx), s))
+            nrows += len(ctx)
+        if nrows > rmaker.maxsize:
+            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+            chunk, sidxs, nrows = [], [], 0
+    if chunk:
+        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+    return nctxs
+
+
+def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
+    # Update the probability maps of the variants with the contexts of
+    # several sources, computing the PoEs once per magnitude (see
+    # make_results)
+    #
+    # :param cm: a ContextMaker instance
+    # :param pnemaps: a list of V MapArrays, one per variant
+    # :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
+    #     source s of the variant v, see _mag_ratios
+    # :param tspan: the time span of the temporal occurrence model
+    # :param ctxs: a list of context arrays of the sources
+    # :param sidxs: a list of arrays with the source index of each row
+    ctx = concat(ctxs)
+    sidx = numpy.concatenate(sidxs)
+    ctx.mag = numpy.round(ctx.mag, 3)
+    for mag in numpy.unique(ctx.mag):
+        mask = ctx.mag == mag
+        ctxt, si = ctx[mask], sidx[mask]
+        # R[v, s] is the rate ratio of the source s in the variant v
+        R = numpy.array([[r.get(float(mag), 0.) for r in rv]
+                         for rv in ratios])
+        cm.cfactor += [len(ctxt), 1]  # as in gen_poes
+        for poes, _, _, _, slc in cm._gen_poes(ctxt):
+            c = ctxt[slc]
+            for v, pnemap in enumerate(pnemaps):
+                rates_v = c.occurrence_rate * R[v, si[slc]]
+                pnemap.update_indep(poes.astype(F64), c, tspan,
+                                    rates=rates_v)
+
+
+def _scale_rups(rupdata, ratio):
+    # :param rupdata: a list of context arrays of the same source
+    # :param ratio: dictionary mag -> ratio of the occurrence rates, see
+    #     _mag_ratios
+    # :returns: a list of context arrays with the occurrence rates rescaled
+    #     by the ratio of their magnitude; the ruptures with zero rate, i.e.
+    #     with a magnitude missing in the variant, are dropped
+    out = []
+    for ctxs in rupdata:
+        factor = numpy.array([ratio.get(round(float(m), 3), 0.)
+                              for m in ctxs.mag])
+        mask = factor > 0
+        new = ctxs[mask].copy()
+        new['occurrence_rate'] *= factor[mask]
+        out.append(new)
+    return out
+
+
+def _zero_source_data(sdata):
+    # :returns: a copy of the source data with zero counts, i.e. the
+    #     same grp_id and src_id but no contexts, ruptures or times
+    out = AccumDict(accum=[])
+    for key in sdata:
+        vals = sdata[key]
+        out[key] = [0 * v if key in ('nctxs', 'nrupts', 'weight',
+                                     'ctimes') else v for v in vals]
+    return out
 
 
 class BaseContext(metaclass=abc.ABCMeta):
