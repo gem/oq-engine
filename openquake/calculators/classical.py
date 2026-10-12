@@ -241,7 +241,7 @@ def group_gids(src_groups, gid_dic):
     return out
 
 
-def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
+def cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt):
     """
     :param srcs: the sources of the group grp with the same sets of
         realizations, i.e. grouped either by basename or by subset
@@ -286,7 +286,7 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
 def geometry_key(srcs, bvals):
     """
     :param srcs: the sources of a group with the same sets of realizations
-        (see cmakers_groups)
+        (see cmakers_groups_gkeys)
     :param bvals: the (branchset, value) pairs of a set of realizations
     :returns: a hashable key with the geometry-changing branchsets in bvals
         which apply to some of srcs, see lt.GEOMETRY_PRESERVING; two sets
@@ -333,8 +333,8 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
 def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
                   as_rmap=True):
     """
-    Yield the results of a classical task as RateMaps: the CSM is built
-    without applying the uncertainties, so cmakers_groups applies them one
+    Yield the results of a classical task as RateMaps: the CSM is built without
+    applying the uncertainties, so cmakers_groups_gkeys applies them one
     set of realizations at a time and restricts the cmaker to the set; the
     rates are attributed to the gids of the set, see read_gid_dic.
 
@@ -378,7 +378,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
-        triples = list(cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt))
+        triples = list(cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt))
         # the sets with the same geometry key have the same geometry, so
         # their MFD variants are computed together by make_results (see
         # geometry_key); the other sets are computed one at a time
@@ -387,8 +387,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
             bykey.setdefault(gkey, []).append((cm, sg))
         slow = []
         for pairs in bykey.values():
-            # NB: make_results is for few sites only, see _make_results;
-            # the check avoids calling it when it would raise ValueError
+            # NB: _make_results is for few sites only
             few = len(sites.complete) <= cmaker.max_sites_disagg
             dics = _make_results(pairs, sites, remove_zeros, as_rmap) \
                 if len(pairs) > 1 and few else None

@@ -1900,7 +1900,7 @@ def make_results(groups, cmakers, sites):
     sources = rmaker.sources
     # NB: the variants can have fewer sources than the base, since the
     # sources are filtered by minimum_magnitude after the uncertainties
-    # are applied, see classical.cmakers_groups
+    # are applied, see classical.cmakers_groups_gkeys
     nsrcs = [len(grp) for grp in groups]
     if any(n != len(sources) for n in nsrcs):
         raise FilteredAway(
