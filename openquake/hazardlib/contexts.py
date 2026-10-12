@@ -1891,12 +1891,12 @@ def make_results(groups, cmakers, sitecol):
     b = max(range(len(groups)),
             key=lambda v: sum(len(d) for d in rates[v]))
     base = groups[b]
-    rmk = RmapMaker(cmakers[b], sitecol, base)
-    if rmk.src_mutex or rmk.rup_mutex or rmk.cluster:
+    rmaker = RmapMaker(cmakers[b], sitecol, base)
+    if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
         raise ValueError('mutually exclusive sources')
-    if not rmk.fewsites:
+    if not rmaker.fewsites:
         raise ValueError('too many sites')
-    sources = rmk.sources
+    sources = rmaker.sources
     if any(len(grp) != len(sources) for grp in groups):
         raise ValueError('the variants have different sources')
     # ratios[v][s] = dictionary mag -> ratio for source s of variant v
@@ -1907,13 +1907,13 @@ def make_results(groups, cmakers, sitecol):
     ratios = [[_mag_ratios(rates[b][s], rates[v][s])
                for s in range(len(sources))]
               for v in range(len(groups))]
-    sids = rmk.srcfilter.sitecol.sids
-    cm = rmk.cmaker
+    sids = rmaker.srcfilter.sitecol.sids
+    cm = rmaker.cmaker
     pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
                         True).fill(False) for _ in groups]
-    tspan = rmk.tom.time_span
-    rmk.rupdata = []  # used by gen_ctxs with few sites
-    rmk.source_data = AccumDict(accum=[])
+    tspan = rmaker.tom.time_span
+    rmaker.rupdata = []  # used by gen_ctxs with few sites
+    rmaker.source_data = AccumDict(accum=[])
     rups = [[] for _ in groups]  # the rup_data of each variant
     # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
     # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
@@ -1921,7 +1921,7 @@ def make_results(groups, cmakers, sitecol):
     for s, src in enumerate(sources):
         nctxs = 0
         t0 = time.time()
-        for ctx in rmk.gen_ctxs(src):
+        for ctx in rmaker.gen_ctxs(src):
             for poes, _, _, _, ctxt in cm.gen_poes(ctx):
                 nctxs += len(ctxt)
                 mag = round(float(ctxt.mag[0]), 3)
@@ -1934,21 +1934,21 @@ def make_results(groups, cmakers, sitecol):
         # 0.14533 for variant 3 in logictree/case_18_bis (first call)
         if cm.oq.keep_rupdata:  # the ruptures of each variant
             for v in range(len(groups)):
-                rups[v].extend(_scale_rups(rmk.rupdata, ratios[v][s]))
-        rmk.rupdata = []  # the contexts of the source are not needed
+                rups[v].extend(_scale_rups(rmaker.rupdata, ratios[v][s]))
+        rmaker.rupdata = []  # the contexts of the source are not needed
         # the source data are recorded only for the first variant, the
         # others get zeros, otherwise the statistics would be repeated
-        rmk.update_source_data(src, rmk.task_no, time.time() - t0, nctxs)
+        rmaker.update_source_data(src, rmaker.task_no, time.time() - t0, nctxs)
     out = []
     for v, pnemap in enumerate(pnemaps):
-        sdata = rmk.source_data if v == 0 else _zero_source_data(
-            rmk.source_data)
+        sdata = rmaker.source_data if v == 0 else _zero_source_data(
+            rmaker.source_data)
         rup_data = concat(rups[v]) if rups[v] else ()
         dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
                    rup_data=rup_data, source_data=sdata,
-                   task_no=rmk.task_no, dparam_mb=0.,
+                   task_no=rmaker.task_no, dparam_mb=0.,
                    source_mb=cm.source_mb)
-        if rmk.disagg_by_src:  # see RmapMaker.make
+        if rmaker.disagg_by_src:  # see RmapMaker.make
             dic['basename'] = valid.basename(sources[0])
         out.append(dic)
     return out

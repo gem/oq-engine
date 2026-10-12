@@ -292,7 +292,11 @@ def geometry_key(srcs, bvals):
         with the same key have the same geometry for the sources srcs, so
         their MFD variants can be computed together by make_results
     """
-    return tuple((id(bset), repr(value)) for bset, value in bvals
+    # e.g. logictree/case_18_bis: the sources of 'first' have two keys, one
+    # for setLowerSeismDepthAbsolute 10.0 and one for 20.0, with 9 sets each
+    # (3 abGR x 3 maxMagGR), i.e. two groups of 9 variants for make_results:
+    #   (('bs6', '10.0'),) and (('bs6', '20.0'),)
+    return tuple((bset.id, repr(value)) for bset, value in bvals
                  if bset.uncertainty_type not in GEOMETRY_PRESERVING and
                  any(get_bset_value(bset, value, src)[0] for src in srcs))
 
@@ -303,6 +307,12 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
     :returns: a list of dictionaries, one per pair, as returned by
         baseclassical, or None if make_results cannot be used
     """
+    # NB: make_results raises a ValueError, and then the variants are computed
+    # one at a time by the caller, if: the sources are mutually exclusive or
+    # clustered (src_mutex, rup_mutex, cluster); there are too many sites
+    # (not fewsites); a variant has a magnitude missing in the base (see
+    # _mag_ratios, the base is the one with most magnitudes); the variants
+    # have a different number of sources (see the check in make_results)
     try:
         dics = make_results([sg for _, sg in pairs],
                             [cm for cm, _ in pairs], sites)
