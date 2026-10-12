@@ -37,6 +37,48 @@ Keep the calculation ID printed by the engine. A downstream calculation can
 refer to that ID, or directly to the corresponding HDF5 datastore. The file
 can also be copied to a more descriptive name, such as ``SES.hdf5``.
 
+Choosing the output filename in a TOML workflow
+-----------------------------------------------
+
+When several rupture-only calculations are combined, the ``build_ses``
+postprocessor can write the resulting datastore to a chosen location. Set
+the filename or path with ``out_file`` in the ``[success]`` table::
+
+  [workflow]
+  description = "Build a reusable SES"
+  calculation_mode = "event_based"
+  ground_motion_fields = false
+  number_of_logic_tree_samples = 200
+  ses_per_logic_tree_path = 50
+
+  [HazardAAA]
+  ini = "model_a/job_hazard.ini"
+  mosaic_model = "AAA"
+
+  [HazardBBB]
+  ini = "model_b/job_hazard.ini"
+  mosaic_model = "BBB"
+
+  [success]
+  func = "openquake.engine.postjobs.build_ses"
+  out_file = "SES.hdf5"
+
+Run the workflow with::
+
+  oq run ses.toml
+
+The two rupture-only calculations can run concurrently. After they complete
+successfully, the postprocessor writes ``SES.hdf5``. A relative
+``out_file`` is resolved from the directory containing the TOML file; an
+absolute path can be used instead.
+
+The current merger has additional model-metadata constraints. Every input
+must have a unique three-character ``mosaic_model`` matching an entry in the
+configured model-boundary file, and its TOML job name must end with the same
+code. These are constraints of the current multi-model merger, not of the
+SES HDF5 format. They are not required when reusing the datastore from a
+single rupture-only calculation.
+
 Starting a GMF calculation from the SES
 ---------------------------------------
 
