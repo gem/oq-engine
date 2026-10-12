@@ -1900,6 +1900,10 @@ def make_results(groups, cmakers, sitecol):
     if any(len(grp) != len(sources) for grp in groups):
         raise ValueError('the variants have different sources')
     # ratios[v][s] = dictionary mag -> ratio for source s of variant v
+    # e.g. logictree/case_18_bis: 9 variants (3 abGR x 3 maxMagGR), the base
+    # is variant 2 (3 mags, rate 0.115893 at M 5.5); variant 3 has rate
+    # 0.284605 at M 5.5, i.e. ratio 2.4558, and variant 0 (maxMag 7.0)
+    # has no magnitude 7.5, i.e. ratio 0 for it
     ratios = [[_mag_ratios(rates[b][s], rates[v][s])
                for s in range(len(sources))]
               for v in range(len(groups))]
@@ -1910,6 +1914,9 @@ def make_results(groups, cmakers, sitecol):
     tspan = rmk.tom.time_span
     rmk.rupdata = []  # used by gen_ctxs with few sites
     rmk.source_data = AccumDict(accum=[])
+    rups = [[] for _ in groups]  # the rup_data of each variant
+    # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
+    # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
     # NB: the GMPEs are computed once, only the rates change by variant
     for s, src in enumerate(sources):
         nctxs = 0
@@ -1922,6 +1929,13 @@ def make_results(groups, cmakers, sitecol):
                     rates_v = ctxt.occurrence_rate * ratios[v][s].get(
                         mag, 0.)
                     pnemap.update_indep(poes, ctxt, tspan, rates=rates_v)
+        # NB: the sum of the rmap of the variants is e.g. 0.04701 for
+        # variant 0, 0.04701 for variant 1, 0.06193 for variant 2 and
+        # 0.14533 for variant 3 in logictree/case_18_bis (first call)
+        if cm.oq.keep_rupdata:  # the ruptures of each variant
+            for v in range(len(groups)):
+                rups[v].extend(_scale_rups(rmk.rupdata, ratios[v][s]))
+        rmk.rupdata = []  # the contexts of the source are not needed
         # the source data are recorded only for the first variant, the
         # others get zeros, otherwise the statistics would be repeated
         rmk.update_source_data(src, rmk.task_no, time.time() - t0, nctxs)
@@ -1929,13 +1943,34 @@ def make_results(groups, cmakers, sitecol):
     for v, pnemap in enumerate(pnemaps):
         sdata = rmk.source_data if v == 0 else _zero_source_data(
             rmk.source_data)
+        rup_data = concat(rups[v]) if rups[v] else ()
         dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
-                   rup_data=(), source_data=sdata,
+                   rup_data=rup_data, source_data=sdata,
                    task_no=rmk.task_no, dparam_mb=0.,
                    source_mb=cm.source_mb)
         if rmk.disagg_by_src:  # see RmapMaker.make
             dic['basename'] = valid.basename(sources[0])
         out.append(dic)
+    return out
+
+
+def _scale_rups(rupdata, ratio):
+    """
+    :param rupdata: a list of context arrays of the same source
+    :param ratio: dictionary mag -> ratio of the occurrence rates, see
+        _mag_ratios
+    :returns: a list of context arrays with the occurrence rates rescaled
+        by the ratio of their magnitude; the ruptures with zero rate, i.e.
+        with a magnitude missing in the variant, are dropped
+    """
+    out = []
+    for ctxs in rupdata:
+        factor = numpy.array([ratio.get(round(float(m), 3), 0.)
+                              for m in ctxs.mag])
+        mask = factor > 0
+        new = ctxs[mask].copy()
+        new['occurrence_rate'] *= factor[mask]
+        out.append(new)
     return out
 
 

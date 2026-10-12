@@ -34,7 +34,8 @@ from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups, read_core_trt_smrs)
-from openquake.hazardlib.lt import get_ts_sets
+from openquake.hazardlib.lt import (
+    get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.contexts import (
     get_cmakers, read_full_lt_by_label, make_results)
 from openquake.hazardlib.calc import hazard_curve
@@ -239,10 +240,6 @@ def group_gids(src_groups, gid_dic):
     return out
 
 
-# prototype flag: OQ_MFDSET=1 enables make_results (few sites only)
-MFDSET = os.environ.get('OQ_MFDSET') == '1'
-
-
 def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     """
     :param srcs: the sources of the group grp with the same sets of
@@ -251,8 +248,9 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
     :param cmaker: the ContextMaker associated to the group
     :param gid_dic: a dictionary trt_smrs -> (gids, weights)
     :param full_lt: a FullLogicTree instance
-    :returns: a generator of (cmaker, group) pairs, one per set of
-        realizations, with the uncertainties applied to the sources
+    :returns: a generator of (cmaker, group, gkey) triples, one per set
+        of realizations, with the uncertainties applied to the sources;
+        gkey is the geometry key of the set (see geometry_key)
     """
     # NB: the uncertainties are applied to the whole group, since
     # correlated branchsets (applyToSources='*') refer to sources outside
@@ -279,7 +277,45 @@ def cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt):
         if not sg.sources:
             continue
         gids, wei = gid_dic[trt_smrs]
-        yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg
+        bvals = bset_values.get(trt_smrs[0] % TWO24, [])
+        gkey = geometry_key(srcs, bvals)
+        yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg, gkey
+
+
+def geometry_key(srcs, bvals):
+    """
+    :param srcs: the sources of a group with the same sets of realizations
+        (see cmakers_groups)
+    :param bvals: the (branchset, value) pairs of a set of realizations
+    :returns: a hashable key with the geometry-changing branchsets in bvals
+        which apply to some of srcs, see lt.GEOMETRY_PRESERVING; two sets
+        with the same key have the same geometry for the sources srcs, so
+        their MFD variants can be computed together by make_results
+    """
+    return tuple((id(bset), repr(value)) for bset, value in bvals
+                 if bset.uncertainty_type not in GEOMETRY_PRESERVING and
+                 any(get_bset_value(bset, value, src)[0] for src in srcs))
+
+
+def _make_results(pairs, sites, remove_zeros, as_rmap):
+    """
+    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :returns: a list of dictionaries, one per pair, as returned by
+        baseclassical, or None if make_results cannot be used
+    """
+    try:
+        dics = make_results([sg for _, sg in pairs],
+                            [cm for cm, _ in pairs], sites)
+    except ValueError:
+        return None
+    for (cmaker_, _), dic in zip(pairs, dics):
+        dic['rmap'] = dic['rmap'].remove_zeros() \
+            if remove_zeros else dic['rmap']
+        dic['rmap'].gid = cmaker_.gid
+        dic['rmap'].wei = cmaker_.wei
+        if not as_rmap:
+            dic['rmap'] = dic['rmap'].to_array(cmaker_.gid)
+    return dics
 
 
 def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
@@ -330,24 +366,23 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
-        pairs = list(cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt))
-        if MFDSET and len(pairs) > 1:  # prototype, see make_results
-            try:
-                dics = make_results([sg for _, sg in pairs],
-                                     [cm for cm, _ in pairs], sites)
-            except ValueError:
-                dics = None
-            if dics is not None:
-                for (cmaker_, _), dic in zip(pairs, dics):
-                    dic['rmap'] = dic['rmap'].remove_zeros() \
-                        if remove_zeros else dic['rmap']
-                    dic['rmap'].gid = cmaker_.gid
-                    dic['rmap'].wei = cmaker_.wei
-                    if not as_rmap:
-                        dic['rmap'] = dic['rmap'].to_array(cmaker_.gid)
-                    yield dic
-                continue
-        for cmaker_, sg in pairs:
+        triples = list(cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt))
+        # the sets with the same geometry key have the same geometry, so
+        # their MFD variants are computed together by make_results (see
+        # geometry_key); the other sets are computed one at a time
+        bykey = {}
+        for cm, sg, gkey in triples:
+            bykey.setdefault(gkey, []).append((cm, sg))
+        slow = []
+        for pairs in bykey.values():
+            # NB: make_results is for few sites only, see _make_results
+            dics = _make_results(pairs, sites, remove_zeros, as_rmap) \
+                if len(pairs) > 1 else None
+            if dics is None:
+                slow.extend(pairs)
+            else:
+                yield from dics
+        for cmaker_, sg in slow:
             yield baseclassical(
                 sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
 
