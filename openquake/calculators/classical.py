@@ -307,10 +307,15 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
     :returns: a list of dictionaries, one per pair, as returned by
         baseclassical, or None if make_results cannot be used
     """
-    # NB: make_results raises a ValueError, and then the variants are computed
-    # one at a time by the caller, if: the sources are mutually exclusive or
-    # clustered (src_mutex, rup_mutex, cluster); there are too many sites
-    # (not fewsites); a variant has a magnitude missing in the base (see
+    # NB: make_results raises a ValueError when the variants cannot be
+    # derived from a single base variant. This is signalled by an exception
+    # and not by a separate pre-check because the conditions depend on the
+    # RmapMaker and on the magnitudes of each source, which are only known
+    # inside make_results. The caller then computes the variants one at a
+    # time (see baseclassical), so the exception is a fallback, not an
+    # error. The cases are: the sources are mutually exclusive or clustered
+    # (src_mutex, rup_mutex, cluster); there are too many sites (not
+    # fewsites); a variant has a magnitude missing in the base (see
     # _mag_ratios, the base is the one with most magnitudes); the variants
     # have a different number of sources (see the check in make_results)
     try:
