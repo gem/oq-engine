@@ -77,6 +77,9 @@ event- based ground motion values to provide hazard curves indicating
 the probabilities of exceeding the intensity measure levels set
 previously in the ``intensity_measure_types_and_levels`` option.
 
+To generate ruptures without GMFs, save them in an SES HDF5 file, and reuse
+them in later calculations, see :ref:`ses-workflows`.
+
 
 ====================================================
 The difference between full enumeration and sampling

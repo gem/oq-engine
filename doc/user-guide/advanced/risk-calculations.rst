@@ -177,21 +177,22 @@ calculations there is no way out.
 Understanding the SES file
 --------------------------
 
+The workflow-based procedure for generating an SES HDF5 file and using it
+as the input to GMF or risk calculations is described in
+:ref:`ses-workflows`.
+
 The command
 
 ``$ oq shell openquake.engine.global_ses <mosaic_dir> ses.hdf5``
 
-is able to take multiple hazard models and build a single file
-containing ruptures coming from all the models without double
-counting. There is clearly a risk of double counting if the same
-source is included in two different mosaic models and therefore the
-engine generates the same ruptures twice. However the
-command is smart enough to discard duplicated ruptures.
+is able to take multiple hazard models and build a single file containing
+ruptures from all the models. The generated ruptures are labelled by their
+three-letter mosaic model code. Model overlaps and duplicated sources must
+still be reviewed when defining the combined model.
 
-The generated ``ses.hdf5`` file contains all the ruptures from all
-the models into a single dataset which is a structured array.
-In particular there is a ``model`` field telling by which model
-each rupture was generated.
+The generated ``ses.hdf5`` file contains the ruptures from all the models in
+a single structured array. In particular, the ``model`` field identifies
+the model that generated each rupture.
 
 There is also a field called ``trt_smr`` that contains information
 about the tectonic region type and the source model realization to

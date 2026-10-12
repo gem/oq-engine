@@ -20,6 +20,7 @@ the techniques to reduce an impossible calculation to a feasible one.
    correlated-uncertainties
    large-calculations
    event-based-calculations
+   ses-and-workflows
    risk-calculations
    vector-valued-psha
    probabilistic-fault-displacement
