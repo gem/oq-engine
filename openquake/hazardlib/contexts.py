@@ -1925,28 +1925,34 @@ def make_results(groups, cmakers, sites):
     # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
     # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
     # NB: the GMPEs are computed once, only the rates change by variant
+    nctxs = [0] * len(sources)  # the number of contexts of each source
+    # NB: the contexts of the sources are concatenated in chunks, as in
+    # _make_src_indep, otherwise gen_poes is called on tiny arrays and the
+    # mean_stds are computed many more times; the chunks are processed by
+    # _update_chunk, which computes the GMPEs once per magnitude and chunk
+    chunk, sidxs, nrows = [], [], 0
+    t0 = time.time()
     for s, src in enumerate(sources):
-        nctxs = 0
-        t0 = time.time()
-        # NB: the contexts of a source are concatenated, as in
-        # _make_src_indep, otherwise gen_poes is called on tiny arrays
-        # and the mean_stds are computed many more times
         ctxs = list(rmaker.gen_ctxs(src))
-        if ctxs:
-            for poes, _, _, _, ctxt in cm.gen_poes(concat(ctxs)):
-                nctxs += len(ctxt)
-                mag = round(float(ctxt.mag[0]), 3)
-                for v, pnemap in enumerate(pnemaps):
-                    rates_v = ctxt.occurrence_rate * ratios[v][s].get(
-                        mag, 0.)
-                    pnemap.update_indep(poes, ctxt, tspan, rates=rates_v)
+        rmaker.rupdata = []  # the contexts are kept in ctxs
+        nctxs[s] = sum(len(ctx) for ctx in ctxs)
         if cm.oq.keep_rupdata:  # the ruptures of each variant
             for v in range(len(groups)):
-                rups[v].extend(_scale_rups(rmaker.rupdata, ratios[v][s]))
-        rmaker.rupdata = []  # the contexts of the source are not needed
-        # the source data are recorded only for the first variant, the
-        # others get zeros, otherwise the statistics would be repeated
-        rmaker.update_source_data(src, rmaker.task_no, time.time() - t0, nctxs)
+                rups[v].extend(_scale_rups(ctxs, ratios[v][s]))
+        for ctx in ctxs:
+            chunk.append(ctx)
+            sidxs.append(numpy.full(len(ctx), s))
+            nrows += len(ctx)
+        if nrows > rmaker.maxsize:
+            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+            chunk, sidxs, nrows = [], [], 0
+    if chunk:
+        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+    # the source data are recorded only for the first variant, the
+    # others get zeros, otherwise the statistics would be repeated
+    dt = (time.time() - t0) / len(sources)
+    for s, src in enumerate(sources):
+        rmaker.update_source_data(src, rmaker.task_no, dt, nctxs[s])
     out = []
     for v, pnemap in enumerate(pnemaps):
         sdata = rmaker.source_data if v == 0 else _zero_source_data(
@@ -1960,6 +1966,37 @@ def make_results(groups, cmakers, sites):
             dic['basename'] = valid.basename(sources[0])
         out.append(dic)
     return out
+
+
+def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
+    """
+    Update the probability maps of the variants with the contexts of
+    several sources, computing the PoEs once per magnitude (see make_results)
+
+    :param cm: a ContextMaker instance
+    :param pnemaps: a list of V MapArrays, one per variant
+    :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
+        source s of the variant v, see _mag_ratios
+    :param tspan: the time span of the temporal occurrence model
+    :param ctxs: a list of context arrays of the sources
+    :param sidxs: a list of arrays with the source index of each row
+    """
+    ctx = concat(ctxs)
+    sidx = numpy.concatenate(sidxs)
+    ctx.mag = numpy.round(ctx.mag, 3)
+    for mag in numpy.unique(ctx.mag):
+        mask = ctx.mag == mag
+        ctxt, si = ctx[mask], sidx[mask]
+        # R[v, s] is the rate ratio of the source s in the variant v
+        R = numpy.array([[r.get(float(mag), 0.) for r in rv]
+                         for rv in ratios])
+        cm.cfactor += [len(ctxt), 1]  # as in gen_poes
+        for poes, _, _, _, slc in cm._gen_poes(ctxt):
+            c = ctxt[slc]
+            for v, pnemap in enumerate(pnemaps):
+                rates_v = c.occurrence_rate * R[v, si[slc]]
+                pnemap.update_indep(poes.astype(F64), c, tspan,
+                                    rates=rates_v)
 
 
 def _scale_rups(rupdata, ratio):
