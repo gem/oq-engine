@@ -8,7 +8,6 @@ Subpackages
 
     openquake.engine.export
     openquake.engine.tools
-    openquake.engine.utils
 
 Submodules
 ----------

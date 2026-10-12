@@ -88,17 +88,25 @@ def _get_near_source_correction(C, rhypo):
     )
 
 
-def _get_site_scaling(C, vs30):
+def _get_site_scaling(C, vs30, vs30_strict):
     """
     Site amplification [Equation 6, p. 1050].
 
         FS = s0 + s1 / (log10(Vs30) - log10(150))
 
     Calibrated for 220 <= Vs30 <= 800 m/s using topographic-proxy
-    Vs30 estimates (Wald and Allen, 2007), so we clamp input Vs30
-    values to this range.
+    Vs30 estimates (Wald and Allen, 2007). If vs30_strict is True,
+    a ValueError is raised for any Vs30 outside this range; otherwise
+    the input is clamped to [220, 800] m/s.
     """
-    vs30 = np.clip(vs30, 220, 800)
+    if vs30_strict:
+        if np.any((vs30 < 220) | (vs30 > 800)):
+            raise ValueError(
+                "Allen2022 site term is calibrated for 220 <= Vs30 <= 800 "
+                "m/s; set vs30_strict=False to clamp out-of-range values."
+            )
+    else:
+        vs30 = np.clip(vs30, 220, 800)
     return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.0))
 
 
@@ -116,11 +124,16 @@ class Allen2022(GMPE):
 
     Note on PGA sigma [Equation 10, p. 1051]:
         sigma_PGA = sqrt(tau_PGA^2 + phi_PGA^2 + lambda_PGA^2)
-        
+
     where lambda_PGA = 0.270 accounts for the additional uncertainty from
     PGA proxy estimation using low-sample-rate data (paper p. 1050).
     This term is already incorporated into the sigma value in Table 1
     (footnote), so sigma is read directly from the table for all IMTs.
+
+    :param vs30_strict:
+        If True (default), raises a ValueError when any input Vs30 falls
+        outside the calibrated range [220, 800] m/s. If False, input Vs30
+        values are clamped to this range before evaluating the site term.
     """
 
     ## Supported tectonic region type is subduction intraslab.
@@ -152,6 +165,9 @@ class Allen2022(GMPE):
     ## Hypocentral distance Rhypo (km) [Equations 2a, 2b, 5a, 5b].
     REQUIRES_DISTANCES = {"rhypo"}
 
+    def __init__(self, vs30_strict=True):
+        self.vs30_strict = vs30_strict
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Compute median ground motion (ln g or ln cm/s) and standard deviations.
@@ -171,7 +187,7 @@ class Allen2022(GMPE):
                 + _get_magnitude_scaling(C, ctx.mag)
                 + _get_depth_scaling(C, ctx.hypo_depth)
                 + _get_near_source_correction(C, ctx.rhypo)
-                + _get_site_scaling(C, ctx.vs30)
+                + _get_site_scaling(C, ctx.vs30, self.vs30_strict)
             )
 
             tau[m] = C["tau"]
