@@ -150,31 +150,31 @@ Mapping of unix groups isn't supported at the moment.
 
 ## Running in production
 
-On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunicorn.org/) is the recommended software stack to run the WebUI.
+On a production system, [nginx](http://nginx.org/en/) + [uvicorn](https://www.uvicorn.org/) is the recommended software stack to run the WebUI.
 
-### gunicorn
+### uvicorn
 
-*gunicorn* can be installed via `pip` in the venv of the OpenQuake engine. For example:
+*uvicorn* can be installed via `pip` in the venv of the OpenQuake engine. For example:
 
 ```console
 sudo su -
 source /opt/openquake/venv/bin/activate
-pip install gunicorn
+pip install uvicorn
 deactivate
 ```
 
-*gunicorn* is usually managed by the OS init system.
+*uvicorn* is usually managed by the OS init system.
 
 Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+ExecStart=/opt/openquake/bin/python3 -m uvicorn --host 127.0.0.1 --port 8800 --workers 4 --timeout 1200 wsgi:application
 ```
 
-*gunicorn* must be started in the `openquake/server` directory with the following syntax:
+*uvicorn* must be started in the `openquake/server` directory with the following syntax:
 
 ```console
-gunicorn -w N wsgi:application
+uvicorn -w N wsgi:application
 ```
 
 where `N` is the number of workers. We suggest `N = 4`.
@@ -233,12 +233,12 @@ systemctl status  openquake-webui.service
 
 ### nginx
 
-*gunicorn* does not serve static content itself thus a frontend like *nginx* is needed.
+*uvicorn* does not serve static content itself thus a frontend like *nginx* is needed.
 
 Please refer to the nginx installation istructions for your operating system.
 
-*nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static
-content (see [documentation](https://docs.gunicorn.org/en/stable/deploy.html)).
+*nginx* must be configured to act as a reverse proxy for *uvicorn* and to provide static
+content (see [documentation](https://www.uvicorn.org/#deploying-uvicorn)).
 
 When the reverse proxy is configured, add the following to `openquake/server/local_settings.py`:
 ```python
