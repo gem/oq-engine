@@ -2043,3 +2043,20 @@ class Deduplicate(Sequence):
 
     def __len__(self):
         return len(self.inv)
+
+
+def confirm(prompt):
+    """
+    Ask for confirmation, given a ``prompt`` and return a boolean value.
+    """
+    while True:
+        try:
+            answer = input(prompt)
+        except KeyboardInterrupt:
+            # the user presses ctrl+c, just say 'no'
+            return False
+        answer = answer.strip().lower()
+        if answer not in ('y', 'n'):
+            print('Please enter y or n')
+            continue
+        return answer == 'y'
