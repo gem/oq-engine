@@ -215,7 +215,8 @@ def test_init_files():
     oq_dir = os.path.join(REPO, 'openquake')
     for cwd, dirs, files in os.walk(oq_dir):
         dirs[:] = [d for d in dirs if d != '__pycache__']
-        if cwd == oq_dir or 'data' in cwd or 'schema/upgrades' in cwd:
+        if cwd == oq_dir or 'data' in cwd or ('schema/upgrades' in cwd
+                                              or 'schema\\upgrades' in cwd):
             continue  # no check for the root directory data directories
         pyfiles = [f for f in files if f.endswith('.py')]
         if pyfiles == ['__init__.py'] and not dirs:
