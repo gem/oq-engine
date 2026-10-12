@@ -1859,7 +1859,7 @@ def _mag_ratios(base, dic):
 
     NB: this assumes that the MFD variants rescale uniformly the
     ruptures of a magnitude, i.e. the relative weights of the ruptures
-    (hypocenters, nodal planes) do not change, see make_variants
+    (hypocenters, nodal planes) do not change, see make_results
     """
     if set(dic) - set(base):
         raise ValueError('new magnitudes in a variant')
@@ -1867,7 +1867,7 @@ def _mag_ratios(base, dic):
             if rate > 0}
 
 
-def make_variants(groups, cmakers, sitecol):
+def make_results(groups, cmakers, sitecol):
     """
     Compute the rates of several variants of the same groups, i.e. groups
     with the same sources and the same geometry but different MFDs, with

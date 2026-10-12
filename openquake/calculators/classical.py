@@ -36,7 +36,7 @@ from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups, read_core_trt_smrs)
 from openquake.hazardlib.lt import get_ts_sets
 from openquake.hazardlib.contexts import (
-    get_cmakers, read_full_lt_by_label, make_variants)
+    get_cmakers, read_full_lt_by_label, make_results)
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -239,7 +239,7 @@ def group_gids(src_groups, gid_dic):
     return out
 
 
-# prototype flag: OQ_MFDSET=1 enables make_variants (few sites only)
+# prototype flag: OQ_MFDSET=1 enables make_results (few sites only)
 MFDSET = os.environ.get('OQ_MFDSET') == '1'
 
 
@@ -331,9 +331,9 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
         pairs = list(cmakers_groups(srcs, grp, cmaker, gid_dic, full_lt))
-        if MFDSET and len(pairs) > 1:  # prototype, see make_variants
+        if MFDSET and len(pairs) > 1:  # prototype, see make_results
             try:
-                dics = make_variants([sg for _, sg in pairs],
+                dics = make_results([sg for _, sg in pairs],
                                      [cm for cm, _ in pairs], sites)
             except ValueError:
                 dics = None
