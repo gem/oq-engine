@@ -41,7 +41,7 @@ from openquake.hazardlib.stats import ndtr, truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
-    get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
+    get_dparam, get_distances, getdefault, MINMAG, MAXMAG, FilteredAway)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
@@ -66,6 +66,11 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
 EPS = 1E-3
+#: How many (rupture, site) pairs are as expensive as a single surviving
+#: context, i.e. how much a discarded pair costs with respect to a context
+#: on which the GSIMs are actually evaluated. Determined heuristically
+#: from the @slowtask in oq-risk-tests
+PAIR_COST = 20.
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -334,12 +339,21 @@ def _quintets(cmaker, src, sitecol):
         planardict = src.get_planar(cmaker.shift_hypo)
 
     magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
-    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
-    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-    maxdist = magdist[maxmag]
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
+    # it is 0 for all the magnitudes if the source has no magnitude inside
+    # the range, which can happen since for the sources modified by the
+    # uncertainties the magnitude filtering is performed in the classical
+    # workers and not in the preclassical (see filter_mag)
+    valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
+    if not valid:  # the source is irrelevant, no site is in range
+        return
+    maxmag = max(valid)
+    maxdist = valid[maxmag]
     cdist = sitecol.get_cdist(src.location)
-    # NB: having a decent max_radius is essential for performance!
-    mask = cdist <= maxdist + src.max_radius(maxdist)
+    # Reuse the rupture radii while handling this source; get_psdist is
+    # called once per rupture and recomputing the whole vector is expensive.
+    radii = src._get_rupture_projection_radii()
+    mask = cdist <= maxdist + src.max_radius(maxdist, radii)
     sites = sitecol.filter(mask)
     if sites is None:
         return
@@ -364,7 +378,7 @@ def _quintets(cmaker, src, sitecol):
             allpla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
+                                    magdist, radii)
             close = sites.filter(cdist[mask] <= psdist)
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
@@ -480,8 +494,9 @@ def genctxs_Pp(src, sitecol, cmaker):
         else:
             pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
-                              pla, sites, src.id, src.offset, tom)
+        with cmaker.ctx_mon:
+            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+                                  pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
@@ -594,8 +609,12 @@ class ContextMaker(object):
         else:
             self.gsims = _fix({gsim: U32([i]) for i, gsim in enumerate(gsims)},
                               betw_ratio)
-        # NB: the gid array can be overridden later on
-        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
+        # NB: gsim_idx is the index of each gsim in the list, i.e. the id
+        # identifying a gsim of the group; it is used to label the GMFs
+        # (see calc.gmf) and the contexts (see the gid column of the rup
+        # dataframe)
+        self.gsim_idx = numpy.arange(len(gsims), dtype=numpy.uint16)
+        self._gid = None  # set by restrict_trt_smrs, see the gid property
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -698,6 +717,12 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        # NB: building the contexts (distances + rupture parameters +
+        # recarray) is by far the most expensive operation of the classical
+        # calculator, so it is monitored even if the monitor is entered
+        # once per rupture; the counts tell how many ruptures were
+        # considered (the ruptures beyond the integration time included)
+        self.ctx_mon = monitor('building contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -758,18 +783,59 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
+    @property
+    def gid(self):
+        """
+        :returns: the ids of the columns of the rates generated by this
+            cmaker, i.e. the gids of an index of rate attribution if the
+            cmaker has been restricted (see restrict_trt_smrs), otherwise
+            the gsim_idx, since for a whole group the ids of the rates
+            and the indexes of the gsims coincide
+        """
+        return self.gsim_idx if self._gid is None else self._gid
+
+    @gid.setter
+    def gid(self, gids):
+        self._gid = gids
+
     def split(self, blocksize):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gid, wei, gsims in zip(block_splitter(self.gid, blocksize),
-                                   block_splitter(self.wei, blocksize),
-                                   block_splitter(self.gsims, blocksize)):
+        for gsim_idx, wei, gsims in zip(block_splitter(self.gsim_idx,
+                                                       blocksize),
+                                         block_splitter(self.wei, blocksize),
+                                         block_splitter(self.gsims,
+                                                        blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
-            new.gid = gid
+            new.gsim_idx = gsim_idx
             new.wei = wei
             yield new
+
+    def restrict_trt_smrs(self, trt_smrs, gid, wei):
+        """
+        :param trt_smrs: the trt_smrs of the index of rate attribution
+        :param gid: the gids identifying the index of rate attribution,
+            i.e. the columns of the rates generated by the new cmaker;
+            NB: the gsim_idx are not changed, since the gsims are not
+            restricted either
+        :param wei: the weights of the gids
+        :returns: a shallow copy of the cmaker restricted to the
+            realizations trt_smrs, since a group has the trt_smrs of all
+            the realizations but the sources can have different
+            uncertainties in different ones
+
+        NB: the gsims are not restricted, since the number of gsims of an
+        index of rate attribution is the number of gsims of its TRT, see
+        get_rlzs_by_gsim, and must match the number of gids, see get_gids
+        """
+        new = copy.copy(self)
+        new.trt_smrs = numpy.array(trt_smrs, U32)
+        new.gid = gid
+        new.wei = wei
+        assert len(new.gsims) == len(gid), (len(new.gsims), len(gid))
+        return new
 
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
         """
@@ -999,85 +1065,110 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        dparam = self.dparam
         for rup in same_mag_rups:
-            if dparam:
-                rrups = _get(rup.surface.surfaces, 'rrup', dparam)
-                rrup = numpy.min(rrups, axis=0)
-            else:
-                rrup = get_distances(rup, sites, 'rrup')
-            mask = rrup <= magdist
-            if not mask.any():
+            # NB: the monitor is entered once per rupture, since the
+            # building of the contexts is the critical section
+            with self.ctx_mon:
+                yield from self._genctx(rup, sites, src_id, magdist)
+
+    def _genctx(self, rup, sites, src_id, magdist):
+        """
+        :param rup: a rupture
+        :param sites: a (filtered) site collection
+        :param src_id: source index
+        :param magdist: integration time, i.e. the maximum distance
+        :yields: a context array for the given rupture
+        """
+        dparam = self.dparam
+        if dparam:
+            rrups = _get(rup.surface.surfaces, 'rrup', dparam)
+            rrup = numpy.min(rrups, axis=0)
+        else:
+            rrup = get_distances(rup, sites, 'rrup')
+        mask = rrup <= magdist
+        if not mask.any():
+            return
+
+        r_sites = sites.filter(mask)
+        # to debug you can insert here
+        # print(rup.surface.tor.get_tuw_df(r_sites))
+        # import pdb; pdb.set_trace()
+
+        ''' # sanity check
+        true_rrup = rup.surface.get_min_distance(r_sites)
+        numpy.testing.assert_allclose(true_rrup, rrup[mask])
+        '''
+        rparams = self.get_rparams(rup)
+        ctx = self._make_ctx(rparams, r_sites, rrup, mask)
+
+        params = self.REQUIRES_DISTANCES - {'rrup'}
+        if self.fewsites or 'clon' in params or 'clat' in params:
+            params.add('clon_clat')
+
+        # compute tu only once
+        if dparam and ('rx' in params or 'ry0' in params):
+            tu = _get_tu(rup, dparam, mask)
+        else:
+            tu = None
+        for param in params - {'clon', 'clat'}:
+            set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+
+        # PFD multi-fault reference-line metrics: fill only the methods
+        # the configured PFD models declare (cmaker.pfd_methods); single
+        # surfaces fall back to the canonical trace-based metrics
+        for method in getattr(self, 'pfd_methods', ()):
+            if method == 'segments':
                 continue
-
-            r_sites = sites.filter(mask)
-            # to debug you can insert here
-            # print(rup.surface.tor.get_tuw_df(r_sites))
-            # import pdb; pdb.set_trace()
-
-            ''' # sanity check
-            true_rrup = rup.surface.get_min_distance(r_sites)
-            numpy.testing.assert_allclose(true_rrup, rrup[mask])
-            '''
-            rparams = self.get_rparams(rup)
-            dd = self.defaultdict.copy()
-            try:
-                po = rparams['probs_occur']
-            except KeyError:
-                dd['probs_occur'] = numpy.zeros(0)
+            if rup.surface is not None and hasattr(
+                    rup.surface, 'get_ref_metrics'):
+                r_km, x_l, l_km = rup.surface.get_ref_metrics(
+                    method, r_sites)
             else:
-                L = len(po) if len(po.shape) == 1 else po.shape[1]
-                dd['probs_occur'] = numpy.zeros(L)
-            ctx = RecordBuilder(**dd).zeros(len(r_sites))
-            for par, val in rparams.items():
-                ctx[par] = val
+                r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
+            ctx['rtor_' + method] = r_km
+            ctx['x_l_' + method] = x_l
+            ctx['length_' + method] = l_km
 
-            ctx.rrup = rrup[mask]
-            ctx.sids = r_sites.sids
-            params = self.REQUIRES_DISTANCES - {'rrup'}
-            if self.fewsites or 'clon' in params or 'clat' in params:
-                params.add('clon_clat')
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
-            # compute tu only once
-            if dparam and ('rx' in params or 'ry0' in params):
-                tu = _get_tu(rup, dparam, mask)
-            else:
-                tu = None
-            for param in params - {'clon', 'clat'}:
-                set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+        for name in r_sites.array.dtype.names:
+            setattr(ctx, name, r_sites[name])
 
-            # PFD multi-fault reference-line metrics: fill only the methods
-            # the configured PFD models declare (cmaker.pfd_methods); single
-            # surfaces fall back to the canonical trace-based metrics
-            for method in getattr(self, 'pfd_methods', ()):
-                if method == 'segments':
-                    continue
-                if rup.surface is not None and hasattr(
-                        rup.surface, 'get_ref_metrics'):
-                    r_km, x_l, l_km = rup.surface.get_ref_metrics(
-                        method, r_sites)
-                else:
-                    r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
-                ctx['rtor_' + method] = r_km
-                ctx['x_l_' + method] = x_l
-                ctx['length_' + method] = l_km
+        ctx.src_id = src_id
+        if src_id >= 0:
+            ctx.rup_id = rup.rup_id
+        yield ctx
 
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and not rup.surface:  # PointRuptures have no surface
-                reqv = reqv_obj.get(ctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    ctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+    def _make_ctx(self, rparams, r_sites, rrup, mask):
+        """
+        :param rparams: a dictionary of rupture parameters
+        :param r_sites: a (filtered) site collection
+        :param rrup: rupture distances, one per site
+        :param mask: boolean mask of the sites within the integration time
+        :returns: a context recarray with shape (len(r_sites),)
+        """
+        dd = self.defaultdict.copy()
+        try:
+            po = rparams['probs_occur']
+        except KeyError:
+            dd['probs_occur'] = numpy.zeros(0)
+        else:
+            L = len(po) if len(po.shape) == 1 else po.shape[1]
+            dd['probs_occur'] = numpy.zeros(L)
+        ctx = RecordBuilder(**dd).zeros(len(r_sites))
+        for par, val in rparams.items():
+            ctx[par] = val
 
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
-
-            ctx.src_id = src_id
-            if src_id >= 0:
-                ctx.rup_id = rup.rup_id
-            yield ctx
+        ctx.rrup = rrup[mask]
+        ctx.sids = r_sites.sids
+        return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -1376,7 +1467,7 @@ class ContextMaker(object):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: (weight, estimate_sites)
+        :returns: an estimate of the CPU cost of processing the source
         """
         t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
@@ -1386,19 +1477,40 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        step = 1 if src.code in b'pP' else 20 if src.num_ruptures >= 400 else 4
-        C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+        if src.bysrc_unc:
+            # NB: the sources modified by the uncertainties are not split
+            # here (see filter_weight) but in classical, after modifying
+            # them; generating all their contexts now would be expensive
+            # (the area sources go through the rupture-by-rupture path of
+            # gen_contexts) and useless, since the estimate is used only
+            # to split the work in tasks. Since each source is processed
+            # once per set of realizations with different uncertainties,
+            # the cost is proportional to the number of sets; NB: the
+            # import is local to avoid a circular dependency
+            from openquake.hazardlib.lt import get_ts_sets
+            C = src.num_ruptures * src.nsites * len(get_ts_sets(src))
+        else:
+            step = (1 if src.code in b'pP' else
+                    20 if src.num_ruptures >= 400 else 4)
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+            # the corrections compensate the subsampling of the ruptures
+            if src.code in b'SFN':
+                C *= step**2
+            elif src.code in b'CKX':
+                C *= step
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        if src.code in b'SFN':
-            C *= step**2
-        elif src.code in b'CKX':
-            C *= step
         src.nctxs = C * srcfilter.multiplier
-        weight = src.nctxs / N
-        return weight
+        # The surviving contexts are not the whole story: the contexts of a
+        # pointlike source are generated for *all* the (rupture, site) pairs
+        # and then filtered by rrup < magdist, so a collapsed point source
+        # with thousands of ruptures and a couple of surviving contexts is
+        # much more expensive than its nctxs suggests. The number of pairs
+        # is the relevant quantity, discounted by PAIR_COST
+        pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+        return (src.nctxs + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1721,6 +1833,208 @@ class RmapMaker(object):
         return dic
 
 
+def _rates_by_mag(sources):
+    # :param sources: a list of sources
+    # :returns: a list of dictionaries mag -> annual occurrence rate, one
+    #     per source, read from the MFD (cheap, no ruptures enumerated)
+    out = []
+    for src in sources:
+        dic = {}
+        for mag, rate in src.get_annual_occurrence_rates():
+            mag = round(mag, 3)
+            dic[mag] = dic.get(mag, 0.) + rate
+        out.append(dic)
+    return out
+
+
+def _mag_ratios(base, dic):
+    # :param base: dictionary mag -> rate of a base source
+    # :param dic: dictionary mag -> rate of another variant of the source
+    # :returns: dictionary mag -> ratio of the rates, i.e. the factor
+    #     applied to the occurrence rates of the base contexts of that mag;
+    #     the magnitudes missing in the variant get ratio 0 (see get),
+    #     the ones missing in the base are not supported
+    #
+    # NB: this assumes that the MFD variants rescale uniformly the
+    # ruptures of a magnitude, i.e. the relative weights of the ruptures
+    # (hypocenters, nodal planes) do not change, see make_results
+    if set(dic) - set(base):
+        raise ValueError('new magnitudes in a variant')
+    return {mag: dic.get(mag, 0.) / rate for mag, rate in base.items()
+            if rate > 0}
+
+
+# called only in the few sites case
+def make_results(groups, cmakers, sites):
+    """
+    Compute the rates of several variants of the same groups, i.e. groups
+    with the same sources and the same geometry but different MFDs, with
+    the contexts computed only once (called by classical.bysrc_results).
+
+    :param groups: a list of V groups, one per variant, with the same
+        sources in the same order
+    :param cmakers: a list of V cmakers, one per variant, with the gids
+    :param sites: a SiteCollection instance, with few sites
+    :returns: a list of V dictionaries, as returned by RmapMaker.make
+    :raises ValueError: if the variants cannot be computed this way
+    :raises FilteredAway: if some sources of a variant were filtered away
+
+    The contexts are generated from the base variant, i.e. the one with
+    the most magnitudes, and for each other variant the occurrence rates
+    of the contexts are rescaled by the ratio of the rates of their magnitude
+    (see _mag_ratios). Only independent Poisson sources are supported,
+    since the probabilities are then linear in the rates.
+    """
+    rates = [_rates_by_mag(grp) for grp in groups]
+    b = max(range(len(groups)),
+            key=lambda v: sum(len(d) for d in rates[v]))
+    rmaker = RmapMaker(cmakers[b], sites, groups[b])
+    if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
+        raise ValueError('mutually exclusive sources')
+    # NB: the caller checks the number of sites, see classical.bysrc_results
+    assert rmaker.fewsites, 'too many sites'
+    sources = rmaker.sources
+    # NB: the variants can have fewer sources than the base, since the
+    # sources are filtered by minimum_magnitude after the uncertainties
+    # are applied, see classical.cmakers_groups_gkeys
+    nsrcs = [len(grp) for grp in groups]
+    if any(n != len(sources) for n in nsrcs):
+        raise FilteredAway(
+            'the variants have %s sources, expected %d: some sources were '
+            'filtered away by the uncertainties' % (nsrcs, len(sources)))
+    # ratios[v][s] = dictionary mag -> ratio for source s of variant v
+    # e.g. logictree/case_18_bis: 9 variants (3 abGR x 3 maxMagGR), the base
+    # is variant 2 (3 mags, rate 0.115893 at M 5.5); variant 3 has rate
+    # 0.284605 at M 5.5, i.e. ratio 2.4558, and variant 0 (maxMag 7.0)
+    # has no magnitude 7.5, i.e. ratio 0 for it
+    ratios = [[_mag_ratios(rates[b][s], rates[v][s])
+               for s in range(len(sources))]
+              for v in range(len(groups))]
+    sids = rmaker.srcfilter.sitecol.sids
+    cm = rmaker.cmaker
+    pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
+                        True).fill(False) for _ in groups]
+    rmaker.source_data = AccumDict(accum=[])
+    rups = [[] for _ in groups]  # the rup_data of each variant
+    # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
+    # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
+    t0 = time.time()
+    nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
+    dt = (time.time() - t0) / len(sources)
+    # the source data are recorded only for the first variant, the
+    # others get zeros, otherwise the statistics would be repeated
+    for s, src in enumerate(sources):
+        rmaker.update_source_data(src, rmaker.task_no, dt, nctxs[s])
+    out = []
+    for v, pnemap in enumerate(pnemaps):
+        sdata = rmaker.source_data if v == 0 else _zero_source_data(
+            rmaker.source_data)
+        rup_data = concat(rups[v]) if rups[v] else ()
+        dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
+                   rup_data=rup_data, source_data=sdata,
+                   task_no=rmaker.task_no, dparam_mb=0.,
+                   source_mb=cm.source_mb)
+        if rmaker.disagg_by_src:  # see RmapMaker.make
+            dic['basename'] = valid.basename(sources[0])
+        out.append(dic)
+    return out
+
+
+def _process_sources(rmaker, ratios, pnemaps, rups):
+    # Feed the probability maps of the variants with the contexts of all the
+    # sources, see make_results. The contexts are concatenated in chunks, as
+    # in _make_src_indep, otherwise gen_poes is called on tiny arrays and the
+    # mean_stds are computed many more times; the chunks are processed by
+    # _update_chunk, which computes the GMPEs once per magnitude and chunk.
+    #
+    # :param rmaker: a RmapMaker instance for the base variant
+    # :param ratios: ratios[v][s] as in make_results
+    # :param pnemaps: a list of V MapArrays, one per variant, to update
+    # :param rups: a list of V lists, the rup_data of each variant, to extend
+    # :returns: the number of contexts of each source
+    cm = rmaker.cmaker
+    tspan = rmaker.tom.time_span
+    nctxs = []
+    chunk, sidxs, nrows = [], [], 0
+    rmaker.rupdata = []  # used by gen_ctxs with few sites
+    for s, src in enumerate(rmaker.sources):
+        ctxs = list(rmaker.gen_ctxs(src))
+        rmaker.rupdata = []  # the contexts are kept in ctxs
+        nctxs.append(sum(len(ctx) for ctx in ctxs))
+        if cm.oq.keep_rupdata:  # the ruptures of each variant
+            for v, rup in enumerate(rups):
+                rup.extend(_scale_rups(ctxs, ratios[v][s]))
+        for ctx in ctxs:
+            chunk.append(ctx)
+            sidxs.append(numpy.full(len(ctx), s))
+            nrows += len(ctx)
+        if nrows > rmaker.maxsize:
+            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+            chunk, sidxs, nrows = [], [], 0
+    if chunk:
+        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+    return nctxs
+
+
+def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
+    # Update the probability maps of the variants with the contexts of
+    # several sources, computing the PoEs once per magnitude (see
+    # make_results)
+    #
+    # :param cm: a ContextMaker instance
+    # :param pnemaps: a list of V MapArrays, one per variant
+    # :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
+    #     source s of the variant v, see _mag_ratios
+    # :param tspan: the time span of the temporal occurrence model
+    # :param ctxs: a list of context arrays of the sources
+    # :param sidxs: a list of arrays with the source index of each row
+    ctx = concat(ctxs)
+    sidx = numpy.concatenate(sidxs)
+    ctx.mag = numpy.round(ctx.mag, 3)
+    for mag in numpy.unique(ctx.mag):
+        mask = ctx.mag == mag
+        ctxt, si = ctx[mask], sidx[mask]
+        # R[v, s] is the rate ratio of the source s in the variant v
+        R = numpy.array([[r.get(float(mag), 0.) for r in rv]
+                         for rv in ratios])
+        cm.cfactor += [len(ctxt), 1]  # as in gen_poes
+        for poes, _, _, _, slc in cm._gen_poes(ctxt):
+            c = ctxt[slc]
+            for v, pnemap in enumerate(pnemaps):
+                rates_v = c.occurrence_rate * R[v, si[slc]]
+                pnemap.update_indep(poes.astype(F64), c, tspan,
+                                    rates=rates_v)
+
+
+def _scale_rups(rupdata, ratio):
+    # :param rupdata: a list of context arrays of the same source
+    # :param ratio: dictionary mag -> ratio of the occurrence rates, see
+    #     _mag_ratios
+    # :returns: a list of context arrays with the occurrence rates rescaled
+    #     by the ratio of their magnitude; the ruptures with zero rate, i.e.
+    #     with a magnitude missing in the variant, are dropped
+    out = []
+    for ctxs in rupdata:
+        factor = numpy.array([ratio.get(round(float(m), 3), 0.)
+                              for m in ctxs.mag])
+        mask = factor > 0
+        new = ctxs[mask].copy()
+        new['occurrence_rate'] *= factor[mask]
+        out.append(new)
+    return out
+
+
+def _zero_source_data(sdata):
+    # :returns: a copy of the source data with zero counts, i.e. the
+    #     same grp_id and src_id but no contexts, ruptures or times
+    out = AccumDict(accum=[])
+    for key in sdata:
+        vals = sdata[key]
+        out[key] = [0 * v if key in ('nctxs', 'nrupts', 'weight',
+                                     'ctimes') else v for v in vals]
+    return out
+
+
 class BaseContext(metaclass=abc.ABCMeta):
     """
     Base class for context object.
@@ -1922,13 +2236,6 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
-    @property
-    def gids(self):
-        """
-        :returns: concatenation of gid arrays, one for each underlying cmaker
-        """
-        return numpy.concatenate([cm.gid for cm in self.cmakers])
-
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -2045,9 +2352,12 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm.trt_smrs = trt_smrs
         cmakers.append(cm)
     gids = full_lt.get_gids(unique_trt_smrs)
-    for cm, gid in zip(cmakers, gids):
-        cm.gid = gid
-        cm.wei = gweights[gid]
+    for cm, gsim_idx in zip(cmakers, gids):
+        # NB: the ids of the gsims of a group become the gids of the
+        # columns of the rates only when the cmaker is restricted to an
+        # index of rate attribution, see restrict_trt_smrs
+        cm.gsim_idx = gsim_idx
+        cm.wei = gweights[gsim_idx]
     return ContextMakerSequence(cmakers, inverse)
 
 
@@ -2146,6 +2456,9 @@ def read_ctx_by_grp(dstore):
     :returns: dictionary grp_id -> ctx
     """
     sitecol = dstore['sitecol'].complete.array
+    # NB: the gid of each context, i.e. of the index of rate attribution
+    # it was computed for, is a column of the rup dataframe; the gids are
+    # the gsim_idx, see gmf.py
     params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
     dtlist = []
     for par, val in params.items():

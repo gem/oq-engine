@@ -36,7 +36,8 @@ from xml.parsers.expat import ExpatError
 
 import numpy
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
 from openquake.baselib import config, workerpool as w
@@ -44,6 +45,7 @@ from openquake.commonlib.auth import API_KEY
 from openquake.baselib.general import engine_version as get_engine_version
 from openquake.baselib.general import gettemp
 from openquake.engine import engine
+from openquake.engine.export.core import DataStoreExportError
 from openquake.hazardlib import gsim, nrml, valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_FORM_DEFAULTS, impact_validate)
@@ -53,8 +55,8 @@ from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.server.db.registry import get_action
 from openquake.server.services import (
-    create_impact_job, get_impact_rupture_data, get_papers_job_ctx,
-    submit_job)
+    create_impact_job, export_result, get_impact_rupture_data,
+    get_papers_job_ctx, remove_exported, submit_job)
 app = FastAPI(title='OpenQuake API')
 app.state.adapters = {}
 
@@ -525,6 +527,33 @@ def calc_traceback(calc_id: int, x_api_key: str | None = Header(default=None)):
         return logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound as exc:
         raise HTTPException(status_code=404) from exc
+
+
+@app.api_route('/v0/calc/result/{result_id}', methods=['GET', 'HEAD'])
+def calc_result(result_id: int, export_type: str | None = None,
+                x_api_key: str | None = Header(default=None)):
+    """Export a calculation result in the requested format."""
+    _check_api_key(x_api_key)
+    try:
+        exported = export_result(result_id, export_type)
+    except dbapi.NotFound as exc:
+        raise HTTPException(status_code=404) from exc
+    except DataStoreExportError as exc:
+        # TODO: there should be a better error page
+        raise HTTPException(
+            status_code=500,
+            detail='%s: %s' % (exc.__class__.__name__, exc)) from exc
+    if exported is None:  # the requested format is not supported
+        raise HTTPException(status_code=404)
+    fname, content_type, exportname = exported
+    response = FileResponse(
+        fname, media_type=content_type,
+        background=BackgroundTask(remove_exported, fname))
+    # NB: the Content-Disposition is set manually, since the one generated
+    # by FileResponse would quote the file name
+    response.headers['content-disposition'] = (
+        'attachment; filename=%s' % exportname)
+    return response
 
 
 @app.get('/v1/engine_version', response_class=PlainTextResponse)

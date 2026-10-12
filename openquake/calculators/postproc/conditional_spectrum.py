@@ -26,6 +26,7 @@ from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.source_reader import read_core_trt_smrs
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -67,6 +68,32 @@ def store_spectra(dstore, name, R, oq, spectra):
     # dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
 
 
+def get_blocks(dstore, oq, cmakers, ctx_by_grp):
+    """
+    :returns: a pair (blocks, trt_rlzs) where blocks is a list of
+        (cmaker, ctx, tom) tuples, one per realization set, i.e. per set
+        of realizations with the same uncertainties, and trt_rlzs
+        is the list of the realizations associated to the gid of each block
+
+    NB: the contexts of a group contain the sources with different
+    uncertainties, so they must be attributed to the sets of realizations
+    with the same uncertainties, see read_gid_dic
+    """
+    full_lt = dstore['full_lt'].init()
+    toms = decode(dstore['toms'][:])
+    units = read_core_trt_smrs(dstore)
+    gids = full_lt.get_gids(units)  # one array per unit
+    unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
+    blocks = []
+    for grp_id, ctx in ctx_by_grp.items():
+        tom = valid.occurrence_model(toms[grp_id])
+        for gid in numpy.unique(ctx.gid):
+            unit = unit_of[gid]
+            blocks.append((cmakers[grp_id].copy(gid=gids[unit]),
+                           ctx[ctx.gid == gid], tom))
+    return blocks, full_lt.get_trt_rlzs(units)
+
+
 def compute_cs(dstore, oq, N, M, P):
     """
     Compute the conditional spectrum in a sequential way.
@@ -74,9 +101,7 @@ def compute_cs(dstore, oq, N, M, P):
     sites, there is no point in parallelizing: the computation is dominated
     by the time spent reading the contexts, not by the CPU.
     """
-    full_lt = dstore['full_lt'].init()
-    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-    R = full_lt.get_num_paths()
+    R = dstore['full_lt'].init().get_num_paths()
     imts = list(oq.imtls)
     imti = imts.index(oq.imt_ref)
     totrups = len(dstore['rup/mag'])
@@ -97,13 +122,11 @@ def compute_cs(dstore, oq, N, M, P):
     cmakers = read_cmakers(dstore).to_array()
 
     # Computing CS
-    toms = decode(dstore['toms'][:])
-    ctx_by_grp = read_ctx_by_grp(dstore)
+    blocks, trt_rlzs = get_blocks(dstore, oq, cmakers,
+                                  read_ctx_by_grp(dstore))
     dstore.swmr_on()
     smap = parallel.Starmap(get_cs_out, h5=dstore)
-    for grp_id, ctx in ctx_by_grp.items():
-        tom = valid.occurrence_model(toms[grp_id])
-        cmaker = cmakers[grp_id]
+    for cmaker, ctx, tom in blocks:
         smap.submit((cmaker, ctx, imti, imls, tom))
     out = smap.reduce()
 
@@ -131,8 +154,7 @@ def compute_cs(dstore, oq, N, M, P):
     # Computing standard deviation
     dstore.swmr_on()
     smap = parallel.Starmap(get_cs_out, h5=dstore.hdf5)
-    for grp_id, ctx in ctx_by_grp.items():
-        cmaker = cmakers[grp_id]
+    for cmaker, ctx, tom in blocks:
         smap.submit((cmaker, ctx, imti, imls, tom, outmean[0]))
     for res in smap:
         for g in res:

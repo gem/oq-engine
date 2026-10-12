@@ -279,7 +279,7 @@ Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,
 :ref:`event-based PSHA <event-based-psha-params>`,
 :ref:`ShakeMap workflows <scenarios-from-shakemaps>`, and
-:ref:`advanced calculations <advanced-calculations>`. The implemented model
+:ref:`large calculations <large-calculations>`. The implemented model
 classes and interfaces are listed in the
 :ref:`hazardlib API reference <openquake-hazardlib-correlation-models>`.
 
@@ -386,3 +386,8 @@ References
   for ground motion spectral accelerations at multiple periods. *Earthquake
   Engineering & Structural Dynamics*, 49(3), 315-316.
   https://doi.org/10.1002/eqe.3233
+* Monteiro, V.A, Aristeidou, S., and O'Reilly, G. J. (2026). Spatial
+  Cross-Correlation Models for Next-Generation Amplitude and Cumulative
+  Intensity Measures.. *Earthquake Spectra*, 42(2), e70076.
+  https://doi.org/10.1177/8755293020952442
+

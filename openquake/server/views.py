@@ -40,7 +40,7 @@ from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden, JsonResponse)
+    HttpResponseForbidden, JsonResponse, StreamingHttpResponse)
 from django.core.mail import EmailMessage
 from django.core.mail.backends.filebased import (
     EmailBackend as FileEmailBackend)
@@ -68,13 +68,11 @@ from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
-from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
-from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
-from openquake.server.services import store
+from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
@@ -95,13 +93,8 @@ JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 ZIP = 'application/x-zip'
 
-#: For exporting calculation outputs, the client can request a specific format
-#: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
-#: XML by default.
-DEFAULT_EXPORT_TYPE = 'xml'
-
-EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
-DEFAULT_CONTENT_TYPE = 'text/plain'
+#: Size of the chunks streamed by the file proxying views.
+_CHUNK_SIZE = 64 * 1024
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -534,6 +527,44 @@ def _call_api(request, endpoint, params=None, headers=None):
     if response.status_code != 200:
         return HttpResponse(status=502)
     return HttpResponse(content=response.content, content_type=JSON)
+
+
+def _stream_content(response, chunk_size):
+    """Yield the content of an internal response in chunks, then close it."""
+    try:
+        yield from response.iter_content(chunk_size)
+    finally:
+        response.close()
+
+
+def _call_api_file(request, endpoint, params=None):
+    """
+    Call an internal FastAPI endpoint returning a file and proxy its content,
+    preserving the HTTP method (i.e. support HEAD), the content type, the
+    content length and the download name.
+    """
+    url = '%s/%s' % (_get_base_url(request), endpoint)
+    try:
+        response = requests.request(
+            request.method, url, params=params,
+            headers={'X-API-Key': API_KEY}, stream=True, timeout=300)
+    except requests.RequestException:
+        return HttpResponse(status=503)
+    if response.status_code == 404:
+        return HttpResponseNotFound()
+    if response.status_code != 200:
+        # forward the error message, if any
+        return HttpResponse(
+            content=response.content, content_type='text/plain',
+            status=response.status_code)
+    headers = {name: response.headers[name] for name in
+               ('Content-Type', 'Content-Length', 'Content-Disposition')
+               if name in response.headers}
+    if request.method == 'HEAD':  # the client wants the headers only
+        response.close()
+        return HttpResponse(status=200, headers=headers)
+    return StreamingHttpResponse(
+        _stream_content(response, _CHUNK_SIZE), headers=headers, status=200)
 
 
 def _post_api(request, endpoint, data, timeout=10):
@@ -1669,7 +1700,8 @@ def calc_traceback(request, calc_id):
 @require_http_methods(['GET', 'HEAD'])
 def calc_result(request, result_id):
     """
-    Download a specific result, by ``result_id``.
+    Download a specific result, by ``result_id``, by proxying the export to
+    the internal FastAPI endpoint.
 
     The common abstracted functionality for getting hazard or risk results.
 
@@ -1690,9 +1722,10 @@ def calc_result(request, result_id):
     """
     # If the result for the requested ID doesn't exist, OR
     # the job which it is related too is not complete,
-    # throw back a 404.
+    # throw back a 404. Django remains responsible for the user and ACL
+    # checks, while the internal FastAPI endpoint performs the export.
     try:
-        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
+        _, job_status, job_user, _, ds_key = logs.dbcmd(
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
@@ -1706,37 +1739,10 @@ def calc_result(request, result_id):
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
-    etype = request.GET.get('export_type')
-    export_type = etype or DEFAULT_EXPORT_TYPE
-
-    # NOTE: for some reason, in some cases the environment variable TMPDIR is
-    # ignored, so we need to use config.directory.custom_tmp if defined
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    tmpdir = tempfile.mkdtemp(dir=temp_dir)
-    try:
-        exported = core.export_from_db(
-            (ds_key, export_type), job_id, datadir, tmpdir)
-    except DataStoreExportError as exc:
-        # TODO: there should be a better error page
-        return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
-                            content_type='text/plain', status=500)
-    if not exported:
-        # Throw back a 404 if the exact export parameters are not supported
-        return HttpResponseNotFound(
-            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
-    elif len(exported) > 1:
-        # Building an archive so that there can be a single file download
-        archname = ds_key + '-' + export_type + '.zip'
-        zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-        exported = os.path.join(tmpdir, archname)
-        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
-    else:  # single file
-        exported = exported[0]
-        content_type = EXPORT_CONTENT_TYPE_MAP.get(
-            export_type, DEFAULT_CONTENT_TYPE)
-
-    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-    return stream_response(exported, content_type, fname)
+    export_type = request.GET.get('export_type') or DEFAULT_EXPORT_TYPE
+    return _call_api_file(
+        request, 'v0/calc/result/%s' % result_id,
+        params={'export_type': export_type})
 
 
 @cross_domain_ajax

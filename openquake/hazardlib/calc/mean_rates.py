@@ -106,11 +106,20 @@ def main(job_ini):
     """
     from openquake.commonlib import readinput
     from openquake.calculators.views import text_table
+    from openquake.hazardlib.source_reader import get_bset_values, modified_groups
     oq = readinput.get_oqparam(job_ini)
     csm = readinput.get_composite_source_model(oq)
+    # NB: there are no workers here, so the uncertainties are applied here,
+    # one set of realizations at a time; this way the groups returned have
+    # the trt_smrs of a single set of uncertainties, as expected by get_rmap
+    src_groups = []
+    for grp in csm.src_groups:
+        bset_values = get_bset_values(csm.full_lt, grp)
+        src_groups.extend(
+            sg for _trt_smrs, sg in modified_groups(grp, bset_values))
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    rmap, cmakers = get_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
+    rmap, cmakers = get_rmap(src_groups, csm.full_lt, sitecol, oq)
     gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape

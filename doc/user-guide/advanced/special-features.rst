@@ -191,3 +191,95 @@ is the most appropriate to use here). It is strongly advisable that if you make 
 within any GMPEs included in the GMC logic tree.
 
 This capability was added as required for implementation of the 2023 Conterminous USA model developed by the USGS.
+
+Disaggregation by source ``disagg_by_src``
+------------------------------------------
+
+Given a system of various sources affecting a specific site, one very common question to ask is: what are the more 
+relevant sources, i.e. which sources contribute the most to the mean hazard curve? The engine is able to answer such 
+question by setting the ``disagg_by_src`` flag in the job.ini file. When doing that, the engine saves in the datastore a 
+4-dimensional ArrayWrapper called ``mean_rates_by_src`` with dimensions (site ID, intensity measure type, intensity measure 
+level, source ID). From that it is possible to extract the contribution of each source to the mean hazard curve 
+(interested people should look at the code in the function ``check_disagg_by_src``). The ArrayWrapper ``mean_rates_by_src`` 
+can also be converted into a pandas DataFrame, then getting something like the following::
+
+	>> dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
+	               site_id  imt  lvl         value
+	ASCTRAS407           0  PGA    0  9.703749e-02
+	IF-CFS-GRID03        0  PGA    0  3.720510e-02
+	ASCTRAS407           0  PGA    1  6.735009e-02
+	IF-CFS-GRID03        0  PGA    1  2.851081e-02
+	ASCTRAS407           0  PGA    2  4.546237e-02
+	...                ...  ...  ...           ...
+	IF-CFS-GRID03        0  PGA   17  6.830692e-05
+	ASCTRAS407           0  PGA   18  1.072884e-06
+	IF-CFS-GRID03        0  PGA   18  1.275539e-05
+	ASCTRAS407           0  PGA   19  1.192093e-07
+	IF-CFS-GRID03        0  PGA   19  5.960464e-07
+
+The ``value`` field here is the probability of exceedence in the hazard curve. The ``lvl`` field is an integer 
+corresponding to the intensity measure level in the hazard curve.
+
+In engine 3.15 we introduced the so-called “colon convention” on source IDs: if you have many sources that for some 
+reason should be collected together - for instance because they all account for seismicity in the same tectonic region, 
+or because they are components of a same source but are split into separate sources by magnitude - you can tell the 
+engine to collect them into one source in the ``mean_rates_by_src`` matrix. The trick is to use IDs with the same 
+prefix, a colon, and then a numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``, ``src_mag_6.75``, 
+``src_mag_6.85``, fragments of the same source with different magnitudes, you could change their IDs to something like 
+``src:0``, ``src:1``, ``src:2`` and that would reduce the size of the matrix mean_rates_by_src by 3 times by collecting 
+together the contributions of each source. There is no restriction on the numeric indices to start from 0, so using the 
+names ``src:665``, ``src:675``, ``src:685`` would work too and would be clearer: the IDs should be unique, however.
+
+If the IDs are not unique and the engine determines that the underlying sources are different, then an extension 
+“semicolon + incremental index” is automatically added. This is useful when the hazard modeler wants to define a model 
+where the more than one version of the same source appears in one source model, having changed some of the parameters, 
+or when varied versions of a source appear in each branch of a logic tree. In that case, the modeler should use always 
+the exact same ID (i.e. without the colon and numeric index): the engine will automatically distinguish the sources 
+during the calculation of the hazard curves and consider them the same when saving the array ``mean_rates_by_src``: you 
+can see an example in the test ``qa_tests_data/classical/case_20/job_bis.ini`` in the engine code base. In that case 
+the ``source_info`` dataset will list 7 sources ``CHAR1;0 CHAR1;1 CHAR1;2 COMFLT1;0 COMFLT1;1 SFLT1;0 SFLT1;1`` but the 
+matrix ``mean_rates_by_src`` will see only three sources ``CHAR1 COMFLT1 SFLT1`` obtained by composing together the 
+versions of the underlying sources.
+
+In version 3.15 ``mean_rates_by_src`` was extended to work with mutually exclusive sources, i.e. for the Japan model. 
+You can see an example in the test ``qa_tests_data/classical/case_27``. However, the case of mutually exclusive ruptures 
+- an example is the New Madrid cluster in the USA model - is not supported yet.
+
+In some cases it is tricky to discern whether use of the colon convention or identical source IDs is appropriate. The 
+following list indicates several possible cases that a user may encounter, and the appropriate approach to assigning 
+source IDs. Note that this list includes the cases that have been tested so far, and is not a comprehensive list of all 
+cases that may arise.
+
+1. Sources in the same source group/source model are scaled
+   alternatives of each other. For example, this occurs when for a
+   given source, epistemic uncertainties such as occurrence rates or
+   geometries are considered, but the modeller has pre-scaled the
+   rates rather than including the alternative hypothesis in separate
+   logic tree branches.
+
+   **Naming approach**: identical IDs.
+
+2. Sources in different files are alternatives of each other,
+   e.g. each is used in a different branch of the source model logic
+   tree.
+
+   **Naming approach**: identical IDs.
+
+3. A source is defined in OQ by numerous sources, either in the same
+   file or different ones. For example, one could have a set of
+   non-parametric sources, each with many ruptures, that are grouped
+   together into single files by magnitude. Or, one could have many
+   point sources that together represent the seismicity from one
+   source.
+
+   **Naming approach**: colon convention
+
+4. One source consists of many mutually exclusive sources, as in qa_tests_data/classical/case_27.
+
+   **Naming approach**: colon convention
+
+Cases 1 and 2 could include include more than one source typology, as in ``qa_tests_data/classical/case_79``.
+
+NB: ``disagg_by_src`` can be set to true only if the ``ps_grid_spacing`` approximation is disabled. The reason is that 
+the ``ps_grid_spacing`` approximation builds effective sources which are not in the original source model, thus breaking 
+the connection between the values of the matrix and the original sources.

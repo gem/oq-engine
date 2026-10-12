@@ -909,7 +909,8 @@ split_sources:
   INTERNAL
 
 split_time:
-  After how much time starts splitting classical tasks
+  After how much time starts splitting the classical tasks with many
+  sites; the tasks with few sites are never split
   Example: *split_time = 600*
   Default: None, meaning the split_time is automatically determined
 
@@ -1135,6 +1136,7 @@ class OqParam(valid.ParamSet):
         'tsunami_fragility',
         'tsunami_vulnerability',
         'post_loss_amplification',
+        'interdependencies',
     } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
@@ -1684,6 +1686,13 @@ class OqParam(valid.ParamSet):
             if (not self.investigation_time and
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
+                
+        if 'interdependencies' in self.inputs:
+            if not self._parent.discrete_damage_distribution:
+                self.raise_invalid(
+                    'discrete_damage_distribution must be True'
+                    ' for interdependencies analysis')
+
 
     def check_hazard(self):
         # check for sites, site_model and hc_id
@@ -2471,15 +2480,6 @@ class OqParam(valid.ParamSet):
             self._validate_correlation_model(name, component)
         return True
 
-    def is_valid_truncation_level(self):
-        """
-        In presence of a correlation model the truncation level must be nonzero
-        """
-        if self.within_event_correlation_model:
-            return self.truncation_level_within != 0
-        else:
-            return True
-
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
@@ -2796,10 +2796,20 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in run-demos.sh
     def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
+        """
+        ini = '[general]\n' + '\n'.join(
+            to_ini(k, v) for k, v in self._param_dict(**inputs).items())
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
+
+    def _param_dict(self, **inputs):
+        """
+        Build the dictionary of parameters to serialize, applying the
+        usual normalization (legacy cross-correlation rename, removal of
+        the internal fields, joining of the list-valued parameters, ...).
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         if (getattr(self, '_legacy_cross_correlation_role', None) ==
@@ -2815,7 +2825,6 @@ class OqParam(valid.ParamSet):
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
                 split():
             dic.pop(k, None)
-
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'limit_states' in dic:
@@ -2825,19 +2834,16 @@ class OqParam(valid.ParamSet):
                 ','.join(keys) for keys in dic['aggregate_by'])
         if 'cache' not in dic:
             dic['cache'] = 'false'
-        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        # newlines can break the checksum, so we remove them
-        return ini.strip().replace('\n\n', '\n')
+        return dic
 
     def from_parent(self, oqparent, new=False):
         """
         :returns:
             updated instance with missing parameters copied from oqparent
         """
-        params = {name: value for name, value in
-                  vars(oqparent).items()
-                  if name not in vars(self)
-                  and name != 'ground_motion_fields'}
+        params = {name: value for name, value in vars(oqparent).items()
+                  if name not in vars(self) and name not in (
+                  'ground_motion_fields', 'postrisk_func', 'postrisk_args')}
         if new:
             oqc = copy.copy(self)
             vars(oqc).update(params)

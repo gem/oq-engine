@@ -23,7 +23,7 @@ from openquake.baselib import general, config
 from openquake.baselib.general import decode
 from openquake.hazardlib import contexts, source_group, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
-    get_rmap, calc_mean_rates, to_rates, to_probs)
+    to_rates, to_probs)
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -61,31 +61,15 @@ class LogictreeTestCase(CalculatorTestCase):
             return
         if 'hcurves-stats' not in self.calc.datastore:  # not produced
             return
-        oq = self.calc.oqparam
         csm = self.calc.csm
         csm_read = source_group.read_csm(self.calc.datastore)
         # make sure the csm read from the datastore is the same as the original
         for sg_orig, sg in zip(csm.src_groups, csm_read.src_groups):
             if len(sg_orig) != len(sg):
                 raise RuntimeError(f'Inconsistent {sg=}, {sg_orig=}')
-
-        if oq.use_rates:  # compare with mean_rates
-            print('Comparing mean_rates')
-            poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
-            exp_rates = to_rates(poes)  # shape (N, M, L1)
-            # NB: the exp_rates are wrong at small levels because the hcurves
-            # are stored at 32 bit and that make a big difference around log(0)
-            full_lt = self.calc.datastore['full_lt'].init()
-            sitecol = self.calc.datastore['sitecol']
-            trt_smrs, _ = contexts.get_unique_inverse(
-                self.calc.datastore['trt_smrs'])
-            rmap = get_rmap(csm_read.src_groups, full_lt, sitecol, oq)[0]
-            wget = full_lt.gsim_lt.wget
-            mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
-            er = exp_rates[exp_rates < 1]
-            mr = mean_rates[mean_rates < 1]
-            aac(mr, er, atol=2e-5)
+        # NB: the sources in the datastore are not modified by the
+        # uncertainties (they are modified in the classical workers), so
+        # the mean rates cannot be recomputed here
 
     def test_case_01(self):
         # same source in two source models
@@ -199,10 +183,13 @@ class LogictreeTestCase(CalculatorTestCase):
             case_08.__file__)
 
     def test_case_09(self):
+        # NB: the tight delta is needed to detect the case of the
+        # maxMagGRAbsolute uncertainty not being applied: the two curves
+        # differ by 6.8e-6, while the reproduction error is 1.6e-8
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_09.__file__)
+            case_09.__file__, delta=1e-6)
 
     def test_case_10(self):
         self.assert_curves_ok(
@@ -229,6 +216,10 @@ class LogictreeTestCase(CalculatorTestCase):
     def test_case_12(self):
         # akin to NAF model
         self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+        # the bval branchset has applyToBranches=smooth_collapsed, i.e. it
+        # applies to the source SC_10:124 only and not to BG_10
+        fname = general.gettemp(view('usignatures', self.calc.datastore))
+        self.assertEqualFiles('expected/unc_signatures.org', fname)
 
     def test_case_12_bis(self):
         # test reduction with empty branches
@@ -337,9 +328,17 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
-        # test classical with 2 gsims and 5 samples
+        # test classical with 1 gsim and 5 samples
         self.assert_curves_ok(['hazard_curve-mean.csv'],
                               case_18.__file__)
+
+    def test_case_18_bis(self):
+        # test classical with 1 gsim and full enumeration
+        self.run_calc(case_18.__file__, 'job_bis.ini')
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations_bis.csv', fname)
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -375,18 +374,22 @@ hazard_uhs-std.csv
             'hazard_curve-11.csv'],
             case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
-        sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
-        self.assertEqual(len(sgs), 7)
-        dupl = sum(len(sg.sources[0].trt_smrs) - 1 for sg in sgs)
-        self.assertEqual(dupl, 29)  # there are 29 duplicated sources
+        sgs = self.calc.csm.src_groups
+        # there is a single group with the full trt_smrs, instead of 7
+        # groups with 1 source each
+        self.assertEqual(len(sgs), 1)
+        self.assertEqual([src.source_id for src in sgs[0]],
+                         ['CHAR1', 'COMFLT1', 'SFLT1'])
+        dupl = sum(len(src.trt_smrs) - 1 for src in sgs[0])
+        self.assertEqual(dupl, 33)  # 3 sources x 12 sm_rlzs
 
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
+        # there is one row per base source, without the ';' suffix added
+        # to the copies with different uncertainties
         numpy.testing.assert_equal(
-            decode(list(df.index)),
-            ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0', 'COMFLT1;1',
-             'SFLT1;0', 'SFLT1;1'])
+            decode(list(df.index)), ['CHAR1', 'COMFLT1', 'SFLT1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
@@ -499,7 +502,10 @@ hazard_uhs-std.csv
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
         ns = len(self.calc.datastore['source_info'])
-        assert ns == 26
+        # with the uncertainties applied in the workers there is one row
+        # per base source and no ';i' suffix for the 7 sources modified by
+        # the correlated uncertainties
+        assert ns == 19
 
     def test_case_25(self):
         # BCHydro-style correlated uncertainties (alt1 + alt2 + alt3)
@@ -507,7 +513,8 @@ hazard_uhs-std.csv
         self.run_calc(case_25.__file__, 'job.ini', exports='csv',
                       concurrent_tasks='4')
         [got] = export(('hcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', got)
+        self.assertEqualFiles(
+            'expected/hazard_curve-mean-PGA.csv', got, delta=5E-4)
         self.assertEqual(len(self.calc.full_lt.get_realizations()), 50)
 
     def test_case_26(self):
@@ -575,9 +582,12 @@ hazard_uhs-std.csv
 
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
-        ae(info['source_id'], [b'21;0', b'21;1', b'22'])
-        ae(info['grp_id'], [0, 1, 2])
-        ae(info['weight'] > 0, [True, True, True])
+        # the uncertainties are applied in the workers, so there is one row
+        # per base source and no ';i' suffix
+        srcids = [b'21', b'22']
+        ae(info['source_id'], srcids)
+        ae(info['grp_id'], list(range(len(srcids))))
+        ae(info['weight'] > 0, [True] * len(srcids))
 
         # check collapse_gsim_logic_tree
         aw = extract(self.calc.datastore, 'realizations')
@@ -664,6 +674,11 @@ hazard_uhs-std.csv
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
                               delta=1E-6)
+        # the branchset B has applyToBranches=a2 and the branchset C has
+        # applyToBranches="b1 b2", i.e. C applies only to two of the three
+        # branches of B, so the source 2 has 7 signatures and not 9
+        fname = general.gettemp(view('usignatures', self.calc.datastore))
+        self.assertEqualFiles('expected/unc_signatures.org', fname)
 
     def test_case_52(self):
         # case with 2 GSIM realizations b1 (w=.9) and b2 (w=.1), 10 samples
@@ -748,24 +763,15 @@ hazard_uhs-std.csv
 
     def test_case_67(self):
         # source specific logic tree with the following structure:
-        # <CompositeSourceModel
-        # grp_id=0 ['10;0']
-        # grp_id=1 ['16']
-        # grp_id=2 ['11;0']
-        # grp_id=3 ['11;1']
-        # grp_id=4 ['11;2']
-        # grp_id=5 ['10;1']
-        # grp_id=6 ['ACC;0']
-        # grp_id=7 ['ALS;0']
-        # grp_id=8 ['BMS;0']
-        # grp_id=9 ['BMS;1']
-        # grp_id=10 ['BMS;2']
-        # grp_id=11 ['BMS;3']
-        # grp_id=12 ['ALS;1']
-        # grp_id=13 ['ALS;2']
-        # grp_id=14 ['ACC;1']>
-        # there are 2x2x3x2x3x4=288 realizations and 2+2+3+2+3+4=16 groups
-        # 1 group has no sources so the engine sees 15 groups
+        # | source_id | grp_id | code | num_ctxs |num_ruptures |mul |
+        # |-----------+--------+------|----------|-------------|----|
+        # | 10        | 0      | A    | 76       |260_352      |144 |
+        # | 11        | 0      | A    | 335      |13_920       |144 |
+        # | 16        | 0      | P    | 89       |252_000      |144 |
+        # | ACC       | 1      | A    | 131      |17_280       |144 |
+        # | ALS       | 1      | A    | 392      |16_128       |144 |
+        # | BMS       | 1      | A    | 50       |55_680       |144 |
+        # there are 2x2x3x2x3x4=288 realizations and 2 groups
         self.run_calc(case_67.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
@@ -868,4 +874,8 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
         [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/trt_gsim.csv', f)
+        # the uncertainties are applied in the workers, so there is a single
+        # group and not one per set of uncertainties
+        lines = open(f).readlines()
+        self.assertEqual(len(lines), 3)  # comment, header, one group
+        self.assertIn('0,Active Shallow Crust,[BooreAtkinson2008]', lines[2])

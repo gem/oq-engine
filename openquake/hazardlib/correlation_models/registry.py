@@ -54,12 +54,12 @@ class ModelSpec:
         return self.cls.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
 
     @property
-    def sa_damping(self):
-        return self.cls.DEFINED_FOR_SA_DAMPING
+    def damping(self):
+        return self.cls.DEFINED_FOR_DAMPING
 
     @property
-    def sa_period_range(self):
-        return self.cls.DEFINED_FOR_SA_PERIOD_RANGE
+    def period_range(self):
+        return self.cls.DEFINED_FOR_PERIOD_RANGE
 
     @property
     def region(self):

@@ -29,6 +29,8 @@ from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
+from openquake.hazardlib.source_reader import (
+    get_core_trt_smrs, read_core_trt_smrs)
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -96,10 +98,19 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter_mag(srcs, min_mag, strict):
-    # filter by magnitude and count the ruptures
+def filter_mag(srcs, min_mag, strict, bysrc=False):
+    """
+    Filter by magnitude and count the ruptures.
+
+    NB: if bysrc is True the sources modified by the uncertainties are not
+    filtered, since the filtering depends on the occurrence rates, which
+    are modified in the workers, where the filtering is performed anyway.
+    """
+    if not srcs:
+        return []
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
-    out = [src for src in srcs if src.get_mags()[-1] >= mmag]
+    out = [src for src in srcs
+           if src.get_mags()[-1] >= mmag or (bysrc and src.bysrc_unc)]
     for ss in out:
         if (ss.nsites and ss.num_ruptures > MAX_NUM_RUPTURES and strict and
             ss.code in b'FSCNXK'):  # only for fault sources
@@ -111,6 +122,13 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
     pointlike and multifault sources, which have been split already.
+
+    NB: the sources modified by the uncertainties (i.e. the ones with
+    bysrc_unc, see build_groups) are neither split nor filtered here: the
+    splitting would destroy the geometry (and the MFD of the fault
+    sources) and the filtering depends on the occurrence rates, which are
+    modified in the workers; there they are split (see cmakers_groups_gkeys
+    in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq
     mon1 = monitor('building top of ruptures', measuremem=True)
@@ -130,7 +148,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         elif src.code in b'pP' and sf.sitecol:
             # special case, compute distances
             distances = sf.sitecol.get_cdist(src.location)
-            radius = src._get_max_rupture_projection_radius()
+            radius = src._get_rupture_projection_radii()[-1]
             src.nsites = (distances <= maxdist + radius).sum()
         elif sf.sitecol:
             # NB: this is approximate, since the sites are sampled
@@ -140,14 +158,15 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if oq.split_sources and src.nsites and src.code != b'F':
+        if oq.split_sources and src.nsites and src.code != b'F' and \
+                not src.bysrc_unc:
             # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
 
     # filter by magnitude and count ruptures
-    splits = _filter_mag(splits, oq.minimum_magnitude, oq.strict)
+    splits = filter_mag(splits, oq.minimum_magnitude, oq.strict, bysrc=True)
     if not splits:
         return {}
 
@@ -155,7 +174,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
-def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor):
+def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
     ps_grid_spacing is set, grid the point sources.
@@ -304,15 +323,17 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sites is None:
             logging.warning('No sites??')
 
-        L = oq.imtls.size
-        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
-        Gt = sum(len(cm.gsims) for cm in self.cmakers)
-        extra = f'<{Gfull}' if Gt < Gfull else ''
-        if sites is not None:
-            nbytes = 4 * len(self.sitecol) * L * Gt
-            # Gt is known before starting the preclassical
-            logging.warning(f'Global RateMap of %s ({Gt=}%s)',
-                            general.humansize(nbytes), extra)
+        # NB: core_trt_smrs is stored by source_reader.build_groups, i.e.
+        # before the preclassical; the core size Gt, i.e. the number of
+        # columns of the global RateMap, is known already at build time
+        # (see source_reader.store_unc_signatures)
+        if 'core_trt_smrs' not in self.datastore:
+            # this happens if the groups were read from the parent
+            # calculation, so the units are taken from the parent
+            parent = self.datastore.parent
+            gid = (read_core_trt_smrs(parent) if 'core_trt_smrs' in parent
+                   else get_core_trt_smrs(csm.src_groups))
+            self.datastore.hdf5.save_vlen('core_trt_smrs', gid)
 
         if sites and not self.few_sites:
             # in SAM from 539,831 -> 11,430 sites

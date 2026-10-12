@@ -102,9 +102,9 @@ Declare the following metadata only when it applies:
 - `INTENSITY_MEASURE_TYPE_APPROXIMATIONS` maps each accepted IMT factory to
   the IMT that represents it when an operational proxy is explicitly
   supported.
-- `DEFINED_FOR_SA_DAMPING` gives the supported spectral damping, when
+- `DEFINED_FOR_DAMPING` gives the supported spectral damping, when
   applicable.
-- `DEFINED_FOR_SA_PERIOD_RANGE` gives the inclusive calibrated period range.
+- `DEFINED_FOR_PERIOD_RANGE` gives the inclusive calibrated period range.
 - `DEFINED_FOR_REGION` records an explicit geographic applicability or
   calibration restriction. Most models should inherit the default `None`.
 
@@ -119,8 +119,8 @@ DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
 INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
-DEFINED_FOR_SA_DAMPING = 5.0
-DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 5.0)
+DEFINED_FOR_DAMPING = 5.0
+DEFINED_FOR_PERIOD_RANGE = (0.01, 5.0)
 ```
 
 Use `None` only when a field genuinely does not apply or the model is not

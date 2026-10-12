@@ -426,16 +426,18 @@ class PointSourceMaxRupProjRadiusTestCase(unittest.TestCase):
         np_dist = PMF([(0.5, NodalPlane(1, 20, 3)),
                        (0.5, NodalPlane(2, 2, 4))])
         source = make_point_source(nodal_plane_distribution=np_dist, mfd=mfd)
-        radius = source._get_max_rupture_projection_radius()
-        self.assertAlmostEqual(radius, 1.2830362)
+        radii = source._get_rupture_projection_radii()
+        self.assertAlmostEqual(radii[-1], 1.2830362)
+        self.assertFalse(hasattr(source, 'radius'))
 
         mfd = TruncatedGRMFD(a_val=1, b_val=2, min_mag=5,
                              max_mag=6, bin_width=1)
         np_dist = PMF([(0.5, NodalPlane(1, 40, 3)),
                        (0.5, NodalPlane(2, 30, 4))])
         source = make_point_source(nodal_plane_distribution=np_dist, mfd=mfd)
-        radius = source._get_max_rupture_projection_radius()
-        self.assertAlmostEqual(radius, 3.8712214)
+        radii = source._get_rupture_projection_radii()
+        self.assertAlmostEqual(radii[-1], 3.8712214)
+        self.assertFalse(hasattr(source, 'radius'))
 
 
 class CollapsedPointSourceTestCase(unittest.TestCase):

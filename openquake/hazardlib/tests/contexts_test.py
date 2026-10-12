@@ -300,14 +300,25 @@ class FastRatesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from openquake.commonlib import readinput
-        job_ini =os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
+        from openquake.hazardlib.contexts import get_cmakers
+        from openquake.hazardlib.source_reader import (
+            get_bset_values, modified_groups)
+        job_ini = os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)
-        cls.sources = csm.get_sources()
-        cls.cmakers = csm.get_cmakers()
+        # the uncertainties are applied in the workers, one set of
+        # realizations at a time, so the groups below are the sets of
+        # realizations with the same uncertainties, as in classical
+        [cls.grp] = csm.src_groups
+        bset_values = get_bset_values(csm.full_lt, cls.grp)
+        cls.src_groups = [sg for _trt, sg
+                          in modified_groups(cls.grp, bset_values)]
+        cls.sources = [sg[0] for sg in cls.src_groups]
+        cls.cmakers = get_cmakers([sg[0].trt_smrs for sg in cls.src_groups],
+                                  csm.full_lt, oq)
         cls.sitecol = readinput.get_site_collection(oq)
         with Monitor('get_rmap', measuremem=True) as cls.mon:
-            cls.rmap = cls.cmakers.get_rmap(csm.src_groups, cls.sitecol)
+            cls.rmap = cls.cmakers.get_rmap(cls.src_groups, cls.sitecol)
 
     def test_get_rmaps(self):
         # changing 100 times abGR on an area sources is 10x faster

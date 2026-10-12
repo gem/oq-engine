@@ -526,6 +526,8 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     Compute losses and loss curves starting from an event loss table.
     """
+    result = None  # set by the postrisk_func
+
     def pre_execute(self):
         oq = self.oqparam
         ds = self.datastore
@@ -719,7 +721,7 @@ class PostRiskCalculator(base.RiskCalculator):
             mod = getattr(postrisk, modname)
             func = getattr(mod, funcname)
             with self._monitor(oq.postrisk_func, measuremem=True):
-                func(self.datastore, **oq.postrisk_args)
+                self.result = func(self.datastore, **oq.postrisk_args)
 
 
 def post_aggregate(calc_id: int, aggregate_by):

@@ -33,7 +33,7 @@ F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 TWO20 = 2 ** 20  # 1 MB
 TWO24 = 2 ** 24
-rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U16),
+rates_dt = numpy.dtype([('sid', U32), ('lid', U16), ('gid', U32),
                         ('rate', F32)])
 
 

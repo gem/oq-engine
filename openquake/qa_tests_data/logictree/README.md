@@ -20,7 +20,8 @@
 | case_15     | Nontrivial source model logic tree with 8+4 realizations                   |
 | case_16     | Sampling 10 logic tree paths out of 759_375                                |
 | case_17     | Sampling 5 logic tree paths out of 2                                       |
-| case_18     | Two GSIMs and 5 samples                                                    |
+| case_18     | a, b, mmax, lower depth and 5 samples                                      |
+| case_18_bis | Full enumeration of the logic tree                                         |
 | case_19     | Test AvgGMPE                                                               |
 | case_20     | Nontrivial source model logic tree with 8+4 realizations changing surfaces |
 | case_20_bis | Tests mean_rates_by_src                                                    |

@@ -411,6 +411,23 @@ def get_params(job_ini, kw={}):
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
+    params = _params_from_cp(cp, base_path, job_ini)
+    try:
+        update(params, kw.items(), base_path)  # override on demand
+    except Exception:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
+    return params
+
+
+def _params_from_cp(cp, base_path, job_ini):
+    """
+    Build a parameters dictionary from an already parsed .ini file,
+    converting the ``<name>_file`` keys into the ``inputs`` subdictionary
+    with absolute paths (see update). Shared by get_params and to_dict.
+    """
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
@@ -429,13 +446,30 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     try:
         update(params, items, base_path)
-        update(params, kw.items(), base_path)  # override on demand
     except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
     return params
+
+
+def to_dict(oqparam, **inputs):
+    """
+    Convert an OqParam into a parameters dictionary with the same structure
+    produced by get_params, so it can be fed directly to run_calc without
+    writing a job.ini file on disk. The input files are stored in the
+    'inputs' subdictionary with absolute paths.
+
+    :param oqparam:
+        an OqParam instance
+    :param inputs:
+        optionally override some input files (e.g. exposure='x.xml')
+    :returns:
+        a dictionary of parameters
+    """
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.read_string(oqparam.to_ini(**inputs))
+    base_path = getattr(oqparam, 'base_path', '') or '<in-memory>'
+    return _params_from_cp(cp, base_path, '<in-memory>')
 
 
 def is_fraction(string):
@@ -1166,23 +1200,24 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-def get_composite_source_model(oqparam, dstore=None, apply_unc=True):
+def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
+
+    NB: the uncertainties are not applied, since they are applied in the
+    workers, one set of realizations at a time, see modified_groups
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param dstore:
          an open datastore where to save the source info
-    :param apply_unc:
-         apply the uncertainties
     """
     if 'source_model_logic_tree' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    csm = source_reader.get_csm(oqparam, full_lt, dstore, apply_unc)
+    csm = source_reader.get_csm(oqparam, full_lt, dstore)
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
@@ -1239,7 +1274,8 @@ def get_crmodel(oqparam):
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
 
-    if 'consequence' in oqparam.inputs:
+    if 'consequence' in oqparam.inputs or (
+            riskmodels.get_xml_consequence_files(oqparam.inputs)):
         consdict = read_consdict(oqparam, limit_states, perils)
     else:
         consdict = {}
@@ -1256,22 +1292,25 @@ def read_consdict(oqparam, limit_states, perils):
     if not limit_states:
         raise InvalidFile('Missing fragility functions in %s' %
                           oqparam.inputs['job_ini'])
-    # build consdict of the form consequence_by_tagname -> tag -> array
-    consdict = {}
-    for by, fnames in oqparam.inputs['consequence'].items():
-        if by == 'taxonomy':  # obsolete name
-            by = 'risk_id'
+    # collect (by, fname, dframe) triples, one per consequence source
+    sources = []
+    for by, fnames in oqparam.inputs.get('consequence', {}).items():
         if isinstance(fnames, str):  # single file
             fnames = [fnames]
         # i.e. files collapsed.csv, fatalities.csv, ... with headers like
         # taxonomy,consequence,slight,moderate,extensive
-        dfs = []
         for fname in fnames:
             if os.path.exists(fname):
-                dfs.append(pandas.read_csv(fname))
-        if not dfs:
-            continue
-        df = pandas.concat(dfs)
+                sources.append((by, fname, pandas.read_csv(fname)))
+    # NRML consequence models, i.e. structural_consequence_file = x.xml
+    for fname in riskmodels.get_xml_consequence_files(oqparam.inputs):
+        sources.append(('taxonomy', fname,
+                        _read_xml_consequence(fname, limit_states)))
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    for by, fname, df in sources:
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
         # NB: consequence files depend on loss_type, unlike fragility files
         if 'taxonomy' in df.columns:  # obsolete name
             df['risk_id'] = df['taxonomy']
@@ -1283,13 +1322,32 @@ def read_consdict(oqparam, limit_states, perils):
         for consequence in df.consequence.unique():
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
-                                  (consequence, fnames))
+                                  (consequence, fname))
             if by == 'risk_id':  # by is risk_id or taxonomy
                 key = f'{consequence}_by_{by}'
             else:
                 key = by
-            consdict[key] = df[df.consequence == consequence]
+            sub = df[df.consequence == consequence]
+            if key in consdict:  # same consequence from several sources
+                sub = pandas.concat([consdict[key], sub])
+            consdict[key] = sub
     return consdict
+
+
+def _read_xml_consequence(fname, limit_states):
+    """
+    :returns: a DataFrame with columns risk_id, consequence, loss_type,
+        peril and the limit states, read from a NRML consequenceModel
+    """
+    cmodel = nrml.to_python(fname)
+    if list(cmodel.limitStates) != list(limit_states):
+        raise InvalidFile('%s: the limit states %s do not match the '
+                          'fragility ones %s' % (
+                              fname, cmodel.limitStates, limit_states))
+    rows = [[risk_id, 'losses', cmodel.lossCategory, 'groundshaking',
+             *coeffs] for risk_id, coeffs in cmodel.items()]
+    columns = ['risk_id', 'consequence', 'loss_type', 'peril']
+    return pandas.DataFrame(rows, columns=columns + list(limit_states))
 
 
 def get_exposure(oqparam, h5=None):
@@ -1343,6 +1401,13 @@ def concat_if_different(values):
     # If all values are identical, return the single unique value,
     # otherwise join with "|"
     return '|'.join(unique_values)
+
+
+def get_interdependencies(oqparam):
+    """
+    Read the interdependencies.csv file used in composite infrastructure risk calculations
+    """
+    return pandas.read_csv(oqparam.inputs['interdependencies'])
 
 
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):

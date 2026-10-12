@@ -28,7 +28,7 @@ from openquake.baselib import config, hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import mean_curve
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 from openquake.commonlib import readinput
 from openquake.calculators.extract import (
     extract, sanitize, _get_data, aggexp_tags)
@@ -760,7 +760,16 @@ def export_reinsurance(ekey, dstore):
             ('infra-event_ccl', 'csv'),
             ('infra-event_pcl', 'csv'),
             ('infra-event_wcl', 'csv'),
-            ('infra-event_efl', 'csv'))
+            ('infra-event_efl', 'csv'),
+            ('inter-avg_loss', 'csv'),
+            ('inter-node_el', 'csv'),
+            ('inter-taz_cl', 'csv'),
+            ('inter-dem_cl', 'csv'),
+            ('inter-event_ccl', 'csv'),
+            ('inter-event_pcl', 'csv'),
+            ('inter-event_wcl', 'csv'),
+            ('inter-event_efl', 'csv'))
+
 def export_node_el(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
@@ -946,7 +955,8 @@ def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
         writer.save(taxmap, dest)
         inputs['taxonomy_mapping'] = dest
 
-    if 'consequence' in oq.inputs:
+    if 'consequence' in oq.inputs or riskmodels.get_xml_consequence_files(
+            oq.inputs):
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
         dic = {}

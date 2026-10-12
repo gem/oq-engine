@@ -16,10 +16,12 @@ import traceback
 from datetime import datetime, timezone
 
 from openquake.baselib import config, parallel
+from openquake.baselib.general import zipfiles
 from openquake.calculators.getters import NotFound
 from openquake.commonlib import logs, oqvalidation, readinput
 from openquake.engine import aelo, engine, impact
 from openquake.engine.aelo import get_params_from
+from openquake.engine.export.core import export_from_db
 from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.validate import impact_validate
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -55,6 +57,62 @@ def get_impact_rupture_data(post, user, rupture_path):
 CWD = os.path.dirname(__file__)
 KUBECTL = 'kubectl apply -f -'.split()
 ENGINE = 'python -m openquake.engine.engine'.split()
+
+XML = 'application/xml'
+JSON = 'application/json'
+ZIP = 'application/x-zip'
+
+#: For exporting calculation outputs, the client can request a specific format
+#: (xml, geojson, csv, etc.). If the client does not specify, give them (NRML)
+#: XML by default.
+DEFAULT_EXPORT_TYPE = 'xml'
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
+DEFAULT_CONTENT_TYPE = 'text/plain'
+
+
+def remove_exported(fname):
+    """Remove the temporary directory containing an exported file."""
+    shutil.rmtree(os.path.dirname(fname), ignore_errors=True)
+
+
+def export_result(result_id, export_type=None):
+    """
+    Export a calculation result in the requested format.
+
+    :param result_id: ID of the result to export
+    :param export_type: export format, NRML XML by default
+    :returns: a triple (fname, content_type, exportname) where `fname` is
+        the path of a file inside a fresh temporary directory, or None if
+        the result cannot be exported in the given format
+    :raises: DataStoreExportError if the export fails
+    """
+    export_type = export_type or DEFAULT_EXPORT_TYPE
+    job_id, _, _, datadir, ds_key = logs.dbcmd('get_result', result_id)
+    # NOTE: for some reason, in some cases, the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
+    try:
+        exported = export_from_db(
+            (ds_key, export_type), job_id, datadir, tmpdir)
+        if not exported:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return None
+        if len(exported) > 1:
+            # build an archive, so that there is a single file to download
+            archname = ds_key + '-' + export_type + '.zip'
+            fname = os.path.join(tmpdir, archname)
+            zipfiles(exported, fname, cleanup=True)
+            content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
+        else:  # single file
+            fname = exported[0]
+            content_type = EXPORT_CONTENT_TYPE_MAP.get(
+                export_type, DEFAULT_CONTENT_TYPE)
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+    return fname, content_type, 'output-%s-%s' % (
+        result_id, os.path.basename(fname))
 
 
 def store(request_files, ini, calc_id):
