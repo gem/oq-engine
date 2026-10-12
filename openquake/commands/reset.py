@@ -20,7 +20,7 @@ import sys
 import getpass
 from openquake.baselib import config
 from openquake.commonlib import logs
-from openquake.engine.utils import confirm
+from openquake.baselib.general import confirm
 from openquake.commands.purge import purge_one, purge_all
 
 
