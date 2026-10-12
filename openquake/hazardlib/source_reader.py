@@ -370,7 +370,7 @@ def _subsets_by_unc(sources):
     if getattr(sources, 'atomic', False):
         # the sources of an atomic group are mutually exclusive (or belong
         # to a cluster), so they must be kept together, see sample_cluster
-        # and cmakers_groups; the sets of realizations are the same for
+        # and cmakers_groups_gkeys; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
                 for trt_smrs in get_ts_sets(sources[0])}
