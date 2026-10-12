@@ -1834,33 +1834,30 @@ class RmapMaker(object):
 
 
 def _rates_by_mag(sources):
-    """
-    :param sources: a list of sources
-    :returns: a list of dictionaries mag -> annual occurrence rate, one
-        per source, read from the MFD (cheap, no ruptures enumerated)
-    """
+    # :param sources: a list of sources
+    # :returns: a list of dictionaries mag -> annual occurrence rate, one
+    #     per source, read from the MFD (cheap, no ruptures enumerated)
     out = []
     for src in sources:
         dic = {}
         for mag, rate in src.get_annual_occurrence_rates():
-            dic[round(mag, 3)] = dic.get(round(mag, 3), 0.) + rate
+            mag = round(mag, 3)
+            dic[mag] = dic.get(mag, 0.) + rate
         out.append(dic)
     return out
 
 
 def _mag_ratios(base, dic):
-    """
-    :param base: dictionary mag -> rate of a base source
-    :param dic: dictionary mag -> rate of another variant of the source
-    :returns: dictionary mag -> ratio of the rates, i.e. the factor
-        applied to the occurrence rates of the base contexts of that mag;
-        the magnitudes missing in the variant get ratio 0 (see get),
-        the ones missing in the base are not supported
-
-    NB: this assumes that the MFD variants rescale uniformly the
-    ruptures of a magnitude, i.e. the relative weights of the ruptures
-    (hypocenters, nodal planes) do not change, see make_results
-    """
+    # :param base: dictionary mag -> rate of a base source
+    # :param dic: dictionary mag -> rate of another variant of the source
+    # :returns: dictionary mag -> ratio of the rates, i.e. the factor
+    #     applied to the occurrence rates of the base contexts of that mag;
+    #     the magnitudes missing in the variant get ratio 0 (see get),
+    #     the ones missing in the base are not supported
+    #
+    # NB: this assumes that the MFD variants rescale uniformly the
+    # ruptures of a magnitude, i.e. the relative weights of the ruptures
+    # (hypocenters, nodal planes) do not change, see make_results
     if set(dic) - set(base):
         raise ValueError('new magnitudes in a variant')
     return {mag: dic.get(mag, 0.) / rate for mag, rate in base.items()
@@ -1891,8 +1888,7 @@ def make_results(groups, cmakers, sites):
     rates = [_rates_by_mag(grp) for grp in groups]
     b = max(range(len(groups)),
             key=lambda v: sum(len(d) for d in rates[v]))
-    base = groups[b]
-    rmaker = RmapMaker(cmakers[b], sites, base)
+    rmaker = RmapMaker(cmakers[b], sites, groups[b])
     if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
         raise ValueError('mutually exclusive sources')
     # NB: the caller checks the number of sites, see classical.bysrc_results
@@ -1918,39 +1914,15 @@ def make_results(groups, cmakers, sites):
     cm = rmaker.cmaker
     pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
                         True).fill(False) for _ in groups]
-    tspan = rmaker.tom.time_span
-    rmaker.rupdata = []  # used by gen_ctxs with few sites
     rmaker.source_data = AccumDict(accum=[])
     rups = [[] for _ in groups]  # the rup_data of each variant
     # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
     # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
-    # NB: the GMPEs are computed once, only the rates change by variant
-    nctxs = [0] * len(sources)  # the number of contexts of each source
-    # NB: the contexts of the sources are concatenated in chunks, as in
-    # _make_src_indep, otherwise gen_poes is called on tiny arrays and the
-    # mean_stds are computed many more times; the chunks are processed by
-    # _update_chunk, which computes the GMPEs once per magnitude and chunk
-    chunk, sidxs, nrows = [], [], 0
     t0 = time.time()
-    for s, src in enumerate(sources):
-        ctxs = list(rmaker.gen_ctxs(src))
-        rmaker.rupdata = []  # the contexts are kept in ctxs
-        nctxs[s] = sum(len(ctx) for ctx in ctxs)
-        if cm.oq.keep_rupdata:  # the ruptures of each variant
-            for v in range(len(groups)):
-                rups[v].extend(_scale_rups(ctxs, ratios[v][s]))
-        for ctx in ctxs:
-            chunk.append(ctx)
-            sidxs.append(numpy.full(len(ctx), s))
-            nrows += len(ctx)
-        if nrows > rmaker.maxsize:
-            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
-            chunk, sidxs, nrows = [], [], 0
-    if chunk:
-        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+    nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
+    dt = (time.time() - t0) / len(sources)
     # the source data are recorded only for the first variant, the
     # others get zeros, otherwise the statistics would be repeated
-    dt = (time.time() - t0) / len(sources)
     for s, src in enumerate(sources):
         rmaker.update_source_data(src, rmaker.task_no, dt, nctxs[s])
     out = []
@@ -1968,19 +1940,54 @@ def make_results(groups, cmakers, sites):
     return out
 
 
-def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
-    """
-    Update the probability maps of the variants with the contexts of
-    several sources, computing the PoEs once per magnitude (see make_results)
+def _process_sources(rmaker, ratios, pnemaps, rups):
+    # Feed the probability maps of the variants with the contexts of all the
+    # sources, see make_results. The contexts are concatenated in chunks, as
+    # in _make_src_indep, otherwise gen_poes is called on tiny arrays and the
+    # mean_stds are computed many more times; the chunks are processed by
+    # _update_chunk, which computes the GMPEs once per magnitude and chunk.
+    #
+    # :param rmaker: a RmapMaker instance for the base variant
+    # :param ratios: ratios[v][s] as in make_results
+    # :param pnemaps: a list of V MapArrays, one per variant, to update
+    # :param rups: a list of V lists, the rup_data of each variant, to extend
+    # :returns: the number of contexts of each source
+    cm = rmaker.cmaker
+    tspan = rmaker.tom.time_span
+    nctxs = []
+    chunk, sidxs, nrows = [], [], 0
+    rmaker.rupdata = []  # used by gen_ctxs with few sites
+    for s, src in enumerate(rmaker.sources):
+        ctxs = list(rmaker.gen_ctxs(src))
+        rmaker.rupdata = []  # the contexts are kept in ctxs
+        nctxs.append(sum(len(ctx) for ctx in ctxs))
+        if cm.oq.keep_rupdata:  # the ruptures of each variant
+            for v, rup in enumerate(rups):
+                rup.extend(_scale_rups(ctxs, ratios[v][s]))
+        for ctx in ctxs:
+            chunk.append(ctx)
+            sidxs.append(numpy.full(len(ctx), s))
+            nrows += len(ctx)
+        if nrows > rmaker.maxsize:
+            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+            chunk, sidxs, nrows = [], [], 0
+    if chunk:
+        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+    return nctxs
 
-    :param cm: a ContextMaker instance
-    :param pnemaps: a list of V MapArrays, one per variant
-    :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
-        source s of the variant v, see _mag_ratios
-    :param tspan: the time span of the temporal occurrence model
-    :param ctxs: a list of context arrays of the sources
-    :param sidxs: a list of arrays with the source index of each row
-    """
+
+def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
+    # Update the probability maps of the variants with the contexts of
+    # several sources, computing the PoEs once per magnitude (see
+    # make_results)
+    #
+    # :param cm: a ContextMaker instance
+    # :param pnemaps: a list of V MapArrays, one per variant
+    # :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
+    #     source s of the variant v, see _mag_ratios
+    # :param tspan: the time span of the temporal occurrence model
+    # :param ctxs: a list of context arrays of the sources
+    # :param sidxs: a list of arrays with the source index of each row
     ctx = concat(ctxs)
     sidx = numpy.concatenate(sidxs)
     ctx.mag = numpy.round(ctx.mag, 3)
@@ -2000,14 +2007,12 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
 
 
 def _scale_rups(rupdata, ratio):
-    """
-    :param rupdata: a list of context arrays of the same source
-    :param ratio: dictionary mag -> ratio of the occurrence rates, see
-        _mag_ratios
-    :returns: a list of context arrays with the occurrence rates rescaled
-        by the ratio of their magnitude; the ruptures with zero rate, i.e.
-        with a magnitude missing in the variant, are dropped
-    """
+    # :param rupdata: a list of context arrays of the same source
+    # :param ratio: dictionary mag -> ratio of the occurrence rates, see
+    #     _mag_ratios
+    # :returns: a list of context arrays with the occurrence rates rescaled
+    #     by the ratio of their magnitude; the ruptures with zero rate, i.e.
+    #     with a magnitude missing in the variant, are dropped
     out = []
     for ctxs in rupdata:
         factor = numpy.array([ratio.get(round(float(m), 3), 0.)
@@ -2020,10 +2025,8 @@ def _scale_rups(rupdata, ratio):
 
 
 def _zero_source_data(sdata):
-    """
-    :returns: a copy of the source data with zero counts, i.e. the
-        same grp_id and src_id but no contexts, ruptures or times
-    """
+    # :returns: a copy of the source data with zero counts, i.e. the
+    #     same grp_id and src_id but no contexts, ruptures or times
     out = AccumDict(accum=[])
     for key in sdata:
         vals = sdata[key]
