@@ -328,9 +328,17 @@ hazard_uhs-std.csv
         numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
-        # test classical with 2 gsims and 5 samples
+        # test classical with 1 gsim and 5 samples
         self.assert_curves_ok(['hazard_curve-mean.csv'],
                               case_18.__file__)
+
+    def test_case_18_bis(self):
+        # test classical with 1 gsim and full enumeration
+        self.run_calc(case_18.__file__, 'job_bis.ini')
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations_bis.csv', fname)
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
