@@ -154,7 +154,7 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[webui]"` (it is not installed by default). Please replace the value of
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default). Please replace the value of
 ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
 ExecStart=/opt/openquake/venv/bin/gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
@@ -226,19 +226,6 @@ Please refer to the nginx installation istructions for your operating system.
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static
 content (see [documentation](https://docs.gunicorn.org/en/stable/deploy.html)).
-
-A minimal configuration, where `STATIC_ROOT` is the folder used by `collectstatic`, is:
-```nginx
-location /static/ {
-    alias <STATIC_ROOT>/;
-}
-
-location / {
-    proxy_pass http://127.0.0.1:8800;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
 
 When the reverse proxy is configured, add the following to `openquake/server/local_settings.py`:
 ```python

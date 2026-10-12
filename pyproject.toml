@@ -55,8 +55,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# needed only by "oq webui start" (see openquake/commands/webui.py)
-webui = ["gunicorn>=26.2"]
+# needed only by Server Installation method (see doc/getting-started/installation-instructions/server.md)
+server = ["gunicorn>=26.2"]
 
 [project.urls]
 Homepage = "https://globalquakemodel.org"
