@@ -23,7 +23,7 @@ import getpass
 import tempfile
 import logging
 
-from openquake.baselib import config
+from openquake.baselib import config, restricted
 from openquake.commonlib import datastore, auth
 
 # optionally overridden in local_settings.py
@@ -138,7 +138,7 @@ MIDDLEWARE = (
 )
 
 # Authentication is not enabled by default
-LOCKDOWN = False
+LOCKDOWN = restricted()
 # Forbid users to see other users outputs by default
 ACL_ON = True
 

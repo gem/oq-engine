@@ -125,13 +125,13 @@ if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 
-def multi_user():
+def restricted():
     return config.dbserver.host != '127.0.0.1'
 
 
 def use_server():
     """:returns: True for regular users in a server installation"""
-    return multi_user() and getpass.getuser() != 'openquake'
+    return restricted() and getpass.getuser() != 'openquake'
 
 
 # the version is managed by the universal installer
