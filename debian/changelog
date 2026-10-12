@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Introduced a epsilon scaling capability in GridAdjustedGMPE
+    with updated unit tests and QA tests (classical/case_11).
+
   [Anthony Carapetis]
   * Fix for Allen (2022) GSIM: Vs30 inputs are now clamped to the calibrated
     range of the model to avoid the singularity at Vs30=150.
