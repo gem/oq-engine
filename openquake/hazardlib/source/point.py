@@ -667,8 +667,7 @@ def _grid_points(points, ps_grid_spacing, grp_id, cnt):
             cps = CollapsedPointSource(  # slow part
                 src_id or 'cps-%03d-%04d' % (grp_id, cnt), points[idxs])
             cps.grp_id = points[0].grp_id
-            cps.ts_sets = points[0].ts_sets
-            cps.sampling = points[0].sampling
+            cps.ts_samples = points[0].ts_samples
             cps.ps_grid_spacing = ps_grid_spacing
             if same_source:
                 cps.source_fraction = len(idxs) / len(points)

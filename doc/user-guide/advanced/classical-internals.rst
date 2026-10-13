@@ -121,11 +121,17 @@ source models for a given logic tree. It is a list of ``SourceGroup``
 instances, each containing a list of sources; the groups are the unit of
 task generation, the sources the unit of computation.
 
-Each source has a ``sampling`` attribute, i.e. an array with two columns,
-``trt_smr`` and ``samples``, with one row per source model realization
+Each source has a ``ts_samples`` attribute, i.e. an array with three columns,
+``trt_smr``, ``samples`` and ``ts``, with one row per source model realization
 the source belongs to::
 
-    sampling_dt = numpy.dtype([('trt_smr', U32), ('samples', U32)])
+    ts_samples_dt = numpy.dtype(
+        [('trt_smr', U32), ('samples', U32), ('ts', U32)])
+
+The ``ts`` column identifies the set of realizations sharing the same
+uncertainties (see step 2 below): it is the smallest ``trt_smr`` of the
+set, or 0 for all the rows if the uncertainties are the same in all the
+realizations (or there are none).
 
 The ``trt_smr`` is an integer encoding two pieces of information, the
 tectonic region type and the realization:
@@ -224,16 +230,17 @@ one set of realizations at a time. The mechanism is the following.
    ``source_reader.unc_signature``). Sources not affected by a
    branchset have an empty signature.
 2. When building the CSM, the ``trt_smrs`` of a source are grouped by
-   signature and stored in the ``ts_sets`` attribute; the sets of
-   realizations sharing the same uncertainties are called *ts sets*.
-   They are read back with ``lt.ts_sets(src)``.
+   signature and stored in the field ``ts`` of the ``ts_samples`` attribute
+   (the smallest ``trt_smr`` of the set); the sets of realizations sharing
+   the same uncertainties are called *ts sets*. They are read back with
+   ``lt.get_ts_sets(src)``.
 3. In the preclassical the ts sets are stored in the ``core_trt_smrs``
    dataset, one row per ts set. Concretely, a ts set is turned into a set of
    ``gids``, i.e. the (realization, GMM) pairs of the ts set, and the
    rates computed for it are associated to those ``gids``; see the
    section on the ``RateMap`` below.
-4. In the workers, for each ts set the engine restricts the sampling of
-   the sources to its realizations (``lt.restrict_sampling``) and applies
+4. In the workers, for each ts set the engine restricts the ts_samples of
+   the sources to its realizations (``lt.restrict_ts_samples``) and applies
    the uncertainties of its first realization
    (``lt.apply_uncertainties``, called by ``source_reader.modified_groups``).
    The resulting sources are then
