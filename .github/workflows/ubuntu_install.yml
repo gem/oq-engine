@@ -9,7 +9,7 @@ on:
         required: true
       debug_enabled:
         type: boolean
-        description: "Run the build with tmate debugging enabled"
+        description: "Run the build with upterm debugging enabled"
         required: false
         default: false
 
