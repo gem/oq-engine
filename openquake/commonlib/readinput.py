@@ -90,7 +90,6 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 def model_in(word, path):
     """
     :returns: True if the 3-character mosaic code word occurs in path
-    as a whole word
     """
     assert len(word) == 3, word
     return re.search(rf'\b{word}\b', path) is not None
