@@ -108,6 +108,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
+        point.width_of_mfd_bin = self.width_of_mfd_bin
         return point
 
     @property
@@ -142,6 +143,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             polygon=polygon,
             area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
+        area.width_of_mfd_bin = self.width_of_mfd_bin
         return area
 
     @property
@@ -171,6 +173,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypo_data=source.HypoData(
                 hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
                 slip_list=numpy.array([[90, 0.7], [135, 0.3]])))
+        simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 
     @property
