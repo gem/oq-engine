@@ -66,10 +66,12 @@ jobs:
           else
             python install.py devel
           fi
-      - name: Setup debugging session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 15
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Run a small subset of tests checking fiona/gdal
         run: |
           source ~/openquake/bin/activate
