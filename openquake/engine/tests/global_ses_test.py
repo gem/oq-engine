@@ -18,6 +18,8 @@
 
 import os
 import sys
+import shutil
+import tempfile
 import numpy
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
@@ -25,6 +27,7 @@ from openquake.commonlib.datastore import read
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.engine import global_ses
+from openquake.commands.sample import reduce_rupture_file
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
@@ -142,10 +145,32 @@ def test_site_model():  # 5 sites
                              'read_source_model', 'count_ruptures'])
 
 
+def check_reduced(fname):
+    # check the links between ruptures, events and geometries
+    with hdf5.File(fname + '.bak') as orig, hdf5.File(fname) as red:
+        nrup_orig = len(orig['ruptures'])
+        rups = red['ruptures'][:]
+        evs = red['events'][:]
+        assert 0 < len(rups) < nrup_orig, (len(rups), nrup_orig)
+        assert len(red['rupgeoms']) == len(rups)
+        ae(rups['geom_id'], numpy.arange(len(rups)))
+        assert len(evs) == rups['n_occ'].sum()
+        for rec in rups:
+            blk = evs[rec['e0']:rec['e0'] + rec['n_occ']]
+            assert (blk['rup_id'] == rec['id']).all()
+
+
 def teardown_module():
-    dstore = read(RUP_HDF5)
-    occ_df = dstore.read_df('occ_by_trt_smr')
+    with read(RUP_HDF5) as dstore:
+        occ_df = dstore.read_df('occ_by_trt_smr')
     assert list(occ_df.columns) == ['trt_smr', 'n_occ', 'name']
+    # reduce a copy, since RUP_HDF5 is still open in the datastores
+    tmpdir = tempfile.mkdtemp()
+    tmp = os.path.join(tmpdir, 'SES.hdf5')
+    shutil.copy(RUP_HDF5, tmp)
+    reduce_rupture_file(tmp, .1)  # sample the ruptures
+    check_reduced(tmp)
+    shutil.rmtree(tmpdir)
     if sys.platform != 'win32':
         os.remove(RUP_HDF5)
     if last_job:
