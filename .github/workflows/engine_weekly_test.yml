@@ -76,6 +76,8 @@ jobs:
           cd openquake/server
           cat > local_settings.py << EOF
           APPLICATION_MODE = 'RESTRICTED'
+          # No emails are sent in this workflow; don't require SMTP credentials.
+          EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
           WEBUI_USER = 'runner'
           WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
           DEBUG = True
