@@ -87,19 +87,28 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
+def model_in(word, path):
+    """
+    :returns: True if the 3-character mosaic code word occurs in path
+    as a whole word
+    """
+    assert len(word) == 3, word
+    return re.search(rf'\b{word}\b', path) is not None
+
+
 def get_country_or_model(job_ini):
     """
     If the path to job_ini contains a recognized country, returns the
     country code or the mosaic code, else the empty string.
     """
     for name, cc in country2code.items():
-        if name in job_ini:
+        if re.search(rf'\b{re.escape(name)}\b', job_ini):
             return cc
     for model in MODELS:
-        if model in job_ini:
+        if model_in(model, job_ini):
             return model
     for model in ALIASES:
-        if model in job_ini:
+        if model_in(model, job_ini):
             return ALIASES[model]
     return ''
 
@@ -368,7 +377,7 @@ def get_model(job_ini):
     model, else the empty string
     """
     for mod in MODELS:
-        if mod in job_ini:
+        if model_in(mod, job_ini):
             return mod
     return ''
 
