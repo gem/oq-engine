@@ -1144,7 +1144,7 @@ def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
 
 # NB: the logic tree is reduced by SourceModelLogicTree.reduce *before*
 # building the sources, so that each source stores the trt_smrs of the
-# logic tree realizations it belongs to (see src.sampling)
+# logic tree realizations it belongs to (see src.ts_samples)
 class FullLogicTree(object):
     """
     The full logic tree as composition of

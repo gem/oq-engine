@@ -35,7 +35,8 @@ NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
 
 U32 = numpy.uint32
-sampling_dt = numpy.dtype([('trt_smr', U32), ('samples', U32)])
+# ts is the set of realizations with the same uncertainties (see get_ts_sets)
+ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 
 
 class LogicTreeError(Exception):
@@ -721,14 +722,14 @@ def apply_uncertainties(bset_values, src_group, check=True):
 # ####################### uncertainties and sampling ###################### #
 
 
-def _sampling_array(src):
+def _ts_samples_array(src):
     """
-    :returns: the sampling of the source as a structured array
+    :returns: the ts_samples of the source as a structured array
     """
-    sampling = src.sampling
-    if isinstance(sampling, list):
-        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
-    return sampling
+    ts_samples = src.ts_samples
+    if isinstance(ts_samples, list):
+        ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+    return ts_samples
 
 
 def get_ts_sets(src):
@@ -737,23 +738,25 @@ def get_ts_sets(src):
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
-    NB: the subsets are stored by build_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
+    NB: the sets are stored in the field ts of the ts_samples by
+        build_groups, i.e. for the sources modified by the uncertainties;
+        the sources without uncertainties have ts=0 everywhere and a
+        single set.
     """
-    if src.ts_sets:
-        return tuple(tuple(t) for t in src.ts_sets)
-    return tuple(_sampling_array(src)['trt_smr']),
+    ts_samples = _ts_samples_array(src)
+    return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
+                 for ts in numpy.unique(ts_samples['ts']))
 
 
-def restrict_sampling(src, trt_smrs):
+def restrict_ts_samples(src, trt_smrs):
     """
-    :returns: a copy of the source with the sampling restricted to
+    :returns: a copy of the source with the ts_samples restricted to
         trt_smrs, i.e. belonging to a single set of uncertainties
     """
     new = copy.copy(src)
-    sampling = _sampling_array(src)
-    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
+    ts_samples = _ts_samples_array(src)
+    new.ts_samples = ts_samples[
+        numpy.isin(ts_samples['trt_smr'], trt_smrs)]
     return new
 
 

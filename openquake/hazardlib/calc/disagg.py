@@ -919,7 +919,7 @@ def gen_disagg_source(groups, site, edges_shapedic, oq, full_lt):
 
     NB: there is no need to reduce the logic tree, since the sources
     already store the trt_smrs of the logic tree realizations they belong
-    to, i.e. `src.sampling['trt_smr']`.
+    to, i.e. `src.ts_samples['trt_smr']`.
 
     :param groups: groups containing sources with a single base ID
     :param site: a Site object
