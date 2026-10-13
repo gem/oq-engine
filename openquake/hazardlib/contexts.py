@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG, FilteredAway)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
+from openquake.hazardlib.geo import Point as GeoPoint
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
@@ -394,6 +395,60 @@ def _quintets(cmaker, src, sitecol):
                 else:  # some sites are far, some are close
                     yield m, mag, mdist, meanpla, far
                     yield m, mag, mdist, allpla, close
+
+
+# reference location to split fault sites into close/far (get_cdist
+# interface of a hazardlib Point): x, y, z = lon, lat, depth
+def _fault_rups_sites(cmaker, src, sitecol, allrups):
+    # the collapse requires parametric ruptures with occurrence_rate
+    if not all(hasattr(rup, 'occurrence_rate') for rup in allrups):
+        return [(allrups, sitecol)]
+
+    # rate-weighted mean hypocenter, used as the reference location
+    hyps = numpy.array(
+        [(rup.hypocenter.longitude, rup.hypocenter.latitude,
+          rup.hypocenter.depth, rup.occurrence_rate)
+         for rup in allrups])
+    mean_hypo = numpy.average(hyps[:, :3], axis=0, weights=hyps[:, 3])
+
+    if cmaker.fewsites:  # a single rupture grid for all sites, no collapse
+        return [(allrups, sitecol)]
+
+    cdist = sitecol.get_cdist(GeoPoint(
+        mean_hypo[0], mean_hypo[1], mean_hypo[2]))
+    # NB: having a decent psdist is essential for performance!
+    psdist = getattr(cmaker, 'pointsource_distance',
+                     float(config.performance.pointsource_distance))
+    # skip the split when pointsource_distance is not a scalar
+    if numpy.isscalar(psdist) and not isinstance(psdist, (numpy.ndarray, list, tuple, dict)):
+        close = sitecol.filter(cdist <= psdist)
+        far = sitecol.filter(cdist > psdist)
+    else:
+        close = None
+        far = None
+
+    # skip split when pointsource_distance is non-scalar: no collapse
+    if close is None and far is None:
+        return [(allrups, sitecol)]
+
+    # representative rupture = the one nearest the mean hypocenter
+    cen = numpy.array(
+        [(rup.hypocenter.longitude, rup.hypocenter.latitude)
+         for rup in allrups])
+    idx = numpy.argmin(
+        numpy.hypot(cen[:, 0] - mean_hypo[0], cen[:, 1] - mean_hypo[1]))
+    rep = copy.copy(allrups[idx])  # copy so the close sites are untouched
+    # use rate-weighted mean hypocenter for more precise distances
+    rep.hypocenter = GeoPoint(
+        mean_hypo[0], mean_hypo[1], mean_hypo[2])
+    rep.occurrence_rate = float(numpy.sum(
+        [rup.occurrence_rate for rup in allrups]))  # full mag rate
+    rups_sites = []
+    if far is not None:
+        rups_sites.append(([rep], far))
+    if close is not None:
+        rups_sites.append((allrups, close))
+    return rups_sites
 
 
 # helper used to populate contexts for planar ruptures
@@ -1092,12 +1147,6 @@ class ContextMaker(object):
         r_sites = sites.filter(mask)
         # to debug you can insert here
         # print(rup.surface.tor.get_tuw_df(r_sites))
-        # import pdb; pdb.set_trace()
-
-        ''' # sanity check
-        true_rrup = rup.surface.get_min_distance(r_sites)
-        numpy.testing.assert_allclose(true_rrup, rrup[mask])
-        '''
         rparams = self.get_rparams(rup)
         ctx = self._make_ctx(rparams, r_sites, rrup, mask)
 
@@ -1226,10 +1275,16 @@ class ContextMaker(object):
                                  key=bymag)
                 if not allrups:
                     return iter([])
-                # sorted by mag by construction
+                # split by magnitude first
                 u32mags = U32([rup.mag * 100 for rup in allrups])
-                rups_sites = [(rups, sitecol) for rups in split_array(
-                    numpy.array(allrups), u32mags)]
+                groups = split_array(numpy.array(allrups), u32mags)
+                rups_sites = []
+                for rups in groups:
+                    if src.code in (b'F', b'S', b'C') and step == 1:
+                        rups_sites.extend(_fault_rups_sites(
+                            self, src, sitecol, rups))
+                    else:
+                        rups_sites.append((rups, sitecol))
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
