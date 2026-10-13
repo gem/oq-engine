@@ -71,6 +71,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+# workers send GMFs to the parent in messages of at least this many rows
+GMF_MSG_ROWS = 100_000
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('weight', F32),
@@ -244,6 +246,44 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
             yield dic
 
 
+def _merge_dics(dics):
+    """
+    :returns: a single dictionary with the concatenated fields
+    """
+    out = dict(gmfdata=pandas.concat([d['gmfdata'] for d in dics],
+                                     ignore_index=True))
+    # as before, sig_eps and times are kept only for the batches
+    # with GMFs, while mea_tau_phi is kept for all the batches
+    full = [d for d in dics if len(d['gmfdata'])]
+    if full:
+        out['sig_eps'] = numpy.concatenate([d['sig_eps'] for d in full])
+    times = [d['times'] for d in full if 'times' in d]
+    if times:
+        out['times'] = numpy.concatenate(times)
+    if 'mea_tau_phi' in dics[0]:  # same columns in all the dicts
+        out['mea_tau_phi'] = {
+            col: numpy.concatenate([d['mea_tau_phi'][col] for d in dics])
+            for col in dics[0]['mea_tau_phi']}
+    return out
+
+
+def _buffered(dics, max_rows=GMF_MSG_ROWS):
+    """
+    Merge the dictionaries yielded by _event_based into bigger ones,
+    with at least max_rows GMF rows each (the last one may be smaller),
+    to reduce the number of messages sent to the parent process
+    """
+    buf, nrows = [], 0
+    for dic in dics:
+        buf.append(dic)
+        nrows += len(dic['gmfdata'])
+        if nrows >= max_rows:
+            yield _merge_dics(buf)
+            buf, nrows = [], 0
+    if buf:
+        yield _merge_dics(buf)
+
+
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
@@ -272,7 +312,8 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        yield from _event_based(proxies, cmaker, secperils, srcfilter, cmon, umon)
+        yield from _buffered(_event_based(
+            proxies, cmaker, secperils, srcfilter, cmon, umon))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
