@@ -377,6 +377,7 @@ jobs:
           OQ_APPLICATION_MODE: AELO
         run: |
           source ~/openquake/bin/activate
+          python -m pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
@@ -424,9 +425,10 @@ jobs:
           else
             python install.py devel --version master
           fi
+          source ~/openquake/bin/activate
           PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
           echo $PY_VER
-          pip3 install -r requirements-impact-$PY_VER-linux64.txt
+          python -m pip install -r requirements-impact-$PY_VER-linux64.txt
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
