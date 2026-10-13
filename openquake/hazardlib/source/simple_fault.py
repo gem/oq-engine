@@ -561,7 +561,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         b_ac = 0.3
         delta_mac = 1.0
         gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
-        bin_width = 0.1
+        # the job parameter width_of_mfd_bin, 0.1 if not set
+        bin_width = getattr(self, 'width_of_mfd_bin', 0.1)
 
         # Get params from recurRow, preferring fault-prefixed keys (alt3)
         mmax = self.mmax

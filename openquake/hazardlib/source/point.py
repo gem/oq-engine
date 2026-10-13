@@ -508,6 +508,8 @@ class CollapsedPointSource(PointSource):
         self.pdata = psources_to_pdata(pointsources, source_id)
         if hasattr(pointsources[0], 'mmax_offset'):
             self.mmax_offset = pointsources[0].mmax_offset
+        if hasattr(pointsources[0], 'width_of_mfd_bin'):
+            self.width_of_mfd_bin = pointsources[0].width_of_mfd_bin
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
