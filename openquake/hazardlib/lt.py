@@ -637,6 +637,33 @@ def check_correlated(bset_values, src_group):
                         ' missing, maybe you mispelled the name?')
 
 
+def shallow_unc(bset_values, bset_applications, source):
+    # True if the uncertainties applied to source modify only its MFD
+    # (see GEOMETRY_PRESERVING) or the attributes listed in its
+    # shallow_uncertainties, so the copy can share the rest
+    # NB: bset_applications has a pair (applies, value) per branchset, e.g.
+    #   bset_values = [(bset_dip, 45.0), (bset_other, {'src2': 0.5})]
+    #   bset_applications = [(True, 45.0), (False, None)]
+    #   the first branchset sets the dip of the source to 45.0, the second
+    #   one is correlated to 'src2' and does not apply to the source
+    if hasattr(source, 'pointsources') or not hasattr(source, 'mfd'):
+        return False  # point sources modify their sub-sources in place
+    allowed = GEOMETRY_PRESERVING | source.shallow_uncertainties
+    return all(bset.uncertainty_type in allowed and not bset.collapsed
+               for (bset, _), (ok, _) in zip(bset_values,
+                                             bset_applications) if ok)
+
+
+def _copy_source(source, shallow):
+    if not shallow:
+        return copy.deepcopy(source)
+    # share the geometry with the original, but copy the MFD, which is
+    # modified in place by the uncertainties
+    src = copy.copy(source)
+    src.mfd = copy.deepcopy(source.mfd)
+    return src
+
+
 def apply_uncertainties(bset_values, src_group, check=True):
     """
     :param bset_values: a list of pairs (branchset, value)
@@ -659,7 +686,8 @@ def apply_uncertainties(bset_values, src_group, check=True):
         pairs = [get_bset_value(bset, value, source)
                  for bset, value in bset_values]
         if any(ok for ok, _ in pairs):  # source not filtered out
-            src = copy.deepcopy(source)
+            shallow = shallow_unc(bset_values, pairs, source)
+            src = _copy_source(source, shallow)
             # the uncertainties can change the number of ruptures, for
             # instance by truncating the MFD, so a cached value is not
             # valid anymore
