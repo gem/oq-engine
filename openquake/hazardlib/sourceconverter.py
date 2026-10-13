@@ -842,6 +842,8 @@ class SourceConverter(RuptureConverter):
             rate_frac = node.attrib.get('rateFrac')
             if rate_frac is not None:
                 simple.rate_frac = float(rate_frac)
+            # used by the BCHydro set_recurrow MFD, see simple_fault.py
+            simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 
     def convert_kiteFaultSource(self, node):
