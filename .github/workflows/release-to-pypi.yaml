@@ -42,7 +42,7 @@ jobs:
         python-version: "3.12"
     - name: Setup upterm session
         uses: owenthereal/action-upterm@v2
-        if: \${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
         with:
           ## Shut down the server if unconnected after 45 minutes.
           wait-timeout-minutes: 45
