@@ -173,7 +173,6 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install https://wheelhouse.openquake.org/unified/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
