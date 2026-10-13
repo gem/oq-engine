@@ -112,6 +112,12 @@ class SimpleFaultSource(ParametricSeismicSource):
         magnitude value.
     """
     code = SIMPLE_FAULT
+    # the dip and the seismogenic depths are scalars, rebound by the
+    # modifications and never mutated in place
+    shallow_uncertainties = frozenset([
+        'simpleFaultDipAbsolute', 'simpleFaultDipRelative',
+        'setLowerSeismDepthAbsolute', 'setUpperSeismDepthAbsolute',
+        'setLowerSeismDepthRelative', 'setUpperSeismDepthRelative'])
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'adjust_dip',

@@ -221,6 +221,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
     _num_ruptures = 0  # set by the engine
+    # uncertainties which modify the source without mutating shared data,
+    # so that a copy can share it with the original (see lt.shallow_unc)
+    shallow_uncertainties = frozenset()
     seed = None  # set by the engine
     samples = 1  # set by the engine
     smweight = 1.  # set by the engine
