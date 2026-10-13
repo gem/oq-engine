@@ -122,10 +122,16 @@ instances, each containing a list of sources; the groups are the unit of
 task generation, the sources the unit of computation.
 
 Each source has a ``ts_samples`` attribute, i.e. an array with three columns,
-``trt_smr`` and ``samples``, with one row per source model realization
+``trt_smr``, ``samples`` and ``ts``, with one row per source model realization
 the source belongs to::
 
-    ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32)])
+    ts_samples_dt = numpy.dtype(
+        [('trt_smr', U32), ('samples', U32), ('ts', U32)])
+
+The ``ts`` column identifies the set of realizations sharing the same
+uncertainties (see step 2 below): it is the smallest ``trt_smr`` of the
+set, or 0 for all the rows if the uncertainties are the same in all the
+realizations (or there are none).
 
 The ``trt_smr`` is an integer encoding two pieces of information, the
 tectonic region type and the realization:
