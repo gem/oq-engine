@@ -31,7 +31,7 @@ from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
 from openquake.commonlib.readinput import (
-    get_close_mosaic_models, get_close_countries)
+    get_close_mosaic_models, get_close_countries, get_country_or_model)
 from openquake.qa_tests_data.logictree import (
     case_02, case_15, case_21, case_25)
 from openquake.qa_tests_data.classical import case_34, case_36, case_65
@@ -645,3 +645,24 @@ class GetCloseRegionsTestCase(unittest.TestCase):
         lon, lat = 124.0, 8.5
         countries = get_close_countries(lon, lat, buffer_radius=0.5)
         self.assertEqual(countries, ['PHL'])
+
+
+class GetCountryOrModelTestCase(unittest.TestCase):
+    def test_mosaic_model_dir(self):
+        self.assertEqual(get_country_or_model('/x/OIN/job.ini'), 'OIN')
+        self.assertEqual(get_country_or_model('mosaic/OIN/a.ini'), 'OIN')
+
+    def test_alias(self):
+        self.assertEqual(get_country_or_model('/x/TWN/job.ini'), 'TEM')
+
+    def test_country_name(self):
+        self.assertEqual(get_country_or_model('/x/Italy/job.ini'), 'ITA')
+        self.assertEqual(
+            get_country_or_model('/x/American_Samoa/job.ini'), 'ASM')
+
+    def test_not_a_whole_word(self):
+        # 'OIN' is a substring of 'POINT' but not a whole word
+        self.assertEqual(get_country_or_model('/x/POINT/job.ini'), '')
+
+    def test_no_match(self):
+        self.assertEqual(get_country_or_model('/x/nothing/job.ini'), '')
