@@ -71,10 +71,11 @@ file = /path/to/db.sqlite3
 If the database is on a different machine, you have to edit the file and
 specify the correct host name.
 
-NB: setting `host=127.0.0.1` is a mistake, since it will result on the
-database being accessed directly, which is a problem,
-since regular users will not have write permission to it. `host=127.0.0.1`
-instead is correct for single-user installations and correctly set by
+
+NB: setting `host=127.0.0.1` is a mistake in a server instalaltion, 
+since it will result on the database being accessed directly, which is a problem,
+since regular users will not have write permission to it. 
+`host=127.0.0.1` instead is correct for single-user installations and correctly set by
 the universal installer.
 
 #### Upgrade the database to host users and sessions
