@@ -31,10 +31,11 @@ import zipfile
 import tempfile
 import math
 import time
+import gzip
 from dataclasses import dataclass
-from urllib.request import urlopen, pathname2url
+from urllib.request import Request, urlopen, pathname2url
 from urllib.error import HTTPError, URLError
-from http.client import HTTPException
+from http.client import HTTPException, IncompleteRead
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
 from datetime import datetime, timezone
@@ -56,6 +57,10 @@ from openquake.hazardlib.source.rupture import (
 
 NOT_FOUND = "No file with extension '.%s' file found"
 US_GOV = 'https://earthquake.usgs.gov'
+USGS_TIMEOUT = 30
+USGS_MAX_ATTEMPTS = 5
+USGS_RANGE_CHUNK_SIZE = 1024 * 1024
+USGS_MAX_RANGE_REQUESTS = 64
 # NOTE: remove includesuperseded parameter to download less data for testing
 QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
@@ -1224,26 +1229,71 @@ def ms_to_utc_date_time(ms):
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _resume_download(url, partial, content_length):
+    # Continue interrupted identity-encoded downloads using HTTP byte ranges.
+    data = bytearray(partial)
+    for _ in range(USGS_MAX_RANGE_REQUESTS):
+        if len(data) >= content_length:
+            return bytes(data)
+        start = len(data)
+        end = min(content_length - 1, start + USGS_RANGE_CHUNK_SIZE - 1)
+        request = Request(url, headers={
+            'Accept-Encoding': 'identity', 'Range': f'bytes={start}-{end}'})
+        with urlopen(request, timeout=USGS_TIMEOUT) as response:
+            content_range = response.headers.get('Content-Range', '')
+            if response.status != 206 or not content_range.startswith(
+                    f'bytes {start}-'):
+                raise URLError(f'Invalid range response from {url}')
+            try:
+                chunk = response.read()
+            except IncompleteRead as exc:
+                chunk = exc.partial
+        if not chunk:
+            raise URLError(f'Empty range response from {url}')
+        data.extend(chunk)
+    raise URLError(f'Unable to complete download from {url}')
+
+
+def _read_remote_url(url):
+    # Request compressed responses where supported to reduce transfer size.
+    request = Request(url, headers={'Accept-Encoding': 'gzip'})
+    content_length = None
+    encoding = ''
+    try:
+        with urlopen(request, timeout=USGS_TIMEOUT) as response:
+            content_length = response.headers.get('Content-Length')
+            encoding = response.headers.get('Content-Encoding', '').lower()
+            data = response.read()
+    except IncompleteRead as exc:
+        if content_length is None or encoding not in ('', 'identity'):
+            raise
+        data = _resume_download(url, exc.partial, int(content_length))
+    if encoding == 'gzip':
+        data = gzip.decompress(data)
+    return data
+
+
 def _download_url(url):
     # Retry transient HTTP and connection failures for remote downloads.
     if not url.startswith(('http://', 'https://')):
         return urlopen(url).read()
-    for attempt in range(3):
+    for attempt in range(USGS_MAX_ATTEMPTS):
         try:
-            with urlopen(url, timeout=30) as response:
-                return response.read()
+            return _read_remote_url(url)
         except HTTPError as exc:
             retryable = exc.code in (408, 429) or 500 <= exc.code < 600
-            if not retryable or attempt == 2:
+            if not retryable or attempt == USGS_MAX_ATTEMPTS - 1:
                 raise
             exc.close()
             error = exc
         except (URLError, TimeoutError, OSError, HTTPException) as exc:
-            if attempt == 2:
-                raise
+            if attempt == USGS_MAX_ATTEMPTS - 1:
+                if isinstance(exc, URLError):
+                    raise
+                raise URLError(exc) from exc
             error = exc
-        logging.warning('Transient error downloading %s: %s; retry %s/3',
-                        url, error, attempt + 1)
+        logging.warning('Transient error downloading %s: %s; retry %s/%s',
+                        url, error, attempt + 1, USGS_MAX_ATTEMPTS)
         time.sleep(0.5 * 2 ** attempt)
 
 
@@ -1582,9 +1632,9 @@ def _get_shakemap_array(xml_file):
     if isinstance(xml_file, str):
         fname = xml_file
     elif hasattr(xml_file, 'fp'):
-        fname = xml_file.fp.name
+        fname = getattr(xml_file.fp, 'name', '<stream>')
     else:
-        fname = xml_file.name
+        fname = getattr(xml_file, 'name', '<stream>')
     if hasattr(xml_file, 'read'):
         data = io.BytesIO(xml_file.read())
     else:
