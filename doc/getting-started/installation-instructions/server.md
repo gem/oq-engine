@@ -72,7 +72,7 @@ If the database is on a different machine, you have to edit the file and
 specify the correct host name.
 
 
-NB: setting `host=127.0.0.1` is a mistake in a server instalaltion, 
+NB: setting `host=127.0.0.1` is a mistake in a server installation, 
 since it will result on the database being accessed directly, which is a problem,
 since regular users will not have write permission to it. 
 `host=127.0.0.1` instead is correct for single-user installations and correctly set by
