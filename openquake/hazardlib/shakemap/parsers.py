@@ -30,9 +30,11 @@ import json
 import zipfile
 import tempfile
 import math
+import time
 from dataclasses import dataclass
 from urllib.request import urlopen, pathname2url
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
+from http.client import HTTPException
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
 from datetime import datetime, timezone
@@ -99,13 +101,12 @@ def urlextract(url, fname):
     Download and unzip an archive and extract the underlying fname
     """
     if not url.endswith('.zip'):
-        return urlopen(url)
-    with urlopen(url) as f:
-        data = io.BytesIO(f.read())
+        return io.BytesIO(_download_url(url))
+    data = io.BytesIO(_download_url(url))
     with zipfile.ZipFile(data) as z:
         for zinfo in z.filelist:
             if zinfo.filename.endswith(fname):
-                return z.open(zinfo)
+                return io.BytesIO(z.read(zinfo))
         raise FileNotFoundError
 
 
@@ -575,7 +576,7 @@ def download_station_data_file(usgs_id, contents, user):
             json_bytes = f.read()
     else:
         logging.info('Downloading stationlist.json')
-        json_bytes = urlopen(stationlist_url).read()
+        json_bytes = _download_url(stationlist_url)
 
     stations = read_usgs_stations_json(json_bytes)
     if len(stations) == 0:
@@ -692,8 +693,7 @@ def get_shakemap_version(usgs_id):
     product_url = US_GOV + f"/earthquakes/feed/v1.0/detail/{usgs_id}.geojson"
     # Get the JSON data for the earthquake event
     try:
-        with urlopen(product_url) as response:
-            event_data = json.loads(response.read().decode())
+        event_data = json.loads(_download_url(product_url).decode())
     except Exception as e:
         logging.error(f"Error: Unable to fetch data for event {usgs_id} - {e}")
         return None
@@ -755,7 +755,7 @@ def download_shakemap_rupture_data(usgs_id, shakemap_contents, user):
         text = open(fname).read()
     else:
         logging.info('Downloading rupture.json')
-        text = urlopen(url).read()
+        text = _download_url(url)
     rup_data = json.loads(text)
     return rup_data, gettemp(text, prefix='rup_', suffix='.json')
 
@@ -905,9 +905,9 @@ def download_finite_fault_rupture(usgs_id, user, monitor):
         basic_inversion_bytes = open(basic_inversion_fname, 'rb').read()
     else:
         logging.info('Downloading FFM.geojson')
-        ffm_str = urlopen(ffm_url).read()
+        ffm_str = _download_url(ffm_url)
         logging.info('Downloading basic_inversion.param')
-        basic_inversion_bytes = urlopen(basic_inversion_url).read()
+        basic_inversion_bytes = _download_url(basic_inversion_url)
 
     ffm = json.loads(ffm_str)
     basic_inversion_str = basic_inversion_bytes.decode('utf8')
@@ -931,8 +931,8 @@ def download_mmi(usgs_id, shakemap_contents, user):
     else:
         logging.info('Downloading shape.zip (mmi_file)')
         mmi_file = gettemp(prefix='mmi_', suffix='.zip')
-        with urlopen(url) as resp, open(mmi_file, 'wb') as f:
-            f.write(resp.read())
+        with open(mmi_file, 'wb') as f:
+            f.write(_download_url(url))
     return mmi_file
 
 
@@ -991,7 +991,7 @@ def _get_usgs_event_data(usgs_id, user=User(),
         logging.info('Downloading %s' % url)
         try:
             with monitor('Downloading USGS json'):
-                text = urlopen(url).read()
+                text = _download_url(url)
         except URLError as exc:
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
@@ -1224,6 +1224,29 @@ def ms_to_utc_date_time(ms):
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _download_url(url):
+    # Retry transient HTTP and connection failures for remote downloads.
+    if not url.startswith(('http://', 'https://')):
+        return urlopen(url).read()
+    for attempt in range(3):
+        try:
+            with urlopen(url, timeout=30) as response:
+                return response.read()
+        except HTTPError as exc:
+            retryable = exc.code in (408, 429) or 500 <= exc.code < 600
+            if not retryable or attempt == 2:
+                raise
+            exc.close()
+            error = exc
+        except (URLError, TimeoutError, OSError, HTTPException) as exc:
+            if attempt == 2:
+                raise
+            error = exc
+        logging.warning('Transient error downloading %s: %s; retry %s/3',
+                        url, error, attempt + 1)
+        time.sleep(0.5 * 2 ** attempt)
+
+
 def get_shakemap_versions(usgs_id, user=User(),
                           monitor=performance.Monitor()):
     err = {}
@@ -1240,7 +1263,7 @@ def get_shakemap_versions(usgs_id, user=User(),
         logging.info('Downloading %s' % url)
         try:
             with monitor('Downloading USGS json'):
-                text = urlopen(url).read()
+                text = _download_url(url)
         except URLError as exc:
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'

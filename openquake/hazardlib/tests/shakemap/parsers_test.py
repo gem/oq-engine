@@ -19,6 +19,9 @@
 import os
 import unittest
 import csv
+import io
+from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
     get_shakemap_versions, get_nodal_planes_and_info,
@@ -310,6 +313,25 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIsNone(shakemap_versions)
         self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
+
+    def test_shakemap_download_retries_transient_errors(self):
+        path = os.path.join(user.testdir, 'us20002926.json')
+        with open(path, 'rb') as f:
+            response = io.BytesIO(f.read())
+        url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
+        error = HTTPError(url, 500, 'Internal Server Error', {}, None)
+        with patch('openquake.hazardlib.shakemap.parsers.urlopen',
+                   side_effect=[URLError('temporary'), error,
+                                response]) as mocked, \
+                patch('openquake.hazardlib.shakemap.parsers.time.sleep') \
+                as sleep:
+            versions, preferred, err = get_shakemap_versions('us20002926')
+        self.assertEqual(mocked.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list],
+                         [0.5, 1.0])
+        self.assertEqual(err, {})
+        self.assertTrue(versions)
+        self.assertTrue(preferred)
 
     def test_15(self):
         usgs_id = 'usp0001ccb'
