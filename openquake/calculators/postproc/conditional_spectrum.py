@@ -25,7 +25,7 @@ from openquake.baselib.general import decode
 from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.source_reader import read_core_trt_smrs
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 

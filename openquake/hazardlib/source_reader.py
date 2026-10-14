@@ -35,7 +35,7 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
     restrict_ts_samples, ts_samples_dt, get_ts_sets)
-from openquake.hazardlib.contexts import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24

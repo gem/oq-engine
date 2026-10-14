@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.mrd import calc_mean_rate_dist
-from openquake.hazardlib import contexts
+from openquake.hazardlib import rmap_maker
 from openquake.hazardlib.correlation_models.registry import get_model
 
 
@@ -79,8 +79,8 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
         logging.warning('There are many intensity levels (%d), the '
                         'calculation can be pretty slow', L1 + 1)
     assert N <= oq.max_sites_disagg, 'Too many sites: %d' % N
-    cmakers = contexts.read_cmakers(dstore).to_array()
-    ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    cmakers = rmap_maker.read_cmakers(dstore).to_array()
+    ctx_by_grp = rmap_maker.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
     smap = parallel.Starmap(compute_mrd, h5=dstore)

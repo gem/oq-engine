@@ -36,7 +36,7 @@ from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups, read_core_trt_smrs)
 from openquake.hazardlib.lt import (
     get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
-from openquake.hazardlib.contexts import (
+from openquake.hazardlib.rmap_maker import (
     get_cmakers, read_full_lt_by_label, make_results)
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve

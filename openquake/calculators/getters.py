@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401

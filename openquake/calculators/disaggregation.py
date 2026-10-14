@@ -30,7 +30,7 @@ from openquake.baselib.general import (
 from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.source_reader import read_core_trt_smrs
 from openquake.commonlib import util
 from openquake.calculators import base, getters
