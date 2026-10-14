@@ -692,8 +692,9 @@ def add_checksums(srcs):
     Build and attach a checksum to each source
     """
     for src in srcs:
+        # width_of_mfd_bin is set by modify_set_recurrow
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id ts_samples branch'}
+               if k not in 'source_id ts_samples branch width_of_mfd_bin'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
