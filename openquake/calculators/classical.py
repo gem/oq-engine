@@ -1150,13 +1150,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             parallel.Starmap(
                 fast_mean, [args[0:1] for args in allargs],
-                distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         else:
             parallel.Starmap(
                 postclassical, allargs,
-                distribute='no' if self.few_sites else None,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):

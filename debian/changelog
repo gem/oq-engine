@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Building the hazard curves in parallel even in the case of few sites
+    (performance-crucial in BCHydro-style calculations)
   * Internal: extended `oq sample` to reduce SES.hdf5 files
 
   [Claudio Schill, Christopher Brooks]
