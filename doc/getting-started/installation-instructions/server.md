@@ -154,17 +154,13 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default). Please replace the value of
-ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
+Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
-ExecStart=/opt/openquake/venv/bin/gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
+WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
-
-Use a single worker process: the WebUI keeps some state in memory, which
-would not be shared among several worker processes. The concurrency is given
-by the threads.
-
-*gunicorn* is usually managed by the OS init system.
+where `N` is the number of workers. We suggest `N = 4`
 
 ### Using Environment Variables in systemd Units
 
