@@ -60,7 +60,7 @@ US_GOV = 'https://earthquake.usgs.gov'
 USGS_TIMEOUT = 30
 USGS_MAX_ATTEMPTS = 5
 USGS_RANGE_CHUNK_SIZE = 1024 * 1024
-USGS_MAX_RANGE_REQUESTS = 64
+USGS_MAX_RANGE_REQUESTS = 256
 # NOTE: remove includesuperseded parameter to download less data for testing
 QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
