@@ -127,7 +127,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
-    modified in the workers; there they are split (see cmakers_groups
+    modified in the workers; there they are split (see cmakers_groups_gkeys
     in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq

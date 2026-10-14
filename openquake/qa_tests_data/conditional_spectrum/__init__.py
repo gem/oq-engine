@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2026 GEM Foundation
+# Copyright (C) 2026, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -14,10 +14,4 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
-from openquake.server.db.upgrade_manager import UpgradeManager
-
-directory = os.path.abspath(os.path.dirname(__file__))
-upgrader = UpgradeManager(directory, version_table='test_version')
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.

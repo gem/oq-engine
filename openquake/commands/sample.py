@@ -23,7 +23,7 @@ import numpy
 import pandas
 from openquake.hazardlib import (
     valid, nrml, sourceconverter, sourcewriter, logictree)
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 
 
 def save_bak(fname, node, num_nodes, total):
@@ -112,12 +112,61 @@ def reduce_asc(fname: str, step: int):
         numpy.savetxt(f, decimated_grid, fmt="%.0f", delimiter=" ")
 
     
+def _sample_ruptures(rups, events, rupgeoms, idxs):
+    # return the sampled ruptures, their events and their geometries,
+    # with the indices e0 and geom_id renumbered consistently
+    rups = rups[idxs]
+    n_occ = rups['n_occ'].astype(int)
+    new_e0 = numpy.cumsum(n_occ) - n_occ  # start of each rupture
+    # positions in the original events array of the kept events
+    shift = numpy.repeat(rups['e0'].astype(int) - new_e0, n_occ)
+    evs = events[numpy.arange(n_occ.sum()) + shift]
+    geoms = rupgeoms[rups['geom_id']]
+    rups['e0'] = new_e0
+    rups['geom_id'] = numpy.arange(len(rups))
+    return rups, evs, geoms
+
+
+def reduce_rupture_file(fname, reduction_factor):
+    """
+    Reduce a rupture file in HDF5 format (i.e. a SES file) by sampling
+    the ruptures. The events of the discarded ruptures are removed, while
+    all the other datasets and attributes are copied unchanged.
+    """
+    with hdf5.File(fname, 'r') as f:  # check before making any backup
+        for key in ('ruptures', 'events', 'rupgeoms'):
+            if key not in f:
+                raise RuntimeError('%s is not a rupture file: missing %s'
+                                   % (fname, key))
+    bak = fname + '.bak'
+    shutil.copy(fname, bak)
+    print('Copied the original file in %s' % bak)
+    with hdf5.File(bak, 'r') as f:
+        rups = f['ruptures'][:]
+        events = f['events'][:]
+        rupgeoms = f['rupgeoms'][:]
+        total = len(rups)
+        idxs = general.random_filter(numpy.arange(total), reduction_factor)
+        rups, evs, geoms = _sample_ruptures(rups, events, rupgeoms, idxs)
+        with hdf5.File(fname, 'w') as dst:
+            for key in f:  # copy the other datasets, e.g. oqparam
+                if key not in ('ruptures', 'events', 'rupgeoms'):
+                    # NB: getitem gives the raw h5py object
+                    f.copy(f.getitem(key), dst, key)
+            dst.attrs.update(f.attrs)
+            dst.create_dataset('ruptures', data=rups, compression='gzip')
+            dst.create_dataset('events', data=evs, compression='gzip')
+            dst.save_vlen('rupgeoms', list(geoms))
+    print('Extracted %d ruptures out of %d' % (len(rups), total))
+
+
 def main(fname, reduction_factor: valid.probability,
          investigation_time: valid.positivefloat = 50.):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
     Supports source models, site models and exposure models. As a special
-    case, it is also able to reduce .csv files by sampling the lines.
+    case, it is also able to reduce .csv files by sampling the lines and
+    rupture files in .hdf5 format by sampling the ruptures.
     This is a debugging utility to reduce large computations to small ones.
     """
     if fname.endswith('.json'):  # used to sample the USGS stations
@@ -149,6 +198,9 @@ def main(fname, reduction_factor: valid.probability,
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
         reduce_asc(fname, int(1/reduction_factor))
+        return
+    elif fname.endswith('.hdf5'):  # rupture file (SES)
+        reduce_rupture_file(fname, reduction_factor)
         return
     elif fname.endswith('_test.py'):
         # tests are not installed, so this import cannot stay at top-level

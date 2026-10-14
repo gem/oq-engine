@@ -1,5 +1,26 @@
   [Michele Simionato]
-  * Removed the experimental uvicorn/FastAPI approach: we are back to Django
+  * Internal: extended `oq sample` to reduce SES.hdf5 files
+
+  [Claudio Schill, Christopher Brooks]
+  * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
+    and add a small unit test for this feature.
+
+  [Christopher Brooks]
+  * Introduce a `vs30_strict` parameter to the Allen (2022) GMM which if
+    set to True (default) raises an error if any sites are outside the
+    Vs30 range of the GMM (220 to 800 m/s), and if False clamps the Vs30s
+    to this range instead (requires explicit user specification).
+  * Introduced a epsilon scaling capability in GridAdjustedGMPE
+    with updated unit tests and QA tests (classical/case_11).
+
+  [Anthony Carapetis]
+  * Fix for Allen (2022) GSIM: Vs30 inputs are now clamped to the calibrated
+    range of the model to avoid the singularity at Vs30=150.
+
+  [Michele Simionato]
+  * Geometry-preserving uncertainties are now optimized in classical calculations
+    with few sites: contexts, means, stddevs and poes are computed only once
+    per realization set
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
