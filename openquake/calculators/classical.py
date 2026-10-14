@@ -311,8 +311,13 @@ def _split_by_mags(pairs):
         and make_results requires them to be a subset of the base ones
     """
     parts = {}
-    for cm, sg in pairs:
-        parts.setdefault(mag_support(sg), []).append((cm, sg))
+    try:
+        for cm, sg in pairs:
+            parts.setdefault(mag_support(sg), []).append((cm, sg))
+    except ValueError:  # sources without MFD, see _rates_by_mag
+        # NB: the pairs are kept together, then _make_results raises
+        # ValueError too and they are computed one at a time
+        return [pairs]
     return list(parts.values())
 
 

@@ -236,6 +236,10 @@ def _rates_by_mag(sources):
     #     per source, read from the MFD (cheap, no ruptures enumerated)
     out = []
     for src in sources:
+        # NB: nonparametric sources have no MFD, so they are not supported
+        # by make_results and the callers must fall back to the slow path
+        if not hasattr(src, 'get_annual_occurrence_rates'):
+            raise ValueError('%s has no MFD' % type(src).__name__)
         dic = {}
         for mag, rate in src.get_annual_occurrence_rates():
             mag = round(mag, 3)
