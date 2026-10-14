@@ -237,5 +237,6 @@ jobs:
       engine_ref: ${{ github.event.pull_request.head.sha }}
       irmt_ref: master
       integration_only: true
+      python_versions: '["3.13"]'
     permissions:
       contents: read
