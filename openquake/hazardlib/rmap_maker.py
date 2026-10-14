@@ -29,6 +29,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import (
     SourceFilter, FilteredAway)
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.site_amplification import (
+    AmplificationFunction)
 from openquake.hazardlib.contexts import (
     ContextMaker, concat, F32, F64, U32, TWO20, TWO24)
 
@@ -539,7 +541,6 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    from openquake.hazardlib.site_amplification import AmplificationFunction
     if not hasattr(full_lt, 'weights'):
         full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)

@@ -38,6 +38,8 @@ from openquake.baselib.general import (
     DictArray, AccumDict, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
+from openquake.hazardlib.site_amplification import (
+    check_same_levels)
 from openquake.hazardlib import stats, calc
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent,
@@ -1057,30 +1059,6 @@ SITE_CLASSES = {
         'custom': {'display_name': 'Specify Vs30', 'vs30': None},
     },
 }
-
-
-def check_same_levels(imtls):
-    """
-    :param imtls: a dictionary (or dict-like) imt -> imls
-    :returns: the periods and the levels
-    :raises: a ValueError if the levels are not the same across all IMTs
-    """
-    if not imtls:
-        raise ValueError('There are no intensity_measure_types_and_levels!')
-    imls = imtls[next(iter(imtls))]
-    for imt in imtls:
-        if not imt.startswith(('PGA', 'SA')):
-            raise ValueError('Site amplification works only with '
-                             'PGA and SA, got %s' % imt)
-        if (imtls[imt] == 0).all():
-            raise ValueError(
-                'You forgot to set intensity_measure_types_and_levels!')
-        elif len(imtls[imt]) != len(imls) or any(
-                l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
-            raise ValueError('Site amplification works only if the '
-                             'levels are the same across all IMTs')
-    periods = [from_string(imt).period for imt in imtls]
-    return periods, imls
 
 
 def check_increasing(dframe, *columns):
