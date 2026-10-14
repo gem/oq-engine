@@ -24,7 +24,7 @@ from unittest import mock
 
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
-from openquake.hazardlib import InvalidFile, nrml, calc, contexts
+from openquake.hazardlib import InvalidFile, nrml, calc, rmap_maker
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -159,7 +159,7 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
         oq = self.calc.oqparam
-        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+        flt0, flt1, flt2 = rmap_maker.read_full_lt_by_label(
             self.calc.datastore).values()
         toml = [gsim._toml for gsim in flt2.get_rlzs_by_gsim_dic()[0]]
         assert toml == [
@@ -197,7 +197,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/uhs_sampling.csv', fname)
 
         oq = self.calc.oqparam
-        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+        flt0, flt1, flt2 = rmap_maker.read_full_lt_by_label(
             self.calc.datastore).values()
         ae(flt0.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
         ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])

@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
@@ -348,12 +348,28 @@ class MapGetter(object):
             with hdf5.File(fname) as dstore:
                 slices = dstore['_rates/slice_by_idx'][:]
                 slices = slices[slices['idx'] == self.chunk]
-                for start, stop in zip(slices['start'], slices['stop']):
-                    df = dstore.read_df('_rates', slc=slice(start, stop))
-                    idxs = U32([sid2idx[sid] for sid in df.sid])
-                    lid = df.lid.to_numpy()
-                    gid = df.gid.to_numpy()
-                    self.array[idxs, lid, gid] += df.rate
+                if len(slices) == 0:
+                    continue
+                # read each column once (reading slice by slice is slow)
+                # and select the rows of the slices of this chunk
+                n = len(dstore['_rates/rate'])
+                marks = numpy.zeros(n + 1, int)
+                numpy.add.at(marks, slices['start'], 1)
+                numpy.add.at(marks, slices['stop'], -1)
+                mask = numpy.cumsum(marks[:n]) > 0
+                sids = dstore['_rates/sid'][:][mask]
+                lid = dstore['_rates/lid'][:][mask]
+                gid = dstore['_rates/gid'][:][mask]
+                rate = dstore['_rates/rate'][:][mask]
+        # NB: numpy.add.at is needed since the same (sid, lid, gid) can
+        # appear several times, and fancy-index += would drop duplicates
+                lookup = numpy.full(max(sid2idx) + 1, -1, int)
+                for sid, idx in sid2idx.items():
+                    lookup[sid] = idx
+                idxs = lookup[sids]
+                if (idxs < 0).any():
+                    raise KeyError('unknown site IDs in _rates')
+                numpy.add.at(self.array, (idxs, lid, gid), rate)
         self.sid2idx = sid2idx
         return self.array
 
