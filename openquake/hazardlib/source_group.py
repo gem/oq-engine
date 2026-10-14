@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536

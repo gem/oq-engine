@@ -21,7 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.general import decode
-from openquake.hazardlib import contexts, source_group, InvalidFile
+from openquake.hazardlib import source_group, InvalidFile, rmap_maker
 from openquake.hazardlib.calc.mean_rates import (
     to_rates, to_probs)
 from openquake.commonlib import readinput
@@ -822,7 +822,7 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
-        cmakers = contexts.read_cmakers(self.calc.datastore)
+        cmakers = rmap_maker.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 2, 3, 4], [0, 5], []])
         ae(list(cmakers[1].gsims.values()), [[6], [9], [7, 8]])
 

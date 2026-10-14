@@ -26,7 +26,7 @@ from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.contexts import ContextMaker, get_distances
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -47,12 +47,6 @@ from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 PLOTTING = False
 aac = numpy.testing.assert_allclose
-dists = numpy.array([0, 10, 20, 30, 40, 50])
-intensities = {
-    '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
-    '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
-    '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
-    '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
 BASE_PATH = os.path.dirname(__file__)
@@ -174,19 +168,6 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         self.assertTrue(abs(dsts[1, 1]-0.0) < 1e-2, msg)
 
 
-class EffectTestCase(unittest.TestCase):
-    def test_dist_by_mag(self):
-        effect = Effect(intensities, dists)
-        dist = list(effect.dist_by_mag(0).values())
-        numpy.testing.assert_allclose(dist, [50, 50, 50, 50])
-
-        dist = list(effect.dist_by_mag(.9).values())
-        numpy.testing.assert_allclose(dist, [12, 15, 19.677419, 20])
-
-        dist = list(effect.dist_by_mag(1.1).values())
-        numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
-
-
 class GetCtxs01TestCase(unittest.TestCase):
     """
     Test for calculation of distances with caching
@@ -300,7 +281,7 @@ class FastRatesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from openquake.commonlib import readinput
-        from openquake.hazardlib.contexts import get_cmakers
+        from openquake.hazardlib.rmap_maker import get_cmakers
         from openquake.hazardlib.source_reader import (
             get_bset_values, modified_groups)
         job_ini = os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
