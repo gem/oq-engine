@@ -1144,17 +1144,23 @@ class ClassicalCalculator(base.HazardCalculator):
         if hmbytes:
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if 'delta_rates' in oq.inputs:
-            pass  # avoid an HDF5 error
-        else:  # in all the other cases
+            # with delta_rates the datastore cannot be put in SWMR mode:
+            # the workers would read the rates while the master still writes
+            # them, so the postclassical tasks must run in the master process
+            distribute = 'no'
+        else:
+            distribute = None
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
                 fast_mean, [args[0:1] for args in allargs],
+                distribute=distribute,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         else:
             parallel.Starmap(
                 postclassical, allargs,
+                distribute=distribute,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
