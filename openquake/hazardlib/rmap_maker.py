@@ -388,19 +388,32 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
     ctx = concat(ctxs)
     sidx = numpy.concatenate(sidxs)
     ctx.mag = numpy.round(ctx.mag, 3)
-    for mag in numpy.unique(ctx.mag):
-        mask = ctx.mag == mag
-        ctxt, si = ctx[mask], sidx[mask]
+    # sorting by magnitude (stable, so the order within each magnitude is
+    # preserved) allows to process each magnitude as a contiguous slice
+    order = numpy.argsort(ctx.mag, kind='stable')
+    ctx = ctx[order]
+    sidx = sidx[order]
+    umags, starts, counts = numpy.unique(
+        ctx.mag, return_index=True, return_counts=True)
+    itime = tspan
+    for mag, start, count in zip(umags, starts, counts):
+        ctxt = ctx[start:start+count]
+        si = sidx[start:start+count]
         # R[v, s] is the rate ratio of the source s in the variant v
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
         cm.cfactor += [len(ctxt), 1]  # as in gen_poes
         for poes, _, _, _, slc in cm._gen_poes(ctxt):
             c = ctxt[slc]
+            # read the record fields once for all the variants
+            sids = c.sids
+            probs_occur = c.probs_occur
+            occ_rate = c.occurrence_rate
+            poes = poes.astype(F64)
             for v, pnemap in enumerate(pnemaps):
-                rates_v = c.occurrence_rate * R[v, si[slc]]
-                pnemap.update_indep(poes.astype(F64), c, tspan,
-                                    rates=rates_v)
+                rates_v = occ_rate * R[v, si[slc]]
+                pnemap._update_indep_arrays(poes, rates_v, probs_occur,
+                                            sids, itime)
 
 
 def _scale_rups(rupdata, ratio):
