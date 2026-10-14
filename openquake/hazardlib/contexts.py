@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import abc
 import copy
 import time
 import logging
@@ -1559,37 +1558,6 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
             out[:, mL1:mL1 + L1] = 0
 
 
-class BaseContext(metaclass=abc.ABCMeta):
-    """
-    Base class for context object.
-    """
-    def __eq__(self, other):
-        """
-        Return True if ``other`` has same attributes with same values.
-        """
-        if isinstance(other, self.__class__):
-            if self._slots_ == other._slots_:
-                oks = []
-                for s in self._slots_:
-                    a, b = getattr(self, s, None), getattr(other, s, None)
-                    if a is None and b is None:
-                        ok = True
-                    elif a is None and b is not None:
-                        ok = False
-                    elif a is not None and b is None:
-                        ok = False
-                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
-                        if a.shape == b.shape:
-                            ok = numpy.allclose(a, b)
-                        else:
-                            ok = False
-                    else:
-                        ok = a == b
-                    oks.append(ok)
-                return numpy.all(oks)
-        return False
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1641,7 +1609,7 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
 
 
 # mock of a rupture used in the tests and in the SMT module of the OQ-MBTK
-class RuptureContext(BaseContext):
+class RuptureContext:
     """
     Rupture calculation context for ground shaking intensity models.
 
@@ -1675,3 +1643,29 @@ class RuptureContext(BaseContext):
     # used in acme_2019
     def __len__(self):
         return len(self.sids)
+
+    def __eq__(self, other):
+        """
+        Return True if ``other`` has same attributes with same values.
+        """
+        if isinstance(other, self.__class__):
+            if self._slots_ == other._slots_:
+                oks = []
+                for s in self._slots_:
+                    a, b = getattr(self, s, None), getattr(other, s, None)
+                    if a is None and b is None:
+                        ok = True
+                    elif a is None and b is not None:
+                        ok = False
+                    elif a is not None and b is None:
+                        ok = False
+                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
+                        if a.shape == b.shape:
+                            ok = numpy.allclose(a, b)
+                        else:
+                            ok = False
+                    else:
+                        ok = a == b
+                    oks.append(ok)
+                return numpy.all(oks)
+        return False
