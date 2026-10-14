@@ -161,7 +161,8 @@ Please replace the value of ExecStart in the file `/etc/systemd/system/openquake
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
 ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
-where `N` is the number of workers. We suggest `N = 4`
+where `N` is the number of workers. 
+Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
 
 ### Using Environment Variables in systemd Units
 
