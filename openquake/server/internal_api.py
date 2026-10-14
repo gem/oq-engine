@@ -699,6 +699,10 @@ internal_urlpatterns = [
     re_path(r'^v1/calc_list/count$', v1_calc_list_count),
     re_path(r'^v1/aelo_site_classes$', v1_aelo_site_classes),
     re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
+]
+
+# base application: the /v0/ API, served at the root
+base_urlpatterns = [
     re_path(r'^v0/calc/model_provenance/(\d+)$', v0_model_provenance),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),
     re_path(r'^v0/worker_([^/]+)$', v0_worker),
