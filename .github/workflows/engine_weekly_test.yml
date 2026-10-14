@@ -8,7 +8,7 @@ on:
         required: true
       debug_enabled:
         type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        description: 'Enable debug Session'
         required: false
         default: false
   schedule:
@@ -36,10 +36,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup debugging session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
@@ -60,6 +56,12 @@ jobs:
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
               cp -- "$file" "${file%.default.tmpl}"
           done
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Test WebUI and run https calculation
         run: |
           source ~/openquake/bin/activate
@@ -91,7 +93,7 @@ jobs:
           # Perform migration after setup local_settings
           cd /home/runner/work/oq-engine/oq-engine/openquake/server
           python manage.py migrate
-          sleep 1
+          sleep 30
           curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
           echo -n "Test Standalone Tools pages"
           curl --fail -I -L -X GET http://127.0.0.1:8800/

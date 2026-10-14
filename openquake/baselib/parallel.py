@@ -241,7 +241,9 @@ def calc_dir(job_id_or_fname):
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
-    safely_call(func, args, self.task_no, monitor)
+    # the results are collected in-process: sending them via zmq
+    # would deadlock, since the master thread is the only receiver
+    safely_call(func, args, self.task_no, monitor, InprocSocket(self.inproc))
 
 
 @submit.add('processpool', 'threadpool')
@@ -530,7 +532,32 @@ def task_weight(arg):
     return 1.
 
 
-def safely_call(func, args, task_no, mon):
+class InprocSocket(object):
+    """
+    A stand-in for the zmq PUSH socket which appends the results to
+    a deque, used when OQ_DISTRIBUTE=no (single process)
+    """
+    def __init__(self, results):
+        self.results = results
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def send(self, res):
+        self.results.append(res)
+
+
+def _channel(sink, mon):
+    # return the sink, if given, otherwise a zmq PUSH socket
+    if sink is not None:
+        return sink
+    return Socket(mon.backurl, zmq.PUSH, 'connect')
+
+
+def safely_call(func, args, task_no, mon, sink=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -542,6 +569,7 @@ def safely_call(func, args, task_no, mon):
     :param args: the arguments
     :param task_no: the task number
     :param mon: a monitor
+    :param sink: where to send the results (default: zmq socket)
     """
     isgenfunc = inspect.isgeneratorfunction(func)
     if hasattr(args[0], 'unpickle'):
@@ -559,7 +587,7 @@ def safely_call(func, args, task_no, mon):
         args += (mon,)
     sentbytes = 0
     if isgenfunc:
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
@@ -571,7 +599,7 @@ def safely_call(func, args, task_no, mon):
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             sentbytes += sendback(res, zsocket)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
@@ -831,6 +859,7 @@ class Starmap(object):
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = {}  # populated by .submit
+        self.inproc = collections.deque()  # used when distribute=no
         self.task_no = 0
         self._shared = {}
         self.n_out = 0
@@ -962,6 +991,12 @@ class Starmap(object):
             if task.done():
                 task.result(timeout=0)
 
+    def _inproc_results(self):
+        # a task submitted while consuming (a subtask) appends more
+        # results, which are seen by the loop since we pop lazily
+        while self.inproc:
+            yield self.inproc.popleft()
+
     def _loop(self):
         self.busytime = AccumDict()  # name -> pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
@@ -981,7 +1016,10 @@ class Starmap(object):
         logging.warning('Sent %d %s tasks, %s', len(self.tasks),
                         self.name, humansize(nbytes))
 
-        isocket = iter(self.socket)  # read from the PULL socket
+        if dist == 'no':  # the results are already in self.inproc
+            isocket = self._inproc_results()
+        else:
+            isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
             res = next(isocket)

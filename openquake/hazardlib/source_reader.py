@@ -34,7 +34,7 @@ from openquake.hazardlib.source_group import (
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
-    restrict_sampling, sampling_dt, get_ts_sets)
+    restrict_ts_samples, ts_samples_dt, get_ts_sets)
 from openquake.hazardlib.contexts import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -62,11 +62,11 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def sampling(samples, trt_smr):
+def ts_samples(samples, trt_smr):
     """
     :returns: a structured array (trt_smr, samples) of length 1
     """
-    return numpy.array([(trt_smr, samples)], sampling_dt)
+    return numpy.array([(trt_smr, samples, 0)], ts_samples_dt)
 
 
 # NB: blocksize is chosen so that event_based/case_35 works
@@ -93,12 +93,12 @@ def splitMF(sources, disagg_by_src, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
-                segment.sampling = src.sampling
+                segment.ts_samples = src.ts_samples
                 splits.append(segment)
         elif src.code == b'F' and not disagg_by_src:
             # use the colon convention only in absence of kendra-splitting
             for segment in src:
-                segment.sampling = src.sampling
+                segment.ts_samples = src.ts_samples
                 splits.append(segment)
         else:
             splits.append(src)
@@ -349,7 +349,7 @@ def modified_groups(sources, bset_values):
     :returns:
         a generator of (trt_smrs, group) pairs, one for each set of
         realizations with the same uncertainties, with the uncertainties
-        applied and the sampling restricted to the set of realizations
+        applied and the ts_samples restricted to the set of realizations
     """
     for trt_smrs, srcs in _subsets_by_unc(sources).items():
         grp = _restricted_group(sources, srcs, trt_smrs)
@@ -370,7 +370,7 @@ def _subsets_by_unc(sources):
     if getattr(sources, 'atomic', False):
         # the sources of an atomic group are mutually exclusive (or belong
         # to a cluster), so they must be kept together, see sample_cluster
-        # and cmakers_groups; the sets of realizations are the same for
+        # and cmakers_groups_gkeys; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
                 for trt_smrs in get_ts_sets(sources[0])}
@@ -384,9 +384,9 @@ def _subsets_by_unc(sources):
 def _restricted_group(sources, srcs, trt_smrs):
     """
     :returns: a group with the given sources, i.e. copies of the sources
-        of `sources` with the sampling restricted to trt_smrs
+        of `sources` with the ts_samples restricted to trt_smrs
     """
-    restricted = [restrict_sampling(src, trt_smrs) for src in srcs]
+    restricted = [restrict_ts_samples(src, trt_smrs) for src in srcs]
     if hasattr(sources, 'sources'):  # keep the attributes of the group
         grp = copy.copy(sources)
         grp.sources = restricted
@@ -445,23 +445,24 @@ def source_with_ts_sets(src, pairs, sigrows):
         realization of the source
     :param sigrows: a list of rows describing the uncertainty signatures,
         extended with the signatures of the source
-    :returns: a copy of the source with the attributes sampling,
-        ts_sets and bysrc_unc set, i.e. the sets of realizations
-        with the same uncertainties
+    :returns: a copy of the source with the attributes ts_samples
+        and bysrc_unc set, i.e. the sets of realizations
+        with the same uncertainties are stored in the field ts
     """
-    arrays, sigdict = [], {}
+    sigdict = {}
     for trt_smr, samples, sig in pairs:
-        arrays.append((trt_smr, samples))
         sigdict.setdefault(sig, []).append(trt_smr)
+    # NB: the field ts is the smallest trt_smr of the set of realizations
+    # with the same uncertainties; it is 0 for all the realizations if
+    # the uncertainties are the same everywhere (or there are none), so
+    # the sources without uncertainties keep their ts_samples as it is
+    tsdict = {sig: min(t) for sig, t in sigdict.items()}
+    multi = len(sigdict) > 1
+    arrays = [(trt_smr, samples, tsdict[sig] if multi else 0)
+              for trt_smr, samples, sig in pairs]
     new_src = copy.copy(src)
-    new_src.sampling = numpy.array(
-        sorted(arrays), sampling_dt)  # sorted by trt_smr
-    # NB: the subsets are stored only if the uncertainties are not the
-    # same in all the realizations; a source with no uncertainties (or with
-    # the same uncertainties everywhere) keeps its sampling as it is
-    new_src.ts_sets = [
-        numpy.array(sorted(t), U32) for t in sigdict.values()
-        ] if len(sigdict) > 1 else []
+    new_src.ts_samples = numpy.array(
+        sorted(arrays), ts_samples_dt)  # sorted by trt_smr
     # flag the sources which will be modified in the workers: they must
     # not be split in the preclassical, since the splitting destroys the
     # geometry (and the MFD of the fault sources)
@@ -480,8 +481,8 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     Build the source groups without applying the uncertainties, as
     needed by the workers.  The uncertainties to be applied in each
     realization are not known until the workers, so the realizations
-    with different uncertainties are stored in the ts_sets attribute
-    of each source (see get_ts_sets).
+    with different uncertainties are stored in the field ts of the
+    ts_samples of each source (see get_ts_sets).
     """
     # NB: the uncertainty signatures are stored in the datastore, so that
     # `oq check_input` can print them, see store_unc_signatures
@@ -692,7 +693,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id sampling branch'}
+               if k not in 'source_id ts_samples branch'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -790,19 +791,19 @@ def _groups_ids(smlt_dir, smdict, fnames):
     return groups, set(src.source_id for grp in groups for src in grp)
 
 
-def _add_sampling(src, rlz, trti):
-    # associate the source to the sampling parameters of the realization;
+def _add_ts_samples(src, rlz, trti):
+    # associate the source to the ts_samples parameters of the realization;
     # the same source can appear in multiple realizations, hence the list.
-    # NB: the multiplicity of the source is len(src.sampling) and it enters
+    # NB: & and it enters
     # the classical calculations too, via SourceGroup.fix_src_offset and
-    # the source_info rows, so the sampling must be always set
-    sampl = sampling(rlz.samples, trti * TWO24 + rlz.ordinal)
-    if src.sampling is None:
+    # the source_info rows, so the ts_samples must be always set
+    sampl = ts_samples(rlz.samples, trti * TWO24 + rlz.ordinal)
+    if src.ts_samples is None:
         # the first time
-        src.sampling = [sampl]
+        src.ts_samples = [sampl]
     else:
         # if the same source belongs to multiple realizations
-        src.sampling.append(sampl)
+        src.ts_samples.append(sampl)
 
 
 def gen_groups(full_lt, smdict, rlz):
@@ -827,11 +828,11 @@ def gen_groups(full_lt, smdict, rlz):
         src_groups.extend(extra)
     # NB: the uncertainties are not applied here, but in the workers,
     # one set of realizations at a time, see modified_groups; the
-    # sampling info is set anyway, since it determines the multiplicity
+    # ts_samples info is set anyway, since it determines the multiplicity
     for src_group in src_groups:
         trti = full_lt.trti.get(src_group.trt, 0)
         for src in src_group:  # tested in case_83_eb
-            _add_sampling(src, rlz, trti)
+            _add_ts_samples(src, rlz, trti)
         yield src_group
 
     # check applyToSources
@@ -865,8 +866,8 @@ def reduce_sources(sources_with_same_id):
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
         src = srcs[0]
-        if len(srcs) > 1 and len(src.sampling) == 1:
-            src.sampling = numpy.concatenate([s.sampling for s in srcs])
+        if len(srcs) > 1 and len(src.ts_samples) == 1:
+            src.ts_samples = numpy.concatenate([s.ts_samples for s in srcs])
         out.append(src)
     return out
 

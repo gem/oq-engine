@@ -740,6 +740,8 @@ class SourceConverter(RuptureConverter):
         mmax_offset = node.attrib.get('mmaxOffset')
         if mmax_offset is not None:
             area.mmax_offset = float(mmax_offset)
+        # used by the BCHydro set_recurrow MFD, see area.py
+        area.width_of_mfd_bin = self.width_of_mfd_bin
         return area
 
     def convert_pointSource(self, node):
@@ -756,7 +758,7 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        return source.PointSource(
+        psrc = source.PointSource(
             source_id=node['id'],
             name=node['name'],
             tectonic_region_type=node.attrib.get('tectonicRegion'),
@@ -770,6 +772,9 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=hdd,
             temporal_occurrence_model=self.get_tom(node))
+        # used by the BCHydro set_recurrow MFD, see point.py
+        psrc.width_of_mfd_bin = self.width_of_mfd_bin
+        return psrc
 
     def convert_multiPointSource(self, node):
         """
@@ -842,6 +847,8 @@ class SourceConverter(RuptureConverter):
             rate_frac = node.attrib.get('rateFrac')
             if rate_frac is not None:
                 simple.rate_frac = float(rate_frac)
+            # used by the BCHydro set_recurrow MFD, see simple_fault.py
+            simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 
     def convert_kiteFaultSource(self, node):

@@ -35,7 +35,8 @@ NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
 
 U32 = numpy.uint32
-sampling_dt = numpy.dtype([('trt_smr', U32), ('samples', U32)])
+# ts is the set of realizations with the same uncertainties (see get_ts_sets)
+ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 
 
 class LogicTreeError(Exception):
@@ -570,6 +571,18 @@ def _dummy(utype, source, value):
     pass
 
 
+# uncertainties changing only the MFD or the rates, i.e. keeping the geometry
+# of the ruptures; the others (and the unknown ones) are geometry-changing,
+# see classical.geometry_key.
+GEOMETRY_PRESERVING = frozenset([
+    'abGRAbsolute', 'abMaxMagAbsolute', 'bGRAbsolute', 'bACAbsolute',
+    'bGRRelative', 'bACRelative', 'maxMagGRRelative',
+    'maxMagGRRelativeNoMoBalance', 'maxMagAndDeltaMagACRelative',
+    'maxMagAndDeltaMagACRelativeNoMoBalance', 'maxMagGRAbsolute',
+    'incrementalMFDAbsolute', 'truncatedGRFromSlipAbsolute',
+    'recurSet', 'recurRow', 'rateSplit', 'dummy'])
+
+
 # ######################### apply_uncertainties ########################### #
 
 def get_bset_value(bset, value, source):
@@ -625,6 +638,33 @@ def check_correlated(bset_values, src_group):
                         ' missing, maybe you mispelled the name?')
 
 
+def shallow_unc(bset_values, bset_applications, source):
+    # True if the uncertainties applied to source modify only its MFD
+    # (see GEOMETRY_PRESERVING) or the attributes listed in its
+    # shallow_uncertainties, so the copy can share the rest
+    # NB: bset_applications has a pair (applies, value) per branchset, e.g.
+    #   bset_values = [(bset_dip, 45.0), (bset_other, {'src2': 0.5})]
+    #   bset_applications = [(True, 45.0), (False, None)]
+    #   the first branchset sets the dip of the source to 45.0, the second
+    #   one is correlated to 'src2' and does not apply to the source
+    if hasattr(source, 'pointsources') or not hasattr(source, 'mfd'):
+        return False  # point sources modify their sub-sources in place
+    allowed = GEOMETRY_PRESERVING | source.shallow_uncertainties
+    return all(bset.uncertainty_type in allowed and not bset.collapsed
+               for (bset, _), (ok, _) in zip(bset_values,
+                                             bset_applications) if ok)
+
+
+def _copy_source(source, shallow):
+    if not shallow:
+        return copy.deepcopy(source)
+    # share the geometry with the original, but copy the MFD, which is
+    # modified in place by the uncertainties
+    src = copy.copy(source)
+    src.mfd = copy.deepcopy(source.mfd)
+    return src
+
+
 def apply_uncertainties(bset_values, src_group, check=True):
     """
     :param bset_values: a list of pairs (branchset, value)
@@ -647,7 +687,8 @@ def apply_uncertainties(bset_values, src_group, check=True):
         pairs = [get_bset_value(bset, value, source)
                  for bset, value in bset_values]
         if any(ok for ok, _ in pairs):  # source not filtered out
-            src = copy.deepcopy(source)
+            shallow = shallow_unc(bset_values, pairs, source)
+            src = _copy_source(source, shallow)
             # the uncertainties can change the number of ruptures, for
             # instance by truncating the MFD, so a cached value is not
             # valid anymore
@@ -681,14 +722,14 @@ def apply_uncertainties(bset_values, src_group, check=True):
 # ####################### uncertainties and sampling ###################### #
 
 
-def _sampling_array(src):
+def _ts_samples_array(src):
     """
-    :returns: the sampling of the source as a structured array
+    :returns: the ts_samples of the source as a structured array
     """
-    sampling = src.sampling
-    if isinstance(sampling, list):
-        sampling = numpy.concatenate(sampling, dtype=sampling_dt)
-    return sampling
+    ts_samples = src.ts_samples
+    if isinstance(ts_samples, list):
+        ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+    return ts_samples
 
 
 def get_ts_sets(src):
@@ -697,23 +738,25 @@ def get_ts_sets(src):
         the same uncertainties applied to the source; there is a single set
         if the uncertainties are the same in all the realizations
 
-    NB: the subsets are stored by build_groups, i.e. for the sources
-        modified by the uncertainties; the sources without uncertainties
-        have a single set, given by the sampling.
+    NB: the sets are stored in the field ts of the ts_samples by
+        build_groups, i.e. for the sources modified by the uncertainties;
+        the sources without uncertainties have ts=0 everywhere and a
+        single set.
     """
-    if src.ts_sets:
-        return tuple(tuple(t) for t in src.ts_sets)
-    return tuple(_sampling_array(src)['trt_smr']),
+    ts_samples = _ts_samples_array(src)
+    return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
+                 for ts in numpy.unique(ts_samples['ts']))
 
 
-def restrict_sampling(src, trt_smrs):
+def restrict_ts_samples(src, trt_smrs):
     """
-    :returns: a copy of the source with the sampling restricted to
+    :returns: a copy of the source with the ts_samples restricted to
         trt_smrs, i.e. belonging to a single set of uncertainties
     """
     new = copy.copy(src)
-    sampling = _sampling_array(src)
-    new.sampling = sampling[numpy.isin(sampling['trt_smr'], trt_smrs)]
+    ts_samples = _ts_samples_array(src)
+    new.ts_samples = ts_samples[
+        numpy.isin(ts_samples['trt_smr'], trt_smrs)]
     return new
 
 

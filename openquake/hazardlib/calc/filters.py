@@ -320,8 +320,7 @@ def split_source(src):
     for i, split in enumerate(splits):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
-        split.sampling = src.sampling
-        split.ts_sets = src.ts_sets
+        split.ts_samples = src.ts_samples
         if hasattr(src, 'bysrc_unc'):
             split.bysrc_unc = src.bysrc_unc
         split.grp_id = grp_id
