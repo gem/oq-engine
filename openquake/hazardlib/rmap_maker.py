@@ -261,6 +261,14 @@ def _mag_ratios(base, dic):
             if rate > 0}
 
 
+def mag_support(sources):
+    # :param sources: a list of sources, as in a group
+    # :returns: a hashable key with the magnitudes of each source; the
+    #     variants with the same key can be computed together by make_results
+    #     since they have the same magnitudes, see _mag_ratios
+    return tuple(tuple(sorted(dic)) for dic in _rates_by_mag(sources))
+
+
 # called only in the few sites case
 def make_results(groups, cmakers, sites):
     """

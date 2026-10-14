@@ -37,7 +37,7 @@ from openquake.hazardlib.source_reader import (
 from openquake.hazardlib.lt import (
     get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
-    get_cmakers, read_full_lt_by_label, make_results)
+    get_cmakers, read_full_lt_by_label, make_results, mag_support)
 from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
@@ -302,6 +302,20 @@ def geometry_key(srcs, bvals):
                  any(get_bset_value(bset, value, src)[0] for src in srcs))
 
 
+def _split_by_mags(pairs):
+    """
+    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :returns: a list of lists of pairs, with the same magnitudes in each
+        list; the MFD variants with the magnitude grid anchored to the
+        maximum magnitude (see width_of_mfd_bin) have different magnitudes,
+        and make_results requires them to be a subset of the base ones
+    """
+    parts = {}
+    for cm, sg in pairs:
+        parts.setdefault(mag_support(sg), []).append((cm, sg))
+    return list(parts.values())
+
+
 def _make_results(pairs, sites, remove_zeros, as_rmap):
     """
     :param pairs: a list of (cmaker, group) pairs with the same geometry
@@ -405,12 +419,15 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         for pairs in bykey.values():
             # NB: _make_results is for few sites only
             few = len(sites.complete) <= cmaker.max_sites_disagg
-            dics = _make_results(pairs, sites, remove_zeros, as_rmap) \
-                if len(pairs) > 1 and few else None
-            if dics is None:
-                slow.extend(pairs)
-            else:
-                yield from dics
+            # make_results needs the same magnitudes in all the variants,
+            # which the MFD bin width does not guarantee (see _split_by_mags)
+            for part in _split_by_mags(pairs):
+                dics = _make_results(part, sites, remove_zeros, as_rmap) \
+                    if len(part) > 1 and few else None
+                if dics is None:
+                    slow.extend(part)
+                else:
+                    yield from dics
         for cmaker_, sg in slow:
             yield baseclassical(
                 sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
