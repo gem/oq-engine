@@ -236,6 +236,10 @@ def _rates_by_mag(sources):
     #     per source, read from the MFD (cheap, no ruptures enumerated)
     out = []
     for src in sources:
+        # NB: nonparametric sources have no MFD, so they are not supported
+        # by make_results and the callers must fall back to the slow path
+        if not hasattr(src, 'get_annual_occurrence_rates'):
+            raise ValueError('%s has no MFD' % type(src).__name__)
         dic = {}
         for mag, rate in src.get_annual_occurrence_rates():
             mag = round(mag, 3)
@@ -259,6 +263,14 @@ def _mag_ratios(base, dic):
         raise ValueError('new magnitudes in a variant')
     return {mag: dic.get(mag, 0.) / rate for mag, rate in base.items()
             if rate > 0}
+
+
+def mag_support(sources):
+    # :param sources: a list of sources, as in a group
+    # :returns: a hashable key with the magnitudes of each source; the
+    #     variants with the same key can be computed together by make_results
+    #     since they have the same magnitudes, see _mag_ratios
+    return tuple(tuple(sorted(dic)) for dic in _rates_by_mag(sources))
 
 
 # called only in the few sites case
@@ -388,19 +400,32 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
     ctx = concat(ctxs)
     sidx = numpy.concatenate(sidxs)
     ctx.mag = numpy.round(ctx.mag, 3)
-    for mag in numpy.unique(ctx.mag):
-        mask = ctx.mag == mag
-        ctxt, si = ctx[mask], sidx[mask]
+    # sorting by magnitude (stable, so the order within each magnitude is
+    # preserved) allows to process each magnitude as a contiguous slice
+    order = numpy.argsort(ctx.mag, kind='stable')
+    ctx = ctx[order]
+    sidx = sidx[order]
+    umags, starts, counts = numpy.unique(
+        ctx.mag, return_index=True, return_counts=True)
+    itime = tspan
+    for mag, start, count in zip(umags, starts, counts):
+        ctxt = ctx[start:start+count]
+        si = sidx[start:start+count]
         # R[v, s] is the rate ratio of the source s in the variant v
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
         cm.cfactor += [len(ctxt), 1]  # as in gen_poes
         for poes, _, _, _, slc in cm._gen_poes(ctxt):
             c = ctxt[slc]
+            # read the record fields once for all the variants
+            sids = c.sids
+            probs_occur = c.probs_occur
+            occ_rate = c.occurrence_rate
+            poes = poes.astype(F64)
             for v, pnemap in enumerate(pnemaps):
-                rates_v = c.occurrence_rate * R[v, si[slc]]
-                pnemap.update_indep(poes.astype(F64), c, tspan,
-                                    rates=rates_v)
+                rates_v = occ_rate * R[v, si[slc]]
+                pnemap._update_indep_arrays(poes, rates_v, probs_occur,
+                                            sids, itime)
 
 
 def _scale_rups(rupdata, ratio):
