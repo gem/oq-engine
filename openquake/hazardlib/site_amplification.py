@@ -24,7 +24,6 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.stats import norm_cdf, truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.oqvalidation import check_same_levels
 
 # Log-spaced rock IMTL grid used in the amp convolution: the adjacent
 # ratio is shrunk from the tightest soil-amplevel ratio (safety margin
@@ -34,6 +33,30 @@ from openquake.commonlib.oqvalidation import check_same_levels
 IMTL_GRID_SHRINK_FACTOR = 0.9
 IMTL_GRID_MIN_RATIO = 1.05
 IMTL_GRID_MAX_RATIO = 1.1
+
+
+def check_same_levels(imtls):
+    """
+    :param imtls: a dictionary (or dict-like) imt -> imls
+    :returns: the periods and the levels
+    :raises: a ValueError if the levels are not the same across all IMTs
+    """
+    if not imtls:
+        raise ValueError('There are no intensity_measure_types_and_levels!')
+    imls = imtls[next(iter(imtls))]
+    for imt in imtls:
+        if not imt.startswith(('PGA', 'SA')):
+            raise ValueError('Site amplification works only with '
+                             'PGA and SA, got %s' % imt)
+        if (imtls[imt] == 0).all():
+            raise ValueError(
+                'You forgot to set intensity_measure_types_and_levels!')
+        elif len(imtls[imt]) != len(imls) or any(
+                l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
+            raise ValueError('Site amplification works only if the '
+                             'levels are the same across all IMTs')
+    periods = [from_string(imt).period for imt in imtls]
+    return periods, imls
 
 
 class AmplificationFunction():

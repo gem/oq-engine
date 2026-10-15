@@ -43,8 +43,8 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, Oq, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.mean_rates import to_rates, to_probs
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
