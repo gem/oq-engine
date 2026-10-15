@@ -41,9 +41,9 @@ jobs:
       with:
         python-version: "3.12"
     - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
+      uses: owenthereal/action-upterm@v2
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      with:
           ## Shut down the server if unconnected after 45 minutes.
           wait-timeout-minutes: 45
     # Append a devXY (where XY is the Jenkins build ID if destination is the testing repo
