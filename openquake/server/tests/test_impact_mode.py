@@ -316,8 +316,11 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 self.assertIn('format=png', output['urls']['png'])
             self.assertEqual(
                 set(impact_outputs),
-                {'avg_gmf', 'assets', 'aggrisk', 'aggrisk_tags',
+                {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',
                  'exposure_by_mmi', 'exposure_by_lse', 'country_reports'})
+            self.assertIsInstance(impact_outputs['avg_gmf_plots'], dict)
+            for imt, url in impact_outputs['avg_gmf_plots'].items():
+                self.assertIn(f'avg_gmf-{imt}.png', url)
             for peril_outputs in impact_outputs['exposure_by_lse'].values():
                 if peril_outputs:
                     self.assertEqual(

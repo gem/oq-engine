@@ -1291,10 +1291,10 @@ def build_impact_outputs(request, calc_id, dstore):
     """Describe impact resources and their presentation URLs."""
     available = internal_api.get_impact_output_data(dstore)
     outputs = {
-        'avg_gmf': [
-            dict(name=name, url=_impact_output_url(
-                request, 'download_png', calc_id, [name]))
-            for name in available['avg_gmf']],
+        'avg_gmf_plots': {
+            imt: _impact_output_url(
+                request, 'download_png', calc_id, [name])
+            for imt, name in available['avg_gmf_plots'].items()},
         'assets': None,
         'aggrisk': None,
         'aggrisk_tags': None,

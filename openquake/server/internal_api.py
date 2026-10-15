@@ -288,9 +288,13 @@ def get_impact_output_data(dstore):
         aggrisk_tags = False
     else:
         aggrisk_tags = True
+    avg_gmf_plots = {}
+    for name in png_names:
+        if name.startswith('avg_gmf-') and name.endswith('.png'):
+            imt = name[len('avg_gmf-'):-len('.png')]
+            avg_gmf_plots[imt] = name
     return {
-        'avg_gmf': [name for name in png_names
-                    if name.startswith('avg_gmf-')],
+        'avg_gmf_plots': avg_gmf_plots,
         'assets': 'assets.png' in png_names,
         'aggrisk': 'aggrisk' in dstore,
         'aggrisk_tags': aggrisk_tags,

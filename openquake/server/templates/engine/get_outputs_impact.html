@@ -31,10 +31,10 @@
             </div>
             {% endcomment %}
             <div class="outputs-general-btns-left">
-              {% for image in impact_outputs.avg_gmf %}
+              {% for imt, url in impact_outputs.avg_gmf_plots.items %}
               <div class="my-pngs">
-                <a href="{{ image.url }}" class="btn btn-sm">
-                  Show average GMF - {{ image.name|get_imt }}</a>
+                <a href="{{ url }}" class="btn btn-sm">
+                  Show average GMF - {{ imt }}</a>
               </div>
               {% endfor %}
               {% if impact_outputs.assets %}
