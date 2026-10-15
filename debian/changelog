@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: removed full tiling since it is not necessary anymore
   * Buffered the `save_rates` phase, with a 200x speedup in BCHydro-style
     calculations (but no visible effect in normal calculations)
   * Building the hazard curves in parallel even in the case of few sites
