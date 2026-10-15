@@ -81,7 +81,30 @@ def _grid_spacing(x, y):
 
 @dataclass(frozen=True)
 class RegularGridLayout:
-    """Projected regular-grid geometry for a geographic site collection."""
+    """Map geographic sites to the regular UTM lattice used by CE.
+
+    ``from_sites`` projects all coordinates into one UTM zone and hemisphere,
+    selected from the median longitude and latitude, then fits and validates
+    an axis-aligned lattice. ``site_indices`` maps the original site order to
+    flattened grid cells; holes remain unused cells in the enclosing rectangle.
+
+    CE constructs stationary covariance lags from Euclidean distances between
+    lattice cells. A fixed row/column offset must have the same displacement
+    everywhere, giving the repeated covariance structure required by the FFT.
+    Geographic grids built along parallels and meridians do not generally
+    satisfy this condition. Substituting geographic pairwise distances would
+    in general lose that structure, rather than merely change the projection.
+
+    UTM is a local planar approximation to surface geometry, not an intrinsic
+    requirement of CE; another suitable planar projection would require
+    consistent support throughout grid detection and sampling. The covariance
+    sampled here uses projected distances, not exact geodesic distances.
+
+    ``grid_shape`` and ``spacing`` follow row/column order, with spacing in
+    kilometres. ``projected_origin`` is northing/easting in metres, ``crs`` is
+    the UTM EPSG code, and ``maximum_error`` is the largest distance in metres
+    between an input site and its fitted lattice position.
+    """
 
     grid_shape: tuple
     spacing: tuple

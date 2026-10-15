@@ -13,7 +13,24 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-"""Complete rectangular UTM grids compatible with circulant embedding."""
+"""Build complete rectangular grids for circulant embedding (CE).
+
+Input locations are transformed to one local UTM coordinate reference system,
+using the same zone and hemisphere convention as the CE grid detector. Their
+projected bounds are padded and snapped outward to multiples of the requested
+spacing. Equal steps along the easting and northing axes then define a square
+lattice, including all cells in its enclosing rectangle. Coordinates are
+transformed back to longitude and latitude, rounded for site-model CSV output,
+and checked with the CE detector.
+
+CE reuses the covariance for each row/column offset throughout the grid, so
+that offset must represent the same Cartesian displacement everywhere. The
+engine's existing geographic grid builders step along parallels and meridians;
+even with kilometre spacing, these do not generally form an axis-aligned UTM
+lattice. UTM is this implementation's choice of planar geometry, not a
+requirement of CE itself. Its Euclidean distances approximate distances on the
+Earth's surface, so the projection must be suitable for the area being modeled.
+"""
 import logging
 
 import numpy
