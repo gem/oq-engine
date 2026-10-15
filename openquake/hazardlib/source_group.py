@@ -680,7 +680,7 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         for ws in block_splitter(keys, max_weight, getweight, nokey):
             nblocks += 1
             out.append((cmaker_[gid], tgetters, list(ws), True))
-        logging.info('Split %d atomic groups with total weight %.3gs '
+        logging.info('Split %d atomic groups with total weight %.1f '
                      'in %d blocks', len(keys),
                      sum(getweight(k) for k in keys), nblocks)
     if atomic:
