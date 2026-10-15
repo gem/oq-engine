@@ -273,7 +273,6 @@ def mag_support(sources):
     return tuple(tuple(sorted(dic)) for dic in _rates_by_mag(sources))
 
 
-# called only in the few sites case
 def make_results(groups, cmakers, sites):
     """
     Compute the rates of several variants of the same groups, i.e. groups
@@ -283,7 +282,7 @@ def make_results(groups, cmakers, sites):
     :param groups: a list of V groups, one per variant, with the same
         sources in the same order
     :param cmakers: a list of V cmakers, one per variant, with the gids
-    :param sites: a SiteCollection instance, with few sites
+    :param sites: a SiteCollection instance
     :returns: a list of V dictionaries, as returned by RmapMaker.make
     :raises ValueError: if the variants cannot be computed this way
     :raises FilteredAway: if some sources of a variant were filtered away
@@ -300,8 +299,6 @@ def make_results(groups, cmakers, sites):
     rmaker = RmapMaker(cmakers[b], sites, groups[b])
     if rmaker.src_mutex or rmaker.rup_mutex or rmaker.cluster:
         raise ValueError('mutually exclusive sources')
-    # NB: the caller checks the number of sites, see classical.bysrc_results
-    assert rmaker.fewsites, 'too many sites'
     sources = rmaker.sources
     # NB: the variants can have fewer sources than the base, since the
     # sources are filtered by minimum_magnitude after the uncertainties
@@ -370,7 +367,8 @@ def _process_sources(rmaker, ratios, pnemaps, rups):
         ctxs = list(rmaker.gen_ctxs(src))
         rmaker.rupdata = []  # the contexts are kept in ctxs
         nctxs.append(sum(len(ctx) for ctx in ctxs))
-        if cm.oq.keep_rupdata:  # the ruptures of each variant
+        # the ruptures of each variant, kept only with few sites as in gen_ctxs
+        if cm.oq.keep_rupdata and rmaker.fewsites:
             for v, rup in enumerate(rups):
                 rup.extend(_scale_rups(ctxs, ratios[v][s]))
         for ctx in ctxs:
