@@ -86,9 +86,6 @@
     a source belongs to a different number of logic tree realizations in the
     original and in the reduced logic tree: the trt_smrs of the source were
     assigned to a sampling array of incompatible length
-  * The export of the calculation results (i.e. GET /v1/calc/result/:id) is
-    now performed by FastAPI and proxied by Django, like many other
-    endpoints; the export logic lives in openquake/server/services.py
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
     source, i.e. when there is no deterministic scenario for that IMT.
   * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are
@@ -146,9 +143,8 @@
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
 
   [Michele Simionato]
-  * Introduced a uvicorn server replacing the DbServer with a REST API
-    and serving also the Django (sub)applications; introduced a scientific
-    REST API based on FastAPI and supporting OpenAPI
+  * Introduced an experimental uvicorn server replacing the DbServer with a
+    REST API and serving also the Django (sub)applications
 
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference

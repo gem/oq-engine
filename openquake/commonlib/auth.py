@@ -1,4 +1,4 @@
-"""Authentication values shared by the Django and FastAPI layers."""
+"""Authentication values shared by the WebUI views and the internal API."""
 
 import os
 

@@ -34,7 +34,7 @@ from openquake.server.db import actions
 from openquake.commonlib.dbapi import db
 from openquake.server.views import job_complete_callback_state
 from openquake.server.tests.views_test import (
-    EngineServerTestCase, loadnpz, start_uvicorn, stop_uvicorn)
+    EngineServerTestCase, loadnpz, start_webui, stop_webui)
 from openquake.qa_tests_data.classical import case_01
 
 django.setup()
@@ -51,12 +51,12 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
-        cls.webserver, cls.webserver_thread, cls.c = start_uvicorn()
+        cls.webserver, cls.webserver_thread, cls.c = start_webui()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        stop_uvicorn(cls.webserver, cls.webserver_thread)
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def postzip(self, archive):
@@ -371,7 +371,7 @@ class CallbackTest(LiveServerTestCase):
 
     def setUp(self):
         (self.webserver, self.webserver_thread,
-         self.client) = start_uvicorn()
+         self.client) = start_webui()
         self.on_job_complete_event = Event()
         self.on_job_complete_data = {}
         job_complete_callback_state['event'] = self.on_job_complete_event
@@ -404,7 +404,7 @@ class CallbackTest(LiveServerTestCase):
         self.assertEqual(get_params['second'], 'two')
 
     def tearDown(self):
-        stop_uvicorn(self.webserver, self.webserver_thread)
+        stop_webui(self.webserver, self.webserver_thread)
         super().tearDown()
 
     # TODO: we could add a test to test the callback in case of a job that starts

@@ -37,7 +37,7 @@ from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
 from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
-    get_or_create_user, start_uvicorn, stop_uvicorn)
+    get_or_create_user, start_webui, stop_webui)
 
 CALC_RUN_TIMEOUT = 60
 
@@ -163,7 +163,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         env['OQ_DISTRIBUTE'] = 'no'
         cls.maxDiff = None
         (cls.webserver, cls.webserver_thread,
-         cls.c) = start_uvicorn()
+         cls.c) = start_webui()
 
     def setUp(self):
         Group = apps.get_model('auth', 'Group')
@@ -187,7 +187,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        stop_uvicorn(cls.webserver, cls.webserver_thread)
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def set_user_level_and_remove_groups(self, level):

@@ -426,13 +426,11 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # Fault sources (SimpleFaultSource): 24 fast, 27 slow; they can
         # fall on either side depending on the other pairs in the group.
         for pairs in bykey.values():
-            # NB: _make_results is for few sites only
-            few = len(sites.complete) <= cmaker.max_sites_disagg
             # make_results needs the same magnitudes in all the variants,
             # which the MFD bin width does not guarantee (see _split_by_mags)
             for part in _split_by_mags(pairs):
                 dics = _make_results(part, sites, remove_zeros, as_rmap) \
-                    if len(part) > 1 and few else None
+                    if len(part) > 1 else None
                 if dics is None:
                     slow.extend(part)
                 else:
