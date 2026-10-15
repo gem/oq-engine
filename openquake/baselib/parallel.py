@@ -785,7 +785,11 @@ class Starmap(object):
             if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
-            cls.pool.shutdown()
+            # Skip shutdown to avoid Python 3.11 deadlock in
+            # concurrent.futures.process.join_executor_internals
+            # (wait=False still hangs with broken workers)
+            # Just delete the pool; OS cleans up on exit.
+            # cls.pool.shutdown(wait=False, cancel_futures=True)
             del cls.pool
 
     @classmethod

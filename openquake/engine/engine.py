@@ -31,6 +31,7 @@ import signal
 import socket
 import sys
 import time
+import faulthandler
 from datetime import datetime, timezone
 from os.path import getsize
 from unittest import mock
@@ -129,6 +130,15 @@ def manage_signals(job_id, signum, _stack):
                 'The openquake master lost its controlling terminal')
 
 
+def _dump_all_stacks(signum, frame):
+    import traceback, sys
+    print(f"\n=== STACK DUMP (signal {signum}) ===", flush=True)
+    for thid, frame in sys._current_frames().items():
+        print(f"\n--- Thread {thid} ---", flush=True)
+        traceback.print_stack(frame, file=sys.stdout)
+    print("=== END STACK DUMP ===\n", flush=True)
+
+
 def register_signals(job_id):
     # register the manage_signals callback for SIGTERM, SIGINT, SIGHUP;
     # when using the Django development server this module is imported by a
@@ -138,6 +148,10 @@ def register_signals(job_id):
     try:
         signal.signal(signal.SIGTERM, manage)
         signal.signal(signal.SIGINT, manage)
+        try:
+            signal.signal(signal.SIGUSR1, _dump_all_stacks)
+        except (ValueError, AttributeError):
+            pass
         if hasattr(signal, 'SIGHUP'):
             # Do not register our SIGHUP handler if running with 'nohup'
             if signal.getsignal(signal.SIGHUP) != signal.SIG_IGN:
@@ -160,7 +174,20 @@ def poll_queue(job_id, poll_time):
         first_time = True
         while True:
             running = logs.dbcmd('get_running_jobs', host)
-            previous = [job.id for job in running if job.id < job_id - offset]
+            previous = []
+            for job in running:
+                if job.id < job_id - offset:
+                    pid_alive = True
+                    try:
+                        pid = int(getattr(job, 'pid', 0) or 0)
+                        if pid > 0:
+                            os.kill(pid, 0)
+                        else:
+                            pid_alive = False
+                    except (OSError, ValueError, TypeError):
+                        pid_alive = False
+                    if pid_alive:
+                        previous.append(job.id)
             if previous:
                 if first_time:
                     logs.dbcmd('update_job', job_id,
@@ -181,6 +208,8 @@ def run_calc(log, mulfactor=2):
         LogContext of the current job
     """
     register_signals(log.calc_id)
+    faulthandler.dump_traceback_later(30, repeat=True,
+                                       file=sys.stdout)
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
         # check the available memory before starting
