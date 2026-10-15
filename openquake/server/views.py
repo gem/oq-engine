@@ -1288,13 +1288,13 @@ def _impact_output_url(request, route_name, calc_id, args=(), query=None):
 
 
 def build_impact_outputs(request, calc_id, dstore):
-    """Describe the impact-specific resources and retrieval URLs."""
-    png_names = list(dstore['png']) if 'png' in dstore else []
+    """Describe impact resources and their presentation URLs."""
+    available = internal_api.get_impact_output_data(dstore)
     outputs = {
         'avg_gmf': [
             dict(name=name, url=_impact_output_url(
                 request, 'download_png', calc_id, [name]))
-            for name in png_names if name.startswith('avg_gmf-')],
+            for name in available['avg_gmf']],
         'assets': None,
         'aggrisk': None,
         'aggrisk_tags': None,
@@ -1302,17 +1302,13 @@ def build_impact_outputs(request, calc_id, dstore):
         'exposure_by_lse': {},
         'country_reports': [],
     }
-    if 'assets.png' in png_names:
+    if available['assets']:
         outputs['assets'] = dict(png=_impact_output_url(
             request, 'download_png', calc_id, ['assets.png']))
-    if 'aggrisk' in dstore:
+    if available['aggrisk']:
         outputs['aggrisk'] = dict(csv=_impact_output_url(
             request, 'download_aggrisk', calc_id))
-    try:
-        _extract(dstore, 'aggrisk_tags')
-    except KeyError:
-        pass
-    else:
+    if available['aggrisk_tags']:
         outputs['aggrisk_tags'] = dict(
             table=_impact_output_url(
                 request, 'extract_html_table', calc_id, ['aggrisk_tags']),
@@ -1321,7 +1317,7 @@ def build_impact_outputs(request, calc_id, dstore):
                 dict(summarize=1)),
             npz=_impact_output_url(
                 request, 'calc_extract', calc_id, ['aggrisk_tags']))
-    if 'mmi_tags' in dstore:
+    if available['exposure_by_mmi']:
         outputs['exposure_by_mmi'] = dict(
             json=_impact_output_url(
                 request, 'exposure_by_mmi', calc_id),
@@ -1329,10 +1325,9 @@ def build_impact_outputs(request, calc_id, dstore):
                 request, 'extract_html_table', calc_id, ['mmi_tags']),
             npz=_impact_output_url(
                 request, 'calc_extract', calc_id, ['mmi_tags']))
-    for peril in ('liquefaction', 'landslide'):
-        key = f'exposure_by_{peril}_lse'
+    for peril, is_available in available['exposure_by_lse'].items():
         outputs['exposure_by_lse'][peril] = None
-        if key not in dstore:
+        if not is_available:
             continue
         query = dict(secondary_peril=peril)
         outputs['exposure_by_lse'][peril] = dict(
@@ -1344,16 +1339,14 @@ def build_impact_outputs(request, calc_id, dstore):
             npz=_impact_output_url(
                 request, 'calc_extract', calc_id, ['exposure_by_lse'],
                 query))
-    if 'impact' in dstore:
-        report_url = reverse('impact_report', args=[calc_id])
-        report_url = request.build_absolute_uri(report_url)
-        for iso3 in dstore['impact']:
-            urls = {}
-            for file_format in ('pdf', 'png'):
-                query = urlencode(dict(iso3=iso3, format=file_format))
-                urls[file_format] = f'{report_url}?{query}'
-            outputs['country_reports'].append(
-                dict(iso3=iso3, urls=urls))
+    report_url = reverse('impact_report', args=[calc_id])
+    report_url = request.build_absolute_uri(report_url)
+    for iso3 in available['country_reports']:
+        urls = {}
+        for file_format in ('pdf', 'png'):
+            query = urlencode(dict(iso3=iso3, format=file_format))
+            urls[file_format] = f'{report_url}?{query}'
+        outputs['country_reports'].append(dict(iso3=iso3, urls=urls))
     return outputs
 
 
