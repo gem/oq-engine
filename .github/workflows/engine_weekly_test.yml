@@ -76,14 +76,17 @@ jobs:
           cd openquake/server
           cat > local_settings.py << EOF
           APPLICATION_MODE = 'RESTRICTED'
+          # No emails are sent in this workflow; don't require SMTP credentials.
+          EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
           WEBUI_USER = 'runner'
           WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
           DEBUG = True
           EOF
           echo "DISPLAY content of local_settings"
           cat local_settings.py
-          # START WEBUI
-          oq webui start 127.0.0.1:8800 -s &
+          # GITHUB_ACTIONS sets settings.TEST, which skips local_settings.py.
+          # Unset it so the WebUI starts with the restricted-mode settings above.
+          env -u GITHUB_ACTIONS oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z localhost 8800; do
             sleep 5 # wait for 1/10 of the second before check again
@@ -92,7 +95,9 @@ jobs:
           sleep 1
           # Perform migration after setup local_settings
           cd /home/runner/work/oq-engine/oq-engine/openquake/server
-          python manage.py migrate
+          # GITHUB_ACTIONS sets settings.TEST, which skips local_settings.py.
+          # Unset it so the WebUI starts with the restricted-mode settings above.
+          env -u GITHUB_ACTIONS python manage.py migrate
           sleep 30
           curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
           echo -n "Test Standalone Tools pages"
@@ -168,7 +173,6 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install https://wheelhouse.openquake.org/unified/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
@@ -280,7 +284,7 @@ jobs:
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -325,7 +329,7 @@ jobs:
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -372,6 +376,7 @@ jobs:
           OQ_APPLICATION_MODE: AELO
         run: |
           source ~/openquake/bin/activate
+          python -m pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
@@ -381,7 +386,7 @@ jobs:
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -419,9 +424,10 @@ jobs:
           else
             python install.py devel --version master
           fi
+          source ~/openquake/bin/activate
           PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
           echo $PY_VER
-          pip3 install -r requirements-impact-$PY_VER-linux64.txt
+          python -m pip install -r requirements-impact-$PY_VER-linux64.txt
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do

@@ -48,7 +48,8 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import ContextMaker, RmapMaker
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.rmap_maker import RmapMaker
 from openquake.hazardlib.source_group import SourceGroup
 
 

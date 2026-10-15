@@ -34,7 +34,7 @@ aae = np.testing.assert_array_almost_equal
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Test file uses replacement adjustment method on tau (scalar, IMT-varying)
-# and subtract adjustment method on phi (per-cell dS2S + scalar att_per_km,
+# and subtract adjustment method on phi (per-cell dS2S + scalar adj_per_km,
 # both IMT-varying), with h3 resolutions of 2, 3, 4
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
@@ -68,7 +68,7 @@ DS2S_SIG_PER_CELL = [
     np.array([0.03, 0.04, 0.05, 0.06]),  # SA(1.0)
 ]
 
-# Scalar att_per_km sigma per IMT
+# Scalar adj_per_km sigma per IMT
 ATT_SIG = [0.00112, 0.00148, 0.00158]  # PGA, SA(0.5), SA(1.0)
 
 EXPECTED_PATH_ADJ = [
@@ -147,7 +147,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         gd = load_residual_grids(GRID_HDF5)
         for m, imt in enumerate(IMTS):
             adjs = raytrace_path_adj(
-                gd["raytrace_grids"]["att_per_km"][imt],
+                gd["raytrace_grids"]["adj_per_km"][imt],
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
                 LONS, LATS,
             )
@@ -163,7 +163,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             aae(tau[GRID, m],
                 np.full(len(LATS), DL2L_SIG[m]), decimal=DP)
             # phi: subtract per-cell dS2S sigma (site-varying) and scalar
-            # att_per_km sigma, both IMT-specific
+            # adj_per_km sigma, both IMT-specific
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_SIG_PER_CELL[m] ** 2
                         - ATT_SIG[m] ** 2), decimal=DP)
@@ -188,7 +188,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # each term. Hypo is at origin so dL2L always picks cell 0;
         # dS2S and dP2P use per-site/per-path SE values from the HDF5
         for eps in [-1.732, 1.0, 1.732]:
-            eps_dict = {"dL2L": eps, "dS2S": eps, "att_per_km": eps}
+            eps_dict = {"dL2L": eps, "dS2S": eps, "adj_per_km": eps}
             mea, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
             mea_cen, *_ = self._get_mean_stds(IMTS)
             for m in range(len(IMTS)):
@@ -206,7 +206,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             stripped = os.path.join(td, "no_se.hdf5")
             shutil.copy(GRID_HDF5, stripped)
             with h5py.File(stripped, "a") as hf:
-                for term in ("dL2L", "dS2S", "att_per_km"):
+                for term in ("dL2L", "dS2S", "adj_per_km"):
                     for imt_str in hf[term]:
                         key = f"{term}_mean_se"
                         if key in hf[term][imt_str]:

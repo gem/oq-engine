@@ -71,10 +71,11 @@ file = /path/to/db.sqlite3
 If the database is on a different machine, you have to edit the file and
 specify the correct host name.
 
-NB: setting `host=127.0.0.1` is a mistake, since it will result on the
-database being accessed directly, which is a problem,
-since regular users will not have write permission to it. `host=127.0.0.1`
-instead is correct for single-user installations and correctly set by
+
+NB: setting `host=127.0.0.1` is a mistake in a server installation, 
+since it will result on the database being accessed directly, which is a problem,
+since regular users will not have write permission to it. 
+`host=127.0.0.1` instead is correct for single-user installations and correctly set by
 the universal installer.
 
 #### Upgrade the database to host users and sessions
@@ -154,17 +155,14 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default). Please replace the value of
-ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
+Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
-ExecStart=/opt/openquake/venv/bin/gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
+WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
-
-Use a single worker process: the WebUI keeps some state in memory, which
-would not be shared among several worker processes. The concurrency is given
-by the threads.
-
-*gunicorn* is usually managed by the OS init system.
+where `N` is the number of workers. 
+Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
 
 ### Using Environment Variables in systemd Units
 

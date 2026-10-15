@@ -446,12 +446,18 @@ class MapArray(object):
         """
         if rates is None:
             rates = ctxt.occurrence_rate
-        sidxs = self.sidx[ctxt.sids]
+        self._update_indep_arrays(poes, rates, ctxt.probs_occur,
+                                  ctxt.sids, itime)
+
+    def _update_indep_arrays(self, poes, rates, probs_occur, sids, itime):
+        # like update_indep, but taking the plain arrays of the fields
+        # (faster, since numpy record field access is slow)
+        sidxs = self.sidx[sids]
         if self.rates:
-            update_pmap_r(self.array, poes, rates, ctxt.probs_occur,
+            update_pmap_r(self.array, poes, rates, probs_occur,
                           sidxs, itime)
         else:
-            update_pmap_i(self.array, poes, rates, ctxt.probs_occur,
+            update_pmap_i(self.array, poes, rates, probs_occur,
                           sidxs, itime)
 
     def update_mutex(self, poes, ctxt, itime, mutex_weight):

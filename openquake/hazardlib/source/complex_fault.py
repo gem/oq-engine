@@ -18,17 +18,37 @@ Module :mod:`openquake.hazardlib.source.complex_fault`
 defines :class:`ComplexFaultSource`.
 """
 import copy
+from functools import lru_cache
 import numpy
 
 from scipy.stats import truncnorm
 from openquake.hazardlib import mfd
 from openquake.hazardlib.codes import COMPLEX_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
 MINWEIGHT = 100
+
+
+@lru_cache(maxsize=256)
+def whole_fault_cells(edges_key, mesh_spacing):
+    """
+    :param edges_key: tuple of edges, each a tuple of (lon, lat, depth)
+    :param mesh_spacing: the rupture mesh spacing in km
+    :returns: (cell_length, cell_area) arrays of the whole-fault mesh
+
+    Bounded LRU cache: sources sharing the same geometry (typically many
+    logic-tree branches) reuse the cell dimensions, avoiding the building
+    of the whole-fault mesh each time the ruptures are counted.
+    """
+    edges = [Line([Point(*p) for p in edge]) for edge in edges_key]
+    mesh = ComplexFaultSurface.from_fault_data(edges, mesh_spacing).mesh
+    _center, cell_length, _width, cell_area = mesh.get_cell_dimensions()
+    return cell_length, cell_area
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
@@ -198,13 +218,21 @@ class ComplexFaultSource(ParametricSeismicSource):
         eps_ar_upp = kwargs.get('eps_upp', None)
         num_bins = kwargs.get('num_bins', None)
 
-        whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing)
-        if step > 1:  # do the expensive check only in preclassical
-            whole_fault_surface.check_proj_polygon()
-        whole_fault_mesh = whole_fault_surface.mesh
-        _cell_center, cell_length, _cell_width, cell_area = (
-            whole_fault_mesh.get_cell_dimensions())
+        if only_rates:  # counting: no need to build the whole mesh
+            edges_key = tuple(
+                tuple((p.longitude, p.latitude, p.depth)
+                      for p in edge.points)
+                for edge in self.edges)
+            cell_length, cell_area = whole_fault_cells(
+                edges_key, self.rupture_mesh_spacing)
+        else:
+            whole_fault_surface = ComplexFaultSurface.from_fault_data(
+                self.edges, self.rupture_mesh_spacing)
+            if step > 1:  # do the expensive check only in preclassical
+                whole_fault_surface.check_proj_polygon()
+            whole_fault_mesh = whole_fault_surface.mesh
+            _cell_center, cell_length, _cell_width, cell_area = (
+                whole_fault_mesh.get_cell_dimensions())
 
         # Get the magnitude scaling relationship
         msr = self.magnitude_scaling_relationship

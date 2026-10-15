@@ -24,7 +24,7 @@ from unittest import mock
 
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
-from openquake.hazardlib import InvalidFile, nrml, calc, contexts
+from openquake.hazardlib import InvalidFile, nrml, calc, rmap_maker
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -159,7 +159,7 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
         oq = self.calc.oqparam
-        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+        flt0, flt1, flt2 = rmap_maker.read_full_lt_by_label(
             self.calc.datastore).values()
         toml = [gsim._toml for gsim in flt2.get_rlzs_by_gsim_dic()[0]]
         assert toml == [
@@ -197,7 +197,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/uhs_sampling.csv', fname)
 
         oq = self.calc.oqparam
-        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+        flt0, flt1, flt2 = rmap_maker.read_full_lt_by_label(
             self.calc.datastore).values()
         ae(flt0.rlzs['branch_path'], ['A~AA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
         ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
@@ -342,22 +342,11 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok([
             '/hazard_curve-mean.csv',
             'hazard_map-mean.csv',
-        ], case_22.__file__, delta=1E-6, tiling=False)
+        ], case_22.__file__, delta=1E-6)
 
         data = self.calc.datastore['source_groups']
-        self.assertFalse(data.attrs['tiling'])
         self.assertEqual(data['tiles'], [1])
         self.assertEqual(data['blocks'], [2])
-        self.assert_curves_ok([
-            '/hazard_curve-mean.csv',
-            'hazard_map-mean.csv',
-        ], case_22.__file__, delta=1E-6, tiling=True)
-
-        data = self.calc.datastore['source_groups']
-        self.assertTrue(data.attrs['tiling'])
-        self.assertEqual(data['gsims'], [4])
-        self.assertGreater(data['tiles'][0], 1)
-        self.assertEqual(data['blocks'], [1])
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],

@@ -36,8 +36,8 @@ from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.source_reader import get_bset_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
@@ -267,7 +267,10 @@ def _merge_dics(dics):
     return out
 
 
-def _buffered(dics, max_rows=GMF_MSG_ROWS):
+# this is CRUCIAL for Manuela's calculations starting from a global SES
+# of 55 GB, since storing millions of small arrays was ultra-slow; we
+# went down from 30 hours to less than 1 hour
+def buffered(dics, max_rows=GMF_MSG_ROWS):
     """
     Merge the dictionaries yielded by _event_based into bigger ones,
     with at least max_rows GMF rows each (the last one may be smaller),
@@ -312,7 +315,7 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        yield from _buffered(_event_based(
+        yield from buffered(_event_based(
             proxies, cmaker, secperils, srcfilter, cmon, umon))
 
 
