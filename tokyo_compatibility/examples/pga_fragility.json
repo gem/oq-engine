@@ -1,0 +1,28 @@
+{
+  "imt": "PGA",
+  "units": "g",
+  "ground_level": "surface",
+  "component": "synthetic_horizontal",
+  "source_url": "urn:synthetic:test",
+  "limit_states": ["slight", "complete"],
+  "functions": [
+    {
+      "id": "DEMO_WOOD",
+      "imls": [0.1, 0.2, 0.3],
+      "no_damage_limit": 0.0,
+      "poes": {
+        "slight": [0.1, 0.5, 0.9],
+        "complete": [0.0, 0.2, 0.6]
+      }
+    },
+    {
+      "id": "DEMO_RC",
+      "imls": [0.1, 0.2, 0.3],
+      "no_damage_limit": 0.0,
+      "poes": {
+        "slight": [0.05, 0.3, 0.7],
+        "complete": [0.0, 0.1, 0.4]
+      }
+    }
+  ]
+}

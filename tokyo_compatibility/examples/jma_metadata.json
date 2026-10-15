@@ -1,0 +1,10 @@
+{
+  "scenario_name": "Synthetic compatibility test",
+  "source_url": "urn:synthetic:test",
+  "source_version": "1",
+  "imt": "JMA",
+  "units": "instrumental",
+  "ground_level": "surface",
+  "component": "synthetic_horizontal",
+  "exposure_count_type": "integer"
+}

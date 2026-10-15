@@ -2075,6 +2075,11 @@ class OqParam(valid.ParamSet):
             # computed by two GMPEs, Youd and Zang, Zhao
             if imt.startswith(('AvgSA', 'PGA', 'PGV', 'SA', 'MMI', 'LSD')):
                 pass  # ground shaking IMT
+            elif (imt == 'JMA' and
+                  self.calculation_mode == 'scenario_damage' and
+                  self.inputs.get('gmfs')):
+                # Preserve native JMA for damage from imported shaking only.
+                pass
             else:
                 raise ValueError(f'The risk functions contain {imt} which is '
                                  f'not in the secondary IMTs {seco_imts}')

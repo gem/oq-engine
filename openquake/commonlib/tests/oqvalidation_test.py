@@ -26,6 +26,7 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib import readinput
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.risklib import riskmodels, scientific
 
 TMP = tempfile.gettempdir()
 
@@ -465,6 +466,66 @@ class OqParamTestCase(unittest.TestCase):
                 inputs=inputs,
                 maximum_distance='400')
         self.assertIn('You forgot to specify a site_model', str(ctx.exception))
+
+    def _fragility(self, imt, levels):
+        # Use real fragility functions to exercise their risk-IMT extraction.
+        function = scientific.FragilityFunctionList(
+            [[0.0, 0.5, 1.0]], format='discrete', imt=imt,
+            imls=levels, nodamage=0)
+        risklist = riskmodels.RiskFuncList([function])
+        risklist.limit_states = ['slight']
+        return risklist
+
+    def test_jma_imported_damage(self):
+        for suffix in ('csv', 'hdf5'):
+            with self.subTest(suffix=suffix):
+                oq = OqParam(
+                    calculation_mode='scenario_damage',
+                    sites='139.7671 35.6812', inputs={
+                        'job_ini': 'job.ini',
+                        'structural_fragility': 'fragility.xml',
+                        'gmfs': ['gmfs.' + suffix]})
+                risklist = self._fragility('JMA', [4.0, 5.0, 6.0])
+                self.assertEqual(oq.set_risk_imts(risklist),
+                                 ['groundshaking'])
+                self.assertEqual(oq.risk_imtls, {'JMA': [4.0]})
+                self.assertEqual(risklist[0].imt, 'JMA')
+                self.assertEqual(list(risklist[0].imls), [4.0, 5.0, 6.0])
+                self.assertEqual(list(risklist[0][0]([4.0, 5.0, 6.0])),
+                                 [0.0, 0.5, 1.0])
+
+    def test_jma_damage_requires_imported_gmfs(self):
+        oq = OqParam(
+            calculation_mode='scenario_damage', hazard_calculation_id=1,
+            inputs={'job_ini': 'job.ini'})
+        with self.assertRaisesRegex(ValueError,
+                                    'risk functions contain JMA'):
+            oq.set_risk_imts(self._fragility('JMA', [4.0, 5.0, 6.0]))
+
+    def test_jma_other_modes_rejected(self):
+        for mode in ('scenario_risk', 'event_based_damage',
+                     'classical_damage'):
+            with self.subTest(mode=mode):
+                oq = OqParam(
+                    calculation_mode=mode, hazard_calculation_id=1,
+                    intensity_measure_types='JMA',
+                    sites='139.7671 35.6812', inputs={
+                        'job_ini': 'job.ini', 'gmfs': ['gmfs.csv']})
+                with self.assertRaisesRegex(ValueError,
+                                            'risk functions contain JMA'):
+                    oq.set_risk_imts(
+                        self._fragility('JMA', [4.0, 5.0, 6.0]))
+
+    def test_pga_damage_risk_imts_unchanged(self):
+        oq = OqParam(
+            calculation_mode='scenario_damage', hazard_calculation_id=1,
+            inputs={'job_ini': 'job.ini'})
+        risklist = self._fragility('PGA', [0.1, 0.2, 0.3])
+        self.assertEqual(oq.set_risk_imts(risklist), ['groundshaking'])
+        self.assertEqual(oq.risk_imtls, {'PGA': [0.1]})
+        self.assertEqual(risklist[0].imt, 'PGA')
+        self.assertEqual(list(risklist[0][0]([0.1, 0.2, 0.3])),
+                         [0.0, 0.5, 1.0])
 
     def test_disaggregation(self):
         with self.assertRaises(InvalidFile) as ctx:

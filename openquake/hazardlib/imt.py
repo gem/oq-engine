@@ -309,9 +309,8 @@ def MMI():
 
 def JMA():
     """
-    Modified Mercalli intensity, a Roman numeral describing the severity
-    of an earthquake in terms of its effects on the earth's surface
-    and on humans and their structures.
+    Japanese Meteorological Agency instrumental seismic intensity.
+    This dimensionless numerical measure is distinct from MMI and PGA.
     """
     return IMT('JMA')
 
