@@ -785,7 +785,8 @@ class Starmap(object):
             if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
-            cls.pool.shutdown()
+            # wait and cancel_futures are explicit to avoid a Python 3.11 bug
+            cls.pool.shutdown(wait=False, cancel_futures=True)
             del cls.pool
 
     @classmethod
