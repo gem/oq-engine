@@ -19,8 +19,14 @@
 import os
 import unittest
 import csv
+import gzip
+import io
+from http.client import IncompleteRead
+from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
+    _download_url, get_rup_dic, User, utc_to_local_time,
+    get_stations_from_usgs,
     get_shakemap_versions, get_nodal_planes_and_info,
     get_nodal_planes_and_product)
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -310,6 +316,65 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIsNone(shakemap_versions)
         self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
+
+    def test_shakemap_download_retries_transient_errors(self):
+        path = os.path.join(user.testdir, 'us20002926.json')
+        class GzipResponse(io.BytesIO):
+            headers = {'Content-Encoding': 'gzip'}
+
+        with open(path, 'rb') as f:
+            response = GzipResponse(gzip.compress(f.read()))
+        url = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
+        error = HTTPError(url, 500, 'Internal Server Error', {}, None)
+        with patch('openquake.hazardlib.shakemap.parsers.urlopen',
+                   side_effect=[URLError('temporary'), error,
+                                response]) as mocked, \
+                patch('openquake.hazardlib.shakemap.parsers.time.sleep') \
+                as sleep:
+            versions, preferred, err = get_shakemap_versions('us20002926')
+        self.assertEqual(mocked.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list],
+                         [0.5, 1.0])
+        self.assertEqual(err, {})
+        self.assertTrue(versions)
+        self.assertTrue(preferred)
+
+    def test_download_resumes_interrupted_range_response(self):
+        class TruncatedResponse:
+            headers = {'Content-Length': '10'}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                pass
+
+            def read(self):
+                raise IncompleteRead(b'abc', 7)
+
+        class RangeResponse(io.BytesIO):
+            status = 206
+            headers = {'Content-Range': 'bytes 3-9/10'}
+
+        url = 'https://example.test/data.zip'
+        with patch('openquake.hazardlib.shakemap.parsers.urlopen',
+                   side_effect=[TruncatedResponse(),
+                                RangeResponse(b'defghij')]) as mocked:
+            data = _download_url(url)
+        self.assertEqual(data, b'abcdefghij')
+        range_request = mocked.call_args_list[1].args[0]
+        self.assertEqual(range_request.get_header('Range'), 'bytes=3-9')
+
+    def test_shakemap_download_reports_exhausted_incomplete_reads(self):
+        error = IncompleteRead(b'partial response')
+        with patch('openquake.hazardlib.shakemap.parsers.urlopen',
+                   side_effect=error) as mocked, \
+                patch('openquake.hazardlib.shakemap.parsers.time.sleep'):
+            versions, preferred, err = get_shakemap_versions('us20002926')
+        self.assertEqual(mocked.call_count, 5)
+        self.assertIsNone(versions)
+        self.assertIsNone(preferred)
+        self.assertIn('IncompleteRead', err['error_msg'])
 
     def test_15(self):
         usgs_id = 'usp0001ccb'
