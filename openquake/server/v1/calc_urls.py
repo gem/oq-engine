@@ -82,8 +82,8 @@ elif settings.APPLICATION_MODE == 'IMPACT':
                 views.extract_html_table, name='extract_html_table'),
         re_path(r'^(\d+)/impact_report$', views.impact_report,
                 name='impact_report'),
-        re_path(r'^(\d+)/impact_outputs$', views.calc_impact_outputs,
-                name='impact_outputs'),
+        re_path(r'^(\d+)/impact_resources$', views.calc_impact_resources,
+                name='impact_resources'),
     ])
 elif settings.APPLICATION_MODE != 'READ_ONLY':
     urlpatterns.extend([

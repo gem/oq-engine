@@ -279,7 +279,7 @@ def calc_info(calc_id):
     return logs.dbcmd('calc_info', calc_id)
 
 
-def get_impact_output_data(dstore):
+def get_impact_resource_data(dstore):
     """Return available IMPACT resources without presentation URLs."""
     png_names = list(dstore['png']) if 'png' in dstore else []
     try:

@@ -1287,9 +1287,9 @@ def _impact_output_url(request, route_name, calc_id, args=(), query=None):
     return url
 
 
-def build_impact_outputs(request, calc_id, dstore):
+def build_impact_resources(request, calc_id, dstore):
     """Describe impact resources and their presentation URLs."""
-    available = internal_api.get_impact_output_data(dstore)
+    available = internal_api.get_impact_resource_data(dstore)
     outputs = {
         'avg_gmf_plots': {
             imt: _impact_output_url(
@@ -1352,7 +1352,7 @@ def build_impact_outputs(request, calc_id, dstore):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def calc_impact_outputs(request, calc_id):
+def calc_impact_resources(request, calc_id):
     """Return impact-specific resources and their retrieval URLs."""
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
@@ -1360,8 +1360,8 @@ def calc_impact_outputs(request, calc_id):
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        outputs = build_impact_outputs(request, calc_id, ds)
-    return JsonResponse(outputs)
+        resources = build_impact_resources(request, calc_id, ds)
+    return JsonResponse(resources)
 
 
 @csrf_exempt
@@ -2381,7 +2381,7 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
-        impact_outputs = build_impact_outputs(request, calc_id, ds)
+        impact_resources = build_impact_resources(request, calc_id, ds)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
     if local_timestamp_str is not None:
@@ -2398,7 +2398,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        weights_precision=weights_precision,
-                       warnings=warnings, impact_outputs=impact_outputs,
+                       warnings=warnings, impact_resources=impact_resources,
                        usgs_id=usgs_id, input_params=input_params)
                   )
 

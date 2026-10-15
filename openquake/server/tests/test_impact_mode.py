@@ -306,22 +306,22 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
                 impact_iso3_list = list(ds['impact'])
             self.assertGreater(len(impact_iso3_list), 0)
-            impact_outputs = self.get_json(
-                f'{job_id}/impact_outputs')
+            impact_resources = self.get_json(
+                f'{job_id}/impact_resources')
             self.assertEqual(
-                [output['iso3'] for output in impact_outputs['country_reports']],
+                [output['iso3'] for output in impact_resources['country_reports']],
                 impact_iso3_list)
-            for output in impact_outputs['country_reports']:
+            for output in impact_resources['country_reports']:
                 self.assertIn('format=pdf', output['urls']['pdf'])
                 self.assertIn('format=png', output['urls']['png'])
             self.assertEqual(
-                set(impact_outputs),
+                set(impact_resources),
                 {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',
                  'exposure_by_mmi', 'exposure_by_lse', 'country_reports'})
-            self.assertIsInstance(impact_outputs['avg_gmf_plots'], dict)
-            for imt, url in impact_outputs['avg_gmf_plots'].items():
+            self.assertIsInstance(impact_resources['avg_gmf_plots'], dict)
+            for imt, url in impact_resources['avg_gmf_plots'].items():
                 self.assertIn(f'avg_gmf-{imt}.png', url)
-            for peril_outputs in impact_outputs['exposure_by_lse'].values():
+            for peril_outputs in impact_resources['exposure_by_lse'].values():
                 if peril_outputs:
                     self.assertEqual(
                         set(peril_outputs), {'json', 'table', 'npz'})
