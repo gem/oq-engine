@@ -351,9 +351,7 @@ in memory: it is materialized in the master node only when the rates
 must be accumulated there, i.e. when there are few sites, or when
 ``disagg_by_src`` is set, or when the source groups are split in
 blocks. In this latter case with many sites the ``RateMap`` may
-actually require a large amount of RAM, but then the calculation
-can be performed by tiling the sites (i.e. splitting the sites
-in blocks).
+actually require a large amount of RAM.
 
 From the rates stored in the datastore one can reconstruct the
 global ``RateMap`` and from that one can rebuild the full hazard

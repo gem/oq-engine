@@ -143,8 +143,11 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g in rmap.gdic:
-        _store(rmap.to_array(g), num_chunks, h5, mon)
+    # collecting the arrays is essential for performance, i.e. I measured
+    # a 200x speedup in the NVA calculation of BCHydro
+    arrays = [rmap.to_array(g) for g in rmap.gdic]
+    big = numpy.concatenate(arrays) if len(arrays) > 1 else arrays[0]
+    _store(big, num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -423,13 +426,11 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # Fault sources (SimpleFaultSource): 24 fast, 27 slow; they can
         # fall on either side depending on the other pairs in the group.
         for pairs in bykey.values():
-            # NB: _make_results is for few sites only
-            few = len(sites.complete) <= cmaker.max_sites_disagg
             # make_results needs the same magnitudes in all the variants,
             # which the MFD bin width does not guarantee (see _split_by_mags)
             for part in _split_by_mags(pairs):
                 dics = _make_results(part, sites, remove_zeros, as_rmap) \
-                    if len(part) > 1 and few else None
+                    if len(part) > 1 else None
                 if dics is None:
                     slow.extend(part)
                 else:
@@ -506,9 +507,8 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     bysrc = any(src.bysrc_unc for src in grps[0])
     # NB: the sources are split in blocks by time only if the rates are
     # accumulated in a RateMap in the master, i.e. if the groups are
-    # already split in blocks, and not with tiling, where each tile is
-    # already a separate task
-    if unsplit or bysrc or not as_rmap or oq.tiling:
+    # already split in blocks
+    if unsplit or bysrc or not as_rmap:
         yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
                                  remove_zeros, as_rmap)
         return
@@ -578,7 +578,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     if amplifier:
         # AmplificationLogicTree: single branch (plain CSV) or amp-LT branches;
         # AmplificationLogicTree.amplify() picks the right branch per rlz
-        # amplification is meant for few sites, i.e. no tiling
+        # amplification is meant for few sites
         with hdf5.File(pgetter.filenames[0], 'r') as f:
             ampcode = f['sitecol'].ampcode
         # switch imtls from rock IMT grid to the soil intensity grid
@@ -891,16 +891,11 @@ class ClassicalCalculator(base.HazardCalculator):
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
-        self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        if self.tiling:
-            assert not oq.disagg_by_src
-            assert self.N > self.oqparam.max_sites_disagg, self.N
-        else:  # regular calculator
-            self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
 
     def get_rmap(self, grp_id, gids):
@@ -926,8 +921,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           self.max_weight, self.num_chunks,
-                           tiling=self.tiling)
+                           self.max_weight, self.num_chunks)
         maxtiles = 1
         num_blocks = 0
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
