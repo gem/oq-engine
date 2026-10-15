@@ -31,7 +31,6 @@ import traceback
 import zlib
 import re
 import psutil
-import requests
 
 from threading import Event
 from collections import defaultdict
@@ -40,7 +39,7 @@ from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden, JsonResponse, StreamingHttpResponse)
+    HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
 from django.core.mail.backends.filebased import (
     EmailBackend as FileEmailBackend)
@@ -71,9 +70,8 @@ from openquake.engine import __version__ as oqversion
 from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
-from openquake.server import utils
+from openquake.server import internal_api, utils
 from openquake.server.services import DEFAULT_EXPORT_TYPE, store
-from openquake.commonlib.auth import API_KEY
 
 from django.conf import settings
 from django.http import FileResponse
@@ -93,8 +91,6 @@ JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 ZIP = 'application/x-zip'
 
-#: Size of the chunks streamed by the file proxying views.
-_CHUNK_SIZE = 64 * 1024
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -462,8 +458,10 @@ def validate_ini(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    return _post_api(
-        request, 'v0/calc/validate_ini', request.POST.dict())
+    return internal_api.run(
+        internal_api.validate_upload,
+        internal_api.make_form(request.POST, request.FILES),
+        'job_ini', 'Missing job_ini file')
 
 
 @csrf_exempt
@@ -482,8 +480,10 @@ def validate_zip(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    return _post_api(
-        request, 'v0/calc/validate_zip', request.POST.dict())
+    return internal_api.run(
+        internal_api.validate_upload,
+        internal_api.make_form(request.POST, request.FILES),
+        'archive', 'Missing archive file')
 
 
 @require_http_methods(['GET'])
@@ -511,93 +511,13 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_api(request, endpoint, params=None, headers=None):
-    """Call an internal FastAPI endpoint and return its JSON response."""
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    request_headers = {'X-API-Key': API_KEY}
-    if headers:
-        request_headers.update(headers)
-    try:
-        response = requests.get(
-            url, params=params, headers=request_headers, timeout=10)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code != 200:
-        return HttpResponse(status=502)
-    return HttpResponse(content=response.content, content_type=JSON)
-
-
-def _stream_content(response, chunk_size):
-    """Yield the content of an internal response in chunks, then close it."""
-    try:
-        yield from response.iter_content(chunk_size)
-    finally:
-        response.close()
-
-
-def _call_api_file(request, endpoint, params=None):
-    """
-    Call an internal FastAPI endpoint returning a file and proxy its content,
-    preserving the HTTP method (i.e. support HEAD), the content type, the
-    content length and the download name.
-    """
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    try:
-        response = requests.request(
-            request.method, url, params=params,
-            headers={'X-API-Key': API_KEY}, stream=True, timeout=300)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code != 200:
-        # forward the error message, if any
-        return HttpResponse(
-            content=response.content, content_type='text/plain',
-            status=response.status_code)
-    headers = {name: response.headers[name] for name in
-               ('Content-Type', 'Content-Length', 'Content-Disposition')
-               if name in response.headers}
-    if request.method == 'HEAD':  # the client wants the headers only
-        response.close()
-        return HttpResponse(status=200, headers=headers)
-    return StreamingHttpResponse(
-        _stream_content(response, _CHUNK_SIZE), headers=headers, status=200)
-
-
-def _post_api(request, endpoint, data, timeout=10):
-    """Post form data and uploaded files to an internal API endpoint."""
-    files = []
-    for field, uploads in request.FILES.lists():
-        for upload in uploads:
-            files.append((
-                field, (upload.name, upload.file, upload.content_type)))
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    try:
-        response = requests.post(
-            url, data=data, files=files or None,
-            headers={'X-API-Key': API_KEY}, timeout=timeout)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code not in (200, 400, 500):
-        return HttpResponse(status=502)
-    return HttpResponse(
-        content=response.content, content_type=JSON,
-        status=response.status_code)
-
-
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
     """
-    Authenticate the request and proxy calculation information to FastAPI.
+    Authenticate the request and return the calculation information.
 
-    Django remains responsible for the user and ACL checks. The internal
-    FastAPI endpoint owns the calculation-information query.
+    Django remains responsible for the user and ACL checks.
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
@@ -606,7 +526,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return _call_api(request, 'v1/calc_info/%s' % calc_id)
+    return internal_api.run(internal_api.calc_info, int(calc_id))
 
 
 @require_http_methods(['GET'])
@@ -670,13 +590,10 @@ def calc_list(request, id=None):
 @cross_domain_ajax
 def calc_count(request):
     """Return the number of calculations matching the requested filters."""
-    headers = {
-        'X-Valid-Users': json.dumps(utils.get_valid_users(request)),
-        'X-User-ACL-On': str(not utils.is_superuser(request)),
-    }
-    return _call_api(
-        request, 'v1/calc_list/count',
-        params=dict(request.GET.items()), headers=headers)
+    return internal_api.run(
+        internal_api.calc_list_count, dict(request.GET.items()),
+        utils.get_valid_users(request),
+        str(not utils.is_superuser(request)))
 
 
 @csrf_exempt
@@ -694,7 +611,7 @@ def calc_abort(request, calc_id):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return JsonResponse(message, status=403)
-    return _post_api(request, 'v0/calc/%s/abort' % calc_id, {})
+    return internal_api.run(internal_api.calc_abort, int(calc_id))
 
 
 @csrf_exempt
@@ -703,8 +620,8 @@ def calc_abort(request, calc_id):
 def calc_remove(request, calc_id):
     """Remove a calculation for its owner."""
     user = utils.get_username(request)
-    return _post_api(
-        request, 'v0/calc/%s/remove' % calc_id, {'username': user})
+    return internal_api.run(
+        internal_api.calc_remove, int(calc_id), user)
 
 
 def share_job(user_level, calc_id, share):
@@ -857,9 +774,10 @@ def log_to_json(log):
 def calc_log(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/log/%s:%s' % (calc_id, start, stop))
+    return internal_api.run(
+        internal_api.calc_log, int(calc_id), int(start or 0),
+        int(stop or 0))
 
 
 @require_http_methods(['GET'])
@@ -867,9 +785,8 @@ def calc_log(request, calc_id, start, stop):
 def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/log/size' % calc_id)
+    return internal_api.run(internal_api.calc_log_size, int(calc_id))
 
 
 job_complete_callback_state = {'event': Event(), 'data': {}}
@@ -931,7 +848,8 @@ def calc_run(request):
         'hazard_job_id': hazard_job_id or '',
         'notify_to': request.POST.get('notify_to') or '',
     }
-    return _post_api(request, 'v0/calc/run', data)
+    return internal_api.run(
+        internal_api.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -969,7 +887,8 @@ def calc_run_ini(request):
         'hazard_job_id': hazard_job_id or '',
         'notify_to': request.POST.get('notify_to') or '',
     }
-    return _post_api(request, 'v0/calc/run', data)
+    return internal_api.run(
+        internal_api.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -982,9 +901,9 @@ def calc_run_scenario_from_ses(request, rup_id):
         username = request.POST.get('job_owner') or username
     data = request.POST.dict()
     data['username'] = username
-    return _post_api(
-        request, 'v0/calc/run_scenario_calc_from_ses_rupture/%s' % rup_id,
-        data, timeout=120)
+    return internal_api.run(
+        internal_api.run_scenario_calc_from_ses_rupture, int(rup_id),
+        internal_api.make_form(data, request.FILES))
 
 
 def aelo_callback(
@@ -1155,8 +1074,9 @@ def impact_get_rupture_data(request):
     """
     data = request.POST.dict()
     data['user_level'] = str(request.user.level)
-    return _post_api(
-        request, 'v0/calc/impact_get_rupture_data', data, timeout=120)
+    return internal_api.run(
+        internal_api.impact_get_rupture_data,
+        internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1300,7 +1220,8 @@ def impact_run(request):
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/impact_run', data, timeout=300)
+    return internal_api.run(
+        internal_api.impact_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1345,7 +1266,8 @@ def impact_run_with_shakemap(request):
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/impact_run', post, timeout=300)
+    return internal_api.run(
+        internal_api.impact_run, internal_api.make_form(post, request.FILES))
 
 
 def extract_report_from_datastore(dstore, iso3, file_format):
@@ -1536,7 +1458,8 @@ def aelo_run(request):
         username=utils.get_username(request),
         email=getattr(getattr(request, 'user', None), 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/aelo_run', data)
+    return internal_api.run(
+        internal_api.aelo_run, internal_api.make_form(data, request.FILES))
 
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):
@@ -1691,17 +1614,15 @@ def calc_results(request, calc_id):
 def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/traceback' % calc_id)
+    return internal_api.run(internal_api.calc_traceback, int(calc_id))
 
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def calc_result(request, result_id):
     """
-    Download a specific result, by ``result_id``, by proxying the export to
-    the internal FastAPI endpoint.
+    Download a specific result, by ``result_id``.
 
     The common abstracted functionality for getting hazard or risk results.
 
@@ -1723,7 +1644,7 @@ def calc_result(request, result_id):
     # If the result for the requested ID doesn't exist, OR
     # the job which it is related too is not complete,
     # throw back a 404. Django remains responsible for the user and ACL
-    # checks, while the internal FastAPI endpoint performs the export.
+    # checks, while the export is performed by the internal API.
     try:
         _, job_status, job_user, _, ds_key = logs.dbcmd(
             'get_result', result_id)
@@ -1740,9 +1661,8 @@ def calc_result(request, result_id):
         return HttpResponseNotFound()
 
     export_type = request.GET.get('export_type') or DEFAULT_EXPORT_TYPE
-    return _call_api_file(
-        request, 'v0/calc/result/%s' % result_id,
-        params={'export_type': export_type})
+    return internal_api.run(
+        internal_api.calc_result, int(result_id), export_type)
 
 
 @cross_domain_ajax
@@ -1898,7 +1818,7 @@ def extract(request, calc_id, what):
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
-    """Authenticate and proxy model provenance to FastAPI."""
+    """Authenticate and return the model provenance."""
     if get_user_level(request) < 2:
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(calc_id))
@@ -1906,7 +1826,8 @@ def model_provenance(request, calc_id):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    return _call_api(request, f'v0/calc/model_provenance/{calc_id}')
+    return internal_api.run(
+        internal_api.model_provenance, int(calc_id))
 
 
 @cross_domain_ajax
@@ -2665,10 +2586,13 @@ def on_same_fs(request):
 
     :param request:
         `django.http.HttpRequest` object, containing mandatory parameters
-        filename and checksum.
+        filename and checksum. The caller authenticates with the internal
+        API key, since it is not necessarily a logged-in user.
     """
-    filename = request.POST['filename']
-    checksum_in = request.POST['checksum']
+    if not internal_api.has_api_key(request):
+        return HttpResponseForbidden()
+    filename = request.POST.get('filename')
+    checksum_in = request.POST.get('checksum')
 
     checksum = 0
     try:
@@ -2676,7 +2600,7 @@ def on_same_fs(request):
         checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
             return JsonResponse({'success': True}, status=200)
-    except (IOError, ValueError):
+    except (IOError, TypeError, ValueError):
         pass
 
     return JsonResponse({'success': False}, status=200)

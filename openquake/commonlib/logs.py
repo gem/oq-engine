@@ -62,7 +62,7 @@ def _worker_api(action, *args):
 
 
 def _decode_db_value(value):
-    """Restore values encoded by the FastAPI database endpoint."""
+    """Restore values encoded by the internal database API."""
     if isinstance(value, dict):
         kind = value.get('__oq_type__')
         if kind == 'datetime':
@@ -94,7 +94,7 @@ def _encode_db_value(value):
 
 
 def _db_api(action, *args):
-    """Call a database action through the FastAPI endpoint."""
+    """Call a database action through the internal API endpoint."""
     server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
     endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
     try:
