@@ -363,6 +363,7 @@ class MapGetter(object):
                 rate = dstore['_rates/rate'][:][mask]
         # NB: numpy.add.at is needed since the same (sid, lid, gid) can
         # appear several times, and fancy-index += would drop duplicates
+        # (see openquake/calculators/tests/getters_test.py)
                 lookup = numpy.full(max(sid2idx) + 1, -1, int)
                 for sid, idx in sid2idx.items():
                     lookup[sid] = idx
