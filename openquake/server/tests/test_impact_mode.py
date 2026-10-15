@@ -305,15 +305,31 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         if 'make_impact_reports' in data:
             with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
                 impact_iso3_list = list(ds['impact'])
-                self.assertGreater(len(impact_iso3_list), 0)
-                for iso3 in impact_iso3_list:
-                    ret = self.c.get(
-                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
-                    self.assertEqual(ret.status_code, 200)
-                    ret = self.c.get(
-                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
-                        f'&format=png')
-                    self.assertEqual(ret.status_code, 200)
+            self.assertGreater(len(impact_iso3_list), 0)
+            impact_outputs = self.get_json(
+                f'{job_id}/impact_outputs')
+            self.assertEqual(
+                [output['iso3'] for output in impact_outputs['country_reports']],
+                impact_iso3_list)
+            for output in impact_outputs['country_reports']:
+                self.assertIn('format=pdf', output['urls']['pdf'])
+                self.assertIn('format=png', output['urls']['png'])
+            self.assertEqual(
+                set(impact_outputs),
+                {'avg_gmf', 'assets', 'aggrisk', 'aggrisk_tags',
+                 'exposure_by_mmi', 'exposure_by_lse', 'country_reports'})
+            for peril_outputs in impact_outputs['exposure_by_lse'].values():
+                if peril_outputs:
+                    self.assertEqual(
+                        set(peril_outputs), {'json', 'table', 'npz'})
+            for iso3 in impact_iso3_list:
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                self.assertEqual(ret.status_code, 200)
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                    f'&format=png')
+                self.assertEqual(ret.status_code, 200)
 
             # Run the command-line extractor against the datastore generated
             # by this test.  Hide xdg-open from PATH so the test does not
