@@ -98,7 +98,7 @@
       with_items:
          - openquake-webui.service
 
-    - name: Create user to run calculation 
+    - name: Create user to run calculation
       user:
         name: ci_user
         groups: openquake
