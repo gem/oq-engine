@@ -143,8 +143,9 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g in rmap.gdic:
-        _store(rmap.to_array(g), num_chunks, h5, mon)
+    arrays = [rmap.to_array(g) for g in rmap.gdic]
+    big = numpy.concatenate(arrays) if len(arrays) > 1 else arrays[0]
+    _store(big, num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
