@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
@@ -235,7 +235,7 @@ def store_csm(dstore, csm, sitecol, cmakers):
     quartets = []
     for sg, cmaker in zip(csm.src_groups, cmakers.to_array()):
         quartet = csm.split_sg(
-            cmaker, sg, sitecol, max_weight, mb_per_gsim, tiling=oq.tiling)
+            cmaker, sg, sitecol, max_weight, mb_per_gsim)
         quartets.append(quartet)
     # storing _csm
     csm.save(dstore, [q[2] for q in quartets])
@@ -249,22 +249,16 @@ def store_csm(dstore, csm, sitecol, cmakers):
     req_gb = get_req_gb(data, N, oq)
 
     # sanity checks
-    if oq.tiling:
-        assert oq.calculation_mode != 'disaggregation'
-        assert not oq.disagg_by_src
-        assert N > oq.max_sites_disagg
-    else:
-        required_gb = req_gb.sum()
-        avail_gb = psutil.virtual_memory().available / 1024**3
-        if required_gb > avail_gb:
-            raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
-        if 'classical' in oq.calculation_mode:
-            logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
+    required_gb = req_gb.sum()
+    avail_gb = psutil.virtual_memory().available / 1024**3
+    if required_gb > avail_gb:
+        raise MemoryError(f'{required_gb:.1f=}, {avail_gb:.1f=}')
+    if 'classical' in oq.calculation_mode:
+        logging.info(f'Requiring {required_gb:.1f} GB for the RateMaps')
 
     # store source groups
     dstore.create_dset('source_groups', data,
-                       attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum(),
-                                  tiling=oq.tiling))
+                       attrs=dict(req_gb=req_gb, mem_gb=req_gb.sum()))
     return max_weight
 
 

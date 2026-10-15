@@ -135,8 +135,7 @@ def store(request_files, ini, calc_id):
         # move each file to calc_dir using the upload file names
         inifiles = []
         for input_file, name in named_files:
-            # input_file is a starlette.datastructures.UploadFile
-            # which contains a .file of kind tempfile.SpooledTemporaryFile
+            # input_file is a Django UploadedFile, whose .file is a file object
             new_path = os.path.join(calc_dir, name)
             with open(new_path, 'wb') as target:
                 shutil.copyfileobj(input_file.file, target)

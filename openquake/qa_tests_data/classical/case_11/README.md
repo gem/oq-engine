@@ -2,7 +2,7 @@
 
 Classical PSHA calculation for five sites using `GridAdjustedGMPE` with
 `AkkarEtAlRjb2014` as the underlying GMM to be adjusted. Three h3-gridded
-residual correction terms are applied (`dL2L`, `dS2S`, `att_per_km`) for
+residual correction terms are applied (`dL2L`, `dS2S`, `adj_per_km`) for
 PGA and SA(0.5) to both the mean predicted ground-motion and the mapped
 sigma component (can be total, tau or phi). SA(1.0) has no grid data and
 therefore receives no adjustment intentionally. The visualisation of the
@@ -14,7 +14,7 @@ The hdf5 containing the corrections used in this simple test case is called
 `grid_adjustments.hdf5`.
 
 If the user inspects the hdf5 file, you will notice that in the case of
-`dL2L` and `att_per_km`, we have specified a scalar sigma adjustment for
+`dL2L` and `adj_per_km`, we have specified a scalar sigma adjustment for
 each IMT (as an attribute in the associated groups), whereas for `dS2S`
 we have specified a per-cell adjustment  (additional dataset in the group
 itself). This option is to provide flexibility to the user. For path-based
@@ -29,11 +29,11 @@ The figure shows the 3 mean adjustments for PGA (note that because for
 `dS2S` we have specified a per-cell reduction to phi that a similar grid
 exists for this GMM sigma correction too in the hdf5):
 
-| Panel | Content |
-|---|---|
-| left | `dL2L`-based mean ground-motion correction per h3 cell (hypocentre lookup) |
-| centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup) |
-| right | `att_per_km`-based mean ground-motion correction per travel path (raytracing) |
+| Panel  | Content                                                                         |
+| ------ | ------------------------------------------------------------------------------- |
+| left   | `dL2L`-based mean ground-motion correction per h3 cell (hypocentre lookup)    |
+| centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup)          |
+| right  | `adj_per_km` which is path-based mean ground-motion correction (natural log units per km) (raytracing) |
 
 Red star = hypocentre; green triangles = sites in the site model.
 

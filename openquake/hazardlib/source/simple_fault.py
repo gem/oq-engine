@@ -20,12 +20,14 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 import copy
 import math
 from collections import namedtuple
+from functools import lru_cache
 import numpy
 from openquake.baselib.general import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.codes import SIMPLE_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -36,6 +38,22 @@ from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 # Grouping all the "extra" hypo depth options to reduce num args in class
 HypoData = namedtuple('HypoData', ['hypo_list', 'slip_list', 'depth_list'],
                       defaults=[(), (), ()])
+
+
+@lru_cache(maxsize=256)
+def whole_fault_shape(trace_key, upper, lower, dip, mesh_spacing):
+    """
+    :param trace_key: tuple of (lon, lat, depth) tuples of the fault trace
+    :returns: shape of the whole-fault mesh (rows, cols)
+
+    Bounded LRU cache: sources sharing the same geometry (typically many
+    logic-tree branches) reuse the mesh shape, while the memory footprint
+    stays limited to `maxsize` small entries.
+    """
+    trace = Line([Point(*p) for p in trace_key])
+    surface = SimpleFaultSurface.from_fault_data(
+        trace, upper, lower, dip, mesh_spacing)
+    return surface.mesh.shape
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -375,17 +393,19 @@ class SimpleFaultSource(ParametricSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
+        # the same geometry is shared by many sources in a logic tree,
+        # so the (expensive) whole-fault mesh shape is cached
+        trace_key = tuple((p.longitude, p.latitude, p.depth)
+                          for p in self.fault_trace.points)
         try:
-            whole_fault_surface = SimpleFaultSurface.from_fault_data(
-                self.fault_trace, self.upper_seismogenic_depth,
+            mesh_rows, mesh_cols = whole_fault_shape(
+                trace_key, self.upper_seismogenic_depth,
                 self.lower_seismogenic_depth, self.dip,
                 self.rupture_mesh_spacing)
         except Exception as exc:
             source_id = self.source_id
             exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
             raise
-        whole_fault_mesh = whole_fault_surface.mesh
-        mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
         self._nr = []

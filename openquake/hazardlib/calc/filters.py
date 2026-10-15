@@ -294,13 +294,6 @@ class IntegrationDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_dist_bins(self, trt, nbins=51):
-        """
-        :returns: an array of distance bins, from 10m to maxdist
-        """
-        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
-
-
 def split_source(src):
     """
     :param src: a splittable (or not splittable) source

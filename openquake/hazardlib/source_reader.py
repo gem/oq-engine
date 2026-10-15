@@ -35,7 +35,7 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
     restrict_ts_samples, ts_samples_dt, get_ts_sets)
-from openquake.hazardlib.contexts import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
 TWO24 = 2**24
@@ -692,8 +692,10 @@ def add_checksums(srcs):
     Build and attach a checksum to each source
     """
     for src in srcs:
+        # width_of_mfd_bin is set by modify_set_recurrow
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id ts_samples branch'}
+               if k not in {'source_id', 'ts_samples', 'branch',
+                            'width_of_mfd_bin'}}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 

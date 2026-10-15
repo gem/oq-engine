@@ -9,9 +9,8 @@ Group=openquake
 #in WorkingDirectory use the folder of the sources from what are installed the engine
 WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
-ExecStart=/opt/openquake/bin/python3 -m uvicorn openquake.server.asgi:app --host 127.0.0.1 --port 8800
-# Using gunicorn (Nginx or another webserver is needed for static content)
-# ExecStart=/opt/openquake/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+# Nginx (or another webserver) must serve the static files from STATIC_ROOT
+ExecStart=/opt/openquake/bin/python3 -m gunicorn openquake.server.wsgi:application --bind 127.0.0.1:8800 --workers 1 --worker-class gthread --threads 16 --timeout 1200
 Type=exec
 Restart=always
 RestartSec=30

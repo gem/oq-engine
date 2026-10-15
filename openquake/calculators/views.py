@@ -38,7 +38,8 @@ from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
-from openquake.hazardlib.contexts import ContextMaker, read_cmakers
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.rmap_maker import read_cmakers
 from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util
 from openquake.risklib import riskmodels

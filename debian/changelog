@@ -1,5 +1,13 @@
   [Michele Simionato]
+  * Removed the experimental uvicorn/FastAPI approach; the DbServer
+    is still gone and replaced by Django
+  * Internal: removed full tiling since it is not necessary anymore
+  * Buffered the `save_rates` phase, with a 200x speedup in BCHydro-style
+    calculations (but no visible effect in normal calculations)
+  * Building the hazard curves in parallel even in the case of few sites
+    (performance-crucial in BCHydro-style calculations)
   * Internal: extended `oq sample` to reduce SES.hdf5 files
+  * Internal: now `oq -v` returns the git hash in a development installation
 
   [Claudio Schill, Christopher Brooks]
   * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
@@ -80,9 +88,6 @@
     a source belongs to a different number of logic tree realizations in the
     original and in the reduced logic tree: the trt_smrs of the source were
     assigned to a sampling array of incompatible length
-  * The export of the calculation results (i.e. GET /v1/calc/result/:id) is
-    now performed by FastAPI and proxied by Django, like many other
-    endpoints; the export logic lives in openquake/server/services.py
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
     source, i.e. when there is no deterministic scenario for that IMT.
   * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are
@@ -140,9 +145,8 @@
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
 
   [Michele Simionato]
-  * Introduced a uvicorn server replacing the DbServer with a REST API
-    and serving also the Django (sub)applications; introduced a scientific
-    REST API based on FastAPI and supporting OpenAPI
+  * Introduced an experimental uvicorn server replacing the DbServer with a
+    REST API and serving also the Django (sub)applications
 
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference

@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
@@ -497,7 +497,7 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split(self, cmdict, sitecol, max_weight, num_chunks=1):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
@@ -523,10 +523,10 @@ class CompositeSourceModel:
                         cmaker.ilabel = idx
                     yield self.split_sg(
                         cmaker, sg, sites, max_weight, mb_per_gsim,
-                        num_chunks, tiling)
+                        num_chunks)
 
     def split_sg(self, cmaker, sg, sitecol, max_weight, mb_per_gsim,
-                 num_chunks=1, tiling=False):
+                 num_chunks=1):
         N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
@@ -542,7 +542,7 @@ class CompositeSourceModel:
             # cannot produce any rate: no tile and therefore no task needed.
             blocks = [sg.grp_id]
             tilegetters = []
-        elif sg.atomic or tiling:
+        elif sg.atomic:
             blocks = [sg.grp_id]
             maxhint = max(hint, splits)
             if N / maxhint < oq.max_sites_disagg:
@@ -619,13 +619,13 @@ def _strip_colons(sources):
     return sorted(ids)
 
 
-def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
+def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     """
     Generates task arguments from atomic and non-atomic groups
     """
     out = []
     atomic = []
-    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks, tiling)
+    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks)
     for cmaker, tilegetters, blocks, extra in allargs:
         n = len(blocks)
         grp_id = _grp_id(blocks[0])
@@ -680,7 +680,7 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
         for ws in block_splitter(keys, max_weight, getweight, nokey):
             nblocks += 1
             out.append((cmaker_[gid], tgetters, list(ws), True))
-        logging.info('Split %d atomic groups with total weight %.3gs '
+        logging.info('Split %d atomic groups with total weight %.1f '
                      'in %d blocks', len(keys),
                      sum(getweight(k) for k in keys), nblocks)
     if atomic:

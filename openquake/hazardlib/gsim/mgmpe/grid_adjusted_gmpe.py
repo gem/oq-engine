@@ -539,11 +539,11 @@ class GridAdjustedGMPE(GMPE):
 
     :param epsilons:
         Optional dict of per-term epsilons, e.g.
-        {"dL2L": -1.732, "dS2S": 0.0, "dP2P": 1.732}. Each term's mean
-        is shifted by epsilon * mean_se using the per-cell SE stored
-        under "{term}_mean_se" in the HDF5. Terms not in the dict
-        default to epsilon = 0 (central only, no shift). A non-zero
-        epsilon raises an error if the matching SE dataset is missing.
+        {"dL2L": -1.732, "dS2S": 0.0, "adj_per_km": 1.732}. Each term's mean
+        is shifted by epsilon * mean_se using the per-cell SE stored under
+        "{term}_mean_se" in the HDF5. Terms not in the dict default to
+        epsilon = 0 (central only, no shift). A non-zero epsilon raises an
+        error if the matching SE dataset is missing.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
