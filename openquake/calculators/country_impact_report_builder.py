@@ -40,7 +40,7 @@ def _humanize_summary_value(value):
     # Apply the shared numeric formatter to both endpoints of loss ranges.
     parts = str(value).split(" - ")
     return " - ".join(
-        humanize_number(part.replace(",", ""), precision=0)
+        humanize_number(part.replace(",", ""), precision=1)
         for part in parts)
 
 
