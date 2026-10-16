@@ -345,7 +345,7 @@ hazard_uhs-std.csv
     def test_gids_numbering(self):
         # the gids of the cmakers must be numbered as the core list, the
         # one used by read_gid_dic in the master, otherwise the rates are
-        # attributed to the wrong RateMap columns (see OQ_SAMPLE_SITES)
+        # attributed to the wrong RateMap columns (this happened in ARB)
         self.run_calc(case_18.__file__, 'job_bis.ini')
         ds = self.calc.datastore
         core = read_core_trt_smrs(ds)
