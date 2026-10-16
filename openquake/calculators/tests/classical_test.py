@@ -528,7 +528,10 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
-                    'source_model_logic_tree_kite_error.xml'))
+                    'source_model_logic_tree_kite_error.xml'),
+                maximum_distance="50",
+                rupture_mesh_spacing="20",
+                complex_fault_mesh_spacing="20")
         self.assertIn(
             'aspectRatioFunction is not supported for a kiteFaultSource (id=kf1)',
             str(ctx.exception))
@@ -539,7 +542,10 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(
                 case_36.__file__, 'job.ini',
                 source_model_logic_tree_file=(
-                    'source_model_logic_tree_both_aratio_error.xml'))
+                    'source_model_logic_tree_both_aratio_error.xml'),
+                maximum_distance="50",
+                rupture_mesh_spacing="20",
+                complex_fault_mesh_spacing="20")
         self.assertIn(
             "Source '1' specifies both ruptAspectRatio and aspectRatioFunction",
             str(ctx.exception))
