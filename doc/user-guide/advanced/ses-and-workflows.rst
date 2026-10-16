@@ -40,8 +40,8 @@ can also be copied to a more descriptive name, such as ``SES.hdf5``.
 Choosing the output filename in a TOML workflow
 -----------------------------------------------
 
-When several rupture-only calculations are combined, for instance
-while building a single SES from multiple hazard models, the ``build_ses``
+When several rupture-only calculations are combined, for instance while
+building a single SES from multiple hazard models, the ``build_ses``
 postprocessor can write the resulting datastore to a chosen location. Set
 the filename or path with ``out_file`` in the ``[success]`` table::
 
@@ -70,36 +70,52 @@ Run the workflow with::
 
 The two rupture-only calculations can run concurrently. After they complete
 successfully, the postprocessor writes ``SES.hdf5``. A relative
-``out_file`` path is resolved from the directory containing the TOML file, 
-but an absolute path can also be used instead.
+``out_file`` path is resolved from the directory containing the TOML file;
+an absolute path can be used instead. The output directory must already
+exist.
 
-Merging SES from different models involves additional model-metadata constraints. 
-Every input must have a unique three-character ``mosaic_model`` matching an entry 
-in the configured model-boundary file, and its TOML job name must end with the same
-code. These constraints are not relevant when reusing the datastore from a
-single SES-only calculation.
+The remaining requirements in this section apply only when several
+rupture-only calculations are merged. They are not needed when an ordinary
+single-calculation datastore is reused directly.
 
-``mosaic_model`` is a generic identifier for a hazard model in a multi-model calculation. 
-Users can supply their own model boundaries and three-character model identifiers. 
-Each polygon in the boundary GeoPackage must have a ``name`` attribute containing the 
-corresponding identifier.
+Despite its name, ``mosaic_model`` is a generic identifier for a hazard
+model in a multi-model calculation; it is not restricted to GEM models.
+Users can supply their own three-letter model identifiers, using uppercase
+ASCII letters, and their own model boundaries. Each polygon in the boundary
+GeoPackage must have a ``name`` attribute containing the corresponding
+identifier.
 
-The hazard model boundary file can be set explicitly in the
-``[directory]`` section of ``openquake.cfg``::
+The boundary file can be set explicitly in the ``[directory]`` section of
+``openquake.cfg``::
 
   [directory]
   mosaic_boundaries_file = /absolute/path/to/mosaic.gpkg
 
-If ``mosaic_boundaries_file`` is not set, the engine looks for ``mosaic.gpkg`` 
-in the configured ``mosaic_dir``. If it is not found there, it falls back to the 
-file bundled with the engine at ``openquake/qa_tests_data/mosaic/mosaic.gpkg``, which
-is GEM's current hazard model boundary file. The engine logs the path of the file it reads.
+If that setting is empty, the engine looks for ``mosaic.gpkg`` in the
+configured ``mosaic_dir``. If that file does not exist, it uses the copy
+bundled with the engine at
+``openquake/qa_tests_data/mosaic/mosaic.gpkg``. An explicitly configured
+``mosaic_boundaries_file`` is used as given; an invalid path raises an error
+instead of falling back. The engine logs the path that it reads. Custom
+model codes are accepted, although the reader may warn that they are not in
+the bundled model list.
 
-For every calculation passed to ``build_ses``, the model identifier links three pieces of information: the model assigned to each rupture using the boundary polygons, the logic tree stored under ``full_lt/<model>`` in the combined datastore, and the calculation parameters stored under the TOML job name.
+For each calculation passed to ``build_ses``, the model identifier connects
+three pieces of information: the model assigned to each rupture using the
+boundary polygons, the logic tree stored under ``full_lt/<model>`` in the
+combined datastore, and the calculation parameters stored under the TOML
+job name.
 
-The current implementation stores this identifier in a three-character field and recovers it from the last three characters of the TOML job name. For example, a job named ``HazardABC`` must set ``mosaic_model = "ABC"``, and the boundary file must contain a polygon whose ``name`` is ``ABC``. If these values do not agree, ruptures may be omitted during the merge or a downstream calculation may be unable to find the corresponding logic tree and calculation parameters.
+The current implementation stores this identifier in a three-byte field and
+recovers it from the last three characters of the TOML job name.
+For example, a job named ``HazardABC`` must set
+``mosaic_model = "ABC"``, and the boundary file must contain a polygon whose
+``name`` is ``ABC``. If these values do not agree, ruptures may be omitted
+during the merge or a downstream calculation may be unable to find the
+corresponding logic tree and calculation parameters.
 
-The three-character naming convention is a constraint of the current multi-model merger, not of the SES HDF5 format. A datastore generated by a single rupture-only event-based calculation does not require a model identifier, a boundary file, or a specially named TOML job.
+The three-letter convention is a constraint of the current multi-model
+merger, not of the SES HDF5 format.
 
 Starting a GMF calculation from the SES
 ---------------------------------------
