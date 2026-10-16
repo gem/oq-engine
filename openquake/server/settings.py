@@ -339,6 +339,7 @@ if APPLICATION_MODE not in ('PUBLIC',):
         TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'openquake.server.authorization',
                 'openquake.server.user_profile', 'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
