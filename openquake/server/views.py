@@ -627,7 +627,8 @@ def calc_remove(request, calc_id):
 def share_job(request, calc_id, share):
     user_level = get_user_level(request)
     superuser = utils.is_superuser(request)
-    if user_level < 2 and not superuser:
+    if (user_level < 2 and not superuser and
+            not request.user.has_perm('auth.can_share_own_jobs')):
         return HttpResponseForbidden()
     try:
         job = logs.dbcmd('get_job', calc_id)
