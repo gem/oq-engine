@@ -48,6 +48,111 @@ def getparams(oq):
     return {k: v for k, v in vars(oq).items() if not k.startswith('_')}
 
 
+# inputs for test_same_source_two_models
+SOURCE_MODEL = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+<sourceModel name="sm">
+<sourceGroup tectonicRegion="Active Shallow Crust">
+%s
+</sourceGroup>
+</sourceModel>
+</nrml>
+'''
+
+POINT_SOURCE = '''\
+<pointSource id="{id}" name="{id}">
+  <pointGeometry>
+    <gml:Point><gml:pos>{lon} 0.0</gml:pos></gml:Point>
+    <upperSeismoDepth>0.0</upperSeismoDepth>
+    <lowerSeismoDepth>20.0</lowerSeismoDepth>
+  </pointGeometry>
+  <magScaleRel>WC1994</magScaleRel>
+  <ruptAspectRatio>1.5</ruptAspectRatio>
+  <truncGutenbergRichterMFD aValue="{a}" bValue="1.0"
+                            maxMag="6.5" minMag="5.0"/>
+  <nodalPlaneDist>
+    <nodalPlane dip="90.0" probability="1.0" rake="0.0" strike="0.0"/>
+  </nodalPlaneDist>
+  <hypoDepthDist>
+    <hypoDepth depth="10.0" probability="1.0"/>
+  </hypoDepthDist>
+</pointSource>'''
+
+
+def source_model(*point_sources):
+    # build a source model with the given (id, lon, a_value) point sources
+    return SOURCE_MODEL % '\n'.join(
+        POINT_SOURCE.format(id=i, lon=lon, a=a) for i, lon, a in point_sources)
+
+# b1 has 2 source model realizations, b2 has 1
+SAME_SOURCE_SMLT = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="sm">
+    <logicTreeBranch branchID="b1">
+      <uncertaintyModel>sm1.xml</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b2">
+      <uncertaintyModel>sm2.xml</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                      branchSetID="mmax" applyToBranches="b1"
+                      applyToSources="other">
+    <logicTreeBranch branchID="m1">
+      <uncertaintyModel>+0.2</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="m2">
+      <uncertaintyModel>-0.2</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
+'''
+
+GSIM_LT = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+    <logicTreeBranch branchID="g1">
+      <uncertaintyModel>[BooreAtkinson2008]</uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
+'''
+
+JOB_INI = '''\
+[general]
+calculation_mode = classical
+sites = 0.1 0.1
+reference_vs30_value = 760.0
+reference_depth_to_1pt0km_per_sec = 100.0
+source_model_logic_tree_file = ssmLT.xml
+gsim_logic_tree_file = gmmLT.xml
+investigation_time = 1.0
+width_of_mfd_bin = 0.1
+rupture_mesh_spacing = 5.0
+area_source_discretization = 10.0
+intensity_measure_types_and_levels = {"PGA": [0.1, 0.2]}
+truncation_level = 3.0
+maximum_distance = 200.0
+number_of_logic_tree_samples = 0
+'''
+
+
 class ParseConfigTestCase(unittest.TestCase):
 
     def test_get_rupture_from_json(self):
@@ -528,6 +633,30 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         # the source IDs have no ';' suffix, since the sources are not
         # duplicated by the uncertainties applied in the workers
         self.assertEqual(len({s.source_id for s in csm.get_sources()}), 22)
+
+    def _get_csm(self, sm1, sm2, smlt):
+        # write the inputs in a temporary directory and build the CSM
+        tmp = tempfile.mkdtemp()
+        files = {'sm1.xml': sm1, 'sm2.xml': sm2, 'ssmLT.xml': smlt,
+                 'gmmLT.xml': GSIM_LT,
+                 'job.ini': JOB_INI}
+        for fname, content in files.items():
+            with open(os.path.join(tmp, fname), 'w') as f:
+                f.write(content)
+        oq = readinput.get_oqparam(os.path.join(tmp, 'job.ini'))
+        return readinput.get_composite_source_model(oq)
+
+    def test_same_source_two_models(self):
+        # the same source in two source models, where the first branch has
+        # 2 realizations, as in the ARB model: the reduced source must keep
+        # the realizations of both branches, not only of the first one
+        csm = self._get_csm(source_model(('common', 0., 3.3),
+                                         ('other', 1., 3.0)),
+                            source_model(('common', 0., 3.3)),
+                            SAME_SOURCE_SMLT)
+        self.assertEqual(len(csm.full_lt.sm_rlzs), 3)
+        [common] = [s for s in csm.get_sources() if s.source_id == 'common']
+        self.assertEqual(len(common.trt_smrs), 3)
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):
