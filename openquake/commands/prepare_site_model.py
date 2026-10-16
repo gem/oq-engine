@@ -20,9 +20,12 @@ import gzip
 import logging
 import numpy
 from openquake.baselib import performance, writers, hdf5
-from openquake.hazardlib import site, valid
+from openquake.hazardlib import nrml, site, sourceconverter, valid
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    RegularGridLayout)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.regular_grid import regular_grid
+from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
@@ -144,9 +147,6 @@ def _csv_sites(sites_csv, spacing, regular, req_site_params, output):
 
 def _check_exported_grid(output):
     """Validate the CSV coordinates that a calculation will actually read."""
-    from openquake.hazardlib.correlation_models.circulant_embedding import (
-        RegularGridLayout)
-
     data = numpy.genfromtxt(output, names=True, delimiter=',',
                             usecols=('lon', 'lat'))
     RegularGridLayout.from_sites(Mesh(data['lon'], data['lat']))
@@ -155,9 +155,6 @@ def _check_exported_grid(output):
 def _rupture_sites(filename, spacing, maximum_distance, mesh_spacing,
                    req_site_params):
     """Read one scenario rupture and use all its finite surface vertices."""
-    from openquake.hazardlib import nrml, sourceconverter
-    from openquake.hazardlib.source.rupture import get_ruptures
-
     filename = str(filename)
     suffix = os.path.splitext(filename)[1].lower()
     if suffix in ('.xml', '.nrml'):

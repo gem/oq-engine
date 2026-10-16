@@ -36,6 +36,8 @@ import logging
 import numpy
 from pyproj import Transformer
 
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    RegularGridLayout, _utm_crs)
 from openquake.hazardlib.geo.mesh import Mesh
 
 MAX_GRID_CELLS = 2_000_000
@@ -64,9 +66,6 @@ def regular_grid(mesh, spacing, padding=None):
     Longitude/latitude coordinates are rounded to five decimals, matching
     the site-model CSV writer, and validated with the engine's CE detector.
     """
-    from openquake.hazardlib.correlation_models.circulant_embedding import (
-        RegularGridLayout, _utm_crs)
-
     if spacing is None or not numpy.isfinite(spacing) or spacing <= 0:
         raise ValueError('Grid spacing must be finite and positive')
     if padding is None:
