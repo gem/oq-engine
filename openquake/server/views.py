@@ -624,8 +624,18 @@ def calc_remove(request, calc_id):
         internal_api.calc_remove, int(calc_id), user)
 
 
-def share_job(user_level, calc_id, share):
-    if user_level < 2:
+def share_job(request, calc_id, share):
+    user_level = get_user_level(request)
+    superuser = utils.is_superuser(request)
+    if user_level < 2 and not superuser:
+        return HttpResponseForbidden()
+    try:
+        job = logs.dbcmd('get_job', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    if job is None:
+        return HttpResponseNotFound()
+    if not superuser and job.user_name != utils.get_username(request):
         return HttpResponseForbidden()
     try:
         message = logs.dbcmd('share_job', calc_id, share)
@@ -748,8 +758,7 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    user_level = get_user_level(request)
-    return share_job(user_level, calc_id, share=False)
+    return share_job(request, calc_id, share=False)
 
 
 @csrf_exempt
@@ -759,8 +768,7 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    user_level = get_user_level(request)
-    return share_job(user_level, calc_id, share=True)
+    return share_job(request, calc_id, share=True)
 
 
 def log_to_json(log):
