@@ -6,8 +6,8 @@ Risk Calculations
 Risk profiles
 -------------
 
-The OpenQuake engine can produce risk profiles, i.e. estimates of average losses
-and maximum probable losses for all countries in the world. Even if you
+The OpenQuake engine can produce risk profiles, i.e. estimates of average
+losses and maximum probable losses for all countries in the world. Even if you
 are interested in a single country, you can still use this feature
 to compute risk profiles for each province in your country.
 
@@ -174,77 +174,5 @@ see similar results with and without splitting. But you will
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
 
-Understanding the SES file
---------------------------
-
-The command
-
-``$ oq shell openquake.engine.global_ses <mosaic_dir> ses.hdf5``
-
-is able to take multiple hazard models and build a single file
-containing ruptures coming from all the models without double
-counting. There is clearly a risk of double counting if the same
-source is included in two different mosaic models and therefore the
-engine generates the same ruptures twice. However the
-command is smart enough to discard duplicated ruptures.
-
-The generated ``ses.hdf5`` file contains all the ruptures from all
-the models into a single dataset which is a structured array.
-In particular there is a ``model`` field telling by which model
-each rupture was generated.
-
-There is also a field called ``trt_smr`` that contains information
-about the tectonic region type and the source model realization to
-which the rupture belongs. Extracting such information is a digestible
-format requires some work and knowledge of the internals of the engine.
-
-Here we will give an explanation. Let's start by saying that the engine
-has a limit of at most 256 tectonic region types, therefore 1 byte is
-enough to identify a tectonic region type. The engine has also a limit
-of 2^24 = 16,777,216 source model realizations, therefore 3 bytes are
-enough to identify uniquely a source model realization. Therefore with
-a 32 bit integer (4 bytes) we can identify uniquely both the tectonic
-region type and the source model realization. That 32 bit integer is
-called ``trt_smr`` and can be used to extract the ``trt`` index and
-the ``smr`` index as follows::
-
-  trt, smr = divmod(trt_smr, 2**24)
-
-From the ``trt`` index one can extract the tectonic region type as follows::
-
-   full_lt.trts[trt]
-
-From the ``smr`` index one can extract the source model realization as follows::
-
-  full_lt.sm_rlzs[smr]
-
-You can visualize `sm_rlzs` for a given model as follows::
-
- $ oq show sm_rlzs:JPN ses.hdf5
- | ordinal | lt_path | value               | samples | weight |
- |---------+---------+---------------------+---------+--------|
- | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
-
-The ``full_lt`` objects can be extracted from the datastore, one
-for each model. A Python script should get you started:
-
-.. code-block:: python
-
- from openquake.baselib import sap, hdf5
- TWO24 = 2 ** 24
-
- def main(ses_hdf5):
-     """
-     Count the ruptures by model and TRT
-     """
-     with hdf5.File(ses_hdf5) as f:
-         ruptures = f['ruptures'][:]
-         for model in f['full_lt']:
-             full_lt = f['full_lt/' + model]
-             rups = ruptures[ruptures['model'] == model.encode('ascii')]
-             trt_indices = rups['trt_smr'] // TWO24
-             for i, trt in enumerate(full_lt.trts):
-                 print(model, trt, (trt_indices==i).sum())
-
- if __name__ == '__main__':
-     sap.run(main)
+For instructions on generating, reusing, and inspecting an SES datastore,
+see :ref:`ses-workflows`.
