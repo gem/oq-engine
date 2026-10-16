@@ -23,6 +23,7 @@ from io import BytesIO
 from pathlib import Path
 from PIL import Image as PILImage
 from openquake import baselib
+from openquake.baselib.general import humanize_number
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, _read_countries_info,
     _read_world_cities, build_classifiers, load_admin_boundaries,
@@ -33,6 +34,14 @@ from openquake.hazardlib.calc.filters import upper_maxdist
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 REPORT_DPI = 30 if any('pytest' in arg for arg in sys.argv) else 300
+
+
+def _humanize_summary_value(value):
+    # Apply the shared numeric formatter to both endpoints of loss ranges.
+    parts = str(value).split(" - ")
+    return " - ".join(
+        humanize_number(part.replace(",", ""), precision=0)
+        for part in parts)
 
 
 class CountryImpactReportBuilder:
@@ -524,10 +533,10 @@ class CountryImpactReportBuilder:
                 exposed_key = meta["label"] + "_exposed"
             table_data.append([
                 self.Paragraph(meta["label"], body_left_style),
-                self.Paragraph(self.summary_data[exposed_key],
-                               body_right_style),
-                self.Paragraph(self.summary_data[meta["label"]],
-                               body_right_style)
+                self.Paragraph(_humanize_summary_value(
+                    self.summary_data[exposed_key]), body_right_style),
+                self.Paragraph(_humanize_summary_value(
+                    self.summary_data[meta["label"]]), body_right_style)
             ])
         summary_table = self.Table(
             table_data,
