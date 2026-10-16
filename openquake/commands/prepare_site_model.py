@@ -229,7 +229,8 @@ def main(
     Use --regular-grid with a positive --grid-spacing for a complete UTM
     rectangle compatible with circulant embedding.
     With --rupture, build a UTM grid around one XML/NRML or CSV rupture,
-    padded by the positive --maximum-distance (in km).
+    extending its projected bounds by --maximum-distance (in km) on each
+    side. This defines the site-grid extent, not CE computational padding.
     """
     _validate_inputs(exposure_xml, sites_csv, rupture, regular_grid,
                      grid_spacing, maximum_distance, rupture_mesh_spacing)
@@ -299,5 +300,6 @@ main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
 main.assoc_distance = 'sites over this distance are discarded'
 main.output = 'output file'
 main.rupture = 'single XML/NRML or OpenQuake CSV scenario rupture'
-main.maximum_distance = 'rupture-grid padding in km (not a calculation cutoff)'
+main.maximum_distance = ('extend each side of the projected rupture bounds '
+                         'by this distance in km (not an Rrup cutoff)')
 main.rupture_mesh_spacing = 'rupture mesh spacing in km (default: 1)'

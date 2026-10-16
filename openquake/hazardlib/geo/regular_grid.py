@@ -17,7 +17,7 @@
 
 Input locations are transformed to one local UTM coordinate reference system,
 using the same zone and hemisphere convention as the CE grid detector. Their
-projected bounds are padded and snapped outward to multiples of the requested
+projected bounds are expanded and snapped outward to multiples of the requested
 spacing. Equal steps along the easting and northing axes then define a square
 lattice, including all cells in its enclosing rectangle. Coordinates are
 transformed back to longitude and latitude, rounded for site-model CSV output,
@@ -60,9 +60,11 @@ def _check_coordinates(lons, lats):
 def regular_grid(mesh, spacing, padding=None):
     """Enclose locations in a complete, axis-aligned square UTM grid.
 
-    ``spacing`` and ``padding`` are in kilometres. Padding defaults to one
-    grid spacing. Bounds are snapped outward to multiples of the spacing
-    from the UTM origin. Rows run west to east, ordered south to north.
+    ``spacing`` and ``padding`` are in kilometres. ``padding`` extends each
+    side of the input's projected bounds and defaults to one grid spacing.
+    It defines the requested site-grid extent, not CE computational padding.
+    Bounds are snapped outward to multiples of the spacing from the UTM
+    origin. Rows run west to east, ordered south to north.
     Longitude/latitude coordinates are rounded to five decimals, matching
     the site-model CSV writer, and validated with the engine's CE detector.
     """

@@ -249,9 +249,12 @@ calculations used by ground-motion models or distance filtering.
 ``oq prepare_site_model`` can build such a grid with ``--regular-grid`` or
 directly from a rupture with ``--rupture``. It lays out the cells in UTM before
 converting them back to longitude and latitude for the site-model CSV. Reading
-that CSV does not change the underlying projected lattice. Station locations
-do not need to lie on this lattice; off-grid stations are handled separately
-as described below.
+that CSV does not change the underlying projected lattice. In rupture mode,
+``--maximum-distance`` defines the requested site-grid extent by expanding the
+projected rupture bounds. This is separate from the larger periodic grid
+constructed internally for CE: that computational padding is not part of the
+site-model CSV. Station locations do not need to lie on the requested lattice;
+off-grid stations are handled separately as described below.
 
 An FFT changes the spatial representation from grid cells to sinusoidal
 spatial frequencies. In this representation, the large BCCB matrix separates

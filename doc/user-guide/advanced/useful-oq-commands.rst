@@ -255,7 +255,8 @@ the vs30 file with a nearest neighbour algorithm::
 	                        output file
 	  --rupture RUPTURE     single XML/NRML or OpenQuake CSV scenario rupture
 	  --maximum-distance MAXIMUM_DISTANCE
-	                        rupture-grid padding in km, not a calculation cutoff
+	                        extend each side of the projected rupture bounds
+	                        by this distance in km (not an Rrup cutoff)
 	  --rupture-mesh-spacing RUPTURE_MESH_SPACING
 	                        rupture mesh spacing in km (default: 1)
 
@@ -322,7 +323,7 @@ from the existing geographic gridding, whose kilometre steps along parallels
 and meridians do not guarantee the projected lattice required by circulant
 embedding (CE). Without ``--regular-grid``, existing behaviour is unchanged.
 
-The bounds are padded by one grid spacing and snapped outward to multiples
+The bounds are expanded by one grid spacing and snapped outward to multiples
 of the spacing from the UTM origin. All cells are retained, including those
 without assets. Assigning the nearest Vs30 values does not move or remove
 sites. The exported coordinates are checked with the engine's CE grid detector
@@ -353,11 +354,20 @@ exactly one NRML/XML or OpenQuake CSV rupture; multiple surfaces are supported.
 CSV ruptures already contain their meshes. Rupture, exposure and sites inputs
 are mutually exclusive in the new gridding modes.
 
-The rupture's projected bounds are expanded by ``--maximum-distance`` and
-snapped outward to the grid spacing. The complete rectangle is retained;
+``--maximum-distance`` controls the requested site-grid extent: each side of
+the rupture's projected bounding rectangle is extended by this distance in
+kilometres, then snapped outward to the grid spacing. For example, projected
+rupture bounds spanning 100 by 20 km become approximately 280 by 200 km with
+``--maximum-distance 90``, before snapping. The complete rectangle is retained;
 corner sites can have Rrup greater than this distance. Set the calculation's
-``maximum_distance`` independently in the job file. Rrup filtering and halo
-options are not provided by this command.
+``maximum_distance`` independently in the job file to filter sites during the
+calculation. Rrup filtering and halo options are not provided by this command.
+
+This grid extent is distinct from CE computational padding. During sampling,
+CE embeds the requested grid in a larger periodic grid to perform the FFTs,
+then retains the values at the requested sites. That internal extension does
+not add sites to the prepared site-model CSV, and ``--maximum-distance`` does
+not control its size.
 
 
 oq show_attrs 
