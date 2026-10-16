@@ -7,7 +7,6 @@
   * Building the hazard curves in parallel even in the case of few sites
     (performance-crucial in BCHydro-style calculations)
   * Internal: extended `oq sample` to reduce SES.hdf5 files
-  * Internal: now `oq -v` returns the git hash in a development installation
 
   [Claudio Schill, Christopher Brooks]
   * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
