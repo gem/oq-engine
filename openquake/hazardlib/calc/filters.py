@@ -294,13 +294,6 @@ class IntegrationDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_dist_bins(self, trt, nbins=51):
-        """
-        :returns: an array of distance bins, from 10m to maxdist
-        """
-        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
-
-
 def split_source(src):
     """
     :param src: a splittable (or not splittable) source
@@ -320,8 +313,7 @@ def split_source(src):
     for i, split in enumerate(splits):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
-        split.sampling = src.sampling
-        split.ts_sets = src.ts_sets
+        split.ts_samples = src.ts_samples
         if hasattr(src, 'bysrc_unc'):
             split.bysrc_unc = src.bysrc_unc
         split.grp_id = grp_id

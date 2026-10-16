@@ -15,6 +15,21 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 window.initImpactForm = function() {
+    function parse_ajax_error(xhr) {
+        if (xhr.responseJSON) return xhr.responseJSON;
+        try {
+            return JSON.parse(xhr.responseText || '{}');
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function ajax_error_message(xhr, fallback) {
+        const response = parse_ajax_error(xhr);
+        return response.error_msg ||
+            `${fallback} (HTTP ${xhr.status || 'unknown'})`;
+    }
+
     function populateTrtSelector(selected_trt) {
         $('#trt').empty();
         var trts = $('#mosaic_model').find(':selected').data('value').split(',');
@@ -161,14 +176,15 @@ window.initImpactForm = function() {
                 }
             }
             $('#submit_impact_get_rupture').prop('disabled', false);
-        }).error(function (data) {
+        }).fail(function (xhr) {
             let shakemap_selector = $("#shakemap_version");
+            let err_msg = ajax_error_message(
+                xhr, 'Unable to retrieve ShakeMap versions');
             shakemap_selector.empty();
-            shakemap_selector.append('<option value="error">Unable to retrieve data</option>');
-            var resp = JSON.parse(data.responseText);
-            var err_msg = resp.error_msg;
+            $('<option>').val('error').text(err_msg).appendTo(shakemap_selector);
+            $('.populating_shakemap_version').hide();
             diaerror.show(false, "Error", err_msg);
-        }).always(function (data) {
+        }).always(function () {
             $('input#usgs_id').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
             $('#getStationDataFromUsgs').prop('disabled', false);
@@ -319,8 +335,9 @@ window.initImpactForm = function() {
                         diaerror.show(false, "Note", data.nodal_planes_issue);
                     }
                 })
-                .fail(function () {
-                    diaerror.show(false, "Error", "Unable to retrieve nodal planes");
+                .fail(function (xhr) {
+                    diaerror.show(false, "Error", ajax_error_message(
+                        xhr, "Unable to retrieve nodal planes"));
                 })
                 .always(function () {
                     $('#submit_impact_get_rupture').prop('disabled', false);
@@ -491,15 +508,16 @@ window.initImpactForm = function() {
                 desc += 'M ' + data.mag + ' (' + data.lon + ', ' + data.lat + ')';
             }
             $('#description').val(desc);
-        }).error(function (data) {
-            var resp = JSON.parse(data.responseText);
+        }).fail(function (xhr) {
+            var resp = parse_ajax_error(xhr);
             if ("invalid_inputs" in resp) {
                 for (var i = 0; i < resp.invalid_inputs.length; i++) {
                     var input_id = resp.invalid_inputs[i];
                     $("input#" + input_id).css("background-color", "#F2DEDE");
                 }
             }
-            var err_msg = resp.error_msg;
+            var err_msg = resp.error_msg || ajax_error_message(
+                xhr, "Unable to retrieve rupture data");
             diaerror.show(false, "Error", err_msg);
             $('#intensity-map').hide();
             $('#pga-map').hide();
@@ -545,12 +563,12 @@ window.initImpactForm = function() {
             } else {
                 $('#station_data_file_loaded').val(data.station_data_file ? data.n_stations + ' stations were loaded' : 'N.A.');
             }
-        }).error(function (data) {
+        }).fail(function (xhr) {
             $('#station_data_file_loaded').val('');
-            var resp = JSON.parse(data.responseText);
-            var err_msg = resp.error_msg;
+            var err_msg = ajax_error_message(
+                xhr, "Unable to retrieve station data from USGS");
             diaerror.show(false, "Error", err_msg);
-        }).always(function (data) {
+        }).always(function () {
             toggleRunCalcBtnState();
             $('#getStationDataFromUsgs').prop('disabled', false);
             $('#get_stations_from_usgs_waiting').hide();
@@ -634,15 +652,16 @@ window.initImpactForm = function() {
             encode: true
         }).done(function (data) {
             // console.log(data);
-        }).error(function (data) {
-            var resp = JSON.parse(data.responseText);
+        }).fail(function (xhr) {
+            var resp = parse_ajax_error(xhr);
             if ("invalid_inputs" in resp) {
                 for (var i = 0; i < resp.invalid_inputs.length; i++) {
                     var input_id = resp.invalid_inputs[i];
                     $("input#" + input_id).css("background-color", "#F2DEDE");
                 }
             }
-            var err_msg = resp.error_msg;
+            var err_msg = resp.error_msg || ajax_error_message(
+                xhr, "Unable to start impact calculation");
             diaerror.show(false, "Error", err_msg);
         }).always(function () {
             $('#submit_impact_calc').prop('disabled', false);

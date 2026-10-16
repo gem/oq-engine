@@ -1,4 +1,23 @@
+  [Michele Simionato]
+  * Removed the experimental uvicorn/FastAPI approach; the DbServer
+    is still gone and replaced by Django
+  * Internal: removed full tiling since it is not necessary anymore
+  * Buffered the `save_rates` phase, with a 200x speedup in BCHydro-style
+    calculations (but no visible effect in normal calculations)
+  * Building the hazard curves in parallel even in the case of few sites
+    (performance-crucial in BCHydro-style calculations)
+  * Internal: extended `oq sample` to reduce SES.hdf5 files
+  * Internal: now `oq -v` returns the git hash in a development installation
+
+  [Claudio Schill, Christopher Brooks]
+  * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
+    and add a small unit test for this feature.
+
   [Christopher Brooks]
+  * Introduce a `vs30_strict` parameter to the Allen (2022) GMM which if
+    set to True (default) raises an error if any sites are outside the
+    Vs30 range of the GMM (220 to 800 m/s), and if False clamps the Vs30s
+    to this range instead (requires explicit user specification).
   * Introduced a epsilon scaling capability in GridAdjustedGMPE
     with updated unit tests and QA tests (classical/case_11).
 
@@ -7,6 +26,9 @@
     range of the model to avoid the singularity at Vs30=150.
 
   [Michele Simionato]
+  * Geometry-preserving uncertainties are now optimized in classical calculations
+    with few sites: contexts, means, stddevs and poes are computed only once
+    per realization set
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
@@ -66,9 +88,6 @@
     a source belongs to a different number of logic tree realizations in the
     original and in the reduced logic tree: the trt_smrs of the source were
     assigned to a sampling array of incompatible length
-  * The export of the calculation results (i.e. GET /v1/calc/result/:id) is
-    now performed by FastAPI and proxied by Django, like many other
-    endpoints; the export logic lives in openquake/server/services.py
   * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
     source, i.e. when there is no deterministic scenario for that IMT.
   * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are
@@ -126,9 +145,8 @@
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
 
   [Michele Simionato]
-  * Introduced a uvicorn server replacing the DbServer with a REST API
-    and serving also the Django (sub)applications; introduced a scientific
-    REST API based on FastAPI and supporting OpenAPI
+  * Introduced an experimental uvicorn server replacing the DbServer with a
+    REST API and serving also the Django (sub)applications
 
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference

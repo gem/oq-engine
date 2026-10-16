@@ -542,11 +542,10 @@ class CampbellBozorgnia2014(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
-            mean[m] = get_mean_values(self.SJ, C, ctx, imt, 
+            mean[m] = get_mean_values(self.SJ, C, ctx, imt,
                                       self.usgs_basin_scaling,
                                       self.cybershake_basin_adj,
                                       pga1100)
-            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             if imt.string[:2] == "SA" and imt.period < 0.25:
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
@@ -558,7 +557,8 @@ class CampbellBozorgnia2014(GMPE):
                                       pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
-                mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
+
+            mean[m] += self.sigma_mu_epsilon * get_epistemic_sigma(ctx)
 
             sig[m], tau[m], phi[m] = compute_sigma(
                 C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b)

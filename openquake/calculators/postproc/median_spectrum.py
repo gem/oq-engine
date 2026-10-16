@@ -22,7 +22,7 @@ Median spectrum post-processor
 import logging
 import numpy as np
 from openquake.baselib import hdf5, sap, parallel, general, performance
-from openquake.hazardlib import contexts
+from openquake.hazardlib import rmap_maker
 
 U32 = np.uint32
 I64 = np.int64
@@ -154,9 +154,9 @@ def main(dstore, csm):
 
     # read the precomputed mean hazard spectrum
     ref_uhs = dstore.sel("hmaps-stats", stat="mean")[:, 0]  # shape NSMP -> NMP
-    cmakers = contexts.read_cmakers(dstore).to_array()
+    cmakers = rmap_maker.read_cmakers(dstore).to_array()
     G = {grp_id: len(cm.gsims) for grp_id, cm in enumerate(cmakers)}
-    ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    ctx_by_grp = rmap_maker.read_ctx_by_grp(dstore)
     # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oq.concurrent_tasks or 1)

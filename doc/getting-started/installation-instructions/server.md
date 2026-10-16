@@ -71,10 +71,11 @@ file = /path/to/db.sqlite3
 If the database is on a different machine, you have to edit the file and
 specify the correct host name.
 
-NB: setting `host=127.0.0.1` is a mistake, since it will result on the
-database being accessed directly, which is a problem,
-since regular users will not have write permission to it. `host=127.0.0.1`
-instead is correct for single-user installations and correctly set by
+
+NB: setting `host=127.0.0.1` is a mistake in a server installation, 
+since it will result on the database being accessed directly, which is a problem,
+since regular users will not have write permission to it. 
+`host=127.0.0.1` instead is correct for single-user installations and correctly set by
 the universal installer.
 
 #### Upgrade the database to host users and sessions
@@ -154,30 +155,14 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* can be installed via `pip` in the venv of the OpenQuake engine. For example:
-
-```console
-sudo su -
-source /opt/openquake/venv/bin/activate
-pip install gunicorn
-deactivate
-```
-
-*gunicorn* is usually managed by the OS init system.
-
+*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
 Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
 ```console
 WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
 ```
-
-*gunicorn* must be started in the `openquake/server` directory with the following syntax:
-
-```console
-gunicorn -w N wsgi:application
-```
-
-where `N` is the number of workers. We suggest `N = 4`.
+where `N` is the number of workers. 
+Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
 
 ### Using Environment Variables in systemd Units
 
@@ -233,7 +218,7 @@ systemctl status  openquake-webui.service
 
 ### nginx
 
-*gunicorn* does not serve static content itself thus a frontend like *nginx* is needed.
+*gunicorn* does not serve static content itself thus a frontend like *nginx* is needed. Static files are collected by `manage.py collectstatic` into `STATIC_ROOT`, and *nginx* must serve them from there.
 
 Please refer to the nginx installation istructions for your operating system.
 

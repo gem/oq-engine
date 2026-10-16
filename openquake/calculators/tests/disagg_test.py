@@ -21,7 +21,7 @@ from unittest import mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import read_ctx_by_grp
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract

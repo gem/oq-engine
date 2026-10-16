@@ -35,8 +35,8 @@ from openquake.baselib import config, hdf5, general, performance, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.contexts import (
-    ContextMaker, read_cmakers, read_ctx_by_grp)
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats, compute_stats2
 from openquake.hazardlib.source import rupture

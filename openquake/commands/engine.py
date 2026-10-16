@@ -25,7 +25,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
-from openquake.engine.utils import confirm
+from openquake.baselib.general import confirm
 from openquake.engine.tools.make_report import make_report as makerep
 from openquake.commands.abort import main as abort
 

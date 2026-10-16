@@ -96,14 +96,15 @@ def get_rup_array(ebruptures, magdist):
     return hdf5.ArrayWrapper(arr, dic)
 
 
-def unique_sampling(sources):
+def unique_ts_samples(sources):
     """
-    Sanity check: all sources in the atomic group must share the same sampling
+    Sanity check: all sources in the atomic group must share the same
+    ts_samples
     """
-    sampling = sources[0].sampling
+    ts_samples = sources[0].ts_samples
     for src in sources[1:]:
-        numpy.testing.assert_equal(src.sampling, sampling)
-    return sampling
+        numpy.testing.assert_equal(src.ts_samples, ts_samples)
+    return ts_samples
 
 
 def sample_cluster(group, num_ses, ses_seed, offset=0):
@@ -123,9 +124,9 @@ def sample_cluster(group, num_ses, ses_seed, offset=0):
         dictionaries with keys rup_array, source_data, eff_ruptures
     """
     eb_ruptures = []
-    sampling = unique_sampling(group)
+    ts_samples = unique_ts_samples(group)
     seed = group[0].serial(ses_seed)
-    for trt_smr, samples in sampling:
+    for trt_smr, samples, _ts in ts_samples:
         for src in group:
             src.offset = offset
             offset += src.num_ruptures
@@ -387,7 +388,7 @@ def num_rup_ids(group):
         number of ruptures of each source times the number of
         realizations of the source
     """
-    return sum(src.num_ruptures * len(src.sampling) for src in group)
+    return sum(src.num_ruptures * len(src.ts_samples) for src in group)
 
 
 def _sample_group(sources, ses_seed, offset, param, monitor=Monitor()):
