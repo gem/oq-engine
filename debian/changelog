@@ -1,7 +1,7 @@
   [Claudio Schill]
   * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
     ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the 
-    5 <= M < 6 bin values, instead of the M > 7 bin.
+    5 <= M < 6 bin values, instead of the M > 7 bin.  
 
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: applyToSources
