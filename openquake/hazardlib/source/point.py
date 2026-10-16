@@ -102,6 +102,8 @@ def calc_average(pointsources):
                 acc[key] = 0. if mean >= 360 else mean
             else:
                 acc[key] = mean
+                # rake must be in (-180, 180]: arctan2 may give -180
+                acc[key] = mean + 360 if mean <= -180 else mean
         elif key == 'dip':
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key in ('dep', 'hypo_dip_frac'):

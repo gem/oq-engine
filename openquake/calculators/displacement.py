@@ -250,7 +250,8 @@ class DisplacementCalculator(base.HazardCalculator):
         self.csm.set_msparams()
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
-        cmakers = self.csm.get_cmakers()
+        core = source_reader.get_core_trt_smrs(self.csm.src_groups)
+        cmakers = self.csm.get_cmakers(core)
         # only the reference-line methods the PFD models actually declare
         set_pfd_methods(cmakers, pfd_methods(pfd_lt))
         # the sparse table from which the curves are recomputed
