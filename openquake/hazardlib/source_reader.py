@@ -858,8 +858,12 @@ def reduce_sources(sources_with_same_id):
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
         src = srcs[0]
-        if len(srcs) > 1 and len(src.ts_samples) == 1:
-            src.ts_samples = numpy.concatenate([s.ts_samples for s in srcs])
+        if len(srcs) > 1:
+            # NB: each copy can have many realizations, since they are
+            # collected before the reduction (see collect_sources), so
+            # the realizations of all the copies must be kept
+            src.ts_samples = numpy.sort(numpy.concatenate(
+                [s.ts_samples for s in srcs]), order='trt_smr')
         out.append(src)
     return out
 
