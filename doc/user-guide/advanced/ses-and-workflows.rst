@@ -117,6 +117,23 @@ corresponding logic tree and calculation parameters.
 The three-letter convention is a constraint of the current multi-model
 merger, not of the SES HDF5 format.
 
+What is reused from the SES
+---------------------------
+
+The SES supplies the sampled ruptures and events, their realization
+mapping, the source-model and GSIM logic trees, the parameters stored with
+the original calculation, and its site collection. The stored site
+collection can provide site parameters for nearby sites in a downstream
+calculation.
+
+The downstream job supplies the sites or exposure to be analysed, the IMTs,
+the GMF and risk settings, and the requested outputs. Values explicitly set
+by the downstream job take precedence where the parameter can be
+overridden. The sampling metadata parameters ``investigation_time``,
+``number_of_logic_tree_samples``, and ``ses_per_logic_tree_path`` must remain
+consistent with the SES because they describe its effective time and
+realization structure. Specifying those values does not resample ruptures.
+
 Starting a GMF calculation from the SES
 ---------------------------------------
 
@@ -135,6 +152,7 @@ outline is::
   site_model_file = site_model.csv
 
   [logic_tree]
+  # These values must match the SES.
   number_of_logic_tree_samples = 200
   ses_per_logic_tree_path = 50
   investigation_time = 1
@@ -158,10 +176,10 @@ Alternatively, set ``hazard_calculation_id`` to the HDF5 pathname in the
 ``job.ini`` file. An absolute path avoids ambiguity. Within a TOML workflow,
 relative HDF5 paths are resolved relative to the TOML file.
 
-The rupture-sampling parameters should remain consistent with those used to
-create the SES. Parameters controlling the GMFs, including the sites,
-intensity measure types, truncation, correlation, and minimum intensity, are
-defined by the downstream job.
+The sites, intensity measure types, truncation, correlation, minimum
+intensity, and hazard-curve outputs in this example are settings for the new
+GMF calculation. The ruptures and their logic-tree associations come from
+the SES.
 
 Starting a risk calculation from the SES
 ----------------------------------------
@@ -181,6 +199,7 @@ fragility functions, aggregation settings, and risk outputs. For example::
   structural_vulnerability_file = vulnerability.xml
 
   [hazard]
+  # These values must match the SES.
   number_of_logic_tree_samples = 200
   ses_per_logic_tree_path = 50
   investigation_time = 1
@@ -202,7 +221,9 @@ Alternatively, use the path to the datastore::
 The engine filters the stored ruptures for the risk sites, generates the
 required ground motions, and applies the risk functions. Reusing the SES
 therefore avoids resampling the ruptures, but it does not reuse previously
-generated GMFs.
+generated GMFs. The exposure, vulnerability or fragility functions,
+aggregation settings, risk seed, and risk outputs belong to the downstream
+risk calculation.
 
 Managing several calculations with TOML
 ---------------------------------------
