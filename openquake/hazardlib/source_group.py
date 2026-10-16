@@ -285,6 +285,14 @@ class SourceGroup(collections.abc.Sequence):
     def __len__(self):
         return len(self.sources)
 
+    def get_ts(self):
+        """
+        :returns: the field ts of the set of realizations of the group,
+            i.e. the same for all its sources and independent of the other
+            sources sharing the task (see get_ts_sets)
+        """
+        return int(self.sources[0].ts_samples['ts'][0])
+
 
 class CompositeSourceModel:
     """
@@ -351,12 +359,14 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
-    def get_cmakers(self):
+    def get_cmakers(self, core_trt_smrs):
         """
-        :param oq: the OqParam used to build the CompositeSourceModel
+        :param core_trt_smrs: the sets of realizations with the same
+            uncertainties, see source_reader.get_core_trt_smrs
         :returns: a ContextMakerSequence instance
         """
-        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq,
+                           core_trt_smrs)
 
     def get_basenames(self):
         """

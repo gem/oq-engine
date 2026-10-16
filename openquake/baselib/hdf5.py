@@ -1127,6 +1127,18 @@ def save_npz(obj, path):
         warnings.filterwarnings("error", category=UserWarning)
         numpy.savez_compressed(path, **a)
 
+
+def is_unique(fname, dfname, *kfields):
+    """
+    :param fname: path to an HDF5 file
+    :param dfname: name of a DataFrame
+    :param kfields: key fields that could be unique
+    :returns: true if the kfields are a primary key (no duplicates)
+    """
+    assert kfields, "Specify at least one key field"
+    with File(fname, 'r') as f:
+        return f.read_df(dfname, kfields).index.is_unique
+
 # #################### obj <-> json ##################### #
 
 

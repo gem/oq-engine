@@ -56,6 +56,7 @@ from openquake.commonlib import (
 from openquake.hazardlib import valid
 from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
+from openquake.calculators.extract import extract as extract_output
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
 from openquake.hazardlib.shakemap.validate import (
@@ -276,6 +277,34 @@ def worker_action(action, payload):
 def calc_info(calc_id):
     """Return the information about a calculation."""
     return logs.dbcmd('calc_info', calc_id)
+
+
+def get_impact_resource_data(dstore):
+    """Return available IMPACT resources without presentation URLs."""
+    png_names = list(dstore['png']) if 'png' in dstore else []
+    try:
+        extract_output(dstore, 'aggrisk_tags')
+    except KeyError:
+        aggrisk_tags = False
+    else:
+        aggrisk_tags = True
+    avg_gmf_plots = {}
+    for name in png_names:
+        if name.startswith('avg_gmf-') and name.endswith('.png'):
+            imt = name[len('avg_gmf-'):-len('.png')]
+            avg_gmf_plots[imt] = name
+    return {
+        'avg_gmf_plots': avg_gmf_plots,
+        'assets': 'assets.png' in png_names,
+        'aggrisk': 'aggrisk' in dstore,
+        'aggrisk_tags': aggrisk_tags,
+        'exposure_by_mmi': 'mmi_tags' in dstore,
+        'exposure_by_lse': {
+            peril: f'exposure_by_{peril}_lse' in dstore
+            for peril in ('liquefaction', 'landslide')},
+        'country_reports': (list(dstore['impact'])
+                            if 'impact' in dstore else []),
+    }
 
 
 def _no_provenance():

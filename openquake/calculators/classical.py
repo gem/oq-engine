@@ -33,7 +33,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    get_bset_values, modified_groups, read_core_trt_smrs)
+    get_bset_values, modified_groups)
+from openquake.hazardlib.rmap_maker import read_core_trt_smrs
 from openquake.hazardlib.lt import (
     get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
@@ -780,7 +781,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
         trt_smrs = self.datastore['trt_smrs'][:]
-        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
+        # NB: the gids of the cmakers must be numbered as in the core list,
+        # the one used by read_gid_dic in the master and in the workers
+        ds = self.datastore.parent or self.datastore
+        core = read_core_trt_smrs(ds)
+        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq, core)
                        for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)

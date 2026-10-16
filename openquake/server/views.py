@@ -1278,6 +1278,92 @@ def extract_report_from_datastore(dstore, iso3, file_format):
     return bytes(data)
 
 
+# Resolve API routes by name so generated URLs respect any URL prefix.
+def _impact_output_url(request, route_name, calc_id, args=(), query=None):
+    url = request.build_absolute_uri(
+        reverse(route_name, args=[calc_id, *args]))
+    if query:
+        url += '?' + urlencode(query)
+    return url
+
+
+def build_impact_resources(request, calc_id, dstore):
+    """Describe impact resources and their presentation URLs."""
+    available = internal_api.get_impact_resource_data(dstore)
+    outputs = {
+        'avg_gmf_plots': {
+            imt: _impact_output_url(
+                request, 'download_png', calc_id, [name])
+            for imt, name in available['avg_gmf_plots'].items()},
+        'assets': None,
+        'aggrisk': None,
+        'aggrisk_tags': None,
+        'exposure_by_mmi': None,
+        'exposure_by_lse': {},
+        'country_reports': {},
+    }
+    if available['assets']:
+        outputs['assets'] = dict(png=_impact_output_url(
+            request, 'download_png', calc_id, ['assets.png']))
+    if available['aggrisk']:
+        outputs['aggrisk'] = dict(csv=_impact_output_url(
+            request, 'download_aggrisk', calc_id))
+    if available['aggrisk_tags']:
+        outputs['aggrisk_tags'] = dict(
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['aggrisk_tags']),
+            summary_table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['aggrisk_tags'],
+                dict(summarize=1)),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['aggrisk_tags']))
+    if available['exposure_by_mmi']:
+        outputs['exposure_by_mmi'] = dict(
+            json=_impact_output_url(
+                request, 'exposure_by_mmi', calc_id),
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['mmi_tags']),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['mmi_tags']))
+    for peril, is_available in available['exposure_by_lse'].items():
+        outputs['exposure_by_lse'][peril] = None
+        if not is_available:
+            continue
+        query = dict(secondary_peril=peril)
+        outputs['exposure_by_lse'][peril] = dict(
+            json=_impact_output_url(
+                request, 'exposure_by_lse', calc_id, query=query),
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id,
+                ['exposure_by_lse'], query),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['exposure_by_lse'],
+                query))
+    report_url = reverse('impact_report', args=[calc_id])
+    report_url = request.build_absolute_uri(report_url)
+    for iso3 in available['country_reports']:
+        urls = {}
+        for file_format in ('pdf', 'png'):
+            query = urlencode(dict(iso3=iso3, format=file_format))
+            urls[file_format] = f'{report_url}?{query}'
+        outputs['country_reports'][iso3] = urls
+    return outputs
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_impact_resources(request, calc_id):
+    """Return impact-specific resources and their retrieval URLs."""
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        resources = build_impact_resources(request, calc_id, ds)
+    return JsonResponse(resources)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -2269,7 +2355,6 @@ def web_engine_get_outputs_impact(request, calc_id):
     local_timestamp_str = None
     time_job_after_event = None
     time_job_after_event_str = None
-    pngs = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             losses = views.view('aggrisk', ds)
@@ -2287,10 +2372,6 @@ def web_engine_get_outputs_impact(request, calc_id):
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
-        if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png']
-                               if k.startswith('avg_gmf-')]
-            pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         input_params = format_oqparam(oqparam)
         usgs_id = None
@@ -2300,23 +2381,9 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
-        if 'impact' in ds:
-            impact_iso3_list = list(ds['impact'])
-        else:
-            impact_iso3_list = []
+        impact_resources = build_impact_resources(request, calc_id, ds)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
-    mmi_tags = 'mmi_tags' in ds
-    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
-    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
-    # NOTE: aggrisk_tags is not available as an attribute of the datastore
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            _extract(ds, 'aggrisk_tags')
-    except KeyError:
-        aggrisk_tags = False
-    else:
-        aggrisk_tags = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -2331,12 +2398,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        weights_precision=weights_precision,
-                       pngs=pngs,
-                       warnings=warnings, mmi_tags=mmi_tags,
-                       impact_iso3_list=impact_iso3_list,
-                       aggrisk_tags=aggrisk_tags,
-                       exposure_by_liq_lse=exposure_by_liq_lse,
-                       exposure_by_land_lse=exposure_by_land_lse,
+                       warnings=warnings, impact_resources=impact_resources,
                        usgs_id=usgs_id, input_params=input_params)
                   )
 

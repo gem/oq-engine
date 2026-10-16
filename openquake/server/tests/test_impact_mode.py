@@ -305,15 +305,33 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         if 'make_impact_reports' in data:
             with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
                 impact_iso3_list = list(ds['impact'])
-                self.assertGreater(len(impact_iso3_list), 0)
-                for iso3 in impact_iso3_list:
-                    ret = self.c.get(
-                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
-                    self.assertEqual(ret.status_code, 200)
-                    ret = self.c.get(
-                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
-                        f'&format=png')
-                    self.assertEqual(ret.status_code, 200)
+            self.assertGreater(len(impact_iso3_list), 0)
+            impact_resources = self.get_json(
+                f'{job_id}/impact_resources')
+            country_reports = impact_resources['country_reports']
+            self.assertEqual(set(country_reports), set(impact_iso3_list))
+            for urls in country_reports.values():
+                self.assertIn('format=pdf', urls['pdf'])
+                self.assertIn('format=png', urls['png'])
+            self.assertEqual(
+                set(impact_resources),
+                {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',
+                 'exposure_by_mmi', 'exposure_by_lse', 'country_reports'})
+            self.assertIsInstance(impact_resources['avg_gmf_plots'], dict)
+            for imt, url in impact_resources['avg_gmf_plots'].items():
+                self.assertIn(f'avg_gmf-{imt}.png', url)
+            for peril_outputs in impact_resources['exposure_by_lse'].values():
+                if peril_outputs:
+                    self.assertEqual(
+                        set(peril_outputs), {'json', 'table', 'npz'})
+            for iso3 in impact_iso3_list:
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                self.assertEqual(ret.status_code, 200)
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                    f'&format=png')
+                self.assertEqual(ret.status_code, 200)
 
             # Run the command-line extractor against the datastore generated
             # by this test.  Hide xdg-open from PATH so the test does not

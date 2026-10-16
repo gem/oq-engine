@@ -413,54 +413,63 @@ def _char_fault_geom_absolute(utype, source, value):
     source.modify('set_geometry', dict(surface=to_surface(value)))
 
 
+def _modify_mfd(source, name, parameters):
+    # NB: a CollapsedPointSource has no mfd, so the modification is
+    # applied to each of its underlying point sources
+    if hasattr(source, 'pointsources'):
+        source.apply_mfd_modification(name, parameters)
+    else:
+        source.mfd.modify(name, parameters)
+
+
 @apply_uncertainty.add('abGRAbsolute')
 def _abGR_absolute(utype, source, value):
     a, b = value
-    source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
+    _modify_mfd(source, 'set_ab', dict(a_val=a, b_val=b))
 
 
 @apply_uncertainty.add('abMaxMagAbsolute')
 def _abMMax_absolute(utype, source, value):
     a, b, mm = value
-    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
+    _modify_mfd(source, 'set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
 
 
 @apply_uncertainty.add('bGRAbsolute')
 def _bGR_absolute(utype, source, value):
     b_val = float(value)
-    source.mfd.modify('set_bGR', dict(b_val=b_val))
+    _modify_mfd(source, 'set_bGR', dict(b_val=b_val))
 
 
 @apply_uncertainty.add('bACAbsolute')
 def _bAC_absolute(utype, source, value):
     b_val = float(value)
-    source.mfd.modify('set_bAC', dict(b_val=b_val))
+    _modify_mfd(source, 'set_bAC', dict(b_val=b_val))
 
 
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
-    source.mfd.modify('increment_b', dict(value=value))
+    _modify_mfd(source, 'increment_b', dict(value=value))
 
 
 @apply_uncertainty.add('bACRelative')
 def _bAC_relative(utype, source, value):
-    source.mfd.modify('increment_b_AC', dict(value=value))
+    _modify_mfd(source, 'increment_b_AC', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelative')
 def _maxmagGR_relative(utype, source, value):
-    source.mfd.modify('increment_max_mag', dict(value=value))
+    _modify_mfd(source, 'increment_max_mag', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelativeNoMoBalance')
 def _maxmagGRnoMoBalance_relative(utype, source, value):
-    source.mfd.modify('increment_max_mag_no_mo_balance', dict(value=value))
+    _modify_mfd(source, 'increment_max_mag_no_mo_balance', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagAndDeltaMagACRelative')
 def _maxmagAndDeltaMagAC_relative(utype, source, value):
     delta_max_mag, delta_m_AC = value
-    source.mfd.modify('increment_max_mag_and_delta_m_AC',
+    _modify_mfd(source, 'increment_max_mag_and_delta_m_AC',
                       dict(delta_max_mag=delta_max_mag,
                            delta_m_AC=delta_m_AC))
 
@@ -468,20 +477,20 @@ def _maxmagAndDeltaMagAC_relative(utype, source, value):
 @apply_uncertainty.add('maxMagAndDeltaMagACRelativeNoMoBalance')
 def _maxmagAndDeltaMagACnoMoBalance_relative(utype, source, value):
     delta_max_mag, delta_m_AC = value
-    source.mfd.modify('increment_max_mag_and_delta_m_AC_no_mo_balance',
+    _modify_mfd(source, 'increment_max_mag_and_delta_m_AC_no_mo_balance',
                       dict(delta_max_mag=delta_max_mag,
                            delta_m_AC=delta_m_AC))
 
 
 @apply_uncertainty.add('maxMagGRAbsolute')
 def _maxmagGR_absolute(utype, source, value):
-    source.mfd.modify('set_max_mag', dict(value=value))
+    _modify_mfd(source, 'set_max_mag', dict(value=value))
 
 
 @apply_uncertainty.add('incrementalMFDAbsolute')
 def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
-    source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
+    _modify_mfd(source, 'set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
 
 

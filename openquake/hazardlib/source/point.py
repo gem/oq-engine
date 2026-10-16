@@ -102,6 +102,8 @@ def calc_average(pointsources):
                 acc[key] = 0. if mean >= 360 else mean
             else:
                 acc[key] = mean
+                # rake must be in (-180, 180]: arctan2 may give -180
+                acc[key] = mean + 360 if mean <= -180 else mean
         elif key == 'dip':
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key in ('dep', 'hypo_dip_frac'):
@@ -569,6 +571,18 @@ class CollapsedPointSource(PointSource):
         pointsources = self.pointsources
         for src in pointsources:
             src.modify(modification, parameters)
+        self._update_pointsources(pointsources)
+
+    def apply_mfd_modification(self, name, parameters):
+        """
+        Apply an MFD modification (such as 'increment_max_mag') to each
+        underlying point source; the MFDs are copied first, since they
+        can be shared between the point sources (see Deduplicate)
+        """
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.mfd = copy.deepcopy(src.mfd)
+            src.mfd.modify(name, parameters)
         self._update_pointsources(pointsources)
 
     def modify_set_recurrow(self, recurrow):

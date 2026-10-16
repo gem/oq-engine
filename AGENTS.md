@@ -11,9 +11,9 @@ Private functions should have comments, not docstrings.
 # development
 
 In order to run Python code you must make sure that the venv
-~/openquake is activated; also make sure ruff, pytest-xdist and
-pytest-django are installed. It is also useful to install pyqt5,
-qtawesome, PyOpenGL and silx to view HDF5 files.
+(~/openquake or .pixi/envs/default) is activated; also make sure ruff,
+pytest-xdist and pytest-django are installed. It is also useful to
+install pyqt5, qtawesome, PyOpenGL and silx to view HDF5 files.
 
 Contributors wanting to develop with the engine should read
 doc/contributing/developing-with-the-engine.rst

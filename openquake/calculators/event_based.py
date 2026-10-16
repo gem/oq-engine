@@ -35,7 +35,8 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.source_reader import get_bset_values
+from openquake.hazardlib.source_reader import (
+    get_bset_values, get_core_trt_smrs)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.filters import (
@@ -888,7 +889,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         maxw = self.counting_ruptures()
         trt_smrs = self.csm.get_trt_smrs()
-        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        core = get_core_trt_smrs(self.csm.src_groups)
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq, core)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
         allargs = []
