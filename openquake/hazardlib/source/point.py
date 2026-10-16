@@ -573,6 +573,18 @@ class CollapsedPointSource(PointSource):
             src.modify(modification, parameters)
         self._update_pointsources(pointsources)
 
+    def apply_mfd_modification(self, name, parameters):
+        """
+        Apply an MFD modification (such as 'increment_max_mag') to each
+        underlying point source; the MFDs are copied first, since they
+        can be shared between the point sources (see Deduplicate)
+        """
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.mfd = copy.deepcopy(src.mfd)
+            src.mfd.modify(name, parameters)
+        self._update_pointsources(pointsources)
+
     def modify_set_recurrow(self, recurrow):
         """Apply an area-source recurrence row to the underlying points."""
         from openquake.hazardlib.source.area import AreaSource
