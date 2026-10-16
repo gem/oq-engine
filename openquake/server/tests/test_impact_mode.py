@@ -308,12 +308,11 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             self.assertGreater(len(impact_iso3_list), 0)
             impact_resources = self.get_json(
                 f'{job_id}/impact_resources')
-            self.assertEqual(
-                [output['iso3'] for output in impact_resources['country_reports']],
-                impact_iso3_list)
-            for output in impact_resources['country_reports']:
-                self.assertIn('format=pdf', output['urls']['pdf'])
-                self.assertIn('format=png', output['urls']['png'])
+            country_reports = impact_resources['country_reports']
+            self.assertEqual(set(country_reports), set(impact_iso3_list))
+            for urls in country_reports.values():
+                self.assertIn('format=pdf', urls['pdf'])
+                self.assertIn('format=png', urls['png'])
             self.assertEqual(
                 set(impact_resources),
                 {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',

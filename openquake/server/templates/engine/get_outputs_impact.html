@@ -74,10 +74,10 @@
               </div>
               {% endif %}
               {% endif %}
-              {% for report in impact_resources.country_reports %}
+              {% for iso3, report_urls in impact_resources.country_reports.items %}
               <div class="my-pngs">
-                <a href="{{ report.urls.png }}" class="btn btn-sm" target="_blank">
-                    Show impact report ({{ report.iso3 }})</a>
+                <a href="{{ report_urls.png }}" class="btn btn-sm" target="_blank">
+                    Show impact report ({{ iso3 }})</a>
               </div>
               {% endfor %}
             </div>

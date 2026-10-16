@@ -1300,7 +1300,7 @@ def build_impact_resources(request, calc_id, dstore):
         'aggrisk_tags': None,
         'exposure_by_mmi': None,
         'exposure_by_lse': {},
-        'country_reports': [],
+        'country_reports': {},
     }
     if available['assets']:
         outputs['assets'] = dict(png=_impact_output_url(
@@ -1346,7 +1346,7 @@ def build_impact_resources(request, calc_id, dstore):
         for file_format in ('pdf', 'png'):
             query = urlencode(dict(iso3=iso3, format=file_format))
             urls[file_format] = f'{report_url}?{query}'
-        outputs['country_reports'].append(dict(iso3=iso3, urls=urls))
+        outputs['country_reports'][iso3] = urls
     return outputs
 
 
