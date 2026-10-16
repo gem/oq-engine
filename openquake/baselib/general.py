@@ -49,6 +49,22 @@ import pandas
 from decorator import decorator
 from openquake.baselib import __version__, config
 
+
+def humanize_number(value, precision=2):
+    """Format a number compactly, e.g. 1000 as ``1.00K``."""
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        return str(value)
+    if value < 1000:
+        return f'{value:.{precision}f}'
+    if value < 1000000:
+        return f'{value / 1000:.{precision}f}K'
+    if value < 1000000000:
+        return f'{value / 1000000:.{precision}f}M'
+    return f'{value / 1000000000:.{precision}f}B'
+
+
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
