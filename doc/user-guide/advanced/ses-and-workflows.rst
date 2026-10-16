@@ -225,6 +225,69 @@ generated GMFs. The exposure, vulnerability or fragility functions,
 aggregation settings, risk seed, and risk outputs belong to the downstream
 risk calculation.
 
+Inspecting an SES datastore
+---------------------------
+
+The main datasets used by a downstream calculation are ``ruptures``,
+``rupgeoms``, ``events``, ``full_lt``, ``oqparam``, and ``sitecol``. Users
+normally do not need to inspect these datasets directly.
+
+In a regular calculation datastore, ``full_lt`` contains one full logic
+tree. In a combined SES it is a group containing one logic tree per model,
+under ``full_lt/<model>``. The ``oqparam`` dataset follows the same pattern:
+it is a single object in a regular datastore and a group keyed by TOML job
+name in a combined SES.
+
+The ``trt_smr`` rupture field identifies the tectonic region type and source
+model realization. The engine supports at most 256 tectonic region types,
+which fit in one byte, and ``2**24`` source model realizations, which fit in
+three bytes. It combines both indices in one 32-bit value. Extract them as
+follows::
+
+  trt, smr = divmod(trt_smr, 2**24)
+
+After selecting the appropriate ``full_lt`` object, use the indices to
+obtain the tectonic region type and source model realization::
+
+  full_lt.trts[trt]
+  full_lt.sm_rlzs[smr]
+
+Show the source model realizations for a regular datastore with::
+
+  oq show sm_rlzs SES.hdf5
+
+For a combined SES, append the model identifier to the view name::
+
+  oq show sm_rlzs:ABC SES.hdf5
+
+The following script counts ruptures by model and tectonic region type. It
+works with both regular and combined SES datastores:
+
+.. code-block:: python
+
+ from openquake.baselib import sap, hdf5
+ TWO24 = 2 ** 24
+
+ def main(ses_hdf5):
+     """Count the ruptures by model and TRT."""
+     with hdf5.File(ses_hdf5) as f:
+         ruptures = f['ruptures'][:]
+         full_lt = f['full_lt']
+         if hasattr(full_lt, 'trts'):
+             full_lts = [('???', full_lt)]
+         else:
+             full_lts = [(model, f[f'full_lt/{model}'])
+                         for model in full_lt]
+         for model, full_lt in full_lts:
+             rups = ruptures if model == '???' else ruptures[
+                 ruptures['model'] == model.encode('ascii')]
+             trt_indices = rups['trt_smr'] // TWO24
+             for i, trt in enumerate(full_lt.trts):
+                 print(model, trt, (trt_indices == i).sum())
+
+ if __name__ == '__main__':
+     sap.run(main)
+
 Managing several calculations with TOML
 ---------------------------------------
 

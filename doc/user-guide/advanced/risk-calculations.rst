@@ -6,8 +6,8 @@ Risk Calculations
 Risk profiles
 -------------
 
-The OpenQuake engine can produce risk profiles, i.e. estimates of average losses
-and maximum probable losses for all countries in the world. Even if you
+The OpenQuake engine can produce risk profiles, i.e. estimates of average
+losses and maximum probable losses for all countries in the world. Even if you
 are interested in a single country, you can still use this feature
 to compute risk profiles for each province in your country.
 
@@ -174,60 +174,5 @@ see similar results with and without splitting. But you will
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
 
-Understanding a reusable SES datastore
---------------------------------------
-
-The workflow-based procedure for generating an SES HDF5 file and using it
-as the input to GMF or risk calculations is described in
-:ref:`ses-workflows`.
-
-A rupture-only event-based calculation produces a normal engine datastore.
-The main datasets needed by a downstream calculation are ``ruptures``,
-``rupgeoms``, ``events``, ``full_lt``, ``oqparam``, and ``sitecol``. Users
-normally do not need to inspect these datasets directly.
-
-The ``trt_smr`` field identifies the tectonic region type and source model
-realization to which each rupture belongs. The engine supports at most 256
-tectonic region types, which can be stored in one byte, and 2^24 =
-16,777,216 source model realizations, which can be stored in three bytes.
-It combines both indices in the 32-bit ``trt_smr`` value. Extract them as
-follows::
-
-  trt, smr = divmod(trt_smr, 2**24)
-
-Use the ``trt`` index to obtain the tectonic region type::
-
-   full_lt.trts[trt]
-
-Use the ``smr`` index to obtain the source model realization::
-
-  full_lt.sm_rlzs[smr]
-
-You can visualize ``sm_rlzs`` as follows::
-
- $ oq show sm_rlzs SES.hdf5
- | ordinal | lt_path | value               | samples | weight |
- |---------+---------+---------------------+---------+--------|
- | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
-
-The ``full_lt`` object can also be extracted from the datastore. The
-following script counts ruptures by tectonic region type:
-
-.. code-block:: python
-
- from openquake.baselib import sap, hdf5
- TWO24 = 2 ** 24
-
- def main(ses_hdf5):
-     """
-     Count the ruptures by TRT.
-     """
-     with hdf5.File(ses_hdf5) as f:
-         ruptures = f['ruptures'][:]
-         full_lt = f['full_lt']
-         trt_indices = ruptures['trt_smr'] // TWO24
-         for i, trt in enumerate(full_lt.trts):
-             print(trt, (trt_indices == i).sum())
-
- if __name__ == '__main__':
-     sap.run(main)
+For instructions on generating, reusing, and inspecting an SES datastore,
+see :ref:`ses-workflows`.
