@@ -31,52 +31,52 @@
             </div>
             {% endcomment %}
             <div class="outputs-general-btns-left">
-              {% for img in pngs.avg_gmf %}
+              {% for imt, url in impact_resources.avg_gmf_plots.items %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
-                  Show average GMF - {{ img|get_imt }}</a>
+                <a href="{{ url }}" class="btn btn-sm">
+                  Show average GMF - {{ imt }}</a>
               </div>
               {% endfor %}
-              {% if pngs.assets %}
+              {% if impact_resources.assets %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
+                <a href="{{ impact_resources.assets.png }}" class="btn btn-sm">
                   Show assets</a>
               </div>
               {% endif %}
 
               {% if user_level >= 2 %}
-              {% if aggrisk_tags %}
+              {% if impact_resources.aggrisk_tags %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
+                <a href="{{ impact_resources.aggrisk_tags.table }}" class="btn btn-sm">
                   Show impact full table</a>
               </div>
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags?summarize=1" class="btn btn-sm">
+                <a href="{{ impact_resources.aggrisk_tags.summary_table }}" class="btn btn-sm">
                   Show impact summary table</a>
               </div>
               {% endif %}
-              {% if mmi_tags %}
+              {% if impact_resources.exposure_by_mmi %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/mmi_tags" class="btn btn-sm">
+                <a href="{{ impact_resources.exposure_by_mmi.table }}" class="btn btn-sm">
                   Show exposure by MMI table</a>
               </div>
               {% endif %}
-              {% if exposure_by_liq_lse %}
+              {% if impact_resources.exposure_by_lse.liquefaction %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/exposure_by_lse?secondary_peril=liquefaction" class="btn btn-sm">
+                <a href="{{ impact_resources.exposure_by_lse.liquefaction.table }}" class="btn btn-sm">
                   Show exposure by liquefaction LSE table</a>
               </div>
               {% endif %}
-              {% if exposure_by_land_lse %}
+              {% if impact_resources.exposure_by_lse.landslide %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/exposure_by_lse?secondary_peril=landslide" class="btn btn-sm">
+                <a href="{{ impact_resources.exposure_by_lse.landslide.table }}" class="btn btn-sm">
                   Show exposure by landslide LSE table</a>
               </div>
               {% endif %}
               {% endif %}
-              {% for iso3 in impact_iso3_list %}
+              {% for iso3, report_urls in impact_resources.country_reports.items %}
               <div class="my-pngs">
-                <a href="/v1/calc/{{ calc_id }}/impact_report?&iso3={{ iso3 }}&format=PNG" class="btn btn-sm" target="_blank">
+                <a href="{{ report_urls.png }}" class="btn btn-sm" target="_blank">
                     Show impact report ({{ iso3 }})</a>
               </div>
               {% endfor %}
@@ -159,9 +159,9 @@
       <p>{{ losses }}</p>
       {% endif %}
     </div>
-    {% if losses_header is not None %}
+    {% if impact_resources.aggrisk %}
     <div id="impact-losses-download">
-      <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aggrisk" class="btn btn-sm output-action-btn">Download csv</a>
+      <a href="{{ impact_resources.aggrisk.csv }}" class="btn btn-sm output-action-btn">Download csv</a>
     </div>
     {% endif %}
     <hr/>
