@@ -351,12 +351,14 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
-    def get_cmakers(self):
+    def get_cmakers(self, core_trt_smrs):
         """
-        :param oq: the OqParam used to build the CompositeSourceModel
+        :param core_trt_smrs: the sets of realizations with the same
+            uncertainties, see source_reader.get_core_trt_smrs
         :returns: a ContextMakerSequence instance
         """
-        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq,
+                           core_trt_smrs)
 
     def get_basenames(self):
         """

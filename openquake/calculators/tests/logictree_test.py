@@ -29,7 +29,7 @@ from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.classical import read_gid_dic, read_full_lt
-from openquake.hazardlib.source_reader import read_core_trt_smrs
+from openquake.hazardlib.rmap_maker import read_core_trt_smrs
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,

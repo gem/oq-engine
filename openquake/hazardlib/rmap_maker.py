@@ -558,12 +558,15 @@ def get_unique_inverse(all_trt_smrs):
 
 
 def _core_gids(trt_smrs, core_trt_smrs, core_gids):
-    # returns the gids of the first set of realizations in core_trt_smrs
-    # which is contained in trt_smrs, see get_cmakers
-    for ts, gids in zip(core_trt_smrs, core_gids):
-        if set(ts) <= set(trt_smrs):
-            return gids
-    raise ValueError('No core set in %s' % (trt_smrs,))
+    # returns the gids of the largest set of realizations in core_trt_smrs
+    # contained in trt_smrs, i.e. the whole group when it is a core set;
+    # the other covering sets are partitions of the same realizations,
+    # so using them too would double count the weights, see get_cmakers
+    covering = [(len(ts), gids) for ts, gids in zip(core_trt_smrs, core_gids)
+                if set(ts) <= set(trt_smrs)]
+    if not covering:
+        raise ValueError('No core set in %s' % (trt_smrs,))
+    return max(covering, key=lambda pair: pair[0])[1]
 
 
 def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
@@ -615,6 +618,16 @@ def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
     return ContextMakerSequence(cmakers, inverse)
 
 
+def read_core_trt_smrs(dstore):
+    """
+    :param dstore: a DataStore instance, possibly closed
+    :returns: a list of trt_smrs tuples, one per realization set, i.e.
+        len(dstore['core_trt_smrs']) tuples, less than the core size Gt
+    """
+    with dstore:  # NB: the datastore is closed when passed to a task
+        return [tuple(t) for t in dstore['core_trt_smrs'][:]]
+
+
 def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
@@ -627,7 +640,8 @@ def read_cmakers(dstore, full_lt=None):
     all_trt_smrs = dstore['trt_smrs'][:]
     if not full_lt:
         full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
+    core = read_core_trt_smrs(dstore) if 'core_trt_smrs' in dstore else None
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq, core)
     return cmakers
 
 

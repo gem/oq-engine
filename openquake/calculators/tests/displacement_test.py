@@ -22,6 +22,7 @@ import numpy
 
 from openquake.calculators.export import export
 from openquake.calculators.getters import MapGetter
+from openquake.hazardlib.source_reader import get_core_trt_smrs
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.pfd import case_1, case_2, case_3, case_4
 from openquake.qa_tests_data.pfd import case_5, case_6, case_7, case_8
@@ -93,7 +94,8 @@ class DisplacementTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini')
         dstore = self.calc.datastore
         self.assertEqual(self.calc.full_lt.get_num_paths(), 2)
-        cmakers = self.calc.csm.get_cmakers()
+        core = get_core_trt_smrs(self.calc.csm.src_groups)
+        cmakers = self.calc.csm.get_cmakers(core)
         active = [len(next(iter(cm.gsims.values()))) for cm in cmakers]
         self.assertEqual(active, [1, 1])  # only 1 of the 2 realizations
         # with R > 1 and individual_rlzs=false only the stats are stored;
@@ -133,7 +135,8 @@ class DisplacementTestCase(CalculatorTestCase):
         # the section trace runs E-W at lat 45.0; the site sits on it, so
         # rtor ~ 0 while x/L is the GC2 position on the raw segmentation
         csm = self.calc.csm
-        cmaker = csm.get_cmakers()[0]
+        core = get_core_trt_smrs(csm.src_groups)
+        cmaker = csm.get_cmakers(core)[0]
         [src] = list(csm.src_groups[0])
         ctxs = list(cmaker.get_ctxs(src, self.calc.sitecol))
         self.assertEqual(len(ctxs), 2)

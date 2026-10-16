@@ -33,7 +33,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    get_bset_values, modified_groups, read_core_trt_smrs)
+    get_bset_values, modified_groups)
+from openquake.hazardlib.rmap_maker import read_core_trt_smrs
 from openquake.hazardlib.lt import (
     get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
