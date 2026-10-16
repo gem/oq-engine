@@ -283,8 +283,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         # the sigmas are weighted averages over the GSIMs
         sigs = [row['sig'] for row in dstore['mag_dst_eps_sig/0'][:]]
         aae(sigs, [0.5433, 0.5071, 0.6395], 4)
-        # the SA(0.2) MCE is governed by the deterministic scenario
-        aae(dstore.read_df("mce").MCE, [0.46, 1.6212, 1.51], 4)
+        # the SA(0.2) MCE is governed by the deterministic scenario;
+        # it depends on the maxMagGRRelative uncertainty on the source 1
+        aae(dstore.read_df("mce").MCE, [0.46, 1.6310, 1.51], 4)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
