@@ -21,11 +21,13 @@ import tempfile
 import unittest.mock as mock
 from types import SimpleNamespace
 import unittest
+import numpy
 import pandas
 from io import BytesIO
 
 from openquake.baselib import general
-from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
+from openquake.hazardlib import (
+    InvalidFile, site_amplification, gsim_lt, source_reader)
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
@@ -42,13 +44,14 @@ from openquake.qa_tests_data.event_based_risk import (
 
 TMP = tempfile.gettempdir()
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+aac = numpy.testing.assert_allclose
 
 
 def getparams(oq):
     return {k: v for k, v in vars(oq).items() if not k.startswith('_')}
 
 
-# inputs for test_same_source_two_models
+# inputs for test_duplicated_id_uncertainty and test_same_source_two_models
 SOURCE_MODEL = '''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
@@ -85,6 +88,37 @@ def source_model(*point_sources):
     # build a source model with the given (id, lon, a_value) point sources
     return SOURCE_MODEL % '\n'.join(
         POINT_SOURCE.format(id=i, lon=lon, a=a) for i, lon, a in point_sources)
+
+DUPLICATED_ID_SMLT = '''\
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID="lt1">
+  <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="sm">
+    <logicTreeBranch branchID="b1">
+      <uncertaintyModel>sm1.xml</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b2">
+      <uncertaintyModel>sm2.xml</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                      branchSetID="mmax" applyToBranches="b1 b2"
+                      applyToSources="src">
+    <logicTreeBranch branchID="m1">
+      <uncertaintyModel>+0.2</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="m2">
+      <uncertaintyModel>-0.2</uncertaintyModel>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>
+'''
 
 # b1 has 2 source model realizations, b2 has 1
 SAME_SOURCE_SMLT = '''\
@@ -645,6 +679,25 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
                 f.write(content)
         oq = readinput.get_oqparam(os.path.join(tmp, 'job.ini'))
         return readinput.get_composite_source_model(oq)
+
+    def test_duplicated_id_uncertainty(self):
+        # two source models with a source with the same ID but different
+        # MFDs, as in the ARB model: the source ID gets a branch suffix,
+        # but the maxMagGRRelative uncertainty must still be applied
+        csm = self._get_csm(source_model(('src', 0., 3.3)),
+                            source_model(('src', 0., 3.5)),
+                            DUPLICATED_ID_SMLT)
+        srcs = csm.get_sources()
+        self.assertEqual([src.source_id for src in srcs],
+                         ['src!b1', 'src!b2'])
+        for src in srcs:
+            self.assertTrue(src.bysrc_unc, src.source_id)
+            # apply the uncertainties as done in the workers
+            bvals = source_reader.get_bset_values(csm.full_lt, [src])
+            mags = sorted(s.mfd.max_mag for _, grp in
+                          source_reader.modified_groups([src], bvals)
+                          for s in grp)
+            aac(mags, [6.3, 6.7])  # maxMag=6.5 -/+ 0.2
 
     def test_same_source_two_models(self):
         # the same source in two source models, where the first branch has
