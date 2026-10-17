@@ -53,6 +53,16 @@ class MultiMFDModifyTestCase(unittest.TestCase):
         self.assertEqual(list(sliced.kwargs), list(mfd.kwargs))
         self.assertEqual(sliced.modification, [])
 
+    def test_slice_keeps_modifications(self):
+        # splitting a source after the uncertainties are applied must
+        # not lose them: the slice must yield the modified MFDs
+        mfd = self._mfd()
+        mfd.modify('increment_max_mag', dict(value=0.2))
+        sliced = mfd[slice(1, 2)]
+        self.assertEqual(len(sliced.modification), 1)
+        for single in sliced:
+            self.assertAlmostEqual(single.max_mag, 6.2)
+
 
 if __name__ == '__main__':
     unittest.main()

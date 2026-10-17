@@ -154,7 +154,11 @@ class MultiMFD(BaseMFD):
                 kwargs[k] = v
             else:
                 kwargs[k] = v[slc]
-        return self.__class__(self.kind, size, self.width_of_mfd_bin, **kwargs)
+        new = self.__class__(self.kind, size, self.width_of_mfd_bin, **kwargs)
+        # the slice must keep the modifications already applied, otherwise
+        # splitting a source loses its uncertainties
+        new.modification = list(self.modification)
+        return new
 
     def __iter__(self):
         """
