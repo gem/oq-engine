@@ -69,6 +69,14 @@ def ts_samples(samples, trt_smr):
     return numpy.array([(trt_smr, samples, 0)], ts_samples_dt)
 
 
+def _copy_uncertainty_attrs(src, segment):
+    # the segments of a split source must keep the ts_samples and the
+    # flag bysrc_unc, otherwise the uncertainties are applied to the
+    # base realization only, see get_ts_sets
+    segment.ts_samples = src.ts_samples
+    segment.bysrc_unc = src.bysrc_unc
+
+
 # NB: blocksize is chosen so that event_based/case_35 works
 def splitMF(sources, disagg_by_src, blocksize=1000):
     """
@@ -93,12 +101,12 @@ def splitMF(sources, disagg_by_src, blocksize=1000):
                     hypocenter_distribution=src.hypocenter_distribution,
                     mesh=geo.Mesh(src.mesh.lons[slc], src.mesh.lats[slc]),
                     temporal_occurrence_model=src.temporal_occurrence_model)
-                segment.ts_samples = src.ts_samples
+                _copy_uncertainty_attrs(src, segment)
                 splits.append(segment)
         elif src.code == b'F' and not disagg_by_src:
             # use the colon convention only in absence of kendra-splitting
             for segment in src:
-                segment.ts_samples = src.ts_samples
+                _copy_uncertainty_attrs(src, segment)
                 splits.append(segment)
         else:
             splits.append(src)
