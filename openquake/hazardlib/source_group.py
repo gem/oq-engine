@@ -653,17 +653,22 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     tilegetters_ = {}
     cmaker_ = {}
     for cmaker, tilegetters, blocks, extra in atomic:
-        gid = tuple(cmaker.gid)
-        tilegetters_[gid] = tilegetters
+        # NB: the key includes the site label, since the cmaker (with its
+        # gsims and ilabel) and the tiles are different for each label,
+        # while the gids are the same, see read_full_lt_by_label
+        gid = (cmaker.ilabel, tuple(cmaker.gid))
+        if tilegetters or gid not in tilegetters_:
+            # a group far from all the sites has no tiles, but it must
+            # not remove the tiles of the other groups with the same gid
+            tilegetters_[gid] = tilegetters
         blocks_[gid].extend(blocks)
-        # NB: keyed by grp_id, since a group is yielded once per label
-        # (see site_labels) and must be counted only once
+        # NB: keyed by grp_id, so that a group is counted only once
         weights_[gid][blocks[0]] = extra['weight']
         cmaker_[gid] = cmaker
     for gid, tgetters in tilegetters_.items():
         weights = weights_[gid]
-        # the groups are deduplicated, since a group yielded once per
-        # label (see site_labels) must be computed only once
+        # NB: a group is yielded once per label (see site_labels), but
+        # here the key contains the label, so the groups are unique
         grp_ids = dict.fromkeys(blocks_[gid])
         keys = [str(grp_id) for grp_id in grp_ids]
         # The atomic groups used to be collapsed in a single task per

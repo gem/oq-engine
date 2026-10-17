@@ -419,6 +419,15 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+    def test_case_27_labels(self):
+        # two close sites with different labels and the same gsim: the
+        # atomic groups must be computed for both, while they were
+        # computed only for the last label (0.0049 instead of 0.378)
+        self.run_calc(case_27.__file__, 'job_labels.ini')
+        ae(self.calc.sitecol.ilabel, [0, 1])
+        hc = self.calc.datastore['hcurves-stats'][:, 0, 0, 0]  # PGV
+        aac(hc, [0.3777862, 0.3783247], rtol=1e-5)
+
     def test_case_28(self):
         # Simple fault with hypoDepthDist
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_28.__file__)
