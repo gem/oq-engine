@@ -188,21 +188,29 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
     return result
 
 
-_full_lt_cache = {}  # dstore filename -> initialized FullLogicTree
+_full_lt_cache = {}  # (dstore filename, ilabel) -> initialized FullLogicTree
 
 
-def read_full_lt(dstore):
+def read_full_lt(dstore, ilabel=None):
     """
+    :param dstore: a DataStore instance, possibly closed
+    :param ilabel: the index of the site label (see site_labels), or None
     :returns: the FullLogicTree stored in the datastore, initialized only
-        once per process, since the init is not cheap for large LTs
+        once per process, since the init is not cheap for large LTs;
+        with a site label, the gsim logic tree is the one of the label,
+        so that the gweights are the right ones (see read_gid_dic)
     """
-    filename = dstore.filename
+    key = (dstore.filename, ilabel or 0)
     try:
-        return _full_lt_cache[filename]
+        return _full_lt_cache[key]
     except KeyError:
         with dstore:
             full_lt = dstore['full_lt'].init()
-        _full_lt_cache[filename] = full_lt
+            if ilabel:
+                # the labels are ordered as the cmdict, i.e. Default first
+                dic = read_full_lt_by_label(dstore, full_lt)
+                full_lt = list(dic.values())[ilabel]
+        _full_lt_cache[key] = full_lt
         return full_lt
 
 
@@ -466,9 +474,11 @@ def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     # NB: the datastore is closed when passed to a task, see read_gid_dic;
     # full_lt is read from the datastore, since it is too big to be passed
     # to the tasks
-    # NB: the tilegetter is trivial unless there are site labels
+    # NB: the tilegetter is trivial unless there are site labels;
+    # the gweights depend on the label, see get_rates
+    full_lt = read_full_lt(dstore, cmaker.ilabel)
     return (grps, tilegetter(sitecol, cmaker.ilabel),
-            read_gid_dic(dstore), read_full_lt(dstore))
+            read_gid_dic(dstore, full_lt), full_lt)
 
 
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -884,6 +894,12 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('maximum size of the multifaults=%.1f MB',
                          self.source_mb)
         self.build_curves_maps()
+        # NB: the sanity check must come after build_curves_maps, since it
+        # needs hcurves-stats; the amplified curves have different levels
+        if (oq.disagg_by_src and oq.use_rates and self.N == 1
+                and not self.amplifier):
+            self.check_mean_rates(
+                self.datastore['mean_rates_by_src/array'][()])
         return True
 
     def _pre_execute(self):
@@ -1014,9 +1030,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
-            mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
-            if oq.use_rates and self.N == 1:  # sanity check
-                self.check_mean_rates(mrs)
+            store_mean_rates_by_src(self.datastore, self.srcidx, acc)
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular disaggregation/case_15 is sensitive to num_cores
@@ -1026,14 +1040,18 @@ class ClassicalCalculator(base.HazardCalculator):
         The sum of the mean_rates_by_src must correspond to the mean_rates
         """
         try:
-            exp = disagg.to_rates(self.datastore['hcurves-stats'][0, 0])
+            hcurves = self.datastore['hcurves-stats'][0, 0]
         except KeyError:  # if there are no ruptures close to the site
             return
+        # NB: the mean_rates_by_src are annual rates, see get_rates
+        exp = disagg.to_rates(hcurves) / self.oqparam.investigation_time
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
         for m in range(len(got)):
             # skipping large rates which can be wrong due to numerics
-            # (it happens in logictree/case_05 and in Japan)
-            ok = got[m] < 2.
+            # (it happens in logictree/case_05 and in Japan); the rates
+            # are compared in the investigation time, where the poes
+            # saturate (see to_rates)
+            ok = got[m] * self.oqparam.investigation_time < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def store_info(self):
