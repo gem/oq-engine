@@ -655,7 +655,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     for cmaker, tilegetters, blocks, extra in atomic:
         # NB: the key includes the site label, since the cmaker (with its
         # gsims and ilabel) and the tiles are different for each label,
-        # while the gids are the same, see read_full_lt_by_label
+        # while the gids are the same, see read_full_lt_by_label;
+        # tested in classical/case_27_labels
         gid = (cmaker.ilabel, tuple(cmaker.gid))
         if tilegetters or gid not in tilegetters_:
             # a group far from all the sites has no tiles, but it must

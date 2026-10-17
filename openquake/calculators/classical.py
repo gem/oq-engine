@@ -207,7 +207,8 @@ def read_full_lt(dstore, ilabel=None):
         with dstore:
             full_lt = dstore['full_lt'].init()
             if ilabel:
-                # the labels are ordered as the cmdict, i.e. Default first
+                # the labels are ordered as the cmdict, i.e. Default first;
+                # tested in classical/case_06_disagg_by_src
                 dic = read_full_lt_by_label(dstore, full_lt)
                 full_lt = list(dic.values())[ilabel]
         _full_lt_cache[key] = full_lt
@@ -475,7 +476,8 @@ def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     # full_lt is read from the datastore, since it is too big to be passed
     # to the tasks
     # NB: the tilegetter is trivial unless there are site labels;
-    # the gweights depend on the label, see get_rates
+    # the gweights depend on the label, see get_rates and
+    # classical/case_06_disagg_by_src
     full_lt = read_full_lt(dstore, cmaker.ilabel)
     return (grps, tilegetter(sitecol, cmaker.ilabel),
             read_gid_dic(dstore, full_lt), full_lt)
@@ -895,7 +897,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          self.source_mb)
         self.build_curves_maps()
         # NB: the sanity check must come after build_curves_maps, since it
-        # needs hcurves-stats; the amplified curves have different levels
+        # needs hcurves-stats; the amplified curves have different levels;
+        # it would catch the bug in classical/case_06_disagg_by_src
         if (oq.disagg_by_src and oq.use_rates and self.N == 1
                 and not self.amplifier):
             self.check_mean_rates(
