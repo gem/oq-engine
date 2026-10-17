@@ -6,6 +6,7 @@
 |case\_04|Test UHS|
 |case\_05|Test disagg_by_src, individual_rlzs|
 |case\_06|Test site\_labels|
+|case\_06\_disagg\_by\_src|Test site\_labels with disagg\_by\_src and a single labelled site|
 |case\_06\_sampling|Test site\_labels with oversampling|
 |case\_07|Test DummyGMPE in event_based|
 |case\_08|Test override_vs30 with two values and disagg_by_src|
@@ -21,6 +22,7 @@
 |case\_25|Test negative depths|
 |case\_26|Test YoungsCoppersmith1985MFD|
 |case\_27|Nankai mutex model, including disaggregation|
+|case\_27\_labels|Nankai mutex model with site\_labels|
 |case\_28|Test hypoDepthDist (and down-dip fractions for hypo placement) with a simple fault source|
 |case\_29|Non-parametric source with one rupture represente by 2 kite surfaces|
 |case\_30|Tests 2025 NSHM variants of the MorikawaFujiwara2013 GMM|

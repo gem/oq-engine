@@ -1,3 +1,17 @@
+  [Michele Simionato]
+  * Fixed a bug affecting previous versions of the engine: with
+    site_labels the atomic groups (cluster or mutex sources) were computed
+    only for the sites of the last label. This affects the USA model with
+    site_labels (job_reduced_ceus_gmc.ini), where the New Madrid cluster
+    was ignored outside San Francisco: the 2475-year PGA was too low by a
+    factor of 1.4-2 near New Madrid and Memphis
+  * Fixed a bug affecting previous versions of the engine: with
+    site_labels and disagg_by_src the mean_rates_by_src were computed
+    with the gsim weights of the Default logic tree instead of the ones
+    of the label (36% off in a test). The sanity check comparing them
+    with the mean hazard curves was never run, since it was called before
+    the curves were computed; now it runs
+
   [Claudio Schill]
   * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
     ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the 
