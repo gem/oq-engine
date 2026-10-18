@@ -383,7 +383,7 @@ def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
         # the rup_data of different groups cannot be concatenated
         # (different shapes of probs_occur); the groups are
         # independent, so the sum of the results is the same;
-        # tested in classical/case_27_other and case_27_nodbs
+        # tested in classical/case_27_other and disagg/case_18
         for grp in grps:
             yield baseclassical([grp], sites, cmaker, remove_zeros,
                                 as_rmap=as_rmap)

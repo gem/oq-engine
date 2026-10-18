@@ -437,18 +437,6 @@ class ClassicalTestCase(CalculatorTestCase):
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         self.assertEqual(sum(len(po) for po in probs_occur), 8)
 
-    def test_case_27_nodbs(self):
-        # without disagg_by_src the ruptures of both atomic groups must be
-        # stored, while only the ones of the first group were stored
-        # (4 probs_occur instead of 8), so the disaggregation missed them;
-        # concurrent_tasks=1 puts both atomic groups in the same task
-        self.run_calc(case_27.__file__, 'job.ini', disagg_by_src='false',
-                      concurrent_tasks='1')
-        dstore = self.calc.datastore
-        probs_occur = dstore['rup/probs_occur'][:]
-        self.assertEqual(sum(len(po) for po in probs_occur), 8)
-        aac(dstore['hcurves-stats'][0, 0, 0], [0.3777862], rtol=1E-5)
-
     def test_case_27_labels(self):
         # two close sites with different labels and the same gsim: the
         # atomic groups must be computed for both, while they were
