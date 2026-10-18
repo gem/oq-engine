@@ -151,6 +151,51 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
                                      f' changed from "shared" to "complete"'})
         self.remove_calc(job.calc_id)
 
+    def test_level_2_can_only_share_own_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_level_2_job_ownership')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'complete')
+
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared'}, job.calc_id)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'shared')
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete'}, job.calc_id)
+        self.remove_calc(job.calc_id)
+
+    def test_superuser_can_share_other_users_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_superuser_share_job')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.user2.is_superuser = True
+        self.user2.save()
+        self.user2.profile.level = 1
+        self.user2.profile.save()
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 200)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 200)
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        self.remove_calc(job.calc_id)
+
     def test_share_or_unshare_user_level_below_2(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_unshare_job_levels_below_2')

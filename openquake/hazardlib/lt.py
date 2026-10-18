@@ -594,6 +594,19 @@ GEOMETRY_PRESERVING = frozenset([
 
 # ######################### apply_uncertainties ########################### #
 
+def lt_source_id(source):
+    """
+    :param source: a source instance
+    :returns: the source ID as written in the logic tree
+
+    NB: sources with the same ID but different content in different
+    source models get the branch ID appended after a "!" (see
+    source_reader.add_bangs), i.e. 'src!b1' for 'src'; the "!" cannot
+    appear in the original IDs, so everything after it is removed
+    """
+    return source.source_id.split('!')[0]
+
+
 def get_bset_value(bset, value, source):
     """
     :param bset: a BranchSet instance
@@ -608,9 +621,10 @@ def get_bset_value(bset, value, source):
     applied after the splitting of the sources, as done by classical
     """
     if bset.correlated:
-        if source.source_id in value:
-            return True, value[source.source_id]
-        bname = valid.basename(source)
+        src_id = lt_source_id(source)
+        if src_id in value:
+            return True, value[src_id]
+        bname = valid.basename(src_id)
         return bname in value, value.get(bname)
     return bset.filter_source(source), value
 
@@ -1073,7 +1087,7 @@ class BranchSet(object):
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSources':
-                if source and source.source_id not in value:
+                if source and lt_source_id(source) not in value:
                     return False
             elif key == 'applyToBranches':
                 pass
