@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a bug affecting previous versions of the engine: with few sites
+    only the ruptures of the first atomic group of a task were stored,
+    so the disaggregation missed the ruptures of the other atomic groups
   * Fixed a bug affecting previous versions of the engine: with
     disagg_by_src the rates of multiple atomic groups were all attributed
     to the source of the first group in mean_rates_by_src, and the
