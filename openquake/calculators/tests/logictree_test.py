@@ -342,6 +342,12 @@ hazard_uhs-std.csv
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
+        # the cfactor counts the contexts once, also for the MFD variants
+        # computed together by make_results (it was 225 = 9 x 25)
+        nctxs = self.calc.datastore.read_df('source_data').nctxs.sum()
+        self.assertEqual(nctxs, 25)
+        self.assertEqual(self.calc.cfactor[0], nctxs)
+
     def test_gids_numbering(self):
         # the gids of the cmakers must be numbered as the core list, the
         # one used by read_gid_dic in the master, otherwise the rates are

@@ -9,8 +9,7 @@
     so the disaggregation missed the ruptures of the other atomic groups
   * Fixed a bug affecting previous versions of the engine: with
     disagg_by_src the rates of multiple atomic groups were all attributed
-    to the source of the first group in mean_rates_by_src, and the
-    ruptures of the other groups were not stored
+    to the source of the first group in mean_rates_by_src
   * Fixed a bug affecting previous versions of the engine: with
     site_labels the atomic groups (cluster or mutex sources) were
     computed only for the sites of the last label. This affects the
