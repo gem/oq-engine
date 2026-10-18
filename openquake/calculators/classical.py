@@ -389,7 +389,18 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # mutex ones must be, since mutually exclusive ruptures are
         # modelled with nonparametric sources) and no uncertainty can be
         # applied to a nonparametric source (the calculation would fail)
-        yield baseclassical(grps, sites, cmaker, remove_zeros, as_rmap=as_rmap)
+        if cmaker.oq.disagg_by_src:
+            # one result per group, since the groups can contain different
+            # sources and the rates are attributed to the source of each
+            # result (see 'basename' in RmapMaker.make); the groups are
+            # independent, so the sum of the results is the same;
+            # tested in classical/case_27_other
+            for grp in grps:
+                yield baseclassical([grp], sites, cmaker, remove_zeros,
+                                    as_rmap=as_rmap)
+        else:
+            yield baseclassical(grps, sites, cmaker, remove_zeros,
+                                as_rmap=as_rmap)
         return
     grp = grps[0]
     if grp.atomic:
@@ -496,8 +507,13 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     grps, sites, gid_dic, full_lt = read_task_input(
         grp_keys, tilegetter, cmaker, dstore, monitor)
-    yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
-                             remove_zeros=False)
+    # the RateMap in the master is the one of the first group (see
+    # get_rmap), also for the results of the other atomic groups
+    rmap_id = int(grp_keys[0].split('-')[0])
+    for dic in bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                             remove_zeros=False):
+        dic['rmap_id'] = rmap_id
+        yield dic
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -751,8 +767,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 chunkno = dic.get('chunkno')  # None with the current impl.
                 _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
-            # aggregating rates is ultra-fast compared to storing
-            self.rmap[grp_id] += rmap
+            # aggregating rates is ultra-fast compared to storing; NB: the
+            # results of the atomic groups go in the RateMap of the first
+            # group of the task, see classical_bysrc
+            self.rmap[dic.pop('rmap_id', grp_id)] += rmap
         return acc
 
     def create_rup(self):
