@@ -1,0 +1,77 @@
+# Smoke test of the zmq dispatch to workerpools running in separate
+# containers, on a single host. Run from the repository root with
+#   docker compose -f docker/zmq_cluster.yml up \
+#       --abort-on-container-exit --exit-code-from master
+# and clean up with
+#   docker compose -f docker/zmq_cluster.yml down -v
+#
+# The "setup" service installs the requirements once into the "venv"
+# volume; the other services use that venv and the repository, mounted
+# read-only, through PYTHONPATH. No SSH is involved: the workers are
+# started by compose and the master only connects to them over TCP.
+name: oq-zmq-cluster
+
+x-engine: &engine
+  image: python:3.11-slim
+  volumes:
+    - ..:/src:ro
+    - venv:/venv:ro
+  environment:
+    PYTHONPATH: /src
+    HOME: /tmp
+  depends_on:
+    setup:
+      condition: service_completed_successfully
+
+services:
+  setup:
+    image: python:3.11-slim
+    command: >-
+      sh -c "python -m venv /venv &&
+             /venv/bin/pip install -q -r /src/requirements-py311-linux64.txt"
+    volumes:
+      - ..:/src:ro
+      - venv:/venv
+
+  worker1:
+    <<: *engine
+    hostname: worker1
+    command: /venv/bin/python -m openquake.baselib.workerpool 2 --ctrl-port 1909
+
+  worker2:
+    <<: *engine
+    hostname: worker2
+    command: /venv/bin/python -m openquake.baselib.workerpool 2 --ctrl-port 1909
+
+  master:
+    <<: *engine
+    hostname: master
+    command:
+      - /venv/bin/python
+      - -c
+      - |
+        import socket
+        from openquake.baselib import config, parallel
+        from openquake.baselib.workerpool import WorkerMaster
+        from openquake.baselib.parallel import Starmap
+
+        # socket.getfqdn is used as the task: the workers must be able to
+        # unpickle it, which a function defined here is not, and Starmap
+        # needs a Python function with at least one argument
+        z = config.zworkers.copy()
+        z['host_cores'] = 'worker1:1909 2,worker2:1909 2'
+        parallel.host_cores[:] = z['host_cores'].split(',')
+        master = WorkerMaster(z)
+        try:
+            master.wait(120)  # raises TimeoutError if a pool is missing
+            res = list(Starmap(socket.getfqdn, [('',)] * 10,
+                               distribute='zmq'))
+        finally:
+            master.stop()
+        assert len(res) == 10, res
+        hosts = {host.split('.')[0] for host in res}
+        assert hosts == {'worker1', 'worker2'}, hosts
+        print('OK: tasks ran on', sorted(hosts))
+
+volumes:
+  venv:
