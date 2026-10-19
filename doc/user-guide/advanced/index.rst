@@ -24,5 +24,6 @@ the techniques to reduce an impossible calculation to a feasible one.
    vector-valued-psha
    probabilistic-fault-displacement
    special-features
+   zmq-cluster
    useful-oq-commands
    working-with-the-dstore
