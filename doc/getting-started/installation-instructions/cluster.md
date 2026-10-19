@@ -56,8 +56,9 @@ shared_dir = /oq_shared
 
 It is not necessary to configure `openquake.cfg` for `/opt/openquake/venv`
 
-The docker swarm mode does not use the shared directory: its service
-mounts no host directory, and its workers run from the engine image.
+In docker swarm mode the service mounts no host directory: the workers
+run from the engine image and return their results to the master over
+ZMQ, while the master writes the calculation datastore.
 
 ### Network and security considerations
 
