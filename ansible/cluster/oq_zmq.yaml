@@ -105,6 +105,15 @@
         home: "{{ shared_nfs }}/ci_user"
         shell: /bin/bash
         state: present
+
+    - name: Set home directory permissions to 755
+      file:
+        path: "{{ shared_nfs }}/ci_user"
+        state: directory
+        owner: ci_user
+        group: openquake
+        mode: '0755'
+
     when: "'master' in group_names"
 
 - hosts: master
