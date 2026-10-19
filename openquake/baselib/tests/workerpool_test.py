@@ -38,10 +38,9 @@ class ParseHostcoreTestCase(unittest.TestCase):
                          ('127.0.0.1', 1910, '-1'))
 
     def test_ssh_args(self):
-        zworkers = dict(ctrl_port='1909',
-                        host_cores='127.0.0.1:1910 2,127.0.0.1 3')
+        host_cores = [('127.0.0.1', 1910, '2'), ('127.0.0.1', 1909, '3')]
         got = [(host, port, cores)
-               for host, port, cores, _args in ssh_args(zworkers)]
+               for host, port, cores, _args in ssh_args(host_cores)]
         self.assertEqual(got, [('127.0.0.1', 1910, '2'),
                                ('127.0.0.1', 1909, '3')])
 
@@ -86,4 +85,6 @@ class WorkerPoolTestCase(unittest.TestCase):
         cls.master.stop()
         parallel.host_cores[:] = cls.host_cores
         # the workerpools must exit on their own after the stop command
-        assert [p.returncode for p in procs] == [0, 0], procs
+        codes = [p.returncode for p in procs]
+        if codes != [0, 0]:  # explicit, so that it survives python -O
+            raise AssertionError('exit codes %s' % codes)

@@ -60,8 +60,9 @@ def get_zworkers(job_id):
     return {}
 
 
-def ssh_args(zworkers):
+def ssh_args(host_cores):
     """
+    :param host_cores: list of triples (host, ctrl_port, num_cores)
     :yields: quadruples (hostIP, ctrl_port, num_cores, [ssh remote python
              command])
     """
@@ -69,15 +70,12 @@ def ssh_args(zworkers):
     if os.environ.get('OQ_WORKERPOOL_ERROR'):
         # can be set in CI to emulate a bug in ssh_args
         raise RuntimeError('Testing a bug in ssh_args')
-    if zworkers['host_cores'].strip():
-        for hostcores in zworkers['host_cores'].split(','):
-            host, port, cores = parallel.parse_hostcore(
-                hostcores, zworkers['ctrl_port'])
-            if host == '127.0.0.1':  # localhost
-                yield host, port, cores, [sys.executable]
-            else:
-                yield host, port, cores, [
-                    'ssh', '-f', '-T', user + '@' + host, sys.executable]
+    for host, port, cores in host_cores:
+        if host == '127.0.0.1':  # localhost
+            yield host, port, cores, [sys.executable]
+        else:
+            yield host, port, cores, [
+                'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
 class WorkerMaster(object):
@@ -97,13 +95,21 @@ class WorkerMaster(object):
             if self.zworkers['host_cores'] else [])
         self.popens = []
 
+    def _running(self):
+        """
+        :yields: (host, port, ctrl_url) for the workerpools already running
+        """
+        for host, port, _ in self.host_cores:
+            if general.socket_ready((host, port)):
+                yield host, port, 'tcp://%s:%s' % (host, port)
+
     def start(self):
         """
         Start multiple workerpools on remote servers via ssh and/or a single
         workerpool on localhost.
         """
         starting = []
-        for host, port, cores, args in ssh_args(self.zworkers):
+        for host, port, cores, args in ssh_args(self.host_cores):
             if general.socket_ready((host, port)):
                 print('%s:%s already running' % (host, port))
                 continue
@@ -120,10 +126,7 @@ class WorkerMaster(object):
         Send a "stop" command to all worker pools
         """
         stopped = []
-        for host, port, _ in self.host_cores:
-            if not general.socket_ready((host, port)):
-                continue
-            ctrl_url = 'tcp://%s:%s' % (host, port)
+        for host, _port, ctrl_url in self._running():
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 try:
                     print(sock.send('stop'))
@@ -131,8 +134,8 @@ class WorkerMaster(object):
                     pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
-            # give the workerpool time to shut down its process pool,
-            # otherwise its semaphores leak; terminate only if it hangs
+            # the workerpool needs time to shut down its process pool,
+            # otherwise its semaphores leak: terminate only if it hangs
             try:
                 popen.wait(timeout=10)
             except subprocess.TimeoutExpired:
@@ -151,7 +154,7 @@ class WorkerMaster(object):
         in case of hard out of memory situations
         """
         killed = []
-        for host, _port, _cores, args in ssh_args(self.zworkers):
+        for host, _port, _cores, args in ssh_args(self.host_cores):
             args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
             print(' '.join(args))
             subprocess.run(args)
@@ -163,10 +166,7 @@ class WorkerMaster(object):
         :returns: a list [(host:port, running, total), ...]
         """
         executing = []
-        for host, port, _cores in self.host_cores:
-            if not general.socket_ready((host, port)):
-                continue
-            ctrl_url = 'tcp://%s:%s' % (host, port)
+        for host, port, ctrl_url in self._running():
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 running = len(sock.send('get_executing').split())
                 total = sock.send('get_num_workers')
@@ -201,10 +201,7 @@ class WorkerMaster(object):
         """
         Stop and start again
         """
-        for host, port, _ in self.host_cores:
-            if not general.socket_ready((host, port)):
-                continue
-            ctrl_url = 'tcp://%s:%s' % (host, port)
+        for _host, _port, ctrl_url in self._running():
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect', timeout=120) as sock:
                 sock.send('restart')
         return 'restarted'
@@ -227,7 +224,7 @@ class WorkerMaster(object):
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
                 for host, port, _ in self.host_cores:
-                    url = 'tcp://%s:%d' % (host, port)
+                    url = 'tcp://%s:%s' % (host, port)
                     print('Sending to', url)
                     with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                         for i in range(2):
