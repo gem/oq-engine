@@ -178,21 +178,19 @@
     #  state: mounted
     when: "'worker' in group_names"
 
-  - name: Clone github repo only on master node
-    shell: |
-      cd "{{ inst_nfs }}"
-      git clone -b {{ oq_version }} --depth=1 --quiet https://github.com/gem/oq-engine.git
-      cd oq-engine
-      git log -1
+  - name: Download the universal installer only on master node
+    get_url:
+      url: https://github.com/gem/oq-engine/raw/master/install.py
+      dest: "{{ inst_nfs }}/install.py"
+      mode: "0644"
     when: "'master' in group_names"
 
-  - name: Run install script from github repo only on master node
+  - name: Run the universal installer only on master node
     block:
       - name: Run install.py on master node
         ansible.builtin.shell: |
           cd "{{ inst_nfs }}"
-          cd oq-engine
-          python3.13 ./install.py devel_server
+          python3.13 ./install.py server --version={{ oq_version }}
         register: oq_install
     rescue:
       - name: Human Readable Output
