@@ -29,7 +29,7 @@ from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_master)
+    case_18, case_master)
 
 aae = numpy.testing.assert_almost_equal
 ae = numpy.testing.assert_equal
@@ -286,6 +286,20 @@ class DisaggregationTestCase(CalculatorTestCase):
         # the SA(0.2) MCE is governed by the deterministic scenario;
         # it depends on the maxMagGRRelative uncertainty on the source 1
         aae(dstore.read_df("mce").MCE, [0.46, 1.6310, 1.51], 4)
+
+    def test_case_18(self):
+        # Nankai mutex model with two atomic groups in the same task (see
+        # concurrent_tasks in job.ini): the ruptures of both groups must
+        # be stored, while only the ones of the first group were stored
+        # (4 probs_occur instead of 8), so the disaggregation missed the
+        # large Nankai ruptures of the second group (Mag sum .19 vs .41)
+        self.run_calc(case_18.__file__, 'job.ini')
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        self.assertEqual(sum(len(po) for po in probs_occur), 8)
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles(
+                'expected_output/' + strip_calc_id(fname), fname)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

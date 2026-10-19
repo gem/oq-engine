@@ -309,7 +309,7 @@ def geometry_key(srcs, bvals):
     # e.g. logictree/case_18_bis: the sources of 'first' have two keys, one
     # for setLowerSeismDepthAbsolute 10.0 and one for 20.0, with 9 sets each
     # (3 abGR x 3 maxMagGR), i.e. two groups of 9 variants for make_results:
-    #   (('bs6', '10.0'),) and (('bs6', '20.0'),)
+    # (('bs6', '10.0'),) and (('bs6', '20.0'),)
     return tuple((bset.id, repr(value)) for bset, value in bvals
                  if bset.uncertainty_type not in GEOMETRY_PRESERVING and
                  any(get_bset_value(bset, value, src)[0] for src in srcs))
@@ -363,8 +363,33 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
     return dics
 
 
+def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
+                    merge_atomic):
+    # yield the results of the atomic groups collapsed in a single
+    # task (see get_allargs and bysrc_results); they contribute to the
+    # same RateMap in the master, with the gids of all the
+    # realizations; the uncertainties are not applied, which is fine
+    # because the sources of an atomic group are nonparametric (the
+    # mutex ones must be, since mutually exclusive ruptures are
+    # modelled with nonparametric sources)
+    if merge_atomic:
+        # with many sites there are no rup_data nor mean_rates_by_src
+        yield baseclassical(grps, sites, cmaker, remove_zeros,
+                            as_rmap=as_rmap)
+    else:
+        # one result per group, since the rates are attributed to the
+        # source of each result (see 'basename' in RmapMaker.make) and
+        # the rup_data of different groups cannot be concatenated
+        # (different shapes of probs_occur); the groups are
+        # independent, so the sum of the results is the same;
+        # tested in classical/case_27_other and disagg/case_18
+        for grp in grps:
+            yield baseclassical([grp], sites, cmaker, remove_zeros,
+                                as_rmap=as_rmap)
+
+
 def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
-                  as_rmap=True):
+                  as_rmap=True, merge_atomic=True):
     """
     Yield the results of a classical task as RateMaps: the CSM is built without
     applying the uncertainties, so cmakers_groups_gkeys applies them one
@@ -379,17 +404,12 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
     :param remove_zeros: if True the sites with zero rates are removed
     :param as_rmap: if False the rates are returned as arrays of rates,
         stored right away by the master, see baseclassical
+    :param merge_atomic: if True the atomic groups of the task are
+        returned in a single result, otherwise in a result per group
     """
     if len(grps) > 1:
-        # the atomic groups collapsed in a single task (see get_allargs)
-        # contribute to the same RateMap in the master, so they must be
-        # returned in a single result, with the gids of all the
-        # realizations; the uncertainties are not applied, which is fine
-        # because the sources of an atomic group are nonparametric (the
-        # mutex ones must be, since mutually exclusive ruptures are
-        # modelled with nonparametric sources) and no uncertainty can be
-        # applied to a nonparametric source (the calculation would fail)
-        yield baseclassical(grps, sites, cmaker, remove_zeros, as_rmap=as_rmap)
+        yield from _atomic_results(grps, sites, cmaker, remove_zeros,
+                                   as_rmap, merge_atomic)
         return
     grp = grps[0]
     if grp.atomic:
@@ -496,8 +516,13 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
     grps, sites, gid_dic, full_lt = read_task_input(
         grp_keys, tilegetter, cmaker, dstore, monitor)
-    yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
-                             remove_zeros=False)
+    # the RateMap in the master is the one of the first group (see
+    # get_rmap), also for the results of the other atomic groups
+    rmap_id = int(grp_keys[0].split('-')[0])
+    for dic in bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                             remove_zeros=False, merge_atomic=False):
+        dic['rmap_id'] = rmap_id
+        yield dic
 
 
 def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -751,8 +776,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 chunkno = dic.get('chunkno')  # None with the current impl.
                 _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
-            # aggregating rates is ultra-fast compared to storing
-            self.rmap[grp_id] += rmap
+            # aggregating rates is ultra-fast compared to storing; NB: the
+            # results of the atomic groups go in the RateMap of the first
+            # group of the task, see classical_bysrc
+            self.rmap[dic.pop('rmap_id', grp_id)] += rmap
         return acc
 
     def create_rup(self):

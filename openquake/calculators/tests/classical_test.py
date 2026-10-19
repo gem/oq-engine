@@ -396,7 +396,9 @@ class ClassicalTestCase(CalculatorTestCase):
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 4)  # 2 x 2
+        # 2 atomic groups x 2 ruptures x 2 probabilities; there were 4
+        # when the ruptures of the second atomic group were not stored
+        self.assertEqual(tot_probs_occur, 8)
 
         # check mean_rates_by_src
         [fname] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
@@ -418,6 +420,22 @@ class ClassicalTestCase(CalculatorTestCase):
         rel = view('relevant_sources:PGV', self.calc.datastore)
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
+
+    def test_case_27_other(self):
+        # the second atomic group has sources named other:03, other:04;
+        # with disagg_by_src the rates of each atomic group must be
+        # attributed to its own source, while they were all attributed to
+        # the first group of the task, i.e. case=0 and other=9.39E-3
+        self.run_calc(case_27.__file__, 'job_other.ini')
+        mrs = self.calc.datastore['mean_rates_by_src']
+        rates = dict(zip(mrs.src_id, mrs.array[0, 0, 0]))  # site 0, PGV
+        aac([rates['case'], rates['other']], [5.1798E-3, 4.2115E-3],
+            rtol=1E-4)
+        # the total is the same as in case_27, where both groups are 'case'
+        aac(rates['case'] + rates['other'], 9.3913E-3, rtol=1E-4)
+        # the ruptures of both atomic groups are stored, see test_case_27
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        self.assertEqual(sum(len(po) for po in probs_occur), 8)
 
     def test_case_27_labels(self):
         # two close sites with different labels and the same gsim: the
