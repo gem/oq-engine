@@ -97,6 +97,9 @@ Event Based Risk
 
 The parameter ``calculation_mode`` needs to be set to ``event_based_risk`` in order to use this calculator.
 
+For calculations that generate a reusable stochastic event set separately
+from the GMFs and risk results, see :ref:`ses-workflows`.
+
 Most of the job configuration parameters required for running a stochastic event based risk calculation are the same as 
 those described in the previous sections for the scenario risk calculator and the classical probabilistic risk calculator. 
 The remaining parameters specific to the stochastic event based risk calculator are illustrated through the example below.
