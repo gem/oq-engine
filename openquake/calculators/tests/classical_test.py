@@ -189,6 +189,19 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(hcurve1, pga1, rtol=3e-6)
         aac(hcurve2, pga2, rtol=3e-6)
 
+    def test_case_06_disagg_by_src(self):
+        # a single site with label Cascadia, affected by both TRTs;
+        # the mean_rates_by_src must be computed with the gsim weights
+        # of the label ([.1, .9, 0] for Active Shallow Crust) and not with
+        # the default ones ([.5, .5, 0]), otherwise they are 36% off
+        self.run_calc(case_06.__file__, 'job_dbs.ini')
+        dstore = self.calc.datastore
+        ae(self.calc.sitecol.ilabel, [1])
+        itime = self.calc.oqparam.investigation_time
+        got = dstore['mean_rates_by_src/array'][0].sum(axis=2)  # (M, L1)
+        exp = calc.disagg.to_rates(dstore['hcurves-stats'][0, 0]) / itime
+        aac(got, exp, atol=1e-6, rtol=1e-4)
+
     def test_case_06_sampling(self):
         # testing oversampling
         self.run_calc(case_06.__file__, 'job.ini',
@@ -383,7 +396,9 @@ class ClassicalTestCase(CalculatorTestCase):
         # make sure probs_occur are stored as expected
         probs_occur = self.calc.datastore['rup/probs_occur'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 4)  # 2 x 2
+        # 2 atomic groups x 2 ruptures x 2 probabilities; there were 4
+        # when the ruptures of the second atomic group were not stored
+        self.assertEqual(tot_probs_occur, 8)
 
         # check mean_rates_by_src
         [fname] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
@@ -405,6 +420,31 @@ class ClassicalTestCase(CalculatorTestCase):
         rel = view('relevant_sources:PGV', self.calc.datastore)
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
+
+    def test_case_27_other(self):
+        # the second atomic group has sources named other:03, other:04;
+        # with disagg_by_src the rates of each atomic group must be
+        # attributed to its own source, while they were all attributed to
+        # the first group of the task, i.e. case=0 and other=9.39E-3
+        self.run_calc(case_27.__file__, 'job_other.ini')
+        mrs = self.calc.datastore['mean_rates_by_src']
+        rates = dict(zip(mrs.src_id, mrs.array[0, 0, 0]))  # site 0, PGV
+        aac([rates['case'], rates['other']], [5.1798E-3, 4.2115E-3],
+            rtol=1E-4)
+        # the total is the same as in case_27, where both groups are 'case'
+        aac(rates['case'] + rates['other'], 9.3913E-3, rtol=1E-4)
+        # the ruptures of both atomic groups are stored, see test_case_27
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        self.assertEqual(sum(len(po) for po in probs_occur), 8)
+
+    def test_case_27_labels(self):
+        # two close sites with different labels and the same gsim: the
+        # atomic groups must be computed for both, while they were
+        # computed only for the last label (0.0049 instead of 0.378)
+        self.run_calc(case_27.__file__, 'job_labels.ini')
+        ae(self.calc.sitecol.ilabel, [0, 1])
+        hc = self.calc.datastore['hcurves-stats'][:, 0, 0, 0]  # PGV
+        aac(hc, [0.3777862, 0.3783247], rtol=1e-5)
 
     def test_case_28(self):
         # Simple fault with hypoDepthDist

@@ -480,7 +480,9 @@ def get_epistemic_sigma(ctx):
     """
     This function gives the epistemic sigma computed following USGS-2014
     approach. Also, note that the events are counted in each magnitude and
-    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
+    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0.
+    Magnitudes below 5 (outside the calibration bins) are assigned the
+    5 <= M < 6 values.
     """
     n = 2
     dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11),
@@ -495,7 +497,7 @@ def get_epistemic_sigma(ctx):
                                  np.where((ctx.rrup > 10) & (ctx.rrup <30),
                                           0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
 
-    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6,
+    sigma_epi = np.where(ctx.mag < 6, dist_func_5_6,
                          np.where((ctx.mag >=6) & (ctx.mag < 7),
                                   dist_func_6_7, dist_func_7_above))
 

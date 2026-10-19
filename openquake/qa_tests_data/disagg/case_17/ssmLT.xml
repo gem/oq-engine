@@ -26,10 +26,11 @@
                 <uncertaintyWeight>0.4</uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
-        <!-- the uncertainty is not applied to the source 1, since the source
-             IDs are 1!b1 and 1!b2 and not 1; however the branchset survives
-             the reduction to the source 1, so the reduced logic tree has a
-             number of realizations different from the original one -->
+        <!-- the uncertainty is applied to both 1!b1 and 1!b2, since the
+             branch suffix is ignored when matching applyToSources; the
+             branchset survives the reduction to the source 1, so the reduced
+             logic tree has a number of realizations different from the
+             original one -->
         <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs3"
                            applyToBranches="e1 e2" applyToSources="1">
             <logicTreeBranch branchID="m_m0.2">
