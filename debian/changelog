@@ -1,9 +1,4 @@
   [Michele Simionato]
-  * With disagg_by_src and site_labels, the sanity check on the number
-    of tiles was skipped, so the mean_rates_by_src could be computed on
-    a subset of the sites; now an error is raised
-  * Fixed the logged cfactor, which was overestimated (by 9 times
-    in logictree/case_18/job_bis)
   * Fixed a bug affecting previous versions of the engine: with few sites
     only the ruptures of the first atomic group of a task were stored,
     so the disaggregation missed the ruptures of the other atomic groups
@@ -16,8 +11,8 @@
     USA model near New Madrid and Memphis
 
   [Anirudh Rao]
-  * Added support for generating regular UTM site grids from exposure, 
-    sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible 
+  * Added support for generating regular UTM site grids from exposure,
+    sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
     with circulant-embedding-based correlated GMF simulations.
 
   [Claudio Schill]
