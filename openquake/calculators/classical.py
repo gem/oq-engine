@@ -204,6 +204,10 @@ def read_full_lt(dstore, ilabel=None):
     try:
         return _full_lt_cache[key]
     except KeyError:
+        # keep only the logic trees of the current calculation, otherwise
+        # the cache would grow forever in long-lived worker processes
+        for k in [k for k in _full_lt_cache if k[0] != dstore.filename]:
+            del _full_lt_cache[k]
         with dstore:
             full_lt = dstore['full_lt'].init()
             if ilabel:
@@ -992,10 +996,11 @@ class ClassicalCalculator(base.HazardCalculator):
             # many sites and the groups are not split in blocks
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
                 self.get_rmap(int(grp_keys[0].split('-')[0]), gids)
-            if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
+            if self.few_sites or oq.disagg_by_src:
                 # NB: a group discarded by the prefiltering has no tiles
                 # at all, which is fine since it produces no rate; however
-                # two or more tiles would silently corrupt disagg_by_src
+                # two or more tiles would silently corrupt disagg_by_src,
+                # also with site labels (see get_rates)
                 assert len(tilegetters) <= 1, (
                     'disagg_by_src has %d tiles for group %s'
                     % (len(tilegetters), grp_keys))
