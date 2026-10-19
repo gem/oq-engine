@@ -11,6 +11,11 @@
     computed only for the sites of the last label. This affects the
     USA model near New Madrid and Memphis
 
+  [Anirudh Rao]
+  * Added support for generating regular UTM site grids from exposure, 
+    sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible 
+    with circulant-embedding-based correlated GMF simulations.
+
   [Claudio Schill]
   * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
     ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the

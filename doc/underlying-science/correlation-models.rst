@@ -226,6 +226,36 @@ a larger periodic grid produces a block-circulant with circulant blocks (BCCB)
 covariance while preserving all covariances between cells in the original
 grid.
 
+A regular grid here means equal steps along fixed Cartesian axes, not simply
+regular longitude/latitude coordinates. For example, two cells separated by
+one column must have the same displacement wherever they occur in the grid.
+Geographic grids built by stepping along parallels and meridians, including
+the engine's existing region grid builder, do not generally satisfy this
+condition: the physical displacement associated with a row/column offset can
+vary with location. Using geographic pairwise distances instead would in
+general lose the repeated covariance structure required by this FFT method.
+
+The OpenQuake engine therefore uses one local UTM projection for the whole
+grid and evaluates covariance lags using Euclidean distances in that plane.
+UTM is an implementation choice, not a requirement of circulant embedding
+itself; other suitable planar projections could be supported if used
+consistently throughout grid preparation and sampling. Projected distances
+approximate distances on the Earth's surface, so even a valid embedding is
+exact for the chosen planar covariance, not an exact geodesic covariance.
+The projection must remain suitable for the geographic extent of the grid.
+This concerns correlation sampling; it does not replace the rupture-distance
+calculations used by ground-motion models or distance filtering.
+
+``oq prepare_site_model`` can build such a grid with ``--regular-grid`` or
+directly from a rupture with ``--rupture``. It lays out the cells in UTM before
+converting them back to longitude and latitude for the site-model CSV. Reading
+that CSV does not change the underlying projected lattice. In rupture mode,
+``--maximum-distance`` defines the requested site-grid extent by expanding the
+projected rupture bounds. This is separate from the larger periodic grid
+constructed internally for CE: that computational padding is not part of the
+site-model CSV. Station locations do not need to lie on the requested lattice;
+off-grid stations are handled separately as described below.
+
 An FFT changes the spatial representation from grid cells to sinusoidal
 spatial frequencies. In this representation, the large BCCB matrix separates
 into one small :math:`M \times M` spectral covariance matrix for every
