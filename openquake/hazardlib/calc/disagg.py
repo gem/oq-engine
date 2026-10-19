@@ -766,7 +766,7 @@ def disaggregation(
     scenarios classified in terms of:
 
     - rupture magnitude
-    - Joyner-Boore distance from rupture surface to site
+    - Closest distance to rupture surface
     - longitude and latitude of the surface projection of a rupture's point
       closest to ``site``
     - epsilon: number of standard deviations by which an intensity measure
