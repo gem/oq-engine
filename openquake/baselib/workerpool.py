@@ -110,24 +110,9 @@ class WorkerMaster(object):
                         else '')
         self.popens = []
 
-    def _hosts(self):
-        # returns the triples (host, port, cores) of the workerpools;
-        # with a swarm the nodes change over time, so docker is asked
-        if not self.service:
-            return self.host_cores
-        out = _docker('service', 'ps', self.service, '--filter',
-                      'desired-state=running', '--format', '{{.Node}}')
-        nodes = sorted(set(out.split()))
-        if not nodes:
-            return []
-        # NB: the master must be a swarm manager to inspect the nodes
-        addrs = _docker('node', 'inspect', '--format',
-                        '{{.Status.Addr}}', *nodes).split()
-        return [(addr, self.ctrl_port, '-1') for addr in addrs]
-
     def _running(self):
         # yields (host, port, ctrl_url) for the workerpools already running
-        for host, port, _ in self._hosts():
+        for host, port, _ in self.host_cores:
             if general.socket_ready((host, port)):
                 yield host, port, 'tcp://%s:%s' % (host, port)
 
@@ -243,7 +228,7 @@ class WorkerMaster(object):
         """
         Send an asynchronous "run_jobs" command to the first WorkerPool
         """
-        host, port, _cores = self._hosts()[0]
+        host, port, _cores = self.host_cores[0]
         ctrl_url = 'tcp://%s:%s' % (host, port)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
             return sock.send('run_jobs')
@@ -252,7 +237,7 @@ class WorkerMaster(object):
         """
         Wait until all workers are active
         """
-        num_hosts = len(self._hosts())
+        num_hosts = len(self.host_cores)
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
@@ -284,7 +269,7 @@ class WorkerMaster(object):
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
-            hosts = self._hosts()
+            hosts = self.host_cores
             ntasks = len(hosts) * 2
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:

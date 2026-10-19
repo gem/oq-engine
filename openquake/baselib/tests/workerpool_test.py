@@ -47,28 +47,24 @@ class ParseHostcoreTestCase(unittest.TestCase):
 
 
 def fake_docker(*args, check=False):
-    # the global service runs one task on each of the two nodes
-    if args[:2] == ('service', 'ps'):
-        return 'node2\nnode1\nnode2\n'
-    if args[:2] == ('node', 'inspect') and 'NanoCPUs' in args[3]:
-        return '8000000000\n4000000000'  # 8 and 4 cores
+    # the swarm has two nodes, with 8 and 4 cores
     if args[:2] == ('node', 'inspect'):
-        addrs = {'node1': '10.0.0.1', 'node2': '10.0.0.2'}
-        return '\n'.join(addrs[node] for node in args[4:])
+        return '8000000000\n4000000000'
     if args[:2] == ('node', 'ls'):
         return 'id1\nid2'
     return ''
 
 
-class SwarmHostsTestCase(unittest.TestCase):
+class SwarmTestCase(unittest.TestCase):
     def test_hosts(self):
-        zworkers = dict(ctrl_port='1909', host_cores='',
+        # the nodes are the static host_cores, also with a swarm
+        zworkers = dict(ctrl_port='1909',
+                        host_cores='10.0.0.1 -1,10.0.0.2 -1',
                         swarm_image='oq-engine')
-        with mock.patch('openquake.baselib.workerpool._docker', fake_docker):
-            master = WorkerMaster(zworkers)
-            self.assertEqual(master._hosts(),
-                             [('10.0.0.1', 1909, '-1'),
-                              ('10.0.0.2', 1909, '-1')])
+        master = WorkerMaster(zworkers)
+        self.assertEqual(master.host_cores,
+                         [('10.0.0.1', 1909, '-1'),
+                          ('10.0.0.2', 1909, '-1')])
 
     def test_memory(self):
         # 2.5 GB per core on the smallest node, which has 4 cores
