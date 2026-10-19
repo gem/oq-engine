@@ -32,8 +32,6 @@
          - nfs-common
          - python3
          - python3-venv
-         - openssh-client
-         - openssh-server
          - git
          - acl
          - strace
@@ -73,7 +71,6 @@
           - git
           - wget
           - rsync
-          - openssh-server
           - python311
           - strace
           - htop
@@ -83,21 +80,12 @@
       when:
         - ansible_facts['distribution'] == 'Rocky'
 
-    - name: Config and Start sshd
-      systemd:
-        name: sshd
-        enabled: yes
-        state: restarted
-
-    - name: Ensure user openquake exist and generate ssh key
+    - name: Ensure user openquake exist
       user:
         name: openquake
         home: /home/openquake
         shell: /bin/bash
         state: present
-        generate_ssh_key: yes
-        ssh_key_bits: 2048
-        ssh_key_file: .ssh/id_rsa
 
     - name: Add IP address of all hosts to all hosts
       lineinfile:
