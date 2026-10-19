@@ -219,6 +219,18 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
+def parse_hostcore(hostcore, default_port):
+    """
+    :param hostcore: a string "host cores" or "host:port cores"
+    :param default_port: the ctrl_port to use if the port is missing
+    :returns: a triple (host, port, cores) with port an integer
+    """
+    hostport, cores = hostcore.split()
+    host, sep, port = hostport.partition(':')
+    # without an explicit port the default ctrl_port is used
+    return host, (int(port) if sep else int(default_port)), cores
+
+
 def calc_dir(job_id_or_fname):
     """
     :param job_id_or_fname: job ID (integer) or .hdf5 pathname (string)
@@ -255,8 +267,8 @@ def processpool_submit(self, func, args, monitor):
 @submit.add('zmq', 'slurm')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    host = host_cores[idx].split()[0]
-    port = int(config.zworkers.ctrl_port)
+    host, port, _cores = parse_hostcore(
+        host_cores[idx], config.zworkers.ctrl_port)
     dest = 'tcp://%s:%d' % (host, port)
     logging.debug('Sending to %s', dest)
     with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
@@ -1075,9 +1087,9 @@ class Starmap(object):
                 # measure the memory only for 1 task out of 10
                 # with 8 nodes the time to get the memory is 0.01 secs
                 for line in host_cores:
-                    host, _cores = line.split()
-                    addr = 'tcp://%s:%s' % (
-                        host, config.zworkers.ctrl_port)
+                    host, port, _cores = parse_hostcore(
+                        line, config.zworkers.ctrl_port)
+                    addr = 'tcp://%s:%s' % (host, port)
                     with Socket(addr, zmq.REQ, 'connect') as sock:
                         mem_gb += sock.send('memory_gb')
         elif self._shared:
