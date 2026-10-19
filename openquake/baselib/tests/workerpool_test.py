@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import time
+import os
 import unittest
-from openquake.baselib import config
+from openquake.baselib import config, parallel
 from openquake.baselib.workerpool import WorkerMaster, ssh_args
 from openquake.baselib.parallel import Starmap, parse_hostcore
-from openquake.baselib.general import socket_ready
 
 
-def double(x):
-    return 2 * x
+def whoami(x):
+    # the parent of a worker process is the workerpool process
+    return os.getppid()
 
 
 class ParseHostcoreTestCase(unittest.TestCase):
@@ -47,31 +47,36 @@ class ParseHostcoreTestCase(unittest.TestCase):
 
 
 class WorkerPoolTestCase(unittest.TestCase):
+    # two workerpools on the same host, on the two ports after ctrl_port
     @classmethod
     def setUpClass(cls):
         cls.z = config.zworkers.copy()
-        cls.z['host_cores'] = '127.0.0.1 4'
-        hostport = '127.0.0.1', int(cls.z['ctrl_port']) + 1
-        if not socket_ready(hostport):
-            raise unittest.SkipTest('The task streamer is off')
+        base = int(cls.z['ctrl_port'])
+        cls.ports = [base, base + 1]
+        cls.z['host_cores'] = '127.0.0.1:%d 2,127.0.0.1:%d 2' % tuple(
+            cls.ports)
+        cls.host_cores = parallel.host_cores[:]
+        parallel.host_cores[:] = cls.z['host_cores'].split(',')
         cls.master = WorkerMaster(cls.z)
         cls.master.start()
+        cls.status = cls.master.wait(30)
 
     def test(self):
         iterargs = ((i,) for i in range(10))
-        smap = Starmap(double, iterargs, distribute='zmq')
-        self.assertEqual(sum(res for res in smap), 90)
-        # sum[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+        smap = Starmap(whoami, iterargs, distribute='zmq')
+        # the tasks alternate between the two workerpools
+        pids = {pid for pid in smap}
+        self.assertEqual(pids, {p.pid for p in self.master.popens})
 
     def test_status(self):
-        time.sleep(1)  # wait a bit for the workerpool to start
-        status = self.master.status()
-        self.assertEqual(len(status), 1)
-        host_port, _running, total = status[0]
-        self.assertEqual(host_port, '127.0.0.1:%s' % self.z['ctrl_port'])
-        self.assertEqual(total, 4)  # host_cores is '127.0.0.1 4'
+        self.assertEqual(
+            self.status,
+            [('127.0.0.1:%d' % port, 0, 2) for port in self.ports])
 
     @classmethod
     def tearDownClass(cls):
+        procs = list(cls.master.popens)
         cls.master.stop()
-        config.zworkers = cls.z
+        parallel.host_cores[:] = cls.host_cores
+        # the workerpools must exit on their own after the stop command
+        assert [p.returncode for p in procs] == [0, 0], procs
