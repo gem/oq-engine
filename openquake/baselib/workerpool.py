@@ -24,6 +24,8 @@ import subprocess
 from datetime import timezone
 from concurrent.futures import ProcessPoolExecutor
 import psutil
+from importlib.metadata import version, PackageNotFoundError
+from packaging.requirements import Requirement
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
 try:
@@ -33,6 +35,38 @@ except ImportError:
         "Do nothing"
 
 UTC = timezone.utc
+# the repository root, where the requirements files are (if it is a checkout)
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))))
+
+
+def missing_requirements(fname):
+    """
+    :param fname: a pip requirements file
+    :returns: the names of the requirements which are not installed with
+              the version required, or with a marker valid on this platform
+    """
+    missing = []
+    with open(fname) as f:
+        lines = [ln.split('#')[0].strip() for ln in f]
+    for line in lines:
+        if not line or line.startswith('-'):  # blank line or pip option
+            continue
+        if '://' in line:  # a wheel URL: name and version are in its name
+            url, _, marker = line.partition(';')
+            name, ver = os.path.basename(url.strip()).split('-')[:2]
+            line = f'{name}=={ver}' + (f';{marker}' if marker else '')
+        req = Requirement(line)
+        if req.marker and not req.marker.evaluate():
+            continue
+        try:
+            installed = version(req.name)
+        except PackageNotFoundError:
+            missing.append(req.name)
+            continue
+        if not req.specifier.contains(installed, prereleases=True):
+            missing.append(req.name)
+    return missing
 
 
 def init_workers():
@@ -400,6 +434,13 @@ def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     # docker sends SIGTERM when a node is drained: stop as with "stop",
     # since SystemExit ends the control loop and WorkerPool.stop is called
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))
+    # the code may be read from the master, while the dependencies come
+    # from the image: exit early if some of them are missing
+    reqs = os.path.join(ROOT, 'requirements-py%d%d-linux64.txt' %
+                        sys.version_info[:2])
+    missing = missing_requirements(reqs) if os.path.exists(reqs) else []
+    if missing:
+        sys.exit('Missing requirements: %s' % ', '.join(missing))
     # 0 means use the ctrl_port in the configuration
     port = ctrl_port or int(config.zworkers['ctrl_port'])
     # NB: unexpected errors will appear in the worker service log

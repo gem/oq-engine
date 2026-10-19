@@ -17,10 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import tempfile
 import unittest
 from unittest import mock
 from openquake.baselib import config, parallel, zeromq as z
-from openquake.baselib.workerpool import WorkerMaster
+from openquake.baselib.workerpool import WorkerMaster, missing_requirements
 from openquake.baselib.parallel import Starmap, parse_hostcore
 
 
@@ -37,6 +38,25 @@ class ParseHostcoreTestCase(unittest.TestCase):
     def test_explicit_port(self):
         self.assertEqual(parse_hostcore('127.0.0.1:1910 -1', '1909'),
                          ('127.0.0.1', 1910, '-1'))
+
+
+class RequirementsTestCase(unittest.TestCase):
+    def test_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fname = os.path.join(tmp, 'requirements.txt')
+            with open(fname, 'w') as f:
+                f.write('numpy>=1  # installed\n'
+                        '-r other.txt\n'
+                        'no-such-package-xyz>=1\n'
+                        'numpy>=999\n'
+                        'numpy>=999 ; python_version < "3"\n'
+                        'https://x/no_such_wheel-1.0-py3-none-any.whl'
+                        ' ; sys_platform == "linux"\n'
+                        'https://x/no_such_wheel2-1.0-py3-none-any.whl'
+                        ' ; sys_platform == "win32"\n')
+            self.assertEqual(missing_requirements(fname),
+                             ['no-such-package-xyz', 'numpy',
+                              'no_such_wheel'])
 
 
 def fake_docker(*args, check=False):

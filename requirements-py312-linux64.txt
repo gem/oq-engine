@@ -59,7 +59,7 @@ https://wheelhouse.openquake.org/unified/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/pyflakes-3.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/pyparsing-3.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/unified/pyreadline3-3.4.1-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/pyreadline3-3.4.1-py3-none-any.whl ; sys_platform == "win32"
 https://wheelhouse.openquake.org/unified/pytest-9.0.3-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/python_pam-2.0.2-py3-none-any.whl
