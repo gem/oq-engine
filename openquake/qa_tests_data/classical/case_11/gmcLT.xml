@@ -4,13 +4,44 @@
   <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                       applyToTectonicRegionType="Active Shallow Crust">
 
-    <logicTreeBranch branchID="grid_adjusted">
+    <!-- Low: mean shifted by -1.732 * per-cell SE -->
+    <logicTreeBranch branchID="grid_adjusted_low">
       <uncertaintyModel>
         [GridAdjustedGMPE]
         gmpe_name = "AkkarEtAlRjb2014"
         grid_hdf5_file = "grid_adjustments.hdf5"
+        epsilons.dL2L = -1.732
+        epsilons.dS2S = -1.732
+        epsilons.adj_per_km = -1.732
       </uncertaintyModel>
-      <uncertaintyWeight>1.0</uncertaintyWeight>
+      <uncertaintyWeight>0.167</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <!-- Central: fitted per-cell adjustments applied on top of the
+         ergodic backbone, no epistemic SE shift -->
+    <logicTreeBranch branchID="grid_adjusted_central">
+      <uncertaintyModel>
+        [GridAdjustedGMPE]
+        gmpe_name = "AkkarEtAlRjb2014"
+        grid_hdf5_file = "grid_adjustments.hdf5"
+        epsilons.dL2L = 0.0
+        epsilons.dS2S = 0.0
+        epsilons.adj_per_km = 0.0
+      </uncertaintyModel>
+      <uncertaintyWeight>0.666</uncertaintyWeight>
+    </logicTreeBranch>
+
+    <!-- High: mean shifted by +1.732 * per-cell SE -->
+    <logicTreeBranch branchID="grid_adjusted_high">
+      <uncertaintyModel>
+        [GridAdjustedGMPE]
+        gmpe_name = "AkkarEtAlRjb2014"
+        grid_hdf5_file = "grid_adjustments.hdf5"
+        epsilons.dL2L = 1.732
+        epsilons.dS2S = 1.732
+        epsilons.adj_per_km = 1.732
+      </uncertaintyModel>
+      <uncertaintyWeight>0.167</uncertaintyWeight>
     </logicTreeBranch>
 
   </logicTreeBranchSet>

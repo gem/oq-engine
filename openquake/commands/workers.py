@@ -18,8 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import getpass
-from openquake.baselib import config, workerpool, parallel as p
+from openquake.baselib import config, use_server, workerpool, parallel as p
 from openquake.commonlib import logs
 
 CHOICES = 'start stop status restart wait kill debug'.split()
@@ -29,9 +28,8 @@ def main(cmd, job_id: int=-1):
     """
     start/stop the workers, or return their status
     """
-    if (cmd != 'status' and config.multi_user and
-            getpass.getuser() not in 'openquake'):
-        sys.exit('oq workers only works in single user mode')
+    if cmd != 'status' and use_server():
+        sys.exit('oq workers only works in single user mode or for openquake')
     dist = p.oq_distribute()
     if dist == 'zmq':
         master = workerpool.WorkerMaster(config.zworkers)

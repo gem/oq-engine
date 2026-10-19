@@ -658,6 +658,10 @@ def get_distances_planar(planar, sites, dist_type):
     :param dist_type: kind of distance to compute
     :returns: an array of distances of shape (U, N)
     """
+    if dist_type in ('rtor', 'x_l'):
+        raise ValueError(
+            '%r requires a surface trace and is not defined for planar '
+            'ruptures' % dist_type)
     getdist = globals()['get_' + dist_type]
     return getdist(planar, sites.xyz)
 

@@ -8,7 +8,7 @@ on:
         required: true
       debug_enabled:
         type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        description: 'Enable debug Session'
         required: false
         default: false
   schedule:
@@ -36,10 +36,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup debugging session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Run Installation of oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
@@ -60,6 +56,12 @@ jobs:
           for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
               cp -- "$file" "${file%.default.tmpl}"
           done
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Test WebUI and run https calculation
         run: |
           source ~/openquake/bin/activate
@@ -74,14 +76,17 @@ jobs:
           cd openquake/server
           cat > local_settings.py << EOF
           APPLICATION_MODE = 'RESTRICTED'
+          # No emails are sent in this workflow; don't require SMTP credentials.
+          EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
           WEBUI_USER = 'runner'
           WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
           DEBUG = True
           EOF
           echo "DISPLAY content of local_settings"
           cat local_settings.py
-          # START WEBUI
-          oq webui start 127.0.0.1:8800 -s &
+          # GITHUB_ACTIONS sets settings.TEST, which skips local_settings.py.
+          # Unset it so the WebUI starts with the restricted-mode settings above.
+          env -u GITHUB_ACTIONS oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z localhost 8800; do
             sleep 5 # wait for 1/10 of the second before check again
@@ -90,8 +95,10 @@ jobs:
           sleep 1
           # Perform migration after setup local_settings
           cd /home/runner/work/oq-engine/oq-engine/openquake/server
-          python manage.py migrate
-          sleep 1
+          # GITHUB_ACTIONS sets settings.TEST, which skips local_settings.py.
+          # Unset it so the WebUI starts with the restricted-mode settings above.
+          env -u GITHUB_ACTIONS python manage.py migrate
+          sleep 30
           curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
           echo -n "Test Standalone Tools pages"
           curl --fail -I -L -X GET http://127.0.0.1:8800/
@@ -166,7 +173,6 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
@@ -212,7 +218,7 @@ jobs:
           set -e
           source ~/openquake/bin/activate
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
-          pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          pip install pytest flake8 https://wheelhouse.openquake.org/unified/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           pytest -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5 openquake/calculators
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib}
@@ -263,7 +269,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           curl -O https://downloads.openquake.org/test_data/exposure.hdf5
-          pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
           # Starting the webui here is not needed by test_public_mode,
           # but here we also want to check that the webui starts without errors
@@ -273,12 +279,12 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
           done
           pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
-          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_public_mode.py
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -318,12 +324,12 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_read_only_mode.py
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -370,16 +376,17 @@ jobs:
           OQ_APPLICATION_MODE: AELO
         run: |
           source ~/openquake/bin/activate
+          python -m pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
-          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
   server_impact_mode:
     runs-on: ${{ matrix.os }}
-    needs: engine
+    needs: webUI
     strategy:
       matrix:
         os: [ubuntu-24.04]
@@ -417,6 +424,10 @@ jobs:
           else
             python install.py devel --version master
           fi
+          source ~/openquake/bin/activate
+          PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
+          echo $PY_VER
+          python -m pip install -r requirements-impact-$PY_VER-linux64.txt
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
@@ -429,11 +440,16 @@ jobs:
           set -x
           date
           wget https://downloads.openquake.org/test_data/exposure.hdf5
+          wget https://downloads.openquake.org/test_data/worldcities.csv
+          wget https://downloads.openquake.org/test_data/countries_info.csv
+          wget https://downloads.openquake.org/test_data/World_Adm1_updated.gpkg
+          wget https://downloads.openquake.org/test_data/fonts.zip
+          unzip fonts.zip
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
-          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/unified/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py

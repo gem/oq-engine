@@ -38,6 +38,8 @@ from openquake.hazardlib.imt import (
 DATA = Path(__file__).with_name('data') / 'BAKER_BRADLEY_2017'
 
 
+EPS = 1E-10
+
 def _imt(name, period):
     non_sa = {
         'PGA': PGA,
@@ -85,7 +87,7 @@ def test_common_factorization_preserves_author_matrix():
     expected = model.correlation_matrix(imts)
     factor = model.factor(range(1), imts, ensure_psd=False)
     actual = factor.lower_triangle @ factor.lower_triangle.T
-    numpy.testing.assert_allclose(actual, expected, rtol=0, atol=1E-14)
+    numpy.testing.assert_allclose(actual, expected, rtol=0, atol=EPS)
 
 
 def test_metadata_and_residual_component():

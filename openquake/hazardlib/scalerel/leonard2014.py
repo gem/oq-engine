@@ -67,6 +67,27 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
             # Dip slip (thrust or normal), and undefined rake
             return log10(area) + 4.19
 
+    def get_median_width(self, mag, rake=None):
+        """
+        Return median rupture width (km) from magnitude for stable
+        continental regions, ``log10(W) = (mag - a) / 2.5`` with
+        ``a = 4.22`` for strike-slip and ``a = 4.14`` for dip-slip faults.
+
+        Added for PR-2 of the oq-engine integration plan; the width rows
+        ``MSR = 1`` of Mammarella et al. (2024) Table 1.
+        """
+        if rake is None:
+            a = 0.5 * (4.22 + 4.14)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            a = 4.22
+        else:
+            a = 4.14
+        return 10.0 ** ((mag - a) / 2.5)
+
+    def get_std_dev_width(self, mag, rake=None):
+        """Return the log10 standard deviation of rupture width."""
+        return 0.15
+
     def get_std_dev_mag(self, area, rake):
         """
         Returns zero for now
@@ -115,6 +136,27 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
         else:
             # Dip slip (thrust or normal), and undefined rake
             return log10(area) + 4.00
+
+    def get_median_width(self, mag, rake=None):
+        """
+        Return median rupture width (km) from magnitude for interplate
+        faults, ``log10(W) = (mag - a) / 2.5`` with ``a = 3.88`` for
+        strike-slip and ``a = 3.63`` for dip-slip faults.
+
+        Added for PR-2 of the oq-engine integration plan; the width rows
+        ``MSR = 0`` of Mammarella et al. (2024) Table 1.
+        """
+        if rake is None:
+            a = 0.5 * (3.88 + 3.63)
+        elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+            a = 3.88
+        else:
+            a = 3.63
+        return 10.0 ** ((mag - a) / 2.5)
+
+    def get_std_dev_width(self, mag, rake=None):
+        """Return the log10 standard deviation of rupture width."""
+        return 0.15
 
     def get_std_dev_mag(self, area, rake):
         """

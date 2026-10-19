@@ -24,10 +24,42 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.stats import norm_cdf, truncnorm_sf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
-from openquake.commonlib.oqvalidation import check_same_levels
+
+# Log-spaced rock IMTL grid used in the amp convolution: the adjacent
+# ratio is shrunk from the tightest soil-amplevel ratio (safety margin
+# so the rock grid is strictly finer than any soil bin), then clamped
+# to [MIN, MAX]. Used by Amplifier.amplify_one and mirrored in
+# disagg._amp_poes_by_eps.
+IMTL_GRID_SHRINK_FACTOR = 0.9
+IMTL_GRID_MIN_RATIO = 1.05
+IMTL_GRID_MAX_RATIO = 1.1
 
 
-class AmplFunction():
+def check_same_levels(imtls):
+    """
+    :param imtls: a dictionary (or dict-like) imt -> imls
+    :returns: the periods and the levels
+    :raises: a ValueError if the levels are not the same across all IMTs
+    """
+    if not imtls:
+        raise ValueError('There are no intensity_measure_types_and_levels!')
+    imls = imtls[next(iter(imtls))]
+    for imt in imtls:
+        if not imt.startswith(('PGA', 'SA')):
+            raise ValueError('Site amplification works only with '
+                             'PGA and SA, got %s' % imt)
+        if (imtls[imt] == 0).all():
+            raise ValueError(
+                'You forgot to set intensity_measure_types_and_levels!')
+        elif len(imtls[imt]) != len(imls) or any(
+                l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
+            raise ValueError('Site amplification works only if the '
+                             'levels are the same across all IMTs')
+    periods = [from_string(imt).period for imt in imtls]
+    return periods, imls
+
+
+class AmplificationFunction():
     """
     Class for managing an amplification function DataFrame.
 
@@ -54,7 +86,7 @@ class AmplFunction():
         :param soil:
             A string
         :returns:
-            A :class:`openquake.hazardlib.site_amplification.AmplFunction`
+            A :class:`openquake.hazardlib.site_amplification.AmplificationFunction`
             instance
         """
         # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
@@ -72,7 +104,7 @@ class AmplFunction():
                   'from_rrup': float, 'level': float, 'imt': str,
                   'median': float, 'std': float}
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
-        return AmplFunction(df, soil)  # requires reset_index
+        return AmplificationFunction(df, soil)  # requires reset_index
 
     @classmethod
     def read_df(cls, csvfname):
@@ -296,9 +328,11 @@ class Amplifier(object):
         min_gm = numpy.amin(self.imtls[imt])
         max_gm = numpy.amax(self.imtls[imt])
 
-        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
-                               numpy.array(self.amplevels[:-1]))*0.9
-        min_ratio = min(max(min_ratio, 1.05), 1.1)
+        min_ratio = numpy.amin(
+            numpy.array(self.amplevels[1:]) /
+            numpy.array(self.amplevels[:-1])) * IMTL_GRID_SHRINK_FACTOR
+        min_ratio = min(max(min_ratio, IMTL_GRID_MIN_RATIO),
+                        IMTL_GRID_MAX_RATIO)
         allimls = [min_gm]
         while allimls[-1] < max_gm:
             allimls.append(allimls[-1]*min_ratio)

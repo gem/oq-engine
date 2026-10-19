@@ -26,6 +26,8 @@ from openquake.hazardlib.scalerel import WC1994
 aac = numpy.testing.assert_allclose
 
 
+EPS = 1E-11
+
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, strike, dip, corners, exc, msg):
         with self.assertRaises(exc) as ae:
@@ -362,7 +364,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists, atol=1E-11)
+        aac(dists, expected_dists, atol=EPS)
 
     def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
@@ -370,7 +372,7 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
                                        Point(-90.33, 0)])
         dists = surface.get_rx_distance(sites)
         expected_dists = [0] * 3
-        aac(dists, expected_dists, atol=1E-11)
+        aac(dists, expected_dists, atol=EPS)
 
     def test6_one_degree_distance(self):
         surface = self._test1to7surface()

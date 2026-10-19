@@ -798,7 +798,6 @@ class KuehnEtAl2020SInter(GMPE):
                    account for aleatory variability associated with non-linear
                    site amplification
     """
-    experimental = True
 
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE

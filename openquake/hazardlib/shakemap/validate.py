@@ -24,7 +24,9 @@ import numpy
 from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
-from openquake.hazardlib.shakemap.parsers import get_rup_dic
+from openquake.commonlib.readinput import get_close_mosaic_models
+from openquake.hazardlib.shakemap.parsers import (
+    get_nodal_planes_and_product, get_rup_dic)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -50,6 +52,8 @@ class ImpactParam:
     mosaic_model: str = None
     trt: str = None
     description: str = None
+    notes: str = None
+    make_impact_reports: bool = False
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -80,6 +84,7 @@ class ImpactParam:
         params = dict(
             base_path='',  # no .ini file
             description=self.description,
+            notes=self.notes,
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
             time_event=self.time_event,
@@ -91,6 +96,7 @@ class ImpactParam:
                 self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
+            make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
             fname = general.gettemp(suffix='.npy')
@@ -129,6 +135,7 @@ IMPACT_FORM_LABELS = {
     'rupture_file': 'Rupture model XML',
     'use_shakemap': 'Use the ShakeMap',
     'shakemap_version': 'ShakeMap version',
+    'shakemap_desc': 'ShakeMap description',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
@@ -152,7 +159,9 @@ IMPACT_FORM_LABELS = {
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
     'description': 'Description',
+    'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
+    'make_impact_reports': 'Make one-page country reports',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -182,6 +191,7 @@ IMPACT_FORM_PLACEHOLDERS = {
     'nodal_plane': '',
     'msr': '',
     'description': 'Leave blank to set automatically',
+    'notes': '',
 }
 
 IMPACT_FORM_DEFAULTS = {
@@ -231,6 +241,7 @@ msr_choices = [msr.__class__.__name__
 
 validators = {
     'approach': valid.Choice(*IMPACT_APPROACHES),
+    'nodal_plane': valid.Choice('NP1', 'NP2'),
     'usgs_id': valid.simple_id,
     'lon': nrml_validators['lon'],
     'lat': nrml_validators['lat'],
@@ -253,6 +264,8 @@ validators = {
     'ses_seed': valid.positiveint,
     'maximum_distance_stations': valid.positivefloat,
     'description': valid.utf8,  # if empty, it will be set automatically
+    'notes': valid.utf8,
+    'make_impact_reports': valid.boolean,
 }
 
 
@@ -261,8 +274,8 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     inputdic = dict(
-        approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-        mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+        approach=None, nodal_plane=None, usgs_id=None, lon=None, lat=None,
+        dep=None, mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
         strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
@@ -271,7 +284,7 @@ def _validate(POST):
             value = validation_func(POST.get(field))
         except Exception as exc:
             blankable = ['dip', 'strike', 'maximum_distance_stations',
-                         'local_timestamp']
+                         'local_timestamp', 'notes']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
                     inputdic[field] = None
@@ -322,6 +335,30 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
+def _apply_nodal_plane(inputdic, user, monitor):
+    """Add selected USGS plane geometry and product provenance."""
+    nodal_plane = inputdic.get('nodal_plane')
+    if not nodal_plane:
+        return {}
+    if inputdic['approach'] != 'build_rup_from_usgs':
+        return {'status': 'failed', 'error_msg':
+                'A nodal plane requires approach=build_rup_from_usgs'}
+    planes, info, product, err = get_nodal_planes_and_product(
+        inputdic['usgs_id'], user, monitor)
+    if err:
+        return err
+    if nodal_plane not in planes:
+        return {'status': 'failed', 'error_msg':
+                f'{nodal_plane} is not available for {inputdic["usgs_id"]}'}
+    for key, value in info.items():
+        if inputdic.get(key) is None:
+            inputdic[key] = float(value)
+    inputdic.update(planes[nodal_plane])
+    inputdic['aspect_ratio'] = inputdic.get('aspect_ratio') or 2.0
+    inputdic['mechanism_product'] = product
+    return {}
+
+
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                     monitor=performance.Monitor()):
     """
@@ -342,13 +379,13 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         inputdic['approach'] = 'use_shakemap_from_usgs'
     else:
         inputdic['approach'] = POST['approach']
+    err = _apply_nodal_plane(inputdic, user, monitor)
+    if err:
+        return None, inputdic, params, err
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
-    if 'shakemap_version' in POST:
-        shakemap_version = POST['shakemap_version']
-    else:
-        shakemap_version = 'usgs_preferred'
+    shakemap_version = POST.get('shakemap_version') or 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(
         inputdic, user, use_shakemap, shakemap_version, rupture_file, monitor)
@@ -364,7 +401,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                    os.path.join(MOSAIC_DIR, 'exposure.hdf5'))
     with monitor('get_close_mosaic_models'):
         try:
-            mosaic_models = readinput.get_close_mosaic_models(
+            mosaic_models = get_close_mosaic_models(
                 rupdic['lon'], rupdic['lat'], 5)
         except ValueError as exc:
             # e.g.:
@@ -379,6 +416,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['rupture_was_loaded'] = rup is not None
     if 'description' in inputdic and inputdic['description']:
         params['description'] = inputdic['description']
+    if 'notes' in inputdic:
+        params['notes'] = inputdic['notes']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file

@@ -7,6 +7,7 @@
   gather_facts: yes
   become: yes
   vars:
+    ansible_stdout_callback: yaml
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_host']}}"

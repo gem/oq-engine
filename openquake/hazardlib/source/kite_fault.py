@@ -23,6 +23,7 @@ import numpy as np
 from typing import Tuple
 from openquake.baselib import general
 from openquake.hazardlib import mfd
+from openquake.hazardlib.codes import KITE_FAULT
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.kite_fault import (
@@ -85,7 +86,7 @@ class KiteFaultSource(ParametricSeismicSource):
     """
     Kite fault source
     """
-    code = b'K'
+    code = KITE_FAULT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'adjust_mfd_from_slip',

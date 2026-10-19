@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType='*'>
+                <!-- mgmpe is enacted from the job file (with_betw_ratio) but
+                     the branch is already an mgmpe -->
+                <logicTreeBranch branchID="mgmpe_wrapped_in_mgmpe">
+                    <uncertaintyModel>
+                    [ModifiableGMPE]
+                    gmpe.YenierAtkinson2015BSSA = {}
+                    sigma_model_alatik2015 = {}
+                </uncertaintyModel>
+                    <uncertaintyWeight>0.500</uncertaintyWeight>
+                </logicTreeBranch>
+                <!-- NGAEastAUS23_vs3000 is an alias of mgmpe with a modified
+                     Stewart 2020 site term -->
+                <logicTreeBranch branchID="mgmpe_is_gsim_parent_class">
+                    <uncertaintyModel>
+                    NGAEastAUS23_vs3000
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.500</uncertaintyWeight>
+                </logicTreeBranch>
+           </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

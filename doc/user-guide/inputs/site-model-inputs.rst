@@ -127,5 +127,61 @@ We used this feature to split the ESHM20 model in two parts (Northern Europe and
 full hazard map was as trivial as joining the generated CSV files. Without the ``custom_site_id`` the site IDs would 
 overlap, thus making impossible to join the outputs.
 
-A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the 
+A geohash string (see https://en.wikipedia.org/wiki/Geohash) makes a good ``custom_site_id`` since it can enable the
 unique identification of all potential sites across the globe.
+
+Amplification logic trees
+-------------------------
+
+Since engine v3.27, ``amplification_file`` in job.ini points at a plain amplification CSV, while
+``ampl_logic_tree_file`` points at a NRML XML file describing an *amplification logic tree*: a set of alternative
+amplification-function CSVs with weights summing to 1, representing epistemic uncertainty on the site-amplification
+function as a logic-tree branchset alongside the SSC and GMM logic trees. The two parameters are mutually exclusive.
+
+The XML has a single branchset with ``uncertaintyType="amplificationModel"``:
+
+.. code-block:: xml
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+      <logicTree logicTreeID="lt_ampl">
+        <logicTreeBranchSet uncertaintyType="amplificationModel" branchSetID="bs_ampl">
+          <logicTreeBranch branchID="af_low">
+            <uncertaintyModel>amp_low.csv</uncertaintyModel>
+            <uncertaintyWeight>0.185</uncertaintyWeight>
+          </logicTreeBranch>
+          <logicTreeBranch branchID="af_med">
+            <uncertaintyModel>amp_med.csv</uncertaintyModel>
+            <uncertaintyWeight>0.630</uncertaintyWeight>
+          </logicTreeBranch>
+          <logicTreeBranch branchID="af_high">
+            <uncertaintyModel>amp_high.csv</uncertaintyModel>
+            <uncertaintyWeight>0.185</uncertaintyWeight>
+          </logicTreeBranch>
+        </logicTreeBranchSet>
+      </logicTree>
+    </nrml>
+
+Each branch is validated on its own: every branch must define AFs for all ampcodes used by the site model and for all
+IMTs listed in ``intensity_measure_types_and_levels``. Beyond that, nothing has to match between branches: the numeric
+AF and sigma values, the rock-IML ``level`` grid, the ``from_mag`` and ``from_rrup`` grids, and any extra ampcodes or
+IMT columns may all differ. Branches may therefore represent alternative discretisations and value sets as legitimate
+epistemic choices.
+
+Disaggregation with amplification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Disaggregation is supported alongside amplification (single CSV or amp-LT). The mag, dist, and lon/lat axes behave as
+usual. The epsilon axis requires two clarifications:
+
+* **Meaning of the epsilon axis.** Under amplification the epsilon axis is the **epsilon of the rock ground motion**,
+  not a soil-scale epsilon. Internally the amplification function is integrated on a fine rock-IML grid (the same grid
+  used by the classical convolution) and each fine-bin contribution is aggregated into the disagg epsilon bin that
+  contains its rock-epsilon. A bar at ``epsilon=+1`` in a 3D disagg plot therefore reads as: "contribution to soil
+  exceedance from cases where the rock ground motion was around 1 sigma above the GMM median, averaged over the
+  amplification model."
+* **``epsilon_star`` is not supported with amplification.** The ``epsilon_star`` mode collapses each rupture's
+  contribution into the single epsilon bin at which its rock ground motion crosses the target IML. Under a stochastic
+  amplification function (any amplification model CSV with a non-zero ``sigma_<IMT>`` column) every rock epsilon contributes with
+  some probability once the amplification is convolved, so no single "epsilon at exceedance" exists per rupture. Setting
+  ``epsilon_star = true`` alongside an amplification model raises an error.

@@ -17,10 +17,24 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from django.core.wsgi import get_wsgi_application
+
+try:
+    from setproctitle import setproctitle
+except ImportError:
+    def setproctitle(title):
+        """Do nothing when setproctitle is unavailable."""
+
+from openquake.commonlib import dbapi
+from openquake.server.db import actions
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
+setproctitle('oq-webui')
+# Initialize the database before the application starts serving requests
+actions.upgrade_db(dbapi.db)
 
-# This application object is used by the development server
-# as well as any WSGI server configured to use this file.
+from django.core.wsgi import get_wsgi_application  # noqa: E402
+
+# This application object is used by gunicorn and by the development server
+# (see WSGI_APPLICATION in the settings) as well as any WSGI server configured
+# to use this file.
 application = get_wsgi_application()

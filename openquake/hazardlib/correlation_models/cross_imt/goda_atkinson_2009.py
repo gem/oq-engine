@@ -46,8 +46,8 @@ class GodaAtkinson2009(TruncatedCrossIMTCorrelationModel):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.05)}
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.1, 5.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.1, 5.0)
     matrix_dtype = numpy.float32
 
     def _rho(self, from_imt, to_imt, context=None):

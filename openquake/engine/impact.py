@@ -59,7 +59,7 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None,
              callback=trivial_callback, *,
-             shakemap_version=None, time_event='day',
+             shakemap_version=None, nodal_plane=None, time_event='day',
              maximum_distance='300', mosaic_model=None, trt=None,
              truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
@@ -70,6 +70,7 @@ def main_cmd(usgs_id, rupture_file=None,
              maximum_distance_stations='',
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
+             make_impact_reports=False,
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -90,6 +91,14 @@ def main_cmd(usgs_id, rupture_file=None,
         post['shakemap_version'] = shakemap_version
     post['msr'] = msr
     post['approach'] = approach
+    if nodal_plane:
+        if nodal_plane not in ('NP1', 'NP2'):
+            callback(None, post, exc='nodal_plane must be NP1 or NP2')
+            return
+        post['nodal_plane'] = nodal_plane
+        approach = 'build_rup_from_usgs'
+        post['approach'] = approach
+        userlevel = 2
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
@@ -123,6 +132,7 @@ main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.shakemap_version = 'Id of the chosen shakemap version'
+main_cmd.nodal_plane = 'USGS nodal plane to use: NP1 or NP2'
 main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
@@ -140,6 +150,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
+main_cmd.make_impact_reports = 'Make one-page report for each involved country'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

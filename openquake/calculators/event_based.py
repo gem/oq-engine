@@ -35,19 +35,23 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.source_reader import (
+    get_bset_values, get_core_trt_smrs)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, use_joint_conditioning, use_joint_gaussian_sampling)
+    conditioned, conditioned_ce, use_circulant_conditioning,
+    use_joint_conditioning, use_joint_gaussian_sampling)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
 from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
+from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES, get_proxies, get_model_lts)
@@ -68,6 +72,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+# workers send GMFs to the parent in messages of at least this many rows
+GMF_MSG_ROWS = 100_000
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('weight', F32),
@@ -214,23 +220,72 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         sites = srcfilter.get_close_sites(proxy, cmaker.trt)
         if sites is None:  # filtered away
             continue
-        dic = dict(gmfdata={}, sig_eps=())
         try:
             ebr = proxy.to_ebr(cmaker.trt)
             computer = get_computer(cmaker, ebr, sites, sec_perils)
         except FarAwayRupture:
             continue
-        else:  # regular GMFs
-            df = computer.compute_all(None, cmon, umon)
+        # Unlike sig_eps, mea_tau_phi is not indexed by batch events: it
+        # contains one set of rupture/site/GSIM/IMT statistics, appended by
+        # the computer while batches are processed. Keep track of the list
+        # position so each batch transfers only newly appended records.
+        mtp_start = 0
+        for df, indices, last in computer.compute_all_batches(cmon, umon):
+            dic = dict(
+                gmfdata=df,
+                sig_eps=computer.build_sig_eps(se_dt, indices))
             if oq.mea_tau_phi:
-                mtp = numpy.array(computer.mea_tau_phi, GmfComputer.mtp_dt)
+                records = computer.mea_tau_phi[mtp_start:]
+                mtp_start = len(computer.mea_tau_phi)
+                mtp = numpy.array(records, GmfComputer.mtp_dt)
                 dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
-        dic['sig_eps'] = computer.build_sig_eps(se_dt)
-        dic['gmfdata'] = df
-        dt = time.time() - t0
-        dic['times'] = numpy.array([(proxy['id'], computer.ctx.rrup.min(), dt,
-                                     rup_weight(proxy), cmon.task_no)], rup_dt)
-        yield dic
+            if last:
+                dt = time.time() - t0
+                dic['times'] = numpy.array([
+                    (proxy['id'], computer.ctx.rrup.min(), dt,
+                     rup_weight(proxy), cmon.task_no)], rup_dt)
+            yield dic
+
+
+def _merge_dics(dics):
+    """
+    :returns: a single dictionary with the concatenated fields
+    """
+    out = dict(gmfdata=pandas.concat([d['gmfdata'] for d in dics],
+                                     ignore_index=True))
+    # as before, sig_eps and times are kept only for the batches
+    # with GMFs, while mea_tau_phi is kept for all the batches
+    full = [d for d in dics if len(d['gmfdata'])]
+    if full:
+        out['sig_eps'] = numpy.concatenate([d['sig_eps'] for d in full])
+    times = [d['times'] for d in full if 'times' in d]
+    if times:
+        out['times'] = numpy.concatenate(times)
+    if 'mea_tau_phi' in dics[0]:  # same columns in all the dicts
+        out['mea_tau_phi'] = {
+            col: numpy.concatenate([d['mea_tau_phi'][col] for d in dics])
+            for col in dics[0]['mea_tau_phi']}
+    return out
+
+
+# this is CRUCIAL for Manuela's calculations starting from a global SES
+# of 55 GB, since storing millions of small arrays was ultra-slow; we
+# went down from 30 hours to less than 1 hour
+def buffered(dics, max_rows=GMF_MSG_ROWS):
+    """
+    Merge the dictionaries yielded by _event_based into bigger ones,
+    with at least max_rows GMF rows each (the last one may be smaller),
+    to reduce the number of messages sent to the parent process
+    """
+    buf, nrows = [], 0
+    for dic in dics:
+        buf.append(dic)
+        nrows += len(dic['gmfdata'])
+        if nrows >= max_rows:
+            yield _merge_dics(buf)
+            buf, nrows = [], 0
+    if buf:
+        yield _merge_dics(buf)
 
 
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
@@ -261,7 +316,8 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        yield from _event_based(proxies, cmaker, secperils, srcfilter, cmon, umon)
+        yield from buffered(_event_based(
+            proxies, cmaker, secperils, srcfilter, cmon, umon))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -401,6 +457,27 @@ def _conditioned_memory(
         computer, num_stations, G, N, compute_covs, memory_limit):
     """Estimate peak arrays used by conditioned-GMF worker tasks."""
     joint = use_joint_conditioning(computer)
+    if compute_covs and use_circulant_conditioning(computer):
+        M = len(computer.inp.imts_Y)
+        Q = len(computer.inp.imts_D) * num_stations
+        T = M * N
+        weights = T * Q * 8
+        station = 4 * Q * Q * 8
+        one_field = 64 * T
+        per_worker = memory_limit // G
+        available = max(
+            0, per_worker - weights - station - one_field)
+        elements_per_site = M * Q
+        block = available // (6 * 8)
+        block = block // elements_per_site * elements_per_site
+        block = min(T * Q, max(elements_per_site, block))
+        chunks = 6 * block * 8
+        size = G * (weights + station + one_field + chunks)
+        detail = (f'{G=} * ({humansize(weights)} regression weights + '
+                  f'{humansize(station)} stations + '
+                  f'{humansize(one_field)} minimum field workspace + '
+                  f'{humansize(chunks)} chunks)')
+        return (size, detail, 'circulant conditioning workspace', block)
     if compute_covs and joint:
         M = len(computer.inp.imts_Y)
         Q = len(computer.inp.imts_D) * num_stations
@@ -449,6 +526,18 @@ def _conditioned_memory(
     return size, detail, 'target-station matrices', None
 
 
+def _store_conditioned(calc, gmf_df):
+    """Append one conditioned GMF table to the datastore."""
+    dstore = calc.datastore
+    if calc.N >= SLICE_BY_EVENT_NSITES:
+        offset = len(dstore['gmf_data/sid'])
+        sbe = build_slice_by_event(gmf_df.eid.to_numpy(), offset)
+        hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)
+    del gmf_df['rlz']
+    for col in gmf_df.columns:
+        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+
+
 def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     """Run a conditioned scenario calculation and store the GMFs."""
     dstore = calc.datastore
@@ -460,6 +549,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     maxdist = oq.maximum_distance(cmaker.trt)
     srcfilter = SourceFilter(calc.sitecol.complete, maxdist)
     sites = srcfilter.get_close_sites(proxy, cmaker.trt)
+    scalable = False
     if sites is None:  # filtered away
         raise FarAwayRupture
     ebr = proxy.to_ebr(cmaker.trt)
@@ -473,6 +563,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         compute_covs = max(computer.tlw, computer.tlb) > \
             TRUNCATION_THRESHOLD
         joint = use_joint_conditioning(computer)
+        scalable = compute_covs and use_circulant_conditioning(computer)
         if compute_covs and joint and not use_joint_gaussian_sampling(
                 computer):
             raise ValueError(
@@ -498,9 +589,19 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     del proxy.geom  # to reduce data transfer
 
     dstore.swmr_on()
-    smap = parallel.Starmap(conditioned, h5=dstore)
+    task = conditioned_ce if scalable else conditioned
+    smap = parallel.Starmap(task, h5=dstore)
     pre = build_precomputed(
-        ebr.rupture, cmaker, computer.inp, compute_covs=compute_covs)
+        ebr.rupture, cmaker, computer.inp,
+        compute_covs=compute_covs and not scalable)
+    if scalable:
+        worker_budget = memory_limit // G
+        for conditioner in pre.conditioners:
+            smap.submit((computer, conditioner, worker_budget))
+        for gmf_df in smap:
+            _store_conditioned(calc, gmf_df)
+        return
+
     shared = dict(DD=pre.DD)
     if pre.YD is not None:
         shared['YD'] = pre.YD
@@ -513,12 +614,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
         smap.submit((computer, conditioner))
     MNEdic = smap.reduce()  # g -> MNE
     gmf_df = computer.compute_all(MNEdic, calc._monitor, calc._monitor)
-    if calc.N >= SLICE_BY_EVENT_NSITES:
-        sbe = build_slice_by_event(gmf_df.eid.to_numpy())
-        hdf5.extend(dstore['gmf_data/slice_by_event'], sbe)
-    del gmf_df['rlz']
-    for col in gmf_df.columns:
-        hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
+    _store_conditioned(calc, gmf_df)
 
 
 def ntasks_by_model(cmaker_rups, concurrent_tasks):
@@ -672,7 +768,7 @@ def read_gsim_lt(oq):
             elif oq.rupture_xml:
                 hypo = readinput.get_rupture(oq).hypocenter
                 lon, lat = [hypo.x, hypo.y]
-            mosaic_models = readinput.get_close_mosaic_models(lon, lat, 5)
+            mosaic_models = get_close_mosaic_models(lon, lat, 5)
             # NOTE: using the first mosaic model
             oq.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
@@ -793,7 +889,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         maxw = self.counting_ruptures()
         trt_smrs = self.csm.get_trt_smrs()
-        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        core = get_core_trt_smrs(self.csm.src_groups)
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq, core)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
         allargs = []
@@ -811,6 +908,11 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
+            # NB: the uncertainties are not applied at the CSM level, but
+            # in sample_ruptures via modified_groups, one set of
+            # realizations at a time; the values are computed here, since
+            # the logic tree is too big to be sent to the workers
+            param['bset_values'] = get_bset_values(self.full_lt, sg)
             mfs = [src for src in sg if src.code == b'F']
             if sg.atomic:
                 allargs.append((sg, param))
@@ -830,7 +932,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         return smap
-        
+
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
@@ -896,8 +998,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(gmfdata):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
-                times = result.pop('times')
-                hdf5.extend(self.datastore['ruptimes'], times)
+                times = result.pop('times', ())
+                if len(times):
+                    hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)

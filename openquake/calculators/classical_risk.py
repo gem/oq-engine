@@ -94,14 +94,16 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         super().pre_execute()
         parent = self.datastore.parent
         if '_rates' in self.datastore or '_rates' in parent:
-            full_lt = self.datastore['full_lt'].init()
+            self.full_lt = self.datastore['full_lt'].init()
             stats = list(oq.hazard_stats().items())
             oq._stats = stats
-            oq._weights = full_lt.weights
+            oq._weights = self.full_lt.weights
             self.riskinputs = self.build_riskinputs()
             self.A = len(self.assetcol)
             self.L = len(self.crmodel.loss_types)
             self.S = len(oq.hazard_stats())
+        else:
+            self.full_lt = None
 
     def post_execute(self, result):
         """

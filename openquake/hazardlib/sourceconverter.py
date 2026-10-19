@@ -30,6 +30,7 @@ from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.aspect_ratio import (
     MagDepAspectRatio, get_aspect_ratio)
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.hazardlib.source.base import get_code2cls
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -452,7 +453,7 @@ class SourceConverter(RuptureConverter):
                  source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
-                 infer_occur_rates=False):
+                 infer_occur_rates=False, filter_sourcecodes=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -465,6 +466,11 @@ class SourceConverter(RuptureConverter):
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
         self.infer_occur_rates = infer_occur_rates
+        self.filter_sourcecodes = filter_sourcecodes
+        # a dictionary node code, e.g. pointSource -> b'P'; the NRML node
+        # tags are the class names with a lowercase initial letter
+        self.node_codes = {cls.__name__[0].lower() + cls.__name__[1:]: code
+                           for code, cls in get_code2cls().items()}
 
     def convert_node(self, node):
         """
@@ -485,6 +491,12 @@ class SourceConverter(RuptureConverter):
             elif self.source_nodes and name not in self.source_nodes:
                 # if source_nodes is set, discard all other source nodes
                 return
+            elif self.filter_sourcecodes:
+                # if filter_sourcecodes is set, discard the sources whose
+                # code is not in it (i.e. keep only the point-like ones)
+                code = self.node_codes.get(name, b'')
+                if code.decode('ascii') not in self.filter_sourcecodes:
+                    return
         obj = getattr(self, 'convert_' + name)(node)
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
             # TruncatedGRMFD with slip rate (for Slovenia)
@@ -728,6 +740,8 @@ class SourceConverter(RuptureConverter):
         mmax_offset = node.attrib.get('mmaxOffset')
         if mmax_offset is not None:
             area.mmax_offset = float(mmax_offset)
+        # used by the BCHydro set_recurrow MFD, see area.py
+        area.width_of_mfd_bin = self.width_of_mfd_bin
         return area
 
     def convert_pointSource(self, node):
@@ -744,7 +758,7 @@ class SourceConverter(RuptureConverter):
         fracs = self.convert_hypo_dip_fracs(node)
         if fracs is not None:
             hdd.hypo_dip_fracs = fracs
-        return source.PointSource(
+        psrc = source.PointSource(
             source_id=node['id'],
             name=node['name'],
             tectonic_region_type=node.attrib.get('tectonicRegion'),
@@ -758,6 +772,9 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=hdd,
             temporal_occurrence_model=self.get_tom(node))
+        # used by the BCHydro set_recurrow MFD, see point.py
+        psrc.width_of_mfd_bin = self.width_of_mfd_bin
+        return psrc
 
     def convert_multiPointSource(self, node):
         """
@@ -830,6 +847,8 @@ class SourceConverter(RuptureConverter):
             rate_frac = node.attrib.get('rateFrac')
             if rate_frac is not None:
                 simple.rate_frac = float(rate_frac)
+            # used by the BCHydro set_recurrow MFD, see simple_fault.py
+            simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 
     def convert_kiteFaultSource(self, node):
@@ -938,6 +957,28 @@ class SourceConverter(RuptureConverter):
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
             temporal_occurrence_model=self.get_tom(node))
+        # retain the declared top edge: a characteristic rupture spans the
+        # whole surface, so its mesh top edge is a resampling that can
+        # corner-cut a wiggly trace (it would distort the PFD distances).
+        # A MultiSurface has no single trace and is left to the per-section
+        # reference-line routing (PR-8), like oq-pfdha
+        if hasattr(char.surface, 'surfaces'):
+            trace = None
+        else:
+            surface_node = node.surface[0]
+            if surface_node.tag.endswith('simpleFaultGeometry'):
+                trace = self.geo_line(surface_node)
+                # keep the declared dip: SimpleFaultSurface.get_dip()
+                # averages the apparent mesh-cell dips and drifts on a
+                # wiggly trace, but PFD models take dip as input
+                char.surface.original_dip = float(~surface_node.dip)
+            elif surface_node.tag.endswith('complexFaultGeometry'):
+                [trace] = self.geo_lines(surface_node)[:1]
+            else:
+                trace = None
+        if trace is not None:
+            char.surface.original_tor = numpy.array(
+                [[p.longitude, p.latitude] for p in trace.points])
         return char
 
     def convert_nonParametricSeismicSource(self, node):

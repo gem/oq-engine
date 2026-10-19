@@ -26,6 +26,7 @@ from openquake.baselib import hdf5, parallel, performance, general, config
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.codes import MULTI_FAULT
 from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
@@ -73,7 +74,7 @@ class MultiFaultSource(BaseSeismicSource):
         An iterable with cardinality N containing the rake of each
         rupture
     """
-    code = b'F'
+    code = MULTI_FAULT
     MODIFICATIONS = {}
     hdf5path = ''
 

@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
@@ -145,10 +145,18 @@ def get_rmap_gb(dstore, full_lt=None):
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
-    if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+    if 'core_trt_smrs' in dstore:
+        # for classical calculations the rates are attributed to the sets of
+        # realizations with the same uncertainties, not to the trt_smrs of
+        # the groups, since the groups are not split by the uncertainties,
+        # which are applied in the workers
+        key = 'core_trt_smrs'
+    else:
+        key = 'trt_smrs'
+    if key not in dstore:  # starting from hazard_curves.csv
         trt_smrs = [[0]]
     else:
-        trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+        trt_smrs, _ = get_unique_inverse(dstore[key][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs, trt_smrs
@@ -188,11 +196,12 @@ def map_getters(dstore, full_lt=None, oq=None, disagg=False):
     n = get_num_chunks(dstore, full_lt)
 
     # full_lt is None in classical_risk, classical_damage
-    full_lt = full_lt or dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt']
+    if getattr(full_lt, 'weights', None) is None:  # not initialized
+        full_lt.init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs, trt_smrs = get_rmap_gb(dstore, full_lt)
     attrs = vars(full_lt)
-    full_lt.init()
     if oq.fastmean:
         gweights = [full_lt.g_weights(trt_smrs)]
     else:
@@ -247,12 +256,12 @@ class CurveGetter(object):
     :param rates: array of shape (L, G) for the given site
     """
     @classmethod
-    def build(cls, dstore):
+    def build(cls, dstore, full_lt):
         """
         :returns: a dictionary sid -> CurveGetter
         """
         rates = {}
-        for mgetter in map_getters(dstore):
+        for mgetter in map_getters(dstore, full_lt):
             array = mgetter.init()
             for sid, idx in mgetter.sid2idx.items():
                 rates[sid] = array[idx]  # shape (L, G)
@@ -339,12 +348,28 @@ class MapGetter(object):
             with hdf5.File(fname) as dstore:
                 slices = dstore['_rates/slice_by_idx'][:]
                 slices = slices[slices['idx'] == self.chunk]
-                for start, stop in zip(slices['start'], slices['stop']):
-                    df = dstore.read_df('_rates', slc=slice(start, stop))
-                    idxs = U32([sid2idx[sid] for sid in df.sid])
-                    lid = df.lid.to_numpy()
-                    gid = df.gid.to_numpy()
-                    self.array[idxs, lid, gid] += df.rate
+                if len(slices) == 0:
+                    continue
+                # read each column once (reading slice by slice is slow)
+                # and select the rows of the slices of this chunk
+                n = len(dstore['_rates/rate'])
+                marks = numpy.zeros(n + 1, int)
+                numpy.add.at(marks, slices['start'], 1)
+                numpy.add.at(marks, slices['stop'], -1)
+                mask = numpy.cumsum(marks[:n]) > 0
+                sids = dstore['_rates/sid'][:][mask]
+                lid = dstore['_rates/lid'][:][mask]
+                gid = dstore['_rates/gid'][:][mask]
+                rate = dstore['_rates/rate'][:][mask]
+        # NB: numpy.add.at is needed since the same (sid, lid, gid) can
+        # appear several times, and fancy-index += would drop duplicates
+                lookup = numpy.full(max(sid2idx) + 1, -1, int)
+                for sid, idx in sid2idx.items():
+                    lookup[sid] = idx
+                idxs = lookup[sids]
+                if (idxs < 0).any():
+                    raise KeyError('unknown site IDs in _rates')
+                numpy.add.at(self.array, (idxs, lid, gid), rate)
         self.sid2idx = sid2idx
         return self.array
 

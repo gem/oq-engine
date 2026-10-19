@@ -174,9 +174,8 @@ We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing 
 
 If you are on a Linux machine _and_ you have root permissions, the
 recommended installation method is `server`. In this case, the engine
-will work with multiple users and two system V services will be
-automatically installed and started: `openquake-dbserver` and
-`openquake-webui`.
+will work with multiple users and a system V service will be
+automatically installed and started: `openquake-webui`.
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
@@ -189,7 +188,7 @@ The installation script will automatically create a user called
 
 *NB*: if you already have an engine installation made with debian or rpm
 packages, before installing the new version you must uninstall the old
-version, make sure that the dbserver and webui services are actually
+version, make sure that the webui is actually
 stopped and then also remove the directory `/opt/openquake` and the
 configuration file `/etc/openquake/openquake.cfg`. If you want to
 preserve some configuration (like the [zworkers] section which is needed

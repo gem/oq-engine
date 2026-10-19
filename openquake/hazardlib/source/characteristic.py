@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
 import numpy
+from openquake.hazardlib.codes import CHARACTERISTIC_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -52,7 +53,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     its attribute `surface_node` to an explicit representation of the surface
     as a LiteralNode object.
     """
-    code = b'X'
+    code = CHARACTERISTIC_FAULT
     MODIFICATIONS = {
         'adjust_mfd_from_slip',
         'set_geometry',

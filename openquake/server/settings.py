@@ -24,7 +24,7 @@ import tempfile
 import logging
 
 from openquake.baselib import config
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, auth
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -90,7 +90,6 @@ DATABASE = {
     'NAME': os.path.expanduser(config.dbserver.file),
     'USER': getpass.getuser(),
     'HOST': config.dbserver.host,
-    'PORT': config.dbserver.port,
 }
 DATABASES = {'default': DATABASE}
 
@@ -130,8 +129,7 @@ LANGUAGE_CODE = 'en-us'
 USE_I18N = True
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
-
+SECRET_KEY = auth.API_KEY
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -151,6 +149,7 @@ ALLOW_DATASTORE_DOWNLOAD = True
 AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
+WSGI_APPLICATION = 'openquake.server.wsgi.application'
 
 INSTALLED_APPS += (
     'django.contrib.staticfiles',
@@ -214,6 +213,7 @@ SERVER_NAME = socket.gethostname()
 # displayed with or without the host name
 # (either 'username@hostname' or just 'username')
 DISPLAY_USER_HOST = False
+CALC_LIST_PAGE_SIZE = 10
 
 APPLICATION_MODES = [
     'PUBLIC',      # The default behavior without authentication
@@ -287,20 +287,26 @@ if STANDALONE and WEBUI:
     CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
     TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
-try:
-    # Try to load a local_settings.py from the current folder; this is useful
-    # when packages are used. A custom local_settings.py can be placed in
-    # /usr/share/openquake/engine, avoiding changes inside the python package
-    from local_settings import *  # noqa
-except ImportError:
-    # If no local_settings.py is availble in the current folder let's try to
-    # load it from openquake/server/local_settings.py
+if not TEST:
     try:
-        from openquake.server.local_settings import *  # noqa
+        # Try to load a local_settings.py from the current folder; this is useful
+        # when packages are used. A custom local_settings.py can be placed in
+        # /usr/share/openquake/engine, avoiding changes inside the python package
+        from local_settings import *  # noqa
     except ImportError:
-        # If a local_setting.py does not exist
-        # settings in this file only will be used
-        pass
+        # If no local_settings.py is availble in the current folder let's try to
+        # load it from openquake/server/local_settings.py
+        try:
+            from openquake.server.local_settings import *  # noqa
+        except ImportError:
+            # If a local_setting.py does not exist
+            # settings in this file only will be used
+            pass
+
+# Local defaults must not affect the test suite. In particular, a configured
+# IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
+if TEST:
+    IMPACT_DEFAULT_USGS_ID = ''
 
 if SUPPRESS_PERMISSION_DENIED_WARNINGS:
     class SuppressPermissionDeniedWarnings(logging.Filter):
@@ -438,7 +444,10 @@ if LOCKDOWN:
     LOGOUT_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
     LOGIN_EXEMPT_URLS = (
         f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
+        f'{WEBUI_PATHPREFIX}/v1/authentication/status',
         'reset_password', 'reset/', 'cookies/',
+        'v0/', 'v1/calc_info/', 'v1/calc_list/count', 'v1/on_same_fs',
+        'v1/aelo_site_classes', 'v1/get_impact_form_defaults',
     )
     LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
 

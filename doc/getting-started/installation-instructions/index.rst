@@ -42,35 +42,6 @@ See the corresponding chapters following the link below.
 - :ref:`Uninstalling the engine <universal>`
 - :ref:`Installing a specific engine version <universal>`
 
-Other installation methods
---------------------------
-
-**Using ``pip``**
-
-The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/openquake.engine>`_ and can be installed
-in any Python 3 environment via ``pip``::
-
-	```
-	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-linux64.txt openquake.engine
-	```
-
-This works for Linux and Python 3.11. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
-
-	```
-	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-win64.txt openquake.engine
-	```
-
-and for Mac, it would be::
-
-	```
-	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-macos.txt openquake.engine
-	```
-
-If you have a previous installation of the engine it is a good idea to
-pass ``--force-reinstall`` to ``pip``: this solves potential issues with
-geospatial libraries, like using using the old version of proj instead
-of the new one.
-
 Cloud
 -----
 

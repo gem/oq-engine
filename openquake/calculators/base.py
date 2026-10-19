@@ -45,8 +45,9 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
-from openquake.hazardlib.site_amplification import Amplifier
-from openquake.hazardlib.site_amplification import AmplFunction
+from openquake.hazardlib.site_amplification import (
+    Amplifier, AmplificationFunction)
+from openquake.hazardlib.amp_lt import AmplificationLogicTree
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
@@ -54,6 +55,7 @@ from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib.model_provenance import copy_model_provenance
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters, postproc
 
@@ -87,7 +89,7 @@ def get_aelo_changelog():
     """
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
-    if 'pytest' in sys.argv[0]:
+    if 'pytest' in sys.argv[0] or os.environ.get('OQ_TEST'):
         mosaic_dir = mosaic.__path__[0]  # qa_tests_data/mosaic
     else:
         mosaic_dir = config.directory.mosaic_dir
@@ -162,6 +164,44 @@ def get_weights(oq, dstore):
     else:
         weights = dstore['weights'][:]
     return weights
+
+
+def create_hcurves_maps(dstore, oq, N, R):
+    """
+    Create the ``hcurves-*`` and ``hmaps-*`` datasets shared by the
+    classical and displacement calculators.
+
+    :returns: ``(S, M, P, L1)``
+    """
+    hstats = oq.hazard_stats()
+    P = len(oq.poes)
+    M = len(oq.imtls)
+    imts = list(oq.imtls)
+    if oq.soil_intensities is not None:
+        L = M * len(oq.soil_intensities)
+    else:
+        L = oq.imtls.size
+    L1 = L // M
+    S = len(hstats)
+    if R == 1 or oq.individual_rlzs:
+        dstore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
+        dstore.set_shape_descr(
+            'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
+        if P:
+            dstore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
+            dstore.set_shape_descr(
+                'hmaps-rlzs', site_id=N, rlz_id=R, imt=imts, poe=oq.poes)
+    if hstats:
+        dstore.create_dset('hcurves-stats', F32, (N, S, M, L1))
+        dstore.set_shape_descr(
+            'hcurves-stats', site_id=N, stat=list(hstats),
+            imt=imts, lvl=numpy.arange(L1))
+        if P:
+            dstore.create_dset('hmaps-stats', F32, (N, S, M, P))
+            dstore.set_shape_descr(
+                'hmaps-stats', site_id=N, stat=list(hstats),
+                imt=imts, poe=oq.poes)
+    return S, M, P, L1
 
 
 class InvalidCalculationID(Exception):
@@ -269,6 +309,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         vars(mon).update(kw)
         return mon
 
+    def _copy_model_provenance(self):
+        """Copy exposure model provenance to the calculation datastore."""
+        try:
+            exposure_path = self.oqparam.inputs['exposure'][0]
+        except (KeyError, IndexError):
+            return
+        copy_model_provenance(exposure_path, self.datastore)
+
     def save_params(self, **kw):
         """
         Update the current calculation parameters and save engine_version
@@ -333,13 +381,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
                 self.datastore = datastore.read(old_job_id)
-                logs.dbcmd(
-                    "UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
-                    self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                logs.dbcmd('update_job', calc_id,
+                           {'ds_calc_dir': self.datastore.filename[:-5]})
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported
             try:
+                if oq.impact:
+                    self._copy_model_provenance()
                 if pre_execute:
                     self.pre_execute()
                 if os.environ.get('OQ_CHECK_INPUT'):
@@ -511,7 +560,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     af = None
-    amplifier = None
+    amplifier = None  # None or AmplificationLogicTree (single or LT branches)
 
     def src_filter(self):
         """
@@ -550,6 +599,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
     def check_overflow(self):
@@ -614,7 +666,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
-        self._read_risk4()
+        self._set_amplifier()
 
         if (oq.calculation_mode == 'event_based' and
                 oq.within_event_correlation_model and
@@ -744,10 +796,10 @@ class HazardCalculator(BaseCalculator):
             calc.datastore.close()
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
-                'max_weight amplifier policy_df treaty_df full_lt exported '
-                'trt_rlzs gids'
+                'max_weight amplifier policy_df treaty_df '
+                'full_lt exported trt_rlzs gids interdep_df'
             ).split():
-                if hasattr(calc, name):
+                if hasattr(calc, name) and name not in self.__dict__:
                     setattr(self, name, getattr(calc, name))
         else:
             with self.monitor('importing inputs', measuremem=True):
@@ -1008,7 +1060,8 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
-        if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        # if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['exposure'] = exposure
@@ -1093,6 +1146,48 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
+            # read interpendencies if any
+            if 'interdependencies' in oq.inputs: # we are in the child
+                self.interdep_df = readinput.get_interdependencies(oq)
+                
+                # check if source_damage_state is valid
+                valid_states = set(self.crmodel.damage_states) | {'non_operational'}
+                interdep_states = self.interdep_df.source_damage_state.unique()
+                for state in interdep_states:
+                    if state not in valid_states:
+                        raise InvalidFile(
+                            f'{oq.inputs["interdependencies"]}\n'
+                            f'source_damage_state={state!r} not in the fragili'
+                            f'ty functions {self.crmodel.damage_states}')
+                
+                # check if source_asset_ids exist
+                parent_assetcol = self.datastore.parent['assetcol']
+                asset2id = {
+                    general.decode(asset_id): i
+                    for i, asset_id in enumerate(parent_assetcol['id'])
+                }
+                interdep_assets = set(self.interdep_df.source_asset_id.unique())
+                missing_assets = interdep_assets - set(asset2id)
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'source_asset_id(s) {sorted(missing_assets)!r} do not'
+                        f' exist in the source exposure model')                
+                
+                # check if target_asset_ids exist
+                interdep_assets_child = set(self.interdep_df.target_asset_id.unique())
+                target_asset_ids = {
+                    general.decode(asset_id)
+                    for asset_id in self.assetcol['id']
+                }
+                missing_assets = interdep_assets_child - target_asset_ids
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'target_asset_id(s) {sorted(missing_assets)!r} do not exist '
+                        f'in the target exposure model'
+                    )
+                
     def _read_risk3(self):
         oq = self.oqparam
         station_sids = set()
@@ -1116,7 +1211,7 @@ class HazardCalculator(BaseCalculator):
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
-                    self.sitecol.set_global_params(oq)
+                    self.sitecol.set_global_params(oq, oq.req_site_params)
                 else:
                     # associate the site model parameters
                     # NB: in AELO mode (i.e. with siteid) associate even
@@ -1150,26 +1245,48 @@ class HazardCalculator(BaseCalculator):
                 # fix: the sitecol is not complete
                 self.sitecol.complete = self.datastore.parent['complete']
 
-    def _read_risk4(self):
+    def _set_amplifier(self):
+        """
+        Set self.amplifier from a plain amplification CSV
+        or an amp-LT XML.
+        """
         oq = self.oqparam
-        # store amplification functions if any
-        if 'amplification' in oq.inputs:
+        # Store amplification functions if any
+        if 'ampl_logic_tree' in oq.inputs:
+            amp_lt = readinput.get_amp_lt(oq)
+            logging.info('Reading %d amplification branches from %s',
+                         amp_lt.get_num_paths(), amp_lt.filename)
+            # Each branch is validated on its own: ampcode coverage
+            # of the sitecol, then IMT coverage via Amplifier init
+            for df in amp_lt.dframes:
+                check_amplification(df, self.sitecol)
+            # self.full_lt is set after _set_amplifier, so refetch here
+            full_lt = getattr(self, 'full_lt', None) or (
+                readinput.get_full_lt(oq))
+            amp_lt.rlz_ampl_ord = numpy.array(
+                [r.extra_rlz.ordinal
+                 for r in full_lt.get_realizations()], numpy.uint32)
+            self.amplifier = amp_lt
+        elif 'amplification' in oq.inputs:
             logging.info('Reading %s', oq.inputs['amplification'])
-            df = AmplFunction.read_df(oq.inputs['amplification'])
+            df = AmplificationFunction.read_df(oq.inputs['amplification'])
             check_amplification(df, self.sitecol)
-            if oq.amplification_method == 'kernel':
-                # TODO: need to add additional checks on the main calculation
-                # methodology since the kernel method is currently tested only
-                # for classical PSHA
-                self.af = AmplFunction.from_dframe(df)
-            else:
-                self.amplifier = Amplifier(oq.imtls, df, oq.soil_intensities)
+            if oq.amplification_method == 'kernel':  # Single branch, no LT
+                # TODO: need to add additional checks on the main
+                # calculation methodology since the kernel method is
+                # currently tested only for classical PSHA
+                self.af = AmplificationFunction.from_dframe(df)
+            else:  # Convolution: single branch, no LT
+                self.amplifier = AmplificationLogicTree(
+                    names=['ampl'], weights=[1.0], dframes=[df],
+                    amplifiers=[Amplifier(
+                        oq.imtls, df, oq.soil_intensities)])
 
         mal = {lt: getdefault(oq.minimum_asset_loss, lt)
                for lt in oq.loss_types}
         if mal:
             logging.info('minimum_asset_loss=%s', mal)
-        oq._amplifier = self.amplifier
+        oq._amplifier = self.amplifier.amplifiers[0] if self.amplifier else None
         self.add_sec_perils(oq)
 
         # compute exposure stats
@@ -1269,7 +1386,7 @@ class HazardCalculator(BaseCalculator):
                 else:  # read the csm from the parent calculation
                     csm = self.datastore.parent['_csm']
                     csm.full_lt = self.datastore.parent['full_lt'].init()
-                oq.postproc_args['csm'] = csm
+                oq.postproc_args = {**oq.postproc_args, 'csm': csm}
             with self._monitor(oq.postproc_func, measuremem=True):
                 func(self.datastore, **oq.postproc_args)
 
@@ -1306,14 +1423,13 @@ class RiskCalculator(HazardCalculator):
             riskinputs = self._gen_riskinputs(dstore)
         assert riskinputs
         logging.info('Built %d risk inputs', len(riskinputs))
-        self.acc = None
         return riskinputs
 
     # used only for classical_risk and classical_damage
     def _gen_riskinputs(self, dstore):
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        getterdict = getters.CurveGetter.build(dstore)
+        getterdict = getters.CurveGetter.build(dstore, self.full_lt)
         for sid, assets in asset_df.groupby(asset_df.index):
             getter = getterdict[sid]
             # hcurves, shape (R, N)
@@ -1342,15 +1458,7 @@ class RiskCalculator(HazardCalculator):
         for block in general.block_splitter(
                 self.riskinputs, maxw, get_weight, sort=True):
             smap.submit((block, self.oqparam))
-        return smap.reduce(self.combine, self.acc)
-
-    def combine(self, acc, res):
-        """
-        Combine the outputs assuming acc and res are dictionaries
-        """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
-        return acc + res
+        return smap.reduce()
 
 
 def longname(name, columns):
@@ -1828,7 +1936,7 @@ def read_parent_sitecol(oq, dstore):
             haz_sitecol = parent['sitecol'].complete
         else:
             haz_sitecol = readinput.get_site_collection(oq, dstore.hdf5)
-        if ('amplification' in oq.inputs and
+        if (oq.has_amplification and
                 'ampcode' not in haz_sitecol.array.dtype.names):
             haz_sitecol.add_col('ampcode', site.ampcode_dt)
     return haz_sitecol

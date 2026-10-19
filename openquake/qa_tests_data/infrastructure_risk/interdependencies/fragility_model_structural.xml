@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
+		<description>Road Network
+</description>
+		<limitStates>slight moderate extensive collapse</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.05 1 1.5</imls>
+			<poes ls="slight">0 0.5 0 0</poes>
+			<poes ls="moderate">0 0 1 0</poes>
+			<poes ls="extensive">0 0 1 0</poes>
+			<poes ls="collapse">0 0 1 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="bridge" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.05 1 1.5</imls>
+			<poes ls="slight">0 0.5 0 0</poes>
+			<poes ls="moderate">0 0 1 0</poes>
+			<poes ls="extensive">0 0 1 0</poes>
+			<poes ls="collapse">0 0 1 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="road" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.05 1 1.5</imls>
+			<poes ls="slight">0 0.5 0 0</poes>
+			<poes ls="moderate">0 0 1 0</poes>
+			<poes ls="extensive">0 0 1 0</poes>
+			<poes ls="collapse">0 0 1 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="TAZ" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.05 1 1.5</imls>
+			<poes ls="slight">0 0.5 0 0</poes>
+			<poes ls="moderate">0 0 1 0</poes>
+			<poes ls="extensive">0 0 1 0</poes>
+			<poes ls="collapse">0 0 1 0</poes>
+		</fragilityFunction>
+		
+		<fragilityFunction id="bdg_1" format="continuous" shape="logncdf">
+			<imls imt="SA(1.0)" noDamageLimit="0" minIML="1e-10" maxIML="5"/>
+			<params ls="slight" mean="0.8" stddev="0.60"/>
+			<params ls="moderate" mean="1.0" stddev="0.60"/>
+			<params ls="extensive" mean="1.2" stddev="0.60"/>
+			<params ls="collapse" mean="1.7" stddev="0.60"/>
+		</fragilityFunction>
+		<fragilityFunction id="bdg_2" format="continuous" shape="logncdf">
+			<imls imt="SA(1.0)" noDamageLimit="0" minIML="1e-10" maxIML="5"/>
+			<params ls="slight" mean="0.49" stddev="0.60"/>
+			<params ls="moderate" mean="0.60" stddev="0.60"/>
+			<params ls="extensive" mean="0.76" stddev="0.60"/>
+			<params ls="collapse" mean="1.01" stddev="0.60"/>
+		</fragilityFunction>
+
+	</fragilityModel>
+</nrml>

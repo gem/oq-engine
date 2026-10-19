@@ -20,22 +20,43 @@ import time
 import os
 import sys
 import json
+import subprocess
 import tempfile
+from types import SimpleNamespace
 import numpy
 import pandas
 from io import BytesIO
 
 import django
 from django.apps import apps
-from django.test import Client
 from django.conf import settings
 from django.http import HttpResponseNotFound
 from openquake.baselib.general import gettemp
-from openquake.commonlib.logs import dbcmd
+from openquake.commonlib.auth import API_KEY
+from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
-from openquake.server.tests.views_test import get_or_create_user
+from openquake.server.views import format_oqparam
+from openquake.server.tests.views_test import (
+    get_or_create_user, start_webui, stop_webui)
 
 CALC_RUN_TIMEOUT = 60
+
+
+def test_format_oqparam_displays_selected_nodal_plane():
+    oqparam = SimpleNamespace(
+        rupture_dict={
+            'approach': 'build_rup_from_usgs', 'usgs_id': 'us7000n7n8',
+            'shakemap_desc': 'v10', 'nodal_plane': 'NP2', 'lon': 1,
+            'lat': 2, 'dep': 3, 'mag': 4, 'msr': 'WC1994',
+            'aspect_ratio': 2, 'rake': 90, 'dip': 45, 'strike': 10},
+        time_event='day', maximum_distance={'default': [[0, 300]]},
+        truncation_level=3, number_of_ground_motion_fields=10,
+        asset_hazard_distance={'default': 15}, ses_seed=42,
+        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
+    inputs = format_oqparam(oqparam)
+    assert inputs['Nodal plane'] == 'NP2'
+    assert list(inputs).index('Nodal plane') < list(inputs).index(
+        'Magnitude scaling relationship')
 
 
 def check_email(job_id, email_content, expected_error):
@@ -55,7 +76,7 @@ def check_email(job_id, email_content, expected_error):
         assert f'engine/{job_id}/outputs_impact' in email_content
 
 
-class ImpactModeTestCase(django.test.TestCase):
+class ImpactModeTestCase(django.test.TransactionTestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -87,7 +108,8 @@ class ImpactModeTestCase(django.test.TestCase):
 
     @classmethod
     def get_json(cls, path, **data):
-        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
+        resp = cls.c.get('/v1/calc/%s' % path, data,
+                         headers={'X-API-Key': API_KEY})
         if hasattr(resp, 'content'):
             assert resp.content, (
                 'No content from http://localhost:8800/v1/calc/%s (params: %s)'
@@ -135,24 +157,37 @@ class ImpactModeTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Group = apps.get_model('auth', 'Group')
-        Permission = apps.get_model('auth', 'Permission')
-        dbcmd('reset_is_running')  # cleanup stuck calculations
+        logs.dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        cls.user, cls.password = get_or_create_user(1)  # level 1
-        cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
-            name='Users who can view the exposure')
-        perm = Permission.objects.get(codename='can_view_exposure')
-        cls.users_who_can_view_exposure.permissions.add(perm)
-        cls.c = Client()
-        cls.c.login(username=cls.user.username, password=cls.password)
         cls.maxDiff = None
+        (cls.webserver, cls.webserver_thread,
+         cls.c) = start_webui()
+
+    def setUp(self):
+        Group = apps.get_model('auth', 'Group')
+        Permission = apps.get_model('auth', 'Permission')
+        ContentType = apps.get_model('contenttypes', 'ContentType')
+        self.user, self.password = get_or_create_user(1)
+        self.users_who_can_view_exposure, _ = Group.objects.get_or_create(
+            name='Users who can view the exposure')
+        content_type = ContentType.objects.get(
+            app_label='auth', model='permission')
+        perm, _ = Permission.objects.get_or_create(
+            codename='can_view_exposure', name='Can view exposure',
+            content_type=content_type)
+        self.users_who_can_view_exposure.permissions.add(perm)
+        self.c.session.cookies.clear()
+        self.c.login(username=self.user.username, password=self.password)
+
+    def tearDown(self):
+        self.user.delete()
+        super().tearDown()
 
     @classmethod
     def tearDownClass(cls):
-        cls.user.delete()
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def set_user_level_and_remove_groups(self, level):
@@ -266,6 +301,63 @@ class ImpactModeTestCase(django.test.TestCase):
             pandas.DataFrame.from_dict(
                 {item: exposure_by_lse[item] for item in exposure_by_lse})
 
+        job = logs.dbcmd('get_job', job_id)
+        if 'make_impact_reports' in data:
+            with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                impact_iso3_list = list(ds['impact'])
+            self.assertGreater(len(impact_iso3_list), 0)
+            impact_resources = self.get_json(
+                f'{job_id}/impact_resources')
+            country_reports = impact_resources['country_reports']
+            self.assertEqual(set(country_reports), set(impact_iso3_list))
+            for urls in country_reports.values():
+                self.assertIn('format=pdf', urls['pdf'])
+                self.assertIn('format=png', urls['png'])
+            self.assertEqual(
+                set(impact_resources),
+                {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',
+                 'exposure_by_mmi', 'exposure_by_lse', 'country_reports'})
+            self.assertIsInstance(impact_resources['avg_gmf_plots'], dict)
+            for imt, url in impact_resources['avg_gmf_plots'].items():
+                self.assertIn(f'avg_gmf-{imt}.png', url)
+            for peril_outputs in impact_resources['exposure_by_lse'].values():
+                if peril_outputs:
+                    self.assertEqual(
+                        set(peril_outputs), {'json', 'table', 'npz'})
+            for iso3 in impact_iso3_list:
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}')
+                self.assertEqual(ret.status_code, 200)
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                    f'&format=png')
+                self.assertEqual(ret.status_code, 200)
+
+            # Run the command-line extractor against the datastore generated
+            # by this test.  Hide xdg-open from PATH so the test does not
+            # launch a desktop application on the test machine.
+            script = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), '..', '..', '..', 'bin',
+                'extract_impact_reports.py'))
+            with tempfile.TemporaryDirectory() as output_dir:
+                env = os.environ.copy()
+                env['PATH'] = output_dir
+                subprocess.run(
+                    [sys.executable, script, str(job_id)],
+                    cwd=output_dir, env=env, check=True,
+                    capture_output=True, text=True)
+                for iso3 in impact_iso3_list:
+                    # Check the standard identifying bytes at the beginning
+                    # of each file to confirm its format.
+                    for file_format, signature in (
+                            ('pdf', b'%PDF'), ('png', b'\x89PNG')):
+                        report = os.path.join(
+                            output_dir,
+                            f'impact_report_{job_id}_{iso3}.{file_format}')
+                        self.assertTrue(os.path.isfile(report))
+                        with open(report, 'rb') as f:
+                            self.assertEqual(f.read(len(signature)), signature)
+
         # check that users can download hidden outputs only if their level
         # is at least 2 or if they have the can_view_exposure permission
 
@@ -278,6 +370,9 @@ class ImpactModeTestCase(django.test.TestCase):
         self.assertEqual(len(exposure_urls), 0)
         # ...and without can_view_exposure they can't extract the assetcol
         ret = self.get(f'{job_id}/extract/assetcol', expected_status_code=403)
+        # Model provenance is restricted to level 2 users.
+        ret = self.get(f'{job_id}/model_provenance',
+                       expected_status_code=403)
 
         # level 1 users with the can_view_exposure permission can see
         # the exposure
@@ -307,6 +402,7 @@ class ImpactModeTestCase(django.test.TestCase):
         # they can also download the hdf5 datastore and the job.zip
         ret = self.get(f'/v1/calc/{job_id}/datastore', prefix='')
         ret = self.get(f'/v1/calc/{job_id}/job_zip', prefix='')
+        ret = self.get(f'{job_id}/model_provenance')
 
         # level 0 users without the can_view_exposure permission can't
         # see the exposure
@@ -400,6 +496,30 @@ class ImpactModeTestCase(django.test.TestCase):
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '1']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_make_impact_report_then_remove_calc(self):
+        self.set_user_level_and_remove_groups(1)
+        usgs_id = 'us6000t7zp'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '10']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100', make_impact_reports=True)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in IMPACT mode

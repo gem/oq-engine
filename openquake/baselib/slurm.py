@@ -2,6 +2,7 @@ import os
 import sys
 import stat
 import time
+import shlex
 import subprocess
 from openquake.baselib import parallel, config
 
@@ -12,7 +13,7 @@ SLURM_BATCH = '''\
 #SBATCH --time={slurm_time}
 #SBATCH --cpus-per-task={num_cores}
 #SBATCH --nodes={nodes}
-srun python -m openquake.baselib.workerpool {num_cores} {job_id}
+srun {python_executable} -m openquake.baselib.workerpool {num_cores} {job_id}
 '''
 
 def start_workers(job_id, n):
@@ -22,9 +23,11 @@ def start_workers(job_id, n):
     calc_dir = parallel.calc_dir(job_id)
     slurm_sh = os.path.join(calc_dir, 'slurm.sh')
     print('Using %s' % slurm_sh)
-    code = SLURM_BATCH.format(num_cores=config.distribution.num_cores,
-                              slurm_time=config.distribution.slurm_time,
-                              job_id=job_id, nodes=n)
+    code = SLURM_BATCH.format(
+        python_executable=shlex.quote(sys.executable),
+        num_cores=config.distribution.num_cores,
+        slurm_time=config.distribution.slurm_time,
+        job_id=job_id, nodes=n)
     with open(slurm_sh, 'w') as f:
         f.write(code)
     os.chmod(slurm_sh, os.stat(slurm_sh).st_mode | stat.S_IEXEC)

@@ -18,6 +18,7 @@
 
 import io
 import os
+import copy
 import time
 import psutil
 import logging
@@ -31,7 +32,14 @@ from openquake.baselib.general import (
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
-from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
+from openquake.hazardlib.source_reader import (
+    get_bset_values, modified_groups)
+from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+from openquake.hazardlib.lt import (
+    get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
+from openquake.hazardlib.rmap_maker import (
+    get_cmakers, read_full_lt_by_label, make_results, mag_support)
+from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -105,18 +113,23 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def store_ctxs(dstore, rupdata, grp_id):
+def store_ctxs(dstore, rupdata, grp_id, gid):
     """
     Store contexts in the datastore
+
+    :param gid: the gid of the index of rate attribution, stored since the
+        contexts of a group have different gids
     """
     nr = len(rupdata)
     known = set(rupdata.dtype.names)
     for par in dstore['rup']:
         if par == 'rup_id':
-            rup_id = I64(rupdata['src_id']) * TWO30 + rupdata['rup_id']
-            hdf5.extend(dstore['rup/rup_id'], rup_id)
+            hdf5.extend(dstore['rup/rup_id'],
+                         I64(rupdata['src_id']) * TWO30 + rupdata['rup_id'])
         elif par == 'grp_id':
             hdf5.extend(dstore['rup/grp_id'], numpy.full(nr, grp_id))
+        elif par == 'gid':
+            hdf5.extend(dstore['rup/gid'], numpy.full(nr, gid, U32))
         elif par == 'probs_occur':
             dstore.hdf5.save_vlen('rup/probs_occur', rupdata[par])
         elif par in known:
@@ -131,8 +144,11 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     Store the rates on a file calc_id/task_no.hdf5
     """
-    for g in rmap.gdic:
-        _store(rmap.to_array(g), num_chunks, h5, mon)
+    # collecting the arrays is essential for performance, i.e. I measured
+    # a 200x speedup in the NVA calculation of BCHydro
+    arrays = [rmap.to_array(g) for g in rmap.gdic]
+    big = numpy.concatenate(arrays) if len(arrays) > 1 else arrays[0]
+    _store(big, num_chunks, h5, mon)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -145,10 +161,15 @@ def read_groups_sitecol(dstore, grp_keys):
     return grp, sitecol
 
 
-def baseclassical(grp, tgetter, cmaker, remove_zeros,
-                  dstore=None, monitor=None):
+def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
+                  as_rmap=True, monitor=None):
     """
     Wrapper over hazard_curve.classical
+
+    :param remove_zeros: if True the sites with zero rates are removed
+    :param as_rmap: if False the rates are returned as an array of rates,
+        to be stored right away by the master, instead of as a RateMap
+        accumulated in the master (see get_rmap)
     """
     if monitor:
         cmaker.init_monitoring(monitor)
@@ -162,34 +183,300 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros,
         result['rmap'] = result['rmap'].remove_zeros()
     result['rmap'].gid = cmaker.gid
     result['rmap'].wei = cmaker.wei
+    if not as_rmap:
+        result['rmap'] = result['rmap'].to_array(cmaker.gid)
     return result
 
 
-# NB: the tilegetter here is trivial unless there are ilabels
-def classical_disagg(grp_keys, tilegetter, cmaker, dstore, monitor):
+_full_lt_cache = {}  # (dstore filename, ilabel) -> initialized FullLogicTree
+
+
+def read_full_lt(dstore, ilabel=None):
     """
-    Call the classical calculator in hazardlib with few sites.
-    `grp_keys` contains always a single element except in the case
-    of multiple atomic groups.
+    :param dstore: a DataStore instance, possibly closed
+    :param ilabel: the index of the site label (see site_labels), or None
+    :returns: the FullLogicTree stored in the datastore, initialized only
+        once per process, since the init is not cheap for large LTs;
+        with a site label, the gsim logic tree is the one of the label,
+        so that the gweights are the right ones (see read_gid_dic)
     """
-    cmaker.init_monitoring(monitor)
-    grps, sitecol = read_groups_sitecol(dstore, grp_keys)
-    sites = tilegetter(sitecol, cmaker.ilabel)
-    if grps[0].atomic:
-        # case_27 (Japan)
-        # disagg_by_src works since the atomic group contains a single
-        # source 'case' (mutex combination of case:01, case:02)
-        result = baseclassical(grps, sites, cmaker, remove_zeros=False)
-        # do not remove zeros, otherwise AELO for JPN will break
-        yield result
+    key = (dstore.filename, ilabel or 0)
+    try:
+        return _full_lt_cache[key]
+    except KeyError:
+        # keep only the logic trees of the current calculation, otherwise
+        # the cache would grow forever in long-lived worker processes
+        for k in [k for k in _full_lt_cache if k[0] != dstore.filename]:
+            del _full_lt_cache[k]
+        with dstore:
+            full_lt = dstore['full_lt'].init()
+            if ilabel:
+                # the labels are ordered as the cmdict, i.e. Default first;
+                # tested in classical/case_06_disagg_by_src
+                dic = read_full_lt_by_label(dstore, full_lt)
+                full_lt = list(dic.values())[ilabel]
+        _full_lt_cache[key] = full_lt
+        return full_lt
+
+
+def read_gid_dic(dstore, full_lt=None):
+    """
+    :param dstore: a DataStore instance
+    :param full_lt: a FullLogicTree instance, read from the datastore if None
+    :returns: a dictionary trt_smrs -> (gids, weights), associating to each
+        realization set its gids and the weights of the corresponding
+        realizations
+
+    The realization sets are the sets of realizations with the same
+    uncertainties applied (see get_core_trt_smrs) and the gids of a
+    realization set are the indices of its trt_smrs, see
+    get_rmap_gb.
+    """
+    trt_smrs = read_core_trt_smrs(dstore)
+    full_lt = full_lt or read_full_lt(dstore)
+    gweights = full_lt.g_weights(trt_smrs)[:, -1]  # shape Gt
+    return {trt_smr: (gids, gweights[gids])
+            for trt_smr, gids in zip(trt_smrs, full_lt.get_gids(trt_smrs))}
+
+
+def group_gids(src_groups, gid_dic):
+    """
+    :param src_groups: the groups of a CSM built without applying the
+        uncertainties
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :returns: a dictionary grp_id -> gids, with the gids of all the rates
+        each group can produce, i.e. one per set of realizations with the
+        same uncertainties
+    """
+    out = {}
+    for grp in src_groups:
+        gids = set()
+        for src in grp:
+            for trt_smrs in get_ts_sets(src):
+                gids.update(gid_dic[trt_smrs][0])
+        out[grp.grp_id] = U32(sorted(gids))
+    return out
+
+
+def cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt):
+    """
+    :param srcs: the sources of the group grp with the same sets of
+        realizations, i.e. grouped either by basename or by subset
+    :param grp: the SourceGroup the sources belong to
+    :param cmaker: the ContextMaker associated to the group
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :param full_lt: a FullLogicTree instance
+    :returns: a generator of (cmaker, group, gkey) triples, one per set
+        of realizations, with the uncertainties applied to the sources;
+        gkey is the geometry key of the set (see geometry_key)
+    """
+    # NB: the uncertainties are applied to the whole group, since
+    # correlated branchsets (applyToSources='*') refer to sources outside
+    # the base source
+    subgrp = copy.copy(grp)
+    subgrp.sources = list(srcs)
+    bset_values = get_bset_values(full_lt, subgrp)
+    for trt_smrs, sg in modified_groups(subgrp, bset_values):
+        sources = []
+        for src in sg:
+            if src.bysrc_unc and src.code in b'AM':
+                sources.extend(preclassical.split_source(src))
+            else:
+                sources.append(src)
+        sg.sources = sources
+        # the sources modified by the uncertainties are filtered here and
+        # not in the preclassical (see filter_mag), since the uncertainties
+        # can change the max magnitude
+        # NB: filter_mag returns a list of sources, but the group must be
+        # returned, since it contains the interdependencies (mutex,
+        # cluster, ...) used by RmapMaker
+        sg.sources = preclassical.filter_mag(
+            sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
+        if not sg.sources:
+            continue
+        gids, wei = gid_dic[trt_smrs]
+        bvals = bset_values.get(trt_smrs[0] % TWO24, [])
+        gkey = geometry_key(srcs, bvals)
+        yield cmaker.restrict_trt_smrs(trt_smrs, gids, wei), sg, gkey
+
+
+def geometry_key(srcs, bvals):
+    """
+    :param srcs: the sources of a group with the same sets of realizations
+        (see cmakers_groups_gkeys)
+    :param bvals: the (branchset, value) pairs of a set of realizations
+    :returns: a hashable key with the geometry-changing branchsets in bvals
+        which apply to some of srcs, see lt.GEOMETRY_PRESERVING; two sets
+        with the same key have the same geometry for the sources srcs, so
+        their MFD variants can be computed together by make_results
+    """
+    # e.g. logictree/case_18_bis: the sources of 'first' have two keys, one
+    # for setLowerSeismDepthAbsolute 10.0 and one for 20.0, with 9 sets each
+    # (3 abGR x 3 maxMagGR), i.e. two groups of 9 variants for make_results:
+    # (('bs6', '10.0'),) and (('bs6', '20.0'),)
+    return tuple((bset.id, repr(value)) for bset, value in bvals
+                 if bset.uncertainty_type not in GEOMETRY_PRESERVING and
+                 any(get_bset_value(bset, value, src)[0] for src in srcs))
+
+
+def _split_by_mags(pairs):
+    """
+    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :returns: a list of lists of pairs, with the same magnitudes in each
+        list; the MFD variants with the magnitude grid anchored to the
+        maximum magnitude (see width_of_mfd_bin) have different magnitudes,
+        and make_results requires them to be a subset of the base ones
+    """
+    parts = {}
+    for cm, sg in pairs:
+        # sources without MFD (e.g. nonparametric), see _rates_by_mag
+        # NB: the pairs are kept together, then _make_results fails
+        # and they are computed one at a time
+        if not all(hasattr(src, 'get_annual_occurrence_rates')
+                   for src in sg):
+            return [pairs]
+        parts.setdefault(mag_support(sg), []).append((cm, sg))
+    return list(parts.values())
+
+
+def _make_results(pairs, sites, remove_zeros, as_rmap):
+    """
+    :param pairs: a list of (cmaker, group) pairs with the same geometry
+    :returns: a list of dictionaries, one per pair, as returned by
+        baseclassical, or None if make_results cannot be used
+    """
+    try:
+        dics = make_results([sg for _, sg in pairs],
+                            [cm for cm, _ in pairs], sites)
+    except (ValueError, FilteredAway):
+        # NB: make_results raises a ValueError when the variants
+        # cannot be derived from a single base. The cases are: the
+        # sources are mutually exclusive or clustered (src_mutex,
+        # rup_mutex, cluster); a variant has a magnitude missing in the base
+        # (see _mag_ratios, the base is the one with most magnitudes);
+        # the variants have a different number of sources, i.e. some
+        # sources were filtered away
+        return None
+    for (cmaker_, _), dic in zip(pairs, dics):
+        dic['rmap'] = dic['rmap'].remove_zeros() \
+            if remove_zeros else dic['rmap']
+        dic['rmap'].gid = cmaker_.gid
+        dic['rmap'].wei = cmaker_.wei
+        if not as_rmap:
+            dic['rmap'] = dic['rmap'].to_array(cmaker_.gid)
+    return dics
+
+
+def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
+                    merge_atomic):
+    # yield the results of the atomic groups collapsed in a single
+    # task (see get_allargs and bysrc_results); they contribute to the
+    # same RateMap in the master, with the gids of all the
+    # realizations; the uncertainties are not applied, which is fine
+    # because the sources of an atomic group are nonparametric (the
+    # mutex ones must be, since mutually exclusive ruptures are
+    # modelled with nonparametric sources)
+    if merge_atomic:
+        # with many sites there are no rup_data nor mean_rates_by_src
+        yield baseclassical(grps, sites, cmaker, remove_zeros,
+                            as_rmap=as_rmap)
     else:
-        # yield a result for each base source
+        # one result per group, since the rates are attributed to the
+        # source of each result (see 'basename' in RmapMaker.make) and
+        # the rup_data of different groups cannot be concatenated
+        # (different shapes of probs_occur); the groups are
+        # independent, so the sum of the results is the same;
+        # tested in classical/case_27_other and disagg/case_18
         for grp in grps:
-            for srcs in groupby(grp, valid.basename).values():
-                result = baseclassical(srcs, sites, cmaker, remove_zeros=False)
-                yield result
+            yield baseclassical([grp], sites, cmaker, remove_zeros,
+                                as_rmap=as_rmap)
 
 
+def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
+                  as_rmap=True, merge_atomic=True):
+    """
+    Yield the results of a classical task as RateMaps: the CSM is built without
+    applying the uncertainties, so cmakers_groups_gkeys applies them one
+    set of realizations at a time and restricts the cmaker to the set; the
+    rates are attributed to the gids of the set, see read_gid_dic.
+
+    :param grps: the source groups of the task
+    :param sites: the sites of the task
+    :param cmaker: the ContextMaker associated to the groups
+    :param gid_dic: a dictionary trt_smrs -> (gids, weights)
+    :param full_lt: a FullLogicTree instance
+    :param remove_zeros: if True the sites with zero rates are removed
+    :param as_rmap: if False the rates are returned as arrays of rates,
+        stored right away by the master, see baseclassical
+    :param merge_atomic: if True the atomic groups of the task are
+        returned in a single result, otherwise in a result per group
+    """
+    if len(grps) > 1:
+        yield from _atomic_results(grps, sites, cmaker, remove_zeros,
+                                   as_rmap, merge_atomic)
+        return
+    grp = grps[0]
+    if grp.atomic:
+        # the sources of an atomic group are mutually exclusive, so they
+        # must be computed together; disagg_by_src works since the atomic
+        # group contains a single source 'case' (mutex combination of
+        # case:01, case:02), see case_27
+        srcblocks = [list(grp)]
+    elif cmaker.oq.disagg_by_src:
+        # the rates must be attributed to the single source computing
+        # them, see the 'basename' key in RmapMaker.make
+        srcblocks = groupby(grp, valid.basename).values()
+    else:
+        # the sources with the same sets of realizations, i.e. with the
+        # same uncertainties, are computed together; otherwise there
+        # would be a RateMap per source and with many sites that would be
+        # extremely slow (share_small)
+        srcblocks = groupby(grp, get_ts_sets).values()
+    for srcs in srcblocks:
+        # for the demo LogicTreeCase2ClassicalPSHA srcs is
+        # [<AreaSource first>] and then [<SimpleFaultSource second>]
+        triples = list(cmakers_groups_gkeys(srcs, grp, cmaker, gid_dic, full_lt))
+        # the sets with the same geometry key have the same geometry, so
+        # their MFD variants are computed together by make_results (see
+        # geometry_key); the other sets are computed one at a time
+        # For case_18/job_bis.ini (one point source, 3x3x2 realizations) all
+        # the 18 pairs are fast and form two groups of 9: the branchset
+        # setLowerSeismDepthAbsolute is not geometry-preserving, so the
+        # depths 10.0 and 20.0 give two geometry keys, each shared by the
+        # 9 sets of the abGR x maxMagGR branches (3 x 3)
+        # sorted(bykey) = [(('bs6', '10.0'),), (('bs6', '20.0'),)]
+        bykey = {}
+        for cm, sg, gkey in triples:
+            bykey.setdefault(gkey, []).append((cm, sg))
+        slow = []
+        # for case_25 (one site, so few=True) each pair is a source
+        # restricted to one set of realizations (one gid).
+        # The fast pairs are the ones whose geometry key is shared with
+        # at least one other pair, computed together by _make_results in
+        # groups of 2-4; the slow pairs have a unique geometry key and
+        # are computed one at a time by baseclassical.
+        # Area sources (CollapsedPointSource, alt*-bkg): 20 fast, 3 slow
+        # (alt2-NVA-AB-bkg, alt2-NVA-bkg, alt3-NVA-AB-bkg: 1 slow each).
+        # Fault sources (SimpleFaultSource): 24 fast, 27 slow; they can
+        # fall on either side depending on the other pairs in the group.
+        for pairs in bykey.values():
+            # make_results needs the same magnitudes in all the variants,
+            # which the MFD bin width does not guarantee (see _split_by_mags)
+            for part in _split_by_mags(pairs):
+                dics = _make_results(part, sites, remove_zeros, as_rmap) \
+                    if len(part) > 1 else None
+                if dics is None:
+                    slow.extend(part)
+                else:
+                    yield from dics
+        for cmaker_, sg in slow:
+            yield baseclassical(
+                sg, sites, cmaker_, remove_zeros, as_rmap=as_rmap)
+
+
+# NB: _split_src is used in conjunction with the split_time mechanism,
+# i.e. only for the groups without sources modified by the uncertainties
+# and with many sites, see classical
 def _split_src(srcs, n):
     for i in range(n):
         blk = srcs[i::n]
@@ -197,44 +484,104 @@ def _split_src(srcs, n):
             yield blk
 
 
-def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     """
-    Call the classical calculator in hazardlib with many sites.
-    `grp_keys` contains always a single element except in the case
-    of multiple atomic groups.
+    :returns: a tuple (groups, sites, gid_dic, full_lt) with the source
+        groups, the sites, the units of rate attribution and the logic
+        tree of a classical task
     """
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
-    fulltask = all('-' not in grp_key for grp_key in grp_keys)
-    sites = tilegetter(sitecol, cmaker.ilabel)
-    if fulltask:
-        # return raw array that will be stored immediately
-        result = baseclassical(grps, sites, cmaker, remove_zeros=True)
-        result['rmap'] = result['rmap'].to_array(cmaker.gid)
-        yield result
-    elif len(grps) == 1 and len(grps[0]) >= 2 and not grps[0].multifault:
-        # NB: multifaults are not split to avoid transferring the dparam cache
-        b0, *blks = _split_src(list(grps[0]), 5)
-        t0 = time.time()
-        res = baseclassical(b0, sites, cmaker, True)
-        dt = time.time() - t0
-        yield res
-        if dt > 2 * cmaker.oq.split_time:
-            for blk in blks[1:]:
-                yield baseclassical, blk, tilegetter, cmaker, True, dstore
-            yield baseclassical(blks[0], sites, cmaker, True)
-        elif dt > cmaker.oq.split_time:
-            # tested in share_small
-            yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
-                   True, dstore)
-            rest = sum(blks[2:], [])
-            if rest:
-                yield baseclassical(rest, sites, cmaker, True)
-        else:
-            yield baseclassical(sum(blks, []), sites, cmaker, True)
+    # the weight of the task is not inferrable from grp_keys, which are
+    # plain strings, so it is set explicitly (used in task_info)
+    monitor.weight = sum(grp.weight for grp in grps)
+    # NB: the datastore is closed when passed to a task, see read_gid_dic;
+    # full_lt is read from the datastore, since it is too big to be passed
+    # to the tasks
+    # NB: the tilegetter is trivial unless there are site labels;
+    # the gweights depend on the label, see get_rates and
+    # classical/case_06_disagg_by_src
+    full_lt = read_full_lt(dstore, cmaker.ilabel)
+    return (grps, tilegetter(sitecol, cmaker.ilabel),
+            read_gid_dic(dstore, full_lt), full_lt)
+
+
+def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with few sites, i.e. with
+    disagg_by_src or with at most max_sites_disagg sites. `grp_keys`
+    contains always a single element except in the case of multiple
+    atomic groups.
+
+    The rates are returned as RateMaps, accumulated in a RateMap in the
+    master (see get_rmap), and the sites with zero rates are not removed,
+    otherwise AELO for JPN will break.
+    """
+    grps, sites, gid_dic, full_lt = read_task_input(
+        grp_keys, tilegetter, cmaker, dstore, monitor)
+    # the RateMap in the master is the one of the first group (see
+    # get_rmap), also for the results of the other atomic groups
+    rmap_id = int(grp_keys[0].split('-')[0])
+    for dic in bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                             remove_zeros=False, merge_atomic=False):
+        dic['rmap_id'] = rmap_id
+        yield dic
+
+
+def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """
+    Call the classical calculator in hazardlib with many sites.
+    `grp_keys` contains always a single element except in the case of
+    multiple atomic groups.
+
+    The rates of a task whose groups are not split in blocks are returned
+    as arrays of rates, stored right away by the master, while the rates
+    of the other tasks are accumulated in a RateMap in the master; the
+    sites with zero rates are removed.
+    """
+    grps, sites, gid_dic, full_lt = read_task_input(
+        grp_keys, tilegetter, cmaker, dstore, monitor)
+    oq = cmaker.oq
+    remove_zeros = True  # reduce the size of the arrays of rates
+    as_rmap = any('-' in grp_key for grp_key in grp_keys)
+    unsplit = len(grps) != 1 or len(grps[0]) < 2 or grps[0].multifault
+    bysrc = any(src.bysrc_unc for src in grps[0])
+    # NB: the sources are split in blocks by time only if the rates are
+    # accumulated in a RateMap in the master, i.e. if the groups are
+    # already split in blocks
+    if unsplit or bysrc or not as_rmap:
+        yield from bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
+                                 remove_zeros, as_rmap)
+        return
+    # NB: multifaults are not split to avoid transferring the dparam cache
+    b0, *blks = _split_src(list(grps[0]), 5)
+    t0 = time.time()
+    yield baseclassical(b0, sites, cmaker, remove_zeros, as_rmap=as_rmap)
+    dt = time.time() - t0
+    # NB: the tasks generated below are called baseclassical, i.e. they
+    # have a different name than the Starmap (classical), hence the times
+    # are stored in a separate row of the starmap_info dataset; this is
+    # what repairs the stragglers when the initial split underestimates the
+    # cost of a group. The split is not triggered by the tests, since they
+    # have few sites; the reference test is classical/share_small in
+    # oq-risk-tests (split_time = 5)
+    if dt > 2 * oq.split_time:
+        for blk in blks[1:]:
+            yield baseclassical, blk, tilegetter, cmaker, remove_zeros, dstore
+        yield baseclassical(
+            blks[0], sites, cmaker, remove_zeros, as_rmap=as_rmap)
+    elif dt > oq.split_time:
+        yield (baseclassical, sum(blks[:2], []), tilegetter, cmaker,
+               remove_zeros, dstore)
+        rest = sum(blks[2:], [])
+        if rest:
+            yield baseclassical(
+                rest, sites, cmaker, remove_zeros, as_rmap=as_rmap)
     else:
-        yield baseclassical(grps, sites, cmaker, True)
+        yield baseclassical(
+            sum(blks, []), sites, cmaker, remove_zeros, as_rmap=as_rmap)
+
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
@@ -260,7 +607,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param hstats: a list of pairs (statname, statfunc)
     :param individual_rlzs: if True, also build the individual curves
-    :param amplifier: instance of Amplifier or None
+    :param amplifier: an AmplificationLogicTree or None
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -271,9 +618,12 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         pgetter.init()
 
     if amplifier:
-        # amplification is meant for few sites, i.e. no tiling
+        # AmplificationLogicTree: single branch (plain CSV) or amp-LT branches;
+        # AmplificationLogicTree.amplify() picks the right branch per rlz
+        # amplification is meant for few sites
         with hdf5.File(pgetter.filenames[0], 'r') as f:
             ampcode = f['sitecol'].ampcode
+        # switch imtls from rock IMT grid to the soil intensity grid
         imtls = DictArray({imt: amplifier.amplevels
                            for imt in pgetter.imtls})
     else:
@@ -295,10 +645,11 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         sidx = MapArray(sids, 1, 1).fill(0).sidx
         for sid in sids:
             idx = sidx[sid]
-            pc = pgetter.get_hcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid)  # rock hcurve, shape (L, R)
             if amplifier:
+                # rock -> soil; with amp-LT each column uses its branch AF
                 pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the hcurve have soil levels != IMT levels
+                # NB: the hcurve now has soil levels != IMT levels
             if pc.sum() == 0:  # no data
                 continue
             if R == 1 or individual_rlzs:
@@ -409,7 +760,9 @@ class ClassicalCalculator(base.HazardCalculator):
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
             with self.monitor('saving rup_data'):
-                store_ctxs(self.datastore, dic['rup_data'], grp_id)
+                # NB: each result has its own gid, see bysrc_results
+                store_ctxs(self.datastore, dic['rup_data'], grp_id,
+                           dic['rmap'].gid.min())
 
         rmap = dic.pop('rmap', None)
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
@@ -427,15 +780,17 @@ class ClassicalCalculator(base.HazardCalculator):
                 chunkno = dic.get('chunkno')  # None with the current impl.
                 _store(rmap, self.num_chunks, self.datastore, chunkno)
         else:
-            # aggregating rates is ultra-fast compared to storing
-            self.rmap[grp_id] += rmap
+            # aggregating rates is ultra-fast compared to storing; NB: the
+            # results of the atomic groups go in the RateMap of the first
+            # group of the task, see classical_bysrc
+            self.rmap[dic.pop('rmap_id', grp_id)] += rmap
         return acc
 
     def create_rup(self):
         """
         Create the rup datasets *before* starting the calculation
         """
-        params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
+        params = {'grp_id', 'gid', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         for label, cmakers in self.cmdict.items():
             for cm in cmakers:
@@ -448,7 +803,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16  # storing only for few sites
                 elif param == 'probs_occur':
                     dt = hdf5.vfloat64
-                elif param == 'src_id':
+                elif param in ('src_id', 'gid'):
                     dt = U32
                 elif param == 'rup_id':
                     dt = I64
@@ -458,6 +813,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = F32
                 descr.append((param, dt))
             self.datastore.create_df('rup', descr, 'gzip')
+            # NB: the gid is the gid of the index of rate attribution,
+            # stored since the contexts of a group have different gids,
+            # i.e. the same rupture is stored once per index of rate
+            # attribution, see store_ctxs
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
 
@@ -465,7 +824,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
         trt_smrs = self.datastore['trt_smrs'][:]
-        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
+        # NB: the gids of the cmakers must be numbered as in the core list,
+        # the one used by read_gid_dic in the master and in the workers
+        ds = self.datastore.parent or self.datastore
+        core = read_core_trt_smrs(ds)
+        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq, core)
                        for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
@@ -564,6 +927,13 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('maximum size of the multifaults=%.1f MB',
                          self.source_mb)
         self.build_curves_maps()
+        # NB: the sanity check must come after build_curves_maps, since it
+        # needs hcurves-stats; the amplified curves have different levels;
+        # it would catch the bug in classical/case_06_disagg_by_src
+        if (oq.disagg_by_src and oq.use_rates and self.N == 1
+                and not self.amplifier):
+            self.check_mean_rates(
+                self.datastore['mean_rates_by_src/array'][()])
         return True
 
     def _pre_execute(self):
@@ -576,39 +946,64 @@ class ClassicalCalculator(base.HazardCalculator):
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
-        self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
-        if self.tiling:
-            assert not oq.disagg_by_src
-            assert self.N > self.oqparam.max_sites_disagg, self.N
-        else:  # regular calculator
-            self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
+        self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         return sgs, ds
+
+    def get_rmap(self, grp_id, gids):
+        """
+        :param grp_id: the id of the group
+        :param gids: a dictionary grp_id -> gids, with the gids of all the
+            rates the group can produce, see group_gids
+        :returns: the RateMap of the group, created if not existing
+
+        NB: a RateMap is huge (550 MB in usa23) and must be created once
+        per group: the atomic groups of a gid are split in blocks with
+        different grp_keys[0], but they all contribute to the RateMap of
+        the first group
+        """
+        if grp_id not in self.rmap:
+            self.rmap[grp_id] = RateMap(
+                self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
+        return self.rmap[grp_id]
 
     def _execute(self, sgs, ds):
         oq = self.oqparam
         allargs = []
-        L = self.oqparam.imtls.size
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
-                           self.max_weight, self.num_chunks, tiling=self.tiling)
+                           self.max_weight, self.num_chunks)
         maxtiles = 1
+        num_blocks = 0
         max_gb, _, _ = getters.get_rmap_gb(self.datastore, self.full_lt)
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
-        num_blocks = 0
+        # the rates are attributed to the sets of realizations with the
+        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
+        # dataset read by the tasks, which can be the parent calculation
+        # (as in case_36)
+        gid_dic = read_gid_dic(ds, self.full_lt)
+        gids = group_gids(self.csm.src_groups, gid_dic)
         for cmaker, tilegetters, grp_keys, atomic in data:
             num_blocks += sum('-' in key for key in grp_keys)
+            # the rates are accumulated in a RateMap in the master, unless
+            # the task returns an array of rates, i.e. unless there are
+            # many sites and the groups are not split in blocks
             if self.few_sites or oq.disagg_by_src or len(grp_keys) > 1:
-                grp_id = int(grp_keys[0].split('-')[0])
-                self.rmap[grp_id] = RateMap(self.sitecol.sids, L, cmaker.gid)
-            if self.few_sites or oq.disagg_by_src and cmaker.ilabel is None:
-                assert len(tilegetters) == 1, "disagg_by_src has no tiles"
+                self.get_rmap(int(grp_keys[0].split('-')[0]), gids)
+            if self.few_sites or oq.disagg_by_src:
+                # NB: a group discarded by the prefiltering has no tiles
+                # at all, which is fine since it produces no rate; however
+                # two or more tiles would silently corrupt disagg_by_src,
+                # also with site labels (see get_rates)
+                assert len(tilegetters) <= 1, (
+                    'disagg_by_src has %d tiles for group %s'
+                    % (len(tilegetters), grp_keys))
             for tgetter in tilegetters:
                 if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
                     # can happen for some ilabel
@@ -643,7 +1038,7 @@ class ClassicalCalculator(base.HazardCalculator):
             allargs = [allargs[int(OQ_TASK_NO)]]
         if self.few_sites or oq.disagg_by_src:
             smap = parallel.Starmap(
-                classical_disagg, allargs, h5=self.datastore.hdf5)
+                classical_bysrc, allargs, h5=self.datastore.hdf5)
         else:
             smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
@@ -670,9 +1065,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     _store(rmap.to_array(g), self.num_chunks, self.datastore)
 
         if oq.disagg_by_src:
-            mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
-            if oq.use_rates and self.N == 1:  # sanity check
-                self.check_mean_rates(mrs)
+            store_mean_rates_by_src(self.datastore, self.srcidx, acc)
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular disaggregation/case_15 is sensitive to num_cores
@@ -682,14 +1075,18 @@ class ClassicalCalculator(base.HazardCalculator):
         The sum of the mean_rates_by_src must correspond to the mean_rates
         """
         try:
-            exp = disagg.to_rates(self.datastore['hcurves-stats'][0, 0])
+            hcurves = self.datastore['hcurves-stats'][0, 0]
         except KeyError:  # if there are no ruptures close to the site
             return
+        # NB: the mean_rates_by_src are annual rates, see get_rates
+        exp = disagg.to_rates(hcurves) / self.oqparam.investigation_time
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
         for m in range(len(got)):
             # skipping large rates which can be wrong due to numerics
-            # (it happens in logictree/case_05 and in Japan)
-            ok = got[m] < 2.
+            # (it happens in logictree/case_05 and in Japan); the rates
+            # are compared in the investigation time, where the poes
+            # saturate (see to_rates)
+            ok = got[m] * self.oqparam.investigation_time < 2.
             numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def store_info(self):
@@ -752,50 +1149,49 @@ class ClassicalCalculator(base.HazardCalculator):
             info = self.datastore.read_df('starmap_info', 'taskname')
         except hdf5.File.EmptyDataset:
             return
-        try:
-            ser = info.loc[b'classical']
-        except KeyError:  # classical_disagg
+        # NB: the classical Starmap generates baseclassical subtasks when
+        # the tasks are too slow, so there can be two rows; the rows with
+        # a tiny mean are discarded, since the tasks are then so fast
+        # that the busy times are dominated by the startup of the worker
+        # processes, so the check below would be meaningless (see eshm20,
+        # with 0.15s of busy time per worker and a ratio of 1.5)
+        ser = info[info.index.isin([b'classical', b'baseclassical'])]
+        ser = ser[ser['mean'] >= 1]
+        if not len(ser):
             return
-        slow_tasks = ser['mean'] > 60. and ser['std'] / ser['mean'] > .2
+        # NB: the check is meaningful only if there are enough tasks to
+        # keep all the workers busy, since the busy times per worker
+        # cannot be balanced with few tasks (i.e. a model with a single
+        # source model logic tree branch and few sites, see the sslt test
+        # in oq-risk-tests, with 2 tasks and 16 workers)
+        ntasks = len(self.datastore['grp_keys'])
+        if ntasks < 4 * parallel.num_cores:
+            logging.info('Only %d tasks for %d workers, not checking for '
+                         'slow tasks', ntasks, parallel.num_cores)
+            return
+        # NB: the ratio std/mean of the *busy times* of the workers
+        # measures how balanced the generated tasks are; since the
+        # tasks are built from an estimate of the cost, and the
+        # estimate cannot be exact, .3 is considered acceptable
+        # (see the alaska and sam_small tests in oq-risk-tests)
+        # NB: the rows are combined and not compared, since they are
+        # components of the busy time of the same workers; assuming the
+        # times spent on the different kinds of tasks are independent,
+        # the means add up and so do the variances
+        std = numpy.sqrt((ser['std'] ** 2).sum())
+        slow_tasks = std / ser['mean'].sum() > .3
         if slow_tasks and self.SLOW_TASK_ERROR:
             raise RuntimeError('Slow tasks in #%d' % self.datastore.calc_id)
         elif slow_tasks:
             logging.warning('There were slow tasks')
 
     def _create_hcurves_maps(self):
-        oq = self.oqparam
         N = len(self.sitecol)
         R = len(self.datastore['weights'])
-        hstats = oq.hazard_stats()
-        # initialize datasets
-        P = len(oq.poes)
-        M = self.M = len(oq.imtls)
-        imts = list(oq.imtls)
-        if oq.soil_intensities is not None:
-            L = M * len(oq.soil_intensities)
-        else:
-            L = oq.imtls.size
-        L1 = self.L1 = L // M
-        S = len(hstats)
-        if R == 1 or oq.individual_rlzs:
-            self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-            self.datastore.set_shape_descr(
-                'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
-            if oq.poes:
-                self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-                self.datastore.set_shape_descr(
-                    'hmaps-rlzs', site_id=N, rlz_id=R,
-                    imt=list(oq.imtls), poe=oq.poes)
-        if hstats:
-            self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-            self.datastore.set_shape_descr(
-                'hcurves-stats', site_id=N, stat=list(hstats),
-                imt=imts, lvl=numpy.arange(L1))
-            if oq.poes:
-                self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-                self.datastore.set_shape_descr(
-                    'hmaps-stats', site_id=N, stat=list(hstats),
-                    imt=list(oq.imtls), poe=oq.poes)
+        S, M, P, L1 = base.create_hcurves_maps(
+            self.datastore, self.oqparam, N, R)
+        self.M = M
+        self.L1 = L1
         return N, S, M, P, L1
 
     # called by execute before post_execute
@@ -823,19 +1219,23 @@ class ClassicalCalculator(base.HazardCalculator):
         if hmbytes:
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if 'delta_rates' in oq.inputs:
-            pass  # avoid an HDF5 error
-        else:  # in all the other cases
+            # with delta_rates the datastore cannot be put in SWMR mode:
+            # the workers would read the rates while the master still writes
+            # them, so the postclassical tasks must run in the master process
+            distribute = 'no'
+        else:
+            distribute = None
             self.datastore.swmr_on()
         if oq.fastmean:
             parallel.Starmap(
                 fast_mean, [args[0:1] for args in allargs],
-                distribute='no' if self.few_sites else None,
+                distribute=distribute,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         else:
             parallel.Starmap(
                 postclassical, allargs,
-                distribute='no' if self.few_sites else None,
+                distribute=distribute,
                 h5=self.datastore.hdf5,
             ).reduce(self.collect_hazard)
         for kind in sorted(self.hazard):

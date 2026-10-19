@@ -38,4 +38,6 @@ def test_aelo_run_job(application_mode, authenticated_page, user):
 
     page.run_aelo_calc()
 
-    page.abort_latest_job()
+    job_id = page.get_job_id_from_new_job()
+    page.abort_job(job_id)
+    page.remove_job(job_id)

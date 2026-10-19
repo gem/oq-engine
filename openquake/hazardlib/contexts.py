@@ -16,25 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import abc
 import copy
 import time
 import logging
 import warnings
-import itertools
 import operator
-import collections
 import numpy
 import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
 from openquake.baselib.general import (
-    AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, getsizeof)
-from openquake.baselib.performance import Monitor, split_array, kround0, compile
-from openquake.baselib.general import decode
-from openquake.hazardlib import valid, imt as imt_module, InvalidFile
+    DictArray, RecordBuilder, split_in_slices, block_splitter,
+    getsizeof)
+from openquake.baselib.performance import Monitor, split_array, compile
+from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
@@ -49,24 +45,61 @@ from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
 U8 = numpy.uint8
+
+
 I32 = numpy.int32
+
+
 U32 = numpy.uint32
+
+
 F16 = numpy.float16
+
+
 F32 = numpy.float32
+
+
 F64 = numpy.float64
+
+
 TWO20 = 2**20
+
+
 TWO16 = 2**16
+
+
 TWO24 = 2**24
+
+
 TWO32 = 2**32
+
+
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
+
+
 KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
-azimuthcp rvolc clon_clat clon clat'''.split())
-NUM_BINS = 256
-DIST_BINS = sqrscale(80, 1000, NUM_BINS)
+azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
+
+
 MEA = 0
+
+
 STD = 1
+
+
 EPS = 1E-3
+
+
+#: How many (rupture, site) pairs are as expensive as a single surviving
+#: context, i.e. how much a discarded pair costs with respect to a context
+#: on which the GSIMs are actually evaluated. Determined heuristically
+#: from the @slowtask in oq-risk-tests
+PAIR_COST = 20.
+
+
 bymag = operator.attrgetter('mag')
+
+
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
@@ -100,8 +133,8 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
     if not dparam:
         # no multifault
         dists = get_distances(rup, r_sites, param)
-        if '_' in param:
-            p0, p1 = param.split('_')  # clon_clat
+        if param in ('clon_clat', 'rx_ry0'):
+            p0, p1 = param.split('_')  # paired attributes
             setattr(ctx, p0, dists[:, 0])
             setattr(ctx, p1, dists[:, 1])
         else:
@@ -139,12 +172,10 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
             # shape (numsites, 3)
             ctx['clon'] = m.lons
             ctx['clat'] = m.lats
-
-
-def round_dist(dst):
-    idx = numpy.searchsorted(DIST_BINS, dst)
-    idx[idx == NUM_BINS] -= 1
-    return DIST_BINS[idx]
+        elif param in ('rtor', 'x_l'):
+            # PFD metrics are not in msparam: use the surface methods, which
+            # for a MultiSurface implement the 'segments' semantics
+            setattr(ctx, param, get_distances(rup, r_sites, param))
 
 
 def is_modifiable(gsim):
@@ -229,51 +260,6 @@ class Oq(object):
                 for key, value in self.inputs['reqv'].items()}
 
 
-# same speed as performance.kround, round more
-def kround1(ctx, kfields):
-    kdist = 2. * ctx.mag**2  # heuristic collapse distance from 32 to 200 km
-    close = ctx.rrup < kdist
-    far = ~close
-    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
-    for kfield in kfields:
-        kval = ctx[kfield]
-        if kfield == 'vs30':
-            out[kfield][close] = numpy.round(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far], 1)  # round more
-        elif kval.dtype == F64 and kfield != 'mag':
-            out[kfield][close] = F16(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far])  # round more
-        else:
-            out[kfield] = ctx[kfield]
-    return out
-
-
-def kround2(ctx, kfields):
-    kdist = 5. * ctx.mag**2  # from 80 to 500 km
-    close = ctx.rrup < kdist
-    far = ~close
-    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
-    for kfield in kfields:
-        kval = ctx[kfield]
-        if kfield == 'rx':   # can be negative
-            out[kfield] = numpy.round(kval)
-        elif kfield in KNOWN_DISTANCES:
-            out[kfield][close] = numpy.ceil(kval[close])  # round to 1 km
-            out[kfield][far] = round_dist(kval[far])  # round more
-        elif kfield == 'vs30':
-            out[kfield][close] = numpy.round(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far], 1)  # round more
-        elif kval.dtype == F64 and kfield != 'mag':
-            out[kfield][close] = F16(kval[close])  # round less
-            out[kfield][far] = numpy.round(kval[far])  # round more
-        else:
-            out[kfield] = ctx[kfield]
-    return out
-
-
-kround = {0: kround0, 1: kround1, 2: kround2}
-
-
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
@@ -314,9 +300,7 @@ def simple_cmaker(gsims, imts, **params):
     return ContextMaker('*', gsims, dic)
 
 
-# ############################ genctxs ################################## #
-
-# generator of quintets (rup_index, mag, planar_array, sites)
+# generator of quintets (rup_index, mag, magdist, planars, sites)
 # called first in preclassical with a reduced sitecol and then in classical
 def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
@@ -324,12 +308,21 @@ def _quintets(cmaker, src, sitecol):
         planardict = src.get_planar(cmaker.shift_hypo)
 
     magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
-    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
-    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-    maxdist = magdist[maxmag]
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range, and
+    # it is 0 for all the magnitudes if the source has no magnitude inside
+    # the range, which can happen since for the sources modified by the
+    # uncertainties the magnitude filtering is performed in the classical
+    # workers and not in the preclassical (see filter_mag)
+    valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
+    if not valid:  # the source is irrelevant, no site is in range
+        return
+    maxmag = max(valid)
+    maxdist = valid[maxmag]
     cdist = sitecol.get_cdist(src.location)
-    # NB: having a decent max_radius is essential for performance!
-    mask = cdist <= maxdist + src.max_radius(maxdist)
+    # Reuse the rupture radii while handling this source; get_psdist is
+    # called once per rupture and recomputing the whole vector is expensive.
+    radii = src._get_rupture_projection_radii()
+    mask = cdist <= maxdist + src.max_radius(maxdist, radii)
     sites = sitecol.filter(mask)
     if sites is None:
         return
@@ -348,26 +341,28 @@ def _quintets(cmaker, src, sitecol):
             if mag > maxmag or mag < minmag:
                 continue
             mdist = magdist[mag]
-            arr = [rup.surface.array.reshape(-1, 3)]  # planar
-            pla = planardict[mag]
+            # far sites use the mean rupture from src.iruptures(),
+            # close sites use all the nodal planes/hypocenters
+            meanpla = [rup.surface.array.reshape(-1, 3)]
+            allpla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist)
+                                    magdist, radii)
             close = sites.filter(cdist[mask] <= psdist)
             far = sites.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sites
+                    yield m, mag, mdist, meanpla, sites
                 else:  # something is close
-                    yield m, mag, mdist, pla, sites
+                    yield m, mag, mdist, allpla, sites
             else:  # many sites
                 if close is None:  # all is far
-                    yield m, mag, mdist, arr, far
+                    yield m, mag, mdist, meanpla, far
                 elif far is None:  # all is close
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, mdist, allpla, close
                 else:  # some sites are far, some are close
-                    yield m, mag, mdist, arr, far
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, mdist, meanpla, far
+                    yield m, mag, mdist, allpla, close
 
 
 # helper used to populate contexts for planar ruptures
@@ -461,14 +456,16 @@ def genctxs_Pp(src, sitecol, cmaker):
     for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
         if not planars:
             continue
-        elif len(planars) > 1:  # when using ps_grid_spacing
+        elif len(planars) > 1:  # when using ps_grid_spacing, case_43
+            # CollapsedPointSource.get_planar() has already normalized each
+            # source block by its own magnitude rate.
             pla = numpy.concatenate(planars).view(numpy.recarray)
-            pla.wlr[:, 2] /= len(planars)  # average rate
         else:
             pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
-                              pla, sites, src.id, src.offset, tom)
+        with cmaker.ctx_mon:
+            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+                                  pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
@@ -487,8 +484,6 @@ def _set_poes(mean_std, loglevels, phi_b, out):
         mea, std = mean_std[:, m]  # shape N
         for lvl, iml in enumerate(levels):
             out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
-
-# ############################ ContextMaker ############################### #
 
 
 def _fix(gsimdict, betw):
@@ -581,8 +576,12 @@ class ContextMaker(object):
         else:
             self.gsims = _fix({gsim: U32([i]) for i, gsim in enumerate(gsims)},
                               betw_ratio)
-        # NB: the gid array can be overridden later on
-        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
+        # NB: gsim_idx is the index of each gsim in the list, i.e. the id
+        # identifying a gsim of the group; it is used to label the GMFs
+        # (see calc.gmf) and the contexts (see the gid column of the rup
+        # dataframe)
+        self.gsim_idx = numpy.arange(len(gsims), dtype=numpy.uint16)
+        self._gid = None  # set by restrict_trt_smrs, see the gid property
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -685,6 +684,12 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        # NB: building the contexts (distances + rupture parameters +
+        # recarray) is by far the most expensive operation of the classical
+        # calculator, so it is monitored even if the monitor is entered
+        # once per rupture; the counts tell how many ruptures were
+        # considered (the ruptures beyond the integration time included)
+        self.ctx_mon = monitor('building contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -745,18 +750,59 @@ class ContextMaker(object):
                 logging.info(f'Conversion from {imc.name} not applicable to'
                              f' {gsim.__class__.__name__}')
 
+    @property
+    def gid(self):
+        """
+        :returns: the ids of the columns of the rates generated by this
+            cmaker, i.e. the gids of an index of rate attribution if the
+            cmaker has been restricted (see restrict_trt_smrs), otherwise
+            the gsim_idx, since for a whole group the ids of the rates
+            and the indexes of the gsims coincide
+        """
+        return self.gsim_idx if self._gid is None else self._gid
+
+    @gid.setter
+    def gid(self, gids):
+        self._gid = gids
+
     def split(self, blocksize):
         """
         Split the ContextMaker by blocks of GSIMs
         """
-        for gid, wei, gsims in zip(block_splitter(self.gid, blocksize),
-                                   block_splitter(self.wei, blocksize),
-                                   block_splitter(self.gsims, blocksize)):
+        for gsim_idx, wei, gsims in zip(block_splitter(self.gsim_idx,
+                                                       blocksize),
+                                         block_splitter(self.wei, blocksize),
+                                         block_splitter(self.gsims,
+                                                        blocksize)):
             new = copy.copy(self)
             new.gsims = gsims
-            new.gid = gid
+            new.gsim_idx = gsim_idx
             new.wei = wei
             yield new
+
+    def restrict_trt_smrs(self, trt_smrs, gid, wei):
+        """
+        :param trt_smrs: the trt_smrs of the index of rate attribution
+        :param gid: the gids identifying the index of rate attribution,
+            i.e. the columns of the rates generated by the new cmaker;
+            NB: the gsim_idx are not changed, since the gsims are not
+            restricted either
+        :param wei: the weights of the gids
+        :returns: a shallow copy of the cmaker restricted to the
+            realizations trt_smrs, since a group has the trt_smrs of all
+            the realizations but the sources can have different
+            uncertainties in different ones
+
+        NB: the gsims are not restricted, since the number of gsims of an
+        index of rate attribution is the number of gsims of its TRT, see
+        get_rlzs_by_gsim, and must match the number of gids, see get_gids
+        """
+        new = copy.copy(self)
+        new.trt_smrs = numpy.array(trt_smrs, U32)
+        new.gid = gid
+        new.wei = wei
+        assert len(new.gsims) == len(gid), (len(new.gsims), len(gid))
+        return new
 
     def horiz_comp_to_geom_mean(self, mean_stds, gsim):
         """
@@ -880,77 +926,99 @@ class ContextMaker(object):
                 ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
 
+    @staticmethod
+    def _get_zbot(rup, msparam):
+        """
+        Bottom-edge depth; needed for width estimation in
+        CampbellBozorgnia2014.
+        """
+        if msparam:
+            return msparam['zbot']
+        elif rup.surface and hasattr(rup, 'surfaces'):
+            return rup.surface.zbot
+        elif rup.surface:
+            return rup.surface.mesh.depths.max()
+        else:
+            return rup.hypocenter.depth
+
+    @staticmethod
+    def _get_in_cshm(rup):
+        """
+        Whether the rupture intersects the CSHM polygon; used in the
+        McVerry and Bradley GMPEs. This is really expensive.
+        """
+        if not rup.surface:
+            return False
+        lons = rup.surface.mesh.lons.flatten()
+        lats = rup.surface.mesh.lats.flatten()
+        points_in_polygon = (
+            shapely.geometry.Point(lon, lat).within(cshm_polygon)
+            for lon, lat in zip(lons, lats))
+        return any(points_in_polygon)
+
+    def _get_rup_param(self, rup, param, msparam):
+        """
+        :param rup: a rupture
+        :param param: a rupture parameter name
+        :param msparam: multi-fault section parameters, or None
+        :returns: the value of the given rupture parameter
+        """
+        surface = rup.surface
+        if param == 'mag':
+            return numpy.round(rup.mag, 3)
+        elif param == 'strike':
+            return msparam['strike'] if msparam else surface.get_strike()
+        elif param == 'dip':
+            if msparam:
+                return msparam['dip']
+            dip = getattr(surface, 'original_dip', None)
+            return dip if dip is not None else surface.get_dip()
+        elif param == 'rake':
+            return rup.rake
+        elif param == 'ztor':
+            return (msparam['ztor'] if msparam
+                    else surface.get_top_edge_depth())
+        elif param == 'width':
+            return msparam['width'] if msparam else surface.get_width()
+        elif param == 'zbot':
+            return self._get_zbot(rup, msparam)
+        elif param == 'length':
+            # top rupture trace length (PFDHA); scalar per rupture
+            return surface.get_tor_length() if surface else 0.0
+        elif param == 'in_cshm':
+            return self._get_in_cshm(rup)
+        elif param == 'hypo_lon':
+            return rup.hypocenter.longitude
+        elif param == 'hypo_lat':
+            return rup.hypocenter.latitude
+        elif param == 'hypo_depth':
+            return rup.hypocenter.depth
+        elif param == 'is_aftershock':
+            # Set to True later in RmapMaker for ruptures with a non-zero
+            # delta_rate. Without delta_rates it stays False
+            return False
+        elif param == 'crjb':
+            # Centroid Joyner-Boore distance between an aftershock rup and
+            # its main shock. Can be provided from the delta_rates CSV
+            return numpy.nan
+        else:
+            raise ValueError('%s requires unknown rupture parameter %r' %
+                             (type(self).__name__, param))
+
     def get_rparams(self, rup):
         """
         :returns: a dictionary with the rupture parameters
         """
-        dic = {}
-        if self.dparam:
-            msparam = rup.surface.msparam
-        else:
-            msparam = None
-        for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if param == 'mag':
-                value = numpy.round(rup.mag, 3)
-            elif param == 'strike':
-                if msparam:
-                    value = msparam['strike']
-                else:
-                    value = rup.surface.get_strike()
-            elif param == 'dip':
-                if msparam:
-                    value = msparam['dip']
-                else:
-                    value = rup.surface.get_dip()
-            elif param == 'rake':
-                value = rup.rake
-            elif param == 'ztor':
-                if msparam:
-                    value = msparam['ztor']
-                else:
-                    value = rup.surface.get_top_edge_depth()
-            elif param == 'hypo_lon':
-                value = rup.hypocenter.longitude
-            elif param == 'hypo_lat':
-                value = rup.hypocenter.latitude
-            elif param == 'hypo_depth':
-                value = rup.hypocenter.depth
-            elif param == 'width':
-                if msparam:
-                    value = msparam['width']
-                else:
-                    value = rup.surface.get_width()
-            elif param == 'in_cshm':
-                # used in McVerry and Bradley GMPEs
-                if rup.surface:
-                    # this is really expensive
-                    lons = rup.surface.mesh.lons.flatten()
-                    lats = rup.surface.mesh.lats.flatten()
-                    points_in_polygon = (
-                        shapely.geometry.Point(lon, lat).within(cshm_polygon)
-                        for lon, lat in zip(lons, lats))
-                    value = any(points_in_polygon)
-                else:
-                    value = False
-            elif param == 'zbot':
-                # needed for width estimation in CampbellBozorgnia2014
-                if msparam:
-                    value = msparam['zbot']
-                elif rup.surface and hasattr(rup, 'surfaces'):
-                    value = rup.surface.zbot
-                elif rup.surface:
-                    value = rup.surface.mesh.depths.max()
-                else:
-                    value = rup.hypocenter.depth
-            else:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (type(self).__name__, param))
-            dic[param] = value
+        msparam = rup.surface.msparam if self.dparam else None
+        dic = {param: self._get_rup_param(rup, param, msparam)
+               for param in self.REQUIRES_RUPTURE_PARAMETERS}
         dic['occurrence_rate'] = getattr(rup, 'occurrence_rate', numpy.nan)
         if hasattr(rup, 'temporal_occurrence_model'):
-            if isinstance(rup.temporal_occurrence_model, NegativeBinomialTOM):
-                dic['probs_occur'] = rup.temporal_occurrence_model.get_pmf(
-                    rup.occurrence_rate)
+            if isinstance(rup.temporal_occurrence_model,
+                          NegativeBinomialTOM):
+                dic['probs_occur'] = (
+                    rup.temporal_occurrence_model.get_pmf(
+                        rup.occurrence_rate))
         elif hasattr(rup, 'probs_occur'):
             dic['probs_occur'] = rup.probs_occur
 
@@ -964,69 +1032,110 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        dparam = self.dparam
         for rup in same_mag_rups:
-            if dparam:
-                rrups = _get(rup.surface.surfaces, 'rrup', dparam)
-                rrup = numpy.min(rrups, axis=0)
-            else:
-                rrup = get_distances(rup, sites, 'rrup')
-            mask = rrup <= magdist
-            if not mask.any():
+            # NB: the monitor is entered once per rupture, since the
+            # building of the contexts is the critical section
+            with self.ctx_mon:
+                yield from self._genctx(rup, sites, src_id, magdist)
+
+    def _genctx(self, rup, sites, src_id, magdist):
+        """
+        :param rup: a rupture
+        :param sites: a (filtered) site collection
+        :param src_id: source index
+        :param magdist: integration time, i.e. the maximum distance
+        :yields: a context array for the given rupture
+        """
+        dparam = self.dparam
+        if dparam:
+            rrups = _get(rup.surface.surfaces, 'rrup', dparam)
+            rrup = numpy.min(rrups, axis=0)
+        else:
+            rrup = get_distances(rup, sites, 'rrup')
+        mask = rrup <= magdist
+        if not mask.any():
+            return
+
+        r_sites = sites.filter(mask)
+        # to debug you can insert here
+        # print(rup.surface.tor.get_tuw_df(r_sites))
+        # import pdb; pdb.set_trace()
+
+        ''' # sanity check
+        true_rrup = rup.surface.get_min_distance(r_sites)
+        numpy.testing.assert_allclose(true_rrup, rrup[mask])
+        '''
+        rparams = self.get_rparams(rup)
+        ctx = self._make_ctx(rparams, r_sites, rrup, mask)
+
+        params = self.REQUIRES_DISTANCES - {'rrup'}
+        if self.fewsites or 'clon' in params or 'clat' in params:
+            params.add('clon_clat')
+
+        # compute tu only once
+        if dparam and ('rx' in params or 'ry0' in params):
+            tu = _get_tu(rup, dparam, mask)
+        else:
+            tu = None
+        for param in params - {'clon', 'clat'}:
+            set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+
+        # PFD multi-fault reference-line metrics: fill only the methods
+        # the configured PFD models declare (cmaker.pfd_methods); single
+        # surfaces fall back to the canonical trace-based metrics
+        for method in getattr(self, 'pfd_methods', ()):
+            if method == 'segments':
                 continue
-
-            r_sites = sites.filter(mask)
-            # to debug you can insert here
-            # print(rup.surface.tor.get_tuw_df(r_sites))
-            # import pdb; pdb.set_trace()
-
-            ''' # sanity check
-            true_rrup = rup.surface.get_min_distance(r_sites)
-            numpy.testing.assert_allclose(true_rrup, rrup[mask])
-            '''
-            rparams = self.get_rparams(rup)
-            dd = self.defaultdict.copy()
-            try:
-                po = rparams['probs_occur']
-            except KeyError:
-                dd['probs_occur'] = numpy.zeros(0)
+            if rup.surface is not None and hasattr(
+                    rup.surface, 'get_ref_metrics'):
+                r_km, x_l, l_km = rup.surface.get_ref_metrics(
+                    method, r_sites)
             else:
-                L = len(po) if len(po.shape) == 1 else po.shape[1]
-                dd['probs_occur'] = numpy.zeros(L)
-            ctx = RecordBuilder(**dd).zeros(len(r_sites))
-            for par, val in rparams.items():
-                ctx[par] = val
+                r_km, x_l, l_km = ctx.rtor, ctx.x_l, ctx.length
+            ctx['rtor_' + method] = r_km
+            ctx['x_l_' + method] = x_l
+            ctx['length_' + method] = l_km
 
-            ctx.rrup = rrup[mask]
-            ctx.sids = r_sites.sids
-            params = self.REQUIRES_DISTANCES - {'rrup'}
-            if self.fewsites or 'clon' in params or 'clat' in params:
-                params.add('clon_clat')
+        # Equivalent distances
+        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+        if reqv_obj and not rup.surface:  # PointRuptures have no surface
+            reqv = reqv_obj.get(ctx.repi, rup.mag)
+            if 'rjb' in self.REQUIRES_DISTANCES:
+                ctx.rjb = reqv
+            if 'rrup' in self.REQUIRES_DISTANCES:
+                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
-            # compute tu only once
-            if dparam and ('rx' in params or 'ry0' in params):
-                tu = _get_tu(rup, dparam, mask)
-            else:
-                tu = None
-            for param in params - {'clon', 'clat'}:
-                set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+        for name in r_sites.array.dtype.names:
+            setattr(ctx, name, r_sites[name])
 
-            # Equivalent distances
-            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-            if reqv_obj and not rup.surface:  # PointRuptures have no surface
-                reqv = reqv_obj.get(ctx.repi, rup.mag)
-                if 'rjb' in self.REQUIRES_DISTANCES:
-                    ctx.rjb = reqv
-                if 'rrup' in self.REQUIRES_DISTANCES:
-                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+        ctx.src_id = src_id
+        if src_id >= 0:
+            ctx.rup_id = rup.rup_id
+        yield ctx
 
-            for name in r_sites.array.dtype.names:
-                setattr(ctx, name, r_sites[name])
+    def _make_ctx(self, rparams, r_sites, rrup, mask):
+        """
+        :param rparams: a dictionary of rupture parameters
+        :param r_sites: a (filtered) site collection
+        :param rrup: rupture distances, one per site
+        :param mask: boolean mask of the sites within the integration time
+        :returns: a context recarray with shape (len(r_sites),)
+        """
+        dd = self.defaultdict.copy()
+        try:
+            po = rparams['probs_occur']
+        except KeyError:
+            dd['probs_occur'] = numpy.zeros(0)
+        else:
+            L = len(po) if len(po.shape) == 1 else po.shape[1]
+            dd['probs_occur'] = numpy.zeros(L)
+        ctx = RecordBuilder(**dd).zeros(len(r_sites))
+        for par, val in rparams.items():
+            ctx[par] = val
 
-            ctx.src_id = src_id
-            if src_id >= 0:
-                ctx.rup_id = rup.rup_id
-            yield ctx
+        ctx.rrup = rrup[mask]
+        ctx.sids = r_sites.sids
+        return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -1097,37 +1206,6 @@ class ContextMaker(object):
             # fast lane for event based with no minimum_distance
             return ctxs
         return (self.recarray([c]) for c in ctxs)
-
-    def max_intensity(self, sitecol1, mags, dists):
-        """
-        :param sitecol1: a SiteCollection instance with a single site
-        :param mags: a sequence of magnitudes
-        :param dists: a sequence of distances
-        :returns: an array of GMVs of shape (#mags, #dists)
-        """
-        assert len(sitecol1) == 1, sitecol1
-        nmags, ndists = len(mags), len(dists)
-        gmv = numpy.zeros((nmags, ndists))
-        for m, d in itertools.product(range(nmags), range(ndists)):
-            mag, dist = mags[m], dists[d]
-            ctx = RuptureContext()
-            for par in self.REQUIRES_RUPTURE_PARAMETERS:
-                setattr(ctx, par, 0)
-            for dst in self.REQUIRES_DISTANCES:
-                setattr(ctx, dst, numpy.array([dist]))
-            for par in self.REQUIRES_SITES_PARAMETERS:
-                setattr(ctx, par, getattr(sitecol1, par))
-            ctx.sids = sitecol1.sids
-            ctx.mag = mag
-            ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
-            try:
-                maxmean = self.get_mean_stds([ctx])[0].max()
-                # shape NM
-            except ValueError:  # magnitude outside of supported range
-                continue
-            else:
-                gmv[m, d] = numpy.exp(maxmean)
-        return gmv
 
     def get_occ_rates(self, ctxt):
         """
@@ -1325,7 +1403,7 @@ class ContextMaker(object):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
-        :returns: (weight, estimate_sites)
+        :returns: an estimate of the CPU cost of processing the source
         """
         t0 = time.time()
         if src.nsites == 0:  # was discarded by the prefiltering
@@ -1335,19 +1413,40 @@ class ContextMaker(object):
             # may happen for CollapsedPointSources
             return EPS
         src.nsites = len(sites)
-        step = 1 if src.code in b'pP' else 20 if src.num_ruptures >= 400 else 4
-        C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+        if src.bysrc_unc:
+            # NB: the sources modified by the uncertainties are not split
+            # here (see filter_weight) but in classical, after modifying
+            # them; generating all their contexts now would be expensive
+            # (the area sources go through the rupture-by-rupture path of
+            # gen_contexts) and useless, since the estimate is used only
+            # to split the work in tasks. Since each source is processed
+            # once per set of realizations with different uncertainties,
+            # the cost is proportional to the number of sets; NB: the
+            # import is local to avoid a circular dependency
+            from openquake.hazardlib.lt import get_ts_sets
+            C = src.num_ruptures * src.nsites * len(get_ts_sets(src))
+        else:
+            step = (1 if src.code in b'pP' else
+                    20 if src.num_ruptures >= 400 else 4)
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+            # the corrections compensate the subsampling of the ruptures
+            if src.code in b'SFN':
+                C *= step**2
+            elif src.code in b'CKX':
+                C *= step
         src.dt = time.time() - t0
         if not C:
             return EPS
         N = len(srcfilter.sitecol.complete)
-        if src.code in b'SFN':
-            C *= step**2
-        elif src.code in b'CKX':
-            C *= step
         src.nctxs = C * srcfilter.multiplier
-        weight = src.nctxs / N
-        return weight
+        # The surviving contexts are not the whole story: the contexts of a
+        # pointlike source are generated for *all* the (rupture, site) pairs
+        # and then filtered by rrup < magdist, so a collapsed point source
+        # with thousands of ruptures and a couple of surviving contexts is
+        # much more expensive than its nctxs suggests. The number of pairs
+        # is the relevant quantity, discounted by PAIR_COST
+        pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+        return (src.nctxs + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """
@@ -1363,10 +1462,6 @@ class ContextMaker(object):
     def __repr__(self):
         rlzs = sum(len(rlzs) for rlzs in self.gsims.values())
         return f'<{self.__class__.__name__} {self.trt} {rlzs=}>'
-        
-
-def by_dists(gsim):
-    return tuple(sorted(gsim.REQUIRES_DISTANCES))
 
 
 # see contexts_tests.py for examples of collapse
@@ -1390,18 +1485,6 @@ def combine_pmf(o1, o2):
         for j in range(n2):
             o[i + j] += o1[i] * o2[j]
     return o
-
-
-def print_finite_size(rups):
-    """
-    Used to print the number of finite-size ruptures
-    """
-    c = collections.Counter()
-    for rup in rups:
-        if rup.surface:
-            c['%.2f' % rup.mag] += 1
-    print(c)
-    print('total finite size ruptures = ', sum(c.values()))
 
 
 def _get_poes(mean_std, loglevels, phi_b):
@@ -1475,224 +1558,6 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
             out[:, mL1:mL1 + L1] = 0
 
 
-class RmapMaker(object):
-    """
-    A class to compute the PoEs from a given source
-    """
-    def __init__(self, cmaker, sitecol, group):
-        vars(self).update(vars(cmaker))
-        self.cmaker = cmaker
-        if hasattr(sitecol, 'sitecol'):
-            self.srcfilter = sitecol
-        else:
-            self.srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
-        self.N = len(self.srcfilter.sitecol.complete)
-        try:
-            self.sources = group.sources
-        except AttributeError:  # already a list of sources
-            self.sources = group
-        self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        if getattr(group, 'rup_interdep', None) != 'mutex':
-            self.rup_mutex = {}
-        else:
-            self.rup_mutex = {}  # src_id, rup_id -> rup_weight
-            for src in group:
-                for i, (rup, _) in enumerate(src.data):
-                    self.rup_mutex[src.id, i] = rup.weight
-        self.fewsites = self.N <= cmaker.max_sites_disagg
-        self.grp_probability = getattr(group, 'grp_probability', 1.)
-        self.cluster = self.cmaker.cluster = getattr(group, 'cluster', 0)
-        if self.cluster:
-            tom = group.temporal_occurrence_model
-        else:
-            # NOTE: I think we should raise an error here
-            tom = getattr(self.sources[0], 'temporal_occurrence_model',
-                          PoissonTOM(self.cmaker.investigation_time))
-        self.cmaker.tom = self.tom = tom
-        M, G = len(self.cmaker.imtls), len(self.cmaker.gsims)
-        self.maxsize = 8 * TWO20 // (M*G)  # crucial for a fast get_mean_stds
-
-    def count_bytes(self, ctxs):
-        # # usuful for debugging memory issues
-        rparams = len(self.cmaker.REQUIRES_RUPTURE_PARAMETERS)
-        sparams = len(self.cmaker.REQUIRES_SITES_PARAMETERS) + 1
-        dparams = len(self.cmaker.REQUIRES_DISTANCES)
-        nbytes = 0
-        for ctx in ctxs:
-            nsites = len(ctx)
-            nbytes += 8 * rparams
-            nbytes += 8 * sparams * nsites
-            nbytes += 8 * dparams * nsites
-        return nbytes
-
-    def gen_ctxs(self, src):
-        if src.code == b'F':
-            sites = self.srcfilter.sitecol
-        else:
-            sites = self.srcfilter.get_close_sites(src)
-            if sites is None:
-                return
-        for ctx in self.cmaker.get_ctxs(src, sites):
-            if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
-                with self.cmaker.delta_mon:
-                    delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
-            if self.fewsites:  # keep rupdata in memory
-                if self.src_mutex:
-                    # needed for Disaggregator.init
-                    ctx.src_id = valid.fragmentno(src)
-                self.rupdata.append(ctx)
-            yield ctx
-
-    def _make_src_indep(self):
-        # sources with the same ID
-        cm = self.cmaker
-        allctxs = []
-        ctxlen = 0
-        totlen = 0
-        t0 = time.time()
-        sids = self.srcfilter.sitecol.sids
-        # using memory here, limited by tiling and pmap_max_mb
-        pnemap = MapArray(
-            sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
-            not self.cluster).fill(self.cluster)
-        for src in self.sources:
-            for ctx in self.gen_ctxs(src):
-                ctxlen += len(ctx)
-                totlen += len(ctx)
-                allctxs.append(ctx)
-                if ctxlen > self.maxsize:
-                    ctxt = concat(allctxs)  # at most a few dozens of MB
-                    cm.update(pnemap, ctxt)
-                    allctxs.clear()
-                    ctxlen = 0
-        if allctxs:
-            # all sources have the same tom by construction
-            cm.update(pnemap, concat(allctxs))
-            allctxs.clear()
-
-        dt = (time.time() - t0) / len(self.sources)
-        factor = totlen / sum(src.nctxs for src in self.sources)
-        for src in self.sources:
-            self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
-        return pnemap
-
-    def _make_src_mutex(self):
-        # used in Japan (case_27) and in New Madrid (case_80)
-        cm = self.cmaker
-        G = len(self.cmaker.gsims)
-        sids = self.srcfilter.sitecol.sids
-        pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
-        for src in self.sources:
-            t0 = time.time()
-            pm = MapArray(
-                pmap.sids, cm.imtls.size, len(cm.gsims)
-            ).fill(not self.rup_mutex)
-            ctxs = list(self.gen_ctxs(src))
-            n = sum(len(ctx) for ctx in ctxs)
-            if n == 0:
-                continue
-            for ctx in ctxs:
-                cm.update(pm, ctx, self.rup_mutex)
-            if self.rup_mutex:
-                # in classical/case_80
-                pmap.array += (1.- pmap.array) * pm.array
-            else:
-                # in classical/case_27
-                pmap.array += (1. - pm.array) * src.mutex_weight
-            self.update_source_data(src, cm.task_no, time.time() - t0, n)
-        pmap.array *= self.grp_probability
-        return ~pmap
-
-    def update_source_data(self, src, task_no, dt, nctxs):
-        src.dt = dt
-        self.source_data['src_id'].append(valid.basename(src))
-        self.source_data['grp_id'].append(src.grp_id)
-        self.source_data['nctxs'].append(nctxs)
-        self.source_data['nrupts'].append(src.num_ruptures)
-        self.source_data['weight'].append(src.weight)
-        self.source_data['ctimes'].append(src.dt)
-        self.source_data['taskno'].append(task_no)
-
-    def make(self):
-        dic = {}
-        self.rupdata = []
-        self.source_data = AccumDict(accum=[])
-        if not self.src_mutex and not self.rup_mutex:
-            pnemap = self._make_src_indep()
-        else:
-            pnemap = self._make_src_mutex()
-        if self.cluster:  # very fast
-            MINFLOAT = 1.4E-45  # minimum 32 bit float
-            probs = F32(self.tom.get_probability_n_occurrences(
-                self.tom.occurrence_rate, numpy.arange(20)))
-            # the probs are usually very small, like
-            # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
-            # they rapidly go below the minimum 32 bit float, so
-            # the length of the loop can be reduced (i.e. from 20 to 7)
-            probs = probs[probs > MINFLOAT]
-            array = numpy.full(pnemap.shape, probs[0], dtype=F32)
-            for nocc, probn in enumerate(probs[1:], 1):
-                array += pnemap.array ** nocc * probn
-            pnemap.array = array
-
-        dic['rmap'] = pnemap.to_rates()
-        dic['rmap'].gid = self.cmaker.gid
-        dic['cfactor'] = self.cmaker.cfactor
-        if self.oq.keep_rupdata:
-            dic['rup_data'] = concat(self.rupdata)
-        else:
-            dic['rup_data'] = ()
-        dic['source_data'] = self.source_data
-        dic['task_no'] = self.task_no
-        dic['dparam_mb'] = getsizeof(self.cmaker.dparam) / TWO20
-        dic['source_mb'] = self.cmaker.source_mb
-        if self.disagg_by_src:
-            # all the sources in the group must have the same source_id because
-            # of the groupby(group, corename) in classical.py
-            coreids = set(map(valid.corename, self.sources))
-            if len(coreids) > 1:
-                raise NameError('Invalid source naming: %s' % coreids)
-
-            # in oq-risk-tests test_phl there are multiple srcids
-            # (mps-0!b1;0, mps-0!b1;1, ...); you can simply use the first,
-            # since in `store_mean_rates_by_src` we use corename
-            dic['basename'] = valid.basename(self.sources[0])
-        return dic
-
-
-class BaseContext(metaclass=abc.ABCMeta):
-    """
-    Base class for context object.
-    """
-    def __eq__(self, other):
-        """
-        Return True if ``other`` has same attributes with same values.
-        """
-        if isinstance(other, self.__class__):
-            if self._slots_ == other._slots_:
-                oks = []
-                for s in self._slots_:
-                    a, b = getattr(self, s, None), getattr(other, s, None)
-                    if a is None and b is None:
-                        ok = True
-                    elif a is None and b is not None:
-                        ok = False
-                    elif a is not None and b is None:
-                        ok = False
-                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
-                        if a.shape == b.shape:
-                            ok = numpy.allclose(a, b)
-                        else:
-                            ok = False
-                    else:
-                        ok = a == b
-                    oks.append(ok)
-                return numpy.all(oks)
-        return False
-
-
 # used in boore_atkinson_2008
 def get_dists(ctx):
     """
@@ -1744,7 +1609,7 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
 
 
 # mock of a rupture used in the tests and in the SMT module of the OQ-MBTK
-class RuptureContext(BaseContext):
+class RuptureContext:
     """
     Rupture calculation context for ground shaking intensity models.
 
@@ -1758,7 +1623,7 @@ class RuptureContext(BaseContext):
     rup_id = 0
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
-        'hypo_depth', 'width', 'hypo_loc', 'src_id', 'rup_id')
+        'hypo_depth', 'width', 'hypo_loc', 'length', 'src_id', 'rup_id')
 
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
@@ -1779,335 +1644,28 @@ class RuptureContext(BaseContext):
     def __len__(self):
         return len(self.sids)
 
-
-class Effect(object):
-    """
-    Compute the effect of a rupture of a given magnitude and distance.
-
-    :param effect_by_mag: a dictionary magstring -> intensities
-    :param dists: array of distances, one per each intensity
-    :param cdist: collapse distance
-    """
-    def __init__(self, effect_by_mag, dists, collapse_dist=None):
-        self.effect_by_mag = effect_by_mag
-        self.dists = dists
-        self.nbins = len(dists)
-
-    def collapse_value(self, collapse_dist):
+    def __eq__(self, other):
         """
-        :returns: intensity at collapse distance
+        Return True if ``other`` has same attributes with same values.
         """
-        # get the maximum magnitude with a cutoff at 7
-        for mag in self.effect_by_mag:
-            if mag > '7.00':
-                break
-        effect = self.effect_by_mag[mag]
-        idx = numpy.searchsorted(self.dists, collapse_dist)
-        return effect[idx-1 if idx == self.nbins else idx]
-
-    def __call__(self, mag, dist):
-        di = numpy.searchsorted(self.dists, dist)
-        if di == self.nbins:
-            di = self.nbins
-        eff = self.effect_by_mag['%.2f' % mag][di]
-        return eff
-
-    # this is used to compute the magnitude-dependent pointsource_distance
-    def dist_by_mag(self, intensity):
-        """
-        :returns: a dict magstring -> distance
-        """
-        dst = {}  # magnitude -> distance
-        for mag, intensities in self.effect_by_mag.items():
-            if intensity < intensities.min():
-                dst[mag] = self.dists[-1]  # largest distance
-            elif intensity > intensities.max():
-                dst[mag] = self.dists[0]  # smallest distance
-            else:
-                dst[mag] = interp1d(intensities, self.dists)(intensity)
-        return dst
-
-
-def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
-    """
-    :param mags: an ordered list of magnitude strings with format %.2f
-    :param sitecol1: a SiteCollection with a single site
-    :param gsims_by_trt: a dictionary trt -> gsims
-    :param maximum_distance: an IntegrationDistance object
-    :param imtls: a DictArray with intensity measure types and levels
-    :returns: a dict magnitude-string -> array(#dists, #trts)
-    """
-    trts = list(gsims_by_trt)
-    ndists = 51
-    gmv = numpy.zeros((len(mags), ndists, len(trts)))
-    param = dict(maximum_distance=maximum_distance, imtls=imtls)
-    for t, trt in enumerate(trts):
-        dist_bins = maximum_distance.get_dist_bins(trt, ndists)
-        cmaker = ContextMaker(trt, gsims_by_trt[trt], param)
-        gmv[:, :, t] = cmaker.max_intensity(sitecol1, F64(mags), dist_bins)
-    return dict(zip(mags, gmv))
-
-
-class ContextMakerSequence(collections.abc.Sequence):
-    """
-    Wrapper over a sequence of ContextMakers
-    """
-    def __init__(self, cmakers, inverse):
-        self.cmakers = cmakers
-        self.inverse = inverse
-
-    @property
-    def Gt(self):
-        """
-        The total number of gsims in the underlying context makers
-        """
-        return sum(len(cm.gsims) for cm in self.cmakers)
-
-    @property
-    def gids(self):
-        """
-        :returns: concatenation of gid arrays, one for each underlying cmaker
-        """
-        return numpy.concatenate([cm.gid for cm in self.cmakers])
-
-    def __getitem__(self, idx):
-        return self.cmakers[idx]
-
-    def __len__(self):
-        return len(self.cmakers)
-
-    def enumerate(self):
-        for grp_id, inv in enumerate(self.inverse):
-            yield grp_id, self[inv]
-
-    def to_array(self, grp_ids=slice(None)):
-        return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
-
-    def get_rmap(self, src_groups, sitecol):
-        """
-        :returns: a RateMap of shape (N, L, Gt)
-        """
-        cmakers = self.to_array()
-        assert cmakers[0].oq.use_rates
-        assert len(src_groups) == len(cmakers)
-        L = cmakers[0].imtls.size
-        rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
-        for group, cmaker in zip(src_groups, cmakers):
-            rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
-        return rmap
-
-    def get_rmaps(self, sources, sitecol):
-        """
-        :param sources: a list of R variations of the same source
-        :param sitecol: a SiteCollection instance
-        :returns: a list of RateMaps of shape (N, L, G), one per smr
-        """
-        # FIXME: works only for logic trees not changing the geometries
-        # and only for pointlike sources
-        R = len(sources)
-        cmaker = self.cmakers[0]
-        assert cmaker.oq.use_rates
-        assert len(self) == R, (len(self), R)
-        L = cmaker.imtls.size
-        G = len(cmaker.gsims)
-        tom = PoissonTOM(cmaker.oq.investigation_time)
-        pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
-        ctx = cmaker.from_srcs([sources[0]], sitecol)
-        magrates = [{numpy.round(mag, 3): rate
-                     for mag, rate in src.get_annual_occurrence_rates()}
-                     for src in sources]
-        for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):
-            mag = ctxt.mag[0]  # ctxt contains a single magnitude
-            for smr, magrate in enumerate(magrates):
-                orate = ctxt.occurrence_rate / magrates[0][mag] * magrate[mag]
-                pmaps[smr].update_indep(poes, ctxt, tom.time_span, orate)
-        return [pmap.to_rates() for pmap in pmaps]
-
-    def combine_rates(self, rmap):
-        """
-        :returns: an array of shape (N, L, R) for the given site ID
-        """
-        N, L, G = rmap.array.shape
-        assert self.Gt == G, (self.Gt, G)
-        maxr = 0
-        for cm in self.cmakers:
-            for rlzs in cm.gsims.values():
-                maxr = max(maxr, rlzs[-1])
-        r0 = numpy.zeros((N, L, maxr + 1))
-        g = 0
-        for cm in self.cmakers:
-            for i, rlzs in enumerate(cm.gsims.values()):
-                rates = rmap.array[:, :, g]
-                for rlz in rlzs:
-                    r0[:, :, rlz] += rates
-                g += 1
-        return r0
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return f'<{name} Gt={self.Gt}, groups={len(self.inverse)}>'
-
-
-def get_unique_inverse(all_trt_smrs):
-    """
-    :returns: unique tuples trt_smrs and an array of indices
-    """
-    strings = [','.join(map(str, ts)) for ts in all_trt_smrs]
-    unique, inverse = numpy.unique(strings, return_inverse=True)
-    return [tuple(map(int, u.split(','))) for u in unique], inverse
-
-
-def get_cmakers(all_trt_smrs, full_lt, oq):
-    """
-    :params all_trt_smrs: a list of arrays, one per source group
-    :param full_lt: a FullLogicTree instance
-    :param oq: object containing the calculation parameters
-    :returns: list of ContextMakers associated to the given src_groups
-    """
-    from openquake.hazardlib.site_amplification import AmplFunction
-    if not hasattr(full_lt, 'weights'):
-        full_lt.init()
-    unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
-    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
-    else:
-        oq.af = None
-    trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(unique_trt_smrs)[:, -1]  # shape Gt
-    cmakers = []
-    for grp_id, trt_smrs in enumerate(unique_trt_smrs):
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
-        if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
-            continue
-        trti = trt_smrs[0] // TWO24
-        cm = ContextMaker(trts[trti], rlzs_by_gsim, oq)
-        cm.trti = trti
-        cm.trt_smrs = trt_smrs
-        cmakers.append(cm)
-    gids = full_lt.get_gids(unique_trt_smrs)
-    for cm, gid in zip(cmakers, gids):
-        cm.gid = gid
-        cm.wei = gweights[gid]
-    return ContextMakerSequence(cmakers, inverse)
-
-
-def read_cmakers(dstore, full_lt=None):
-    """
-    :param dstore: a DataStore-like object
-    :param all_trt_smrs: a list of arrays
-    :returns: an array of ContextMaker instances, one per source group
-    """
-    oq = dstore['oqparam']
-    oq.mags_by_trt = {
-        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
-    all_trt_smrs = dstore['trt_smrs'][:]
-    if not full_lt:
-        full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    return cmakers
-
-
-def read_full_lt_by_label(dstore, full_lt=None):
-    """
-    :param dstore: a DataStore-like object
-    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
-    :returns: a dictionary label -> full_lt
-    """
-    oq = dstore['oqparam']
-    full_lt = full_lt or dstore['full_lt'].init()
-    glt = full_lt.gsim_lt
-    attrs = vars(full_lt)
-    dic = {'Default': full_lt}
-    for label in oq.site_labels:
-        dic[label] = flt = copy.copy(full_lt)
-        dic[label].__dict__.update(attrs)
-        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
-        flt.label = label
-        dic[label].gsim_lt = dstore['gsim_lt' + label]
-        flt.weights = numpy.array(
-            [rlz.weight for rlz in flt.get_realizations()])
-
-        # all gsim logic trees in the dictionary must have the same
-        # trts and the same number of gsims per trt
-        exp = list(glt.values)
-        got = list(flt.gsim_lt.values)
-        if exp != got:
-            raise InvalidFile(
-                f'{oq.inputs["gsim_logic_tree"]}: expected {exp} got {got}')
-        for trt, gsims in full_lt.gsim_lt.values.items():
-            got = len(gsims)
-            exp = len(glt.values[trt])
-            if exp != got:
-                raise InvalidFile(
-                    f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
-                    f'got {got} for {trt=}')
-
-    # sanity check: the gids must be consistent
-    unique_trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
-    default_gids = dic['Default'].get_gids(unique_trt_smrs)
-    for label in list(dic)[1:]:
-        gids = dic[label].get_gids(unique_trt_smrs)
-        numpy.testing.assert_equal(gids, default_gids)
-    return dic
-
-
-# used in event_based
-def read_cmaker(dstore, trt_smr):
-    """
-    :param dstore: a DataStore-like object
-    :returns: a ContextMaker instance
-    """
-    oq = dstore['oqparam']
-    full_lt = dstore['full_lt']
-    trts = list(full_lt.gsim_lt.values)
-    trt = trts[trt_smr // len(full_lt.sm_rlzs)]
-    rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
-    return ContextMaker(trt, rlzs_by_gsim, oq)
-
-
-def get_src_mutex(srcs):
-    """
-    :param srcs: a list of sources with weights and the same grp_id
-    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
-    """
-    grp_ids = [src.grp_id for src in srcs]
-    [grp_id] = set(grp_ids)
-    ok = all(hasattr(src, 'mutex_weight') for src in srcs)
-    if not ok:
-        return {grp_id: {}}
-    dic = dict(src_ids=U32([src.id for src in srcs]),
-               weights=F64([src.mutex_weight for src in srcs]))
-    return {grp_id: dic}
-
-
-def read_ctx_by_grp(dstore):
-    """
-    :param dstore: DataStore instance
-    :returns: dictionary grp_id -> ctx
-    """
-    sitecol = dstore['sitecol'].complete.array
-    params = {n: dstore['rup/' + n][:] for n in dstore['rup']}
-    dtlist = []
-    for par, val in params.items():
-        if len(val) == 0:
-            return {}
-        elif par == 'probs_occur':
-            item = (par, object)
-        elif par == 'occurrence_rate':
-            item = (par, F64)
-        else:
-            item = (par, val[0].dtype)
-        dtlist.append(item)
-    for par in sitecol.dtype.names:
-        if par != 'sids':
-            dtlist.append((par, sitecol.dtype[par]))
-    ctx = numpy.zeros(len(params['grp_id']), dtlist).view(numpy.recarray)
-    for par, val in params.items():
-        ctx[par] = val
-    for par in sitecol.dtype.names:
-        if par != 'sids':
-            ctx[par] = sitecol[par][ctx.sids]
-    grp_ids = numpy.unique(ctx.grp_id)
-    ctx = ctx[numpy.argsort(ctx.mag)]  # NB: crucial for performance
-    return {grp_id: ctx[ctx.grp_id == grp_id] for grp_id in grp_ids}
+        if isinstance(other, self.__class__):
+            if self._slots_ == other._slots_:
+                oks = []
+                for s in self._slots_:
+                    a, b = getattr(self, s, None), getattr(other, s, None)
+                    if a is None and b is None:
+                        ok = True
+                    elif a is None and b is not None:
+                        ok = False
+                    elif a is not None and b is None:
+                        ok = False
+                    elif hasattr(a, 'shape') and hasattr(b, 'shape'):
+                        if a.shape == b.shape:
+                            ok = numpy.allclose(a, b)
+                        else:
+                            ok = False
+                    else:
+                        ok = a == b
+                    oks.append(ok)
+                return numpy.all(oks)
+        return False

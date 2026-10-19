@@ -192,7 +192,19 @@ import sqlite3
 import warnings
 import threading
 import collections
+import datetime
 from openquake.baselib import config
+
+
+def _convert_timestamp(value):
+    """Convert SQLite timestamps, including date-only and ISO values."""
+    return datetime.datetime.fromisoformat(value.decode())
+
+
+# The sqlite3 default timestamp converter only accepts a space between the
+# date and time, while SQLite also accepts values produced by isoformat().
+# Register a converter that handles both forms (and date-only values).
+sqlite3.register_converter('TIMESTAMP', _convert_timestamp)
 
 
 class NotFound(Exception):
@@ -309,8 +321,10 @@ class Db(object):
             if dname and not os.path.exists(dname):
                 os.makedirs(dname)
             self.local.conn = self.connect(*self.args, **self.kw)
-            # set WAL mode to avoid OperationalError: database is locked
+            # set WAL mode to serialize multiple writers
             self.local.conn.execute('PRAGMA journal_mode = WAL')
+            # set busy_timeout to avoid OperationalError: database is locked
+            self.local.conn.execute('PRAGMA busy_timeout=5000')
             # honor ON DELETE CASCADE
             self.local.conn.execute('PRAGMA foreign_keys = ON')
             return self.local.conn

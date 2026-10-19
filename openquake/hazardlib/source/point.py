@@ -19,8 +19,9 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 import copy
 import numpy
-from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
+from openquake.baselib.general import AccumDict, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
+from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     build_planar, PlanarSurface, planin_dt, get_rupdims)
@@ -30,7 +31,8 @@ from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
-from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
+from openquake.hazardlib.geo.utils import (
+    get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
 
 
 def msr_name(src):
@@ -55,16 +57,19 @@ def calc_average(pointsources):
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[], hypo_dip_frac=[])
     trt = pointsources[0].tectonic_region_type
+    multiple = len(pointsources) > 1
     for src in pointsources:
         assert src.tectonic_region_type == trt
+        rate = sum(r for m, r in src.get_annual_occurrence_rates())
+        factor = rate if multiple else 1.
         ws, ds = zip(*src.nodal_plane_distribution.data)
         acc['strike'].extend([np.strike for np in ds])
         acc['dip'].extend([np.dip for np in ds])
         acc['rake'].extend([np.rake for np in ds])
-        node_w.extend(ws)
+        node_w.extend(factor * prob for prob in ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
         acc['dep'].extend(deps)
-        dep_w.extend(ws)
+        dep_w.extend(factor * prob for prob in ws)
         if src.hypo_dip_fracs is None:
             # Default OQ behaviour of using rup centroid
             acc['hypo_dip_frac'].extend([0.5] * len(deps))
@@ -77,9 +82,29 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+        rate_w.append(rate)
     for key in acc:
-        if key in ('dip', 'strike', 'rake'):
+        if key in ('strike', 'rake'):
+            values = numpy.asarray(acc[key], dtype=float)
+            weights = numpy.asarray(node_w, dtype=float)
+            total = weights.sum()
+            radians = numpy.radians(values)
+            sin = numpy.sum(numpy.sin(radians) * weights)
+            cos = numpy.sum(numpy.cos(radians) * weights)
+            if numpy.hypot(sin, cos) <= 1e-8 * total:
+                # The circular mean is undefined for opposite angles.
+                mean = numpy.average(values, weights=weights)
+            else:
+                angle = angular_mean(values, weights / total)
+                mean = numpy.asarray(angle).item()
+            if key == 'strike':
+                mean %= 360
+                acc[key] = 0. if mean >= 360 else mean
+            else:
+                acc[key] = mean
+                # rake must be in (-180, 180]: arctan2 may give -180
+                acc[key] = mean + 360 if mean <= -180 else mean
+        elif key == 'dip':
             acc[key] = numpy.average(acc[key], weights=node_w)
         elif key in ('dep', 'hypo_dip_frac'):
             # Same entry in hypoDepthDist so share weight
@@ -129,7 +154,7 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    code = b'P'
+    code = POINT
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',
@@ -214,46 +239,40 @@ class PointSource(ParametricSeismicSource):
             arr['rake'] = np.rake
         return planin
 
-    def max_radius(self, maxdist):
+    # used in the source filtering
+    def max_radius(self, maxdist, radii=None):
         """
-        :returns: max radius + ps_grid_spacing * sqrt(2)/2
+        :returns: max radius, without the ps_grid_spacing half diagonal
         """
-        self._get_max_rupture_projection_radius()
-        eff_radius = min(self.radius[-1], maxdist / 2)
-        return eff_radius + self.ps_grid_spacing * .707
+        if radii is None:
+            radii = self._get_rupture_projection_radii()
+        return min(radii[-1], maxdist / 2)
 
-    def get_psdist(self, m, mag, psdist, magdist):
+    def get_psdist(self, m, mag, psdist, magdist, radii=None):
         """
         :returns: the effective pointsource distance for the given magnitude
         """
-        eff_radius = min(self.radius[m], magdist[mag] / 2)
-        return eff_radius + self.ps_grid_spacing * .707 + psdist
+        if radii is None:
+            radii = self._get_rupture_projection_radii()
+        return psdist + min(radii[m], magdist[mag] / 2)
 
-    def _get_max_rupture_projection_radius(self):
+    def _get_rupture_projection_radii(self):
         """
-        Find a maximum radius of a circle on Earth surface enveloping a rupture
-        produced by this source.
-
-        :returns:
-            Half of maximum rupture's diagonal surface projection.
+        Return half the maximum rupture's diagonal surface projection for
+        each magnitude.
         """
-        if hasattr(self, 'radius'):
-            return self.radius[-1]  # max radius
-        if isinstance(self.magnitude_scaling_relationship, PointMSR):
-            M = len(self.get_annual_occurrence_rates())
-            self.radius = numpy.zeros(M)
-            return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        self.radius = numpy.zeros(len(magd))
+        if isinstance(self.magnitude_scaling_relationship, PointMSR):
+            return numpy.zeros(len(magd))
+        radii = numpy.zeros(len(magd))
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         for m, planin in enumerate(self.get_planin()):
             rup_length, rup_width, _ = get_rupdims(
                 usd, lsd, self.get_aspect_ratio(magd[m][1]),
                 planin.area[-1], planin.dip[-1])
-            # the projection radius is half of the rupture diagonal
-            self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-        return self.radius[-1]  # max radius
+            radii[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+        return radii
 
     def get_planar(self, shift_hypo=False, iruptures=False):
         """
@@ -262,8 +281,14 @@ class PointSource(ParametricSeismicSource):
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
+            total_rates = dict(self.get_annual_occurrence_rates())
             for src in self.pointsources:
-                out += src.get_planar(shift_hypo)
+                src_rates = dict(src.get_annual_occurrence_rates())
+                for mag, [pla] in src.get_planar(shift_hypo).items():
+                    # The context builder applies the aggregate magnitude
+                    # rate. Normalize each source block by its own rate.
+                    pla.wlr[:, 2] *= src_rates[mag] / total_rates[mag]
+                    out += {mag: [pla]}
             return out
 
         hdd = numpy.array(self.hypocenter_distribution.data)
@@ -377,7 +402,7 @@ class PointSource(ParametricSeismicSource):
         """
         Polygon corresponding to the max_rupture_projection_radius
         """
-        radius = self._get_max_rupture_projection_radius()
+        radius = self._get_rupture_projection_radii()[-1]
         return self.location.to_polygon(radius)
 
     def get_bounding_box(self, maxdist):
@@ -425,7 +450,10 @@ def psources_to_pdata(pointsources, name):
                                   for ps in pointsources]),
                  mfd=Deduplicate([ps.mfd for ps in pointsources]),
                  msr=Deduplicate([ps.magnitude_scaling_relationship
-                                  for ps in pointsources]))
+                                  for ps in pointsources]),
+                 scaling_rate=numpy.array([
+                     getattr(ps, 'scaling_rate', 1.)
+                     for ps in pointsources]))
     return pdata
 
 
@@ -443,10 +471,11 @@ def pdata_to_psources(pdata):
     rms = pdata['rms']
     mfd = pdata['mfd']
     msr = pdata['msr']
+    scaling_rate = pdata.get('scaling_rate')
     out = []
     for i, rec in enumerate(pdata['array']):
         hcd[i].hypo_dip_fracs = hdf[i]
-        out.append(PointSource(
+        ps = PointSource(
             source_id=f'{name}:{i}',
             name=name,
             tectonic_region_type=trt,
@@ -459,7 +488,10 @@ def pdata_to_psources(pdata):
             location=Point(rec['lon'], rec['lat']),
             nodal_plane_distribution=npd[i],
             hypocenter_distribution=hcd[i],
-            temporal_occurrence_model=tom))
+            temporal_occurrence_model=tom)
+        ps.scaling_rate = (1. if scaling_rate is None
+                           else float(scaling_rate[i]))
+        out.append(ps)
     return out
 
 
@@ -470,12 +502,16 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'p'
-    MODIFICATIONS = set()
+    code = COLLAPSED_POINT
+    MODIFICATIONS = PointSource.MODIFICATIONS | {'set_recurrow'}
 
     def __init__(self, source_id, pointsources):
         self.source_id = source_id
         self.pdata = psources_to_pdata(pointsources, source_id)
+        if hasattr(pointsources[0], 'mmax_offset'):
+            self.mmax_offset = pointsources[0].mmax_offset
+        if hasattr(pointsources[0], 'width_of_mfd_bin'):
+            self.width_of_mfd_bin = pointsources[0].width_of_mfd_bin
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
@@ -527,12 +563,132 @@ class CollapsedPointSource(PointSource):
             np, self.location.z, self.hypo_dip_frac)._gen_ruptures(
             iruptures=True)
 
+    def modify(self, modification, parameters):
+        if modification == 'set_recurrow':
+            self.modify_set_recurrow(**parameters)
+            return
+        super().modify(modification, parameters)
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.modify(modification, parameters)
+        self._update_pointsources(pointsources)
+
+    def apply_mfd_modification(self, name, parameters):
+        """
+        Apply an MFD modification (such as 'increment_max_mag') to each
+        underlying point source; the MFDs are copied first, since they
+        can be shared between the point sources (see Deduplicate)
+        """
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.mfd = copy.deepcopy(src.mfd)
+            src.mfd.modify(name, parameters)
+        self._update_pointsources(pointsources)
+
+    def modify_set_recurrow(self, recurrow):
+        """Apply an area-source recurrence row to the underlying points."""
+        from openquake.hazardlib.source.area import AreaSource
+        from openquake.hazardlib.mfd.evenly_discretized import (
+            EvenlyDiscretizedMFD)
+
+        row = dict(recurrow)
+        rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'
+        fraction = getattr(self, 'source_fraction', 1.)
+        row[rate_key] = float(row[rate_key]) * fraction
+        AreaSource.modify_set_recurrow(self, row)
+        rates = self.mfd.get_annual_occurrence_rates()
+        share = 1. / len(self.pdata['array'])
+        pointsources = self.pointsources
+        for src in pointsources:
+            src.mfd = EvenlyDiscretizedMFD(
+                rates[0][0], .1, [rate * share for _mag, rate in rates])
+        self._update_pointsources(pointsources)
+
+    def _update_pointsources(self, pointsources):
+        self.pdata = psources_to_pdata(pointsources, self.source_id)
+        vars(self).update(calc_average(pointsources))
+        self.location = Point(self.lon, self.lat, self.dep)
+        self.nodal_plane_distribution = PMF(
+            [(1., NodalPlane(self.strike, self.dip, self.rake))])
+        self.hypocenter_distribution = PMF([(1., self.dep)])
+        self.hypo_dip_fracs = (self.hypo_dip_frac,)
+
     def count_ruptures(self):
         """
         :returns: the total number of underlying ruptures
         """
         return sum(src.num_ruptures
                    for src in pdata_to_psources(self.pdata))
+
+
+def _cps_key(src):
+    msr = src.magnitude_scaling_relationship
+    aratio = src.rupture_aspect_ratio
+    if isinstance(aratio, MagDepAspectRatio):
+        aratio = ('magdep', aratio.func_type,
+                  tuple((float(mag), float(value))
+                        for mag, value in aratio.mag_points))
+    else:
+        aratio = 'scalar'
+    # TOMs are already grouped by source_reader; keep incompatible MSRs
+    # and aspect-ratio representations in separate collapsed blocks.
+    return type(msr), msr_name(src), aratio
+
+
+# the grid is plotted in https://github.com/gem/oq-engine/pull/11832
+def _cell_indices(lons, lats, spacing):
+    """
+    :param lons: an array of longitudes in degrees
+    :param lats: an array of latitudes in degrees
+    :param spacing: the grid spacing in km
+    :returns: a list of P pairs of cell indices
+
+    The cells are the squares of a global grid of the given spacing in km
+    anchored at the (0, 0) point; therefore the cell of a point depends
+    only on the position of the point.
+    """
+    kmperdeg = 1. / KM_TO_DEGREES  # ~111 km per degree of latitude
+    xkm = lons * kmperdeg * numpy.cos(lats * DEGREES_TO_RAD)
+    ykm = lats * kmperdeg
+    return list(zip(numpy.floor(xkm / spacing).astype(int),
+                    numpy.floor(ykm / spacing).astype(int)))
+
+
+def _grid_points(points, ps_grid_spacing, grp_id, cnt):
+    if len(points) < 2:  # nothing to collapse
+        return list(points), cnt
+    coords = numpy.array([(p.location.x, p.location.y, p.location.z)
+                          for p in points])
+    if (len(numpy.unique(coords[:, 0])) == 1 or
+            len(numpy.unique(coords[:, 1])) == 1):
+        # degenerated rectangle, there is no grid, do not collapse
+        return list(points), cnt
+    # NB: the grid is global, i.e. it is not anchored in the bounding box
+    # of the points: otherwise the collapsing of a region would change
+    # when adding or removing sources far away (i.e. padding sources)
+    grid = AccumDict(accum=[])
+    for k, ij in enumerate(_cell_indices(coords[:, 0], coords[:, 1],
+                                         ps_grid_spacing)):
+        grid[ij].append(k)
+    out = []
+    unique_ids = set(src.source_id.rsplit('.', 1)[0] for src in points)
+    same_source = len(unique_ids) == 1
+    src_id = next(iter(unique_ids)) if same_source else ''
+    for idxs in grid.values():
+        bysrc = same_source and getattr(points[0], 'bysrc_unc', False)
+        if len(idxs) > 1 or bysrc:
+            cnt += 1
+            cps = CollapsedPointSource(  # slow part
+                src_id or 'cps-%03d-%04d' % (grp_id, cnt), points[idxs])
+            cps.grp_id = points[0].grp_id
+            cps.ts_samples = points[0].ts_samples
+            cps.ps_grid_spacing = ps_grid_spacing
+            if same_source:
+                cps.source_fraction = len(idxs) / len(points)
+            out.append(cps)
+        else:  # there is a single source
+            out.append(points[idxs[0]])
+    return out, cnt
 
 
 def grid_point_sources(sources, ps_grid_spacing):
@@ -542,7 +698,7 @@ def grid_point_sources(sources, ps_grid_spacing):
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
-        a dict grp_id -> list of non-point sources and collapsed point sources
+        a list of non-point sources and collapsed point sources
     """
     grp_id = sources[0].grp_id
     for src in sources[1:]:
@@ -553,30 +709,13 @@ def grid_point_sources(sources, ps_grid_spacing):
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
         return out + list(ps)
-    coords = numpy.zeros((len(ps), 3))
-    for p, psource in enumerate(ps):
-        coords[p, 0] = psource.location.x
-        coords[p, 1] = psource.location.y
-        coords[p, 2] = psource.location.z
-    if (len(numpy.unique(coords[:, 0])) == 1 or
-            len(numpy.unique(coords[:, 1])) == 1):
-        # degenerated rectangle, there is no grid, do not collapse
-        return out + list(ps)
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
-    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    groups = {}
+    for index, src in enumerate(ps):
+        groups.setdefault(_cps_key(src), []).append(index)
     cnt = 0
-    for idxs in grid.values():
-        if len(idxs) > 1:
-            cnt += 1
-            name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])  # slow part
-            cps.grp_id = ps[0].grp_id
-            cps.sampling = ps[0].sampling
-            cps.ps_grid_spacing = ps_grid_spacing
-            out.append(cps)
-        else:  # there is a single source
-            out.append(ps[idxs[0]])
+    for indices in groups.values():
+        block, cnt = _grid_points(ps[indices], ps_grid_spacing, grp_id, cnt)
+        out.extend(block)
     return out
 
 

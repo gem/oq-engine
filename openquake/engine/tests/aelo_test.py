@@ -79,14 +79,14 @@ def test_PAC():
         if rtgmpy:
             s = calc.datastore['asce07'][0].decode('ascii')
             asce07 = json.loads(s)
-            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 0.83427],
+            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 1.11865],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA
         r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.03272 , 0.040302, 0.7959],
+            aac([r0, r1, a7['PGA']], [0.03272 , 0.040302, 1.07915],
                 atol=1E-6)
 
             # check that there are not warnings about results
@@ -114,7 +114,7 @@ def test_KOR():
         calc.run()
     if rtgmpy:
         asce07 = json.loads(calc.datastore['asce07'][0])
-        aac(asce07['PGA'], 1.68641, atol=5E-5)
+        aac(asce07['PGA'], 1.69988, atol=5E-5)
         # check all plots created
         assert 'png/site.png' in calc.datastore
         assert 'png/mce.png' in calc.datastore

@@ -38,6 +38,8 @@ from openquake.baselib.general import (
     DictArray, AccumDict, engine_version, count_lines)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap, retperiods
+from openquake.hazardlib.site_amplification import (
+    check_same_levels)
 from openquake.hazardlib import stats, calc
 from openquake.hazardlib.correlation_models.base import (
     CrossIMTCorrelationModel, ResidualComponent,
@@ -46,6 +48,7 @@ from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
+from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
@@ -295,6 +298,15 @@ extreme_gmv:
   Example: *extreme_gmv = 5.0*
   Default: {'default': numpy.inf} i.e. no values are extreme
 
+filter_sourcecodes:
+  Used for debugging purposes. When given, keeps only the sources with
+  the given codes, discarding the others. The valid codes are
+  A=area, p=collapsed point, P=point, M=multiPoint, S=simple fault,
+  K=kite fault, C=complex fault, X=characteristic fault,
+  N=nonParametric, F=multiFault.
+  Example: *filter_sourcecodes = pPAM* (i.e. only point-like sources).
+  Default: empty string, meaning all sources are kept
+
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
   of fault length used to float ruptures along strike by the given float
@@ -506,6 +518,12 @@ master_seed:
   Example: *master_seed = 1234*.
   Default: 123456789
 
+make_impact_reports:
+  Produce a one-page impact reports for each affected country,
+  as postrisk_func
+  Example: *make_impact_reports = true*.
+  Default: False
+
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
   Example: *max = true*.
@@ -600,6 +618,11 @@ mosaic_model:
   Example: *mosaic_model = ZAF*
   Default: empty string
 
+notes:
+  Additional information about the job
+  Example: 'Lorem ipsum'
+  Default: None
+
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
   Example: *num_epsilon_bins = 3*.
@@ -640,8 +663,8 @@ poes_disagg:
    Alias for poes.
 
 pointsource_distance:
-  Used in classical calculations to collapse the point sources. Can also be
-  used in conjunction with *ps_grid_spacing*.
+  Used in classical calculations to collapse the point sources. Don't set
+  it when using *ps_grid_spacing*, since it will be set automatically.
   Example: *pointsource_distance = 50*.
   Default: {'default': 100}
 
@@ -764,6 +787,32 @@ rupture_mesh_spacing:
   Example: *rupture_mesh_spacing = 2.0*.
   Default: 5.0
 
+r_threshold_km:
+  PFD only: half-width (km) of the on-trace principal-displacement zone
+  for the boxcar rupture-location weight (used when r_sigma_km == 0).
+  Example: *r_threshold_km = 0.1*.
+  Default: 0.1
+
+r_sigma_km:
+  PFD only: two-sided mapping-error sigma (km) for the Petersen Gaussian
+  rupture-location weight; 0 selects the boxcar/complementary split.
+  Example: *r_sigma_km = 0.5*.
+  Default: 0.0
+
+near_far_threshold_km:
+  PFD only: distance (km) below which a site is in the Visini et al.
+  (2025) distributed-faulting 'near' regime (else 'far'), used by the
+  combined secondary pipeline.
+  Example: *near_far_threshold_km = 0.2*.
+  Default: 0.2
+
+surface_rupture_depth_tolerance_km:
+  PFD only: a rupture contributes surface-displacement hazard only if
+  its top edge reaches within this depth (km); deeper (buried) ruptures
+  are skipped.
+  Example: *surface_rupture_depth_tolerance_km = 0.01*.
+  Default: 0.01
+
 sampling_method:
   One of early_weights, late_weights, early_latin, late_latin)
   Example: *sampling_method = early_latin*.
@@ -830,11 +879,6 @@ site_labels:
 tile_spec:
   INTERNAL
 
-tiling:
-  Used to force the tiling or non-tiling strategy in classical calculations
-  Example: *tiling = true*.
-  Default: False
-
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
    Example: *smlt_branch=b1*
@@ -862,7 +906,8 @@ split_sources:
   INTERNAL
 
 split_time:
-  After how much time starts splitting classical tasks
+  After how much time starts splitting the classical tasks with many
+  sites; the tasks with few sites are never split
   Example: *split_time = 600*
   Default: None, meaning the split_time is automatically determined
 
@@ -971,6 +1016,7 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
+                   'displacement',
                    'scenario_damage',
                    'workflow']
 
@@ -1010,30 +1056,6 @@ SITE_CLASSES = {
 }
 
 
-def check_same_levels(imtls):
-    """
-    :param imtls: a dictionary (or dict-like) imt -> imls
-    :returns: the periods and the levels
-    :raises: a ValueError if the levels are not the same across all IMTs
-    """
-    if not imtls:
-        raise ValueError('There are no intensity_measure_types_and_levels!')
-    imls = imtls[next(iter(imtls))]
-    for imt in imtls:
-        if not imt.startswith(('PGA', 'SA')):
-            raise ValueError('Site amplification works only with '
-                             'PGA and SA, got %s' % imt)
-        if (imtls[imt] == 0).all():
-            raise ValueError(
-                'You forgot to set intensity_measure_types_and_levels!')
-        elif len(imtls[imt]) != len(imls) or any(
-                l1 != l2 for l1, l2 in zip(imtls[imt], imls)):
-            raise ValueError('Site amplification works only if the '
-                             'levels are the same across all IMTs')
-    periods = [from_string(imt).period for imt in imtls]
-    return periods, imls
-
-
 def check_increasing(dframe, *columns):
     """
     Make sure the passed columns of the dataframe exists and correspond
@@ -1062,11 +1084,13 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'pfd_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
+        'reqv_ignore_sources', 'amplification', 'ampl_logic_tree',
+        'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
@@ -1085,6 +1109,7 @@ class OqParam(valid.ParamSet):
         'tsunami_fragility',
         'tsunami_vulnerability',
         'post_loss_amplification',
+        'interdependencies',
     } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
@@ -1158,6 +1183,7 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
+    filter_sourcecodes = valid.Param(valid.sourcecodes, '')
     gmf_max_gb = valid.Param(valid.positivefloat, .01)
     total_residual_correlation_model = valid.Param(
         valid.NoneOr(valid.utf8_not_empty), None)
@@ -1197,6 +1223,7 @@ class OqParam(valid.ParamSet):
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
+    make_impact_reports = valid.Param(valid.boolean, False)
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_nodes_network = valid.Param(valid.positiveint, 1000)
@@ -1211,6 +1238,7 @@ class OqParam(valid.ParamSet):
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
+    notes = valid.Param(valid.utf8, None)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
@@ -1246,6 +1274,11 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
+    r_sigma_km = valid.Param(valid.positivefloat, 0.0)
+    r_threshold_km = valid.Param(valid.positivefloat, 0.1)
+    near_far_threshold_km = valid.Param(valid.positivefloat, 0.2)
+    surface_rupture_depth_tolerance_km = valid.Param(
+        valid.positivefloat, 0.01)
     rupture_id = valid.Param(valid.positiveint, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
     rupture_dict = valid.Param(valid.dictionary, {})
@@ -1270,7 +1303,6 @@ class OqParam(valid.ParamSet):
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.coordinates, ())
     tile_spec = valid.Param(valid.tile_spec, None)
-    tiling = valid.Param(valid.boolean, False)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
@@ -1437,6 +1469,7 @@ class OqParam(valid.ParamSet):
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
+        given = set(names_vals)
         super().__init__(**names_vals)
         self._set_truncation_levels(names_vals)
         self.check_siteid()
@@ -1461,10 +1494,8 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if ('ps_grid_spacing' in names_vals and
-                float(names_vals['ps_grid_spacing']) and
-                'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=40.)
+        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
+            self.pointsource_distance = dict(default=50+self.ps_grid_spacing)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
@@ -1472,7 +1503,7 @@ class OqParam(valid.ParamSet):
             self.maximum_distance.cut(self.minimum_magnitude)
 
         self.check_hazard()
-        self.check_gsim_lt()
+        self.check_gsim_lt(given)
         self.set_loss_types()
         self.check_risk()
 
@@ -1482,9 +1513,49 @@ class OqParam(valid.ParamSet):
         """
         raise InvalidFile('%s: %s' % (self.inputs['job_ini'], msg))
 
-    def check_gsim_lt(self):
+    def check_gsim_lt(self, given=()):
         # check the gsim_logic_tree and set req_site_params
         self.req_site_params = set()
+        if ('amplification' in self.inputs and
+                'ampl_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'Cannot set both amplification_file and '
+                'ampl_logic_tree_file')
+        if (self.calculation_mode == 'displacement' and
+                'gsim_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'use pfd_logic_tree_file, not gsim_logic_tree_file, '
+                'in displacement calculations')
+        if (self.calculation_mode != 'displacement' and
+                'pfd_logic_tree' in self.inputs):
+            self.raise_invalid(
+                'pfd_logic_tree_file is only allowed in displacement '
+                'calculations')
+        if self.calculation_mode == 'displacement':
+            # the second logic tree is a PFD logic tree, not a GSIM one
+            fname = self.inputs.get('pfd_logic_tree')
+            if not fname:
+                self.raise_invalid('Missing pfd_logic_tree_file')
+            path = os.path.join(self.base_path, fname)
+            PFDLogicTree(path)  # validate the logic tree
+            # the kernel works per source and yields annual rates
+            if 'use_rates' in given and not self.use_rates:
+                logging.warning(
+                    'use_rates is forced to true in displacement '
+                    'calculations')
+            self.use_rates = True
+            if 'disagg_by_src' in given and not self.disagg_by_src:
+                logging.warning(
+                    'disagg_by_src is forced to true in displacement '
+                    'calculations')
+            self.disagg_by_src = True
+            if not hasattr(self, 'maximum_distance'):
+                # default PFD integration distance (km), as in oq-pfdha
+                self.maximum_distance = valid.IntegrationDistance.new('10')
+            self._trts = {'*'}
+            self.sec_imts
+            self.req_site_params = sorted(self.req_site_params)
+            return
         if self.inputs.get('gsim_logic_tree'):
             if self.gsim != '[FromFile]':
                 self.raise_invalid('if `gsim_logic_tree_file` is set, there'
@@ -1508,10 +1579,18 @@ class OqParam(valid.ParamSet):
             self.check_gsims([valid.gsim(self.gsim, self.base_path)])
         else:
             self.raise_invalid('Missing gsim or gsim_logic_tree_file')
-        if 'amplification' in self.inputs:
+        if self.has_amplification:
             self.req_site_params.add('ampcode')
         self.sec_imts  # populate req_site_params
         self.req_site_params = sorted(self.req_site_params)
+
+    @property
+    def has_amplification(self):
+        """
+        :returns: True if an amplification file or logic tree is set
+        """
+        return ('amplification' in self.inputs or
+                'ampl_logic_tree' in self.inputs)
 
     def check_risk(self):
         # checks for risk
@@ -1540,6 +1619,7 @@ class OqParam(valid.ParamSet):
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
+                and self.calculation_mode != 'displacement'
                 and self.hazard_calculation_id is None):
             if ('multi_peril' not in self.inputs and
                     getattr(self, 'truncation_level', None) is None and
@@ -1578,6 +1658,13 @@ class OqParam(valid.ParamSet):
             if (not self.investigation_time and
                     self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
+                
+        if 'interdependencies' in self.inputs:
+            if not self._parent.discrete_damage_distribution:
+                self.raise_invalid(
+                    'discrete_damage_distribution must be True'
+                    ' for interdependencies analysis')
+
 
     def check_hazard(self):
         # check for sites, site_model and hc_id
@@ -1615,13 +1702,18 @@ class OqParam(valid.ParamSet):
                                'in event_based calculations')
 
         # check for amplification
-        if ('amplification' in self.inputs and self.imtls and
+        if (self.has_amplification and self.imtls and
                 self.calculation_mode in ['classical', 'classical_risk',
                                           'disaggregation']):
             check_same_levels(self.imtls)
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
+            if self.epsilon_star and self.has_amplification:
+                # epsilon is a rock-GMPE residual; a soil-target 'eps at
+                # exceedance' is not well-defined once amp is convolved
+                self.raise_invalid(
+                    'epsilon_star=true is not supported with amplification')
             if not self.poes_disagg and self.poes:
                 self.poes_disagg = self.poes
             elif not self.poes and self.poes_disagg:
@@ -1664,7 +1756,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses            
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
@@ -2131,10 +2223,9 @@ class OqParam(valid.ParamSet):
             return
         cls = get_model_class(name)
         if component == ResidualComponent.WITHIN_EVENT:
-            valid_type = (
-                issubclass(cls, SpatialCrossIMTCorrelationModel) and
-                not issubclass(cls, CrossIMTCorrelationModel))
-            expected_type = 'spatial or spatial-cross-IMT'
+            valid_type = issubclass(
+                cls, SpatialCrossIMTCorrelationModel)
+            expected_type = 'spatial, cross-IMT, or spatial-cross-IMT'
         else:
             valid_type = issubclass(cls, CrossIMTCorrelationModel)
             expected_type = 'cross-IMT'
@@ -2361,15 +2452,6 @@ class OqParam(valid.ParamSet):
             self._validate_correlation_model(name, component)
         return True
 
-    def is_valid_truncation_level(self):
-        """
-        In presence of a correlation model the truncation level must be nonzero
-        """
-        if self.within_event_correlation_model:
-            return self.truncation_level_within != 0
-        else:
-            return True
-
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly
@@ -2414,7 +2496,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if 'gsim_logic_tree' not in self.inputs:
+        if (self.calculation_mode == 'displacement' or
+                'gsim_logic_tree' not in self.inputs):
             return True  # disable the check
         gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
@@ -2486,7 +2569,7 @@ class OqParam(valid.ParamSet):
         """
         classical = ('classical' in self.calculation_mode or
                      'disaggregation' in self.calculation_mode)
-        if (classical and 'amplification' in self.inputs and
+        if (classical and self.has_amplification and
                 self.amplification_method == 'convolution'):
             return len(self.soil_intensities) > 1
         else:
@@ -2685,10 +2768,20 @@ class OqParam(valid.ParamSet):
             dic[name] = doc
         return dic
 
-    # tested in run-demos.sh
     def to_ini(self, **inputs):
         """
         Converts the parameters into a string in .ini format
+        """
+        ini = '[general]\n' + '\n'.join(
+            to_ini(k, v) for k, v in self._param_dict(**inputs).items())
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
+
+    def _param_dict(self, **inputs):
+        """
+        Build the dictionary of parameters to serialize, applying the
+        usual normalization (legacy cross-correlation rename, removal of
+        the internal fields, joining of the list-valued parameters, ...).
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         if (getattr(self, '_legacy_cross_correlation_role', None) ==
@@ -2704,7 +2797,6 @@ class OqParam(valid.ParamSet):
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
                 split():
             dic.pop(k, None)
-
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'limit_states' in dic:
@@ -2714,19 +2806,16 @@ class OqParam(valid.ParamSet):
                 ','.join(keys) for keys in dic['aggregate_by'])
         if 'cache' not in dic:
             dic['cache'] = 'false'
-        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        # newlines can break the checksum, so we remove them
-        return ini.strip().replace('\n\n', '\n')
+        return dic
 
     def from_parent(self, oqparent, new=False):
         """
         :returns:
             updated instance with missing parameters copied from oqparent
         """
-        params = {name: value for name, value in
-                  vars(oqparent).items()
-                  if name not in vars(self)
-                  and name != 'ground_motion_fields'}
+        params = {name: value for name, value in vars(oqparent).items()
+                  if name not in vars(self) and name not in (
+                  'ground_motion_fields', 'postrisk_func', 'postrisk_args')}
         if new:
             oqc = copy.copy(self)
             vars(oqc).update(params)

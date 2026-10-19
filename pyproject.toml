@@ -25,22 +25,22 @@ classifiers = [
 # Core dependencies (simplified based on common engine requirements)
 # Note: oq-engine uses requirements-py3x.txt files for exact pinning
 dependencies = [
-    "numpy>=2.2.6",
-    "scipy>=1.7",
-    "pandas>=2.2.3",
+    "numpy>=2.4.0",
+    "scipy~=1.17",
+    "pandas~=2.2",
     "h5py>=3.13",
     "django>=4.2, <5",
     "psutil",
     "requests",
     "pyzmq~=26.0.3; python_version <= '3.11'",
-    "pyzmq~=26.2.0; python_version >  '3.11'",    
+    "pyzmq~=26.2.0; python_version >  '3.11'",
     "h3>=4.4",
 
     # unplanned deps
     "decorator~=5.1.1",
     "pillow~=12.2.0",
     "toml~=0.10.2",
-    "numba~=0.61.2",
+    "numba~=0.67",
     "alpha_shapes~=1.1.0",
     "django_cors_headers~=4.3.1",
     "django_cookie_consent~=0.6.0",
@@ -53,6 +53,10 @@ dependencies = [
     "geopandas~=1.1.4; sys_platform != 'win32'",
     "fiona~=1.10.1",
 ]
+
+[project.optional-dependencies]
+# needed only by Server Installation method (see doc/getting-started/installation-instructions/server.md)
+server = ["gunicorn>=26.2"]
 
 [project.urls]
 Homepage = "https://globalquakemodel.org"

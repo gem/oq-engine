@@ -22,15 +22,16 @@ import itertools
 import collections
 import numpy
 import pandas
+import tempfile
 
-from openquake.baselib import hdf5, writers, general, node
+from openquake.baselib import config, hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
-from openquake.hazardlib.stats import compute_stats2, mean_curve
-from openquake.risklib import scientific
+from openquake.hazardlib.stats import mean_curve
+from openquake.risklib import scientific, riskmodels
 from openquake.commonlib import readinput
 from openquake.calculators.extract import (
-    extract, sanitize, avglosses, aggexp_tags)
+    extract, sanitize, _get_data, aggexp_tags)
 from openquake.calculators import base, post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
@@ -223,32 +224,6 @@ def export_exposure_by_lse(ekey, dstore):
                                     if isinstance(x, bytes) else x)
     writer.save(df, dest, df.columns, comment=dstore.metadata)
     return [dest]
-
-
-def _get_data(dstore, dskey, loss_types, stats):
-    name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
-    if kind == 'stats':
-        try:
-            weights = dstore['weights'][()]
-        except KeyError:
-            # there is single realization, like in classical_risk/case_2
-            weights = [1.]
-        if dskey in set(dstore):  # precomputed
-            rlzs_or_stats = list(stats)
-            statfuncs = [stats[ros] for ros in stats]
-            value = avglosses(dstore, loss_types, 'stats')  # shape (A, S, L)
-        elif dstore['oqparam'].collect_rlzs:
-            rlzs_or_stats = list(stats)
-            value = avglosses(dstore, loss_types, 'rlzs')
-        else:  # compute on the fly
-            rlzs_or_stats, statfuncs = zip(*stats.items())
-            value = compute_stats2(
-                avglosses(dstore, loss_types, 'rlzs'), statfuncs, weights)
-    else:  # rlzs
-        value = avglosses(dstore, loss_types, kind)  # shape (A, R, L)
-        R = value.shape[1]
-        rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
-    return name, value, rlzs_or_stats
 
 
 # this is used by event_based_risk, classical_risk and scenario_risk
@@ -785,7 +760,16 @@ def export_reinsurance(ekey, dstore):
             ('infra-event_ccl', 'csv'),
             ('infra-event_pcl', 'csv'),
             ('infra-event_wcl', 'csv'),
-            ('infra-event_efl', 'csv'))
+            ('infra-event_efl', 'csv'),
+            ('inter-avg_loss', 'csv'),
+            ('inter-node_el', 'csv'),
+            ('inter-taz_cl', 'csv'),
+            ('inter-dem_cl', 'csv'),
+            ('inter-event_ccl', 'csv'),
+            ('inter-event_pcl', 'csv'),
+            ('inter-event_wcl', 'csv'),
+            ('inter-event_efl', 'csv'))
+
 def export_node_el(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
@@ -802,8 +786,12 @@ def convert_df_to_vulnerability(loss_type, df):
     descr = N('description', {}, f"{loss_type} vulnerability model")
     root.append(descr)
     for riskfunc in df.riskfunc:
-        rfunc = json.loads(riskfunc)[
-            'openquake.risklib.scientific.VulnerabilityFunction']
+        dic = json.loads(riskfunc)
+        key = 'openquake.risklib.scientific.VulnerabilityFunction'
+        if key not in dic:
+            # Skip non-vulnerability functions (e.g. FragilityFunctionList)
+            continue
+        rfunc = dic[key]
         vfunc = N('vulnerabilityFunction',
                   {'id': rfunc['id'], 'dist': rfunc['distribution_name']})
         imls = N('imls', {'imt': rfunc['imt']}, rfunc['imls'])
@@ -856,7 +844,8 @@ def export_fragility_xml(dstore):
     crm = dstore.read_df('crm')
     ddic = {peril: {} for peril in crm.peril.unique()}
     for (peril, loss_type), df in crm.groupby(['peril', 'loss_type']):
-        nodeobj = convert_df_to_fragility(peril, loss_type, oq.limit_states, df)
+        nodeobj = convert_df_to_fragility(
+            peril, loss_type, oq.limit_states, df)
         dest = dstore.export_path('%s_%s_fragility.xml' % (peril, loss_type))
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
@@ -927,22 +916,7 @@ def export_exposure(ekey, dstore):
     return [exposure_xml, assetcol_csv]
 
 
-# tested in impact_test[1]
-@export.add(('job', 'zip'))
-def export_job_zip(ekey, dstore):
-    """
-    Exports:
-    - job.ini
-    - rupture.csv
-    - gsim_lt.xml
-    - site_model.csv
-    - exposure.xml and assetcol.csv
-    - vulnerability functions.xml
-    - taxonomy_mapping.csv
-    - consequences.csv
-    """
-    inputs = {}
-    oq = dstore['oqparam']
+def _get_gsim_lt(dstore, oq, inputs):
     if oq.shakemap_uri or 'usgs_id' in oq.rupture_dict:  # from shakemap
         df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
         ren = {'sid': 'site_id', 'eid': 'event_id'}
@@ -955,51 +929,35 @@ def export_job_zip(ekey, dstore):
         if not oq.shakemap_uri:
             oq.shakemap_uri = {'kind': 'usgs_id',
                                'id': oq.rupture_dict['usgs_id']}
-            oq.rupture_dict.pop('rupture_file', None)
-            oq.rupture_dict.pop('mmi_file', None)
-            oq.inputs.pop('rupture', None)
-            oq.inputs.pop('mmi', None)
-        gsim_lt = None  # from shakemap
-    else:
+            oq.rupture_dict = {
+                k: v for k, v in oq.rupture_dict.items()
+                if k not in ('rupture_file', 'mmi_file')}
+            oq.inputs = {
+                k: v for k, v in oq.inputs.items()
+                if k not in ('rupture', 'mmi')}
+        return None  # from shakemap
+    elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
         model = dstore['ruptures'][0]['model'].decode('ascii')
         # FIXME: extracts the gsim_lt of the first model only
         [(model, lt)] = base.get_model_lts(dstore, model)
-        gsim_lt = lt.gsim_lt
-    oq.base_path = os.path.abspath('.')
-    job_ini = dstore.export_path('%s.ini' % ekey[0])
-    inputs['job_ini'] = job_ini
-    [exposure_xml, assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
-    inputs['exposure'] = exposure_xml
-    csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-    if len(csv.splitlines()) > 2:  # comment + header + data
-        dest = dstore.export_path('rupture.csv')
-        with open(dest, 'w', encoding='utf8') as out:
-            out.write(csv)
-        inputs['rupture_model'] = dest
-    if gsim_lt and (oq.gsim is None or oq.gsim == '[FromFile]'):
-        dest = dstore.export_path('gsim_logic_tree.xml')
-        with open(dest, 'wb') as out:
-            nrml.write([gsim_lt.to_node()], out)
-        inputs['gsim_logic_tree'] = dest
-    if oq.calculation_mode.endswith('risk'):
-        inputs.update(export_vulnerability_xml(dstore))
-    elif oq.calculation_mode.endswith('damage'):
-        ddic = export_fragility_xml(dstore)
-        for peril, ltype_by_path in ddic.items():
-            inputs[f'{peril}_fragility'] = ltype_by_path
-            for ltype in ltype_by_path:
-                # needed for PAPERS
-                oq.inputs.pop(f'{ltype}_fragility', None)
+        return lt.gsim_lt
+    return None
 
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dest = dstore.export_path('taxonomy_mapping.csv')
-    taxmap = dstore.read_df('taxmap')
-    taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
-    taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
-    del taxmap['taxi']
-    writer.save(taxmap, dest)
-    inputs['taxonomy_mapping'] = dest
-    if 'consequence' in oq.inputs:
+
+def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
+    if 'taxmap' in dstore and 'assetcol/tagcol/taxonomy' in dstore:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        dest = dstore.export_path('taxonomy_mapping.csv')
+        taxmap = dstore.read_df('taxmap')
+        taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+        taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
+        del taxmap['taxi']
+        writer.save(taxmap, dest)
+        inputs['taxonomy_mapping'] = dest
+
+    if 'consequence' in oq.inputs or riskmodels.get_xml_consequence_files(
+            oq.inputs):
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
         dic = {}
         for name_by_key, df in consdict.items():
@@ -1009,15 +967,85 @@ def export_job_zip(ekey, dstore):
             writer.save(df, dest)
             dic[name_by_key] = dest
         inputs['consequence'] = dic
-    inputs['site_model'] = dstore.export_path('sites.csv')
-    sitecol = dstore['sitecol']
-    sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['site_model'])
+
+
+# tested in impact_test[1]
+@export.add(('job', 'zip'))
+def export_job_zip(ekey, dstore):
+    """
+    Exports:
+    - job.ini
+    - rupture.csv (if present)
+    - gsim_lt.xml (if present)
+    - site_model.csv (if present)
+    - exposure.xml and assetcol.csv (if present)
+    - vulnerability/fragility functions.xml (if present)
+    - taxonomy_mapping.csv (if present)
+    - consequences.csv (if present)
+    """
+    # Ensure dstore export path resolves to a valid temp dir for restored jobs
+    if not os.path.exists(dstore.export_dir):
+        dstore.export_dir = os.path.join(
+            config.directory.custom_tmp or tempfile.gettempdir())
+    inputs = {}
+    oq = dstore['oqparam']
+    ddic = {}
+
+    gsim_lt = _get_gsim_lt(dstore, oq, inputs)
+
+    oq.base_path = os.path.abspath('.')
+    job_ini = dstore.export_path('%s.ini' % ekey[0])
+    inputs['job_ini'] = job_ini
+
+    assetcol_csv = None
+    if 'assetcol' in dstore or 'exposure' in dstore:
+        [exposure_xml, assetcol_csv] = export_exposure(
+            ('exposure', 'zip'), dstore)
+        inputs['exposure'] = exposure_xml
+
+    if 'ruptures' in dstore:
+        csv = extract(dstore, 'ruptures?slice=0&slice=1').array
+        if len(csv.splitlines()) > 2:  # comment + header + data
+            dest = dstore.export_path('rupture.csv')
+            with open(dest, 'w', encoding='utf8') as out:
+                out.write(csv)
+            inputs['rupture_model'] = dest
+
+    if gsim_lt and (oq.gsim is None or oq.gsim == '[FromFile]'):
+        dest = dstore.export_path('gsim_logic_tree.xml')
+        with open(dest, 'wb') as out:
+            nrml.write([gsim_lt.to_node()], out)
+        inputs['gsim_logic_tree'] = dest
+
+    if oq.calculation_mode.endswith('risk'):
+        inputs.update(export_vulnerability_xml(dstore))
+    elif oq.calculation_mode.endswith('damage'):
+        ddic = export_fragility_xml(dstore)
+        toremove = set()
+        for peril, ltype_by_path in ddic.items():
+            inputs[f'{peril}_fragility'] = ltype_by_path
+            toremove.update(f'{ltype}_fragility' for ltype in ltype_by_path)
+        # needed for PAPERS: use a new instance dict
+        oq.inputs = {k: v for k, v in oq.inputs.items()
+                     if k not in toremove}
+
+    _export_taxmap_and_consequences(dstore, oq, ddic, inputs)
+
+    if 'sitecol' in dstore:
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        inputs['site_model'] = dstore.export_path('sites.csv')
+        sitecol = dstore['sitecol']
+        sitecol.make_complete()  # needed for test_impact[1]
+        writer.save(sitecol.array, inputs['site_model'])
+
     with open(job_ini, 'w', encoding='utf8') as out:
         if 'gmfs' in inputs:
             oq.hazard_calculation_id = None
         out.write(oq.to_ini(**inputs))
-    fnames = list(inputs.values()) + [assetcol_csv]
+
+    # Filter out None values before flattening file paths
+    fnames = [f for f in list(inputs.values()) + [assetcol_csv]
+              if f is not None]
     return flatten(fnames)
 
 

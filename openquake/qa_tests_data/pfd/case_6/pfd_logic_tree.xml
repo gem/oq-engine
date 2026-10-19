@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_fdha_case_6_chiou2025">
+  <logicTreeBranchSet branchSetID="bs_1" uncertaintyType="fdhaPrimarySRModel">
+    <logicTreeBranch branchID="B1_PSR">
+      <uncertaintyModel>
+        [WC1993PrimarySR]
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_2" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PSR">
+    <logicTreeBranch branchID="B2_PFD">
+      <uncertaintyModel>
+        [Chiou2025PrimaryFD]
+        version = "model7"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_3" uncertaintyType="fdhaSecondarySRModel" applyToBranches="B2_PFD">
+    <logicTreeBranch branchID="B3_SSR">
+      <uncertaintyModel>
+        [FixedSecondarySR]
+        value = 0.0
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_4" uncertaintyType="fdhaSecondaryFDModel" applyToBranches="B3_SSR">
+    <logicTreeBranch branchID="B4_SFD">
+      <uncertaintyModel>
+        [Youngs2003SecondaryFD]
+        style = "all"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  </logicTree>
+</nrml>

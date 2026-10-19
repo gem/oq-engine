@@ -1,0 +1,3 @@
+#,,,,,,,,,,"trts=['intraplate margin lower'], ses_seed=42"
+seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
+0,6.500000E+00,0.000000E+00,-55.93890,44.51041,1.050000E+01,1,intraplate margin lower,ParametricProbabilisticRupture PlanarSurface,"[[[[-55.9389, -55.9389, -55.9389, -55.9389]], [[44.45, 44.57, 44.45, 44.57]], [[2.73, 2.73, 18.27, 18.27]]]]","{""occurrence_rate"": 1.0e-06}"

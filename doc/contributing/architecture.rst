@@ -28,7 +28,6 @@ The OpenQuake engine suite is composed of several components:
 - the hazard and risk **calculators**, implementing the core logic of the engine
 - the **datastore**, which is an HDF5 file working as a short term storage/cache for a calculation; it is possible to run a calculation starting from an existing datastore, to avoid recomputing everything every time; there is a separate datastore for each calculation
 - the **database**, which is a SQLite file working as a long term storage for the calculation metadata; the database contains the start/stop times of the computations, the owner of a calculation, the calculation descriptions, the performances, the logs, etc; the bulk scientific data (essentially big arrays) are kept in the datastore
-- the **DbServer**, which is a service mediating the interaction between the calculators and the database
 - the **WebUI** is a web application that allows to run and monitor computations via a browser; multiple calculations can be run in parallel
 - the **oq command-line** tool; it allows to run computations and provides an interface to the underlying database and datastores so that it is possible to list and export the results
 - the engine can run on a cluster of machines: in that case a minimal amount of configuration is needed, whereas in single machine installations the engine works out of the box

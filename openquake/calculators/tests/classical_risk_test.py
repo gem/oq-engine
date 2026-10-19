@@ -100,7 +100,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     def test_case_lisa(self):
         # testing average(outs) with len(outs) > 1
-        self.run_calc(case_lisa.__file__, 'job_haz.ini,job_risk.ini')
+        self.run_calc(case_lisa.__file__, 'job_haz.ini,job_risk.ini',
+                      concurrent_tasks='4')
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),

@@ -238,6 +238,30 @@ class OqParamTestCase(unittest.TestCase):
         ).get_total_residual_correlation_model()
         self.assertEqual(model.__class__.__name__, 'Bradley2012')
 
+    def test_within_cross_imt_model(self):
+        # Within-event settings may select a same-site cross-IMT model even
+        # when that model does not also describe spatial dependence.
+        common = dict(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='3')
+        oq = OqParam(
+            **common,
+            within_event_correlation_model=(
+                'AbrahamsonEtAl2014WithinEvent'),
+            between_event_correlation_model=(
+                'AbrahamsonEtAl2014BetweenEvent'))
+        oq.validate()
+        within = oq.get_within_event_correlation_model()
+        between = oq.get_between_event_correlation_model()
+        self.assertEqual(
+            within.__class__.__name__,
+            'AbrahamsonEtAl2014WithinEvent')
+        self.assertEqual(
+            between.__class__.__name__,
+            'AbrahamsonEtAl2014BetweenEvent')
+        self.assertEqual(between.truncation_level, 3)
+
     def test_conditional_spectrum_cross_correlation_alias(self):
         oq = OqParam(
             calculation_mode='classical', inputs=fakeinputs,
@@ -348,6 +372,15 @@ class OqParamTestCase(unittest.TestCase):
         oq.validate()
         self.assertEqual(oq.truncation_level_between, 2.0)
         self.assertEqual(oq.truncation_level_within, 3.0)
+
+    def test_zero_truncation_with_correlation_model(self):
+        oq = OqParam(
+            calculation_mode='event_based', inputs=fakeinputs,
+            sites='0.1 0.2', maximum_distance='400',
+            truncation_level='0', intensity_measure_types='PGA',
+            within_event_correlation_model='JayaramBaker2009')
+        oq.validate()
+        self.assertEqual(oq.truncation_level_within, 1E-9)
 
     def test_ambiguous_gsim(self):
         with self.assertRaises(InvalidFile) as ctx:

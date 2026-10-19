@@ -18,6 +18,7 @@
 
 import os
 import sys
+import getpass
 import configparser
 
 # use utf8 as default encodings on all platforms (i.e. Windows)
@@ -123,16 +124,15 @@ if config.directory.custom_tmp:
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
-# wether the engine was installed as multi_user (linux root) or not
-if sys.platform in 'win32 darwin':
-    config.multi_user = False
-else:  # linux
-    import pwd
-    try:
-        install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
-    except KeyError:  # on the IUSS cluster
-        install_user = None
-    config.multi_user = install_user in ('root', 'openquake')
+
+def multi_user():
+    return config.dbserver.host != '127.0.0.1'
+
+
+def use_server():
+    """:returns: True for regular users in a server installation"""
+    return multi_user() and getpass.getuser() != 'openquake'
+
 
 # the version is managed by the universal installer
 __version__ = '3.27.0'

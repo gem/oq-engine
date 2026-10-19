@@ -67,6 +67,10 @@ def get_dparam(surface, sites, param):
         dist = surface.get_rx_distance(sites)
     elif param == 'ry0':
         dist = surface.get_ry0_distance(sites)
+    elif param == 'rtor':
+        dist = surface.get_rtor(sites)
+    elif param == 'x_l':
+        dist = surface.get_x_l_ratio(sites)[0]
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
@@ -82,6 +86,10 @@ def get_distances(rupture, sites, param):
     """
     surf = rupture.surface
     if not surf:  # PointRupture
+        if param in ('rtor', 'x_l'):
+            raise ValueError(
+                '%r requires a surface trace and is not defined for a '
+                'PointRupture' % param)
         if param == 'clon_clat':
             dist = numpy.empty((len(sites), 2))
             dist[:, 0] = rupture.hypocenter.x
@@ -96,6 +104,10 @@ def get_distances(rupture, sites, param):
         dist = get_dparam(surf, sites, 'ry0')
     elif param == 'rjb':
         dist = get_dparam(surf, sites, 'rjb')
+    elif param == 'rtor':
+        dist = surf.get_rtor(sites)
+    elif param == 'x_l':
+        dist = surf.get_x_l_ratio(sites)[0]
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -282,13 +294,6 @@ class IntegrationDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_dist_bins(self, trt, nbins=51):
-        """
-        :returns: an array of distance bins, from 10m to maxdist
-        """
-        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
-
-
 def split_source(src):
     """
     :param src: a splittable (or not splittable) source
@@ -308,7 +313,9 @@ def split_source(src):
     for i, split in enumerate(splits):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
-        split.sampling = src.sampling
+        split.ts_samples = src.ts_samples
+        if hasattr(src, 'bysrc_unc'):
+            split.bysrc_unc = src.bysrc_unc
         split.grp_id = grp_id
         split.id = src.id
         if has_hdf5:

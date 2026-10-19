@@ -23,7 +23,7 @@ from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.contexts import simple_cmaker, _get_poes
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.site import ampcode_dt
-from openquake.hazardlib.site_amplification import AmplFunction, get_poes_site
+from openquake.hazardlib.site_amplification import AmplificationFunction, get_poes_site
 from openquake.hazardlib.tests.site_amplification_function_test import ampl_func
 
 
@@ -50,7 +50,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         imls_soil = numpy.log(numpy.logspace(-2, 0, num=20))
         cmaker.loglevels = ll = DictArray(
             {'PGA': imls_soil, 'SA(1.0)': imls_soil})
-        cmaker.oq.af = AmplFunction.from_dframe(df)
+        cmaker.oq.af = AmplificationFunction.from_dframe(df)
         cmaker.truncation_level = tl = 3.
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number

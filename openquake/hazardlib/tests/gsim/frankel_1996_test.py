@@ -60,7 +60,8 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         ctx.rhypo = numpy.array([10])
         mean_mw4pt4_d10 = mean_stds(ctx, gsim, 'SA(0.1)', 0)
 
-        self.assertAlmostEqual(float(mean_mw3_d1), float(mean_mw4pt4_d10))
+        self.assertAlmostEqual(
+            float(mean_mw3_d1[0]), float(mean_mw4pt4_d10[0]))
 
         # rupture with Mw = 9 (Mblg = 8.2093636421088814) at rhypo = 1500 km
         # must give same mean as rupture with Mw = 8.2
@@ -73,7 +74,8 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
         ctx.rhypo = numpy.array([1000.])
         mean_mw8pt2_d1000 = mean_stds(ctx, gsim, 'SA(0.1)', 0)
 
-        self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
+        self.assertAlmostEqual(
+            mean_mw9_d1500[0], mean_mw8pt2_d1000[0])
 
     def test_dist_not_in_increasing_order(self):
         gsim = self.GSIM_CLASS()

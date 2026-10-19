@@ -108,6 +108,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
+        point.width_of_mfd_bin = self.width_of_mfd_bin
         return point
 
     @property
@@ -142,6 +143,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             polygon=polygon,
             area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
+        area.width_of_mfd_bin = self.width_of_mfd_bin
         return area
 
     @property
@@ -171,6 +173,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypo_data=source.HypoData(
                 hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
                 slip_list=numpy.array([[90, 0.7], [135, 0.3]])))
+        simple.width_of_mfd_bin = self.width_of_mfd_bin
         return simple
 
     @property
@@ -228,6 +231,10 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             lower_seismogenic_depth=20.0,
             dip=45.0,
             mesh_spacing=self.rupture_mesh_spacing)
+        # the converter attaches the declared top edge to characteristic faults
+        surface.original_tor = numpy.array(
+            [[p.longitude, p.latitude] for p in fault_trace.points])
+        surface.original_dip = 45.0
 
         char = source.CharacteristicFaultSource(
             source_id="5",
@@ -270,6 +277,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ])]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
             edges, self.complex_fault_mesh_spacing)
+        # the converter attaches the declared top edge to characteristic faults
+        complex_surface.original_tor = numpy.array(
+            [[p.longitude, p.latitude] for p in edges[0].points])
 
         char = source.CharacteristicFaultSource(
             source_id="6",
@@ -726,15 +736,15 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
         oqparam.split_sources = False
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm.sm_rlzs), 9)  # example with 1 x 3 x 3 paths
-        # there are 2 distinct tectonic region types and 18 src_groups
-        self.assertEqual(sum(1 for tm in csm.src_groups), 18)
+        # there are 2 distinct tectonic region types and 2 src_groups,
+        # since the uncertainties are not applied at build time, so there
+        # is a group per source group and not per set of uncertainties
+        self.assertEqual(sum(1 for tm in csm.src_groups), 2)
 
         rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (after splitting)
-        self.assertEqual(
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-            list(map(len, csm.src_groups)))
+        # counting the sources in each TRT model (split_sources is False)
+        self.assertEqual([1, 2], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.logictree import case_17

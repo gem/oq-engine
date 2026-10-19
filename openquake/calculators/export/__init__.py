@@ -89,6 +89,14 @@ DISPLAY_NAME = {
     'infra-event_pcl': 'Partial Connectivity Loss By Event',
     'infra-event_wcl': 'Weighted Connectivity Loss By Event',
     'infra-event_efl': 'Efficiency Loss by Event',
+    'inter-avg_loss': 'Average Infrastructure Loss with Interdependencies',
+    'inter-node_el': 'Efficiency Loss Of Nodes with Interdependencies',
+    'inter-taz_cl': 'Connectivity Loss Of TAZ Nodes with Interdependencies',
+    'inter-dem_cl': 'Connectivity Loss Of Demand Nodes with Interdependencies',
+    'inter-event_ccl': 'Complete Connectivity Loss By Event with Interdependencies',
+    'inter-event_pcl': 'Partial Connectivity Loss By Event with Interdependencies',
+    'inter-event_wcl': 'Weighted Connectivity Loss By Event with Interdependencies',
+    'inter-event_efl': 'Efficiency Loss by Event with Interdependencies',
 }
 
 
@@ -99,19 +107,35 @@ AGGRISK_FIELD_DESCRIPTION = {
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m²)',
-    'number': 'Buildings beyond repair',
+    'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
-    'affectedpop': ('Number of people living in buildings '
-                    'with moderate or higher damage'),
+    'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
-    'value': 'Value',
+    'value': 'Exposed value',
     'loss_type': 'Loss type',
     'lossmea': 'Mean',
     'q50': 'Median',
     'q05': '5th percentile',
     'q95': '95th percentile',
 }
+
+
+AGGRISK_FIELD_EXPLANATION = {
+    'affectedpop': ('Population living in buildings that sustained at least'
+                    ' moderate damage'),
+    'area': ('Total floor area (in m²) of buildings that sustained complete'
+             ' damage'),
+    'injured': ('Seriously or critically injured people according to the'
+                ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
+    'number': ('Number of buildings that sustained a level of damage beyond'
+               ' repair (extensive damage or higher)'),
+    'occupants': 'Number of fatalities',
+    'residents': ('Population living in buildings that sustained at least'
+                  ' extensive damage'),
+    'economic': ('Sum of structural and contents economic loss (in USD)'),
+}
+
 
 EXPOSURE_FIELD_DESCRIPTION = {
     'number': 'Buildings',

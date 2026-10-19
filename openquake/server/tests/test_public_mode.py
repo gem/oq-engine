@@ -22,23 +22,19 @@ import sys
 import json
 import pprint
 import numpy
-import zlib
 import gzip
-import tempfile
-import string
-import random
 import logging
 import django
-from django.test import LiveServerTestCase, Client, override_settings
-from unittest import skipIf
+from django.test import LiveServerTestCase, override_settings
 from threading import Event
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.dbserver import db
+from openquake.commonlib.dbapi import db
 from openquake.server.views import job_complete_callback_state
-from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
+from openquake.server.tests.views_test import (
+    EngineServerTestCase, loadnpz, start_webui, stop_webui)
 from openquake.qa_tests_data.classical import case_01
 
 django.setup()
@@ -52,15 +48,16 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
-        env = os.environ.copy()
-        env['OQ_DISTRIBUTE'] = 'no'
-        cls.c = Client()
+        cls.webserver, cls.webserver_thread, cls.c = start_webui()
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
+        stop_webui(cls.webserver, cls.webserver_thread)
+        super().tearDownClass()
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -74,6 +71,11 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             return dict(job_id=js['job_id'])
         else:  # error case
             return dict(tb_str='\n'.join(js['traceback']), job_id=js['job_id'])
+
+    def test_authentication_status(self):
+        response = self.c.get('/v1/authentication/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authentication_required': False})
 
     def test_404(self):
         # looking for a missing calc_id
@@ -116,7 +118,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # check eids_by_gsim
         resp = self.c.get(extract_url + 'eids_by_gsim')
-        dic = dict(loadnpz(resp.streaming_content))
+        dic = dict(loadnpz([resp.content]))
         for gsim, eids in dic.items():
             numpy.testing.assert_equal(eids, numpy.sort(eids)), gsim
         self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 33)
@@ -127,12 +129,12 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # check asset_tags
         resp = self.c.get(extract_url + 'asset_tags')
-        got = loadnpz(resp.streaming_content)
+        got = loadnpz([resp.content])
         self.assertEqual(len(got['taxonomy']), 7)
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        got = loadnpz(resp.streaming_content)['json']
+        got = loadnpz([resp.content])['json']
         dic = json.loads(bytes(got))
         self.assertEqual(sorted(dic['tagnames']), ['taxonomy'])
         self.assertEqual(sorted(dic['names']),
@@ -143,27 +145,27 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
         if resp.status_code == 500:  # should never happen
             raise RuntimeError(resp.content.decode('utf8'))
-        got = loadnpz(resp.streaming_content)
+        got = loadnpz([resp.content])
         self.assertEqual(len(got['array']), 25)
 
         # check losses_by_asset
         resp = self.c.get(extract_url + 'losses_by_asset')
         if resp.status_code == 500:  # should never happen
             raise RuntimeError(resp.content.decode('utf8'))
-        got = loadnpz(resp.streaming_content)
+        got = loadnpz([resp.content])
         self.assertEqual(len(got['rlz-000']), 95)
 
         # check agg_losses
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
-        got = loadnpz(resp.streaming_content)
+        got = loadnpz([resp.content])
         self.assertEqual(len(got['array']), 1)  # expected 1 aggregate value
         self.assertEqual(resp.status_code, 200)
 
         # check *-aggregation
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=*')
-        got = loadnpz(resp.streaming_content)
+        got = loadnpz([resp.content])
         self.assertEqual(len(got['tags']), 6)  # expected 6 taxonomies
         self.assertEqual(len(got['array']), 6)  # expected 6 aggregates
         self.assertEqual(resp.status_code, 200)
@@ -178,25 +180,25 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # check MFD distribution
         extract_url = '/v1/calc/%s/extract/event_based_mfd?' % job_id
-        got = loadnpz(self.c.get(extract_url))
+        got = loadnpz([self.c.get(extract_url).content])
         self.assertGreater(len(got['mag']), 1)
         self.assertGreater(len(got['freq']), 1)
 
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
-        got = loadnpz(self.c.get(extract_url))
+        got = loadnpz([self.c.get(extract_url).content])
         boundaries = gzip.decompress(bytes(got['boundaries'])).split(b'\n')
         self.assertEqual(len(boundaries), 31)
         for b in boundaries:
             self.assertEqual(b[:12], b'POLYGON((-77')
         # check gmf_data with no data
         extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
-        got = loadnpz(self.c.get(extract_url))
+        got = loadnpz([self.c.get(extract_url).content])
         self.assertEqual(len(got['rlz-000']), 3)
 
         # check extract_sources
         extract_url = '/v1/calc/%s/extract/sources?' % job_id
-        got = loadnpz(self.c.get(extract_url))
+        got = loadnpz([self.c.get(extract_url).content])
         self.assertEqual(list(got), ['src_gz', 'extra', 'array'])
         self.assertGreater(len(got['array']), 0)
 
@@ -360,39 +362,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
 
-    # NOTE: on_same_fs is an internal feature developed in the context of
-    # hybridge, so it is not a problem skipping it on windows
-    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
-    def test_check_fs_access(self):
-        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
-            filename = f.name
-            content = bytes(''.join(random.choice(
-                string.ascii_uppercase + string.digits) for _ in range(32)),
-                            'utf-8')
-            f.write(content)
-            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
-            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
-                                                  'checksum': checksum})
-            self.assertEqual(resp.status_code, 200)
-            resp_text_dict = json.loads(resp.content.decode('utf8'))
-            self.assertTrue(resp_text_dict['success'])
-
-    def test_check_fs_access_fail(self):
-        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
-            filename = f.name
-            content = bytes(''.join(random.choice(
-                string.ascii_uppercase + string.digits) for _ in range(32)),
-                            'utf-8')
-            f.write(content)
-            checksum = 'impossible'
-
-            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
-                                                  'checksum': checksum})
-
-            self.assertEqual(resp.status_code, 200)
-            resp_text_dict = json.loads(resp.content.decode('utf8'))
-            self.assertFalse(resp_text_dict['success'])
-
 
 @override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')
 class CallbackTest(LiveServerTestCase):
@@ -401,7 +370,8 @@ class CallbackTest(LiveServerTestCase):
     """
 
     def setUp(self):
-        self.client = Client()
+        (self.webserver, self.webserver_thread,
+         self.client) = start_webui()
         self.on_job_complete_event = Event()
         self.on_job_complete_data = {}
         job_complete_callback_state['event'] = self.on_job_complete_event
@@ -432,6 +402,10 @@ class CallbackTest(LiveServerTestCase):
         self.assertEqual(body['user_name'], 'custom_owner')
         self.assertEqual(get_params['first'], 'one')
         self.assertEqual(get_params['second'], 'two')
+
+    def tearDown(self):
+        stop_webui(self.webserver, self.webserver_thread)
+        super().tearDown()
 
     # TODO: we could add a test to test the callback in case of a job that starts
     # successfully (the inputs are valid) but fails afterwards.

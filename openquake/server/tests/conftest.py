@@ -17,12 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import pytest
+import requests
 import glob
 import shutil
 import pathlib
 import subprocess
+import tempfile
+import zipfile
 from django.contrib.auth import get_user_model
+from openquake.baselib import config
+from openquake.server.tests.views_test import start_webui, stop_webui
 
 # pytest-playwright starts an asyncio event loop at session startup.
 # Django 4+ forbids synchronous ORM/database operations when an event loop
@@ -40,8 +46,118 @@ def copy_from_templates_if_needed(tmpldir, ext):
             shutil.copy(fname, stripped)
 
 
+def _download_file(url, target):
+    """Download *url* atomically, removing incomplete files on failure."""
+    if target.is_file() and target.stat().st_size:
+        return
+    target.unlink(missing_ok=True)
+    fd, temporary = tempfile.mkstemp(
+        prefix=f'.{target.name}.', dir=target.parent)
+    os.close(fd)
+    try:
+        with requests.get(url, stream=True, timeout=60) as response:
+            response.raise_for_status()
+            with open(temporary, 'wb') as stream:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        stream.write(chunk)
+        if not pathlib.Path(temporary).stat().st_size:
+            raise OSError(f'Empty download from {url}')
+        os.replace(temporary, target)
+    except BaseException:
+        pathlib.Path(temporary).unlink(missing_ok=True)
+        target.unlink(missing_ok=True)
+        raise
+
+
+def _download_server_data(data_dir):
+    """Download the files used by the server integration tests."""
+    base_url = 'https://downloads.openquake.org/test_data'
+    files = ('worldcities.csv', 'countries_info.csv',
+             'World_Adm1_simplified.gpkg')
+    for name in files:
+        _download_file(f'{base_url}/{name}', data_dir / name)
+
+    mosaic_dir = pathlib.Path(__file__).parents[2] / 'qa_tests_data' / 'mosaic'
+    mosaic_dir.mkdir(exist_ok=True)
+    exposure = mosaic_dir / 'exposure.hdf5'
+    _download_file(f'{base_url}/exposure.hdf5', exposure)
+    repo_dir = mosaic_dir.parents[2]
+    exposure_link = repo_dir / 'exposure.hdf5'
+    if exposure_link.is_symlink() and not exposure_link.exists():
+        exposure_link.unlink()
+    if (not exposure_link.exists()
+            or exposure_link.stat().st_size == 0):
+        exposure_link.unlink(missing_ok=True)
+        exposure_link.symlink_to(exposure.relative_to(repo_dir))
+
+    fonts_dir = data_dir / 'fonts'
+    if not any(fonts_dir.glob('NotoSans*-Regular.ttf')):
+        archive_path = data_dir / 'fonts.zip'
+        _download_file(f'{base_url}/fonts.zip', archive_path)
+        with zipfile.ZipFile(archive_path) as archive:
+            archive.extractall(data_dir)
+
+
+def _configure_server_data(data_dir, basemap_path=None):
+    """Configure the downloaded data for this process and its children."""
+    fd, cfg_path = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.cfg')
+    os.close(fd)
+    paths = {
+        'world_cities_file': data_dir / 'worldcities.csv',
+        'countries_info_file': data_dir / 'countries_info.csv',
+        'admin1_boundaries_file': data_dir / 'World_Adm1_simplified.gpkg',
+        'fonts_dir': data_dir / 'fonts',
+    }
+    if basemap_path is not None:
+        paths['basemap_file'] = basemap_path
+    with open(cfg_path, 'w') as cfg:
+        cfg.write('[directory]\n')
+        for name, path in paths.items():
+            cfg.write(f'{name} = {path}\n')
+    for name, path in paths.items():
+        config.directory[name] = str(path)
+    return cfg_path
+
+
+_server_cfg_path = None
+_server_old_cfg_path = None
+
+
+def _prepare_server_data():
+    global _server_cfg_path, _server_old_cfg_path
+    if _server_cfg_path is not None:
+        return
+    data_dir = pathlib.Path(__file__).parent / 'data'
+    data_dir.mkdir(exist_ok=True)
+    _download_server_data(data_dir)
+    basemap_path = None
+    if os.environ.get('OQ_APPLICATION_MODE', '').upper() == 'IMPACT':
+        basemap_path = data_dir / 'basemap.tif'
+    _server_cfg_path = _configure_server_data(data_dir, basemap_path)
+    _server_old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
+    os.environ['OQ_CONFIG_FILE'] = _server_cfg_path
+
+
+def pytest_configure(config):
+    """Prepare paths before unittest classes or worker processes start."""
+    _prepare_server_data()
+
+
 @pytest.fixture(scope="session", autouse=True)
-def migrate_before_tests():
+def server_test_data():
+    """Make server test data available, downloading only missing files."""
+    _prepare_server_data()
+    yield
+    if _server_old_cfg_path is None:
+        os.environ.pop('OQ_CONFIG_FILE', None)
+    else:
+        os.environ['OQ_CONFIG_FILE'] = _server_old_cfg_path
+    pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def migrate_before_tests(server_test_data):
     """
     Generate registration files before running migrations (if needed),
     then load data fixtures
@@ -53,14 +169,28 @@ def migrate_before_tests():
            if appmode in ('AELO', 'IMPACT')
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
+    # the tests share the engine DB (there is no pytest-django test DB), so
+    # make sure it is migrated before the server process connects to it
+    subprocess.run([sys.executable, serverdir / 'manage.py', 'migrate'],
+                   check=True)
     if appmode in ['AELO', 'IMPACT']:
-        # run migrations if needed
-        subprocess.run([serverdir / 'manage.py', 'migrate'], check=True)
         # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
-        subprocess.run([serverdir / 'manage.py', 'loaddata', js], check=True)
+        subprocess.run(
+            [sys.executable, serverdir / 'manage.py', 'loaddata', js],
+            check=True)
     yield
+
+
+@pytest.fixture(scope="session")
+def django_db_setup():
+    """
+    Use the engine DB directly (no pytest-django test DB): the server runs
+    in a separate process and must see the same users and sessions as the
+    test process.
+    """
+    pass
 
 
 @pytest.fixture
@@ -87,17 +217,24 @@ def test_credentials():
 
 
 @pytest.fixture
-def user(db, application_mode, test_credentials, request):
+def user(django_db_blocker, application_mode, test_credentials, request):
     level = request.param
 
+    # use the engine DB directly (no pytest-django test DB) so that the
+    # server process can see the user and the session
+    django_db_blocker.unblock()
     User = get_user_model()
-    user = User.objects.create_user(
+    user, _ = User.objects.get_or_create(
         username=test_credentials["username"],
-        email=test_credentials["email"],
-        password=test_credentials["password"],
-    )
+        defaults={"email": test_credentials["email"]})
+    user.set_password(test_credentials["password"])
+    user.email = test_credentials["email"]
+    user.save()
 
-    profile = user.profile
+    # the profile is created by a signal only on user creation, so an
+    # existing test user may lack it
+    from openquake.server.user_profile.models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.level = level
     profile.save()
 
@@ -105,8 +242,9 @@ def user(db, application_mode, test_credentials, request):
 
 
 @pytest.fixture
-def authenticated_session(db, user):
+def authenticated_session(django_db_blocker, user):
     from django.test import Client
+    django_db_blocker.unblock()
     client = Client()
     client.force_login(user)
     session = client.session
@@ -115,16 +253,19 @@ def authenticated_session(db, user):
 
 
 @pytest.fixture
-def authenticated_page(
-        page, live_server, authenticated_session, application_mode):
-    page.context.clear_cookies()
-    page.context.add_cookies([{
-        "name": "sessionid",
-        "value": authenticated_session,
-        "url": live_server.url,
-    }])
-    page.goto(f"{live_server.url}/engine/")
-    return page
+def authenticated_page(page, authenticated_session, application_mode):
+    server, thread, client = start_webui()
+    try:
+        page.context.clear_cookies()
+        page.context.add_cookies([{
+            "name": "sessionid",
+            "value": authenticated_session,
+            "url": client.base_url,
+        }])
+        page.goto(f"{client.base_url}/engine/")
+        yield page
+    finally:
+        stop_webui(server, thread)
 
 
 @pytest.fixture
@@ -139,3 +280,34 @@ def ui_logged_in_page(
 
     page.wait_for_url(f"{live_server.url}/engine/")
     return page
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-abort-jobs",
+        action="store_true",
+        default=False,
+        help="Skip aborting jobs after test execution."
+    )
+    parser.addoption(
+        "--skip-remove-jobs",
+        action="store_true",
+        default=False,
+        help="Skip removing jobs after test execution."
+    )
+
+
+@pytest.fixture
+def should_abort_job(request):
+    """
+    Returns True by default, False if --skip-abort-jobs is passed.
+    """
+    return not request.config.getoption("--skip-abort-jobs")
+
+
+@pytest.fixture
+def should_remove_job(request):
+    """
+    Returns True by default, False if --skip-remove-jobs is passed.
+    """
+    return not request.config.getoption("--skip-remove-jobs")

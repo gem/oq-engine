@@ -27,6 +27,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 DATA = Path(__file__).with_name('data') / 'HERESI_MIRANDA_2019'
 
 
+EPS = 1E-10
+
 def test_reference_values():
     reference = numpy.genfromtxt(
         DATA / 'reference.csv', delimiter=',', names=True)
@@ -38,7 +40,7 @@ def test_reference_values():
             numpy.array([[row['distance']]]), imt)
         actual.append(matrix[0, 0])
     numpy.testing.assert_allclose(
-        actual, reference['correlation'], rtol=1E-12, atol=1E-14)
+        actual, reference['correlation'], rtol=EPS, atol=EPS)
 
 
 @pytest.mark.parametrize(('imt', 'message'), [

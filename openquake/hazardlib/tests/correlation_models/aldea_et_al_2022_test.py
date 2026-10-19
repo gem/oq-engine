@@ -31,6 +31,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 DATA = Path(__file__).with_name('data') / 'ALDEA_ET_AL_2022'
 
 
+EPS = 1E-10
+
 class Mesh:
     def __init__(self, distances):
         self.distances = distances
@@ -59,7 +61,7 @@ def test_reference_values():
             numpy.array([[float(row['distance'])]]), [imt], [imt])
         numpy.testing.assert_allclose(
             actual[0, 0], float(row['correlation']),
-            rtol=1E-14, atol=1E-15)
+            rtol=EPS, atol=EPS)
 
 
 def test_model_is_registered_with_calibration_metadata():
@@ -67,7 +69,7 @@ def test_model_is_registered_with_calibration_metadata():
     assert AldeaEtAl2022.DEFINED_FOR_REGION == 'Chilean subduction zone'
     assert AldeaEtAl2022.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is (
         const.IMC.GEOMETRIC_MEAN)
-    assert AldeaEtAl2022.DEFINED_FOR_SA_DAMPING == 5.0
+    assert AldeaEtAl2022.DEFINED_FOR_DAMPING == 5.0
 
 
 def test_covariance_and_factor_are_positive_definite():

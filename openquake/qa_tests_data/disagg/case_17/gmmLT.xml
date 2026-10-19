@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- two GSIMs per tectonic region type, as in the AELO models; the sources
+     1, 10, 11, 12 share the prefix "1" and belong to 4 different TRTs -->
+<nrml>
+  <logicTree logicTreeID="gmm">
+    <logicTreeBranchSet branchSetID="bs1" uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="TECTONIC_REGION_1">
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+        <uncertaintyWeight>0.6</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b2">
+        <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+        <uncertaintyWeight>0.4</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs2" uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="TECTONIC_REGION_2">
+      <logicTreeBranch branchID="b3">
+        <uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+        <uncertaintyWeight>0.7</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b4">
+        <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+        <uncertaintyWeight>0.3</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs3" uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="TECTONIC_REGION_3">
+      <logicTreeBranch branchID="b5">
+        <uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b6">
+        <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs4" uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="TECTONIC_REGION_4">
+      <logicTreeBranch branchID="b7">
+        <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+        <uncertaintyWeight>0.4</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b8">
+        <uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+        <uncertaintyWeight>0.6</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

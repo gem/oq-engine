@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import shutil
+import tempfile
 import unittest
+
+import h5py
 import numpy as np
 
 from openquake.hazardlib import valid
@@ -30,7 +34,7 @@ aae = np.testing.assert_array_almost_equal
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Test file uses replacement adjustment method on tau (scalar, IMT-varying)
-# and subtract adjustment method on phi (per-cell dS2S + scalar att_per_km,
+# and subtract adjustment method on phi (per-cell dS2S + scalar adj_per_km,
 # both IMT-varying), with h3 resolutions of 2, 3, 4
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
@@ -64,29 +68,48 @@ DS2S_SIG_PER_CELL = [
     np.array([0.03, 0.04, 0.05, 0.06]),  # SA(1.0)
 ]
 
-# Scalar att_per_km sigma per IMT
+# Scalar adj_per_km sigma per IMT
 ATT_SIG = [0.00112, 0.00148, 0.00158]  # PGA, SA(0.5), SA(1.0)
 
 EXPECTED_PATH_ADJ = [
-    np.array([0., 1.15658587, 2.10640224, 1.03237941]),  # PGA
-    np.array([0., 1.18827316, 1.91776919, 1.33602045]),  # SA(0.5)
-    np.array([0., 0.83971303, 1.98064684, 0.42509743]),  # SA(1.0)
+    np.array([0., 1.15658587, 2.2321576, 1.21456404]),  # PGA
+    np.array([0., 1.18827316, 2.0120857, 1.33602045]),  # SA(0.5)
+    np.array([0., 0.83971303, 2.13784103, 0.91092302]), # SA(1.0)
 ]
 
 # Per-IMT expected mean diff: hypo always in cell 0 for dL2L, sites vary
 EXPECTED_MEAN_DIFFS = [
-    DL2L_MEAN_PER_CELL[m][0] + 
-    DS2S_MEAN_PER_CELL[m] + 
+    DL2L_MEAN_PER_CELL[m][0] +
+    DS2S_MEAN_PER_CELL[m] +
     EXPECTED_PATH_ADJ[m] for m in range(len(IMTS))
+]
+
+# Per-cell SE of the mean for each term/IMT, matching the datasets
+# written to test_grid_adjustments.hdf5
+DL2L_SE_PER_CELL = [
+    np.array([0.010, 0.015, 0.020, 0.025]),  # PGA
+    np.array([0.008, 0.012, 0.016, 0.020]),  # SA(0.5)
+    np.array([0.006, 0.009, 0.012, 0.015]),  # SA(1.0)
+]
+DS2S_SE_PER_CELL = [
+    np.array([0.020, 0.025, 0.030, 0.035]),  # PGA
+    np.array([0.016, 0.020, 0.024, 0.028]),  # SA(0.5)
+    np.array([0.012, 0.015, 0.018, 0.021]),  # SA(1.0)
+]
+EXPECTED_PATH_SE_ADJ = [
+    np.array([0., 0.115658587, 0.22321576, 0.121456404]),  # PGA
+    np.array([0., 0.118827316, 0.20120857, 0.133602045]),  # SA(0.5)
+    np.array([0., 0.083971303, 0.213784103, 0.091092302]), # SA(1.0)
 ]
 
 
 class GridAdjustedGMPETest(unittest.TestCase):
 
-    def _get_mean_stds(self, imts):
+    def _get_mean_stds(self, imts, epsilons=None):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
+                               epsilons=epsilons)
         cmaker = simple_cmaker([base, adj], imts)
         ctx = cmaker.new_ctx(len(LATS))
         ctx.mag = 6.0
@@ -102,12 +125,17 @@ class GridAdjustedGMPETest(unittest.TestCase):
         return cmaker.get_mean_stds([ctx])
 
     def test_grid_lookup(self):
-        # Check correct values returned when searching loaded grid
+        # Check correct values returned when searching loaded grid for
+        # both a hypo-based term (dL2L) and a site-based term (dS2S)
         gd = load_residual_grids(GRID_HDF5)
-        mu = grid_lookup(
+        mu_dl2l = grid_lookup(
             gd["grids"]["PGA"]["dL2L"]["mean"],
             LATS, LONS, gd["h3_res"])
-        aae(mu, DL2L_MEAN_PER_CELL[0], decimal=DP)
+        aae(mu_dl2l, DL2L_MEAN_PER_CELL[0], decimal=DP)
+        mu_ds2s = grid_lookup(
+            gd["grids"]["PGA"]["dS2S"]["mean"],
+            LATS, LONS, gd["h3_res"])
+        aae(mu_ds2s, DS2S_MEAN_PER_CELL[0], decimal=DP)
         # Check that zero is returned for out-of-bounds coords
         mu = grid_lookup(
             gd["grids"]["PGA"]["dL2L"]["mean"],
@@ -119,7 +147,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         gd = load_residual_grids(GRID_HDF5)
         for m, imt in enumerate(IMTS):
             adjs = raytrace_path_adj(
-                gd["raytrace_grids"]["att_per_km"][imt],
+                gd["raytrace_grids"]["adj_per_km"][imt],
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
                 LONS, LATS,
             )
@@ -135,7 +163,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             aae(tau[GRID, m],
                 np.full(len(LATS), DL2L_SIG[m]), decimal=DP)
             # phi: subtract per-cell dS2S sigma (site-varying) and scalar
-            # att_per_km sigma, both IMT-specific
+            # adj_per_km sigma, both IMT-specific
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_SIG_PER_CELL[m] ** 2
                         - ATT_SIG[m] ** 2), decimal=DP)
@@ -154,3 +182,56 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(
                 gmpe_name="Campbell2003", grid_hdf5_file=GRID_HDF5)
+
+    def test_epsilons_shift_mean_by_eps_times_se(self):
+        # Non-zero epsilon must shift the mean by epsilon * mean_se for
+        # each term. Hypo is at origin so dL2L always picks cell 0;
+        # dS2S and dP2P use per-site/per-path SE values from the HDF5
+        for eps in [-1.732, 1.0, 1.732]:
+            eps_dict = {"dL2L": eps, "dS2S": eps, "adj_per_km": eps}
+            mea, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
+            mea_cen, *_ = self._get_mean_stds(IMTS)
+            for m in range(len(IMTS)):
+                expected_shift = eps * (
+                    DL2L_SE_PER_CELL[m][0]
+                    + DS2S_SE_PER_CELL[m]
+                    + EXPECTED_PATH_SE_ADJ[m])
+                aae(mea[GRID, m] - mea_cen[GRID, m], expected_shift,
+                    decimal=DP)
+
+    def test_epsilons_missing_se_raises(self):
+        # Non-zero epsilon for a term whose mean_se dataset is absent
+        # must raise rather than silently falling back to the central
+        with tempfile.TemporaryDirectory() as td:
+            stripped = os.path.join(td, "no_se.hdf5")
+            shutil.copy(GRID_HDF5, stripped)
+            with h5py.File(stripped, "a") as hf:
+                for term in ("dL2L", "dS2S", "adj_per_km"):
+                    for imt_str in hf[term]:
+                        key = f"{term}_mean_se"
+                        if key in hf[term][imt_str]:
+                            del hf[term][imt_str][key]
+            base = valid.gsim(BASE_GSIM)
+            adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                   grid_hdf5_file=stripped,
+                                   epsilons={"dL2L": 1.0})
+            cmaker = simple_cmaker([base, adj], ["PGA"])
+            ctx = cmaker.new_ctx(len(LATS))
+            ctx.mag = 6.0
+            ctx.rake = 0.0
+            ctx.hypo_depth = 10.0
+            ctx.vs30 = 760.0
+            ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
+            ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
+            ctx.lat = LATS
+            ctx.lon = LONS
+            ctx.hypo_lat = 0.0
+            ctx.hypo_lon = 0.0
+            with self.assertRaises(ValueError):
+                cmaker.get_mean_stds([ctx])
+
+    def test_epsilons_unknown_term_raises(self):
+        # Unknown term names must raise rather than silently default
+        with self.assertRaises(ValueError):
+            GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
+                             epsilons={"dL2L": 1.0, "nope": 0.5})

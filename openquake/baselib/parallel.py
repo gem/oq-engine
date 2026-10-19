@@ -188,7 +188,6 @@ import time
 import socket
 import signal
 import pickle
-import sqlite3
 import getpass
 import inspect
 import logging
@@ -220,6 +219,18 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
+def parse_hostcore(hostcore, default_port):
+    """
+    :param hostcore: a string "host cores" or "host:port cores"
+    :param default_port: the ctrl_port to use if the port is missing
+    :returns: a triple (host, port, cores) with port an integer
+    """
+    hostport, cores = hostcore.split()
+    host, sep, port = hostport.partition(':')
+    # without an explicit port the default ctrl_port is used
+    return host, (int(port) if sep else int(default_port)), cores
+
+
 def calc_dir(job_id_or_fname):
     """
     :param job_id_or_fname: job ID (integer) or .hdf5 pathname (string)
@@ -242,7 +253,9 @@ def calc_dir(job_id_or_fname):
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
-    safely_call(func, args, self.task_no, monitor)
+    # the results are collected in-process: sending them via zmq
+    # would deadlock, since the master thread is the only receiver
+    safely_call(func, args, self.task_no, monitor, InprocSocket(self.inproc))
 
 
 @submit.add('processpool', 'threadpool')
@@ -254,8 +267,8 @@ def processpool_submit(self, func, args, monitor):
 @submit.add('zmq', 'slurm')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    host = host_cores[idx].split()[0]
-    port = int(config.zworkers.ctrl_port)
+    host, port, _cores = parse_hostcore(
+        host_cores[idx], config.zworkers.ctrl_port)
     dest = 'tcp://%s:%d' % (host, port)
     logging.debug('Sending to %s', dest)
     with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
@@ -444,10 +457,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     engine_version()))
-            if mon.dbserver_host != config.dbserver.host:
+            if mon.database_host != config.dbserver.host:
                 raise RuntimeError(
-                    'The worker has dbserver.host=%s while the master has %s'
-                    % (mon.dbserver_host, config.dbserver.host))
+                    'The worker has database.host=%s while the master has %s'
+                    % (mon.database_host, config.dbserver.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -458,9 +471,6 @@ class Result(object):
             _etype, exc, tb = sys.exc_info()
             res = Result(exc, mon, ''.join(traceback.format_tb(tb)))
         else:
-            if isinstance(val, sqlite3.Cursor):
-                # happens when the DbServer performs an UPDATE command
-                val = val.lastrowid
             res = Result(val, mon)
         return res
 
@@ -481,8 +491,6 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
         return msg % (used_mem_percent, socket.gethostname())
 
 
-dummy_mon = Monitor(dbserver_host=config.dbserver.host)
-dummy_mon.backurl = None
 DEBUG = False
 
 
@@ -512,7 +520,56 @@ def sendback(res, zsocket):
     return nbytes
 
 
-def safely_call(func, args, task_no=0, mon=dummy_mon):
+def task_weight(arg):
+    """
+    :param arg: the first argument of a task
+    :returns: the weight of the argument, used in the task_info dataset
+
+    The weight of a task is the estimated cost of the work it performs,
+    so it is the sum of the weights of the items it will process. The
+    argument is however often a plain list of identifiers (see the
+    classical tasks, which receive the keys of the source groups) and
+    then the weight has to be set by the task itself (see
+    `openquake.calculators.classical.classical`).
+    """
+    try:
+        return arg.weight  # for instance a SourceGroup
+    except AttributeError:
+        pass
+    if isinstance(arg, (list, tuple)) and arg:
+        try:
+            return sum(item.weight for item in arg)
+        except AttributeError:
+            pass
+    return 1.
+
+
+class InprocSocket(object):
+    """
+    A stand-in for the zmq PUSH socket which appends the results to
+    a deque, used when OQ_DISTRIBUTE=no (single process)
+    """
+    def __init__(self, results):
+        self.results = results
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def send(self, res):
+        self.results.append(res)
+
+
+def _channel(sink, mon):
+    # return the sink, if given, otherwise a zmq PUSH socket
+    if sink is not None:
+        return sink
+    return Socket(mon.backurl, zmq.PUSH, 'connect')
+
+
+def safely_call(func, args, task_no, mon, sink=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -524,27 +581,25 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     :param args: the arguments
     :param task_no: the task number
     :param mon: a monitor
+    :param sink: where to send the results (default: zmq socket)
     """
     isgenfunc = inspect.isgeneratorfunction(func)
     if hasattr(args[0], 'unpickle'):
         # args is a list of Pickled objects
         args = [a.unpickle() for a in args]
-    if mon is dummy_mon:  # in the DbServer
-        assert not isgenfunc, func
-        return Result.new(func, args, mon)
     # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
-    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.weight = task_weight(args[0])  # used in task_info
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
     sentbytes = 0
     if isgenfunc:
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
@@ -556,7 +611,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             sentbytes += sendback(res, zsocket)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
@@ -742,7 +797,8 @@ class Starmap(object):
             if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
-            cls.pool.shutdown()
+            # wait and cancel_futures are explicit to avoid a Python 3.11 bug
+            cls.pool.shutdown(wait=False, cancel_futures=True)
             del cls.pool
 
     @classmethod
@@ -791,7 +847,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.name = task_func.__name__
-        self.monitor = Monitor(self.name, dbserver_host=config.dbserver.host)
+        self.monitor = Monitor(self.name, database_host=config.dbserver.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         if distribute == 'zmq':
@@ -816,6 +872,7 @@ class Starmap(object):
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = {}  # populated by .submit
+        self.inproc = collections.deque()  # used when distribute=no
         self.task_no = 0
         self._shared = {}
         self.n_out = 0
@@ -947,8 +1004,14 @@ class Starmap(object):
             if task.done():
                 task.result(timeout=0)
 
+    def _inproc_results(self):
+        # a task submitted while consuming (a subtask) appends more
+        # results, which are seen by the loop since we pop lazily
+        while self.inproc:
+            yield self.inproc.popleft()
+
     def _loop(self):
-        self.busytime = AccumDict(accum=[])  # pid -> time
+        self.busytime = AccumDict()  # name -> pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -966,7 +1029,10 @@ class Starmap(object):
         logging.warning('Sent %d %s tasks, %s', len(self.tasks),
                         self.name, humansize(nbytes))
 
-        isocket = iter(self.socket)  # read from the PULL socket
+        if dist == 'no':  # the results are already in self.inproc
+            isocket = self._inproc_results()
+        else:
+            isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
             res = next(isocket)
@@ -989,14 +1055,22 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        if len(self.busytime) > 1:
-            times = numpy.array(list(self.busytime.values()))
-            if self.h5.mode != 'r':
-                self.monitor.save_starmap_info(self.h5, self.name, times)
+        # NB: a Starmap can generate tasks with different names, as
+        # preclassical -> filter_weight, or classical -> baseclassical
+        # when the tasks are split for being too slow (see the comment
+        # in classical.py); there is one row per task name, so that the
+        # tasks of different kinds are not mixed together
+        for name, dic in self.busytime.items():
+            if len(dic) > 1:  # no statistics with a single core
+                times = numpy.array(list(dic.values()))
+                if self.h5.mode != 'r':
+                    self.monitor.save_starmap_info(self.h5, name, times)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
-        self.busytime += {res.workerid: res.mon.duration}
+        name = res.mon.operation[6:]  # strip 'total '
+        dic = self.busytime.setdefault(name, AccumDict(accum=0.))
+        dic += {res.workerid: res.mon.duration}
         del self.tasks[res.mon.task_no]
         self._submit_many(1)
         todo = set(range(self.task_no)) - finished
@@ -1007,16 +1081,15 @@ class Starmap(object):
         if self.h5.mode != 'r':
             del self.h5['task_sent']
             self.h5['task_sent'] = str(task_sent)
-        name = res.mon.operation[6:]  # strip 'total '
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:
                 # measure the memory only for 1 task out of 10
                 # with 8 nodes the time to get the memory is 0.01 secs
                 for line in host_cores:
-                    host, _cores = line.split()
-                    addr = 'tcp://%s:%s' % (
-                        host, config.zworkers.ctrl_port)
+                    host, port, _cores = parse_hostcore(
+                        line, config.zworkers.ctrl_port)
+                    addr = 'tcp://%s:%s' % (host, port)
                     with Socket(addr, zmq.REQ, 'connect') as sock:
                         mem_gb += sock.send('memory_gb')
         elif self._shared:

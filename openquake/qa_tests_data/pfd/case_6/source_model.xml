@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="IAEA Kumamoto Uto segment (Option 1)">
+    <sourceGroup name="IAEA Kumamoto Uto segment (Option 1)" tectonicRegion="Active Shallow Crust">
+      <characteristicFaultSource id="UTO" name="Uto Segment" tectonicRegion="Active Shallow Crust">
+        <incrementalMFD binWidth="0.1" minMag="6.5">
+          <occurRates>18.9e-5</occurRates>
+        </incrementalMFD>
+        <rake>0.0</rake>
+        <surface>
+          <simpleFaultGeometry>
+            <gml:LineString>
+              <gml:posList>
+                130.81530 32.76750
+                130.76560 32.74740
+                130.60350 32.68170
+              </gml:posList>
+            </gml:LineString>
+            <dip>60</dip>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>14.0</lowerSeismoDepth>
+          </simpleFaultGeometry>
+        </surface>
+      </characteristicFaultSource>
+    </sourceGroup>
+  </sourceModel>
+</nrml>

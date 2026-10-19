@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_fdha_hazard_curve_minimal">
+  <logicTreeBranchSet branchSetID="bs_1_primary_surf_rup" uncertaintyType="fdhaPrimarySRModel">
+    <logicTreeBranch branchID="B1_PRIMARY_SURF_RUP">
+      <uncertaintyModel>
+        [Youngs2003PrimarySR]
+        style = "all"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_2_primary_surf_displ" uncertaintyType="fdhaPrimaryFDModel" applyToBranches="B1_PRIMARY_SURF_RUP">
+    <logicTreeBranch branchID="B2_PRIMARY_SURF_DISPL">
+      <uncertaintyModel>
+        [Youngs2003PrimaryFD]
+        style = "all"
+        norm_disp_type = "AD"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_3_secondary_surf_rup" uncertaintyType="fdhaSecondarySRModel" applyToBranches="B2_PRIMARY_SURF_DISPL">
+    <logicTreeBranch branchID="B3_SECONDARY_SURF_RUP">
+      <uncertaintyModel>
+        [Youngs2003SecondarySR]
+        version = 3
+        style = "all"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  <logicTreeBranchSet branchSetID="bs_4_secondary_surf_displ" uncertaintyType="fdhaSecondaryFDModel" applyToBranches="B3_SECONDARY_SURF_RUP">
+    <logicTreeBranch branchID="B4_SECONDARY_SURF_DISPL">
+      <uncertaintyModel>
+        [Youngs2003SecondaryFD]
+        style = "normal"
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+  </logicTree>
+</nrml>

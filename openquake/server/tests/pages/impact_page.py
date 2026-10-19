@@ -10,11 +10,13 @@ class ImpactPage(EnginePage):
     def select_shakemap_version(self, value):
         shakemap_version_select = self.page.locator('select#shakemap_version')
         expect(shakemap_version_select.locator(
-            f'option[value="{value}"]')).to_have_count(1, timeout=20_000)
+            f'option[value="{value}"]')).to_have_count(1, timeout=30_000)
         shakemap_version_select.select_option(value=value)
         expect(shakemap_version_select).to_have_value(value)
 
     def retrieve_data(self):
+        self.page.locator('.modal-backdrop').wait_for(
+            state='detached', timeout=15_000)
         self.page.locator("#submit_impact_get_rupture").click()
 
     def run_impact_calc(self):
@@ -34,6 +36,12 @@ class ImpactPage(EnginePage):
             'input#truncation_level')).to_have_value('0')
         expect(self.page.locator(
             'input#number_of_ground_motion_fields')).to_have_value('1')
+
+    def set_make_impact_reports(self):
+        reports_ckb = self.page.locator('input#make_impact_reports')
+        expect(reports_ckb).to_be_visible()
+        reports_ckb.check()
+        expect(reports_ckb).to_be_checked()
 
     def rupture_identifier(self):
         return self.page.locator('input#usgs_id')
@@ -97,7 +105,9 @@ class ImpactPageLevel2(ImpactPage):
         self.page.locator("input#strike").fill(str(strike))
 
     def choose_rupture_model(self):
-        expect(self.page.locator("input#rupture_file_input")).to_be_visible()
+        # the input is un-hidden by the approach handler, which may be slow
+        expect(self.page.locator("input#rupture_file_input")).to_be_visible(
+            timeout=50_000)
         rupture_file = (
             files("openquake.hazardlib.tests.shakemap.data")
             / "fault_rupture.xml"
@@ -110,17 +120,19 @@ class ImpactPageLevel2(ImpactPage):
 
     def confirm_relocated_hypocenter_warning(self):
         expect(self.page.get_by_text("it was moved")).to_be_visible(
-            timeout=15_000)
+            timeout=50_000)
         modal = self.page.get_by_text("it was moved")
         self.page.get_by_role("button", name="Close").click()
         expect(modal).not_to_be_visible()
 
     def select_nodal_plane(self):
-        expect(self.page.locator('select#nodal_plane')).to_be_visible()
+        # the select is empty (hence not visible) until the nodal planes
+        # are retrieved from the USGS, so wait for the options first
         self.page.wait_for_function(
             "document.querySelector('select#nodal_plane').options.length > 0",
             timeout=30_000
         )
+        expect(self.page.locator('select#nodal_plane')).to_be_visible()
 
     def retrieve_stations_from_usgs(self, expect_no_seismic_stations=False):
         get_stations_btn = self.page.get_by_role("button",
@@ -130,9 +142,9 @@ class ImpactPageLevel2(ImpactPage):
         station_data_loaded = self.page.locator(
             'input#station_data_file_loaded')
         if expect_no_seismic_stations:
+            expect(station_data_loaded).to_have_value(
+                'N.A. (conversion issue)', timeout=30_000)
             self.page.get_by_role("button", name="Close").click(
                 timeout=15_000)
-            expect(station_data_loaded).to_have_value(
-                'N.A. (conversion issue)', timeout=15_000)
         else:
-            expect(station_data_loaded).not_to_have_value('', timeout=15_000)
+            expect(station_data_loaded).not_to_have_value('', timeout=30_000)

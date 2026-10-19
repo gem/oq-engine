@@ -21,7 +21,7 @@ import shutil
 import getpass
 from openquake.baselib import config
 from openquake.baselib.general import humansize
-from openquake.commonlib import logs
+from openquake.commonlib import logs, dbapi
 
 datadir = logs.get_datadir()
 
@@ -71,10 +71,10 @@ def purge_orphan(force):
     Purge orphan files not referenced in the database
     """
     # first purge non-relevant workflows, thus leaving orphan calculations
-    logs.dbcmd("DELETE FROM job WHERE calculation_mode='workflow'"
-               " AND not relevant")
-    logs.dbcmd("VACUUM")
-    dbfiles = {rec[0] for rec in logs.dbcmd(
+    dbapi.db("DELETE FROM job WHERE calculation_mode='workflow'"
+             " AND not relevant")
+    dbapi.db("VACUUM")
+    dbfiles = {rec[0] for rec in dbapi.db(
         'SELECT ds_calc_dir || ".hdf5" FROM job')}
     hdf5files = {os.path.join(datadir, f)
                  for f in os.listdir(datadir)
@@ -110,7 +110,7 @@ def purge_db(status, days, force):
     todelete = []
     totsize = 0
     calc_ids = []
-    for calc_id, fname in logs.dbcmd(query):
+    for calc_id, fname in dbapi.db(query):
         if os.path.exists(fname) and os.access(fname, os.W_OK):
             calc_ids.append(calc_id)
             todelete.append(fname)
@@ -126,7 +126,7 @@ def purge_db(status, days, force):
     size = humansize(totsize)
     if force:
         print('Removed %d HDF5 files, %s' % (len(todelete), size))
-        logs.dbcmd('DELETE FROM job WHERE id in (?X)', calc_ids)
+        dbapi.db('DELETE FROM job WHERE id in (?X)', calc_ids)
     elif todelete:
         print('Found %d HDF5 files, %s' % (len(todelete), size))
         print('Use --force to really delete the calculations and jobs')

@@ -103,7 +103,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
         for model, df in dvf.groupby('model'):
             if model not in MODELS:
                 continue
-            elif model in ('???', 'USA', 'GLD'):
+            elif model in ('???', 'USA'):
                 continue
             elif exclude_models and model in exclude_models.split(','):
                 continue
@@ -122,7 +122,7 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
             # del params['postproc_func']
             allparams.append(params)
             models.append(model)
-    print('Considering %d sites (excluding USA, GLD)' %
+    print('Considering %d sites (excluding USA)' %
           (sum(len(ls) for ls in ids.values())))
 
     logging.root.handlers = []  # avoid too much logging

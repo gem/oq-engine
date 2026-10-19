@@ -78,6 +78,20 @@ def test_joint_memory_estimates():
     assert dense_name == 'dense joint conditioning workspace'
     assert dense_block is None
 
+    ce_model = SimpleNamespace(SUPPORTS_CIRCULANT_EMBEDDING=True)
+    scalable = SimpleNamespace(
+        inp=SimpleNamespace(
+            within_event_model=ce_model,
+            imts_Y=range(4), imts_D=range(3)),
+        E=500, N=N)
+    ce_size, _, ce_name, ce_block = event_based._conditioned_memory(
+        scalable, D, G, N, compute_covs=True,
+        memory_limit=8 * 1024 ** 3)
+    assert ce_name == 'circulant conditioning workspace'
+    assert ce_size <= 8 * 1024 ** 3
+    assert ce_size >= T * Q * 8
+    assert ce_block > 0
+
     chunked_size, _, chunked_name, block = (
         event_based._conditioned_memory(
             computer, D, G, N, compute_covs=False, memory_limit=budget))
@@ -345,13 +359,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
-        out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_6.__file__, 'job.ini')
 
         # first check the number of generated ruptures
         num_rups = len(self.calc.datastore['ruptures'])
-        self.assertEqual(num_rups, 1913)
+        self.assertEqual(num_rups, 1030)
 
-        fnames = out['hcurves', 'csv']
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
         expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)

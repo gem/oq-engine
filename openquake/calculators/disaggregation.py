@@ -30,7 +30,8 @@ from openquake.baselib.general import (
 from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import (
+    read_cmakers, read_ctx_by_grp, read_core_trt_smrs)
 from openquake.commonlib import util
 from openquake.calculators import base, getters
 
@@ -47,7 +48,7 @@ F32 = numpy.float32
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                   monitor):
+                   amplifier, gid_by_rlz, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -63,6 +64,10 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
         a dictionary src_id -> weight, usually empty
     :param rwdic:
         dictionary rlz -> weight, empty for individual realizations
+    :param amplifier:
+        an AmplificationModel or None. When an AmplificationModel is present
+        hmap3 is treated as soil-scale target IMLs and _disaggregate_amp
+        is used
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -75,9 +80,13 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     out = []
     for site in sitecol:
         try:
-            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges,
+                                       gid_by_rlz)
         except disagg.FarAwayRupture:
             continue
+        if amplifier is not None:
+            dis.amplifier = amplifier
+            dis.ampcode = dis.sitecol.ampcode[0]
         with dstore:
             iml2 = dstore['hmap3'][dis.sid]
             if iml2.sum() == 0:  # zero hard for this site
@@ -112,12 +121,25 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
-def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
+def gids_by_rlz(ctx, gid_to_rlzs):
+    """Map realization IDs to context gids available in an array."""
+    if not gid_to_rlzs or 'gid' not in (ctx.dtype.names or ()):
+        return None
+    out = {}
+    for gid in numpy.unique(ctx.gid):
+        for rlz in gid_to_rlzs.get(int(gid), ()):
+            out.setdefault(int(rlz), []).append(int(gid))
+    return out
+
+
+def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+           amplifier, gid_by_rlz):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
-    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
+    smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
+                 amplifier, gid_by_rlz))
 
 
 def check_memory(N, Z, shape8D):
@@ -231,6 +253,13 @@ class DisaggregationCalculator(base.HazardCalculator):
             iml3 = numpy.zeros((s['N'], s['M'], 1))
             for m, imt in enumerate(oq.imtls):
                 iml3[:, m] = oq.iml_disagg[imt]
+        elif self.amplifier:
+            # hcurves-stats is on soil_intensities when amplifying, so hmap3
+            # stores soil-scale IMTLs and uses _disaggregate_amp which then
+            # integrates the amplification function against bedrock
+            # distributions rupture by rupture
+            soil_imtls = {imt: oq.soil_intensities for imt in oq.imtls}
+            iml3 = map_array.compute_hmaps(mean_curves, soil_imtls, oq.poes)
         else:
             iml3 = map_array.compute_hmaps(
                 mean_curves, oq.imtls, oq.poes)
@@ -245,6 +274,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         return self.compute()
 
     def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp):
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         # compute the total weight of the contexts and the maxsize
         ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
@@ -255,12 +286,22 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
+        gid_to_rlzs = {}
+        if 'core_trt_smrs' in dstore:
+            full_lt = dstore['full_lt'].init()
+            core_trt_smrs = read_core_trt_smrs(dstore)
+            for trt_smrs, gids in zip(
+                    core_trt_smrs, full_lt.get_gids(core_trt_smrs)):
+                rlzs = full_lt.get_rlzs_by_gsim(trt_smrs).values()
+                gid_to_rlzs[int(gids[0])] = numpy.concatenate(list(rlzs))
+
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            gid_by_rlz = gids_by_rlz(ctxt, gid_to_rlzs)
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
-            # NB: in case_27 src_mutex for grp_id=1 has the form
+            # NB: in classical/case_27 src_mutex for grp_id=1 has the form
             # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
             if rup_mutex:
                 raise NotImplementedError(
@@ -278,7 +319,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic)
+                       self.bin_edges, src_mutex, rwdic, self.amplifier,
+                       gid_by_rlz)
                 continue
 
             # split by tiles
@@ -290,11 +332,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                     for c in disagg.split_by_magbin(
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
-                               self.bin_edges, src_mutex, rwdic)
+                               self.bin_edges, src_mutex, rwdic,
+                               self.amplifier, gid_by_rlz)
                 elif len(ctx):
                     # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, rwdic)
+                           self.bin_edges, src_mutex, rwdic, self.amplifier,
+                           gid_by_rlz)
 
     def compute(self):
         """
@@ -304,6 +348,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                   else self.datastore)
         cmakers = read_cmakers(dstore).to_array()
         if 'src_mutex' in dstore:
+            if self.amplifier is not None:
+                raise NotImplementedError(
+                    'Disaggregation with amplification and mutex sources')
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             gp = dict(dstore['grp_probability'])  # grp_id -> probability
             src_mutex_by_grp = {

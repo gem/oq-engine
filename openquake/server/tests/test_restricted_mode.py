@@ -16,16 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import zlib
+import json
+import string
+import random
+import tempfile
+from unittest import skipIf
 import django
 from datetime import datetime, timedelta
-from django.test import Client
 from openquake.commonlib import logs
+from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
-from openquake.server.tests.views_test import get_or_create_user, random_string
+from openquake.server.tests.views_test import (
+    get_or_create_user, random_string, start_webui, stop_webui)
 
 
-class RestrictedModeTestCase(django.test.TestCase):
+class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def post(cls, path, data=None):
@@ -39,16 +47,17 @@ class RestrictedModeTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user0, cls.password0 = get_or_create_user(0)  # level 0
-        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
-        cls.user2, cls.password2 = get_or_create_user(2)  # level 2
-        cls.c = Client()
+        (cls.webserver, cls.webserver_thread,
+         cls.c) = start_webui()
+
+    def setUp(self):
+        self.user0, self.password0 = get_or_create_user(0)
+        self.user1, self.password1 = get_or_create_user(1)
+        self.user2, self.password2 = get_or_create_user(2)
 
     @classmethod
     def tearDownClass(cls):
-        cls.user0.delete()
-        cls.user1.delete()
-        cls.user2.delete()
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def remove_calc(self, calc_id):
@@ -56,6 +65,11 @@ class RestrictedModeTestCase(django.test.TestCase):
         if ret.status_code != 200:
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (calc_id, ret))
+
+    def test_authentication_status(self):
+        response = self.c.get('/v1/authentication/status')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'authentication_required': True})
 
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
@@ -135,6 +149,51 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.json(),
                          {'success': f'The status of calculation {job.calc_id} was'
                                      f' changed from "shared" to "complete"'})
+        self.remove_calc(job.calc_id)
+
+    def test_level_2_can_only_share_own_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_level_2_job_ownership')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'complete')
+
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared'}, job.calc_id)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'shared')
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete'}, job.calc_id)
+        self.remove_calc(job.calc_id)
+
+    def test_superuser_can_share_other_users_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_superuser_share_job')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.user2.is_superuser = True
+        self.user2.save()
+        self.user2.profile.level = 1
+        self.user2.profile.save()
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 200)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 200)
+
+        self.c.login(username=self.user1.username, password=self.password1)
         self.remove_calc(job.calc_id)
 
     def test_share_or_unshare_user_level_below_2(self):
@@ -307,6 +366,9 @@ class RestrictedModeTestCase(django.test.TestCase):
         ret = self.get('list', limit=-1)
         self.assertEqual(ret.status_code, 200)
         all_jobs = ret.json()
+        count_ret = self.get('list/count', limit=-1)
+        self.assertEqual(count_ret.status_code, 200)
+        self.assertEqual(count_ret.json(), len(all_jobs))
         job_ids = {j['id'] for j in all_jobs}
         self.assertIn(job1.calc_id, job_ids)
         self.assertIn(job2.calc_id, job_ids)
@@ -414,3 +476,43 @@ class RestrictedModeTestCase(django.test.TestCase):
 
         for job in [older_job, newer_job]:
             self.remove_calc(job.calc_id)
+
+    # NOTE: on_same_fs is an internal feature developed in the context of
+    # hybridge, so it is not a problem skipping it on windows
+    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
+    def test_check_fs_access(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
+            # unauthenticated request must be rejected
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum})
+            self.assertEqual(resp.status_code, 403)
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum},
+                               headers={'X-API-Key': API_KEY})
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertTrue(resp_text_dict['success'])
+
+    def test_check_fs_access_fail(self):
+        with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
+            filename = f.name
+            content = bytes(''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(32)),
+                            'utf-8')
+            f.write(content)
+            checksum = 'impossible'
+
+            resp = self.c.post('/v1/on_same_fs', {'filename': filename,
+                                                  'checksum': checksum},
+                               headers={'X-API-Key': API_KEY})
+
+            self.assertEqual(resp.status_code, 200)
+            resp_text_dict = json.loads(resp.content.decode('utf8'))
+            self.assertFalse(resp_text_dict['success'])

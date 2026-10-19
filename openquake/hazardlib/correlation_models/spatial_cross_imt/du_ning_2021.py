@@ -188,11 +188,12 @@ class DuNing2021(SpatialCrossIMTCorrelationModel):
     rows in Table 3 are not.
     """
 
+    SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
         SA, PGA, PGV, IA, CAV, RSD575, RSD595}
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
 
     def _coefficients(self, imts):
         return _published_coefficients(imts)

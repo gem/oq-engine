@@ -183,8 +183,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
     INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
 
     def _validate_imt_combination(self, imts):
         if (any(imt.name == 'PGA' for imt in imts) and

@@ -19,6 +19,22 @@ Registry
     :undoc-members:
     :show-inheritance:
 
+Scalable sampling
+-----------------
+
+.. currentmodule:: openquake.hazardlib.correlation_models.circulant_embedding
+
+.. autoclass:: RegularGridLayout
+    :members:
+
+.. autoclass:: CirculantEmbeddingFactor
+    :members:
+
+.. currentmodule:: openquake.hazardlib.correlation_models.local_kriging
+
+.. autoclass:: LocalKrigingFactor
+    :members:
+
 Spatial models
 --------------
 
@@ -69,6 +85,12 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.monteiro_et_al_2026
+
+.. autoclass:: MonteiroEtAl2026
+    :members:
+    :show-inheritance:
+
 .. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.wang_du_2013
 
 .. autoclass:: WangDu2013PGAIAPGV
@@ -91,6 +113,16 @@ Joint spatial and cross-IMT models
 
 Cross-IMT models
 ----------------
+
+.. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.abrahamson_et_al_2014
+
+.. autoclass:: AbrahamsonEtAl2014BetweenEvent
+    :members:
+    :show-inheritance:
+
+.. autoclass:: AbrahamsonEtAl2014WithinEvent
+    :members:
+    :show-inheritance:
 
 .. currentmodule:: openquake.hazardlib.correlation_models.cross_imt.baker_bradley_2017
 

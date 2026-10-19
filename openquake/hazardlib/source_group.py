@@ -25,12 +25,13 @@ import collections
 import numpy
 from openquake.baselib import config, hdf5, performance
 from openquake.baselib.general import zpik, zunpik
-from openquake.baselib.general import split_in_blocks, AccumDict, groupby
+from openquake.baselib.general import split_in_blocks, AccumDict
+from openquake.baselib.general import block_splitter, groupby, nokey
 from openquake.hazardlib.calc.filters import magstr
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
-from openquake.hazardlib.contexts import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
@@ -102,7 +103,6 @@ class SourceGroup(collections.abc.Sequence):
         to what used by the USGS for the New Madrid in the 2008 National
         Hazard Model.
     """
-    changes = 0  # set in apply_uncertainty
 
     @classmethod
     def collect(cls, sources):
@@ -171,16 +171,6 @@ class SourceGroup(collections.abc.Sequence):
         The trt_smrs of the underlying sources
         """
         return self.sources[0].trt_smrs
-
-    @property
-    def tom_name(self):
-        """
-        :returns: name of the associated temporal occurrence model
-        """
-        if self.temporal_occurrence_model:
-            return self.temporal_occurrence_model.__class__.__name__
-        else:
-            return 'PoissonTOM'
 
     @property
     def atomic(self):
@@ -253,12 +243,6 @@ class SourceGroup(collections.abc.Sequence):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
-    def get_trt_smr(self):
-        """
-        :returns: the .trt_smr attribute of the underlying sources
-        """
-        return self.sources[0].trt_smr
-
     def get_tom_toml(self, time_span):
         """
         :returns: the TOM as a json string {'PoissonTOM': {'time_span': 50}}
@@ -300,6 +284,14 @@ class SourceGroup(collections.abc.Sequence):
 
     def __len__(self):
         return len(self.sources)
+
+    def get_ts(self):
+        """
+        :returns: the field ts of the set of realizations of the group,
+            i.e. the same for all its sources and independent of the other
+            sources sharing the task (see get_ts_sets)
+        """
+        return int(self.sources[0].ts_samples['ts'][0])
 
 
 class CompositeSourceModel:
@@ -367,12 +359,14 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
-    def get_cmakers(self):
+    def get_cmakers(self, core_trt_smrs):
         """
-        :param oq: the OqParam used to build the CompositeSourceModel
+        :param core_trt_smrs: the sets of realizations with the same
+            uncertainties, see source_reader.get_core_trt_smrs
         :returns: a ContextMakerSequence instance
         """
-        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq,
+                           core_trt_smrs)
 
     def get_basenames(self):
         """
@@ -513,7 +507,7 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split(self, cmdict, sitecol, max_weight, num_chunks=1):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
@@ -539,10 +533,10 @@ class CompositeSourceModel:
                         cmaker.ilabel = idx
                     yield self.split_sg(
                         cmaker, sg, sites, max_weight, mb_per_gsim,
-                        num_chunks, tiling)
+                        num_chunks)
 
     def split_sg(self, cmaker, sg, sitecol, max_weight, mb_per_gsim,
-                 num_chunks=1, tiling=False):
+                 num_chunks=1):
         N = len(sitecol.complete)
         oq = cmaker.oq
         max_mb = float(config.memory.pmap_max_mb)
@@ -552,7 +546,13 @@ class CompositeSourceModel:
             # crucial to avoid OOM in CEA or USA due to the dparam cache
             splits = N / 2_500  # use tiles with at max 2500 sites
         hint = sg.weight / max_weight
-        if sg.atomic or tiling:
+        if not any(src.nsites for src in sg.sources):
+            # no source is within the integration distance of any site, so the
+            # group was discarded by the prefiltering in preclassical and it
+            # cannot produce any rate: no tile and therefore no task needed.
+            blocks = [sg.grp_id]
+            tilegetters = []
+        elif sg.atomic:
             blocks = [sg.grp_id]
             maxhint = max(hint, splits)
             if N / maxhint < oq.max_sites_disagg:
@@ -629,13 +629,13 @@ def _strip_colons(sources):
     return sorted(ids)
 
 
-def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
+def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     """
     Generates task arguments from atomic and non-atomic groups
     """
     out = []
     atomic = []
-    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks, tiling)
+    allargs = csm.split(cmdict, sitecol, max_weight, num_chunks)
     for cmaker, tilegetters, blocks, extra in allargs:
         n = len(blocks)
         grp_id = _grp_id(blocks[0])
@@ -649,16 +649,56 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks, tiling):
             out.append((cmaker, tilegetters, grp_keys, False))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
+    weights_ = AccumDict(accum={})
     tilegetters_ = {}
     cmaker_ = {}
     for cmaker, tilegetters, blocks, extra in atomic:
-        gid = tuple(cmaker.gid)
-        tilegetters_[gid] = tilegetters
+        # NB: the key includes the site label, since the cmaker (with its
+        # gsims and ilabel) and the tiles are different for each label,
+        # while the gids are the same, see read_full_lt_by_label;
+        # tested in classical/case_27_labels
+        gid = (cmaker.ilabel, tuple(cmaker.gid))
+        if tilegetters or gid not in tilegetters_:
+            # a group far from all the sites has no tiles, but it must
+            # not remove the tiles of the other groups with the same gid
+            tilegetters_[gid] = tilegetters
         blocks_[gid].extend(blocks)
+        # NB: keyed by grp_id, so that a group is counted only once
+        weights_[gid][blocks[0]] = extra['weight']
         cmaker_[gid] = cmaker
     for gid, tgetters in tilegetters_.items():
-        grp_keys = [str(grp_id) for grp_id in blocks_[gid]]
-        out.append((cmaker_[gid], tgetters, grp_keys, True))
+        weights = weights_[gid]
+        # NB: a group is yielded once per label (see site_labels), but
+        # here the key contains the label, so the groups are unique
+        grp_ids = dict.fromkeys(blocks_[gid])
+        keys = [str(grp_id) for grp_id in grp_ids]
+        # The atomic groups used to be collapsed in a single task per
+        # gid, but they are independent from each other, so they can be
+        # split in blocks of about max_weight, exactly as the non-atomic
+        # groups are. This is necessary because the weight of a single
+        # group is always a tiny fraction of max_weight, hence it would
+        # always round down to a single block (see usa23, with 401 atomic
+        # groups collapsed in 2 tasks). NB: unlike splitting by site,
+        # splitting by group does not multiply the amount of data sent
+        # to the workers, since each group is still read only once.
+        def getweight(key):
+            return weights[int(key)]
+
+        if csm.oq.disagg_by_src:
+            # disagg_by_src requires all the groups in a single task,
+            # otherwise the rates are attributed to the wrong source
+            out.append((cmaker_[gid], tgetters, keys, True))
+            logging.info('Not splitting %d atomic groups, since '
+                         'disagg_by_src is set', len(keys))
+            continue
+
+        nblocks = 0
+        for ws in block_splitter(keys, max_weight, getweight, nokey):
+            nblocks += 1
+            out.append((cmaker_[gid], tgetters, list(ws), True))
+        logging.info('Split %d atomic groups with total weight %.1f '
+                     'in %d blocks', len(keys),
+                     sum(getweight(k) for k in keys), nblocks)
     if atomic:
         logging.info('Collapsed %d atomic tasks into %d',
                      len(atomic), len(cmaker_))

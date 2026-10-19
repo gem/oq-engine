@@ -37,7 +37,7 @@ import numpy
 import pandas
 import numba
 
-from openquake.baselib.general import humansize, fast_agg
+from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -51,11 +51,12 @@ task_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
+# NB: there is one row per task name, since a Starmap can generate
+# tasks with different names, as classical -> baseclassical when the
+# tasks are split for being too slow
 starmap_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
      ('min', numpy.float32), ('max', numpy.float32)])
-F16= numpy.float16
-F64= numpy.float64
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -235,7 +236,7 @@ class Monitor(object):
     version = None  # set by Starmap
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None, dbserver_host='127.0.0.1'):
+                 h5=None, database_host='127.0.0.1'):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
@@ -248,7 +249,7 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
-        self.dbserver_host = dbserver_host
+        self.database_host = database_host
 
     @property
     def mem(self):
@@ -350,13 +351,16 @@ class Monitor(object):
 
     def save_starmap_info(self, h5, name, times):
         """
-        Called at the end of a Starmap. Store stats about the times per core.
+        Called at the end of a Starmap. Store stats about the times per
+        core for the tasks called `name`; the same Starmap can generate
+        tasks with different names, in which case there is one row for
+        each name.
         """
         t = (name, times.mean(), times.std(), times.min(), times.max())
         data = numpy.array([t], starmap_info_dt)
         hdf5.extend(h5['starmap_info'], data)
-        logging.info('Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                     t[1], t[2], t[3], t[4])
+        logging.info('%s: mean time per core=%ds, std=%.1fs, min=%ds, '
+                     'max=%ds', name, t[1], t[2], t[3], t[4])
 
     def reset(self):
         """
@@ -595,45 +599,6 @@ def split_array(arr, indices, counts=None):
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
     return [out[s1:s2][::-1] for s1, s2 in zip(cumcounts, cumcounts + counts)]
-
-
-def kround0(ctx, kfields):
-    """
-    half-precision rounding
-    """
-    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
-    for kfield in kfields:
-        kval = ctx[kfield]
-        if kval.dtype == F64:
-            out[kfield] = F16(kval)
-        else:
-            out[kfield] = ctx[kfield]
-    return out
-
-
-# this is not so fast
-def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
-    """
-    Given a structured array of N elements with a discrete kfield with
-    K <= N unique values, returns a structured array of K elements
-    obtained by averaging the values associated to the kfield.
-    """
-    k_array = kround(array, kfields)
-    uniq, indices, counts = numpy.unique(
-        k_array, return_inverse=True, return_counts=True)
-    klist = [(k, k_array.dtype[k]) for k in kfields]
-    for mfield in mfields:
-        klist.append((mfield, array.dtype[mfield]))
-    res = numpy.zeros(len(uniq), klist)
-    for kfield in kfields:
-        res[kfield] = uniq[kfield]
-    for mfield in mfields:
-        values = array[mfield]
-        res[mfield] = fast_agg(indices, values) / (
-            counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-    if afield:
-        return res, split_array(array[afield], indices, counts)
-    return res
 
 
 @contextmanager

@@ -51,10 +51,9 @@ via an association with the closest site in the site model;
 the GSIMs to use are also inferred from the GSIMs in the mosaic via an
 association table (model, trt_smr) -> rlzs_by_gsim.
 
-Note 1: the GLD model is excluded since it has no vs30 data.
-Note 2: for JPN and KOR instead of using 50 ses x 1 year,
+Note 1: for JPN and KOR instead of using 50 ses x 1 year,
         we use 1 ses x 50 years, since the models require so.
-Note 3: ruptures.hdf5 will contain a global site model with all the
+Note 2: ruptures.hdf5 will contain a global site model with all the
         available site parameters merged together, with zeros for missing
         parameters (i.e. xvf will be zero for most models).
 

@@ -256,10 +256,8 @@ def main(what, report=False):
         for calc in sorted(base.calculators):
             print(calc)
     elif what == 'executing':
-        fields = 'id,user_name,calculation_mode,description'
-        rows = logs.dbcmd(f"SELECT {fields} FROM job WHERE status IN "
-                          "('executing', 'submitted') AND is_running=1")
-        print(fields.replace(',', '\t'))
+        rows = logs.dbcmd('get_executing_jobs')
+        print('\t'.join(rows._fields))
         for row in rows:
             print('\t'.join(map(str, row)))
     elif what.startswith('peril'):
@@ -399,6 +397,9 @@ def main(what, report=False):
                 for bset in ltree.branchsets:
                     pprint(bset)
                 lt.print_tree(ltree.branchsets[0])
+                if 'pfd_logic_tree' in oq.inputs:
+                    [br] = readinput.get_pfd_lt(oq).branchsets[0].branches
+                    lt.print_tree(br)
         if mon.duration > 1:
             print(mon)
     elif what:

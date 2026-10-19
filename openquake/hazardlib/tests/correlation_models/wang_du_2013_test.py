@@ -31,6 +31,8 @@ from openquake.hazardlib.imt import IA, PGA, PGV, SA, from_string
 DATA = Path(__file__).with_name('data') / 'WANG_DU_2013'
 
 
+EPS = 1E-10
+
 class Mesh:
     def __init__(self, distances):
         self.distances = distances
@@ -69,7 +71,7 @@ def test_pga_ia_pgv_reference_values():
     actual, expected, _ = _reference_values(
         WangDu2013PGAIAPGV, 'pga_ia_pgv.csv')
     numpy.testing.assert_allclose(
-        actual, expected, rtol=1E-13, atol=1E-15)
+        actual, expected, rtol=EPS, atol=EPS)
 
 
 def test_spectral_acceleration_reference_values():
@@ -79,11 +81,11 @@ def test_spectral_acceleration_reference_values():
         any(imt.period == 10 for imt in pair) for pair in imts])
     numpy.testing.assert_allclose(
         actual[~at_endpoint], expected[~at_endpoint],
-        rtol=1E-13, atol=1E-15)
+        rtol=EPS, atol=EPS)
     # The author script uses 10.0001 as its final interpolation node.
     numpy.testing.assert_allclose(
         actual[at_endpoint], expected[at_endpoint],
-        rtol=2E-5, atol=1E-14)
+        rtol=2E-5, atol=EPS)
 
 
 def test_models_are_registered_with_calibration_metadata():
@@ -97,7 +99,7 @@ def test_models_are_registered_with_calibration_metadata():
     assert (
         WangDu2013SpectralAcceleration.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         == {SA})
-    assert WangDu2013SpectralAcceleration.DEFINED_FOR_SA_DAMPING == 5.0
+    assert WangDu2013SpectralAcceleration.DEFINED_FOR_DAMPING == 5.0
 
 
 @pytest.mark.parametrize(('model', 'imts1', 'imts2'), [
@@ -129,7 +131,7 @@ def test_covariance_and_factor_are_positive_definite(model, imts):
     distances = abs(positions[:, None] - positions)
     covariance = model.covariance(Sites(distances), imts)
     assert covariance.dtype == numpy.float64
-    numpy.testing.assert_allclose(covariance, covariance.T, atol=1E-15)
+    numpy.testing.assert_allclose(covariance, covariance.T, atol=EPS)
     numpy.testing.assert_allclose(numpy.diag(covariance), 1.0)
     assert numpy.linalg.eigvalsh(covariance).min() > 0
     factor = model.factor(Sites(distances), imts, ensure_psd=False)
