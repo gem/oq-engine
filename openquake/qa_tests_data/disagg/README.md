@@ -13,5 +13,6 @@
 | case_11 |                                                |
 | case_12 | Source fragments and alternatives of fragments |
 | case_16 | Check the NZ22 K20 GMM has required attributes | 
+| case_18 | Nankai mutex model with two atomic groups in the same task |
 
 
