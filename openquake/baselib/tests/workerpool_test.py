@@ -20,7 +20,7 @@ import os
 import unittest
 from unittest import mock
 from openquake.baselib import config, parallel, zeromq as z
-from openquake.baselib.workerpool import WorkerMaster, ssh_args
+from openquake.baselib.workerpool import WorkerMaster
 from openquake.baselib.parallel import Starmap, parse_hostcore
 
 
@@ -37,13 +37,6 @@ class ParseHostcoreTestCase(unittest.TestCase):
     def test_explicit_port(self):
         self.assertEqual(parse_hostcore('127.0.0.1:1910 -1', '1909'),
                          ('127.0.0.1', 1910, '-1'))
-
-    def test_ssh_args(self):
-        host_cores = [('127.0.0.1', 1910, '2'), ('127.0.0.1', 1909, '3')]
-        got = [(host, port, cores)
-               for host, port, cores, _args in ssh_args(host_cores)]
-        self.assertEqual(got, [('127.0.0.1', 1910, '2'),
-                               ('127.0.0.1', 1909, '3')])
 
 
 def fake_docker(*args, check=False):

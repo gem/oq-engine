@@ -20,7 +20,6 @@ import sys
 import time
 import socket
 import signal
-import getpass
 import subprocess
 from datetime import timezone
 from concurrent.futures import ProcessPoolExecutor
@@ -58,24 +57,6 @@ def get_zworkers(job_id):
         return DotDict(ctrl_port=config.zworkers['ctrl_port'],
                        host_cores=hostcores.replace('\n', ',').rstrip(','))
     return {}
-
-
-def ssh_args(host_cores):
-    """
-    :param host_cores: list of triples (host, ctrl_port, num_cores)
-    :yields: quadruples (hostIP, ctrl_port, num_cores, [ssh remote python
-             command])
-    """
-    user = getpass.getuser()
-    if os.environ.get('OQ_WORKERPOOL_ERROR'):
-        # can be set in CI to emulate a bug in ssh_args
-        raise RuntimeError('Testing a bug in ssh_args')
-    for host, port, cores in host_cores:
-        if host == '127.0.0.1':  # localhost
-            yield host, port, cores, [sys.executable]
-        else:
-            yield host, port, cores, [
-                'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
 # name of the docker swarm global service running the workerpools
@@ -152,20 +133,21 @@ class WorkerMaster(object):
 
     def start(self):
         """
-        Start multiple workerpools on remote servers via ssh and/or a single
-        workerpool on localhost, or the docker swarm service if configured.
+        Start the workerpools on the docker swarm if configured, otherwise
+        a workerpool on localhost. Remote hosts need the swarm.
         """
         if self.service:
             return self._swarm_start()
         starting = []
-        for host, port, cores, args in ssh_args(self.host_cores):
+        for host, port, cores in self.host_cores:
+            if host != '127.0.0.1':
+                print('%s: remote hosts require swarm_image' % host)
+                continue
             if general.socket_ready((host, port)):
                 print('%s:%s already running' % (host, port))
                 continue
-            args += ['-m', 'openquake.baselib.workerpool', cores,
-                     '--ctrl-port', str(port)]
-            if host != '127.0.0.1':
-                print('%s: if it hangs, check the ssh keys' % ' '.join(args))
+            args = [sys.executable, '-m', 'openquake.baselib.workerpool',
+                    cores, '--ctrl-port', str(port)]
             self.popens.append(subprocess.Popen(args))
             starting.append(host)
         return 'starting %s' % starting
@@ -204,13 +186,10 @@ class WorkerMaster(object):
         """
         if self.service:
             return self._swarm_kill()
-        killed = []
-        for host, _port, _cores, args in ssh_args(self.host_cores):
-            args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
-            print(' '.join(args))
-            subprocess.run(args)
-            killed.append(host)
-        return 'killed %s' % killed
+        args = ['killall', '-r', 'oq-zworker|multiprocessing']
+        print(' '.join(args))
+        subprocess.run(args)
+        return 'killed localhost'
 
     def status(self):
         """
