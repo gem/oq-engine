@@ -19,6 +19,7 @@
 import os
 import sys
 import time
+import shutil
 import logging
 import getpass
 import cProfile
@@ -130,6 +131,10 @@ def from_file(fname, mosaic_dir, asce_dir, concurrent_jobs,
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     engine.run_jobs(logctxs, concurrent_jobs)
+    # oq mosaic run_site is used only in the tests: the exported files
+    # are not needed, except for testing that the export works
+    for model in models:
+        shutil.rmtree(os.path.join(asce_dir, model), ignore_errors=True)
     out = []
     count_errors = 0
     asce = {}
