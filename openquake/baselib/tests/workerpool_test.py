@@ -18,7 +18,7 @@
 
 import os
 import unittest
-from openquake.baselib import config, parallel
+from openquake.baselib import config, parallel, zeromq as z
 from openquake.baselib.workerpool import WorkerMaster, ssh_args
 from openquake.baselib.parallel import Starmap, parse_hostcore
 
@@ -66,7 +66,14 @@ class WorkerPoolTestCase(unittest.TestCase):
         smap = Starmap(whoami, iterargs, distribute='zmq')
         # the tasks alternate between the two workerpools
         pids = {pid for pid in smap}
-        self.assertEqual(pids, {p.pid for p in self.master.popens})
+        # ask the workerpools for their own PIDs: on Windows the Popen
+        # pid is the venv launcher, not the process running the pool
+        expected = set()
+        for port in self.ports:
+            url = 'tcp://127.0.0.1:%d' % port
+            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                expected.add(sock.send('getpid'))
+        self.assertEqual(pids, expected)
 
     def test_status(self):
         self.assertEqual(
