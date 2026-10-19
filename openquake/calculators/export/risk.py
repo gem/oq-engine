@@ -27,7 +27,6 @@ import tempfile
 from openquake.baselib import config, hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
-from openquake.hazardlib.site import site_param_dt
 from openquake.hazardlib.stats import mean_curve
 from openquake.risklib import scientific, riskmodels
 from openquake.commonlib import readinput
@@ -1037,8 +1036,6 @@ def export_job_zip(ekey, dstore):
         inputs['site_model'] = dstore.export_path('sites.csv')
         sitecol = dstore['sitecol']
         sitecol.make_complete()  # needed for test_impact[1]
-        if oq.impact:
-            _add_impact_site_params(oq, sitecol)
         writer.save(sitecol.array, inputs['site_model'])
 
     with open(job_ini, 'w', encoding='utf8') as out:
@@ -1050,19 +1047,6 @@ def export_job_zip(ekey, dstore):
     fnames = [f for f in list(inputs.values()) + [assetcol_csv]
               if f is not None]
     return flatten(fnames)
-
-
-def _add_impact_site_params(oq, sitecol):
-    # the exposure HDF5 is not exported, so the site parameters of the
-    # site model close to the rupture are associated to the sites here,
-    # otherwise the reloaded job would require reference_vs30_value
-    sm = readinput.get_site_model(oq)
-    assoc_dist = (oq.region_grid_spacing * 1.414
-                  if oq.region_grid_spacing else base.ASSOC_DIST)
-    for name in sm.dtype.names:
-        if name in site_param_dt and name not in sitecol.array.dtype.names:
-            sitecol.add_col(name, site_param_dt[name])
-    sitecol.assoc(sm, assoc_dist, 'warn')
 
 
 def flatten(list_of_paths):

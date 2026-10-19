@@ -1209,6 +1209,15 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else ASSOC_DIST)
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
+                if oq.impact:
+                    # the grid sites have no parameters and req_site_params
+                    # is not known yet: add all the site model ones, both
+                    # to the sitecol and to the complete sitecol
+                    for name in sm.dtype.names:
+                        if name in site.site_param_dt:
+                            dt = site.site_param_dt[name]
+                            self.sitecol.add_col(name, dt)
+                            self.sitecol.complete.add_col(name, dt)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq, oq.req_site_params)
@@ -1221,7 +1230,7 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs:
+                    if 'station_data' in oq.inputs or oq.impact:
                         # the complete sitecol is required
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
