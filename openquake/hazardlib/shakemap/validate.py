@@ -54,6 +54,7 @@ class ImpactParam:
     description: str = None
     notes: str = None
     make_impact_reports: bool = False
+    region_grid_spacing: float = 10  # km, mandatory in impact mode
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -89,6 +90,7 @@ class ImpactParam:
             rupture_dict=str(rupdic),
             time_event=self.time_event,
             maximum_distance=str(self.maximum_distance),
+            region_grid_spacing=str(self.region_grid_spacing),
             mosaic_model=self.mosaic_model,
             tectonic_region_type=self.trt,
             truncation_level=str(self.truncation_level),
@@ -152,6 +154,7 @@ IMPACT_FORM_LABELS = {
     'truncation_level': 'Level of truncation',
     'number_of_ground_motion_fields': 'Number of ground motion fields',
     'asset_hazard_distance': 'Asset hazard distance (km)',
+    'region_grid_spacing': 'Region grid spacing (km)',
     'ses_seed': 'Random seed (ses_seed)',
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
@@ -184,6 +187,7 @@ IMPACT_FORM_PLACEHOLDERS = {
     'truncation_level': 'float ≥ 0',
     'number_of_ground_motion_fields': 'float ≥ 1',
     'asset_hazard_distance': 'float ≥ 0',
+    'region_grid_spacing': 'float > 0',
     'ses_seed': 'int ≥ 0',
     'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
@@ -212,6 +216,7 @@ IMPACT_FORM_DEFAULTS = {
     'truncation_level': '3',
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
+    'region_grid_spacing': '10',
     'ses_seed': '42',
     'station_data_file_from_usgs': '',
     'station_data_file': '',
@@ -261,6 +266,8 @@ validators = {
     'truncation_level': valid.positivefloat,
     'number_of_ground_motion_fields': valid.positiveint,
     'asset_hazard_distance': valid.positivefloat,
+    # zero would be taken as unset by the engine, so it is rejected here
+    'region_grid_spacing': lambda v: valid.positivefloat(valid.nonzero(v)),
     'ses_seed': valid.positiveint,
     'maximum_distance_stations': valid.positivefloat,
     'description': valid.utf8,  # if empty, it will be set automatically
