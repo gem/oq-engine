@@ -63,9 +63,9 @@ since the universal installer already writes in the `openquake.cfg`
 file a section
 
 ```
-[dbserver]
+[server]
 host = localhost
-file = /path/to/db.sqlite3
+dbfile = /path/to/db.sqlite3
 ```
 
 If the database is on a different machine, you have to edit the file and

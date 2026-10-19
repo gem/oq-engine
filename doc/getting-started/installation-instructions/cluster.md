@@ -117,7 +117,7 @@ The following file (on all nodes) should be modified to enable
 # enable celery only if you have a cluster
 oq_distribute = zmq
 
-[dbserver]
+[server]
 # address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
