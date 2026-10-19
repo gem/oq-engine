@@ -39,14 +39,22 @@ class EnginePage:
         job_row = self.get_job_row(job_id)
         expect(job_row).to_contain_text("complete", timeout=120_000)
 
+    def _confirm_action(self, action):
+        # Wait for the custom modal before querying its dynamically labelled
+        # button; this also verifies that the initiating click was handled.
+        modal = self.page.locator("#confirmModal")
+        expect(modal).to_be_visible(timeout=20_000)
+        button = modal.locator(".btn-confirm")
+        expect(button).to_have_text(f"Yes, {action}")
+        button.click(timeout=20_000)
+
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
         expect(job_row.get_by_text("executing")).to_be_visible(
             timeout=80_000)
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Abort"), timeout=20_000)
-        self.page.get_by_role("button", name="Yes, abort").click(
-            timeout=20_000)
+        self._confirm_action("abort")
         expect(self.page.get_by_text("has been aborted")).to_be_visible(
             timeout=20_000)
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
@@ -56,8 +64,7 @@ class EnginePage:
         job_row = self.get_job_row(job_id)
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Remove"))
-        self.page.get_by_role("button", name="Yes, remove").click(
-            timeout=30_000)
+        self._confirm_action("remove")
         expect(self.page.get_by_text("has been removed")).to_be_visible(
             timeout=30_000)
         self.page.get_by_role("button", name="Close").click(timeout=30_000)
