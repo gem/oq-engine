@@ -32,6 +32,21 @@ communicate on the specified ports, and the nodes must be able to reach
 each other on the ports used by docker swarm (2377/tcp for the managers,
 7946/tcp and 7946/udp between the nodes).
 
+The workerpool containers must also be able to reach the receiver ports of
+the master: the results of the tasks are sent back to it, and the swarm
+tasks reach the host through the `docker_gwbridge` network, which uses the
+subnet `172.18.0.0/16` by default. If the master runs `ufw`, a firewall
+blocks these connections unless you open the receiver ports for that
+subnet, for example:
+
+```
+$ sudo ufw allow from 172.18.0.0/16 to any port 1912:1930 proto tcp
+```
+
+Without this rule `oq workers debug` hangs waiting for the results. Check
+the subnet of `docker_gwbridge` with `docker network inspect docker_gwbridge`
+if your installation uses a different one.
+
 ### Storage requirements
 
 Storage requirements depend a lot on the type of calculations you want
