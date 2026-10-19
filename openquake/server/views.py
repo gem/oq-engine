@@ -553,16 +553,23 @@ def calc_list(request, id=None):
         utils.get_valid_users(request),
         not utils.is_superuser(request), id)
     response_data = []
-    username = psutil.Process(os.getpid()).username()
+    username = utils.get_username(request)
+    superuser = utils.is_superuser(request)
+    can_share_own_jobs = (
+        get_user_level(request) >= 2 or
+        request.user.has_perm('auth.can_share_own_jobs'))
+    process_username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
+        can_manage_sharing = superuser or (
+            owner == username and can_share_own_jobs)
         if settings.DISPLAY_USER_HOST and host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
-                if psutil.Process(pid).username() == username:
+                if psutil.Process(pid).username() == process_username:
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
@@ -573,6 +580,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
+                 can_manage_sharing=can_manage_sharing,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
                  start_time=start_time_str, relevant=relevant, tags=tags))
 
@@ -627,7 +635,8 @@ def calc_remove(request, calc_id):
 def share_job(request, calc_id, share):
     user_level = get_user_level(request)
     superuser = utils.is_superuser(request)
-    if user_level < 2 and not superuser:
+    if (user_level < 2 and not superuser and
+            not request.user.has_perm('auth.can_share_own_jobs')):
         return HttpResponseForbidden()
     try:
         job = logs.dbcmd('get_job', calc_id)

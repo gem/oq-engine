@@ -176,6 +176,50 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
            {'status': 'complete'}, job.calc_id)
         self.remove_calc(job.calc_id)
 
+    def test_group_permission_allows_low_level_users_to_share_own_jobs(self):
+        from django.contrib.auth.models import Group, Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get(
+            app_label='auth', model='permission')
+        permission, _ = Permission.objects.get_or_create(
+            codename='can_share_own_jobs', name='Can share own jobs',
+            content_type=content_type)
+        group, _ = Group.objects.get_or_create(
+            name='test-can-share-own-jobs')
+        group.permissions.add(permission)
+        self.user1.groups.add(group)
+
+        own_dic = dict(calculation_mode='event_based',
+                       description='test_group_share_own_job')
+        other_dic = dict(calculation_mode='event_based',
+                         description='test_group_share_other_job')
+        [own_job] = create_jobs([own_dic], user_name=self.user1.username)
+        [other_job] = create_jobs([other_dic], user_name=self.user2.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, own_job.calc_id)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, other_job.calc_id)
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.post(f'{own_job.calc_id}/share')
+        self.assertEqual(ret.status_code, 200)
+        ret = self.post(f'{own_job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 200)
+
+        ret = self.post(f'{other_job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            other_job.calc_id)[0].status, 'shared')
+        ret = self.get('list', include_shared=1)
+        listed = {calc['id']: calc for calc in ret.json()}
+        self.assertTrue(listed[own_job.calc_id]['can_manage_sharing'])
+        self.assertFalse(listed[other_job.calc_id]['can_manage_sharing'])
+
+        self.remove_calc(own_job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        self.remove_calc(other_job.calc_id)
+
     def test_superuser_can_share_other_users_jobs(self):
         job_dic = dict(calculation_mode='event_based',
                        description='test_superuser_share_job')
