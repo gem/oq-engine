@@ -18,6 +18,7 @@
 
 import os
 import unittest
+from unittest import mock
 from openquake.baselib import config, parallel, zeromq as z
 from openquake.baselib.workerpool import WorkerMaster, ssh_args
 from openquake.baselib.parallel import Starmap, parse_hostcore
@@ -43,6 +44,27 @@ class ParseHostcoreTestCase(unittest.TestCase):
                for host, port, cores, _args in ssh_args(host_cores)]
         self.assertEqual(got, [('127.0.0.1', 1910, '2'),
                                ('127.0.0.1', 1909, '3')])
+
+
+def fake_docker(*args, check=False):
+    # the global service runs one task on each of the two nodes
+    if args[:2] == ('service', 'ps'):
+        return 'node2\nnode1\nnode2\n'
+    if args[:2] == ('node', 'inspect'):
+        addrs = {'node1': '10.0.0.1', 'node2': '10.0.0.2'}
+        return '\n'.join(addrs[node] for node in args[4:])
+    return ''
+
+
+class SwarmHostsTestCase(unittest.TestCase):
+    def test_hosts(self):
+        zworkers = dict(ctrl_port='1909', host_cores='',
+                        swarm_service='oq', swarm_image='oq-engine')
+        with mock.patch('openquake.baselib.workerpool._docker', fake_docker):
+            master = WorkerMaster(zworkers)
+            self.assertEqual(master._hosts(),
+                             [('10.0.0.1', 1909, '-1'),
+                              ('10.0.0.2', 1909, '-1')])
 
 
 class WorkerPoolTestCase(unittest.TestCase):

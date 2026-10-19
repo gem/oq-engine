@@ -78,6 +78,14 @@ def ssh_args(host_cores):
                 'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
+def _docker(*args, check=False):
+    # run a docker command and return its stdout ('' if it failed)
+    res = subprocess.run(['docker', *args], capture_output=True, text=True)
+    if check and res.returncode:
+        raise RuntimeError(res.stderr.strip())
+    return res.stdout.strip()
+
+
 class WorkerMaster(object):
     """
     :param zworkers: dictionary with keys host_keys and ctrl_port
@@ -93,21 +101,62 @@ class WorkerMaster(object):
             [parallel.parse_hostcore(hc, self.ctrl_port)
              for hc in self.zworkers['host_cores'].split(',')]
             if self.zworkers['host_cores'] else [])
+        # name of a docker swarm global service, if any
+        self.service = self.zworkers.get('swarm_service', '')
         self.popens = []
 
+    def _hosts(self):
+        # returns the triples (host, port, cores) of the workerpools;
+        # with a swarm the nodes change over time, so docker is asked
+        if not self.service:
+            return self.host_cores
+        out = _docker('service', 'ps', self.service, '--filter',
+                      'desired-state=running', '--format', '{{.Node}}')
+        nodes = sorted(set(out.split()))
+        if not nodes:
+            return []
+        # NB: the master must be a swarm manager to inspect the nodes
+        addrs = _docker('node', 'inspect', '--format',
+                        '{{.Status.Addr}}', *nodes).split()
+        return [(addr, self.ctrl_port, '-1') for addr in addrs]
+
     def _running(self):
-        """
-        :yields: (host, port, ctrl_url) for the workerpools already running
-        """
-        for host, port, _ in self.host_cores:
+        # yields (host, port, ctrl_url) for the workerpools already running
+        for host, port, _ in self._hosts():
             if general.socket_ready((host, port)):
                 yield host, port, 'tcp://%s:%s' % (host, port)
+
+    def _swarm_start(self):
+        # create the global service the first time, otherwise restart it:
+        # a stopped pool exits with 0, so the swarm does not restart it
+        if _docker('service', 'inspect', '--format', '{{.ID}}',
+                   self.service):
+            _docker('service', 'update', '--force', self.service,
+                    check=True)
+            return 'restarted %s' % self.service
+        image = self.zworkers.get('swarm_image', '')
+        if not image:
+            sys.exit('swarm_image is not specified in openquake.cfg')
+        port = str(self.ctrl_port)
+        _docker('service', 'create', '--name', self.service,
+                '--mode', 'global', '--restart-condition', 'on-failure',
+                '--publish', f'mode=host,target={port},published={port}',
+                image, 'python', '-m', 'openquake.baselib.workerpool', '-1',
+                '--ctrl-port', port, check=True)
+        return 'created %s' % self.service
+
+    def _swarm_kill(self):
+        # restarting the tasks kills the workerpools and their workers
+        _docker('service', 'update', '--force', self.service, check=True)
+        return 'killed %s' % self.service
 
     def start(self):
         """
         Start multiple workerpools on remote servers via ssh and/or a single
-        workerpool on localhost.
+        workerpool on localhost, or the docker swarm service if configured.
         """
+        if self.service:
+            return self._swarm_start()
         starting = []
         for host, port, cores, args in ssh_args(self.host_cores):
             if general.socket_ready((host, port)):
@@ -153,6 +202,8 @@ class WorkerMaster(object):
         Send a "killall" command to all worker pools to cleanup everything
         in case of hard out of memory situations
         """
+        if self.service:
+            return self._swarm_kill()
         killed = []
         for host, _port, _cores, args in ssh_args(self.host_cores):
             args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
@@ -177,7 +228,7 @@ class WorkerMaster(object):
         """
         Send an asynchronous "run_jobs" command to the first WorkerPool
         """
-        host, port, _cores = self.host_cores[0]
+        host, port, _cores = self._hosts()[0]
         ctrl_url = 'tcp://%s:%s' % (host, port)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
             return sock.send('run_jobs')
@@ -186,7 +237,7 @@ class WorkerMaster(object):
         """
         Wait until all workers are active
         """
-        num_hosts = len(self.zworkers['host_cores'].split(','))
+        num_hosts = len(self._hosts())
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
@@ -218,11 +269,12 @@ class WorkerMaster(object):
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
-            ntasks = len(self.host_cores) * 2
+            hosts = self._hosts()
+            ntasks = len(hosts) * 2
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
-                for host, port, _ in self.host_cores:
+                for host, port, _ in hosts:
                     url = 'tcp://%s:%s' % (host, port)
                     print('Sending to', url)
                     with z.Socket(url, z.zmq.REQ, 'connect') as sock:
@@ -349,6 +401,11 @@ class WorkerPool(object):
         return 'WorkerPool on %s stopped' % self.hostname
 
 
+def _exit_on_sigterm(signum, frame):
+    # SystemExit ends the control loop, so WorkerPool.stop is called
+    sys.exit(0)
+
+
 def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     """
     Start a workerpool with the given number of workers.
@@ -358,6 +415,8 @@ def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    # docker sends SIGTERM when a node is drained: stop as with "stop"
+    signal.signal(signal.SIGTERM, _exit_on_sigterm)
     # 0 means use the ctrl_port in the configuration
     port = ctrl_port or int(config.zworkers['ctrl_port'])
     # NB: unexpected errors will appear in the worker service log
