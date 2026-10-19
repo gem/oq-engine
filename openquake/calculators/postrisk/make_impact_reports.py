@@ -72,20 +72,19 @@ def _get_impact_summary_data(dstore, iso3, no_uncertainty):
         matching_rows = rows.loc[rows['loss_type'] == lt]
         if not matching_rows.empty:
             r = matching_rows.iloc[0]
-            q50 = int(round(r.get('q50', 0)))
-            q05 = int(round(r.get('q05', 0)))
-            q95 = int(round(r.get('q95', 0)))
-            exposed_val = int(round(r.get('value', 0)))
+            q50 = float(r.get('q50', 0))
+            q05 = float(r.get('q05', 0))
+            q95 = float(r.get('q95', 0))
+            exposed_val = float(r.get('value', 0))
         else:
-            q50 = q05 = q95 = exposed_val = 0
-        # Format with thousands separators
+            q50 = q05 = q95 = exposed_val = 0.0
         if no_uncertainty:
             # Display only the central value
-            summary_data[label] = f"{q50:,}"
+            summary_data[label] = str(q50)
         else:
             # Display the range
-            summary_data[label] = f"{q05:,} - {q95:,}"
-        summary_data[f"{label}_exposed"] = f"{exposed_val:,}"
+            summary_data[label] = f"{q05} - {q95}"
+        summary_data[f"{label}_exposed"] = str(exposed_val)
     return summary_data
 
 
