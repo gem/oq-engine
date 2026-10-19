@@ -215,7 +215,13 @@ def run_calc(log, mulfactor=2):
         calc.from_engine = True
         set_concurrent_tasks_default(calc, mulfactor)
         t0 = time.time()
-        calc.run(shutdown=True)
+        try:
+            calc.run(shutdown=True)
+        except BaseException:
+            # close the hdf5 file also on errors (MemoryError, MasterKilled),
+            # otherwise it is left unflushed and may get corrupted
+            calc.datastore.close()
+            raise
         logging.info('Exposing the outputs to the database')
         base.expose_outputs(calc.datastore)
         calc.datastore.close()
