@@ -4,6 +4,11 @@
     can run on the same host; `oq workers status` shows each pool as
     `host:port`, and stopping the workerpools no longer leaks semaphores.
 
+  * Fixed a bug affecting previous versions of the engine: with
+    site_labels the atomic groups (cluster or mutex sources) were
+    computed only for the sites of the last label. This affects the
+    USA model near New Madrid and Memphis
+
   [Anirudh Rao]
   * Added support for generating regular UTM site grids from exposure, 
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible 
@@ -11,8 +16,8 @@
 
   [Claudio Schill]
   * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
-    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the 
-    5 <= M < 6 bin values, instead of the M > 7 bin.  
+    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
+    5 <= M < 6 bin values, instead of the M > 7 bin.
 
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: the uncertainties
