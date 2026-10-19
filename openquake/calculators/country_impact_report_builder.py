@@ -569,7 +569,7 @@ class CountryImpactReportBuilder:
 
         exposed_value_txt = (
             f'The exposed value refers to the assets and population located'
-            f' within a {self.maximum_distance}km radius of the epicentre.')
+            f' within a {self.maximum_distance} km radius of the epicentre.')
         left_bundle.append(
             self.Paragraph(exposed_value_txt, body_left_style))
         if self.no_uncertainty:
