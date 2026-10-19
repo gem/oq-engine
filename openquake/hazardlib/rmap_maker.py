@@ -186,6 +186,10 @@ class RmapMaker(object):
     def make(self):
         dic = {}
         self.rupdata = []
+        # NB: the cfactor of the cmaker is shared by the results of the
+        # task (see restrict_trt_smrs) and accumulated in the master, so
+        # only the increment of this result must be returned
+        cfactor0 = self.cmaker.cfactor.copy()
         self.source_data = AccumDict(accum=[])
         if not self.src_mutex and not self.rup_mutex:
             pnemap = self._make_src_indep()
@@ -207,7 +211,7 @@ class RmapMaker(object):
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
-        dic['cfactor'] = self.cmaker.cfactor
+        dic['cfactor'] = self.cmaker.cfactor - cfactor0
         if self.oq.keep_rupdata:
             dic['rup_data'] = concat(self.rupdata)
         else:
@@ -309,10 +313,12 @@ def make_results(groups, cmakers, sites):
             'the variants have %s sources, expected %d: some sources were '
             'filtered away by the uncertainties' % (nsrcs, len(sources)))
     # ratios[v][s] = dictionary mag -> ratio for source s of variant v
-    # e.g. logictree/case_18_bis: 9 variants (3 abGR x 3 maxMagGR), the base
-    # is variant 2 (3 mags, rate 0.115893 at M 5.5); variant 3 has rate
-    # 0.284605 at M 5.5, i.e. ratio 2.4558, and variant 0 (maxMag 7.0)
-    # has no magnitude 7.5, i.e. ratio 0 for it
+    # e.g. logictree/case_18/job_bis: the 9 variants of a depth (3 abGR x
+    # 3 maxMagGR) are split by classical._split_by_mags in 6 variants with
+    # magnitudes 5.5, 6.5 (maxMag 7.0 and 7.3) and 3 with magnitudes 5.5,
+    # 6.5, 7.5 (maxMag 7.6); in the first call the base is variant 0, with
+    # rate 0.115893 at M 5.5, and variant 2 has rate 0.284605, i.e. ratio
+    # 2.4558; since the variants have the same magnitudes, no ratio is 0
     ratios = [[_mag_ratios(rates[b][s], rates[v][s])
                for s in range(len(sources))]
               for v in range(len(groups))]
@@ -322,10 +328,12 @@ def make_results(groups, cmakers, sites):
                         True).fill(False) for _ in groups]
     rmaker.source_data = AccumDict(accum=[])
     rups = [[] for _ in groups]  # the rup_data of each variant
-    # e.g. logictree/case_18_bis: the base has 6 ruptures, variant 1 (maxMag
-    # 7.3) has 4 and variant 0 (maxMag 7.0) has 4, see _scale_rups
+    # e.g. logictree/case_18/job_bis: 4 ruptures for each of the 6
+    # variants with magnitudes 5.5, 6.5 at a depth, see _scale_rups
     t0 = time.time()
+    cfactor0 = cm.cfactor.copy()  # see RmapMaker.make
     nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
+    cfactor = cm.cfactor - cfactor0
     dt = (time.time() - t0) / len(sources)
     # the source data are recorded only for the first variant, the
     # others get zeros, otherwise the statistics would be repeated
@@ -336,7 +344,9 @@ def make_results(groups, cmakers, sites):
         sdata = rmaker.source_data if v == 0 else _zero_source_data(
             rmaker.source_data)
         rup_data = concat(rups[v]) if rups[v] else ()
-        dic = dict(rmap=pnemap.to_rates(), cfactor=cm.cfactor,
+        # the cfactor too is recorded only for the first variant
+        dic = dict(rmap=pnemap.to_rates(),
+                   cfactor=cfactor if v == 0 else numpy.zeros(2),
                    rup_data=rup_data, source_data=sdata,
                    task_no=rmaker.task_no, dparam_mb=0.,
                    source_mb=cm.source_mb)
