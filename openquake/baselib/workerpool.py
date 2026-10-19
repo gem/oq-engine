@@ -78,6 +78,10 @@ def ssh_args(host_cores):
                 'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
+# name of the docker swarm global service running the workerpools
+SWARM_SERVICE = 'oq-zworkerpool'
+
+
 def _docker(*args, check=False):
     # run a docker command and return its stdout ('' if it failed)
     res = subprocess.run(['docker', *args], capture_output=True, text=True)
@@ -101,8 +105,9 @@ class WorkerMaster(object):
             [parallel.parse_hostcore(hc, self.ctrl_port)
              for hc in self.zworkers['host_cores'].split(',')]
             if self.zworkers['host_cores'] else [])
-        # name of a docker swarm global service, if any
-        self.service = self.zworkers.get('swarm_service', '')
+        # the docker swarm global service is used only if swarm_image is set
+        self.service = (SWARM_SERVICE if self.zworkers.get('swarm_image')
+                        else '')
         self.popens = []
 
     def _hosts(self):
@@ -145,15 +150,13 @@ class WorkerMaster(object):
             _docker('service', 'update', '--force', self.service,
                     check=True)
             return 'restarted %s' % self.service
-        image = self.zworkers.get('swarm_image', '')
-        if not image:
-            sys.exit('swarm_image is not specified in openquake.cfg')
         port = str(self.ctrl_port)
         _docker('service', 'create', '--name', self.service,
                 '--mode', 'global', '--restart-condition', 'on-failure',
                 '--limit-memory', self._swarm_memory(),
                 '--publish', f'mode=host,target={port},published={port}',
-                image, 'python', '-m', 'openquake.baselib.workerpool', '-1',
+                self.zworkers['swarm_image'],
+                'python', '-m', 'openquake.baselib.workerpool', '-1',
                 '--ctrl-port', port, check=True)
         return 'created %s' % self.service
 

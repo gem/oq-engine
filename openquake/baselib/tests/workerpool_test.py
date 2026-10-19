@@ -63,7 +63,7 @@ def fake_docker(*args, check=False):
 class SwarmHostsTestCase(unittest.TestCase):
     def test_hosts(self):
         zworkers = dict(ctrl_port='1909', host_cores='',
-                        swarm_service='oq', swarm_image='oq-engine')
+                        swarm_image='oq-engine')
         with mock.patch('openquake.baselib.workerpool._docker', fake_docker):
             master = WorkerMaster(zworkers)
             self.assertEqual(master._hosts(),
@@ -73,7 +73,7 @@ class SwarmHostsTestCase(unittest.TestCase):
     def test_memory(self):
         # 2.5 GB per core on the smallest node, which has 4 cores
         zworkers = dict(ctrl_port='1909', host_cores='',
-                        swarm_service='oq', swarm_image='oq-engine')
+                        swarm_image='oq-engine')
         with mock.patch('openquake.baselib.workerpool._docker', fake_docker):
             master = WorkerMaster(zworkers)
             self.assertEqual(master._swarm_memory(), str(10 * 1024**3))
