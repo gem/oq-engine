@@ -196,9 +196,10 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
                          description='test_group_share_other_job')
         [own_job] = create_jobs([own_dic], user_name=self.user1.username)
         [other_job] = create_jobs([other_dic], user_name=self.user2.username)
-        for job in (own_job, other_job):
-            db("UPDATE job SET ?D WHERE id=?x",
-               {'status': 'complete', 'is_running': 0}, job.calc_id)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, own_job.calc_id)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, other_job.calc_id)
 
         self.c.login(username=self.user1.username, password=self.password1)
         ret = self.post(f'{own_job.calc_id}/share')
@@ -209,7 +210,11 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         ret = self.post(f'{other_job.calc_id}/share')
         self.assertEqual(ret.status_code, 403)
         self.assertEqual(db('SELECT status FROM job WHERE id=?x',
-                            other_job.calc_id)[0].status, 'complete')
+                            other_job.calc_id)[0].status, 'shared')
+        ret = self.get('list', include_shared=1)
+        listed = {calc['id']: calc for calc in ret.json()}
+        self.assertTrue(listed[own_job.calc_id]['can_manage_sharing'])
+        self.assertFalse(listed[other_job.calc_id]['can_manage_sharing'])
 
         self.remove_calc(own_job.calc_id)
         self.c.login(username=self.user2.username, password=self.password2)
