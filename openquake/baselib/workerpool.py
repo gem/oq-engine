@@ -117,11 +117,19 @@ class WorkerMaster(object):
                     check=True)
             return 'restarted %s' % self.service
         port = str(self.ctrl_port)
+        # the engine code is read from the same path on each node, e.g.
+        # from an NFS mount of the master; the image has only the deps
+        code = self.zworkers.get('swarm_code_dir', '')
+        env = []
+        if code:  # the working directory must not shadow the code
+            env = ['--mount', f'type=bind,source={code},target={code},'
+                   'readonly', '--env', f'PYTHONPATH={code}',
+                   '--workdir', code]
         _docker('service', 'create', '--name', self.service,
                 '--mode', 'global', '--restart-condition', 'on-failure',
                 '--limit-memory', self._swarm_memory(),
                 '--publish', f'mode=host,target={port},published={port}',
-                self.zworkers['swarm_image'],
+                *env, self.zworkers['swarm_image'],
                 'python', '-m', 'openquake.baselib.workerpool', '-1',
                 '--ctrl-port', port, check=True)
         return 'created %s' % self.service

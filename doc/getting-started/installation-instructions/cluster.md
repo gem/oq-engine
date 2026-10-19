@@ -47,9 +47,10 @@ On the master node you will also need space for:
 
 On large installations we strongly suggest to create a separate partition for `/home`.
 
-The workers do not mount any host directory: they run from the engine
-image and return their results to the master over ZMQ, while the master
-writes the calculation datastore.
+The workers read the engine code from the master, from a directory that
+must be mounted at the same path on every node (see `swarm_code_dir`
+below). They return their results to the master over ZMQ, while the
+master writes the calculation datastore.
 
 ### Swap partitions
 
@@ -67,6 +68,14 @@ Please use the [Universal installation script](universal.md) in
 `server` mode or `devel_server` mode. The installer will save the
 Python code in the folder `/opt/openquake/venv`.
 
+With `devel_server`, the engine code is the git clone of the repository,
+which is the one the workers read. Clone it in `/opt/openquake/oq-engine`
+and run `install.py devel_server` from there. Export `/opt/openquake` from
+the master to the workers over NFS, and mount it at the same path on each
+worker. To update the code, run `git pull` on the master: the workers see
+the new code at once, but the workerpools must be restarted with
+`oq workers start` to load it, when no calculation is running.
+
 ### Docker swarm
 
 Install docker on every node, and create the swarm on the node that
@@ -81,16 +90,17 @@ step, or get it again with `docker swarm join-token worker`. The master
 must be a swarm manager, because it inspects the nodes to size the
 memory limit of the workers. Check the nodes with `docker node ls`.
 
-The workerpools run from an image that contains the engine. Build it from
-`docker/Dockerfile.engine`, which installs from GitHub the branch given in
-the `oq_branch` build argument, so that branch must be pushed first. From
-the `docker` directory of the repository:
+The workerpools run from an image that contains the dependencies of the
+engine, but not its code, which is read from the master. Build it from
+`docker/Dockerfile.workers`, from the root of the repository:
 
 ```
-$ docker build -f Dockerfile.engine --build-arg oq_branch=<branch> \
-    -t <registry>/oq-engine:latest .
-$ docker push <registry>/oq-engine:latest
+$ docker build -f docker/Dockerfile.workers -t <registry>/oq-workers:latest .
+$ docker push <registry>/oq-workers:latest
 ```
+
+The image must be rebuilt only when the dependencies in
+`requirements-py312-linux64.txt` change.
 
 The registry must be reachable from every node. If you have only one node,
 the image can stay local.
@@ -119,7 +129,9 @@ receiver_ports = 1912-1930
 host_cores = < IP address of node1> -1, < IP address of node2> -1
 ctrl_port = 1909
 # the image of the workerpools, built as described above
-swarm_image = <registry>/oq-engine:latest
+swarm_image = <registry>/oq-workers:latest
+# the engine code on the master, at the same path on every node
+swarm_code_dir = /opt/openquake/oq-engine
 # hard memory limit of each workerpool, in GB per core
 memory_per_core = 2.5
 ```

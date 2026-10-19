@@ -59,6 +59,24 @@ class SwarmTestCase(unittest.TestCase):
                          [('10.0.0.1', 1909, '-1'),
                           ('10.0.0.2', 1909, '-1')])
 
+    def test_code_mount(self):
+        # the service reads the engine code from swarm_code_dir
+        calls = []
+
+        def record(*args, check=False):
+            calls.append(args)
+            return fake_docker(*args, check=check)
+
+        zworkers = dict(ctrl_port='1909', host_cores='',
+                        swarm_image='oq-engine',
+                        swarm_code_dir='/opt/openquake/oq-engine')
+        with mock.patch('openquake.baselib.workerpool._docker', record):
+            WorkerMaster(zworkers).start()
+        [create] = [c for c in calls if c[:2] == ('service', 'create')]
+        self.assertIn('PYTHONPATH=/opt/openquake/oq-engine', create)
+        self.assertIn('type=bind,source=/opt/openquake/oq-engine,'
+                      'target=/opt/openquake/oq-engine,readonly', create)
+
     def test_memory(self):
         # 2.5 GB per core on the smallest node, which has 4 cores
         zworkers = dict(ctrl_port='1909', host_cores='',

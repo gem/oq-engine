@@ -1,0 +1,11 @@
+# Image of the zmq workerpools with only the dependencies of the engine:
+# the engine code is read from the master (see swarm_code_dir in
+# openquake.cfg), so it is not copied into the image.
+# Build from the root of the repository:
+#   docker build -f docker/Dockerfile.workers -t <registry>/oq-workers:latest .
+FROM python:3.12.6-slim
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libcap-dev && rm -rf /var/lib/apt/lists/*
+WORKDIR /tmp/deps
+COPY requirements-py312-linux64.txt .
+RUN pip --disable-pip-version-check install -r requirements-py312-linux64.txt && rm -rf /root/.cache
+WORKDIR /
