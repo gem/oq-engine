@@ -74,7 +74,9 @@ and run `install.py devel_server` from there. Export `/opt/openquake` from
 the master to the workers over NFS, and mount it at the same path on each
 worker. To update the code, run `git pull` on the master: the workers see
 the new code at once, but the workerpools must be restarted with
-`oq workers start` to load it, when no calculation is running.
+`oq workers start` to load it, when no calculation is running. The
+repository should be owned by the `openquake` group, with write access
+for the users who update it, so that `git pull` does not need root.
 
 ### Docker swarm
 
