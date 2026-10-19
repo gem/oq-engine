@@ -126,7 +126,7 @@ if 'OQ_DISTRIBUTE' not in os.environ:
 
 
 def multi_user():
-    return config.dbserver.host != '127.0.0.1'
+    return config.server.host != '127.0.0.1'
 
 
 def use_server():
