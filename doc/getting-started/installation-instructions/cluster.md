@@ -6,9 +6,18 @@ If you have a HPC cluster using the SLURM scheduler you are on the wrong
 page and you should [go here](slurm.md) instead. This page documents how to
 run the engine on a bare cluster of Linux machine without any scheduler.
 
+There are two ways to run the zmq workerpools on the nodes:
+
+- **ssh mode**: the master starts and stops the workerpools on the
+  workers via ssh, and the workers read the calculation files from a
+  shared directory. This is the traditional setup, described first.
+- **docker swarm mode**: the workerpools run as the tasks of a docker
+  swarm global service, one per node. See [Docker swarm mode](#docker-swarm-mode)
+  below.
+
 ## Pre-requisites
 
-### Shared filesystem
+### Shared filesystem (ssh mode)
 
 OpenQuake 2.4 introduced the concept of _shared directory_ (aka _shared_dir_). This _shared directory_ allows the workers to read directly from the master's filesystem, thus increasing scalability and performance; starting with OpenQuake 3.3 this feature is **mandatory** on a multi-node deployment.
 
@@ -47,6 +56,9 @@ shared_dir = /oq_shared
 
 It is not necessary to configure `openquake.cfg` for `/opt/openquake/venv`
 
+The docker swarm mode does not use the shared directory: its service
+mounts no host directory, and its workers run from the engine image.
+
 ### Network and security considerations
 
 The worker nodes should be isolated from the external network using
@@ -55,7 +67,8 @@ is meant to be used internally and should not face the public directly.
 
 The following ports must be open on the **master node**:
 
-* 1912-1920 for ZeroMQ receivers
+* the `receiver_ports` range of the `[dbserver]` section of
+  `openquake.cfg` (1912-1930 by default) for ZeroMQ receivers
 * 8800 for the API/WebUI (optional)
 
 The following port must be open on the **workers node**:
@@ -65,11 +78,15 @@ The following port must be open on the **workers node**:
 The **master node** and the **worker nodes** must be able to
 communicate on the specified ports.
 
-Moreover the user `openquake` on the master must be able to access the
+In ssh mode, the user `openquake` on the master must be able to access the
 workers via ssh. This means that you have to generate and copy the
 ssh keys properly, and the first time you must connect to the workers
 manually. Then the engine will be able to start and stop zworker
 processes at each new calculation.
+
+In docker swarm mode, the nodes must be able to reach each other on the
+ports used by docker swarm (2377/tcp for the managers, 7946/tcp and
+7946/udp between the nodes).
 
 ### Storage requirements
 
@@ -97,24 +114,53 @@ It is much better to get a MemoryError and then reduce the size of the job.
 
 ## Installation
 
+### ssh mode
+
 Please use the [Universal installation script](universal.md) in
 `server` mode or `devel_server` mode. The installer will save the
 Python code in the folder `/opt/openquake/venv`. Since
 `/opt/openquake` is exported to the workers via NFS there will be no
 need to install anything on the worker nodes except Python.
 
+### Docker swarm mode
+
+Install docker on every node, and create the swarm on the node that
+will be the manager:
+
+```
+$ docker swarm init --advertise-addr <manager-ip>
+```
+
+To add a worker node, run on it the command printed by the previous
+step, or get it again with `docker swarm join-token worker`. The master
+must be a swarm manager, because it inspects the nodes to size the
+memory limit of the workers. Check the nodes with `docker node ls`.
+
+The workerpools run from an image that contains the engine. Build it from
+`docker/Dockerfile.engine`, which installs from GitHub the branch given in
+the `oq_branch` build argument, so that branch must be pushed first. From
+the `docker` directory of the repository:
+
+```
+$ docker build -f Dockerfile.engine --build-arg oq_branch=<branch> \
+    -t <registry>/oq-engine:latest .
+$ docker push <registry>/oq-engine:latest
+```
+
+The registry must be reachable from every node. If you have only one node,
+the image can stay local.
+
 ## OpenQuake Engine 'master' node configuration File
 
-### Enable zmq distribution
-
-The following file (on all nodes) should be modified to enable
+The following file (on the master node) should be modified to enable
 *zmq* support:
 
 `/opt/openquake/venv/openquake.cfg`
 
+### ssh mode configuration
+
 ```
 [distribution]
-# enable celery only if you have a cluster
 oq_distribute = zmq
 
 [dbserver]
@@ -122,7 +168,7 @@ oq_distribute = zmq
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
 host = < IP address of master>
-receiver_ports = 1912-1920
+receiver_ports = 1912-1930
 
 [zworkers]
 host_cores = < IP address of worker1> -1, < IP address of worker2> -1
@@ -136,6 +182,42 @@ engine will automatically start and stop zmq processes on the worker
 nodes at each new calculation, *provided the user openquake has ssh
 access to the workers*.  Please note that you must list explicitly the
 workers that you want to use.
+
+### Docker swarm mode configuration
+
+```
+[distribution]
+oq_distribute = zmq
+
+[dbserver]
+host = < IP address of master>
+receiver_ports = 1912-1930
+
+[zworkers]
+# one entry for each node of the swarm: the IP address of the node,
+# and the number of cores to use (-1 means all of them)
+host_cores = < IP address of node1> -1, < IP address of node2> -1
+ctrl_port = 1909
+# the image of the workerpools, built as described above
+swarm_image = <registry>/oq-engine:latest
+# hard memory limit of each workerpool, in GB per core
+memory_per_core = 2.5
+```
+
+Setting `swarm_image` turns on the swarm mode. The workerpools are then
+the tasks of the docker swarm global service `oq-zworkerpool`, one on each
+node, and `host_cores` must list all the nodes of the swarm: the engine does
+not discover them by itself, so update it when a node is added or removed.
+
+Each workerpool container gets a hard memory limit of `memory_per_core` GB
+for each core of the smallest node, so with 16-core nodes and the default
+value each container can use 40 GB. The limit protects the host: if the
+workers use more memory the container is killed, instead of the whole
+machine running out of memory. The limit is set when the service is created;
+to change it, remove the service with `docker service rm oq-zworkerpool` and
+start the workerpools again.
+
+### Common notes
 
 NB: when using the zmq mechanism you should not touch the parameter
 `serialize_jobs` and keep it at its default value of `true`.
@@ -168,6 +250,17 @@ There are a few useful commands to manage the workers, to be run as user
 - `oq workers stop` is used to stop the workers nicely
 - `oq workers kill` is used to send a hard `kill -9` to the workers
 - `oq workers debug` is used to test that the installation is correct
+- `oq workers wait` waits until all the workers are ready
+
+In docker swarm mode, `oq workers start` on a service that already exists
+restarts all its workerpools, so do not run it while a calculation is
+running. `oq workers stop` leaves the service in place with no running
+tasks, and `oq workers kill` force-restarts its tasks.
+
+Adding a node to the swarm starts a workerpool on it automatically: add
+the node to `host_cores` as well. To remove a node, drain it with
+`docker node update --availability drain <node>`, which stops its
+workerpool cleanly, and then remove it from `host_cores`.
 
 If a calculation is stuck in the "executing" state due to an IT
 problem (like the cluster running out of memory followed by an `oq
