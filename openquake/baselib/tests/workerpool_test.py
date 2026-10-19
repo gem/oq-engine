@@ -19,13 +19,31 @@
 import time
 import unittest
 from openquake.baselib import config
-from openquake.baselib.workerpool import WorkerMaster
-from openquake.baselib.parallel import Starmap
+from openquake.baselib.workerpool import WorkerMaster, ssh_args
+from openquake.baselib.parallel import Starmap, parse_hostcore
 from openquake.baselib.general import socket_ready
 
 
 def double(x):
     return 2 * x
+
+
+class ParseHostcoreTestCase(unittest.TestCase):
+    def test_default_port(self):
+        self.assertEqual(parse_hostcore('10.0.0.1 4', 1909),
+                         ('10.0.0.1', 1909, '4'))
+
+    def test_explicit_port(self):
+        self.assertEqual(parse_hostcore('127.0.0.1:1910 -1', '1909'),
+                         ('127.0.0.1', 1910, '-1'))
+
+    def test_ssh_args(self):
+        zworkers = dict(ctrl_port='1909',
+                        host_cores='127.0.0.1:1910 2,127.0.0.1 3')
+        got = [(host, port, cores)
+               for host, port, cores, _args in ssh_args(zworkers)]
+        self.assertEqual(got, [('127.0.0.1', 1910, '2'),
+                               ('127.0.0.1', 1909, '3')])
 
 
 class WorkerPoolTestCase(unittest.TestCase):
@@ -47,7 +65,11 @@ class WorkerPoolTestCase(unittest.TestCase):
 
     def test_status(self):
         time.sleep(1)  # wait a bit for the workerpool to start
-        self.assertEqual(self.master.status(), [('127.0.0.1', 'running')])
+        status = self.master.status()
+        self.assertEqual(len(status), 1)
+        host_port, _running, total = status[0]
+        self.assertEqual(host_port, '127.0.0.1:%s' % self.z['ctrl_port'])
+        self.assertEqual(total, 4)  # host_cores is '127.0.0.1 4'
 
     @classmethod
     def tearDownClass(cls):

@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Internal: the `host_cores` entries of the `[zworkers]` section can now
+    specify a port, as in `127.0.0.1:1910 4`, so that several workerpools
+    can run on the same host; `oq workers status` shows each pool as
+    `host:port`, and stopping the workerpools no longer leaks semaphores.
+
   [Anirudh Rao]
   * Added support for generating regular UTM site grids from exposure, 
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible 

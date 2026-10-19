@@ -62,7 +62,8 @@ def get_zworkers(job_id):
 
 def ssh_args(zworkers):
     """
-    :yields: triples (hostIP, num_cores, [ssh remote python command])
+    :yields: quadruples (hostIP, ctrl_port, num_cores, [ssh remote python
+             command])
     """
     user = getpass.getuser()
     if os.environ.get('OQ_WORKERPOOL_ERROR'):
@@ -70,11 +71,12 @@ def ssh_args(zworkers):
         raise RuntimeError('Testing a bug in ssh_args')
     if zworkers['host_cores'].strip():
         for hostcores in zworkers['host_cores'].split(','):
-            host, cores = hostcores.split()
+            host, port, cores = parallel.parse_hostcore(
+                hostcores, zworkers['ctrl_port'])
             if host == '127.0.0.1':  # localhost
-                yield host, cores, [sys.executable]
+                yield host, port, cores, [sys.executable]
             else:
-                yield host, cores, [
+                yield host, port, cores, [
                     'ssh', '-f', '-T', user + '@' + host, sys.executable]
 
 
@@ -90,7 +92,8 @@ class WorkerMaster(object):
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(self.zworkers['ctrl_port'])
         self.host_cores = (
-            [hc.split() for hc in self.zworkers['host_cores'].split(',')]
+            [parallel.parse_hostcore(hc, self.ctrl_port)
+             for hc in self.zworkers['host_cores'].split(',')]
             if self.zworkers['host_cores'] else [])
         self.popens = []
 
@@ -100,11 +103,12 @@ class WorkerMaster(object):
         workerpool on localhost.
         """
         starting = []
-        for host, cores, args in ssh_args(self.zworkers):
-            if general.socket_ready((host, self.ctrl_port)):
-                print('%s:%s already running' % (host, self.ctrl_port))
+        for host, port, cores, args in ssh_args(self.zworkers):
+            if general.socket_ready((host, port)):
+                print('%s:%s already running' % (host, port))
                 continue
-            args += ['-m', 'openquake.baselib.workerpool', cores]
+            args += ['-m', 'openquake.baselib.workerpool', cores,
+                     '--ctrl-port', str(port)]
             if host != '127.0.0.1':
                 print('%s: if it hangs, check the ssh keys' % ' '.join(args))
             self.popens.append(subprocess.Popen(args))
@@ -116,10 +120,10 @@ class WorkerMaster(object):
         Send a "stop" command to all worker pools
         """
         stopped = []
-        for host, _ in self.host_cores:
-            if not general.socket_ready((host, self.ctrl_port)):
+        for host, port, _ in self.host_cores:
+            if not general.socket_ready((host, port)):
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            ctrl_url = 'tcp://%s:%s' % (host, port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 try:
                     print(sock.send('stop'))
@@ -127,12 +131,17 @@ class WorkerMaster(object):
                     pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
-            popen.terminate()
-            # since we are not consuming any output from the spawned process
-            # we must call wait() after terminate() to have Popen()
-            # fully deallocate the process file descriptors, otherwise
-            # zombies will arise
-            popen.wait()
+            # give the workerpool time to shut down its process pool,
+            # otherwise its semaphores leak; terminate only if it hangs
+            try:
+                popen.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                popen.terminate()
+                # since we are not consuming any output from the spawned
+                # process we must call wait() after terminate() to have
+                # Popen() fully deallocate the process file descriptors,
+                # otherwise zombies will arise
+                popen.wait()
         self.popens = []
         return 'stopped %s' % stopped
 
@@ -142,7 +151,7 @@ class WorkerMaster(object):
         in case of hard out of memory situations
         """
         killed = []
-        for host, cores, args in ssh_args(self.zworkers):
+        for host, _port, _cores, args in ssh_args(self.zworkers):
             args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
             print(' '.join(args))
             subprocess.run(args)
@@ -151,25 +160,25 @@ class WorkerMaster(object):
 
     def status(self):
         """
-        :returns: a list [(host, running, total), ...]
+        :returns: a list [(host:port, running, total), ...]
         """
         executing = []
-        for host, _cores in self.host_cores:
-            if not general.socket_ready((host, self.ctrl_port)):
+        for host, port, _cores in self.host_cores:
+            if not general.socket_ready((host, port)):
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            ctrl_url = 'tcp://%s:%s' % (host, port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
                 running = len(sock.send('get_executing').split())
                 total = sock.send('get_num_workers')
-                executing.append((host, running, total))
+                executing.append(('%s:%s' % (host, port), running, total))
         return executing
 
     def send_jobs(self):
         """
         Send an asynchronous "run_jobs" command to the first WorkerPool
         """
-        host, _cores = self.host_cores[0]
-        ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+        host, port, _cores = self.host_cores[0]
+        ctrl_url = 'tcp://%s:%s' % (host, port)
         with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
             return sock.send('run_jobs')
 
@@ -192,10 +201,10 @@ class WorkerMaster(object):
         """
         Stop and start again
         """
-        for host, _ in self.host_cores:
-            if not general.socket_ready((host, self.ctrl_port)):
+        for host, port, _ in self.host_cores:
+            if not general.socket_ready((host, port)):
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            ctrl_url = 'tcp://%s:%s' % (host, port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect', timeout=120) as sock:
                 sock.send('restart')
         return 'restarted'
@@ -217,8 +226,8 @@ class WorkerMaster(object):
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
                 mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
-                for host, _ in self.host_cores:
-                    url = 'tcp://%s:%d' % (host, self.ctrl_port)
+                for host, port, _ in self.host_cores:
+                    url = 'tcp://%s:%d' % (host, port)
                     print('Sending to', url)
                     with z.Socket(url, z.zmq.REQ, 'connect') as sock:
                         for i in range(2):
@@ -344,7 +353,7 @@ class WorkerPool(object):
         return 'WorkerPool on %s stopped' % self.hostname
 
 
-def workerpool(num_workers: int=-1, job_id: int=0):
+def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     """
     Start a workerpool with the given number of workers.
     """
@@ -353,12 +362,15 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    # 0 means use the ctrl_port in the configuration
+    port = ctrl_port or int(config.zworkers['ctrl_port'])
     # NB: unexpected errors will appear in the worker service log
-    wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
+    wpool = WorkerPool(port, num_workers, job_id)
     wpool.start()
 
 workerpool.num_workers = dict(help='number of cores to use')
 workerpool.job_id = dict(help='associated job, if any')
+workerpool.ctrl_port = dict(help='ZMQ control port (0 means from config)')
 
 
 if __name__ == '__main__':
