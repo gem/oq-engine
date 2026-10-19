@@ -743,6 +743,8 @@ region:
 
 region_grid_spacing:
   Used together with the *region* option to generate the hazard sites.
+  In impact mode it is mandatory and it defines the spacing in km of the
+  regular grid of sites around the rupture (circulant embedding).
   Example: *region_grid_spacing = 10*.
   Default: None
 
@@ -1781,6 +1783,7 @@ class OqParam(valid.ParamSet):
         """
         super().validate()
         self.check_source_model()
+        self.check_impact()
         if isinstance(self.hazard_calculation_id, str):
             path = self.hazard_calculation_id
             if not os.path.isabs(path):
@@ -2709,6 +2712,12 @@ class OqParam(valid.ParamSet):
             logging.warning(
                 'There is a single IMT, the uniform_hazard_spectra plot will '
                 'contain a single point')
+
+    def check_impact(self):
+        # in impact mode the sites are a regular grid with this spacing
+        if self.impact and not self.region_grid_spacing:
+            self.raise_invalid('region_grid_spacing must be set in impact '
+                               'mode')
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs

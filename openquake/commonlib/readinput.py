@@ -69,6 +69,7 @@ from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
+from openquake.hazardlib.geo.regular_grid import regular_grid
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
@@ -568,9 +569,12 @@ def get_mesh_exp(oqparam, h5=None):
     """
     exposure = get_exposure(oqparam, h5)
     if oqparam.impact:
+        # the sites are a regular UTM grid enclosing the site model around
+        # the rupture, as required by circulant embedding; the site model
+        # parameters are associated to the grid in base.py
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
-        return mesh, exposure
+        return regular_grid(mesh, oqparam.region_grid_spacing), exposure
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
         return mesh, exposure
@@ -859,15 +863,12 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:
+        if oqparam.impact:
+            # the grid is not the site model: the parameters are associated
+            # to the sites in base.py
+            sm = None
+        elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
-        elif oqparam.impact and (
-                    not oqparam.infrastructure_connectivity_analysis):
-            # filter the far away sites
-            rup = get_rupture(oqparam)
-            dist = oqparam.maximum_distance('*')(rup.mag)
-            [expo_hdf5] = oqparam.inputs['exposure']
-            sm = get_site_model_around(expo_hdf5, rup, dist)
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
