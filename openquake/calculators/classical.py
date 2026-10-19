@@ -309,7 +309,7 @@ def geometry_key(srcs, bvals):
     # e.g. logictree/case_18_bis: the sources of 'first' have two keys, one
     # for setLowerSeismDepthAbsolute 10.0 and one for 20.0, with 9 sets each
     # (3 abGR x 3 maxMagGR), i.e. two groups of 9 variants for make_results:
-    #   (('bs6', '10.0'),) and (('bs6', '20.0'),)
+    # (('bs6', '10.0'),) and (('bs6', '20.0'),)
     return tuple((bset.id, repr(value)) for bset, value in bvals
                  if bset.uncertainty_type not in GEOMETRY_PRESERVING and
                  any(get_bset_value(bset, value, src)[0] for src in srcs))
@@ -365,16 +365,15 @@ def _make_results(pairs, sites, remove_zeros, as_rmap):
 
 def _atomic_results(grps, sites, cmaker, remove_zeros, as_rmap,
                     merge_atomic):
-    # yield the results of the atomic groups collapsed in a single task
-    # (see get_allargs and bysrc_results); they contribute to the same RateMap in the master, with the gids of
-    # all the realizations; the uncertainties are not applied, which is
-    # fine because the sources of an atomic group are nonparametric
-    # (the mutex ones must be, since mutually exclusive ruptures are
-    # modelled with nonparametric sources) and no uncertainty can be
-    # applied to a nonparametric source (the calculation would fail)
+    # yield the results of the atomic groups collapsed in a single
+    # task (see get_allargs and bysrc_results); they contribute to the
+    # same RateMap in the master, with the gids of all the
+    # realizations; the uncertainties are not applied, which is fine
+    # because the sources of an atomic group are nonparametric (the
+    # mutex ones must be, since mutually exclusive ruptures are
+    # modelled with nonparametric sources)
     if merge_atomic:
-        # with many sites a single result is much lighter, and there
-        # are no rup_data nor mean_rates_by_src to keep separated
+        # with many sites there are no rup_data nor mean_rates_by_src
         yield baseclassical(grps, sites, cmaker, remove_zeros,
                             as_rmap=as_rmap)
     else:
