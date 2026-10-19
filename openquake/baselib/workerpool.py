@@ -388,11 +388,6 @@ class WorkerPool(object):
         return 'WorkerPool on %s stopped' % self.hostname
 
 
-def _exit_on_sigterm(signum, frame):
-    # SystemExit ends the control loop, so WorkerPool.stop is called
-    sys.exit(0)
-
-
 def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     """
     Start a workerpool with the given number of workers.
@@ -402,8 +397,9 @@ def workerpool(num_workers: int=-1, job_id: int=0, *, ctrl_port: int=0):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, signal.SIG_IGN)
-    # docker sends SIGTERM when a node is drained: stop as with "stop"
-    signal.signal(signal.SIGTERM, _exit_on_sigterm)
+    # docker sends SIGTERM when a node is drained: stop as with "stop",
+    # since SystemExit ends the control loop and WorkerPool.stop is called
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))
     # 0 means use the ctrl_port in the configuration
     port = ctrl_port or int(config.zworkers['ctrl_port'])
     # NB: unexpected errors will appear in the worker service log
