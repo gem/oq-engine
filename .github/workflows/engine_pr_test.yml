@@ -153,6 +153,14 @@ jobs:
           OQ_APPLICATION_MODE=IMPACT pytest -vx openquake/server/tests/test_impact_mode.py
           OQ_APPLICATION_MODE=AELO pytest -vx openquake/server/tests/test_aelo_mode.py
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{commands,engine}  # _unc moved to nightly tests
+      - name: ZMQ cluster test with docker compose
+        run: |
+          set -e
+          docker compose -f docker/zmq_cluster.yml up \
+            --abort-on-container-exit --exit-code-from master
+      - name: Remove the ZMQ cluster containers
+        if: always()
+        run: docker compose -f docker/zmq_cluster.yml down -v
 
   server_UI:
     runs-on: ${{ matrix.os }}
