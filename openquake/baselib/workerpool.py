@@ -126,6 +126,17 @@ class WorkerMaster(object):
             if general.socket_ready((host, port)):
                 yield host, port, 'tcp://%s:%s' % (host, port)
 
+    def _swarm_memory(self):
+        # hard memory limit in bytes for each task: memory_per_core GB
+        # for each core, taken on the smallest node of the swarm
+        gb_per_core = float(self.zworkers.get('memory_per_core') or 2.5)
+        ids = _docker('node', 'ls', '-q').split()
+        # NB: the master must be a swarm manager to inspect the nodes
+        out = _docker('node', 'inspect', '--format',
+                      '{{.Description.Resources.NanoCPUs}}', *ids)
+        cores = [int(nano) // 10**9 for nano in out.split()]
+        return str(int(min(cores) * gb_per_core * 1024**3))
+
     def _swarm_start(self):
         # create the global service the first time, otherwise restart it:
         # a stopped pool exits with 0, so the swarm does not restart it
@@ -140,6 +151,7 @@ class WorkerMaster(object):
         port = str(self.ctrl_port)
         _docker('service', 'create', '--name', self.service,
                 '--mode', 'global', '--restart-condition', 'on-failure',
+                '--limit-memory', self._swarm_memory(),
                 '--publish', f'mode=host,target={port},published={port}',
                 image, 'python', '-m', 'openquake.baselib.workerpool', '-1',
                 '--ctrl-port', port, check=True)
