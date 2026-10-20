@@ -1664,6 +1664,12 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid(
                     'discrete_damage_distribution must be True'
                     ' for interdependencies analysis')
+            # the interdependencies are between the assets, so each
+            # aggregation must be by asset: agg_id is the asset index
+            if self.aggregate_by != [['id']]:
+                self.raise_invalid(
+                    'aggregate_by = id must be set for interdependencies'
+                    ' analysis, got aggregate_by = %s' % self.aggregate_by)
 
 
     def check_hazard(self):
