@@ -90,3 +90,4 @@
 |case\_94|Tests application of deltas to total, tau and phi using mgmpe (both scalar and IMT-dependent)
 |case\_95|Tests that the TRT of a padding source far away does not affect the collapsing of the point sources
 |case\_96|Test a source with an uncertainty and magnitudes partially outside the integration distance
+|case\_97|Logic tree with IMT-dependent weights not aligned with the IMTs of the calculation (fastmean vs standard)
