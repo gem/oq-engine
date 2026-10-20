@@ -153,7 +153,7 @@ def test_expanded_layout():
 
 def test_irregular_layout():
     sites, _ = geographic_grid((3, 4), perturb=0.002)
-    with pytest.raises(ValueError, match='regular UTM grid'):
+    with pytest.raises(ValueError, match='regular grid'):
         RegularGridLayout.from_sites(sites)
 
 

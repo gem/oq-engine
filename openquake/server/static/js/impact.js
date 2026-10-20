@@ -631,6 +631,7 @@ window.initImpactForm = function() {
         formData.append('number_of_ground_motion_fields',
                         $('#number_of_ground_motion_fields').val());
         formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
+        formData.append('region_grid_spacing', $('#region_grid_spacing').val());
         formData.append('ses_seed', $('#ses_seed').val());
         formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
         formData.append('local_timestamp', $("#local_timestamp").val());

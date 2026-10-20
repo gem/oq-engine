@@ -43,6 +43,10 @@
                 <input class="impact-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ impact_form_placeholders.asset_hazard_distance }}" value="{{ impact_form_defaults.asset_hazard_distance }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
               <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
+                <label for="region_grid_spacing">{{ impact_form_labels.region_grid_spacing }}</label>
+                <input class="impact-input" type="text" id="region_grid_spacing" name="region_grid_spacing" placeholder="{{ impact_form_placeholders.region_grid_spacing }}" value="{{ impact_form_defaults.region_grid_spacing }}" {% if user_level < 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="ses_seed">{{ impact_form_labels.ses_seed }}</label>
                 <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="{{ impact_form_defaults.ses_seed }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>

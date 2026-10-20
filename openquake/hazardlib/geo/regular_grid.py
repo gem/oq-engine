@@ -15,10 +15,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """Build complete rectangular grids for circulant embedding (CE).
 
-Input locations are transformed to one local UTM coordinate reference system,
-using the same zone and hemisphere convention as the CE grid detector. Their
-projected bounds are expanded and snapped outward to multiples of the requested
-spacing. Equal steps along the easting and northing axes then define a square
+Input locations are transformed to one local transverse Mercator coordinate
+reference system, centred on the middle of their longitude extent, as used by
+the CE grid detector. Their projected bounds are expanded and snapped outward
+to multiples of the requested spacing. Equal steps along the easting and northing axes then define a square
 lattice, including all cells in its enclosing rectangle. Coordinates are
 transformed back to longitude and latitude, rounded for site-model CSV output,
 and checked with the CE detector.
@@ -26,10 +26,11 @@ and checked with the CE detector.
 CE reuses the covariance for each row/column offset throughout the grid, so
 that offset must represent the same Cartesian displacement everywhere. The
 engine's existing geographic grid builders step along parallels and meridians;
-even with kilometre spacing, these do not generally form an axis-aligned UTM
-lattice. UTM is this implementation's choice of planar geometry, not a
-requirement of CE itself. Its Euclidean distances approximate distances on the
-Earth's surface, so the projection must be suitable for the area being modeled.
+even with kilometre spacing, these do not generally form an axis-aligned
+lattice. The transverse Mercator projection is this implementation's choice of
+planar geometry, not a requirement of CE itself. Its Euclidean distances
+approximate distances on the Earth's surface, so the projection must be
+suitable for the area being modeled.
 """
 import logging
 
@@ -37,7 +38,7 @@ import numpy
 from pyproj import Transformer
 
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    RegularGridLayout, _utm_crs)
+    RegularGridLayout, _local_crs)
 from openquake.hazardlib.geo.mesh import Mesh
 
 MAX_GRID_CELLS = 2_000_000
@@ -58,12 +59,12 @@ def _check_coordinates(lons, lats):
 
 
 def regular_grid(mesh, spacing, padding=None):
-    """Enclose locations in a complete, axis-aligned square UTM grid.
+    """Enclose locations in a complete, axis-aligned square grid.
 
     ``spacing`` and ``padding`` are in kilometres. ``padding`` extends each
     side of the input's projected bounds and defaults to one grid spacing.
     It defines the requested site-grid extent, not CE computational padding.
-    Bounds are snapped outward to multiples of the spacing from the UTM
+    Bounds are snapped outward to multiples of the spacing from the projected
     origin. Rows run west to east, ordered south to north.
     Longitude/latitude coordinates are rounded to five decimals, matching
     the site-model CSV writer, and validated with the engine's CE detector.
@@ -77,8 +78,8 @@ def regular_grid(mesh, spacing, padding=None):
     lons, lats = numpy.asarray(mesh.lons).ravel(), numpy.asarray(
         mesh.lats).ravel()
     _check_coordinates(lons, lats)
-    # Share CE's zone and hemisphere convention, not per-point UTM zones.
-    crs = _utm_crs(lons, lats)
+    # One projection for the whole grid, shared with the CE detector
+    crs = _local_crs(lons, lats)
     projection = Transformer.from_crs(4326, crs, always_xy=True)
     if len(lons) == 1:
         x, y = projection.transform(float(lons[0]), float(lats[0]))
@@ -106,12 +107,9 @@ def regular_grid(mesh, spacing, padding=None):
     if len(numpy.unique(coordinates, axis=0)) != len(lons):
         raise ValueError('Duplicate grid cells after coordinate rounding; '
                          'increase the grid spacing')
-    if _utm_crs(lons, lats) != crs:
-        raise ValueError('Grid sites select a different UTM zone or '
-                         'hemisphere; adjust the input extent or spacing')
     grid = Mesh(lons, lats)
-    layout = RegularGridLayout.from_sites(grid)
-    logging.info('Regular UTM grid EPSG:%d: %d rows x %d columns, '
+    layout = RegularGridLayout.from_sites(grid, crs=crs)
+    logging.info('Regular grid %s: %d rows x %d columns, '
                  '%g km spacing, %d sites', layout.crs,
                  *layout.grid_shape, spacing, len(lons))
     return grid

@@ -90,7 +90,7 @@ def associate(sitecol, vs30fnames, assoc_distance):
 
 
 def _grid(mesh, spacing, regular):
-    """Keep the old geographic discretization unless UTM is requested."""
+    """Keep the old geographic discretization unless a regular grid is requested."""
     if regular:
         return regular_grid(mesh, spacing)
     return mesh.get_convex_hull().dilate(spacing).discretize(spacing)
@@ -226,9 +226,9 @@ def main(
     For each site the closest vs30 parameter is used. The command can also
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
-    Use --regular-grid with a positive --grid-spacing for a complete UTM
+    Use --regular-grid with a positive --grid-spacing for a complete
     rectangle compatible with circulant embedding.
-    With --rupture, build a UTM grid around one XML/NRML or CSV rupture,
+    With --rupture, build a regular grid around one XML/NRML or CSV rupture,
     extending its projected bounds by --maximum-distance (in km) on each
     side. This defines the site-grid extent, not CE computational padding.
     """
@@ -293,7 +293,7 @@ main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
 main.sentinel_z = dict(help='assign dummy -999 to z1pt0/z2pt5', abbrev='-999')
-main.regular_grid = 'build a complete regular UTM grid for circulant embedding'
+main.regular_grid = 'build a complete regular grid for circulant embedding'
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
 main.sites_csv = dict(help='sites in CSV format (filenames)', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
