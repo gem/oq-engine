@@ -1260,7 +1260,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
 
-        if 'hmaps-stats' in self.datastore and not oq.tile_spec:
+        # Plotting and the stability check below both need mean outputs.
+        if ('mean' in hstats and 'hmaps-stats' in self.datastore
+                and not oq.tile_spec):
             self.plot_hmaps()
 
             # check numerical stability of the hmaps around the poes

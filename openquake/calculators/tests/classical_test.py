@@ -127,6 +127,20 @@ class ClassicalTestCase(CalculatorTestCase):
             aac(self.calc.datastore[kind + '-rlzs'][:], mean,
                 rtol=1E-5, atol=1E-7)
 
+    def test_case_01_quantile_maps_without_mean(self):
+        # Exercise the few-sites path, including the hazard-map checks.
+        self.run_calc(case_01.__file__, 'job.ini',
+                      mean_hazard_curves='false', quantile_hazard_curves='0.5',
+                      poes='0.01', max_sites_disagg='10')
+        self.assertEqual(list(self.calc.oqparam.hazard_stats()),
+                         ['quantile-0.5'])
+        ds = self.calc.datastore
+        # With one realization, its curves/maps equal the median outputs.
+        for kind in ('hcurves', 'hmaps'):
+            quantiles = ds.sel(kind + '-stats', stat='quantile-0.5')
+            ae(quantiles, ds[kind + '-rlzs'][:])
+            self.assertGreater(quantiles.max(), 0)
+
     def test_case_02(self):
         # test for Lanzano2019 with vs30 > 1500
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_02.__file__)
