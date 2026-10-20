@@ -1,20 +1,10 @@
   [Michele Simionato]
-  * Fixed a bug affecting previous versions of the engine: with
-    compare_with_classical the event based mean curves were compared with
-    themselves, so the relative difference with the classical ones was
-    always zero
-  * Fixed a bug affecting previous versions of the engine: the limit
-    gmf_data_rows was compared with the size in bytes of the GMFs instead
-    of their number of rows, so hazard curves from GMFs were refused too
-    early
-  * Fixed a bug affecting previous versions of the engine: with
-    maximum_rupture_depth the ruptures deeper than the limit made the
-    calculation fail with an assertion error
-  * Fixed a bug affecting previous versions of the engine: when
-    avg_losses_max was exceeded and collect_rlzs was false, the calculation
-    only logged a warning instead of raising an error
-  * Fixed a bug affecting previous versions of the engine: the average
-    losses of a single realization were stored in the first realization
+  * Bug fix: with maximum_rupture_depth the ruptures deeper than the limit made
+    the calculation fail with an assertion error
+  * Bug fix: when avg_losses_max was exceeded and collect_rlzs was false, the
+    calculation only logged a warning instead of raising an error
+  * Bug fix: the average losses of a single realization were stored in the
+    first realization
   * Fixed a crash when requesting quantile hazard maps without the mean:
     mean-map plotting and stability checks now require mean outputs
   * Fixed mean_rates_by_src in classical calculations with IMT-dependent
@@ -28,16 +18,14 @@
     specify a port, as in `127.0.0.1:1910 4`, so that several workerpools
     can run on the same host; `oq workers status` shows each pool as
     `host:port`, and stopping the workerpools no longer leaks semaphores.
-  * Fixed a bug affecting previous versions of the engine: with few sites
-    only the ruptures of the first atomic group of a task were stored,
-    so the disaggregation missed the ruptures of the other atomic groups
-  * Fixed a bug affecting previous versions of the engine: with
-    disagg_by_src the rates of multiple atomic groups were all attributed
-    to the source of the first group in mean_rates_by_src
-  * Fixed a bug affecting previous versions of the engine: with
-    site_labels the atomic groups (cluster or mutex sources) were
-    computed only for the sites of the last label. This affects the
-    USA model near New Madrid and Memphis
+  * Bug fix: with few sites only the ruptures of the first atomic group of a
+    task were stored, so the disaggregation missed the ruptures of the other
+    atomic groups
+  * Bug fix: with disagg_by_src the rates of multiple atomic groups were all
+    attributed to the source of the first group in mean_rates_by_src
+  * Bug fix: with site_labels the atomic groups (cluster or mutex sources) were
+    computed only for the sites of the last label. This affects the USA model
+    near New Madrid and Memphis
 
   [Anirudh Rao]
   * Added support for generating regular UTM site grids from exposure,
