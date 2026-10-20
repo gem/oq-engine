@@ -36,17 +36,17 @@ from openquake.commonlib.oqvalidation import OqParam
 
 
 @contextmanager
-def force_fastmean(value):
+def no_fastmean():
     """
-    Force the value of the `fastmean` property of OqParam, which is
+    Force the `fastmean` property of OqParam to False, which is
     normally computed from the other parameters; this is needed to
-    compare the fastmean algorithm with the standard one.
+    compare the standard algorithm with the fastmean one.
 
-    >>> with force_fastmean(False):
+    >>> with no_fastmean():
     ...     pass
     """
     original = OqParam.fastmean
-    OqParam.fastmean = property(lambda self: value)
+    OqParam.fastmean = property(lambda self: False)
     try:
         yield
     finally:

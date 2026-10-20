@@ -32,7 +32,7 @@ from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, force_fastmean
+from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_18, case_22, case_23,
@@ -1344,7 +1344,7 @@ class ClassicalTestCase(CalculatorTestCase):
                          ['PGA', 'SA(0.2)', 'SA(1.0)'])
 
         # the fastmean algorithm and the standard algorithm must agree
-        with force_fastmean(False):
+        with no_fastmean():
             self.run_calc(case_97.__file__, 'job.ini')
         slow = self.calc.datastore['hcurves-stats'][:, 0]
         aac(fast, slow, rtol=1E-6)
