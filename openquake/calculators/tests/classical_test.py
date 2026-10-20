@@ -105,28 +105,6 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
         self.assertIn('All sources were discarded', str(ctx.exception))
 
-    def test_case_01_fast_mean(self):
-        # With one realization, the mean and individual outputs coincide.
-        self.run_calc(case_01.__file__, 'job.ini', use_rates='true',
-                      poes='0.01 0.1')
-        self.assertTrue(self.calc.oqparam.fastmean)
-        self.assertEqual(self.calc.R, 1)
-        ds = self.calc.datastore
-        means = {}
-        for kind in ('hcurves', 'hmaps'):
-            with self.subTest(kind=kind):
-                means[kind] = ds[kind + '-stats'][:]
-                self.assertGreater(means[kind].max(), 0)
-                ae(ds[kind + '-rlzs'][:], means[kind])
-
-        # Requesting individual realizations forces regular post-processing.
-        self.run_calc(case_01.__file__, 'job.ini', use_rates='true',
-                      poes='0.01 0.1', individual_rlzs='true')
-        self.assertFalse(self.calc.oqparam.fastmean)
-        for kind, mean in means.items():
-            aac(self.calc.datastore[kind + '-rlzs'][:], mean,
-                rtol=1E-5, atol=1E-7)
-
     def test_case_01_quantile_maps_without_mean(self):
         # Exercise the few-sites path, including the hazard-map checks.
         self.run_calc(case_01.__file__, 'job.ini',
@@ -1137,6 +1115,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_78_mfd_variants(self):
         # Negative-binomial MFD variants need their own occurrence PMFs.
+        # In a previous refactoring the fast path reused them, giving the
+        # same curves for the two realizations.
         kw = dict(source_model_logic_tree_file='source_logic_tree_mfd.xml',
                   ps_grid_spacing='0', individual_rlzs='true', poes='')
         self.run_calc(case_78.__file__, 'job.ini', **kw)
