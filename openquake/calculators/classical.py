@@ -599,6 +599,12 @@ def fast_mean(pgetter, monitor=parallel.Monitor()):
         # computing the hmaps is very fast too
         pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
             pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+    if pgetter.R == 1:
+        # Individual outputs are always created for a single realization,
+        # whose curves and maps coincide with the mean.
+        pmap_by_kind['hcurves-rlzs'] = pmap_by_kind['hcurves-stats']
+        if pgetter.poes:
+            pmap_by_kind['hmaps-rlzs'] = pmap_by_kind['hmaps-stats']
     return pmap_by_kind
 
 
