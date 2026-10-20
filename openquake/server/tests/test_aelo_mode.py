@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 
+# NB: run these tests with OQ_APPLICATION_MODE=AELO,
+# see the server tests section of AGENTS.md
 import os
 import sys
 import json

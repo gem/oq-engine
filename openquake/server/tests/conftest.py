@@ -205,15 +205,16 @@ def migrate_before_tests(server_test_data):
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
     # the tests share the engine DB (there is no pytest-django test DB), so
     # make sure it is migrated before the server process connects to it
+    env = dict(os.environ, OQ_TEST='1')  # the test mode, see settings.py
     subprocess.run([sys.executable, serverdir / 'manage.py', 'migrate'],
-                   check=True)
+                   check=True, env=env)
     if appmode in ['AELO', 'IMPACT']:
         # load cookie-related fixtures
         js = (serverdir / 'fixtures/0001_cookie_consent_required_'
                           'plus_hide_cookie_bar.json')
         subprocess.run(
             [sys.executable, serverdir / 'manage.py', 'loaddata', js],
-            check=True)
+            check=True, env=env)
     yield
 
 

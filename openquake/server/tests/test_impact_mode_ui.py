@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+# NB: run these tests with OQ_APPLICATION_MODE=IMPACT,
+# see the server tests section of AGENTS.md
 import pytest
 from openquake.server.tests.pages.impact_page import (
     ImpactPageLevel0, ImpactPageLevel1, ImpactPageLevel2)
