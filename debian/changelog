@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Bug fix: with interdependencies analysis and several loss types, the
+    total rows of the non-operational assets were summed over all the loss
+    types, so they were multiplied by the number of loss types
+  * The interdependencies analysis now requires aggregate_by = id in both the
+    parent and the child calculation, since the assets are identified by
+    their index
   * Bug fix: with maximum_rupture_depth the ruptures deeper than the limit made
     the calculation fail with an assertion error
   * Bug fix: when avg_losses_max was exceeded and collect_rlzs was false, the
