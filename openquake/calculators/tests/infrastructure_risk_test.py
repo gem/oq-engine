@@ -171,6 +171,29 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
                 warning_was_found,
                 'If there are node weights != 1, a warning should be raised')
 
+    def test_interdependencies_aggregate_by(self):
+        # the interdependencies require aggregate_by = id
+        self.run_calc(interdependencies.__file__, 'job.ini')
+        hc_id = str(self.calc.datastore.calc_id)
+        with self.assertRaisesRegex(InvalidFile, 'aggregate_by = id'):
+            self.get_calc(interdependencies.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          interdependencies_file='interdependencies.csv',
+                          aggregate_by='taz')
+
+    def test_interdependencies_parent_aggregate_by(self):
+        # the parent must aggregate by asset too; running it without
+        # postrisk_func avoids building the child from the parent settings
+        self.calc = self.get_calc(interdependencies.__file__, 'job.ini',
+                                  aggregate_by='taxonomy')
+        self.calc.pre_execute()
+        self.calc.execute()
+        hc_id = str(self.calc.datastore.calc_id)
+        with self.assertRaisesRegex(InvalidFile, 'in the parent calculation'):
+            self.get_calc(interdependencies.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          interdependencies_file='interdependencies.csv')
+
     def test_interdependencies(self):
         # Run the calculation without closing the datastore
         self.calc = self.get_calc(interdependencies.__file__, 'job.ini')

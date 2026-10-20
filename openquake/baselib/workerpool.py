@@ -213,12 +213,12 @@ class WorkerMaster(object):
         self.start()
         try:
             mon = performance.Monitor(
-                'zmq-debug', database_host=config.dbserver.host)
+                'zmq-debug', database_host=config.server.host)
             mon.inject = True
-            rec_host = (config.dbserver.receiver_host or config.dbserver.host
+            rec_host = (config.server.receiver_host or config.server.host
                         or '127.0.0.1')
             receiver = 'tcp://%s:%s' % (
-                rec_host, config.dbserver.receiver_ports)
+                rec_host, config.server.receiver_ports)
             ntasks = len(self.host_cores) * 2
             task_no = 0
             with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
