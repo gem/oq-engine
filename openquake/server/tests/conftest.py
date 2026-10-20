@@ -25,6 +25,7 @@ import shutil
 import pathlib
 import subprocess
 import tempfile
+import threading
 import zipfile
 from django.contrib.auth import get_user_model
 from openquake.baselib import config
@@ -99,8 +100,9 @@ def _download_server_data(data_dir):
             archive.extractall(data_dir)
 
 
-def _configure_server_data(data_dir, basemap_path=None):
-    """Configure the downloaded data for this process and its children."""
+def _configure_server_data(data_dir, dbfile, basemap_path=None):
+    """Configure the downloaded data and the database for this process and
+    its children."""
     fd, cfg_path = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.cfg')
     os.close(fd)
     paths = {
@@ -115,6 +117,7 @@ def _configure_server_data(data_dir, basemap_path=None):
         cfg.write('[directory]\n')
         for name, path in paths.items():
             cfg.write(f'{name} = {path}\n')
+        cfg.write(f'[server]\ndbfile = {dbfile}\n')
     for name, path in paths.items():
         config.directory[name] = str(path)
     return cfg_path
@@ -122,6 +125,33 @@ def _configure_server_data(data_dir, basemap_path=None):
 
 _server_cfg_path = None
 _server_old_cfg_path = None
+_server_dbfile = None
+
+
+def _isolate_database():
+    """
+    Point the engine database and the Django database to a scratch file, so
+    that the tests never touch the engine database. The calculations and the
+    server processes get the same path from OQ_CONFIG_FILE.
+    """
+    global _server_dbfile
+    from django.db import connections
+    from openquake.commonlib import dbapi
+    from openquake.server.db import actions
+    fd, dbfile = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.sqlite3')
+    os.close(fd)
+    _server_dbfile = dbfile
+    config.server['dbfile'] = dbfile
+    dbapi.db.args = (dbfile,) + dbapi.db.args[1:]
+    dbapi.db.local = threading.local()  # forget the old connections
+    connections.settings['default']['NAME'] = dbfile
+    connections.close_all()
+    # the schema of the engine tables is created in the scratch database
+    actions.upgrade_db(dbapi.db)
+    if dbapi.db.path != dbfile or connections['default'].settings_dict[
+            'NAME'] != dbfile:
+        raise RuntimeError('The tests could not isolate the database')
+    return dbfile
 
 
 def _prepare_server_data():
@@ -134,7 +164,8 @@ def _prepare_server_data():
     basemap_path = None
     if os.environ.get('OQ_APPLICATION_MODE', '').upper() == 'IMPACT':
         basemap_path = data_dir / 'basemap.tif'
-    _server_cfg_path = _configure_server_data(data_dir, basemap_path)
+    dbfile = _isolate_database()
+    _server_cfg_path = _configure_server_data(data_dir, dbfile, basemap_path)
     _server_old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
     os.environ['OQ_CONFIG_FILE'] = _server_cfg_path
 
@@ -154,6 +185,9 @@ def server_test_data():
     else:
         os.environ['OQ_CONFIG_FILE'] = _server_old_cfg_path
     pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
+    from django.db import connections
+    connections.close_all()
+    pathlib.Path(_server_dbfile).unlink(missing_ok=True)
 
 
 @pytest.fixture(scope="session", autouse=True)
