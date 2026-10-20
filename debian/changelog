@@ -3,8 +3,11 @@
     the calculation fail with an assertion error
   * Bug fix: when avg_losses_max was exceeded and collect_rlzs was false, the
     calculation only logged a warning instead of raising an error
-  * Bug fix: the average losses of a single realization were stored in the
-    first realization
+  * Bug fix: when all the events of a risk calculation with collect_rlzs
+    set to false belonged to a single realization other than the first one,
+    the average losses were stored in the first realization, so both the
+    per-realization and the mean average losses were wrong (but all global
+    risk model calculations are unaffected)
   * Fixed a crash when requesting quantile hazard maps without the mean:
     mean-map plotting and stability checks now require mean outputs
   * Fixed mean_rates_by_src in classical calculations with IMT-dependent
