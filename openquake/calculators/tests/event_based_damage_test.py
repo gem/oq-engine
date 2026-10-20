@@ -32,7 +32,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.views import view, text_table
 from openquake.calculators.checkers import assert_close
 from openquake.calculators.event_based_damage import (
-    DamageCalculator, _fix_totals)
+    DamageCalculator, fix_totals)
 
 
 def test_fix_no_damage():
@@ -59,7 +59,7 @@ def test_fix_totals():
         non_operational_inter=[1., 1., 0., 0., 1., 0.],
         non_operational=[1., 1., 0., 0., 1., 0.]),
         index=pandas.Index([0] * 6, name='event_id'))
-    _fix_totals(df)
+    fix_totals(df)
     # the totals are per loss type: 1+1 for loss 3, 0+1 for loss 4
     expected = [1, 1, 2, 0, 1, 1]
     numpy.testing.assert_equal(df.non_operational_inter.to_numpy(), expected)

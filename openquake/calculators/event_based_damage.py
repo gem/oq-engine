@@ -120,9 +120,12 @@ def _dframe(dd_dic, csqidx, loss_types):
     return pandas.DataFrame(dic)
 
 
-# set the total rows (the ones with the maximum agg_id) to the sums of the
-# asset rows with the same event_id and loss_id; the child_df is modified
-def _fix_totals(child_df):
+def fix_totals(child_df):
+    """
+    Set the total rows (the ones with the maximum agg_id) to the sums of
+    the asset rows with the same event_id and loss_id; child_df is
+    modified in place
+    """
     total_agg_id = child_df.agg_id.max()
     asset_mask = (child_df.agg_id != total_agg_id).to_numpy()
     total_mask = (child_df.agg_id == total_agg_id).to_numpy()
@@ -323,7 +326,9 @@ class DamageCalculator(EventBasedRiskCalculator):
 
         for i, row in self.interdep_df.iterrows():
             # Find events where the source assets in in the
-            # triggering damage/functionality state
+            # triggering damage/functionality state; the states are 0 or 1
+            # only with discrete_damage_distribution = true, which is
+            # required for the interdependencies analysis
             source_mask = (
                 (parent_df.agg_id == row.parent_id) &
                 (parent_df[row.col] == 1)
@@ -342,7 +347,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             child_df['non_operational_inter'].to_numpy())
 
         # Correct the total values per event and loss type
-        _fix_totals(child_df)
+        fix_totals(child_df)
 
         # Storing new columns in the dstore
         self.datastore['risk_by_event/non_operational'][:] = (
