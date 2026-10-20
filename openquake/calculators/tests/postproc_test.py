@@ -33,7 +33,9 @@ from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
+from openquake.calculators.views import view
 from openquake.calculators.postproc.compute_rtgm import get_seismicity_class
+from openquake.calculators.postproc.compute_mrd import get_gid_weights
 from openquake.qa_tests_data.postproc import (
     case_mrd, case_rtgm, case_median_spectrum)
 
@@ -110,6 +112,21 @@ def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
 
 
 class PostProcTestCase(CalculatorTestCase):
+
+    def test_get_gid_weights(self):
+        # the weights must be indexed by the global gid and not by the
+        # position of the gsim inside the cmaker
+        class FakeCMaker:
+            def __init__(self, gsim_idx, wei):
+                self.gsim_idx = np.array(gsim_idx)
+                self.wei = np.array(wei)
+
+        # two cmakers with the gids in the "wrong" order
+        cmakers = [FakeCMaker([2, 3], [.2, .3]), FakeCMaker([0, 1], [.4, .1])]
+        gweights = get_gid_weights(cmakers)
+        aae(gweights, [.4, .1, .2, .3])
+        # the concatenation of the weights would be wrong
+        aae(np.concatenate([cm.wei for cm in cmakers]), [.2, .3, .4, .1])
 
     def test_mrd(self):
         # Computes the mean rate density using a simple PSHA input model
@@ -235,6 +252,28 @@ class PostProcTestCase(CalculatorTestCase):
         fnames = export(('median_spectrum_disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    def test_median_spectrum_shape_descr(self):
+        # the shape description must be consistent with the data, i.e.
+        # the number of "kinds" must be the size of the kind axis
+        self.run_calc(case_median_spectrum.__file__, 'job1.ini')
+        dset = self.calc.datastore['median_spectra']
+        dic = json.loads(dset.attrs['json'])
+        self.assertEqual(len(dic['kind']), dset.shape[2])
+        # the third kind is the total weight, not the (discarded) tau
+        self.assertEqual(dic['kind'], ['mea', 'sig', 'wei'])
+
+    def test_log_median_spectrum(self):
+        # the view must return one value per period
+        self.run_calc(case_median_spectrum.__file__, 'job1.ini')
+        ds = self.calc.datastore
+        periods = [imt.period for imt in ds['oqparam'].imt_periods()]
+        res = view('log_median_spectrum', ds)
+        self.assertEqual(len(res), len(periods))
+        aae(res['period'], periods)
+        # the median spectrum is the 'mea' row, in log space
+        aae(res['value'], ds['median_spectra'][:, 0, 0, :, 0].sum(axis=0),
+            decimal=5)
 
     def test_median_spectrum2(self):
         # test with two sites and two ruptures
