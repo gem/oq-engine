@@ -4,6 +4,11 @@
     as described in the Powers et al. (2026) EQ spectra paper. 
 
   [Michele Simionato]
+  * Bug fix: the regular grids used for impact and circulant embedding were
+    projected in a single UTM zone, so site models spanning a zone boundary
+    (e.g. the 36E boundary) failed. The grids now use a transverse Mercator
+    projection centred on the middle of the longitude extent, with no zone
+    boundaries. The default `region_grid_spacing` of the impact form is 1 km
   * Internal: the `calc_mcurves` function ignored the IMT-dependent
     logic-tree weights, so its mean hazard curves could be wrong for the
     IMTs with IMT-dependent weights
