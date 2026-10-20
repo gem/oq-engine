@@ -1471,9 +1471,6 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         either 'error', 'keep_first', 'keep_last', 'avg'
     :returns: station_data, observed_imts
     """
-    if parallel.oq_distribute() == 'zmq':
-        logging.error('Conditioned scenarios are not meant to be run '
-                      ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
     df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE',
                  'STATION_ID', duplicates_strategy=duplicates_strategy)
