@@ -1660,11 +1660,27 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('missing investigation_time')
                 
         if 'interdependencies' in self.inputs:
-            if not self._parent.discrete_damage_distribution:
-                self.raise_invalid(
-                    'discrete_damage_distribution must be True'
-                    ' for interdependencies analysis')
+            self.check_interdependencies()
 
+    def check_interdependencies(self):
+        # check for the interdependencies analysis
+        if not self._parent.discrete_damage_distribution:
+            self.raise_invalid(
+                'discrete_damage_distribution must be True'
+                ' for interdependencies analysis')
+        # the interdependencies are between the assets, so each
+        # aggregation must be by asset: agg_id is the asset index
+        if self.aggregate_by != [['id']]:
+            self.raise_invalid(
+                'aggregate_by = id must be set for interdependencies'
+                ' analysis, got aggregate_by = %s' % self.aggregate_by)
+        # the same for the parent, whose agg_id are the asset indices
+        # used to find the source assets of the interdependencies
+        if self._parent.aggregate_by != [['id']]:
+            self.raise_invalid(
+                'aggregate_by = id must be set in the parent calculation'
+                ' for interdependencies analysis, got aggregate_by = %s'
+                % self._parent.aggregate_by)
 
     def check_hazard(self):
         # check for sites, site_model and hc_id

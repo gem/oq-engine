@@ -68,7 +68,7 @@ def get_zmq_ports():
     """
     :returns: an array with the receiver ports
     """
-    start, stop = config.dbserver.receiver_ports.split('-')
+    start, stop = config.server.receiver_ports.split('-')
     return numpy.arange(int(start), int(stop))
 
 
@@ -476,7 +476,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContexts stored in jobs.pik, called by job.yaml or slurm
+    # run LogContexts stored in jobs.pik, called by submit_cmd or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
     try:

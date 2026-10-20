@@ -19,7 +19,9 @@
 import os
 import sys
 import unittest
+from types import SimpleNamespace
 import numpy
+import pandas
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
     case_11, case_12, case_13, case_14, case_15, case_16)
@@ -29,6 +31,39 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import view, text_table
 from openquake.calculators.checkers import assert_close
+from openquake.calculators.event_based_damage import (
+    DamageCalculator, fix_totals)
+
+
+def test_fix_no_damage():
+    # tiny negative damages are zeroed, clearly negative ones are an error
+    fake = SimpleNamespace(
+        R=1, crmodel=SimpleNamespace(damage_states=['no_damage', 'ds1']),
+        assetcol={'value-number': numpy.array([10., 10.])})
+    prc = SimpleNamespace(num_events=numpy.array([1]))
+    fake.dmgcsq = numpy.zeros((1, 2, 1, 1, 2), numpy.float32)  # P,A,R,L,Dc
+    fake.dmgcsq[0, 0, 0, 0, 1] = -1E-9
+    DamageCalculator._fix_no_damage(fake, prc)
+    numpy.testing.assert_equal(fake.dmgcsq[0, 0, 0, 0, 1], 0)
+
+    fake.dmgcsq[0, 0, 0, 0, 1] = -1E-3
+    with unittest.TestCase().assertRaises(AssertionError):
+        DamageCalculator._fix_no_damage(fake, prc)
+
+
+def test_fix_totals():
+    # two assets (agg_id 0 and 1) and their total (agg_id 2), two loss types
+    df = pandas.DataFrame(dict(
+        agg_id=[0, 1, 2, 0, 1, 2],
+        loss_id=[3, 3, 3, 4, 4, 4],
+        non_operational_inter=[1., 1., 0., 0., 1., 0.],
+        non_operational=[1., 1., 0., 0., 1., 0.]),
+        index=pandas.Index([0] * 6, name='event_id'))
+    fix_totals(df)
+    # the totals are per loss type: 1+1 for loss 3, 0+1 for loss 4
+    expected = [1, 1, 2, 0, 1, 1]
+    numpy.testing.assert_equal(df.non_operational_inter.to_numpy(), expected)
+    numpy.testing.assert_equal(df.non_operational.to_numpy(), expected)
 
 
 class EventBasedDamageTestCase(CalculatorTestCase):

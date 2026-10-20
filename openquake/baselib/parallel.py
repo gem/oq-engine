@@ -457,10 +457,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     engine_version()))
-            if mon.database_host != config.dbserver.host:
+            if mon.database_host != config.server.host:
                 raise RuntimeError(
                     'The worker has database.host=%s while the master has %s'
-                    % (mon.database_host, config.dbserver.host))
+                    % (mon.database_host, config.server.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -847,7 +847,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.name = task_func.__name__
-        self.monitor = Monitor(self.name, database_host=config.dbserver.host)
+        self.monitor = Monitor(self.name, database_host=config.server.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         if distribute == 'zmq':
@@ -864,11 +864,11 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.receiver = 'tcp://0.0.0.0:%s' % config.server.receiver_ports
         if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = get_return_ip(config.dbserver.receiver_host)
+            self.return_ip = get_return_ip(config.server.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = {}  # populated by .submit

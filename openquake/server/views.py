@@ -21,7 +21,6 @@ import ast
 import csv
 import shutil
 import json
-import string
 import pickle
 import logging
 import os
@@ -82,7 +81,6 @@ if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
 UTC = timezone.utc
-CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -99,7 +97,6 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
 
-KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
 AELO_FORM_LABELS = {
@@ -1601,18 +1598,9 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
 
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
-    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
             subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
-    elif submit_cmd == KUBECTL and big_job:
-        for job in jobs:
-            with open(os.path.join(CWD, 'job.yaml')) as f:
-                yaml = string.Template(f.read()).substitute(
-                    DATABASE='%(host)s:%(port)d' % config.dbserver,
-                    CALC_PIK=save_pik(job, custom_tmp),
-                    CALC_NAME='calc%d' % job.calc_id)
-            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         kwargs = {}
         if notify_to is not None:

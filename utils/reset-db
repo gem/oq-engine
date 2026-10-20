@@ -36,22 +36,10 @@ check_dep() {
     done
 }
 
-startstop() {
-    local ACTION=$1
-    local SERVICE=${2:-openquake-dbserver}
-
-    if [ -f /lib/systemd/system/${SERVICE}.service ]; then
-        systemctl $ACTION ${SERVICE}.service
-    else
-        echo -e "!! Service $SERVICE not found. Aborting." >&2
-        exit 1
-    fi
-}
-
 getdbpath() {
     local OQ_CFG='/etc/openquake/openquake.cfg'
     if [ -f $OQ_CFG ]; then
-        grep 'file = ' $OQ_CFG | tr -d ' ' | cut -d '=' -f 2
+        grep 'dbfile = ' $OQ_CFG | tr -d ' ' | cut -d '=' -f 2
     else
         echo -e "!! Configuration file not found. Aborting." >&2
         exit 1
@@ -110,13 +98,10 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    echo " * OpenQuake Engine DbServer stopped"
-    startstop stop
     rm $(getdbpath)
     echo " * Database dropped"
     find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     if [ -z $skipnew ]; then
-        startstop start
         echo " * Migrating schema"
         cd /usr/share/openquake/engine || true
         python3 -m openquake.server.manage migrate

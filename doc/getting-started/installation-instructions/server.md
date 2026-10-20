@@ -56,6 +56,20 @@ sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
 
+```{warning}
+The `[dbserver]` section of `openquake.cfg` does not exist anymore.
+Starting from version 3.27 its keys live in the `[server]` section:
+
+- `host`, `receiver_host` and `receiver_ports` keep their names;
+- `file` has been renamed `dbfile`;
+- the `port` key has been removed;
+- the `oq dbserver` command and the DbServer daemon have been removed.
+
+Versions up to 3.26, including the LTS release 3.23, still use the
+`[dbserver]` section with the `file` key, so the configuration files
+must be updated when upgrading.
+```
+
 #### Configuring the database host
 
 If the database file is on the local machine, there is nothing to do
@@ -63,9 +77,9 @@ since the universal installer already writes in the `openquake.cfg`
 file a section
 
 ```
-[dbserver]
+[server]
 host = localhost
-file = /path/to/db.sqlite3
+dbfile = /path/to/db.sqlite3
 ```
 
 If the database is on a different machine, you have to edit the file and
