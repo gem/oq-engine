@@ -972,16 +972,40 @@ def _get_properties(usgs_id, user=User(), monitor=performance.Monitor()):
     return properties, err
 
 
+def _select_shakemap_product(usgs_id, shakemaps, shakemap_version):
+    # Resolve a selected product without leaking a list-unpacking exception.
+    if not shakemaps:
+        return None, {'status': 'failed',
+                      'error_msg': f'No ShakeMap available for {usgs_id}'}
+    if shakemap_version == 'usgs_preferred':
+        return _get_usgs_preferred_item(shakemaps), {}
+    matches = [shm for shm in shakemaps
+               if shm['id'] == shakemap_version]
+    if not matches:
+        error_msg = (
+            f'Selected ShakeMap version {shakemap_version!r} is not '
+            f'present in the current USGS event response for {usgs_id}. '
+            'Retrieve the versions again and select an available version.')
+        return None, {'status': 'failed', 'error_msg': error_msg,
+                      'invalid_inputs': ['shakemap_version']}
+    [shakemap] = matches
+    return shakemap, {}
+
+
 def _get_contents(usgs_id, shakemap_version='usgs_preferred',
                   user=User(), monitor=performance.Monitor()):
     # returns the _contents dictionary or an error dictionary
     properties, err = _get_properties(usgs_id, user, monitor)
-    shakemaps = properties['products']['shakemap']
-    if shakemap_version == 'usgs_preferred':
-        shakemap = _get_usgs_preferred_item(shakemaps)
-    else:
-        [shakemap] = [shm for shm in shakemaps
-                      if shm['id'] == shakemap_version]
+    if err:
+        return None, err
+    try:
+        shakemaps = properties['products']['shakemap']
+    except KeyError:
+        shakemaps = []
+    shakemap, err = _select_shakemap_product(
+        usgs_id, shakemaps, shakemap_version)
+    if err:
+        return None, err
     return shakemap['contents'], err
 
 
@@ -1015,14 +1039,11 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     try:
         shakemaps = properties['products']['shakemap']
     except KeyError:
-        err = {'status': 'failed',
-               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        shakemaps = []
+    shakemap, err = _select_shakemap_product(
+        usgs_id, shakemaps, shakemap_version)
+    if err:
         return None, None, None, None, err
-    if shakemap_version == 'usgs_preferred':
-        shakemap = _get_usgs_preferred_item(shakemaps)
-    else:
-        [shakemap] = [shm for shm in shakemaps
-                      if shm['id'] == shakemap_version]
     contents = shakemap['contents']
 
     if get_grid and 'download/grid.xml' in contents:
@@ -1324,6 +1345,10 @@ def get_shakemap_versions(usgs_id, user=User(),
     try:
         shakemaps = properties['products']['shakemap']
     except KeyError:
+        err = {'status': 'failed',
+               'error_msg': f'No ShakeMap available for {usgs_id}'}
+        return None, None, err
+    if not shakemaps:
         err = {'status': 'failed',
                'error_msg': f'No ShakeMap available for {usgs_id}'}
         return None, None, err

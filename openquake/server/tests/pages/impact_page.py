@@ -2,25 +2,70 @@ from importlib.resources import files
 from playwright.sync_api import expect
 from openquake.server.tests.pages.engine_page import EnginePage
 
+# Rupture/station requests can make two serial USGS downloads, each with
+# five 30-second attempts and exponential backoff.
+USGS_REQUEST_TIMEOUT = 330_000
+
 
 class ImpactPage(EnginePage):
     def set_rupture_identifier(self, usgs_id):
         self.page.locator('#usgs_id').fill(usgs_id)
 
     def select_shakemap_version(self, value):
-        shakemap_version_select = self.page.locator('select#shakemap_version')
-        expect(shakemap_version_select.locator(
-            f'option[value="{value}"]')).to_have_count(1, timeout=30_000)
-        shakemap_version_select.select_option(value=value)
-        expect(shakemap_version_select).to_have_value(value)
+        selector = self.page.locator('select#shakemap_version')
+        expect(self.page.locator('input#usgs_id')).to_be_enabled(
+            timeout=180_000)
+        expect(self.page.locator(
+            '.populating_shakemap_version')).to_be_hidden(timeout=180_000)
+        options = selector.locator('option')
+        expect(options).not_to_have_count(0, timeout=180_000)
+        error_option = selector.locator('option[value="error"]')
+        if error_option.count():
+            raise AssertionError(
+                f'Unable to load ShakeMap versions: '
+                f'{error_option.inner_text()}')
+        option = selector.locator(f'option[value="{value}"]')
+        if not option.count():
+            available = options.evaluate_all(
+                'items => items.map(item => '
+                '`${item.value}: ${item.textContent}`)')
+            raise AssertionError(
+                f'ShakeMap version {value!r} is not available; '
+                f'current options: {available}')
+        selector.select_option(value=value)
+        expect(selector).to_have_value(value)
 
     def retrieve_data(self):
         self.page.locator('.modal-backdrop').wait_for(
             state='detached', timeout=15_000)
-        self.page.locator("#submit_impact_get_rupture").click()
+        with self.page.expect_response(
+                lambda response: response.url.endswith(
+                    '/v1/calc/impact_get_rupture_data'),
+                timeout=USGS_REQUEST_TIMEOUT) as response_info:
+            self.page.locator("#submit_impact_get_rupture").click()
+        response = response_info.value
+        if not response.ok:
+            raise AssertionError(
+                f'Rupture retrieval failed ({response.status}): '
+                f'{response.text()}')
+        data = response.json()
+        map_fields = ('rupture_png', 'mmi_map_png', 'pga_map_png')
+        if not any(data.get(field) for field in map_fields):
+            raise AssertionError(
+                f'Rupture retrieval returned no map; keys: '
+                f'{sorted(data)}')
 
     def run_impact_calc(self):
-        self.page.locator("#submit_impact_calc").click()
+        with self.page.expect_response(
+                lambda response: response.url.endswith(
+                    '/v1/calc/impact_run'),
+                timeout=USGS_REQUEST_TIMEOUT) as response_info:
+            self.page.locator("#submit_impact_calc").click()
+        response = response_info.value
+        if not response.ok:
+            raise AssertionError(
+                f'Impact calculation submission failed '
+                f'({response.status}): {response.text()}')
 
     def set_time_of_the_event(self, value):
         selector = self.page.locator('select#time_event')
@@ -138,13 +183,37 @@ class ImpactPageLevel2(ImpactPage):
         get_stations_btn = self.page.get_by_role("button",
                                                  name="Retrieve from the USGS")
         expect(get_stations_btn).to_be_visible(timeout=15_000)
-        get_stations_btn.click(timeout=15_000)
+        with self.page.expect_response(
+                lambda response: response.url.endswith(
+                    '/v1/impact_get_stations_from_usgs'),
+                timeout=USGS_REQUEST_TIMEOUT) as response_info:
+            get_stations_btn.click(timeout=15_000)
+        response = response_info.value
+        if not response.ok:
+            raise AssertionError(
+                f'Station retrieval failed ({response.status}): '
+                f'{response.text()}')
+        data = response.json()
+        issue = data.get('station_data_issue')
+        if issue:
+            expected_no_station_messages = (
+                'no features', 'no seismic', 'none of them are seismic',
+                'no stations were found', 'all discarded',
+                'station_type" is not specified')
+            if (not expect_no_seismic_stations or
+                    not any(text in issue.lower()
+                            for text in expected_no_station_messages)):
+                raise AssertionError(f'Station retrieval failed: {issue}')
+        elif expect_no_seismic_stations:
+            raise AssertionError(
+                'Expected the selected ShakeMap to have no usable stations')
         station_data_loaded = self.page.locator(
             'input#station_data_file_loaded')
         if expect_no_seismic_stations:
             expect(station_data_loaded).to_have_value(
-                'N.A. (conversion issue)', timeout=30_000)
+                'N.A. (conversion issue)', timeout=USGS_REQUEST_TIMEOUT)
             self.page.get_by_role("button", name="Close").click(
                 timeout=15_000)
         else:
-            expect(station_data_loaded).not_to_have_value('', timeout=30_000)
+            expect(station_data_loaded).not_to_have_value(
+                '', timeout=USGS_REQUEST_TIMEOUT)

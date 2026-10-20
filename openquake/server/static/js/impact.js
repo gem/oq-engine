@@ -139,11 +139,33 @@ window.initImpactForm = function() {
         $('#rupture-map').hide();
     }
 
+    let shakemap_versions_request = null;
+    let shakemap_versions_request_id = 0;
+
+    // Ignore late responses after the USGS ID or approach has changed.
+    function invalidate_shakemap_versions_request() {
+        shakemap_versions_request_id++;
+        if (shakemap_versions_request) {
+            shakemap_versions_request.abort();
+            shakemap_versions_request = null;
+        }
+    }
+
     function set_shakemap_version_selector() {
+        invalidate_shakemap_versions_request();
+        const request_id = shakemap_versions_request_id;
         let shakemap_selector = $("#shakemap_version");
         shakemap_selector.empty();
         const usgs_id = $.trim($("#usgs_id").val());
-        if (usgs_id == '') return;
+        if (usgs_id == '') {
+            $('input#usgs_id').prop('disabled', false);
+            $('input[name="impact_approach"]').prop('disabled', false);
+            $('#submit_impact_get_rupture').prop('disabled', false);
+            $('#getStationDataFromUsgs').prop('disabled', false);
+            toggleRunCalcBtnState();
+            $('.populating_shakemap_version').hide();
+            return;
+        }
         $('input#usgs_id').prop('disabled', true);
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('#getStationDataFromUsgs').prop('disabled', true);
@@ -153,14 +175,18 @@ window.initImpactForm = function() {
         $('input[name="impact_approach"]').prop('disabled', true);
         var formData = new FormData();
         formData.append('usgs_id', usgs_id);
-        $.ajax({
+        const request = $.ajax({
             type: "POST",
             url: gem_oq_server_url + "/v1/impact_get_shakemap_versions",
             data: formData,
             processData: false,
             contentType: false,
             encode: true,
-        }).done(function (data) {
+        });
+        shakemap_versions_request = request;
+        request.done(function (data) {
+            if (request_id !== shakemap_versions_request_id ||
+                    usgs_id !== $.trim($("#usgs_id").val())) return;
             let shakemap_selector = $("#shakemap_version");
             shakemap_selector.empty();
             if (data.shakemap_versions_issue) {
@@ -177,6 +203,8 @@ window.initImpactForm = function() {
             }
             $('#submit_impact_get_rupture').prop('disabled', false);
         }).fail(function (xhr) {
+            if (request_id !== shakemap_versions_request_id ||
+                    xhr.statusText === 'abort') return;
             let shakemap_selector = $("#shakemap_version");
             let err_msg = ajax_error_message(
                 xhr, 'Unable to retrieve ShakeMap versions');
@@ -185,6 +213,8 @@ window.initImpactForm = function() {
             $('.populating_shakemap_version').hide();
             diaerror.show(false, "Error", err_msg);
         }).always(function () {
+            if (request_id !== shakemap_versions_request_id) return;
+            shakemap_versions_request = null;
             $('input#usgs_id').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
             $('#getStationDataFromUsgs').prop('disabled', false);
@@ -238,6 +268,7 @@ window.initImpactForm = function() {
 
     $('input[name="impact_approach"]').change(function () {
         const selected_approach = $(this).val();
+        invalidate_shakemap_versions_request();
         set_retrieve_data_btn_state('initial');
         reset_impact_forms();
         if (approaches_requiring_usgs_id.includes(selected_approach)) {
@@ -295,9 +326,23 @@ window.initImpactForm = function() {
     const USGS_ID_TYPING_DELAY = 500; // milliseconds
 
     $('input[name="usgs_id"]').on('input', function () {
+        invalidate_shakemap_versions_request();
         clearTimeout(usgsTypingTimer);
+        reset_rupture_form_inputs();
+        const selected_approach = get_selected_approach();
+        if (approaches_requiring_shakemap_version.includes(
+                selected_approach)) {
+            $('#shakemap_version').empty();
+            $('#submit_impact_get_rupture').prop('disabled', true);
+            $('#getStationDataFromUsgs').prop('disabled', true);
+            $('#submit_impact_calc').prop('disabled', true);
+            $('.populating_shakemap_version').show();
+            $('.populating_shakemap_version').html(
+                '<img src="/static/img/spinner.gif" '
+                + 'class="loading-spinner" /> Waiting to retrieve '
+                + 'ShakeMap versions...');
+        }
         usgsTypingTimer = setTimeout(function () {
-            reset_rupture_form_inputs();
             const selected_approach = get_selected_approach();
             if (approaches_requiring_shakemap_version.includes(selected_approach)) {
                 set_shakemap_version_selector();
@@ -381,6 +426,9 @@ window.initImpactForm = function() {
     $("#impact_get_rupture_form").submit(function (event) {
         $('#submit_impact_get_rupture').prop('disabled', true);
         $('input[name="impact_approach"]').prop('disabled', true);
+        $('input#usgs_id').prop('disabled', true);
+        $('select#shakemap_version').prop('disabled', true);
+        $('#getStationDataFromUsgs').prop('disabled', true);
         set_retrieve_data_btn_state('running');
         var formData = new FormData();
         const selected_approach = get_selected_approach();
@@ -526,6 +574,9 @@ window.initImpactForm = function() {
         }).always(function (data) {
             $('#submit_impact_get_rupture').prop('disabled', false);
             $('input[name="impact_approach"]').prop('disabled', false);
+            $('input#usgs_id').prop('disabled', false);
+            $('select#shakemap_version').prop('disabled', false);
+            $('#getStationDataFromUsgs').prop('disabled', false);
             set_retrieve_data_btn_state('initial');
             // $('.submit_impact_get_rupture_waiting').hide();
         });

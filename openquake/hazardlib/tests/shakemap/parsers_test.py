@@ -317,6 +317,16 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
 
+    def test_unknown_shakemap_version_returns_validation_error(self):
+        _rup, _rupdic, err = get_rup_dic(
+            {'usgs_id': 'us20002926',
+             'approach': 'use_shakemap_from_usgs'},
+            user=user, use_shakemap=False,
+            shakemap_version='urn:usgs-product:missing')
+        self.assertIn('not present in the current USGS event response',
+                      err['error_msg'])
+        self.assertEqual(err['invalid_inputs'], ['shakemap_version'])
+
     def test_shakemap_download_retries_transient_errors(self):
         path = os.path.join(user.testdir, 'us20002926.json')
         class GzipResponse(io.BytesIO):
