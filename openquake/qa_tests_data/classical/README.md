@@ -36,6 +36,7 @@
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
 |case\_39|Test checking of IMT-dependent weights with unsupported IMTs|
+|case\_39\_disagg\_by\_src|Test disagg_by_src with IMT-dependent weights|
 |case\_40|NGAEast GMPEs|
 |case\_41|SERA Site Amplification Models including EC8 Site Classes and Geology|
 |case\_42|Split/filter a long complex fault source with maxdist=1000 km|
