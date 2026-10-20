@@ -1085,8 +1085,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_78_mfd_variants(self):
         # Negative-binomial MFD variants need their own occurrence PMFs.
-        # In a previous version the fast path reused them, giving the same
-        # curves for the two realizations.
+        # In a previous refactoring the fast path reused them, giving the
+        # same curves for the two realizations.
         kw = dict(source_model_logic_tree_file='source_logic_tree_mfd.xml',
                   ps_grid_spacing='0', individual_rlzs='true', poes='')
         self.run_calc(case_78.__file__, 'job.ini', **kw)
