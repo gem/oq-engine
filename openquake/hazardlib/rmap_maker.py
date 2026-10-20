@@ -297,6 +297,11 @@ def make_results(groups, cmakers, sites):
     (see _mag_ratios). Only independent Poisson sources are supported,
     since the probabilities are then linear in the rates.
     """
+    # Non-Poisson occurrence PMFs must be recomputed for each MFD variant;
+    # rescaling occurrence_rate while reusing probs_occur is incorrect.
+    if any(not isinstance(getattr(src, 'temporal_occurrence_model', None),
+                          PoissonTOM) for grp in groups for src in grp):
+        raise ValueError('non-Poisson sources')
     rates = [_rates_by_mag(grp) for grp in groups]
     b = max(range(len(groups)),
             key=lambda v: sum(len(d) for d in rates[v]))
