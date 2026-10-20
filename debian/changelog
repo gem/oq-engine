@@ -1,6 +1,4 @@
   [Michele Simionato]
-  * Fixed zero-filled individual hazard curves and maps when using the
-    fast mean algorithm with a single realization
   * Fixed mean_rates_by_src in classical calculations with IMT-dependent
     logic-tree weights: source contributions now use each IMT's weights
   * Internal: the `[dbserver]` section of openquake.cfg has been renamed

@@ -1,7 +1,6 @@
 |Test ID|Description|
 |-|-|
 |case\_01|Test .npz export, raises error when all source are discarded and test wrong .ini|
-|case\_01\_fast\_mean|Test fast mean outputs with one realization, the same as the individual ones|
 |case\_02|Test reqv, 1 rlz, 1 site|
 |case\_03|Test minimum\_magnitude|
 |case\_04|Test UHS|
