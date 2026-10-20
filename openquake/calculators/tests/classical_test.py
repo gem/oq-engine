@@ -1083,6 +1083,20 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_dist.org', fname)
 
+    def test_case_78_mfd_variants(self):
+        # Negative-binomial MFD variants need their own occurrence PMFs.
+        kw = dict(source_model_logic_tree_file='source_logic_tree_mfd.xml',
+                  ps_grid_spacing='0', individual_rlzs='true', poes='')
+        self.run_calc(case_78.__file__, 'job.ini', **kw)
+        curves = self.calc.datastore['hcurves-rlzs'][:]
+        # Compute each variant separately as a reference for the fast path.
+        with mock.patch('openquake.calculators.classical._make_results',
+                        return_value=None):
+            self.run_calc(case_78.__file__, 'job.ini', **kw)
+        reference = self.calc.datastore['hcurves-rlzs'][:]
+        aac(curves, reference, rtol=1E-5)
+        self.assertFalse(numpy.allclose(curves[:, 0], curves[:, 1]))
+
     def test_case_80(self):
         # New Madrid cluster with rup_mutex
         self.run_calc(case_80.__file__, 'job.ini')
