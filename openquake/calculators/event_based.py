@@ -676,10 +676,6 @@ def run(func, oq, rup0, calc):
         # assume scenario with a single true rupture
         assert oq.calculation_mode.startswith('scenario'), oq.calculation_mode
         assert len(dstore['ruptures']) == 1
-
-        if parallel.oq_distribute() in ('zmq', 'slurm'):
-            logging.error('Conditioned scenarios are not meant to be run'
-                          ' on a cluster')
         _model, full_lt = base.get_model_lts(dstore, model)[0]
         trt = full_lt.trts[0]
         proxy = RuptureProxy(rup0)
