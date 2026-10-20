@@ -247,7 +247,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
         # due numeric errors we can have small negative damages; we fix them
         small = self.dmgcsq < 0
-        assert (small > -1E-6).all()
+        assert (self.dmgcsq[small] > -1E-6).all()
         self.dmgcsq[small] = 0
 
     def _store_damages(self):

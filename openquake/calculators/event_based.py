@@ -230,7 +230,9 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         # the computer while batches are processed. Keep track of the list
         # position so each batch transfers only newly appended records.
         mtp_start = 0
+        ngmfs = 0  # GMFs of the rupture, in all the batches so far
         for df, indices, last in computer.compute_all_batches(cmon, umon):
+            ngmfs += len(df)
             dic = dict(
                 gmfdata=df,
                 sig_eps=computer.build_sig_eps(se_dt, indices))
@@ -239,7 +241,7 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
                 mtp_start = len(computer.mea_tau_phi)
                 mtp = numpy.array(records, GmfComputer.mtp_dt)
                 dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
-            if last:
+            if last and ngmfs:  # the rupture produced GMFs
                 dt = time.time() - t0
                 dic['times'] = numpy.array([
                     (proxy['id'], computer.ctx.rrup.min(), dt,
@@ -253,12 +255,13 @@ def _merge_dics(dics):
     """
     out = dict(gmfdata=pandas.concat([d['gmfdata'] for d in dics],
                                      ignore_index=True))
-    # as before, sig_eps and times are kept only for the batches
-    # with GMFs, while mea_tau_phi is kept for all the batches
+    # sig_eps is kept only for the batches with GMFs, while times and
+    # mea_tau_phi are kept for all the batches (the times of a rupture
+    # are in its last batch, which can be empty)
     full = [d for d in dics if len(d['gmfdata'])]
     if full:
         out['sig_eps'] = numpy.concatenate([d['sig_eps'] for d in full])
-    times = [d['times'] for d in full if 'times' in d]
+    times = [d['times'] for d in dics if 'times' in d]
     if times:
         out['times'] = numpy.concatenate(times)
     if 'mea_tau_phi' in dics[0]:  # same columns in all the dicts
@@ -370,15 +373,21 @@ def _filter_rups(oq, sitecol, trts, dstore):
     affected = 0
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
-    hypo_deps = filrups['hypo'][:, 2]
-    for model, trt_smr in pairs:
-        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
-        if oq.maximum_rupture_depth:
+    if oq.maximum_rupture_depth:
+        # drop the ruptures too deep for their TRT from filrups itself, so
+        # that filtered_ruptures and the per-pair arrays stay consistent
+        keep = numpy.ones(len(filrups), bool)
+        hypo_deps = filrups['hypo'][:, 2]
+        for model, trt_smr in pairs:
+            ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
             amodel = model.decode('ascii')
             trt_array = trts.get(amodel, trts.get('???'))
             trt = trt_array[trt_smr // TWO24]
             maxdep = getdefault(oq.maximum_rupture_depth, trt)
-            ok &= hypo_deps <= maxdep
+            keep[ok & (hypo_deps > maxdep)] = False
+        filrups = filrups[keep]
+    for model, trt_smr in pairs:
+        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
@@ -995,12 +1004,12 @@ class EventBasedCalculator(base.HazardCalculator):
         sec_imts = self.oqparam.sec_imts
         with sav_mon:
             gmfdata = result.pop('gmfdata')
+            times = result.pop('times', ())
+            if len(times):
+                hdf5.extend(self.datastore['ruptimes'], times)
             if len(gmfdata):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
-                times = result.pop('times', ())
-                if len(times):
-                    hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
@@ -1241,8 +1250,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:
             maxsize = int(config.memory.gmf_data_rows)
-            if size > maxsize:
-                msg = 'gmf_data has {:_d} rows > {:_d}'.format(size, maxsize)
+            nrows = len(self.datastore['gmf_data/sid'])  # NB: not bytes
+            if nrows > maxsize:
+                msg = 'gmf_data has {:_d} rows > {:_d}'.format(nrows, maxsize)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             logging.info('Building hazard curves and possibly maps')
             build_hcurves(self.datastore)
@@ -1262,7 +1272,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     all = slice(None)
                     for im in oq.imtls:
                         cl_mean_curves = get_mean_curve(
-                            self.datastore, im, all)
+                            self.cl.datastore, im, all)
                         eb_mean_curves = get_mean_curve(
                             self.datastore, im, all)
                         self.rdiff, index = util.max_rel_diff_index(

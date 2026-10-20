@@ -19,6 +19,7 @@
 import os
 import sys
 import unittest
+from types import SimpleNamespace
 import numpy
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
@@ -29,6 +30,23 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import view, text_table
 from openquake.calculators.checkers import assert_close
+from openquake.calculators.event_based_damage import DamageCalculator
+
+
+def test_fix_no_damage():
+    # tiny negative damages are zeroed, clearly negative ones are an error
+    fake = SimpleNamespace(
+        R=1, crmodel=SimpleNamespace(damage_states=['no_damage', 'ds1']),
+        assetcol={'value-number': numpy.array([10., 10.])})
+    prc = SimpleNamespace(num_events=numpy.array([1]))
+    fake.dmgcsq = numpy.zeros((1, 2, 1, 1, 2), numpy.float32)  # P,A,R,L,Dc
+    fake.dmgcsq[0, 0, 0, 0, 1] = -1E-9
+    DamageCalculator._fix_no_damage(fake, prc)
+    numpy.testing.assert_equal(fake.dmgcsq[0, 0, 0, 0, 1], 0)
+
+    fake.dmgcsq[0, 0, 0, 0, 1] = -1E-3
+    with unittest.TestCase().assertRaises(AssertionError):
+        DamageCalculator._fix_no_damage(fake, prc)
 
 
 class EventBasedDamageTestCase(CalculatorTestCase):
