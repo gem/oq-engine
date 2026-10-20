@@ -105,6 +105,20 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
         self.assertIn('All sources were discarded', str(ctx.exception))
 
+    def test_case_01_quantile_maps_without_mean(self):
+        # Exercise the few-sites path, including the hazard-map checks.
+        self.run_calc(case_01.__file__, 'job.ini',
+                      mean_hazard_curves='false', quantile_hazard_curves='0.5',
+                      poes='0.01', max_sites_disagg='10')
+        self.assertEqual(list(self.calc.oqparam.hazard_stats()),
+                         ['quantile-0.5'])
+        ds = self.calc.datastore
+        # With one realization, its curves/maps equal the median outputs.
+        for kind in ('hcurves', 'hmaps'):
+            quantiles = ds.sel(kind + '-stats', stat='quantile-0.5')
+            ae(quantiles, ds[kind + '-rlzs'][:])
+            self.assertGreater(quantiles.max(), 0)
+
     def test_case_02(self):
         # test for Lanzano2019 with vs30 > 1500
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_02.__file__)
@@ -628,6 +642,22 @@ class ClassicalTestCase(CalculatorTestCase):
                       "(SA) for the GSIM [SiMidorikawa1999Asc]",
                       str(ctx.exception))
 
+    def test_case_39_disagg_by_src(self):
+        # Source contributions must use the weights of each IMT, including
+        # GSIMs with zero default weight and nonzero weight for one IMT.
+        for site_model in ('site_model.csv', 'sites_dbs.csv'):
+            with self.subTest(site_model=site_model):
+                self.run_calc(
+                    case_39.__file__, 'job.ini', disagg_by_src='true',
+                    site_model_file=site_model, investigation_time='2')
+                ds = self.calc.datastore
+                got = ds['mean_rates_by_src/array'][:].sum(axis=3)
+                itime = self.calc.oqparam.investigation_time
+                exp = calc.disagg.to_rates(
+                    ds['hcurves-stats'][:, 0]) / itime
+                aac(got, exp, atol=1E-7, rtol=1E-4)
+                self.assertGreater(got[:, 0].max(), 0)
+
     def test_case_40(self):
         # NGA East
         self.assert_curves_ok([
@@ -1082,6 +1112,22 @@ class ClassicalTestCase(CalculatorTestCase):
         dbm = view('disagg:Dist', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_dist.org', fname)
+
+    def test_case_78_mfd_variants(self):
+        # Negative-binomial MFD variants need their own occurrence PMFs.
+        # In a previous refactoring the fast path reused them, giving the
+        # same curves for the two realizations.
+        kw = dict(source_model_logic_tree_file='source_logic_tree_mfd.xml',
+                  ps_grid_spacing='0', individual_rlzs='true', poes='')
+        self.run_calc(case_78.__file__, 'job.ini', **kw)
+        curves = self.calc.datastore['hcurves-rlzs'][:]
+        # Compute each variant separately as a reference for the fast path.
+        with mock.patch('openquake.calculators.classical._make_results',
+                        return_value=None):
+            self.run_calc(case_78.__file__, 'job.ini', **kw)
+        reference = self.calc.datastore['hcurves-rlzs'][:]
+        aac(curves, reference, rtol=1E-5)
+        self.assertFalse(numpy.allclose(curves[:, 0], curves[:, 1]))
 
     def test_case_80(self):
         # New Madrid cluster with rup_mutex
