@@ -244,6 +244,14 @@ def ceus2020_site_term(
         The reference Vs30 value
     :param ref_pga:
         The reference PGA value computed for a vs30 corresponding to `ref_vs30`
+    :param usgs:
+        If True, use the US 2023 NSHM variant of the site term: the USGS
+        F760 coefficients in the linear Stewart et al. (2020) scaling AND
+        the US 2023 NSHM form of the Hashash et al. (2020) nonlinear
+        term (0.5*f4 + 0.5*f4_mod averaging in use since the US 2023
+        NSHM release, plus the Vs30 floor at 200 m/s and PGA-rock cap at
+        1.0 g adopted by the US 2023 NSHM revisions in Powers et al.
+        (Earthquake Spectra, 2026)).
     """
     if not hasattr(ref_pga, '__len__'):
         ref_pga = np.array([ref_pga])
@@ -253,7 +261,8 @@ def ceus2020_site_term(
     slin = stewart2020_linear_scaling(imt, ctx.vs30, wimp, usgs)
 
     # Compute the nonlinear term
-    snlin = hashash2020_non_linear_scaling(imt, ctx.vs30, ref_pga, ref_vs30)
+    snlin = hashash2020_non_linear_scaling(
+        imt, ctx.vs30, ref_pga, ref_vs30, usgs=usgs)
 
     # Final mean
     me[:] += (slin + snlin)

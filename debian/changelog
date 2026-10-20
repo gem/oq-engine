@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Updated the US NSHM variant of the CEUS non-linear site term (Hashash
+    et al. 2020) to include the Vs30 floor (200 m/s) and rock PGA cap (1 g)
+    as described in the Powers et al. (2026) EQ spectra paper. 
+
   [Michele Simionato]
   * Bug fix: with interdependencies analysis and several loss types, the
     total rows of the non-operational assets were summed over all the loss
