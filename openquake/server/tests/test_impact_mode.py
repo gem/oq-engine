@@ -545,7 +545,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          'local_timestamp', 'time_event', 'dip', 'strike',
                          'maximum_distance', 'truncation_level',
                          'number_of_ground_motion_fields',
-                         'asset_hazard_distance',
+                         'asset_hazard_distance', 'region_grid_spacing',
                          'ses_seed', 'station_data_file_from_usgs',
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
