@@ -384,7 +384,8 @@ class CountryImpactReportBuilder:
                 x_limits=self.x_limits,
                 y_limits=self.y_limits,
                 basemap_path=self.basemap_path,
-                epicenter=self.hypocenter
+                epicenter=self.hypocenter,
+                scale_bar=True
             )
             fig, ax = plot_variable(
                 aggloss_df, admin_boundaries, label,
