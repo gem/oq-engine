@@ -120,6 +120,21 @@ def _dframe(dd_dic, csqidx, loss_types):
     return pandas.DataFrame(dic)
 
 
+# set the total rows (the ones with the maximum agg_id) to the sums of the
+# asset rows with the same event_id and loss_id; the child_df is modified
+def _fix_totals(child_df):
+    total_agg_id = child_df.agg_id.max()
+    asset_mask = (child_df.agg_id != total_agg_id).to_numpy()
+    total_mask = (child_df.agg_id == total_agg_id).to_numpy()
+    keys = pandas.MultiIndex.from_arrays(
+        [child_df.index[total_mask], child_df.loss_id[total_mask]])
+    for col in ['non_operational_inter', 'non_operational']:
+        sums = child_df[asset_mask].groupby(
+            ['event_id', 'loss_id'])[col].sum()
+        child_df.loc[total_mask, col] = sums.reindex(
+            keys, fill_value=0).to_numpy()
+
+
 @base.calculators.add('event_based_damage', 'scenario_damage')
 class DamageCalculator(EventBasedRiskCalculator):
     """
@@ -326,29 +341,8 @@ class DamageCalculator(EventBasedRiskCalculator):
             child_df['non_operational_orig'].to_numpy(),
             child_df['non_operational_inter'].to_numpy())
 
-        # Correct the total values per event
-        total_agg_id = child_df.agg_id.max()
-        asset_mask = child_df.agg_id != total_agg_id
-        total_mask = child_df.agg_id == total_agg_id
-
-        inter_totals = (
-            child_df.loc[asset_mask]
-            .groupby(level='event_id')['non_operational_inter']
-            .sum()
-        )
-        nonop_totals = (
-            child_df.loc[asset_mask]
-            .groupby(level='event_id')['non_operational']
-            .sum()
-        )
-
-        child_df.loc[total_mask, 'non_operational_inter'] = (
-            child_df.loc[total_mask].index.map(inter_totals)
-        )
-
-        child_df.loc[total_mask, 'non_operational'] = (
-            child_df.loc[total_mask].index.map(nonop_totals)
-        )
+        # Correct the total values per event and loss type
+        _fix_totals(child_df)
 
         # Storing new columns in the dstore
         self.datastore['risk_by_event/non_operational'][:] = (
