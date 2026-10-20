@@ -2036,7 +2036,8 @@ def view_log_median_spectrum(token, dstore):
     periods = [imt.period for imt in dstore['oqparam'].imt_periods()]
     res = numpy.zeros(len(periods), dt('period value'))
     res['period'] = periods
-    res['value'] = dset[:, sid, :, 0].sum(axis=0)
+    # the median spectrum is the 'mea' row, in log space
+    res['value'] = dset[:, sid, 0, :, 0].sum(axis=0)
     return res
 
 

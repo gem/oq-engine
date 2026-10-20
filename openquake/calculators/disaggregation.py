@@ -230,9 +230,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                         # reshape mean (N, M, L1) -> (N, L) with N=1
                         mean = mgetter.get_fast_mean().array.reshape((1, -1))
                     else:
+                        # build_stat_curve returns an array of shape (L, 1)
                         mean = getters.build_stat_curve(
                             hcurve, oq.imtls, stats.mean_curve,
-                            full_lt.gsim_lt.wget)
+                            full_lt.gsim_lt.wget).reshape((1, -1))
                     # mean has shape (1, L)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]

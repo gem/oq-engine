@@ -204,8 +204,10 @@ def main(dstore, csm):
             median_spectra[grp_id, site_id] = out
             tot_w[site_id] += out[2]
     dstore.create_dset("median_spectra", median_spectra)
+    # NB: the third axis has 3 elements, i.e. <mea>, <sig> and the total
+    # weight <wei>; the tau values are not stored
     dstore.set_shape_descr("median_spectra", grp_id=Gr,
-                           site_id=N, kind=['mea', 'sig', 'tau', 'wei'],
+                           site_id=N, kind=['mea', 'sig', 'wei'],
                            period=periods, poe=oq.poes)
 
     # sanity check on the weights
