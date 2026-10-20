@@ -599,6 +599,12 @@ def fast_mean(pgetter, monitor=parallel.Monitor()):
         # computing the hmaps is very fast too
         pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
             pmap_by_kind['hcurves-stats'], pgetter.imtls, pgetter.poes)
+    if pgetter.R == 1:
+        # Individual outputs are always created for a single realization,
+        # whose curves and maps coincide with the mean.
+        pmap_by_kind['hcurves-rlzs'] = pmap_by_kind['hcurves-stats']
+        if pgetter.poes:
+            pmap_by_kind['hmaps-rlzs'] = pmap_by_kind['hmaps-stats']
     return pmap_by_kind
 
 
@@ -1254,7 +1260,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)
 
-        if 'hmaps-stats' in self.datastore and not oq.tile_spec:
+        # Plotting and the stability check below both need mean outputs.
+        if ('mean' in hstats and 'hmaps-stats' in self.datastore
+                and not oq.tile_spec):
             self.plot_hmaps()
 
             # check numerical stability of the hmaps around the poes
