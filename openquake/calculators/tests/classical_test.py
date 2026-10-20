@@ -628,6 +628,22 @@ class ClassicalTestCase(CalculatorTestCase):
                       "(SA) for the GSIM [SiMidorikawa1999Asc]",
                       str(ctx.exception))
 
+    def test_case_39_disagg_by_src(self):
+        # Source contributions must use the weights of each IMT, including
+        # GSIMs with zero default weight and nonzero weight for one IMT.
+        for site_model in ('site_model.csv', 'sites_dbs.csv'):
+            with self.subTest(site_model=site_model):
+                self.run_calc(
+                    case_39.__file__, 'job.ini', disagg_by_src='true',
+                    site_model_file=site_model, investigation_time='2')
+                ds = self.calc.datastore
+                got = ds['mean_rates_by_src/array'][:].sum(axis=3)
+                itime = self.calc.oqparam.investigation_time
+                exp = calc.disagg.to_rates(
+                    ds['hcurves-stats'][:, 0]) / itime
+                aac(got, exp, atol=1E-7, rtol=1E-4)
+                self.assertGreater(got[:, 0].max(), 0)
+
     def test_case_40(self):
         # NGA East
         self.assert_curves_ok([
