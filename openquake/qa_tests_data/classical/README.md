@@ -36,6 +36,7 @@
 |case\_37|Christchurch GMPEs|
 |case\_38|Example with custom site id and BCHydro GMPEs|
 |case\_39|Test checking of IMT-dependent weights with unsupported IMTs|
+|case\_39\_disagg\_by\_src|Test disagg_by_src with IMT-dependent weights|
 |case\_40|NGAEast GMPEs|
 |case\_41|SERA Site Amplification Models including EC8 Site Classes and Geology|
 |case\_42|Split/filter a long complex fault source with maxdist=1000 km|
@@ -70,6 +71,7 @@
 |case\_76|Tests for Canada SHM6|
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
+|case\_78\_mfd\_variants|Tests NegativeBinomialTOM sources with MFD variants in a logic tree|
 |case\_80|Tests New Madrid cluster with rup\_mutex|
 |case\_81|Tests a Tabular GMM and a non-tabular GMM both with extra parameters specified within mixture models|
 |case\_82|tests two mps, only one with reqv that should collapse points|
