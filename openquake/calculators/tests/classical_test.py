@@ -32,7 +32,7 @@ from openquake.calculators.classical import ClassicalCalculator
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
     case_09, case_10, case_11, case_12, case_13, case_18, case_22, case_23,
@@ -44,7 +44,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95, case_96)
+    case_95, case_96, case_97)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -1326,6 +1326,49 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_96.__file__, 'job.ini')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+
+    def test_case_97(self):
+        # the logic tree has IMT-dependent weights for PGA and SA(1.0),
+        # i.e. IMTs which are not a prefix of the IMTs of the calculation
+        # (PGA, SA(0.2), SA(1.0)); the weights of each IMT must be taken
+        # from the right column of the logic tree
+        self.run_calc(case_97.__file__, 'job.ini')
+        fast = self.calc.datastore['hcurves-stats'][:, 0]
+
+        # the test is meaningful only if the weights of the logic tree are
+        # IMT-dependent and are not aligned with the IMTs of the calculation
+        full_lt = self.calc.datastore['full_lt'].init()
+        self.assertEqual(full_lt.gsim_lt.wget.imti,
+                         {'PGA': 0, 'SA(1.0)': 1, 'weight': 2})
+        self.assertEqual(list(self.calc.oqparam.imtls),
+                         ['PGA', 'SA(0.2)', 'SA(1.0)'])
+
+        # the fastmean algorithm and the standard algorithm must agree
+        with no_fastmean():
+            self.run_calc(case_97.__file__, 'job.ini')
+        slow = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(fast, slow, rtol=1E-6)
+
+    def test_97_fastmean_view(self):
+        # the fastmean view must return the mean hazard curve of the site
+        self.run_calc(case_97.__file__, 'job.ini')
+        ds = self.calc.datastore
+        arr = view('fastmean:0', ds)
+        mean = ds['hcurves-stats'][0, 0]  # the first stat is the mean
+        for m, imt in enumerate(ds['oqparam'].imtls):
+            aac(arr[imt], mean[m], rtol=1E-5)
+
+    def test_97_mcurves(self):
+        # calc_mcurves must use the IMT-dependent weights, like the
+        # standard algorithm does
+        self.run_calc(case_97.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        oq.use_rates = True
+        hcurves, _ = calc.mean_rates.calc_mcurves(
+            self.calc.csm.src_groups, self.calc.sitecol,
+            self.calc.full_lt, oq)
+        mean = self.calc.datastore['hcurves-stats'][0, 0]
+        aac(hcurves[0], mean, rtol=6E-5)
 
 
 class FakeDatastoreCalculator:

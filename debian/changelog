@@ -4,6 +4,27 @@
     as described in the Powers et al. (2026) EQ spectra paper. 
 
   [Michele Simionato]
+  * Internal: the `calc_mcurves` function ignored the IMT-dependent
+    logic-tree weights, so its mean hazard curves could be wrong for the
+    IMTs with IMT-dependent weights
+  * Internal: fixed a crash in the `fastmean` view, which used a stale MapGetter
+    interface
+  * Bug fix: in classical calculations with IMT-dependent logic-tree weights
+    the fastmean algorithm was using the weights of the wrong IMT, so the
+    mean hazard curves could be wrong by up to 30% (the standard algorithm
+    was giving the correct values)
+  * Bug fix: the fastmean algorithm was converting the rates into
+    probabilities in single precision, losing precision for small rates,
+    i.e. for long return periods
+  * Bug fix: the disaggregation was reporting the realizations in the
+    reverse order of their distance to the mean curve, i.e. the realization
+    closest to the mean was the last one
+  * Bug fix: the mean rate distribution was computed with the weights of
+    the wrong gsim when the source groups were not in the order of the
+    gids
+  * Internal: fixed the shape description of the `median_spectra` dataset, which
+    was declaring 4 kinds for an axis of 3 elements (and mislabeling the total
+    weight as `tau`)
   * Bug fix: with interdependencies analysis and several loss types, the
     total rows of the non-operational assets were summed over all the loss
     types, so they were multiplied by the number of loss types

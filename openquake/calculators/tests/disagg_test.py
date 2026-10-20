@@ -21,7 +21,10 @@ from unittest import mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
+from openquake.hazardlib import stats
 from openquake.hazardlib.rmap_maker import read_ctx_by_grp
+from openquake.commonlib.util import log as ulog
+from openquake.calculators import getters
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -146,6 +149,32 @@ class DisaggregationTestCase(CalculatorTestCase):
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
+    def test_case_6_best_rlzs(self):
+        # the realizations reported by the disaggregation must be sorted
+        # by the distance of their hazard curve to the mean curve
+        self.run_calc(case_6.__file__, 'job.ini')
+        ds = self.calc.datastore
+        best = ds['best_rlzs'][:]
+        oq = ds['oqparam']
+        full_lt = ds['full_lt'].init()
+        mg = getters.map_getters(ds, full_lt, oq)
+        for sid in range(len(ds['sitecol'])):
+            hcurve = mg[sid].get_hcurve(sid)  # shape (L, R)
+            mean = getters.build_stat_curve(
+                hcurve, oq.imtls, stats.mean_curve,
+                full_lt.gsim_lt.wget).ravel()
+            dists = []
+            for r in range(hcurve.shape[1]):
+                # the distance is computed in log space
+                diff = ulog(hcurve[:, r], 1E-12) - ulog(mean, 1E-12)
+                dists.append(numpy.sqrt((diff * diff).sum()))
+            # the realizations must be sorted by increasing distance
+            got = [dists[r] for r in best[sid]]
+            self.assertEqual(got, sorted(got))
+        # the realization with the largest weight (0.4) is the closest
+        # to the mean, so it must come first
+        self.assertEqual(best[0].tolist(), [0, 1, 2])
 
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site

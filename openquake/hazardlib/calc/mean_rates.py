@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers, get_unique_inverse
 
 F32 = numpy.float32
 CUTOFF = 1E-12
@@ -49,6 +49,16 @@ def to_probs(rates, itime=1):
     array([0.8])
     """
     return 1. - numpy.exp(- rates * itime)
+
+
+def get_gweights(src_groups, full_lt):
+    """
+    :returns: the weights of the gids of the rates, with shape (Gt, M+1),
+        numbered as in get_cmakers, i.e. with the same unique trt_smrs
+    """
+    all_trt_smrs = [sg[0].trt_smrs for sg in src_groups]
+    unique_trt_smrs, _inverse = get_unique_inverse(all_trt_smrs)
+    return full_lt.g_weights(unique_trt_smrs)
 
 
 def get_rmap(src_groups, full_lt, sitecol, oq):
@@ -93,9 +103,11 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     """
     assert oq.use_rates
     rmap, cmakers = get_rmap(src_groups, full_lt, sitecol, oq)
-    gweights = numpy.concatenate([cm.wei for cm in cmakers])
-    rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
-    return to_probs(rates), gweights
+    gweights = get_gweights(src_groups, full_lt)  # shape (Gt, M+1)
+    rates = calc_mean_rates(rmap, gweights, full_lt.gsim_lt.wget, oq.imtls)
+    # the default weights are returned, as in the case without IMT-dependent
+    # weights, while the rates are computed with the IMT-dependent ones
+    return to_probs(rates), gweights[:, -1]
 
 
 # tested in run-demos.sh
@@ -120,7 +132,7 @@ def main(job_ini):
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
     rmap, cmakers = get_rmap(src_groups, csm.full_lt, sitecol, oq)
-    gws = numpy.concatenate([cm.wei for cm in cmakers])
+    gws = get_gweights(src_groups, csm.full_lt)
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())

@@ -64,6 +64,23 @@ def combine_mrds(acc, g_weights):
     return out
 
 
+def get_gid_weights(cmakers):
+    """
+    :param cmakers: a list of ContextMaker instances
+    :returns: an array of weights indexed by the global gid
+
+    NB: the weights of a cmaker are ordered by the gsim_idx of the
+    cmaker, i.e. by the global gids, and not necessarily by the gid
+    itself, so they cannot be concatenated and indexed by gid
+    """
+    gtot = 1 + max(cm.gsim_idx.max() for cm in cmakers)
+    gweights = numpy.zeros(gtot)
+    for cm in cmakers:
+        for w, g in zip(cm.wei, cm.gsim_idx):
+            gweights[g] = w
+    return gweights
+
+
 def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
          method='indirect'):
     """
@@ -91,5 +108,4 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
                      meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    gweights = numpy.concatenate([cm.wei for cm in cmakers])
-    mrd[:] = combine_mrds(acc, gweights)
+    mrd[:] = combine_mrds(acc, get_gid_weights(cmakers))
