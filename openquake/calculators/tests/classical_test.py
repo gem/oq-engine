@@ -1349,6 +1349,27 @@ class ClassicalTestCase(CalculatorTestCase):
         slow = self.calc.datastore['hcurves-stats'][:, 0]
         aac(fast, slow, rtol=1E-6)
 
+    def test_97_fastmean_view(self):
+        # the fastmean view must return the mean hazard curve of the site
+        self.run_calc(case_97.__file__, 'job.ini')
+        ds = self.calc.datastore
+        arr = view('fastmean:0', ds)
+        mean = ds['hcurves-stats'][0, 0]  # the first stat is the mean
+        for m, imt in enumerate(ds['oqparam'].imtls):
+            aac(arr[imt], mean[m], rtol=1E-5)
+
+    def test_97_mcurves(self):
+        # calc_mcurves must use the IMT-dependent weights, like the
+        # standard algorithm does
+        self.run_calc(case_97.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        oq.use_rates = True
+        hcurves, _ = calc.mean_rates.calc_mcurves(
+            self.calc.csm.src_groups, self.calc.sitecol,
+            self.calc.full_lt, oq)
+        mean = self.calc.datastore['hcurves-stats'][0, 0]
+        aac(hcurves[0], mean, rtol=6E-5)
+
 
 class FakeDatastoreCalculator:
     """

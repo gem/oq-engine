@@ -47,7 +47,7 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
-    get_ebrupture, MapGetter, get_rmap_gb)
+    get_ebrupture, map_getters, get_rmap_gb)
 from openquake.calculators.base import get_weights
 from openquake.calculators.extract import extract
 
@@ -1972,18 +1972,15 @@ def view_fastmean(token, dstore):
     """
     site_id = int(token.split(':')[1])
     oq = dstore['oqparam']
-    ws = dstore['weights'][:]
-    gweights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
-    slicedic = AccumDict(accum=[])
-    for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
-        slicedic[idx].append((start, stop))
+    if not oq.fastmean:
+        raise ValueError('The fastmean view requires the fastmean algorithm')
     M = len(oq.imtls)
     L1 = oq.imtls.size // M
     array = numpy.zeros(L1, oq.imt_dt(F32))
-    for slices in slicedic.values():
-        pgetter = MapGetter(dstore.filename, gweights, len(ws), slices, oq)
-        pgetter.init()
-        pmap = pgetter.get_fast_mean(gweights)
+    # the getters know the IMT-dependent weights, see map_getters
+    for mgetter in map_getters(dstore, oq=oq):
+        mgetter.init()
+        pmap = mgetter.get_fast_mean()
         for idx, sid in enumerate(pmap.sids):
             if sid == site_id:
                 for m, imt in enumerate(oq.imtls):
