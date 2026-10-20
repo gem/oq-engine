@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed mean_rates_by_src in classical calculations with IMT-dependent
+    logic-tree weights: source contributions now use each IMT's weights
   * Internal: the `[dbserver]` section of openquake.cfg has been renamed
     to `[server]`, the `file` key is now `dbfile` and the unused `port`
     key has been removed. Update existing configuration files accordingly.

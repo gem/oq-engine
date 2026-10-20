@@ -701,13 +701,17 @@ def make_hmap_png(hmap, lons, lats):
 
 
 # used in in disagg_by_src
-def get_rates(rmap, M, itime):
+def get_rates(rmap, gweights, itime):
     """
     :param rmap: a MapArray
+    :param gweights: weights of shape (Gt, M), in the order of oq.imtls
+    :param itime: investigation time used to convert to annual rates
     :returns: an array of rates of shape (N, M, L1)
     """
-    rates = rmap.array @ rmap.wei / itime
-    return rates.reshape((len(rates), M, -1))
+    weights = gweights[rmap.gid]
+    G, M = weights.shape
+    rates = rmap.array.reshape((len(rmap.array), M, -1, G))
+    return numpy.einsum('nmlg,gm->nml', rates, weights) / itime
 
 
 def store_mean_rates_by_src(dstore, srcidx, dic):
@@ -769,8 +773,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if source_id:
             # accumulate the rates for the given source
             oq = self.oqparam
-            M = len(oq.imtls)
-            acc[source_id] += get_rates(rmap, M, oq.investigation_time)
+            acc[source_id] += get_rates(
+                rmap, self.gweights, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
@@ -848,6 +852,14 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if oq.disagg_by_src:
+            # disagg_by_src uses a single site label, checked in _pre_execute.
+            # Select each IMT's weights, including the default for other IMTs.
+            ilabel = self.sitecol.ilabel[0] if oq.site_labels else 0
+            full_lt = list(full_lt_by_label.values())[ilabel]
+            weights = full_lt.g_weights(core)
+            wget = full_lt.gsim_lt.wget
+            self.gweights = numpy.array(
+                [wget(weights, imt) for imt in oq.imtls]).T
             M = len(oq.imtls)
             L1 = oq.imtls.size // M
             sources = self.csm.get_basenames()
