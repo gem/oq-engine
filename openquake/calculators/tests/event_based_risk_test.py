@@ -19,7 +19,9 @@ import os
 import sys
 from unittest import mock, SkipTest
 import numpy
+import pandas
 
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
@@ -27,6 +29,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
+from openquake.calculators.event_based_risk import update
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -47,6 +50,15 @@ def aae(data, expected):
                 numpy.testing.assert_equal(got, exp)
             else:
                 numpy.testing.assert_almost_equal(got, numpy.float32(exp))
+
+
+def test_update_single_realization():
+    # all the events are in realization 1: the losses must go there
+    loss3 = {'aids': [], 'bids': [], 'loss': []}
+    alt = pandas.DataFrame(dict(aid=[0, 1], loss=[1., 2.], eid=[0, 1]))
+    rlz_id = numpy.array([1, 1], numpy.uint32)
+    update(loss3, 0, 2, alt, rlz_id, False)  # X=2, lti=0
+    numpy.testing.assert_equal(loss3['bids'][0], [2, 2])  # rlz*X + lti
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -200,6 +212,18 @@ agg_id
         self.run_calc(case_1f.__file__, 'job.ini', concurrent_tasks='2')
         loss2 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss2)
+
+    def test_avg_losses_too_big(self):
+        # the size check must use the R realizations actually transferred
+        with mock.patch.dict(config.memory, {'avg_losses_max': '1'}):
+            with self.assertRaisesRegex(ValueError, 'collect_rlzs'):
+                self.run_calc(case_1f.__file__, 'job.ini',
+                              collect_rlzs='false')
+
+    def test_ruptimes(self):
+        # the times of the ruptures must be saved also by ebrisk
+        self.run_calc(case_1f.__file__, 'job.ini')
+        self.assertGreater(len(self.calc.datastore['ruptimes']), 0)
 
     def test_case_1g(self):
         # vulnerability function with PMF

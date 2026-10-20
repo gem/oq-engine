@@ -25,6 +25,7 @@ import numpy
 import pandas
 import numpy.testing
 
+from openquake.baselib import config
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
 from openquake.hazardlib import InvalidFile
@@ -49,6 +50,17 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
+
+
+def test_merge_dics_times():
+    # the times of a rupture are in its last batch, which can be empty
+    d1 = dict(gmfdata=pandas.DataFrame(dict(sid=[0])),
+              sig_eps=numpy.zeros(1))
+    d2 = dict(gmfdata=pandas.DataFrame(dict(sid=[])),
+              sig_eps=numpy.zeros(0),
+              times=numpy.array([(1, 0., 2., 1., 0)], event_based.rup_dt))
+    out = event_based._merge_dics([d1, d2])
+    numpy.testing.assert_equal(out['times']['rup_id'], [1])
 
 
 def test_joint_memory_estimates():
@@ -263,6 +275,38 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1_from_ses(self):
         self.run_calc(case_1.__file__, 'job_from_ses.ini')
         self.assertEqual(len(self.calc.datastore['events']), 4906)
+
+    def test_depth_filter(self):
+        # case_1 has ruptures at 4, 4, 5, 5 km: the cap removes the last two
+        self.run_calc(case_1.__file__, 'job.ini',
+                      ses_per_logic_tree_path='100',
+                      maximum_rupture_depth="{'default': 4.5}")
+        rups = self.calc.datastore['ruptures'][:]
+        deep = rups['id'][rups['hypo'][:, 2] > 4.5]
+        self.assertEqual(len(deep), 2)
+        events = self.calc.datastore['events'][:]
+        gmf_eids = numpy.unique(self.calc.datastore['gmf_data/eid'][:])
+        ev = events[numpy.isin(events['id'], gmf_eids)]
+        self.assertGreater(len(ev), 0)
+        self.assertFalse(numpy.isin(ev['rup_id'], deep).any())
+
+    def test_gmf_rows_limit(self):
+        # gmf_data_rows is a limit on rows, not on bytes
+        kw = dict(ses_per_logic_tree_path='100')
+        self.run_calc(case_1.__file__, 'job.ini', **kw)
+        nrows = len(self.calc.datastore['gmf_data/sid'])
+        with patch.dict(config.memory, {'gmf_data_rows': str(nrows)}):
+            self.run_calc(case_1.__file__, 'job.ini', **kw)  # no error
+        with patch.dict(config.memory, {'gmf_data_rows': str(nrows - 1)}):
+            with self.assertRaisesRegex(RuntimeError, 'gmf_data has'):
+                self.run_calc(case_1.__file__, 'job.ini', **kw)
+
+    def test_compare_with_classical(self):
+        # the classical mean curves must come from the classical datastore
+        self.run_calc(case_1.__file__, 'job.ini',
+                      ses_per_logic_tree_path='100',
+                      compare_with_classical='true')
+        self.assertGreater(self.calc.rdiff, 0)
 
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
