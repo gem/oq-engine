@@ -1,6 +1,7 @@
 |Test ID|Description|
 |-|-|
 |case\_01|Test .npz export, raises error when all source are discarded and test wrong .ini|
+|case\_01\_quantile\_maps\_without\_mean|Test quantile hazard maps without the mean, with few sites|
 |case\_02|Test reqv, 1 rlz, 1 site|
 |case\_03|Test minimum\_magnitude|
 |case\_04|Test UHS|
