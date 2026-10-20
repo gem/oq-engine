@@ -54,7 +54,7 @@ class ImpactParam:
     description: str = None
     notes: str = None
     make_impact_reports: bool = False
-    region_grid_spacing: float = 10  # km, mandatory in impact mode
+    region_grid_spacing: float = 1  # km, mandatory in impact mode
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -216,7 +216,7 @@ IMPACT_FORM_DEFAULTS = {
     'truncation_level': '3',
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
-    'region_grid_spacing': '10',
+    'region_grid_spacing': '1',
     'ses_seed': '42',
     'station_data_file_from_usgs': '',
     'station_data_file': '',

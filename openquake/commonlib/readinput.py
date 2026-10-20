@@ -569,7 +569,7 @@ def get_mesh_exp(oqparam, h5=None):
     """
     exposure = get_exposure(oqparam, h5)
     if oqparam.impact:
-        # the sites are a regular UTM grid enclosing the site model around
+        # the sites are a regular grid enclosing the site model around
         # the rupture, as required by circulant embedding; the site model
         # parameters are associated to the grid in base.py
         sm = get_site_model(oqparam, h5)

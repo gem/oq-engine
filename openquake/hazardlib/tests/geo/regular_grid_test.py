@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""Deterministic UTM spacing, coordinate precision and allocation checks."""
+"""Deterministic spacing, coordinate precision and allocation checks."""
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -26,11 +26,11 @@ from openquake.hazardlib.correlation_models.circulant_embedding import (
     RegularGridLayout)
 
 
-@pytest.mark.parametrize('lons,lats,crs', [
-    ([12.2, 12.3], [42, 41.94], 32633),
-    ([174.5, 174.8], [-41.2, -41], 32760)])
+@pytest.mark.parametrize('lons,lats', [
+    ([12.2, 12.3], [42, 41.94]),
+    ([174.5, 174.8], [-41.2, -41])])
 @pytest.mark.parametrize('spacing', [0.5, 1, 2])
-def test_spacing(lons, lats, crs, spacing):
+def test_spacing(lons, lats, spacing):
     mesh = Mesh(numpy.array(lons), numpy.array(lats))
     grid = regular_grid(mesh, spacing)
     assert grid.lons.dtype == numpy.float64
@@ -38,11 +38,11 @@ def test_spacing(lons, lats, crs, spacing):
     numpy.testing.assert_array_equal(grid.lons, again.lons)
     numpy.testing.assert_array_equal(grid.lats, again.lats)
     layout = RegularGridLayout.from_sites(grid)
-    assert layout.crs == crs
+    assert layout.crs.startswith('+proj=tmerc')
     assert len(grid.lons) == numpy.prod(layout.grid_shape)
     numpy.testing.assert_array_equal(
         layout.site_indices, numpy.arange(len(grid.lons)))
-    x, y = Transformer.from_crs(4326, crs, always_xy=True).transform(
+    x, y = Transformer.from_crs(4326, layout.crs, always_xy=True).transform(
         grid.lons, grid.lats)
     x = numpy.asarray(x).reshape(layout.grid_shape)
     y = numpy.asarray(y).reshape(layout.grid_shape)
@@ -100,12 +100,15 @@ def test_limits(spacing, padding):
         allocate.assert_not_called()
 
 
-def test_zone_change():
-    # An asymmetric extent can select a different zone than its input median.
-    mesh = Mesh(numpy.array([5.8, 5.85, 6.4]),
-                numpy.array([44, 44.01, 44.02]))
-    with pytest.raises(ValueError, match='different UTM zone'):
-        regular_grid(mesh, 1)
+def test_zone_boundary():
+    # An extent crossing the 36E boundary between UTM zones 36 and 37
+    mesh = Mesh(numpy.array([35.5, 36.5, 37.5, 36.0]),
+                numpy.array([44, 44.2, 44.1, 44.4]))
+    grid = regular_grid(mesh, 5)
+    layout = RegularGridLayout.from_sites(grid)
+    assert len(grid.lons) == numpy.prod(layout.grid_shape)
+    numpy.testing.assert_array_equal(
+        layout.site_indices, numpy.arange(len(grid.lons)))
 
 
 def test_rounding():
