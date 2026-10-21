@@ -126,7 +126,7 @@ class ImpactParam:
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
         _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
-            oq, h5={'performance_data': hdf5.FakeDataset()})
+            oq, h5=hdf5.FakeH5())
         id0s = numpy.unique(assetcol['ID_0'])
         countries = set(assetcol.tagcol.ID_0[i] for i in id0s)
         tmap_keys = get_tmap_keys(self.exposure_hdf5, countries)

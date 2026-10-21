@@ -209,6 +209,8 @@ class PerfBuffer(object):
     by a Starmap with perf='memory', so that the datastore is not written
     while the tasks run; the rows are saved in the datastore at the end
     """
+    mode = 'w'  # so that the Monitor saves its rows
+
     def __init__(self):
         self.tables = collections.defaultdict(list)
 
@@ -395,9 +397,7 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if (not isinstance(h5, PerfBuffer)
-                and getattr(h5, 'mode', 'r') == 'r'):
-            # in ImpactParam h5 is replaced with a dictionary
+        if h5.mode == 'r':
             return
         data = self.get_data()
         if len(data):

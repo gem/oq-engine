@@ -130,6 +130,16 @@ class FakeDataset:
         pass
 
 
+class FakeH5(dict):
+    """
+    Cache used when there is no datastore, with a null performance table
+    """
+    mode = 'w'
+
+    def __init__(self):
+        super().__init__(performance_data=FakeDataset())
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
