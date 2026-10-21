@@ -48,7 +48,7 @@ def copy_from_templates_if_needed(tmpldir, ext):
 
 
 def _download_file(url, target):
-    """Download *url* atomically, removing incomplete files on failure."""
+    # Download *url* atomically, removing incomplete files on failure.
     if target.is_file() and target.stat().st_size:
         return
     target.unlink(missing_ok=True)
@@ -72,7 +72,7 @@ def _download_file(url, target):
 
 
 def _download_server_data(data_dir):
-    """Download the files used by the server integration tests."""
+    # Download the files used by the server integration tests.
     base_url = 'https://downloads.openquake.org/test_data'
     files = ('worldcities.csv', 'countries_info.csv',
              'World_Adm1_simplified.gpkg')
@@ -101,8 +101,7 @@ def _download_server_data(data_dir):
 
 
 def _configure_server_data(data_dir, dbfile, basemap_path=None):
-    """Configure the downloaded data and the database for this process and
-    its children."""
+    # Configure the downloaded data and database for this process and children.
     fd, cfg_path = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.cfg')
     os.close(fd)
     paths = {
@@ -131,12 +130,11 @@ _server_old_datadir = None
 
 
 def _isolate_database():
-    """
-    Point the engine database and the Django database to a scratch file, so
-    that the tests never touch the engine database. The calculations and the
-    server processes get the same path from OQ_CONFIG_FILE.
-    """
+    # Use a scratch DB so tests cannot touch the engine database. Calculations
+    # and server processes get its path from OQ_CONFIG_FILE.
     global _server_dbfile
+    # Keep these imports local: dbapi creates a global Db using the current
+    # config.server.dbfile, then this function redirects it to the scratch DB.
     from django.db import connections
     from openquake.commonlib import dbapi
     from openquake.server.db import actions
