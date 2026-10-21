@@ -125,7 +125,7 @@ def compute_cs(dstore, oq, N, M, P):
     blocks, trt_rlzs = get_blocks(dstore, oq, cmakers,
                                   read_ctx_by_grp(dstore))
     dstore.swmr_on()
-    smap = parallel.Starmap(get_cs_out, h5=dstore)
+    smap = parallel.Starmap(get_cs_out, h5=dstore, mode='r')
     for cmaker, ctx, tom in blocks:
         smap.submit((cmaker, ctx, imti, imls, tom))
     out = smap.reduce()
