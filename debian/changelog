@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Optimised raytracing performance in GridAdjustedGMPE by avoiding
+    construction of OQ Polygon and OQ Mesh objecion for each travel
+    path.
+  
   [Michele Simionato]
   * Internal: changed the Starmap mechanism to use read-only datastores
     whenever possible, to avoid corruption in case of out-of-memory
