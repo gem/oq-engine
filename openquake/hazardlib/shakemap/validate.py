@@ -61,6 +61,7 @@ class ImpactParam:
     make_impact_reports: bool = False
     region_grid_spacing: float = 10 if TEST_MODE else 1  # km, mandatory
     within_event_correlation_model: str = None
+    calculation_mode: str = 'scenario_risk'  # hidden from the form
     within_event_correlation_params: dict = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
@@ -93,7 +94,7 @@ class ImpactParam:
             base_path='',  # no .ini file
             description=self.description,
             notes=self.notes,
-            calculation_mode='scenario_risk',
+            calculation_mode=self.calculation_mode,
             rupture_dict=str(rupdic),
             time_event=self.time_event,
             maximum_distance=str(self.maximum_distance),
@@ -177,6 +178,7 @@ IMPACT_FORM_LABELS = {
     'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
     'make_impact_reports': 'Make one-page country reports',
+    'calculation_mode': 'Calculation mode',
     'within_event_correlation_model': 'Within-event correlation model',
     'within_event_correlation_params': 'Within-event correlation params',
 }
@@ -288,6 +290,7 @@ validators = {
     'notes': valid.utf8,
     'make_impact_reports': valid.boolean,
     'within_event_correlation_model': valid.NoneOr(valid.utf8_not_empty),
+    'calculation_mode': valid.Choice('scenario', 'scenario_risk'),
     'within_event_correlation_params': valid.dictionary,
 }
 

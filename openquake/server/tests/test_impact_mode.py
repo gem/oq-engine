@@ -505,6 +505,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.set_user_level_and_remove_groups(1)
         data = dict(usgs_id='us6000phrk', approach='use_pnt_rup_from_usgs',
                     use_shakemap='false', maximum_distance='100',
+                    calculation_mode='scenario',
                     time_event='day', truncation_level='3',
                     number_of_ground_motion_fields='10',
                     asset_hazard_distance='15', ses_seed='42',
