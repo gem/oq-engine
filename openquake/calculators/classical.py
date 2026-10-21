@@ -927,8 +927,8 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        sgs, ds = self._pre_execute()
-        self._execute(sgs, ds)
+        ds = self._pre_execute()
+        self._execute(ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -963,13 +963,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
-        sgs = self.datastore['source_groups']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        return sgs, ds
+        return ds
 
     def get_rmap(self, grp_id, gids):
         """
@@ -988,7 +987,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
         return self.rmap[grp_id]
 
-    def _execute(self, sgs, ds):
+    def _execute(self, ds):
         oq = self.oqparam
         allargs = []
         self.rmap = {}
@@ -1069,12 +1068,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(save_rates, h5=self.datastore,
-                                       distribute='processpool')
-            for grp_id, rmap in self.rmap.items():
-                for rm in rmap.split(L1):
-                    savemap.submit((rm, self.num_chunks, None))
-            savemap.reduce()
+            with self.datastore.tempfile() as tmp_h5:
+                savemap = parallel.Starmap(
+                    save_rates, h5=tmp_h5, distribute='processpool')
+                savemap.monitor.filename = self.datastore.filename
+                for grp_id, rmap in self.rmap.items():
+                    for rm in rmap.split(L1):
+                        savemap.submit((rm, self.num_chunks, None))
+                savemap.reduce()
         else:
             # store sequentially
             logging.info('Saving %d RateMap(s)', len(self.rmap))
