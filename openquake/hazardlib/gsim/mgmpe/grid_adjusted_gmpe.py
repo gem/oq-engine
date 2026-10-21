@@ -24,9 +24,6 @@ import h3
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
@@ -78,19 +75,13 @@ def load_sigma_for_term(
 
 def build_raytrace_grid(cell_ids, mean_vals):
     """
-    Build the OQ polygon grid for one path-based term/IMT.
+    Build the H3 cell-id lookup for one path-based term/IMT.
 
-    Returns {cell_id: (Polygon, per_km_adj_value)}.
+    Returns {cell_id: per_km_adj_value}. Raytracing resolves each sample
+    point to a stored cell via h3.latlng_to_cell with finest-to-coarsest
+    fallback (see raytrace_path_adj).
     """
-    val_dict = dict(zip(cell_ids, mean_vals))
-    imt_pgns = {}
-    for cid in cell_ids:
-        pnts = [Point(pnt[1], pnt[0])
-                for pnt in h3.cell_to_boundary(cid)]
-        # Store (OQ pgn, per km adjustment value) together
-        imt_pgns[cid] = (Polygon(pnts), val_dict[cid])
-
-    return imt_pgns
+    return dict(zip(cell_ids, mean_vals))
 
 
 def load_residual_grids(hdf5_path):
@@ -108,8 +99,8 @@ def load_residual_grids(hdf5_path):
       epsilons kwarg of GridAdjustedGMPE). Per-cell sigma is not supported
       for path-based terms.
 
-    * raytrace_grids: {term: {imt_str: {cell_id: (oq_pgn, val)}, ...}} - OQ
-      pgn grids for path-based terms (used in raytracing), stored per term
+    * raytrace_grids: {term: {imt_str: {cell_id: val}, ...}} - H3 cell-id
+      lookups for path-based terms (used in raytracing), stored per term
       per IMT (cell grids can differ across IMTs and across terms).
 
     * raytrace_se_grids: same structure as raytrace_grids but holding the
@@ -215,7 +206,8 @@ def load_residual_grids(hdf5_path):
             "res_terms": res_terms}
 
 
-def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
+def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
+                      h3_res):
     """
     For each epicentre-to-site path (travel path) apply an adjustment based
     on the distance traversed through each (h3) grid cell. A conventional
@@ -225,7 +217,7 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
     mean ground-motion.
 
     :param grid:
-        {cell_id: (oq_pgn, per_km_adj_value)} for a single term and given imt
+        {cell_id: per_km_adj_value} for a single term and given imt
     :param hypo_lons:
         Array of hypocentre longitudes
     :param hypo_lats:
@@ -234,41 +226,45 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats):
         Array of site longitudes
     :param site_lats:
         Array of site latitudes
+    :param h3_res:
+        Sorted list of h3 resolution levels (coarse to fine) present
+        in the stored grid; iterated finest-to-coarsest at lookup.
     :returns:
         adjustment_vals array of shape (len(hypo_lons),)
     """
     # Set some stores
     n_paths = len(hypo_lons)
     ra_per_path = np.zeros(n_paths)
+    res_fine_to_coarse = list(reversed(h3_res))
 
     for idx_path in range(n_paths): # Iterate over the paths
 
-        # Discretize the line
-        dsct_line = npoints_between(
+        # Discretise the line
+        lons, lats, _ = npoints_between(
             site_lons[idx_path], site_lats[idx_path], 0.,
             hypo_lons[idx_path], hypo_lats[idx_path], 0.,
             100, # npoints
         )
 
-        # Create mesh of discretized line
-        mesh = Mesh(dsct_line[0], dsct_line[1])
-
         # Distance between consecutive discretised points along the path
-        line_spacing = distance(
-            mesh.lons[0], mesh.lats[0], 0.,
-            mesh.lons[1], mesh.lats[1], 0.
-        )
+        line_spacing = distance(lons[0], lats[0], 0.,
+                                lons[1], lats[1], 0.)
 
         # Get the cumulative correction based on distance traversed per
-        # grid cell and the associated distance-based adjustment terms
-        adj = 0.0
-        for pgn, dba in grid.values(): # Iter over OQ pgns rep. of h3 cells
-
-            # Adj = N points intersecting zone * spacing * per-km adjustment
-            adj += np.count_nonzero(pgn.intersects(mesh)) * line_spacing * dba
+        # grid cell and the associated distance-based adjustment terms.
+        # Each sample point resolves to one stored cell via finest-to-
+        # coarsest h3 fallback; points with no stored cell contribute zero
+        adj_sum = 0.0
+        for lat, lon in zip(lats, lons):
+            for res in res_fine_to_coarse:
+                cell = h3.latlng_to_cell(lat, lon, res)
+                val = grid.get(cell)
+                if val is not None:
+                    adj_sum += val
+                    break
 
         # Store the total cumulative adjustment for the term
-        ra_per_path[idx_path] = adj
+        ra_per_path[idx_path] = adj_sum * line_spacing
 
     return ra_per_path
 
@@ -380,7 +376,8 @@ def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
         if grid is None:
             return None
         return raytrace_path_adj(
-            grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)
+            grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+            grid_data["h3_res"])
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
