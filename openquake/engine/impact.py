@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    ImpactParam, impact_validate)
+    ImpactParam, IMPACT_FORM_DEFAULTS, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -71,6 +71,10 @@ def main_cmd(usgs_id, rupture_file=None,
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
              make_impact_reports=False,
+             mmi_file=ImpactParam.mmi_file,
+             description=ImpactParam.description,
+             notes=ImpactParam.notes,
+             region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
