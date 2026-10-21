@@ -37,7 +37,6 @@ from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import loadnpz
-from openquake.calculators.extract import extract_losses_by_site
 from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
@@ -60,35 +59,6 @@ def test_format_oqparam_displays_selected_nodal_plane():
     assert inputs['Nodal plane'] == 'NP2'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
         'Magnitude scaling relationship')
-
-
-def test_losses_by_site_completes_sites_before_filtering_assets():
-    sitecol = SimpleNamespace(
-        sids=numpy.array([0, 2]),
-        lons=numpy.array([10, 20, 30]),
-        lats=numpy.array([40, 50, 60]))
-
-    def make_complete():
-        sitecol.sids = numpy.array([0, 2, 4])
-
-    sitecol.make_complete = make_complete
-
-    class DStore(dict):
-        def getitem(self, key):
-            return self[key]
-
-    assets = numpy.array(
-        [(0, 10, 40), (1, 30, 60)],
-        dtype=[('site_id', numpy.uint32), ('lon', numpy.float32),
-               ('lat', numpy.float32)])
-    losses = {'structural': numpy.array([[100], [200]])}
-    dstore = DStore({'sitecol': sitecol, 'assetcol/array': assets,
-                     'avg_losses-rlzs': losses})
-
-    df = extract_losses_by_site(dstore, '')
-    assert list(df.lon) == [10, 30]
-    assert list(df.lat) == [40, 60]
-    assert list(df.structural) == [100, 200]
 
 
 def check_email(job_id, email_content, expected_error):
@@ -508,6 +478,27 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                                  ' Kahramanmaras earthquake sequence'))
         expected_error = "The imts {'SA(0.6)'} are required"
         self.impact_run_then_remove('impact_run', data, expected_error)
+
+    def test_run_by_usgs_id_then_remove_calc_success(self):
+        self.set_user_level_and_remove_groups(1)
+        # NOTE: this case tests the extractor for losses_by_site in the
+        # case discarding sites that do not correspond to any assets,
+        # e.g. for the JRC script that uses
+        # shakemap_id = 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
+        # {
+        #     "id": "urn:usgs-product:us:shakemap:us6000phrk:1736792435199",
+        #     "number": "5",
+        #     "utc_date_time": "2025-01-13 18:20:35"
+        # },
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '5']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
+                    maximum_distance='100')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
         self.set_user_level_and_remove_groups(1)
