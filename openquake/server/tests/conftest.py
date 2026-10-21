@@ -125,7 +125,7 @@ def _configure_server_data(data_dir, dbfile, basemap_path=None):
 _server_cfg_path = None
 _server_old_cfg_path = None
 _server_dbfile = None
-_server_datadir = None
+_test_datadir = None
 _server_old_datadir = None
 
 
@@ -156,7 +156,7 @@ def _isolate_database():
 
 def _prepare_server_data():
     global _server_cfg_path, _server_old_cfg_path
-    global _server_datadir, _server_old_datadir
+    global _test_datadir, _server_old_datadir
     if _server_cfg_path is not None:
         return
     data_dir = pathlib.Path(__file__).parent / 'data'
@@ -166,8 +166,8 @@ def _prepare_server_data():
     if os.environ.get('OQ_APPLICATION_MODE', '').upper() == 'IMPACT':
         basemap_path = data_dir / 'basemap.tif'
     _server_old_datadir = os.environ.get('OQ_DATADIR')
-    _server_datadir = tempfile.mkdtemp(prefix='oq-server-tests-')
-    os.environ['OQ_DATADIR'] = _server_datadir
+    _test_datadir = tempfile.mkdtemp(prefix='oq-server-tests-')
+    os.environ['OQ_DATADIR'] = _test_datadir
     dbfile = _isolate_database()
     _server_cfg_path = _configure_server_data(data_dir, dbfile, basemap_path)
     _server_old_cfg_path = os.environ.get('OQ_CONFIG_FILE')
@@ -196,7 +196,7 @@ def server_test_data():
     from django.db import connections
     connections.close_all()
     pathlib.Path(_server_dbfile).unlink(missing_ok=True)
-    shutil.rmtree(_server_datadir)
+    shutil.rmtree(_test_datadir)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -212,8 +212,8 @@ def migrate_before_tests(server_test_data):
            if appmode in ('AELO', 'IMPACT')
            else '.default.tmpl')
     copy_from_templates_if_needed(serverdir / 'templates/registration', ext)
-    # the tests share the engine DB (there is no pytest-django test DB), so
-    # make sure it is migrated before the server process connects to it
+    # Django and the engine share the scratch DB; pytest-django does not make
+    # a separate test DB, so migrate it before the server process connects.
     env = dict(os.environ, OQ_TEST='1')  # the test mode, see settings.py
     subprocess.run([sys.executable, serverdir / 'manage.py', 'migrate'],
                    check=True, env=env)
@@ -230,9 +230,9 @@ def migrate_before_tests(server_test_data):
 @pytest.fixture(scope="session")
 def django_db_setup():
     """
-    Use the engine DB directly (no pytest-django test DB): the server runs
-    in a separate process and must see the same users and sessions as the
-    test process.
+    Use the scratch DB configured for the engine, without a separate
+    pytest-django test DB. The server and test process must share users and
+    sessions.
     """
     pass
 
