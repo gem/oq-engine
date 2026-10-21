@@ -643,7 +643,9 @@ class GmfComputer(object):
         self._ce_checked = True
         model = self.within_event_model
         dense_bytes = _dense_correlation_bytes(model, self.sites, self.M)
-        compatible = model.SUPPORTS_CIRCULANT_EMBEDDING
+        compatible = (model.SUPPORTS_CIRCULANT_EMBEDDING and
+                      self.cmaker.oq.correlation_strategy ==
+                      'circulant_embedding')
         if not compatible:
             if dense_bytes > _correlation_budget():
                 raise ValueError(

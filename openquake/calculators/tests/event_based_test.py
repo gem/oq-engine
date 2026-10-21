@@ -69,6 +69,8 @@ def test_joint_memory_estimates():
         inp=SimpleNamespace(
             within_event_model=object(),
             imts_Y=range(4), imts_D=range(3)),
+        cmaker=SimpleNamespace(oq=SimpleNamespace(
+            correlation_strategy='circulant_embedding')),
         E=500)
     G = 1  # number of GSIMs
     N = 10_000  # number of target sites
@@ -95,6 +97,8 @@ def test_joint_memory_estimates():
         inp=SimpleNamespace(
             within_event_model=ce_model,
             imts_Y=range(4), imts_D=range(3)),
+        cmaker=SimpleNamespace(oq=SimpleNamespace(
+            correlation_strategy='circulant_embedding')),
         E=500, N=N)
     ce_size, _, ce_name, ce_block = event_based._conditioned_memory(
         scalable, D, G, N, compute_covs=True,

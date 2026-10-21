@@ -1514,7 +1514,9 @@ def use_circulant_conditioning(computer):
     """Return whether the scalable joint conditioning path is eligible."""
     model = computer.inp.within_event_model
     return (use_joint_conditioning(computer) and
-            getattr(model, 'SUPPORTS_CIRCULANT_EMBEDDING', False))
+            getattr(model, 'SUPPORTS_CIRCULANT_EMBEDDING', False) and
+            computer.cmaker.oq.correlation_strategy ==
+            'circulant_embedding')
 
 
 def _conditioning_batch_size(computer, sampler, weights, memory_budget):

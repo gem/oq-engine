@@ -52,7 +52,9 @@ EPS = 1E-12
 
 def build_computer(sites, factor=None, seed=7):
     computer = GmfComputer.__new__(GmfComputer)
-    computer.cmaker = SimpleNamespace(truncation_level_within=3)
+    computer.cmaker = SimpleNamespace(
+        truncation_level_within=3,
+        oq=SimpleNamespace(correlation_strategy='circulant_embedding'))
     computer.M = len(IMTS)
     computer.N = len(sites)
     computer.rng = numpy.random.default_rng(seed)
@@ -82,6 +84,7 @@ def build_full_computer(num_events=5, truncation_level=99):
         [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'],
         truncation_level=truncation_level)
     cmaker.oq.calculation_mode = 'scenario'
+    cmaker.oq.correlation_strategy = 'circulant_embedding'
     cmaker.gmf_mon = Monitor()
     cmaker.gid = numpy.array([0])
     ebr = EBRupture(
@@ -198,8 +201,8 @@ def test_empty_gsim():
         pass
 
     gsims = {
-        data.ZeroMeanGMM(): numpy.array([0]),
-        OtherGMM(): numpy.array([1])}
+        data.ZeroMeanGMM(): numpy.array([0], numpy.uint32),
+        OtherGMM(): numpy.array([1], numpy.uint32)}
     cmaker = simple_cmaker(gsims, ['PGA', 'SA(0.3)'])
     cmaker.oq.calculation_mode = 'event_based'
     cmaker.gmf_mon = Monitor()
@@ -229,7 +232,9 @@ def test_ce_scaled_once():
     # applied afterward and the legacy spatial factor must not run again.
     computer = GmfComputer.__new__(GmfComputer)
     computer.cmaker = SimpleNamespace(
-        oq=SimpleNamespace(mea_tau_phi=False),
+        oq=SimpleNamespace(
+            mea_tau_phi=False,
+            correlation_strategy='circulant_embedding'),
         truncation_level_within=3,
         truncation_level_between=3)
     computer.within_event_model = JayaramBaker2009(False)
