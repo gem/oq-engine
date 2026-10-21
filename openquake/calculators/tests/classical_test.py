@@ -560,6 +560,7 @@ class ClassicalTestCase(CalculatorTestCase):
     
     def test_case_36(self):
         # Test mag-dependent aratio using the linear_piecewise expression type
+        # The compact area source keeps rupture generation fast.
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv"], case_36.__file__)
 
         # Check that epistemic uncertainty on aratio is rejected when the
