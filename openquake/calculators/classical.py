@@ -1153,8 +1153,8 @@ class ClassicalCalculator(base.HazardCalculator):
             if kind in self.hazard:
                 array = self.hazard[kind]
             else:
-                dset = self.datastore.getitem(kind)
-                array = self.hazard[kind] = numpy.zeros(dset.shape, dset.dtype)
+                shape, dtype = self.hazard_specs[kind]
+                array = self.hazard[kind] = numpy.zeros(shape, dtype)
             for r, pmap in enumerate(pmaps):
                 for idx, sid in enumerate(pmap.sids):
                     array[sid, r] = pmap.array[idx]  # shape (M, P)
@@ -1244,18 +1244,24 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             distribute = None
             self.datastore.swmr_on()
-        if oq.fastmean:
-            parallel.Starmap(
-                fast_mean, [args[0:1] for args in allargs],
-                distribute=distribute,
-                h5=self.datastore.hdf5,
-            ).reduce(self.collect_hazard)
-        else:
-            parallel.Starmap(
-                postclassical, allargs,
-                distribute=distribute,
-                h5=self.datastore.hdf5,
-            ).reduce(self.collect_hazard)
+        kinds = ('hcurves-stats', 'hcurves-rlzs',
+                 'hmaps-stats', 'hmaps-rlzs')
+        self.hazard_specs = {
+            kind: (self.datastore[kind].shape, self.datastore[kind].dtype)
+            for kind in kinds if kind in self.datastore}
+        with self.datastore.tempfile() as tmp_h5:
+            if oq.fastmean:
+                smap = parallel.Starmap(
+                    fast_mean, [args[0:1] for args in allargs],
+                    distribute=distribute, h5=tmp_h5,
+                )
+            else:
+                smap = parallel.Starmap(
+                    postclassical, allargs,
+                    distribute=distribute, h5=tmp_h5,
+                )
+            smap.monitor.filename = self.datastore.filename
+            smap.reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)

@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import io
 import os
 import re
 import gzip
 import logging
 import collections
+from contextlib import contextmanager
 import numpy
 import h5py
 
@@ -274,6 +276,35 @@ class DataStore(collections.abc.MutableMapping):
             self.hdf5.swmr_mode = True
         except (ValueError, RuntimeError):  # already set
             pass
+
+    @contextmanager
+    def tempfile(self):
+        """Close the datastore and manage performance in its temporary file."""
+        # Used in post_execute to run additional postprocessing with the
+        # datastore read-only, so an out-of-memory error cannot corrupt it.
+        self.close()
+        names = ('performance_data', 'task_info', 'starmap_info')
+        starts = {}
+        try:
+            with hdf5.File(self.tempname, 'a') as tmp:
+                performance.init_performance(tmp)
+                starts = {name: len(tmp[name]) for name in names}
+                yield tmp
+        finally:
+            self.open('a')
+            self.mode = 'a'
+            if starts:
+                with hdf5.File(self.tempname, 'r') as tmp:
+                    for name in names:
+                        data = tmp[name][starts[name]:]
+                        if len(data):
+                            hdf5.extend(self.hdf5[name], data)
+                    sent = ast.literal_eval(general.decode(
+                        tmp['task_sent'][()]))
+                task_sent = ast.literal_eval(general.decode(
+                    self['task_sent'][()]))
+                task_sent.update(sent)
+                self['task_sent'] = str(task_sent)
 
     def set_attrs(self, key, **kw):
         """
