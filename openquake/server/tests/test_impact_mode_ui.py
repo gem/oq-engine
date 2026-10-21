@@ -145,7 +145,7 @@ def test_impact_ui_level_2_build_rupture(
         'div#shakemap_version_grp')).to_be_visible()
     page.set_rupture_identifier('usp0001ccb')
     page.select_shakemap_version(
-        value="urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087")
+        value='urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087')
     page.retrieve_stations_from_usgs()
     page.select_nodal_plane()
     page.retrieve_data()
