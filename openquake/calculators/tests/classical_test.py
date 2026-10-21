@@ -1154,6 +1154,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
+        # The fixtures keep eight near-site points each to limit runtime.
         self.run_calc(case_82.__file__, 'job.ini')
         [f1] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mean_rates_by_src.csv', f1)
