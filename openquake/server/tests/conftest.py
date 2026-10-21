@@ -124,7 +124,7 @@ def _configure_server_data(data_dir, dbfile, basemap_path=None):
 
 _server_cfg_path = None
 _server_old_cfg_path = None
-_server_dbfile = None
+_test_dbfile = None
 _test_datadir = None
 _server_old_datadir = None
 
@@ -132,7 +132,7 @@ _server_old_datadir = None
 def _isolate_database():
     # Use a scratch DB so tests cannot touch the engine database. Calculations
     # and server processes get its path from OQ_CONFIG_FILE.
-    global _server_dbfile
+    global _test_dbfile
     # Keep these imports local: dbapi creates a global Db using the current
     # config.server.dbfile, then this function redirects it to the scratch DB.
     from django.db import connections
@@ -140,7 +140,7 @@ def _isolate_database():
     from openquake.server.db import actions
     fd, dbfile = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.sqlite3')
     os.close(fd)
-    _server_dbfile = dbfile
+    _test_dbfile = dbfile
     config.server['dbfile'] = dbfile
     dbapi.db.args = (dbfile,) + dbapi.db.args[1:]
     dbapi.db.local = threading.local()  # forget the old connections
@@ -195,7 +195,7 @@ def server_test_data():
     pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
     from django.db import connections
     connections.close_all()
-    pathlib.Path(_server_dbfile).unlink(missing_ok=True)
+    pathlib.Path(_test_dbfile).unlink(missing_ok=True)
     shutil.rmtree(_test_datadir)
 
 
