@@ -634,6 +634,7 @@ hazard_uhs-std.csv
     def test_case_30(self):
         # point on the international data line
         # this is also a test with IMT-dependent weights
+        # Source grids and fault traces are trimmed to reduce runtime.
         if sys.platform != 'darwin':  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
