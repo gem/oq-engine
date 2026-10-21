@@ -126,7 +126,7 @@ _server_cfg_path = None
 _server_old_cfg_path = None
 _test_dbfile = None
 _test_datadir = None
-_server_old_datadir = None
+_old_datadir = None
 
 
 def _isolate_database():
@@ -156,7 +156,7 @@ def _isolate_database():
 
 def _prepare_server_data():
     global _server_cfg_path, _server_old_cfg_path
-    global _test_datadir, _server_old_datadir
+    global _test_datadir, _old_datadir
     if _server_cfg_path is not None:
         return
     data_dir = pathlib.Path(__file__).parent / 'data'
@@ -165,7 +165,7 @@ def _prepare_server_data():
     basemap_path = None
     if os.environ.get('OQ_APPLICATION_MODE', '').upper() == 'IMPACT':
         basemap_path = data_dir / 'basemap.tif'
-    _server_old_datadir = os.environ.get('OQ_DATADIR')
+    _old_datadir = os.environ.get('OQ_DATADIR')
     _test_datadir = tempfile.mkdtemp(prefix='oq-server-tests-')
     os.environ['OQ_DATADIR'] = _test_datadir
     dbfile = _isolate_database()
@@ -188,10 +188,10 @@ def server_test_data():
         os.environ.pop('OQ_CONFIG_FILE', None)
     else:
         os.environ['OQ_CONFIG_FILE'] = _server_old_cfg_path
-    if _server_old_datadir is None:
+    if _old_datadir is None:
         os.environ.pop('OQ_DATADIR', None)
     else:
-        os.environ['OQ_DATADIR'] = _server_old_datadir
+        os.environ['OQ_DATADIR'] = _old_datadir
     pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
     from django.db import connections
     connections.close_all()
