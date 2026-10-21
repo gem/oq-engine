@@ -35,6 +35,7 @@ I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
+RATES_BLOCK = 2 ** 28  # rows of _rates read at once, to bound the memory
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -386,8 +387,8 @@ class MapGetter(object):
             # read each column block by block (reading slice by slice
             # is slow) and select the rows of the slices of this chunk
             n = len(dstore['_rates/rate'])
-            for a in range(0, n, TWO24):
-                b = min(a + TWO24, n)
+            for a in range(0, n, RATES_BLOCK):
+                b = min(a + RATES_BLOCK, n)
                 # clip the slices to the block and mark their rows
                 start = numpy.clip(slices['start'], a, b) - a
                 stop = numpy.clip(slices['stop'], a, b) - a
