@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+# NB: run these tests with OQ_APPLICATION_MODE=RESTRICTED,
 import pytest
 from playwright.sync_api import expect
 
