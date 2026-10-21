@@ -842,6 +842,7 @@ class Starmap(object):
         # in a temporary file and copied back into the DataStore at the end
         self.__class__.init(distribute=distribute)
         self.mode = mode
+        self.merged = False  # set by _merge_performance in mode 'r'
         self.task_func = task_func
         if h5:
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
@@ -1020,6 +1021,15 @@ class Starmap(object):
             yield self.inproc.popleft()
 
     def _loop(self):
+        # the performance info is merged also when the iteration is
+        # stopped early, since the generator is closed in that case
+        try:
+            yield from self._loop_tasks()
+        finally:
+            if self.mode == 'r' and not self.merged:
+                self._merge_performance()
+
+    def _loop_tasks(self):
         self.busytime = AccumDict()  # name -> pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
@@ -1032,8 +1042,6 @@ class Starmap(object):
                 self.submit(args, func=func)
 
         if not hasattr(self, 'socket'):  # no submit was ever made
-            if self.mode == 'r':
-                self._merge_performance()
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
@@ -1076,8 +1084,6 @@ class Starmap(object):
                 times = numpy.array(list(dic.values()))
                 if self.h5.mode != 'r':
                     self.monitor.save_starmap_info(self.h5, name, times)
-        if self.mode == 'r':
-            self._merge_performance()
 
     def _merge_performance(self):
         # copy the performance info and the task_sent from the temporary
@@ -1097,6 +1103,7 @@ class Starmap(object):
         fname = tmp.filename
         tmp.close()
         os.remove(fname)
+        self.merged = True
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)

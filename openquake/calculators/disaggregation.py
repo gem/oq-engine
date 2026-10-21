@@ -366,7 +366,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(compute_disagg, h5=self.datastore, mode='r')
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices;

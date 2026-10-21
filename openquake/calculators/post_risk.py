@@ -586,7 +586,7 @@ class PostRiskCalculator(base.RiskCalculator):
                            self.policy_df, ct)]
             self.datastore.swmr_on()
             smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
-                                    h5=self.datastore.hdf5)
+                                    h5=self.datastore, mode='r')
             rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
                 raise ValueError('No data in risk_by_event for %r' % lt)

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import operator
 import os
 import unittest
 import tempfile
@@ -172,3 +173,27 @@ class DataStoreTestCase(unittest.TestCase):
         fname = os.path.join(DATA, 'avg_losses.csv')
         fields = ['asset_id', 'MACRO_TAXONOMY']
         self.dstore.import_csv(fname, 'avg_losses', fields)
+
+
+def get_value(n, monitor):
+    return n
+
+
+class StarmapModeRTestCase(unittest.TestCase):
+    def test_merge_performance(self):
+        from openquake.baselib import parallel
+        tmpdir = tempfile.mkdtemp()
+        self.addCleanup(os.rmdir, tmpdir)
+        self.addCleanup(lambda: [os.remove(os.path.join(tmpdir, f))
+                                 for f in os.listdir(tmpdir)])
+        dstore = datastore.DataStore(
+            os.path.join(tmpdir, 'calc_1.hdf5'), mode='w')
+        self.addCleanup(dstore.close)
+        before = len(dstore['performance_data'][:])
+        smap = parallel.Starmap(get_value, [(1,), (2,), (3,)],
+                                distribute='no', h5=dstore, mode='r')
+        self.assertEqual(smap.reduce(operator.add, 0), 6)
+        # the performance info was copied back from the temporary file
+        self.assertGreater(len(dstore['performance_data'][:]), before)
+        self.assertEqual(dstore.mode, 'a')
+        self.assertEqual(os.listdir(tmpdir), ['calc_1.hdf5'])
