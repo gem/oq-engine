@@ -927,8 +927,8 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        sgs, ds = self._pre_execute()
-        self._execute(sgs, ds)
+        ds = self._pre_execute()
+        self._execute(ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -963,13 +963,12 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
-        sgs = self.datastore['source_groups']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
             ds = self.datastore
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        return sgs, ds
+        return ds
 
     def get_rmap(self, grp_id, gids):
         """
@@ -988,7 +987,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
         return self.rmap[grp_id]
 
-    def _execute(self, sgs, ds):
+    def _execute(self, ds):
         oq = self.oqparam
         allargs = []
         self.rmap = {}
@@ -1069,12 +1068,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(save_rates, h5=self.datastore,
-                                       distribute='processpool')
-            for grp_id, rmap in self.rmap.items():
-                for rm in rmap.split(L1):
-                    savemap.submit((rm, self.num_chunks, None))
-            savemap.reduce()
+            with self.datastore.reopen('r'):  # read-only while saving
+                savemap = parallel.Starmap(
+                    save_rates, h5=self.datastore, perf='memory',
+                    distribute='processpool')
+                for grp_id, rmap in self.rmap.items():
+                    for rm in rmap.split(L1):
+                        savemap.submit((rm, self.num_chunks, None))
+                savemap.reduce()
         else:
             # store sequentially
             logging.info('Saving %d RateMap(s)', len(self.rmap))
@@ -1153,8 +1154,8 @@ class ClassicalCalculator(base.HazardCalculator):
             if kind in self.hazard:
                 array = self.hazard[kind]
             else:
-                dset = self.datastore.getitem(kind)
-                array = self.hazard[kind] = numpy.zeros(dset.shape, dset.dtype)
+                shape, dtype = self.hazard_specs[kind]
+                array = self.hazard[kind] = numpy.zeros(shape, dtype)
             for r, pmap in enumerate(pmaps):
                 for idx, sid in enumerate(pmap.sids):
                     array[sid, r] = pmap.array[idx]  # shape (M, P)
@@ -1236,34 +1237,35 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard curves', humansize(hcbytes))
         if hmbytes:
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
-        if 'delta_rates' in oq.inputs:
-            # with delta_rates the datastore cannot be put in SWMR mode:
-            # the workers would read the rates while the master still writes
-            # them, so the postclassical tasks must run in the master process
-            distribute = 'no'
-        else:
-            distribute = None
-            self.datastore.swmr_on()
-        if oq.fastmean:
-            parallel.Starmap(
-                fast_mean, [args[0:1] for args in allargs],
-                distribute=distribute,
-                h5=self.datastore.hdf5,
-            ).reduce(self.collect_hazard)
-        else:
-            parallel.Starmap(
-                postclassical, allargs,
-                distribute=distribute,
-                h5=self.datastore.hdf5,
-            ).reduce(self.collect_hazard)
-        for kind in sorted(self.hazard):
-            logging.info('Saving %s', kind)  # very fast
-            self.datastore[kind][:] = self.hazard.pop(kind)
+        kinds = ('hcurves-stats', 'hcurves-rlzs',
+                 'hmaps-stats', 'hmaps-rlzs')
+        self.hazard_specs = {
+            kind: (self.datastore[kind].shape, self.datastore[kind].dtype)
+            for kind in kinds if kind in self.datastore}
+        # the datastore is read-only while the postclassical tasks run,
+        # the writes are done explicitly after the Starmap
+        with self.datastore.reopen('r'):
+            if oq.fastmean:
+                smap = parallel.Starmap(
+                    fast_mean, [args[0:1] for args in allargs],
+                    h5=self.datastore, perf='memory',
+                )
+            else:
+                smap = parallel.Starmap(
+                    postclassical, allargs,
+                    h5=self.datastore, perf='memory',
+                )
+            smap.reduce(self.collect_hazard)
+        with self.datastore.reopen('a'):
+            for kind in sorted(self.hazard):
+                logging.info('Saving %s', kind)  # very fast
+                self.datastore[kind][:] = self.hazard.pop(kind)
 
         # Plotting and the stability check below both need mean outputs.
         if ('mean' in hstats and 'hmaps-stats' in self.datastore
                 and not oq.tile_spec):
-            self.plot_hmaps()
+            with self.datastore.reopen('a'):
+                self.plot_hmaps()
 
             # check numerical stability of the hmaps around the poes
             if self.N <= oq.max_sites_disagg and not self.amplifier:

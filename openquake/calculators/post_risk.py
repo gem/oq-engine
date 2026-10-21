@@ -584,15 +584,16 @@ class PostRiskCalculator(base.RiskCalculator):
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in general.split_in_blocks(
                            self.policy_df, ct)]
-            self.datastore.swmr_on()
-            smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
-                                    h5=self.datastore.hdf5)
-            rbp = pandas.concat(list(smap))
+            with self.datastore.reopen('r'):  # read-only while in parallel
+                smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
+                                        h5=self.datastore, perf='memory')
+                rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
                 raise ValueError('No data in risk_by_event for %r' % lt)
             rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
-            self.datastore.create_df('reinsurance_by_policy', rbp)
-            self.datastore.create_df('reinsurance-risk_by_event', rbe)
+            with self.datastore.reopen('a'):
+                self.datastore.create_df('reinsurance_by_policy', rbp)
+                self.datastore.create_df('reinsurance-risk_by_event', rbe)
 
         if eff_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves

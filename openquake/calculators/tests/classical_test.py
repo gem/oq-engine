@@ -296,7 +296,8 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurves1 = self.calc.datastore['hcurves-stats'][:]
         self.run_calc(case_10.__file__, 'job_refrates.ini')
         hcurves2 = self.calc.datastore['hcurves-stats'][:]
-        aac(hcurves1, hcurves2)
+        # the sums over the tasks can differ in the last digits
+        aac(hcurves1, hcurves2, rtol=1e-6)
 
     def test_case_11(self):
         # Check grid-adjusted GMPE

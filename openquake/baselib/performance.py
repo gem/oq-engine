@@ -203,6 +203,28 @@ def memory_gb(pids=()):
 
 
 # this is not thread-safe
+class PerfBuffer(object):
+    """
+    In-memory replacement of the performance tables of a datastore, used
+    by a Starmap with perf='memory', so that the datastore is not written
+    while the tasks run; the rows are saved in the datastore at the end
+    """
+    def __init__(self):
+        self.tables = collections.defaultdict(list)
+
+    def append(self, name, data):
+        self.tables[name].append(data)
+
+
+def _save(h5, name, data):
+    # save the rows in the table `name` of h5, a datastore or a PerfBuffer
+    if isinstance(h5, PerfBuffer):
+        h5.append(name, data)
+    else:
+        hdf5.extend(h5[name], data)
+        h5[name].flush()  # notify the reader
+
+
 class Monitor(object):
     """
     Measure the resident memory occupied by a list of processes during
@@ -346,8 +368,7 @@ class Monitor(object):
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend(h5['task_info'], data)
-        h5['task_info'].flush()  # notify the reader
+        _save(h5, 'task_info', data)
 
     def save_starmap_info(self, h5, name, times):
         """
@@ -358,7 +379,7 @@ class Monitor(object):
         """
         t = (name, times.mean(), times.std(), times.min(), times.max())
         data = numpy.array([t], starmap_info_dt)
-        hdf5.extend(h5['starmap_info'], data)
+        _save(h5, 'starmap_info', data)
         logging.info('%s: mean time per core=%ds, std=%.1fs, min=%ds, '
                      'max=%ds', name, t[1], t[2], t[3], t[4])
 
@@ -374,13 +395,13 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if getattr(h5, 'mode', 'r') == 'r':
+        if (not isinstance(h5, PerfBuffer)
+                and getattr(h5, 'mode', 'r') == 'r'):
             # in ImpactParam h5 is replaced with a dictionary
             return
         data = self.get_data()
         if len(data):
-            hdf5.extend(h5['performance_data'], data)
-            h5['performance_data'].flush()  # notify the reader
+            _save(h5, 'performance_data', data)
             self.reset()
 
     # TODO: rename this as spawn; see what will break

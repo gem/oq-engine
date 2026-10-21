@@ -124,11 +124,11 @@ def compute_cs(dstore, oq, N, M, P):
     # Computing CS
     blocks, trt_rlzs = get_blocks(dstore, oq, cmakers,
                                   read_ctx_by_grp(dstore))
-    dstore.swmr_on()
-    smap = parallel.Starmap(get_cs_out, h5=dstore)
-    for cmaker, ctx, tom in blocks:
-        smap.submit((cmaker, ctx, imti, imls, tom))
-    out = smap.reduce()
+    with dstore.reopen('r'):  # read-only in the parallel phase
+        smap = parallel.Starmap(get_cs_out, h5=dstore, perf='memory')
+        for cmaker, ctx, tom in blocks:
+            smap.submit((cmaker, ctx, imti, imls, tom))
+        out = smap.reduce()
 
     # Apply weights and get two dictionaries with integer keys
     # (corresponding to the rlz ID) and array values
@@ -152,7 +152,6 @@ def compute_cs(dstore, oq, N, M, P):
                                 mean_cs[n, p], imls[n, p])
 
     # Computing standard deviation
-    dstore.swmr_on()
     smap = parallel.Starmap(get_cs_out, h5=dstore.hdf5)
     for cmaker, ctx, tom in blocks:
         smap.submit((cmaker, ctx, imti, imls, tom, outmean[0]))

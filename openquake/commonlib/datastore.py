@@ -22,6 +22,7 @@ import re
 import gzip
 import logging
 import collections
+from contextlib import contextmanager
 import numpy
 import h5py
 
@@ -203,6 +204,11 @@ class DataStore(collections.abc.MutableMapping):
         self.filename = path
         self.ppath = ppath
         self.parent = ()  # can be set later
+        # NB: the _tmp.hdf5 file must not be deleted, not even after the
+        # calculation is complete: it holds the sections of the
+        # multiFaultSources, read by get_sections (used by oq plot, by
+        # the disagg postprocessing and by --hc child calculations), and
+        # the monitor inputs such as crmodel and assets
         self.tempname = self.filename[:-5] + '_tmp.hdf5'
         self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
         if self.mode == 'r' and not os.path.exists(self.filename):
@@ -261,6 +267,28 @@ class DataStore(collections.abc.MutableMapping):
                 return self.parent.getitem(name)
             else:
                 raise
+
+    def _reopen(self, mode):
+        # close the datastore and open it again with the given mode
+        self.close()
+        self.open(mode)
+        self.mode = mode
+
+    @contextmanager
+    def reopen(self, mode):
+        """
+        Open the datastore with the given mode ('r' or 'a') for the duration
+        of the context, then restore the previous state
+        """
+        prev = self.mode
+        if (mode == 'r') == (prev == 'r'):  # already in the right state
+            yield self
+            return
+        self._reopen(mode)
+        try:
+            yield self
+        finally:
+            self._reopen('r' if prev == 'r' else 'a')
 
     def swmr_on(self):
         """

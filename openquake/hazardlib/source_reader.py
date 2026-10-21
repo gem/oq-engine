@@ -153,6 +153,21 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
+def _sample_atomic_groups(src_groups, sample, applied):
+    # Atomic groups are sampled as units; applied sources are always retained.
+    atomic = [sg for sg in src_groups if sg.atomic]
+    if not atomic:
+        return src_groups
+    selected = general.random_filter(atomic, float(sample))
+    selected.extend(sg for sg in atomic if any(
+        src.source_id in applied for src in sg))
+    if not selected:
+        selected = [atomic[0]]
+    selected_ids = {id(sg) for sg in selected}
+    return [sg for sg in src_groups
+            if not sg.atomic or id(sg) in selected_ids]
+
+
 def read_source_model(fname, branch, converter, applied, sample, monitor):
     """
     :param fname: path to a source model XML file
@@ -166,6 +181,8 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     t0 = time.time()
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
+    if sample:
+        sm.src_groups = _sample_atomic_groups(sm.src_groups, sample, applied)
     for sg in sm.src_groups:
         if sample and not sg.atomic:
             srcs = []
