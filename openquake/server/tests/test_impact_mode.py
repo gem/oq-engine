@@ -40,7 +40,7 @@ from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
 
-CALC_RUN_TIMEOUT = 300
+CALC_RUN_TIMEOUT = 100
 
 
 def test_format_oqparam_displays_selected_nodal_plane():
