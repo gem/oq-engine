@@ -284,8 +284,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        small1 = mrs1.array[mrs1.array < 2.]  # large rates are different!
-        small50 = mrs50.array[mrs50.array < 2.]
+        # The 1-year calculation uses PGA only; compare its matching IMT.
+        small1 = mrs1.array[:, 0]
+        small50 = mrs50.array[:, 0]
+        small1 = small1[small1 < 2.]  # large rates are different!
+        small50 = small50[small50 < 2.]
         numpy.testing.assert_allclose(small1, small50, rtol=1E-4)
 
     def test_case_16(self):
