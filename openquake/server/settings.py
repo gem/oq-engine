@@ -45,7 +45,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
 
 TEST = ('test' in sys.argv or any('pytest' in arg for arg in sys.argv)
-        or os.environ.get('GITHUB_ACTIONS'))
+        or os.environ.get('GITHUB_ACTIONS') or os.environ.get('OQ_TEST'))
 
 INSTALLED_APPS = ('openquake.server.db',)
 
