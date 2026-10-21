@@ -100,7 +100,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
     ctx_by_grp = rmap_maker.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
-    smap = parallel.Starmap(compute_mrd, h5=dstore, mode='r')
+    smap = parallel.Starmap(compute_mrd, h5=dstore, perf='memory')
     for grp_id, ctx in ctx_by_grp.items():
         # NB: a trivial splitting of the contexts would case task-dependency!
         cmaker = cmakers[grp_id]

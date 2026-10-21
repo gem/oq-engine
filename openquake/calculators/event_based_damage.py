@@ -183,7 +183,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             rlzs = None
         self.datastore.swmr_on()
         smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore,
-                                 mode='r')
+                                 perf='memory')
         smap.monitor.save('aggids', aggids)
         smap.monitor.save('crmodel', self.crmodel)
         ct = oq.concurrent_tasks or 1

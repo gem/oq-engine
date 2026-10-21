@@ -22,6 +22,7 @@ import re
 import gzip
 import logging
 import collections
+from contextlib import contextmanager
 import numpy
 import h5py
 
@@ -266,6 +267,28 @@ class DataStore(collections.abc.MutableMapping):
                 return self.parent.getitem(name)
             else:
                 raise
+
+    def _reopen(self, mode):
+        # close the datastore and open it again with the given mode
+        self.close()
+        self.open(mode)
+        self.mode = mode
+
+    @contextmanager
+    def reopened(self, mode):
+        """
+        Open the datastore with the given mode ('r' or 'a') for the duration
+        of the context, then restore the previous state
+        """
+        prev = self.mode
+        if (mode == 'r') == (prev == 'r'):  # already in the right state
+            yield self
+            return
+        self._reopen(mode)
+        try:
+            yield self
+        finally:
+            self._reopen('r' if prev == 'r' else 'a')
 
     def swmr_on(self):
         """

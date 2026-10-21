@@ -191,9 +191,9 @@ class StarmapModeRTestCase(unittest.TestCase):
         self.addCleanup(dstore.close)
         before = len(dstore['performance_data'][:])
         smap = parallel.Starmap(get_value, [(1,), (2,), (3,)],
-                                distribute='no', h5=dstore, mode='r')
+                                distribute='no', h5=dstore, perf='memory')
         self.assertEqual(smap.reduce(operator.add, 0), 6)
-        # the performance info was copied back from the temporary file
+        # the performance info was saved in the datastore at the end
         self.assertGreater(len(dstore['performance_data'][:]), before)
-        self.assertEqual(dstore.mode, 'a')
+        self.assertEqual(dstore.mode, 'w')  # unchanged
         self.assertEqual(os.listdir(tmpdir), ['calc_1.hdf5'])
