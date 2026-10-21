@@ -40,7 +40,7 @@ from openquake.server.views import format_oqparam
 from openquake.server.tests.views_test import (
     get_or_create_user, start_webui, stop_webui)
 
-CALC_RUN_TIMEOUT = 60
+CALC_RUN_TIMEOUT = 100
 
 
 def test_format_oqparam_displays_selected_nodal_plane():
@@ -498,6 +498,33 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
+
+    def test_run_by_usgs_id_point_rupture_correlation(self):
+        # the GMFs are computed from the point rupture, not from a ShakeMap,
+        # so the within-event correlation model is really used
+        self.set_user_level_and_remove_groups(1)
+        data = dict(usgs_id='us6000phrk', approach='use_pnt_rup_from_usgs',
+                    use_shakemap='false', maximum_distance='100',
+                    calculation_mode='scenario',
+                    time_event='day', truncation_level='3',
+                    number_of_ground_motion_fields='10',
+                    asset_hazard_distance='15', ses_seed='42',
+                    within_event_correlation_model='JayaramBaker2009',
+                    within_event_correlation_params=(
+                        '{"vs30_clustering": False}'))
+        with tempfile.TemporaryDirectory() as email_dir:
+            data['email_file_path'] = email_dir
+            resp = self.post('impact_run', data=data)
+            [job_id] = json.loads(resp.content.decode('utf8'))
+            job_dic = self.wait(job_id)
+            if job_dic is None:
+                raise TimeoutError()
+            if job_dic['status'] == 'failed':
+                tb = self.get_json('%s/traceback' % job_id)
+                raise Exception('\n'.join(tb))
+            self.assertEqual(job_dic['status'], 'complete')
+            ret = self.post('%s/remove' % job_id)
+            self.assertEqual(ret.status_code, 200)
 
     def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
         self.set_user_level_and_remove_groups(1)

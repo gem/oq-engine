@@ -47,7 +47,6 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
-CE_MIN_SITES = 1_000
 
 
 def _correlation_budget():
@@ -644,19 +643,15 @@ class GmfComputer(object):
         self._ce_checked = True
         model = self.within_event_model
         dense_bytes = _dense_correlation_bytes(model, self.sites, self.M)
-        dense_sites = (len(self.sites.complete)
-                       if isinstance(model, SpatialCorrelationModel)
-                       else len(self.sites))
-        compatible = model.SUPPORTS_CIRCULANT_EMBEDDING
-        if dense_sites < CE_MIN_SITES or not compatible:
+        compatible = (model.SUPPORTS_CIRCULANT_EMBEDDING and
+                      self.cmaker.oq.correlation_strategy ==
+                      'circulant_embedding')
+        if not compatible:
             if dense_bytes > _correlation_budget():
-                qualifier = ('too small for automatic circulant embedding'
-                             if compatible else
-                             'not enabled for circulant embedding')
                 raise ValueError(
-                    f'{model.__class__.__name__} is {qualifier}; its dense '
-                    f'factorization requires about '
-                    f'{humansize(dense_bytes)}')
+                    f'{model.__class__.__name__} is not enabled for '
+                    f'circulant embedding; its dense factorization '
+                    f'requires about {humansize(dense_bytes)}')
             return None
 
         try:

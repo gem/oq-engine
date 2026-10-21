@@ -229,6 +229,7 @@ class Oq(object):
     af = None
     impact = False
     total_residual_correlation_model = None
+    correlation_strategy = 'cholesky_decomposition'
     mea_tau_phi = False
     split_sources = True
     keep_rupdata = True

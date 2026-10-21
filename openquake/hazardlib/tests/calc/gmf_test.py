@@ -52,7 +52,9 @@ EPS = 1E-12
 
 def build_computer(sites, factor=None, seed=7):
     computer = GmfComputer.__new__(GmfComputer)
-    computer.cmaker = SimpleNamespace(truncation_level_within=3)
+    computer.cmaker = SimpleNamespace(
+        truncation_level_within=3,
+        oq=SimpleNamespace(correlation_strategy='circulant_embedding'))
     computer.M = len(IMTS)
     computer.N = len(sites)
     computer.rng = numpy.random.default_rng(seed)
@@ -82,6 +84,7 @@ def build_full_computer(num_events=5, truncation_level=99):
         [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'],
         truncation_level=truncation_level)
     cmaker.oq.calculation_mode = 'scenario'
+    cmaker.oq.correlation_strategy = 'circulant_embedding'
     cmaker.gmf_mon = Monitor()
     cmaker.gid = numpy.array([0])
     ebr = EBRupture(
@@ -94,9 +97,8 @@ def build_full_computer(num_events=5, truncation_level=99):
 
 def collect_batches(batch_size):
     computer = build_full_computer()
-    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1), \
-            mock.patch.object(
-                GmfComputer, '_ce_batch_size', return_value=batch_size):
+    with mock.patch.object(
+            GmfComputer, '_ce_batch_size', return_value=batch_size):
         batches = list(computer.compute_all_batches())
     return pandas.concat([batch[0] for batch in batches]), batches
 
@@ -105,8 +107,7 @@ def test_ce_selection():
     complete = regular_sites((2, 3))
     sites = complete.filtered([4, 0, 2])
     computer = build_computer(sites)
-    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1):
-        factor = computer._get_ce_factor()
+    factor = computer._get_ce_factor()
 
     assert isinstance(factor, CirculantEmbeddingFactor)
     assert factor.grid_shape == (2, 3)
@@ -124,8 +125,7 @@ def test_ce_selection_with_off_grid_complete_sites():
         [float(complete.lats[0]) + 2])
     computer = build_computer(sites)
 
-    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1):
-        factor = computer._get_ce_factor()
+    factor = computer._get_ce_factor()
 
     assert factor.grid_shape == (3, 4)
     assert factor.output_size == len(IMTS) * len(sites)
@@ -201,8 +201,8 @@ def test_empty_gsim():
         pass
 
     gsims = {
-        data.ZeroMeanGMM(): numpy.array([0]),
-        OtherGMM(): numpy.array([1])}
+        data.ZeroMeanGMM(): numpy.array([0], numpy.uint32),
+        OtherGMM(): numpy.array([1], numpy.uint32)}
     cmaker = simple_cmaker(gsims, ['PGA', 'SA(0.3)'])
     cmaker.oq.calculation_mode = 'event_based'
     cmaker.gmf_mon = Monitor()
@@ -218,10 +218,9 @@ def test_empty_gsim():
         assert num_events
         return get_eps(imts, num_events, rng)
 
-    with mock.patch('openquake.hazardlib.calc.gmf.CE_MIN_SITES', 1), \
-            mock.patch.object(
-                computer.between_event_model, 'get_inter_eps',
-                side_effect=reject_empty):
+    with mock.patch.object(
+            computer.between_event_model, 'get_inter_eps',
+            side_effect=reject_empty):
         batches = list(computer.compute_all_batches())
 
     assert len(batches) == 1
@@ -233,7 +232,9 @@ def test_ce_scaled_once():
     # applied afterward and the legacy spatial factor must not run again.
     computer = GmfComputer.__new__(GmfComputer)
     computer.cmaker = SimpleNamespace(
-        oq=SimpleNamespace(mea_tau_phi=False),
+        oq=SimpleNamespace(
+            mea_tau_phi=False,
+            correlation_strategy='circulant_embedding'),
         truncation_level_within=3,
         truncation_level_between=3)
     computer.within_event_model = JayaramBaker2009(False)

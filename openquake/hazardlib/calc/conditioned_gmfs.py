@@ -373,7 +373,7 @@ from openquake.baselib import config, performance
 from openquake.baselib.general import humansize
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib.calc.gmf import (
-    CE_MIN_SITES, GmfComputer, TRUNCATION_THRESHOLD)
+    GmfComputer, TRUNCATION_THRESHOLD)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
@@ -1515,7 +1515,8 @@ def use_circulant_conditioning(computer):
     model = computer.inp.within_event_model
     return (use_joint_conditioning(computer) and
             getattr(model, 'SUPPORTS_CIRCULANT_EMBEDDING', False) and
-            getattr(computer, 'N', 0) >= CE_MIN_SITES)
+            computer.cmaker.oq.correlation_strategy ==
+            'circulant_embedding')
 
 
 def _conditioning_batch_size(computer, sampler, weights, memory_budget):

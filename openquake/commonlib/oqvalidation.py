@@ -179,6 +179,14 @@ correlation_cutoff:
   Example: *correlation_cutoff = 1E-9*
   Default: 2E-4
 
+correlation_strategy:
+  How the spatially correlated within-event residuals are sampled:
+  *cholesky_decomposition* factorizes the dense correlation matrix of the
+  sites, *circulant_embedding* uses an FFT on a regular grid of sites. It is
+  set to *circulant_embedding* automatically in impact mode.
+  Example: *correlation_strategy = circulant_embedding*
+  Default: cholesky_decomposition
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -1166,6 +1174,9 @@ class OqParam(valid.ParamSet):
     between_event_correlation_params = valid.Param(valid.dictionary, {})
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
+    correlation_strategy = valid.Param(
+        valid.Choice('cholesky_decomposition', 'circulant_embedding'),
+        'cholesky_decomposition')
     siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -2734,6 +2745,8 @@ class OqParam(valid.ParamSet):
         if self.impact and not self.region_grid_spacing:
             self.raise_invalid('region_grid_spacing must be set in impact '
                                'mode')
+        if self.impact:
+            self.correlation_strategy = 'circulant_embedding'
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs
