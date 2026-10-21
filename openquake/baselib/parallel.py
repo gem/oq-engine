@@ -1092,7 +1092,7 @@ class Starmap(object):
         # save the performance info collected in memory and the task_sent
         # in the datastore, which is opened in 'a' mode for the purpose
         dstore = self.dstore
-        with dstore.reopened('a'):
+        with dstore.reopen('a'):
             for name, rows in self.h5.tables.items():
                 hdf5.extend(dstore.hdf5[name], numpy.concatenate(rows))
             task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))

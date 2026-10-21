@@ -275,7 +275,7 @@ class DataStore(collections.abc.MutableMapping):
         self.mode = mode
 
     @contextmanager
-    def reopened(self, mode):
+    def reopen(self, mode):
         """
         Open the datastore with the given mode ('r' or 'a') for the duration
         of the context, then restore the previous state

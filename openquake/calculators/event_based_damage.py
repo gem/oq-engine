@@ -181,28 +181,30 @@ class DamageCalculator(EventBasedRiskCalculator):
             rlzs = self.datastore['events']['rlz_id']
         else:
             rlzs = None
-        self.datastore.swmr_on()
-        smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore,
-                                 perf='memory')
-        smap.monitor.save('aggids', aggids)
-        smap.monitor.save('crmodel', self.crmodel)
         ct = oq.concurrent_tasks or 1
         sids = self.assetcol['site_id']
-        for t in range(ct):
-            gmf_tile = gmf_df[gmf_df.sid % ct == t]
-            asset_tile = self.assetcol.new(self.assetcol.array[sids % ct == t])
-            if len(asset_tile):
-                smap.submit((gmf_tile, asset_tile, oq, rlzs))
-        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
         dd_dict = general.AccumDict(accum=0)
-        for ddd, dmgcsq, ords in smap:
-            dd_dict += ddd
-            self.dmgcsq[:, ords] += dmgcsq
+        with self.datastore.reopen('r'):  # read-only in the parallel phase
+            smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore,
+                                     perf='memory')
+            smap.monitor.save('aggids', aggids)
+            smap.monitor.save('crmodel', self.crmodel)
+            for t in range(ct):
+                gmf_tile = gmf_df[gmf_df.sid % ct == t]
+                asset_tile = self.assetcol.new(
+                    self.assetcol.array[sids % ct == t])
+                if len(asset_tile):
+                    smap.submit((gmf_tile, asset_tile, oq, rlzs))
+            for ddd, dmgcsq, ords in smap:
+                dd_dict += ddd
+                self.dmgcsq[:, ords] += dmgcsq
+        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
         df = _dframe(dd_dict, csqidx, oq.loss_types)
         with self.monitor('saving risk_by_event', measuremem=True):
-            for name in df.columns:
-                dset = self.datastore['risk_by_event/' + name]
-                hdf5.extend(dset, df[name].to_numpy())
+            with self.datastore.reopen('a'):
+                for name in df.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, df[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):

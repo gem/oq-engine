@@ -1068,13 +1068,14 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            savemap = parallel.Starmap(
-                save_rates, h5=self.datastore, perf='memory',
-                distribute='processpool')
-            for grp_id, rmap in self.rmap.items():
-                for rm in rmap.split(L1):
-                    savemap.submit((rm, self.num_chunks, None))
-            savemap.reduce()
+            with self.datastore.reopen('r'):  # read-only while saving
+                savemap = parallel.Starmap(
+                    save_rates, h5=self.datastore, perf='memory',
+                    distribute='processpool')
+                for grp_id, rmap in self.rmap.items():
+                    for rm in rmap.split(L1):
+                        savemap.submit((rm, self.num_chunks, None))
+                savemap.reduce()
         else:
             # store sequentially
             logging.info('Saving %d RateMap(s)', len(self.rmap))
@@ -1243,7 +1244,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for kind in kinds if kind in self.datastore}
         # the datastore is read-only while the postclassical tasks run,
         # the writes are done explicitly after the Starmap
-        with self.datastore.reopened('r'):
+        with self.datastore.reopen('r'):
             if oq.fastmean:
                 smap = parallel.Starmap(
                     fast_mean, [args[0:1] for args in allargs],
@@ -1255,7 +1256,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     h5=self.datastore, perf='memory',
                 )
             smap.reduce(self.collect_hazard)
-        with self.datastore.reopened('a'):
+        with self.datastore.reopen('a'):
             for kind in sorted(self.hazard):
                 logging.info('Saving %s', kind)  # very fast
                 self.datastore[kind][:] = self.hazard.pop(kind)
@@ -1263,7 +1264,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # Plotting and the stability check below both need mean outputs.
         if ('mean' in hstats and 'hmaps-stats' in self.datastore
                 and not oq.tile_spec):
-            with self.datastore.reopened('a'):
+            with self.datastore.reopen('a'):
                 self.plot_hmaps()
 
             # check numerical stability of the hmaps around the poes

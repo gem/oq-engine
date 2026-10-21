@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Avoided corruption of the datastore caused by an OOM in the post_classical phase
+  * Internal: changed the Starmap mechanism to use read-only datastores
+    whenever possible, to avoid corruption in case of out-of-memory
 
   [Christopher Brooks]
   * Updated the US NSHM variant of the CEUS non-linear site term (Hashash
