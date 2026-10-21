@@ -20,6 +20,7 @@ import io
 import base64
 import numpy
 import functools
+import math
 from pathlib import Path
 from shapely.geometry import Polygon, box
 from dataclasses import dataclass
@@ -658,6 +659,35 @@ class MapDataElements:
     y_limits: tuple[float, float] | None = None
     basemap_path: str | Path | Any | None = None
     epicenter: tuple[float, float] | None = None
+    scale_bar: bool = False
+
+
+def _longitude_km_per_degree(latitude):
+    # Distance along a WGS84 parallel for one longitude degree.
+    semi_major_axis = 6378.137
+    eccentricity_squared = 0.00669437999014
+    lat_rad = math.radians(latitude)
+    sin_lat = math.sin(lat_rad)
+    prime_vertical = semi_major_axis / math.sqrt(
+        1 - eccentricity_squared * sin_lat ** 2)
+    return (prime_vertical * math.cos(lat_rad) * math.pi / 180)
+
+
+def _overlay_scale_bar(ax):
+    # Calibrate the scale at the map's central latitude.
+    # Import lazily: matplotlib-scalebar is an impact-report dependency.
+    from matplotlib_scalebar.scalebar import ScaleBar
+
+    ymin, ymax = ax.get_ylim()
+    km_per_degree = _longitude_km_per_degree((ymin + ymax) / 2)
+    if km_per_degree <= 1e-6:
+        return
+    ax.add_artist(ScaleBar(
+        km_per_degree, units='km', location='lower left',
+        length_fraction=0.2, width_fraction=0.003,
+        color='black', box_color='white', box_alpha=0.6,
+        border_pad=0.5, font_properties={'size': 14},
+        rotation='horizontal-only'))
 
 
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
@@ -712,6 +742,8 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     _resolve_limits(ax, elements.x_limits, elements.y_limits,
                     elements.epicenter)
     _overlay_cities(ax, elements.cities, style.city_font_size)
+    if elements.scale_bar:
+        _overlay_scale_bar(ax)
 
     if elements.plot_title:
         ax.set_title(elements.plot_title, fontsize=style.title_font_size)

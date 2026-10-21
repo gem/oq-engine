@@ -1,7 +1,9 @@
-https://wheelhouse.openquake.org/v3/py/affine-2.4.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py312/rasterio-1.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
-https://wheelhouse.openquake.org/v3/py/adjustText-1.3.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/mapclassify-2.10.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/reportlab-4.4.9-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pymupdf-1.27.2.3-cp310-abi3-manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/unified/affine-2.4.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/timezonefinder-8.2.1-cp39-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/unified/rasterio-1.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+https://wheelhouse.openquake.org/unified/adjustText-1.3.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/mapclassify-2.10.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/reportlab-4.4.9-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/pymupdf-1.27.2.3-cp310-abi3-manylinux_2_28_x86_64.whl
+https://wheelhouse.openquake.org/unified/matplotlib_scalebar-0.9.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/python_dateutil-2.8.2-py2.py3-none-any.whl
