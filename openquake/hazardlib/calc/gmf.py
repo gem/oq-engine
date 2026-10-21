@@ -47,7 +47,7 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
-CE_MIN_SITES = 1_000
+CE_MIN_SITES = 50
 
 
 def _correlation_budget():
