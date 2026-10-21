@@ -45,6 +45,7 @@ from xml.dom import minidom
 
 from shapely.geometry import shape, Point, Polygon
 import pandas as pd
+import h5py
 import numpy
 
 from openquake.baselib import performance, config
@@ -142,6 +143,8 @@ def get_array(**kw):
     elif kind == 'usgs_xml':
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
+    elif kind == 'shake_result_hdf':
+        return get_array_shake_result_hdf(kw['fname'])
     elif kind == 'usgs_id':
         # NOTE: _get_contents uses the 'usgs_preferred' ShakeMap
         #       version by default
@@ -1046,7 +1049,8 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
         return None, None, None, None, err
     contents = shakemap['contents']
 
-    if get_grid and 'download/grid.xml' in contents:
+    if (get_grid and ('download/grid.xml' in contents or
+                      'download/shake_result.hdf' in contents)):
         if user.testdir:  # in parsers_test
             grid_fname = f'{user.testdir}/{usgs_id}-grid.xml'
             shakemap_array = get_shakemap_array(grid_fname)
@@ -1609,11 +1613,19 @@ def get_array_usgs_id(kind, id, contents={}):
 
     :param kind: the string "usgs_id", for API compatibility
     :param id: ShakeMap ID
-    :param contents: a dictionary containing 'download/grid.xml'
+    :param contents: product links from the USGS event response
     """
+    result = contents.get('download/shake_result.hdf')
+    if result:
+        try:
+            return get_array(
+                kind='shake_result_hdf', fname=result['url'])
+        except (OSError, KeyError, ValueError) as exc:
+            logging.warning('Unable to read shake_result.hdf for %s: %s; '
+                            'falling back to grid.xml', id, exc)
     grid = contents.get('download/grid.xml')
     if not grid:
-        raise MissingLink('Could not find grid.xml link for %s' % id)
+        raise MissingLink('Could not find a ShakeMap grid for %s' % id)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
     if not uncertainty:
@@ -1621,6 +1633,57 @@ def get_array_usgs_id(kind, id, contents={}):
     return get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)
+
+
+def get_array_shake_result_hdf(fname):
+    # Convert the HDF5 grid to the common ShakeMap array representation.
+    url = path2url(fname)
+    with h5py.File(io.BytesIO(_download_url(url)), 'r') as h5:
+        config_text = h5['dictionaries/config'][()]
+        if isinstance(config_text, bytes):
+            config_text = config_text.decode('utf8')
+        conf = json.loads(config_text)
+        extent = list(map(float, conf['extent']['bounds']['extent']))
+        if -999 in extent or not numpy.isfinite(extent).all():
+            info_text = h5['dictionaries/info.json'][()]
+            if isinstance(info_text, bytes):
+                info_text = info_text.decode('utf8')
+            map_info = json.loads(info_text)['output']['map_information']
+            extent = [
+                float(map_info['min']['longitude']),
+                float(map_info['min']['latitude']),
+                float(map_info['max']['longitude']),
+                float(map_info['max']['latitude'])]
+        _, _, lon_max, lat_max = extent
+        prediction = conf['interp']['prediction_location']
+        xres = float(prediction['xres'])
+        yres = float(prediction['yres'])
+        component = conf['interp'].get(
+            'component', 'GREATER_OF_TWO_HORIZONTAL')
+        imt_groups = h5[f'arrays/imts/{component}']
+        imts = sorted(imt for imt in imt_groups
+                      if 'mean' in imt_groups[imt])
+        shape = h5['arrays/vs30'].shape
+        ny, nx = shape
+        dt = [(imt, F32) for imt in imts]
+        array = numpy.zeros(ny * nx, [
+            ('lon', F32), ('lat', F32), ('vs30', F32),
+            ('val', dt), ('std', dt), ('phi', dt), ('tau', dt)])
+        lons = lon_max - (nx - 1 - numpy.arange(nx)) * xres
+        lats = lat_max - numpy.arange(ny) * yres
+        array['lon'] = numpy.tile(lons.astype(F32), ny)
+        array['lat'] = numpy.repeat(lats.astype(F32), nx)
+        array['vs30'] = h5['arrays/vs30'][()].reshape(-1)
+        for imt in imts:
+            group = imt_groups[imt]
+            mean = group['mean'][()].reshape(-1)
+            scale = 1 if imt in ('MMI', 'PGV') else 100
+            array['val'][imt] = (mean if imt == 'MMI' else
+                                 numpy.exp(mean) * scale)
+            for field in ('std', 'phi', 'tau'):
+                if field in group:
+                    array[field][imt] = group[field][()].reshape(-1)
+    return array
 
 
 def get_array_file_npy(kind, fname):

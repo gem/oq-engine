@@ -54,7 +54,8 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES,
+    IMPACT_SPATIAL_CORRELATION_OPTIONS)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
@@ -2020,6 +2021,8 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_approaches'] = IMPACT_APPROACHES
+        params['impact_spatial_correlation_options'] = (
+            IMPACT_SPATIAL_CORRELATION_OPTIONS)
 
         # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \

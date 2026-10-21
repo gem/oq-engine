@@ -140,6 +140,9 @@ def test_impact_ui_level_2_build_rupture(
         should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('cholesky_decomposition')
     expect(page.rupture_identifier()).to_be_visible()
     expect(authenticated_page.locator(
         'div#shakemap_version_grp')).to_be_visible()
@@ -160,6 +163,8 @@ def test_impact_ui_level_2_build_rupture(
         page.run_impact_calc()
     assert 'name="nodal_plane"' in request.value.post_data
     assert 'NP2' in request.value.post_data
+    assert 'spatial_correlation' in request.value.post_data
+    assert 'cholesky_decomposition' in request.value.post_data
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()
         if should_abort_job:

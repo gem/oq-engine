@@ -75,6 +75,7 @@ def main_cmd(usgs_id, rupture_file=None,
              description=ImpactParam.description,
              notes=ImpactParam.notes,
              region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
+             correlation_strategy='circulant_embedding',
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -155,6 +156,7 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.correlation_strategy = 'Spatial correlation strategy'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

@@ -25,6 +25,7 @@ import numpy
 from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import CORRELATION_STRATEGIES
 from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
     get_nodal_planes_and_product, get_rup_dic)
@@ -61,6 +62,7 @@ class ImpactParam:
     make_impact_reports: bool = False
     region_grid_spacing: float = 10 if TEST_MODE else 1  # km, mandatory
     within_event_correlation_model: str = None
+    correlation_strategy: str = 'circulant_embedding'
     calculation_mode: str = 'scenario_risk'  # hidden from the form
     within_event_correlation_params: dict = None
 
@@ -106,6 +108,7 @@ class ImpactParam:
                 self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
+            correlation_strategy=self.correlation_strategy,
             make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
@@ -181,6 +184,8 @@ IMPACT_FORM_LABELS = {
     'calculation_mode': 'Calculation mode',
     'within_event_correlation_model': 'Within-event correlation model',
     'within_event_correlation_params': 'Within-event correlation params',
+    'correlation_strategy': 'Spatial correlation strategy',
+    'spatial_correlation': 'Spatial correlation',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -214,6 +219,13 @@ IMPACT_FORM_PLACEHOLDERS = {
     'notes': '',
 }
 
+IMPACT_SPATIAL_CORRELATION_OPTIONS = (
+    ('none', 'None'),
+    ('cholesky_decomposition',
+     'JayaramBaker2009 (Cholesky decomposition)'),
+    ('circulant_embedding',
+     'JayaramBaker2009 (Circulant embedding)'))
+
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'rupture_from_usgs': '',
@@ -243,6 +255,7 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file_input': '',
     'station_data_file_loaded': '',
     'description': '',
+    'spatial_correlation': 'none',
 }
 
 IMPACT_APPROACHES = {
@@ -290,6 +303,9 @@ validators = {
     'notes': valid.utf8,
     'make_impact_reports': valid.boolean,
     'within_event_correlation_model': valid.NoneOr(valid.utf8_not_empty),
+    'correlation_strategy': valid.Choice(*CORRELATION_STRATEGIES),
+    'spatial_correlation': valid.Choice(*(
+        value for value, _label in IMPACT_SPATIAL_CORRELATION_OPTIONS)),
     'calculation_mode': valid.Choice('scenario', 'scenario_risk'),
     'within_event_correlation_params': valid.dictionary,
 }
@@ -324,6 +340,18 @@ def _validate(POST):
             inputdic[field] = value
         else:
             params[field] = value
+
+    # The UI bundles the fixed model with the selected factorization.
+    if not validation_errs and 'spatial_correlation' in params:
+        choice = params.pop('spatial_correlation')
+        params.pop('within_event_correlation_model', None)
+        params.pop('within_event_correlation_params', None)
+        params.pop('correlation_strategy', None)
+        if choice != 'none':
+            params['within_event_correlation_model'] = 'JayaramBaker2009'
+            params['within_event_correlation_params'] = {
+                'vs30_clustering': True}
+            params['correlation_strategy'] = choice
 
     if validation_errs:
         err_msg = 'Invalid input value'

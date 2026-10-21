@@ -479,6 +479,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
+        # Exercise HDF ShakeMap ingestion and correlated impact GMFs.
         self.set_user_level_and_remove_groups(1)
         # NOTE: this case tests the extractor for losses_by_site in the
         # case discarding sites that do not correspond to any assets,
@@ -496,7 +497,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
-                    maximum_distance='100')
+                    maximum_distance='100',
+                    spatial_correlation='circulant_embedding')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     def test_run_by_usgs_id_point_rupture_correlation(self):
@@ -578,8 +580,9 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
                          'station_data_file_input', 'station_data_file_loaded',
-                         'description']
+                         'description', 'spatial_correlation']
         self.assertEqual(list(resp), expected_list)
+        self.assertEqual(resp['spatial_correlation'], 'none')
 
     def test_impact_get_shakemap_versions(self):
         self.set_user_level_and_remove_groups(1)

@@ -1,7 +1,7 @@
 import os.path
 import unittest
 import numpy
-from openquake.hazardlib import geo, imt
+from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
@@ -58,6 +58,59 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.0069831, 0.0298023, 0.0602146, 0.0294691],
                          [0.0069507, 0.0296108, 0.0594237, 0.0286251],
                          [0.0080306, 0.034196, 0.0762079, 0.037936]])
+
+    def test_circulant_embedding_strategy(self):
+        lons = numpy.tile([0., 0.1, 0.2], 3)
+        lats = numpy.repeat([0., 0.1, 0.2], 3)
+        component_dt = numpy.dtype([
+            ('lon', float), ('lat', float), ('val', imt_dt),
+            ('std', imt_dt), ('phi', imt_dt), ('tau', imt_dt),
+            ('vs30', float)])
+        shakemap = numpy.zeros(9, component_dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        shakemap['val'] = (0.5, 0.6, 0.7, 0.8)
+        shakemap['std'] = (0.5, 0.5, 0.5, 0.5)
+        shakemap['phi'] = (0.4, 0.4, 0.4, 0.4)
+        shakemap['tau'] = (0.3, 0.3, 0.3, 0.3)
+        sites = site.SiteCollection.from_points(lons, lats)
+        for correlation_strategy in (
+                'cholesky_decomposition', 'circulant_embedding'):
+            method = {
+                'kind': 'Silva&Horspool',
+                'spatial_model': spatial_model,
+                'cross_imt_model': None,
+                'cholesky_limit': 10000,
+                'correlation_strategy': correlation_strategy,
+                'sites': sites}
+            _, gmfs = to_gmfs(
+                shakemap, method, vs30=None, truncation_level=3,
+                num_gmfs=8, seed=42, imts=['PGA', 'SA(0.3)'])
+            self.assertEqual(gmfs.shape, (9, 8, 2))
+            self.assertTrue(numpy.isfinite(gmfs).all())
+
+    def test_zero_shakemap_uncertainty_skips_correlation(self):
+        lons = numpy.tile([0., 0.1], 2)
+        lats = numpy.repeat([0., 0.1], 2)
+        shakemap = numpy.zeros(4, shakemap_dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        shakemap['val'] = (10., 20., 30., 40.)
+        sites = site.SiteCollection.from_points(lons, lats)
+        expected = numpy.tile([0.1, 0.2], (4, 1))
+        for correlation_strategy in (
+                'cholesky_decomposition', 'circulant_embedding'):
+            method = {
+                'kind': 'Silva&Horspool',
+                'spatial_model': spatial_model,
+                'cross_imt_model': None,
+                'cholesky_limit': 10000,
+                'correlation_strategy': correlation_strategy,
+                'sites': sites}
+            _, gmfs = to_gmfs(
+                shakemap, method, vs30=None, truncation_level=3,
+                num_gmfs=2, seed=42, imts=['PGA', 'SA(0.3)'])
+            numpy.testing.assert_allclose(gmfs[:, 0], expected)
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
@@ -189,15 +242,15 @@ class ShakemapTestCase(unittest.TestCase):
         aae(gmfs[..., 0].sum(axis=0), [0.5809846, 0.8790549])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.605358, 0.8245417])  # SA(1.0)
 
-        # set stddev to zero
+        # Zero standard deviations produce deterministic ShakeMap GMFs.
         shakemap['std'] = 0
-        with self.assertRaises(ValueError) as ctx:
-            gmf_dict.update({'kind': 'Silva&Horspool',
-                             'spatial_model': None,
-                             'cross_imt_model': cross_imt_model})
-            to_gmfs(shakemap, gmf_dict, vs30=shakemap['vs30'],
-                    truncation_level=3, num_gmfs=2, seed=42)
-        self.assertIn('stddev==0 for IMT=PGA', str(ctx.exception))
+        gmf_dict.update({'kind': 'Silva&Horspool',
+                         'spatial_model': None,
+                         'cross_imt_model': cross_imt_model})
+        _, gmfs = to_gmfs(
+            shakemap, gmf_dict, vs30=shakemap['vs30'],
+            truncation_level=3, num_gmfs=2, seed=42)
+        numpy.testing.assert_array_equal(gmfs[:, 0], gmfs[:, 1])
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification

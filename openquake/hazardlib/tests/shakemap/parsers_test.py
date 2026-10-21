@@ -21,14 +21,19 @@ import unittest
 import csv
 import gzip
 import io
+import json
+import tempfile
 from http.client import IncompleteRead
+import h5py
+import numpy
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from openquake.hazardlib.shakemap.parsers import (
-    _download_url, get_rup_dic, User, utc_to_local_time,
+    _download_url, get_array, get_rup_dic, User, utc_to_local_time,
     get_stations_from_usgs,
     get_shakemap_versions, get_nodal_planes_and_info,
     get_nodal_planes_and_product)
+from openquake.hazardlib.shakemap.maps import filter_unused_imts
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
@@ -36,6 +41,52 @@ user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
+    def test_shake_result_hdf(self):
+        config = {
+            'extent': {'bounds': {'extent': [-999.] * 4}},
+            'interp': {
+                'component': 'GREATER_OF_TWO_HORIZONTAL',
+                'prediction_location': {'xres': 1., 'yres': 1.}}}
+        info = {'output': {'map_information': {
+            'min': {'longitude': '10', 'latitude': '20'},
+            'max': {'longitude': '11', 'latitude': '21'}}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['dictionaries/info.json'] = json.dumps(info)
+                h5['arrays/vs30'] = numpy.array([[200, 300], [400, 500]])
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt, mean in (
+                        ('MMI', [[4., 5.], [6., 7.]]),
+                        ('PGA', [[0., numpy.log(.1)],
+                                 [numpy.log(.2), numpy.log(.3)]]),
+                        ('PGV', [[0., numpy.log(2)],
+                                 [numpy.log(3), numpy.log(4)]])):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = mean
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        numpy.testing.assert_array_equal(
+            array['lon'], [10, 11, 10, 11])
+        numpy.testing.assert_array_equal(
+            array['lat'], [21, 21, 20, 20])
+        numpy.testing.assert_allclose(
+            array['val']['PGA'], [100, 10, 20, 30])
+        numpy.testing.assert_allclose(
+            array['val']['PGV'], [1, 2, 3, 4])
+        numpy.testing.assert_array_equal(
+            array['val']['MMI'], [4, 5, 6, 7])
+        self.assertIn('phi', array.dtype.names)
+        self.assertIn('tau', array.dtype.names)
+        filtered = filter_unused_imts(array, ['PGA'])
+        self.assertEqual(filtered['val'].dtype.names, ('PGA',))
+        numpy.testing.assert_array_equal(
+            filtered['phi']['PGA'], array['phi']['PGA'])
+        numpy.testing.assert_array_equal(
+            filtered['tau']['PGA'], array['tau']['PGA'])
+
     @classmethod
     def setUp(cls):
         try:

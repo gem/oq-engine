@@ -31,7 +31,8 @@ import ast
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
-from openquake.hazardlib.shakemap.validate import impact_validate
+from openquake.hazardlib.shakemap.validate import (
+    _validate, impact_validate)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -46,6 +47,13 @@ class ImpactValidateTestCase(unittest.TestCase):
             raise unittest.SkipTest('Missing timezonefinder')
         else:
             del timezonefinder
+
+    def test_spatial_correlation_none(self):
+        _inputdic, params, err = _validate(
+            {'spatial_correlation': 'none'})
+        self.assertEqual(err, {})
+        self.assertNotIn('within_event_correlation_model', params)
+        self.assertNotIn('correlation_strategy', params)
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
@@ -115,6 +123,7 @@ class ImpactValidateTestCase(unittest.TestCase):
             'strike': '0',
             'time_event': 'day',
             'trt': 'active shallow crust normal',
+            'spatial_correlation': 'cholesky_decomposition',
             'truncation_level': '3',
             'usgs_id': 'FromFile',
             'approach': 'provide_rup'}
@@ -161,6 +170,13 @@ class ImpactValidateTestCase(unittest.TestCase):
             self.assertEqual(params['truncation_level'], '3.0')
             self.assertEqual(params['number_of_ground_motion_fields'], '2'),
             self.assertEqual(params['ses_seed'], '42')
+            self.assertEqual(
+                params['correlation_strategy'], 'cholesky_decomposition')
+            self.assertEqual(
+                params['within_event_correlation_model'],
+                'JayaramBaker2009')
+            self.assertIn('vs30_clustering',
+                          params['within_event_correlation_params'])
             # self.assertEqual(params['station_data_file'], stations)  # FIXME
             self.assertEqual(err, {})
 

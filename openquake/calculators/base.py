@@ -45,6 +45,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -1840,6 +1841,16 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    if gmf_dict['kind'] == 'Silva&Horspool':
+        gmf_dict = dict(gmf_dict)
+        rupture_dict = oq.rupture_dict or {}
+        gmf_dict.update(
+            correlation_strategy=oq.correlation_strategy,
+            sites=sitecol,
+            context=CorrelationContext(
+                mag=rupture_dict.get('mag'),
+                rake=rupture_dict.get('rake'),
+                trt=oq.tectonic_region_type))
     sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
@@ -1917,10 +1928,8 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.impact:
-            gmf_dict = {'kind': 'basic'}  # possibly add correlation
-        elif (oq.within_event_correlation_model or
-              oq.total_residual_correlation_model):
+        if (oq.within_event_correlation_model or
+                oq.total_residual_correlation_model):
             # spatial and cross-IMT correlation after Silva and Horspool
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatial_model':

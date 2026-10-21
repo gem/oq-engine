@@ -116,8 +116,8 @@ window.initImpactForm = function() {
     }
 
     function set_retrieve_data_btn_state(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
-        const approach = get_selected_approach();
-        const msg = retrieve_data_btn_txt_map[approach][state];
+        const impact_approach = get_selected_approach();
+        const msg = retrieve_data_btn_txt_map[impact_approach][state];
         if (state == 'initial') {
             $('.submit_impact_get_rupture_waiting').hide();
         } else {
@@ -236,6 +236,8 @@ window.initImpactForm = function() {
             selector.empty();
         }
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
+        $('#spatial_correlation').val(
+            window.IMPACT.impact_form_defaults['spatial_correlation']);
         $('#no_uncertainty').prop('checked', false);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
@@ -684,6 +686,8 @@ window.initImpactForm = function() {
         formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
         formData.append('region_grid_spacing', $('#region_grid_spacing').val());
         formData.append('ses_seed', $('#ses_seed').val());
+        formData.append('spatial_correlation',
+                        $('#spatial_correlation').val());
         formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
         formData.append('local_timestamp', $("#local_timestamp").val());
         formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
@@ -709,7 +713,8 @@ window.initImpactForm = function() {
             if ("invalid_inputs" in resp) {
                 for (var i = 0; i < resp.invalid_inputs.length; i++) {
                     var input_id = resp.invalid_inputs[i];
-                    $("input#" + input_id).css("background-color", "#F2DEDE");
+                    $("input#" + input_id + ", select#" + input_id)
+                        .css("background-color", "#F2DEDE");
                 }
             }
             var err_msg = resp.error_msg || ajax_error_message(
