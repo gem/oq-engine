@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Avoided corruption of the datastore caused by an OOM in the post_classical phase
+
   [Christopher Brooks]
   * Updated the US NSHM variant of the CEUS non-linear site term (Hashash
     et al. 2020) to include the Vs30 floor (200 m/s) and rock PGA cap (1 g)
