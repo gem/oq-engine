@@ -313,8 +313,8 @@ class DeltaRatesGetter(object):
         self.dstore = dstore
 
     def __call__(self, src_id):
-        with self.dstore.open('r') as dstore:
-            return dstore['delta_rates'][src_id]
+        with self.dstore:  # opened and closed here, if not already open
+            return self.dstore['delta_rates'][src_id]
 
 
 class MapGetter(object):

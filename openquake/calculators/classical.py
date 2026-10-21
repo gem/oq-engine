@@ -1068,14 +1068,13 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            with self.datastore.tempfile() as tmp_h5:
-                savemap = parallel.Starmap(
-                    save_rates, h5=tmp_h5, distribute='processpool')
-                savemap.monitor.filename = self.datastore.filename
-                for grp_id, rmap in self.rmap.items():
-                    for rm in rmap.split(L1):
-                        savemap.submit((rm, self.num_chunks, None))
-                savemap.reduce()
+            savemap = parallel.Starmap(
+                save_rates, h5=self.datastore, mode='r',
+                distribute='processpool')
+            for grp_id, rmap in self.rmap.items():
+                for rm in rmap.split(L1):
+                    savemap.submit((rm, self.num_chunks, None))
+            savemap.reduce()
         else:
             # store sequentially
             logging.info('Saving %d RateMap(s)', len(self.rmap))
@@ -1250,19 +1249,17 @@ class ClassicalCalculator(base.HazardCalculator):
         self.hazard_specs = {
             kind: (self.datastore[kind].shape, self.datastore[kind].dtype)
             for kind in kinds if kind in self.datastore}
-        with self.datastore.tempfile() as tmp_h5:
-            if oq.fastmean:
-                smap = parallel.Starmap(
-                    fast_mean, [args[0:1] for args in allargs],
-                    distribute=distribute, h5=tmp_h5,
-                )
-            else:
-                smap = parallel.Starmap(
-                    postclassical, allargs,
-                    distribute=distribute, h5=tmp_h5,
-                )
-            smap.monitor.filename = self.datastore.filename
-            smap.reduce(self.collect_hazard)
+        if oq.fastmean:
+            smap = parallel.Starmap(
+                fast_mean, [args[0:1] for args in allargs],
+                distribute=distribute, h5=self.datastore, mode='r',
+            )
+        else:
+            smap = parallel.Starmap(
+                postclassical, allargs,
+                distribute=distribute, h5=self.datastore, mode='r',
+            )
+        smap.reduce(self.collect_hazard)
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)  # very fast
             self.datastore[kind][:] = self.hazard.pop(kind)

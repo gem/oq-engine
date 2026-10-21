@@ -835,8 +835,13 @@ class Starmap(object):
         return cls(task, taskargs, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None):
+                 progress=logging.info, h5=None, mode='r+'):
+        # mode 'r+': the performance info is saved in h5 (an hdf5.File
+        # or a DataStore); mode 'r': h5 must be a DataStore, which is
+        # only read by the tasks, while the performance info is saved
+        # in a temporary file and copied back into the DataStore at the end
         self.__class__.init(distribute=distribute)
+        self.mode = mode
         self.task_func = task_func
         if h5:
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
@@ -853,6 +858,10 @@ class Starmap(object):
         if distribute == 'zmq':
             self.monitor.version = h5['/'].attrs.get('engine_version')
         self.progress = progress
+        if mode == 'r':
+            self.dstore = h5
+            h5 = hdf5.File(gettemp(suffix='.hdf5', remove=False), 'w')
+            init_performance(h5)
         self.h5 = h5
         self.task_queue = []
         try:
@@ -1023,6 +1032,8 @@ class Starmap(object):
                 self.submit(args, func=func)
 
         if not hasattr(self, 'socket'):  # no submit was ever made
+            if self.mode == 'r':
+                self._merge_performance()
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
@@ -1065,6 +1076,27 @@ class Starmap(object):
                 times = numpy.array(list(dic.values()))
                 if self.h5.mode != 'r':
                     self.monitor.save_starmap_info(self.h5, name, times)
+        if self.mode == 'r':
+            self._merge_performance()
+
+    def _merge_performance(self):
+        # copy the performance info and the task_sent from the temporary
+        # file into the datastore, which is reopened in 'a' mode
+        tmp, dstore = self.h5, self.dstore
+        dstore.close()
+        dstore.open('a')
+        dstore.mode = 'a'
+        for name in ('performance_data', 'task_info', 'starmap_info'):
+            data = tmp[name][:]
+            if len(data):
+                hdf5.extend(dstore.hdf5[name], data)
+        sent = ast.literal_eval(decode(tmp['task_sent'][()]))
+        task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
+        task_sent.update(sent)
+        dstore['task_sent'] = str(task_sent)
+        fname = tmp.filename
+        tmp.close()
+        os.remove(fname)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
