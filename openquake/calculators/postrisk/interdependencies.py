@@ -21,7 +21,7 @@ import logging
 
 from openquake.baselib import sap
 from openquake.commonlib import datastore, logs, readinput
-from openquake.calculators.base import run_calc
+from openquake.calculators.base import run_calc, expose_outputs
 
 
 def main(dstore, child_exposure_xml, interdependencies_csv):
@@ -46,6 +46,8 @@ def main(dstore, child_exposure_xml, interdependencies_csv):
     # from the oqparam instead of writing a child.ini file on disk
     job_ini = readinput.to_dict(oq)
     calc = run_calc(job_ini, hazard_calculation_id=dstore.calc_id)
+    # expose the outputs of the child calculation in the database
+    expose_outputs(calc.datastore)
     outs = '\n'.join(logs.dbcmd('list_outputs', calc.datastore.calc_id, False))
     logging.info(outs)
     return calc.datastore.calc_id  # child ID
