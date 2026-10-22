@@ -328,7 +328,6 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     """
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
-    L = len(oq.loss_types)
     weights = base.get_weights(oq, dstore)
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
@@ -354,9 +353,9 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
             acc['rlz_id'].append(rlz_id)
             acc['loss_id'].append(loss_id)
             if dmgs:
-                # infer the number of buildings in nodamage state
+                # Already grouped by loss type: average over events only.
                 ndamaged = sum(df[col].sum() for col in dmgs)
-                dmg0 = aggnumber[agg_id] - ndamaged / (ne * L)
+                dmg0 = aggnumber[agg_id] - ndamaged / ne
                 assert dmg0 >= 0, dmg0
                 acc['dmg_0'].append(dmg0)
             for col in columns:

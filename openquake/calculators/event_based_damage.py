@@ -45,6 +45,22 @@ def zero_dmgcsq(A, R, L, crmodel):
     return numpy.zeros((P, A, R, L, Dc), F32)
 
 
+def _compose_damage_counts(dd5, numbers, D):
+    # Compose per-peril probabilities and convert back to building counts.
+    dd4 = numpy.zeros(dd5.shape[1:])
+    A, E, L, _Dc = dd4.shape
+    for a in range(A):
+        if numbers[a] == 0:
+            continue
+        for e in range(E):
+            for li in range(L):
+                fractions = dd5[:, a, e, li, :D] / numbers[a]
+                dd4[a, e, li, :D] = (
+                    scientific.compose_dds(fractions) * numbers[a])
+    dd4[..., D:] = dd5[..., D:].max(axis=0)
+    return dd4
+
+
 def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
     """
     :param df: a DataFrame of GMFs
@@ -69,14 +85,12 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
         if len(gmf_df) == 0:
             continue
         eids = gmf_df.eid.to_numpy()
-        E = len(eids)
         if not oq.float_dmg_dist:
             rng = scientific.MultiEventRNG(
                 oq.master_seed, numpy.unique(eids))
         else:
             rng = None
         for taxo, adf in asset_df.groupby('taxonomy'):
-            A = len(adf)
             ords = adf.ordinal.to_numpy()
             idxs = [idx[o] for o in ords]
             rc = scientific.RiskComputer(crmodel, taxo)
@@ -87,13 +101,8 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
                 for e, rlz in enumerate(rlzs[eids]):
                     dmgcsq[:, idxs, rlz] += dd5[:, :, e]
             if P > 1:
-                dd4 = numpy.empty(dd5.shape[1:])
-                for li in range(L):
-                    for a in range(A):
-                        for e in range(E):
-                            dd4[a, e, li, :D] = scientific.compose_dds(
-                                dd5[:, a, e, li, :D])
-                            dd4[a, e, li, D:] = dd5[:, a, e, li, D:].max(axis=0)
+                dd4 = _compose_damage_counts(
+                    dd5, adf['value-number'].to_numpy(), D)
             else:
                 dd4 = dd5[0]
             tot = dd4.sum(axis=0)  # (E, L, Dc)
