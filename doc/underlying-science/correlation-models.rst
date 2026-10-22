@@ -235,26 +235,32 @@ condition: the physical displacement associated with a row/column offset can
 vary with location. Using geographic pairwise distances instead would in
 general lose the repeated covariance structure required by this FFT method.
 
-The OpenQuake engine therefore uses one local UTM projection for the whole
-grid and evaluates covariance lags using Euclidean distances in that plane.
-UTM is an implementation choice, not a requirement of circulant embedding
-itself; other suitable planar projections could be supported if used
-consistently throughout grid preparation and sampling. Projected distances
-approximate distances on the Earth's surface, so even a valid embedding is
-exact for the chosen planar covariance, not an exact geodesic covariance.
+The OpenQuake engine therefore uses one local transverse Mercator projection
+for the whole grid and evaluates covariance lags using Euclidean distances in
+that plane. New grids use a projection centred on their longitude extent.
+If that projection does not fit an older site grid, the detector also tests
+the nominal UTM zone and its two neighbouring zones, retaining the best valid
+fit with the same coordinate tolerance. The selected projection is reused for
+station interpolation; geographic sites are not moved or resampled. An
+explicit CRS passed to ``RegularGridLayout.from_sites`` is always respected.
+
+The projection is an implementation choice, not a requirement of circulant
+embedding itself. Projected distances approximate distances on the Earth's
+surface, so even a valid embedding is exact for the chosen planar covariance,
+not an exact geodesic covariance.
 The projection must remain suitable for the geographic extent of the grid.
 This concerns correlation sampling; it does not replace the rupture-distance
 calculations used by ground-motion models or distance filtering.
 
 ``oq prepare_site_model`` can build such a grid with ``--regular-grid`` or
-directly from a rupture with ``--rupture``. It lays out the cells in UTM before
-converting them back to longitude and latitude for the site-model CSV. Reading
-that CSV does not change the underlying projected lattice. In rupture mode,
-``--maximum-distance`` defines the requested site-grid extent by expanding the
-projected rupture bounds. This is separate from the larger periodic grid
-constructed internally for CE: that computational padding is not part of the
-site-model CSV. Station locations do not need to lie on the requested lattice;
-off-grid stations are handled separately as described below.
+directly from a rupture with ``--rupture``. It lays out the cells in the local
+projection before converting them back to longitude and latitude for the
+site-model CSV. Reading that CSV does not change the underlying lattice.
+In rupture mode, ``--maximum-distance`` defines the site-grid extent by
+expanding the projected rupture bounds. This is separate from the larger
+periodic grid constructed internally for CE: that computational padding is
+not part of the site-model CSV. Station locations do not need to lie on the
+requested lattice; off-grid stations are handled separately as described below.
 
 An FFT changes the spatial representation from grid cells to sinusoidal
 spatial frequencies. In this representation, the large BCCB matrix separates
