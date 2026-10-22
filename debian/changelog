@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added a check forbidding equal sources with different IDs in different
+    source models
+
   [Christopher Brooks]
   * Fixed a bug in MorikawaFujiwara2013 that meant when no z1pt4 was set
     (either no reference value in job file or per-site in site model) that

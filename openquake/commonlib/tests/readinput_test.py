@@ -663,10 +663,12 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         # (see build_groups)
         oq = readinput.get_oqparam('job.ini', case_25)
         csm = readinput.get_composite_source_model(oq)
-        self.assertEqual(len(csm.src_groups), 6)  # one per source group
+        self.assertEqual(len(csm.src_groups), 5)  # one per source group
         # the source IDs have no ';' suffix, since the sources are not
-        # duplicated by the uncertainties applied in the workers
-        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 22)
+        # duplicated by the uncertainties applied in the workers; the
+        # identical sources of different source models have the same ID,
+        # so they are reduced (see reduce_sources)
+        self.assertEqual(len({s.source_id for s in csm.get_sources()}), 8)
 
     def _get_csm(self, sm1, sm2, smlt):
         # write the inputs in a temporary directory and build the CSM
