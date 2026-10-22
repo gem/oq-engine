@@ -25,7 +25,6 @@ import shutil
 import pathlib
 import subprocess
 import tempfile
-import threading
 import zipfile
 from django.contrib.auth import get_user_model
 from openquake.baselib import config
@@ -141,9 +140,10 @@ def _isolate_database():
     fd, dbfile = tempfile.mkstemp(prefix='oq-server-tests-', suffix='.sqlite3')
     os.close(fd)
     _test_dbfile = dbfile
+    if hasattr(dbapi.db.local, 'conn'):
+        dbapi.db.close()
     config.server['dbfile'] = dbfile
     dbapi.db.args = (dbfile,) + dbapi.db.args[1:]
-    dbapi.db.local = threading.local()  # forget the old connections
     connections.settings['default']['NAME'] = dbfile
     connections.close_all()
     # the schema of the engine tables is created in the scratch database
@@ -194,7 +194,11 @@ def server_test_data():
         os.environ['OQ_DATADIR'] = _old_datadir
     pathlib.Path(_server_cfg_path).unlink(missing_ok=True)
     from django.db import connections
+    from openquake.commonlib import dbapi
     connections.close_all()
+    # The engine has a separate SQLite connection, which locks the file on
+    # Windows even after all Django connections have been closed.
+    dbapi.db.close()
     pathlib.Path(_test_dbfile).unlink(missing_ok=True)
     shutil.rmtree(_test_datadir)
 
