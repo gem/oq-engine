@@ -1,4 +1,7 @@
   [Christopher Brooks]
+  * Fixed a bug in MorikawaFujiwara2013 that meant when no z1pt4 was set
+    (either no reference value in job file or per-site in site model) that
+    caused the basin term to become nan and thus zero hazard.
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
     path.
