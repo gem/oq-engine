@@ -55,10 +55,19 @@ class EnginePage:
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Abort"), timeout=20_000)
         self._confirm_action("abort")
-        expect(self.page.get_by_text("has been aborted")).to_be_visible(
-            timeout=20_000)
+        # short jobs may finish before the abort reaches the server, which
+        # then refuses it: both outcomes are valid, so check the row state
+        aborted = self.page.get_by_text("has been aborted")
+        finished = self.page.get_by_text("is not running")
+        expect(aborted.or_(finished)).to_be_visible(timeout=20_000)
+        was_aborted = aborted.is_visible()
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
-        expect(job_row.get_by_text("failed")).to_be_visible(timeout=20_000)
+        if was_aborted:
+            expect(job_row.get_by_text("failed")).to_be_visible(
+                timeout=20_000)
+        else:
+            expect(job_row.get_by_text("complete")).to_be_visible(
+                timeout=20_000)
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
