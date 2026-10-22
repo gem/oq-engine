@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import unittest
-from types import SimpleNamespace
 import numpy as np
 
-from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013Crustal,
         MorikawaFujiwara2013SubInterfaceNE,
@@ -28,7 +26,6 @@ from openquake.hazardlib.gsim.morikawa_fujiwara_2013 import (
         MorikawaFujiwara2013CrustalNIED,
         MorikawaFujiwara2013SubInterfaceNIED,
         MorikawaFujiwara2013SubSlabNIED,
-        _get_basin_term,
         _infer_z1pt4_from_vs30)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -110,45 +107,3 @@ class MorikawaFujiwara2013InferZ1pt4Test(unittest.TestCase):
                              250., 500., 1000.])
         out = _infer_z1pt4_from_vs30(vs30, z1pt4.copy(), z1pt4 == -999)
         np.testing.assert_allclose(out, expected, atol=1e-2)
-
-
-class MorikawaFujiwara2013MissingZ1pt4Test(unittest.TestCase):
-    """
-    Regression test: when reference_depth_to_1pt4km_per_sec is omitted
-    from the job file, ctx.z1pt4 is NaN (not -999), and the basin term
-    previously returned NaN - silently zeroing the hazard. compute() must
-    now raise ValueError in that case.
-    """
-    def _ctx(self, z1pt4_vals):
-        n = len(z1pt4_vals)
-        return SimpleNamespace(
-            z1pt4=np.asarray(z1pt4_vals, dtype=float),
-            vs30=np.full(n, 760.),
-            mag=np.full(n, 6.0),
-            rrup=np.full(n, 50.),
-            hypo_depth=np.full(n, 10.),
-            lon=np.full(n, 140.),
-            lat=np.full(n, 36.))
-
-    def test_nan_z1pt4_raises(self):
-        gmm = MorikawaFujiwara2013Crustal()
-        imts = [PGA()]
-        n = 3
-        mean = np.zeros((1, n))
-        sig = np.zeros((1, n))
-        expected = (
-            "MorikawaFujiwara2013 requires z1pt4 for every site. "
-            "Supply it in the site model, set "
-            "reference_depth_to_1pt4km_per_sec in the job file, or "
-            "set reference_depth_to_1pt4km_per_sec = -999 to use "
-            "GEM's Vs30-based z1pt4 estimate.")
-        with self.assertRaises(ValueError) as cm:
-            gmm.compute(self._ctx([760., np.nan, -999.]),
-                        imts, mean, sig, None, None)
-        self.assertEqual(str(cm.exception), expected)
-
-    def test_minus999_still_triggers_inference(self):
-        # -999 means use GEM's Vs30-based z1pt4 and must still work
-        C = MorikawaFujiwara2013Crustal.COEFFS[PGA()]
-        bt = _get_basin_term(C, self._ctx([-999., -999., -999.]))
-        np.testing.assert_allclose(bt, [0.04433789] * 3, atol=1e-6)

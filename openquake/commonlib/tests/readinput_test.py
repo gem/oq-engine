@@ -850,3 +850,16 @@ class GetCountryOrModelTestCase(unittest.TestCase):
 
     def test_no_match(self):
         self.assertEqual(get_country_or_model('/x/nothing/job.ini'), '')
+
+
+class CheckSitecolParamsTestCase(unittest.TestCase):
+    def test_nan_z1pt4_raises(self):
+        arr = numpy.zeros(3, [('vs30', float), ('z1pt4', float)])
+        arr['vs30'] = 760.
+        arr['z1pt4'] = [760., numpy.nan, -999.]
+        sitecol = SimpleNamespace(array=arr)
+        oq = SimpleNamespace(req_site_params=['vs30', 'z1pt4'])
+        with self.assertRaises(InvalidFile) as cm:
+            readinput.check_sitecol_params(sitecol, oq)
+        self.assertIn("Missing z1pt4 for one or more sites",
+                      str(cm.exception))

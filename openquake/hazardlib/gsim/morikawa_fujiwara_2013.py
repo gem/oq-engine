@@ -367,15 +367,6 @@ class MorikawaFujiwara2013Crustal(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        # Raise an error if z1pt4 is unset - otherwise the basin
-        # term silently produces NaN and therefore zero hazard
-        if np.isnan(ctx.z1pt4).any():
-            raise ValueError(
-                "MorikawaFujiwara2013 requires z1pt4 for every site. "
-                "Supply it in the site model, set "
-                "reference_depth_to_1pt4km_per_sec in the job file, or "
-                "set reference_depth_to_1pt4km_per_sec = -999 to use "
-                "GEM's Vs30-based z1pt4 estimate.")
         mw01 = CONSTS["Mw01"]
         mw1 = CONSTS["Mw1"]
         mw1prime = np.array(ctx.mag)

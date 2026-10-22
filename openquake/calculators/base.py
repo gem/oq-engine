@@ -1248,6 +1248,9 @@ class HazardCalculator(BaseCalculator):
                 if 'z2pt5' in names:
                     self.sitecol.calculate_z2pt5()
 
+            # Now can check valid core site params
+            readinput.check_sitecol_params(self.sitecol, oq)
+
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
                 self.datastore['complete'] = self.sitecol.complete
