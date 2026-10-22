@@ -17,8 +17,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
-import zlib
 import copy
+import hashlib
 import json
 import os.path
 import pickle
@@ -323,6 +323,9 @@ def get_csm(oq, full_lt, dstore=None):
     if found:
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
+    if oq.strict:
+        check_same_sources(smdict, oq.inputs.get(
+            'source_model_logic_tree', oq.inputs['job_ini']))
 
     # checking ps_grid_spacing
     pointlike_sources = 0
@@ -701,17 +704,34 @@ def store_data(oq, smdict, csm, dstore):
                      time.time()-t0)
 
 
+# attributes which are not part of the content of a source
+NOT_CONTENT = {'source_id', 'name', 'ts_samples', 'branch',
+               'width_of_mfd_bin', 'checksum'}
+
+
+def content_hash(src, exclude=NOT_CONTENT):
+    """
+    :param src: a source object
+    :param exclude: the attributes to ignore
+    :returns: the md5 hex digest of the other attributes of the source
+
+    NB: by default the ID and the name are ignored, i.e. two copies of the
+    same source with different IDs or names have the same hash
+    """
+    dic = {k: v for k, v in vars(src).items() if k not in exclude}
+    return hashlib.md5(pickle.dumps(dic, protocol=4)).hexdigest()
+
+
 # called by reduce_sources
 def add_checksums(srcs):
     """
     Build and attach a checksum to each source
     """
+    # width_of_mfd_bin is set by modify_set_recurrow; the name is not part
+    # of the checksum, i.e. sources with the same content are reduced even
+    # if they have different names
     for src in srcs:
-        # width_of_mfd_bin is set by modify_set_recurrow
-        dic = {k: v for k, v in vars(src).items()
-               if k not in {'source_id', 'ts_samples', 'branch',
-                            'width_of_mfd_bin'}}
-        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
+        src.checksum = content_hash(src)
 
 
 # called before add_semicolons
@@ -751,6 +771,53 @@ def add_bangs(smdict):
                         src.source_id += '!%s' % src.branch
                 found.append(srcid)
     return found
+
+
+def check_same_sources(smdict, fname):
+    """
+    Raise an InvalidFile error if the same source (i.e. a source with the
+    same content) appears in different source models with different IDs:
+    then the engine cannot recognize the copies as the same source, i.e. it
+    cannot reduce them (see reduce_sources), and the source is computed
+    once per source model.
+
+    :param smdict: a dictionary source model file -> SourceModel
+    :param fname: the source model logic tree file, used in the error
+    """
+    # NB: the atomic groups are skipped, since their sources cannot be
+    # duplicated anyway (see add_bangs); the sources are hashed only if
+    # their code and TRT appear in more than one source model file, to
+    # save time
+    bykey = general.AccumDict(accum=[])  # (code, trt) -> [(smfile, src)]
+    for smfile, smodel in smdict.items():
+        for sgroup in smodel.src_groups:
+            if sgroup.atomic:
+                continue
+            for src in sgroup:
+                bykey[src.code, src.tectonic_region_type].append(
+                    (smfile, src))
+    errors = []
+    for pairs in bykey.values():
+        if len({smfile for smfile, _ in pairs}) < 2:
+            continue
+        byhash = general.AccumDict(accum=[])
+        for smfile, src in pairs:
+            byhash[content_hash(src)].append((smfile, src))
+        for same in byhash.values():
+            smfiles = {smfile for smfile, _ in same}
+            # NB: the original IDs, without the bangs added by add_bangs
+            # for sources with the same ID and a different content
+            ids = {basename(src).split('!')[0] for _, src in same}
+            if len(smfiles) > 1 and len(ids) > 1:
+                errors.append(sorted({'%s[%s]' % (
+                    basename(src).split('!')[0], os.path.basename(smfile))
+                    for smfile, src in same}))
+    if errors:
+        lines = ['  ' + general.shortlist(err) for err in errors]
+        raise InvalidFile(
+            '%s: %d sources appear in different source models with '
+            'different IDs, use the same ID for each of them:\n%s' % (
+                fname, len(errors), '\n'.join(lines)))
 
 
 def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
