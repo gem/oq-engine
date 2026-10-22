@@ -323,9 +323,8 @@ def get_csm(oq, full_lt, dstore=None):
     if found:
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
-    if oq.strict:
-        check_same_sources(smdict, oq.inputs.get(
-            'source_model_logic_tree', oq.inputs['job_ini']))
+    check_same_sources(smdict, oq.inputs.get(
+        'source_model_logic_tree', oq.inputs['job_ini']))
 
     # checking ps_grid_spacing
     pointlike_sources = 0
@@ -775,14 +774,14 @@ def add_bangs(smdict):
 
 def check_same_sources(smdict, fname):
     """
-    Raise an InvalidFile error if the same source (i.e. a source with the
-    same content) appears in different source models with different IDs:
-    then the engine cannot recognize the copies as the same source, i.e. it
-    cannot reduce them (see reduce_sources), and the source is computed
-    once per source model.
+    Log a warning if the same source (i.e. a source with the same content)
+    appears in different source models with different IDs: then the engine
+    cannot recognize the copies as the same source, i.e. it cannot reduce
+    them (see reduce_sources), and the source is computed once per source
+    model.
 
     :param smdict: a dictionary source model file -> SourceModel
-    :param fname: the source model logic tree file, used in the error
+    :param fname: the source model logic tree file, used in the warning
     """
     # NB: the atomic groups are skipped, since their sources cannot be
     # duplicated anyway (see add_bangs); the sources are hashed only if
@@ -814,10 +813,13 @@ def check_same_sources(smdict, fname):
                     for smfile, src in same}))
     if errors:
         lines = ['  ' + general.shortlist(err) for err in errors]
-        raise InvalidFile(
-            '%s: %d sources appear in different source models with '
-            'different IDs, use the same ID for each of them:\n%s' % (
-                fname, len(errors), '\n'.join(lines)))
+        msg = ('%s: %d sources appear in different source models with '
+               'different IDs, use the same ID for each of them:\n%s' % (
+                   fname, len(errors), '\n'.join(lines)))
+        # NB: in oq check_input the models must be fixed, so it is an error
+        if os.environ.get('OQ_CHECK_INPUT'):
+            raise InvalidFile(msg)
+        logging.warning(msg)
 
 
 def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
