@@ -196,3 +196,25 @@ class ImpactValidateTestCase(unittest.TestCase):
                 'aspect_ratio': 2, 'msr': 'WC1994'}
         _rup, rupdic, _oqparams, _err = impact_validate(POST, user)
         self.assertIn('msr', rupdic)
+
+    def test_provide_rup_params_spatial_correlation(self):
+        # rupture-only job without ShakeMap keeps the correlation settings
+        POST = {
+            'approach': 'provide_rup_params', 'use_shakemap': 'false',
+            'usgs_id': 'UserProvided', 'lon': '84.4', 'lat': '27.6',
+            'dep': '30', 'mag': '7', 'dip': '90', 'rake': '90',
+            'strike': '0', 'aspect_ratio': '2', 'msr': 'WC1994',
+            'mosaic_model': 'IND', 'time_event': 'day',
+            'local_timestamp': '', 'maximum_distance': '100',
+            'maximum_distance_stations': '',
+            'asset_hazard_distance': '15',
+            'number_of_ground_motion_fields': '2', 'ses_seed': '42',
+            'truncation_level': '3',
+            'spatial_correlation': 'circulant_embedding'}
+        _rup, _rupdic, oqparams, err = impact_validate(POST, user)
+        self.assertFalse(err)
+        self.assertEqual(oqparams['within_event_correlation_model'],
+                         'JayaramBaker2009')
+        self.assertEqual(oqparams['correlation_strategy'],
+                         'circulant_embedding')
+        self.assertNotIn('shakemap_uri', oqparams)
