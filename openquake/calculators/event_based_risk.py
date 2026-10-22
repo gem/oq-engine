@@ -84,17 +84,14 @@ def get_assetdf_startstop(assetcol):
     return assetdf, U32(iss)
 
 
-def fast_agg(keys, values, correl, li, loss2):
+def fast_agg(keys, values, li, loss2):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
     :param values: an array of (N, D) floats
-    :param correl: True if there is asset correlation
     :param li: loss type index
     :param loss2: dictionary unique key -> array(L, D)
     """
     ukeys, avalues = general.fast_agg2(keys, values)
-    if correl:  # restore the variances
-        avalues[:, 0] = avalues[:, 0] ** 2
     for ukey, avalue in zip(ukeys, avalues):
         loss2[ukey][li] += avalue
 
@@ -155,13 +152,16 @@ def build_avg(loss3, A, X):
     return avg
 
 
-def build_alt(loss2, xtypes):
+def build_alt(loss2, xtypes, correl=False):
     """
     Build aggregated loss table
     """
     lis = range(len(xtypes))
     dic = general.AccumDict(accum=[])
     for ukey, arr in loss2.items():
+        if correl:  # square after summing sigmas across all asset chunks
+            arr = arr.copy()
+            arr[:, 0] **= 2
         eid, kid = divmod(ukey, TWO32)
         for li in lis:
             if arr[li].any():
@@ -192,12 +192,12 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
         eids = alt.eid.to_numpy() * TWO32  # U64
         values = numpy.array([alt[col] for col in value_cols]).T
         # aggregate all assets
-        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
+        fast_agg(eids + U64(oq.K), values, li, loss2)
         if len(aggids):
             # aggregate assets for each tag combination
             aids = alt.aid.to_numpy()
             for kids in aggids[:, aids]:
-                fast_agg(eids + U64(kids), values, correl, li, loss2)
+                fast_agg(eids + U64(kids), values, li, loss2)
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -319,7 +319,7 @@ def event_based_risk(gmf_df, monitor):
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
     avg = build_avg(loss3, oq.A, R*X)
-    alt = build_alt(loss2, xtypes)
+    alt = build_alt(loss2, xtypes, int(oq.asset_correlation))
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 

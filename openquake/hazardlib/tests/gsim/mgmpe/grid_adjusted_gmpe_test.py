@@ -149,7 +149,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             adjs = raytrace_path_adj(
                 gd["raytrace_grids"]["adj_per_km"][imt],
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
-                LONS, LATS,
+                LONS, LATS, gd["h3_res"],
             )
             aae(adjs, EXPECTED_PATH_ADJ[m], decimal=DP)
 

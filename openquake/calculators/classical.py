@@ -313,10 +313,22 @@ def geometry_key(srcs, bvals):
     # e.g. logictree/case_18_bis: the sources of 'first' have two keys, one
     # for setLowerSeismDepthAbsolute 10.0 and one for 20.0, with 9 sets each
     # (3 abGR x 3 maxMagGR), i.e. two groups of 9 variants for make_results:
-    # (('bs6', '10.0'),) and (('bs6', '20.0'),)
-    return tuple((bset.id, repr(value)) for bset, value in bvals
-                 if bset.uncertainty_type not in GEOMETRY_PRESERVING and
-                 any(get_bset_value(bset, value, src)[0] for src in srcs))
+    # (('setLowerSeismDepthAbsolute', '10.0', ids),) and
+    # (('setLowerSeismDepthAbsolute', '20.0', ids),), with ids the IDs of
+    # the sources of 'first'
+    # NB: the key uses the uncertainty type and the affected sources and not
+    # the branchset ID, since the same uncertainty with the same value gives
+    # the same geometry even if it comes from different branchsets, i.e.
+    # from different source models containing the same source
+    key = []
+    for bset, value in bvals:
+        if bset.uncertainty_type in GEOMETRY_PRESERVING:
+            continue
+        ids = tuple(src.source_id for src in srcs
+                    if get_bset_value(bset, value, src)[0])
+        if ids:
+            key.append((bset.uncertainty_type, repr(value), ids))
+    return tuple(key)
 
 
 def _split_by_mags(pairs):

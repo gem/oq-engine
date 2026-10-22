@@ -35,6 +35,7 @@ I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
+RATES_BLOCK = 2 ** 22  # rows of _rates read at once, to bound the memory
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -363,34 +364,51 @@ class MapGetter(object):
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
         self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
+        lookup = numpy.full(max(sid2idx) + 1, -1, int)
+        for sid, idx in sid2idx.items():
+            lookup[sid] = idx
         for fname in self.filenames:
-            with hdf5.File(fname) as dstore:
-                slices = dstore['_rates/slice_by_idx'][:]
-                slices = slices[slices['idx'] == self.chunk]
-                if len(slices) == 0:
+            self.read_chunk(fname, lookup)
+        self.sid2idx = sid2idx
+        return self.array
+
+    def read_chunk(self, fname, lookup):
+        """
+        Add the rates of the chunk stored in the file fname to self.array
+
+        :param fname: the path to a datastore with a _rates group
+        :param lookup: an array mapping site IDs to indices of self.array
+        """
+        with hdf5.File(fname) as dstore:
+            slices = dstore['_rates/slice_by_idx'][:]
+            slices = slices[slices['idx'] == self.chunk]
+            if len(slices) == 0:
+                return
+            # read each column block by block (reading slice by slice
+            # is slow) and select the rows of the slices of this chunk
+            n = len(dstore['_rates/rate'])
+            for a in range(0, n, RATES_BLOCK):
+                b = min(a + RATES_BLOCK, n)
+                # clip the slices to the block and mark their rows
+                start = numpy.clip(slices['start'], a, b) - a
+                stop = numpy.clip(slices['stop'], a, b) - a
+                marks = numpy.zeros(b - a + 1, int)
+                numpy.add.at(marks, start, 1)
+                numpy.add.at(marks, stop, -1)
+                mask = numpy.cumsum(marks[:-1]) > 0
+                if not mask.any():
                     continue
-                # read each column once (reading slice by slice is slow)
-                # and select the rows of the slices of this chunk
-                n = len(dstore['_rates/rate'])
-                marks = numpy.zeros(n + 1, int)
-                numpy.add.at(marks, slices['start'], 1)
-                numpy.add.at(marks, slices['stop'], -1)
-                mask = numpy.cumsum(marks[:n]) > 0
-                sids = dstore['_rates/sid'][:][mask]
-                lid = dstore['_rates/lid'][:][mask]
-                gid = dstore['_rates/gid'][:][mask]
-                rate = dstore['_rates/rate'][:][mask]
-        # NB: numpy.add.at is needed since the same (sid, lid, gid) can
-        # appear several times, and fancy-index += would drop duplicates
-                lookup = numpy.full(max(sid2idx) + 1, -1, int)
-                for sid, idx in sid2idx.items():
-                    lookup[sid] = idx
+                sids = dstore['_rates/sid'][a:b][mask]
+                lid = dstore['_rates/lid'][a:b][mask]
+                gid = dstore['_rates/gid'][a:b][mask]
+                rate = dstore['_rates/rate'][a:b][mask]
                 idxs = lookup[sids]
                 if (idxs < 0).any():
                     raise KeyError('unknown site IDs in _rates')
+                # NB: numpy.add.at is needed since the same
+                # (sid, lid, gid) can appear several times, and
+                # fancy-index += would drop duplicates
                 numpy.add.at(self.array, (idxs, lid, gid), rate)
-        self.sid2idx = sid2idx
-        return self.array
 
     def get_hcurve(self, sid):  # used in classical
         """

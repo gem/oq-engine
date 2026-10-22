@@ -7,7 +7,7 @@
         name="point source 7"
         tectonicRegion='active shallow crust'>
       <pointGeometry>
-        <gml:Point><gml:pos>0 0.77</gml:pos></gml:Point>
+        <gml:Point><gml:pos>0 0.79</gml:pos></gml:Point>
         <upperSeismoDepth>0</upperSeismoDepth>
         <lowerSeismoDepth>10</lowerSeismoDepth>
       </pointGeometry>

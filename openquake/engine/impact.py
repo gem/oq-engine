@@ -90,7 +90,8 @@ def main_cmd(usgs_id, rupture_file=None,
     loc = locals().copy()
     fields = set(ImpactParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
-    post = {f: loc.get(f) for f in fields}
+    # fields not in the signature (i.e. calculation_mode) keep the defaults
+    post = {f: loc[f] for f in fields if f in loc}
     post['usgs_id'] = usgs_id
     if shakemap_version is not None:
         post['shakemap_version'] = shakemap_version

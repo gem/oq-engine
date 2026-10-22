@@ -14,7 +14,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <pointGeometry>
                 <gml:Point>
                     <gml:pos>
-                        -123.4 46.4
+                        -123.4 46.42
                     </gml:pos>
                 </gml:Point>
                 <upperSeismoDepth>
