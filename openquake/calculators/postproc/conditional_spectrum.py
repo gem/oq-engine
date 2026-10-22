@@ -46,8 +46,9 @@ def to_spectra(outdic, n, p):
     out = numpy.zeros((R, M, 2))
     for r in range(R):
         c = outdic[r]
-        out[r, :, 0] = numpy.exp(c[:, n, 1, p])  # NB: seems wrong!
-        out[r, :, 1] = numpy.sqrt(c[:, n, 2, p])
+        # normalize the moments by the total weight c[:, n, 0, p]
+        out[r, :, 0] = numpy.exp(c[:, n, 1, p] / c[:, n, 0, p])
+        out[r, :, 1] = numpy.sqrt(c[:, n, 2, p] / c[:, n, 0, p])
     return out
 
 
@@ -141,7 +142,8 @@ def compute_cs(dstore, oq, N, M, P):
 
     # sanity check: the mean conditional spectrum must be close to the imls
     ref_idx = list(oq.imtls).index(oq.imt_ref)
-    mean_cs = numpy.exp(outmean[0][ref_idx, :, 1, :])  # shape (N, P)
+    om = outmean[0][ref_idx]  # shape (N, 3, P)
+    mean_cs = numpy.exp(om[:, 1, :] / om[:, 0, :])  # shape (N, P)
     for n in range(N):
         for p in range(P):
             diff = abs(1. - imls[n, p]/ mean_cs[n, p])

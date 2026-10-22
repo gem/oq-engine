@@ -4,6 +4,11 @@
     path.
   
   [Michele Simionato]
+  * Bug fix: the conditional spectra were not normalized by the total
+    weight of the ruptures, so the mean and standard deviation were wrong
+    (the mean conditional spectrum was not consistent with the IMLs)
+
+  [Michele Simionato]
   * Internal: changed the Starmap mechanism to use read-only datastores
     whenever possible, to avoid corruption in case of out-of-memory
 
