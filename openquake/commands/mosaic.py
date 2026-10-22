@@ -306,7 +306,8 @@ def callback(job_id, params, exc=None):
         error = str(exc)
     else:
         error = ''
-    description = params['description']
+    # params can be None or lack 'description' when validation fails
+    description = (params or {}).get('description', '')
     impact_res['res_list'].append((job_id, description, error))
 
 
