@@ -3,9 +3,8 @@
     source models
 
   [Christopher Brooks]
-  * Fixed a bug in MorikawaFujiwara2013 that meant when no z1pt4 was set
-    (either no reference value in job file or per-site in site model) that
-    the basin term became nan and thus zero hazard was incorrectly computed.
+  * Introduced a check on core parameters in a SiteCollection for which
+    NaN values are not permitted.
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
     path.
