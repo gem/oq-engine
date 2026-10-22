@@ -81,14 +81,26 @@ def _grid_spacing(x, y):
     return float(numpy.median(distances))
 
 
+def _legacy_crses(lons, lats):
+    # Older grids use one UTM zone, possibly extending into its neighbours.
+    # Try only the nominal zone and its neighbours, not all sixty projections.
+    zone = min(60, max(1, int((numpy.median(lons) + 180) // 6) + 1))
+    prefix = 32600 if numpy.median(lats) >= 0 else 32700
+    zones = [zone, (zone - 2) % 60 + 1, zone % 60 + 1]
+    return [f'EPSG:{prefix + candidate}' for candidate in zones]
+
+
 @dataclass(frozen=True)
 class RegularGridLayout:
     """Map geographic sites to the regular lattice used by CE.
 
     ``from_sites`` projects all coordinates with one transverse Mercator
     projection, centred on the middle of the longitude extent unless ``crs``
-    (a PROJ string) is given, then fits and validates an axis-aligned lattice. ``site_indices`` maps the original site order to
-    flattened grid cells; holes remain unused cells in the enclosing rectangle.
+    is given, then fits and validates an axis-aligned lattice. If the default
+    projection does not fit, nearby UTM projections are tested for older site
+    grids. An explicit ``crs`` is used without this automatic fallback.
+    ``site_indices`` maps the original site order to flattened grid cells;
+    holes remain unused cells in the enclosing rectangle.
 
     CE constructs stationary covariance lags from Euclidean distances between
     lattice cells. A fixed row/column offset must have the same displacement
@@ -105,8 +117,9 @@ class RegularGridLayout:
 
     ``grid_shape`` and ``spacing`` follow row/column order, with spacing in
     kilometres. ``projected_origin`` is northing/easting in metres, ``crs`` is
-    the PROJ string of the projection, and ``maximum_error`` is the largest
-    distance in metres between an input site and its fitted lattice position.
+    a projection specification accepted by pyproj, and ``maximum_error`` is
+    the largest distance in metres between an input site and its fitted
+    lattice position.
     """
 
     grid_shape: tuple
@@ -127,8 +140,30 @@ class RegularGridLayout:
         if not numpy.isfinite(lons).all() or not numpy.isfinite(lats).all():
             raise ValueError('Correlation grid coordinates must be finite')
 
-        if crs is None:
-            crs = _local_crs(lons, lats)
+        if crs is not None:
+            return cls._from_crs(lons, lats, max_cell_ratio, crs)
+        crs = _local_crs(lons, lats)
+        try:
+            return cls._from_crs(lons, lats, max_cell_ratio, crs)
+        except ValueError:
+            # Keep the current default for new grids. On failure, recover an
+            # older UTM lattice without resampling or relaxing its tolerance.
+            best = None
+            for candidate in _legacy_crses(lons, lats):
+                try:
+                    layout = cls._from_crs(
+                        lons, lats, max_cell_ratio, candidate)
+                except ValueError:
+                    continue
+                if best is None or layout.maximum_error < best.maximum_error:
+                    best = layout
+            if best is None:
+                raise
+            return best
+
+    @classmethod
+    def _from_crs(cls, lons, lats, max_cell_ratio, crs):
+        # Fit one fixed projection; keep all grid checks and the tolerance.
         transformer = Transformer.from_crs(
             4326, crs, always_xy=True)
         x, y = transformer.transform(lons, lats)
