@@ -236,6 +236,18 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         filtered2 = filtered.filter(numpy.array([True, False, True]))
         arreq(filtered2.vs30, [1.2, 4.])
 
+    def test_check_nan_core_params(self):
+        col = SiteCollection([
+            Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
+                 z1pt0=3, z2pt5=5),
+        ])
+        col.add_col('z1pt4', numpy.float64, numpy.array([numpy.nan]))
+        for field in ('vs30', 'z1pt0', 'z1pt4', 'z2pt5'):
+            col.array[field] = numpy.nan
+            with self.assertRaises(ValueError) as ar:
+                col.check_nan(field)
+            self.assertIn(f'Missing {field}', str(ar.exception))
+
     def test_within_region(self):
         region = wkt.loads('POLYGON((0 0, 9 0, 9 9, 0 9, 0 0))')
         reducedcol = self.SITES.within(region)
