@@ -402,19 +402,13 @@ def _process_sources(rmaker, ratios, pnemaps, rups):
 MAX_LINEAR = 2 ** 24
 
 
+# NB: this is crucial for the performance of the BCHydro calculation
 def _update_linear(cm, pnemaps, R, ctxt, si, itime):
     # Update the probability maps of the variants with the contexts of a
     # single magnitude, for Poisson ruptures only. The rate of a row is
     # occ_rate * R[v, s], and update_pmap_r adds rate * poe * itime to the
     # map, so the contributions of each source are summed once, and each
     # variant gets the sum of its contributions weighted by R[v, s]
-    #
-    # :param cm: a ContextMaker instance
-    # :param pnemaps: a list of V MapArrays, one per variant
-    # :param R: an array of shape (V, S) with the rate ratios at this mag
-    # :param ctxt: a context array with a single magnitude
-    # :param si: the source index of each row of ctxt
-    # :param itime: the time span of the temporal occurrence model
     pmap = pnemaps[0]
     N, L, G = pmap.array.shape
     contribs = numpy.zeros((N, L, len(R[0]), G))  # N, L, S, G
