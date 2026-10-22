@@ -215,7 +215,7 @@ def _get_basin_term(C, ctx, region=None):
     vs30 = ctx.vs30
     # Get sites that have sentinel (-999) z1pt4
     mask = z1pt4 == -999
-    if len(mask):
+    if mask.any():
         # Use GEM estimate of z1pt4 from vs30 for these sites
         z1pt4 = _infer_z1pt4_from_vs30(vs30, z1pt4, mask)
     # Now compute basin term as usual

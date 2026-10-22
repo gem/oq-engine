@@ -1248,6 +1248,12 @@ class HazardCalculator(BaseCalculator):
                 if 'z2pt5' in names:
                     self.sitecol.calculate_z2pt5()
 
+            # NaN check on core params after final site-model association:
+            # catches silent zero hazard from missing z1pt4 and similar
+            self.sitecol.check_nan(
+                [p for p in site.CORE_SITE_PARAMS
+                 if p in oq.req_site_params])
+
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
                 self.datastore['complete'] = self.sitecol.complete

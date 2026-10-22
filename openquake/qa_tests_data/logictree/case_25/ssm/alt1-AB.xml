@@ -4,7 +4,7 @@
   <sourceModel name="alt1_NVA-AB">
     <sourceGroup name="Alt1 Background Sources (NVA-AB)"
                  tectonicRegion="NVA">
-      <areaSource id="alt1-NVA-AB-bkg" name="NVA background (NVA-AB)">
+      <areaSource id="NVA-AB-bkg" name="NVA background (NVA-AB)">
           <areaGeometry>
               <gml:Polygon>
                   <gml:exterior>

@@ -1,4 +1,11 @@
+  [Michele Simionato]
+  * Added a check forbidding equal sources with different IDs in different
+    source models
+
   [Christopher Brooks]
+  * Added a NaN check on required core site parameters (vs30, z1pt0,
+    z2pt5, z1pt4, lon, lat) after site-model association; a missing
+    z1pt4 was silently producing zero hazard with MorikawaFujiwara2013
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
     path.

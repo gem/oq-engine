@@ -183,7 +183,9 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     if cmaker.ps_grid_spacing and cmaker.split_sources:
         srcs = []
         for src in sources:
-            if src.code in b'AM':
+            # NB: the sources modified by the uncertainties are not split
+            # here, see filter_weight; they are weighted there instead
+            if src.code in b'AM' and not src.bysrc_unc:
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
