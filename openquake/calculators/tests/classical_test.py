@@ -1168,9 +1168,11 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)
 
     def test_case_84(self):
-        # three sources are identical except for their source_ids.
-        # one is collapsed using reqv, while the other two are specified
-        # as 'not collapsed' in the job file field reqv_ignore_sources
+        # three sources are identical except for their source_ids and a
+        # small shift in latitude (otherwise check_same_sources would
+        # complain); one is collapsed using reqv, while the other two are
+        # specified as 'not collapsed' in the job file field
+        # reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
         [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)

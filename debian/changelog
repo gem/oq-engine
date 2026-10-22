@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added a check forbidding equal sources with different IDs in different
+    source models
+
   [Christopher Brooks]
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
