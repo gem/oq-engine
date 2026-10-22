@@ -528,6 +528,34 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             ret = self.post('%s/remove' % job_id)
             self.assertEqual(ret.status_code, 200)
 
+    def test_provide_rup_params_spatial_correlation_then_remove_calc(self):
+        # rupture-only job without ShakeMap, through the form fields
+        self.set_user_level_and_remove_groups(2)
+        data = dict(usgs_id='UserProvided', approach='provide_rup_params',
+                    use_shakemap='false', lon='84.4', lat='27.6',
+                    dep='30', mag='7', rake='90', dip='90', strike='0',
+                    aspect_ratio='2', msr='WC1994', mosaic_model='IND',
+                    maximum_distance='100', time_event='day',
+                    truncation_level='3', ses_seed='42',
+                    number_of_ground_motion_fields='10',
+                    asset_hazard_distance='15',
+                    spatial_correlation='circulant_embedding')
+        # NOTE: no MMI outputs without a ShakeMap, so the checks done by
+        #       impact_run_then_remove do not apply here
+        with tempfile.TemporaryDirectory() as email_dir:
+            data['email_file_path'] = email_dir
+            resp = self.post('impact_run', data=data)
+            [job_id] = json.loads(resp.content.decode('utf8'))
+            job_dic = self.wait(job_id)
+            if job_dic is None:
+                raise TimeoutError()
+            if job_dic['status'] == 'failed':
+                tb = self.get_json('%s/traceback' % job_id)
+                raise Exception('\n'.join(tb))
+            self.assertEqual(job_dic['status'], 'complete')
+            ret = self.post('%s/remove' % job_id)
+            self.assertEqual(ret.status_code, 200)
+
     def test_run_by_usgs_id_then_remove_calc_no_rupture(self):
         self.set_user_level_and_remove_groups(1)
         usgs_id = 'us6000phrk'
