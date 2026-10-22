@@ -994,18 +994,25 @@ class SiteCollection(object):
         """
         self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.countries)
 
-    def check_nan(self, field):
+    def check_nan(self, fields):
         """
-        Raise a ValueError if the field contains NaNs
+        Raise a ValueError if any of the given fields contains NaNs.
+        ``fields`` may be a single field name or a sequence of them.
         """
-        try:
-            values = getattr(self, field)
-        except ValueError:  # in scenario test_case_14
-            pass
-        else:
-            if numpy.isnan(values).any():
-                raise ValueError(f'The {field} is NaN, missing site model '
-                                 'or site parameter')
+        if isinstance(fields, str):
+            fields = (fields,)
+        for field in fields:
+            try:
+                values = getattr(self, field)
+            except ValueError:  # in scenario test_case_14
+                continue
+            if not numpy.isnan(values).any():
+                continue
+            hint = (f" or set reference {param[field]} in the job file"
+                    if field in param else "")
+            raise ValueError(
+                f"Missing {field} for one or more sites. Supply it "
+                f"in the site model{hint}.")
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

@@ -4,7 +4,7 @@
 
   [Christopher Brooks]
   * Introduced a check on core parameters in a SiteCollection for which
-    NaN values are not permitted.
+    NaN values are not permitted
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
     path.

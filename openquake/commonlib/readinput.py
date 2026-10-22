@@ -720,25 +720,9 @@ def check_site_param(oqparam, name):
     return value
 
 
-def check_sitecol_params(sitecol, oqparam):
-    """
-    Raise InvalidFile if the assembled SiteCollection has NaN values
-    for a required core site parameter (lon, lat, vs30, z1pt0, z2pt5,
-    z1pt4).
-    """
-    # NOTE: lon/lat are nominally validated earlier via valid.coordinates
-    # but the lon/lat validators accept 'nan' (float('nan') so check here
-    core_params = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
-    names = sitecol.array.dtype.names
-    for name in core_params:
-        if (name in oqparam.req_site_params
-                and name in names
-                and numpy.isnan(sitecol.array[name]).any()):
-            hint = (f" or set reference {site.param[name]} in the job "
-                    f"file" if name in site.param else "")
-            raise InvalidFile(
-                f"Missing {name} for one or more sites. Supply it in "
-                f"the site model{hint}.")
+#: Core site parameters whose NaN values would silently produce NaN
+#: hazard; lon/lat included because valid.coordinates accepts 'nan'
+CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
 
 
 def get_site_model(oqparam, h5=None):
