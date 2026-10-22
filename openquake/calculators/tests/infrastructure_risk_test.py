@@ -18,7 +18,7 @@
 
 import numpy
 from openquake.baselib import InvalidFile
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.qa_tests_data.infrastructure_risk import (
     case_1, case_2, case_3, five_nodes_demsup_directed,
     five_nodes_demsup_directedunweighted,
@@ -203,3 +203,8 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         with datastore.read(self.calc.child_id) as child_dstore:
             outs = 'avg_loss event_efl event_pcl event_wcl node_el'.split()
             self._check_csv_outputs(outs, child_dstore, interdependencies)
+        # the outputs of the child must be exposed in the database
+        child_outs = logs.dbcmd('get_outputs', self.calc.child_id)
+        keys = {out.ds_key for out in child_outs}
+        for out in outs:
+            self.assertIn('infra-' + out, keys)
