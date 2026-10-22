@@ -238,11 +238,9 @@ general lose the repeated covariance structure required by this FFT method.
 The OpenQuake engine therefore uses one local transverse Mercator projection
 for the whole grid and evaluates covariance lags using Euclidean distances in
 that plane. New grids use a projection centred on their longitude extent.
-If that projection does not fit an older site grid, the detector also tests
-the nominal UTM zone and its two neighbouring zones, retaining the best valid
-fit with the same coordinate tolerance. The selected projection is reused for
-station interpolation; geographic sites are not moved or resampled. An
-explicit CRS passed to ``RegularGridLayout.from_sites`` is always respected.
+The selected projection is reused for station interpolation; geographic sites
+are not moved or resampled. An explicit CRS passed to
+``RegularGridLayout.from_sites`` is always respected.
 
 The projection is an implementation choice, not a requirement of circulant
 embedding itself. Projected distances approximate distances on the Earth's

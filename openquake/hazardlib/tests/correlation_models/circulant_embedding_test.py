@@ -15,7 +15,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from types import SimpleNamespace
-from unittest.mock import patch
 
 import numpy
 import pytest
@@ -39,16 +38,15 @@ MODELS = [DuNing2021, MonteiroEtAl2026]
 
 EPS = 1E-10
 
-def geographic_grid(shape, missing=(), perturb=None, crs=32610,
-                    origin=(500_000, 4_200_000)):
-    """Return rounded geographic coordinates for a projected grid."""
+def geographic_grid(shape, missing=(), perturb=None):
+    """Return rounded geographic coordinates for a UTM grid."""
     y, x = numpy.indices(shape)
     keep = numpy.ones(shape, dtype=bool)
     for row, column in missing:
         keep[row, column] = False
-    x = origin[0] + x[keep] * 1_000
-    y = origin[1] + y[keep] * 1_000
-    transformer = Transformer.from_crs(crs, 4326, always_xy=True)
+    x = 500_000 + x[keep] * 1_000
+    y = 4_200_000 + y[keep] * 1_000
+    transformer = Transformer.from_crs(32610, 4326, always_xy=True)
     lons, lats = transformer.transform(x, y)
     lons = numpy.round(lons, 5)
     lats = numpy.round(lats, 5)
@@ -151,69 +149,6 @@ def test_expanded_layout():
     expected = numpy.rint(rows).astype(int) * 8
     expected += numpy.rint(columns).astype(int)
     numpy.testing.assert_array_equal(expanded.site_indices, expected)
-
-
-@pytest.mark.parametrize('crs,origin', [
-    (32610, (600_000, 4_200_000)),
-    (32760, (400_000, 5_400_000)),
-    (32636, (825_000, 1_100_000))])
-def test_legacy_csv(tmp_path, crs, origin):
-    # Larger old grids fail in the new default projection. The last case
-    # extends mostly into zone 37 but remains a regular zone-36 lattice.
-    sites, order = geographic_grid(
-        (61, 81), missing=[(20, 30)], crs=crs, origin=origin)
-    path = tmp_path / 'sites.csv'
-    numpy.savetxt(path, numpy.column_stack((sites.lons, sites.lats)),
-                  delimiter=',', header='lon,lat', comments='', fmt='%.5f')
-    data = numpy.genfromtxt(path, delimiter=',', names=True)
-    sites = SimpleNamespace(lons=data['lon'], lats=data['lat'])
-    layout = RegularGridLayout.from_sites(sites)
-    assert layout.crs == f'EPSG:{crs}'
-    assert layout.grid_shape == (61, 81)
-    assert layout.maximum_error < 1
-    numpy.testing.assert_allclose(layout.spacing, (1, 1), atol=1E-4)
-    expected = numpy.delete(numpy.arange(61 * 81), 20 * 81 + 30)[order]
-    numpy.testing.assert_array_equal(layout.site_indices, expected)
-
-    # Off-grid stations must use the recovered projection too.
-    lon, lat = Transformer.from_crs(crs, 4326, always_xy=True).transform(
-        origin[0] + 2250, origin[1] + 3750)
-    station = SimpleNamespace(lons=numpy.array([lon]),
-                              lats=numpy.array([lat]))
-    rows, columns = layout.grid_coordinates(station)
-    numpy.testing.assert_allclose(rows, [3.75], atol=1E-3)
-    numpy.testing.assert_allclose(columns, [2.25], atol=1E-3)
-
-
-def test_default_projection():
-    crs = '+proj=tmerc +lon_0=-123 +k=1 +datum=WGS84 +units=m'
-    sites, _ = geographic_grid(
-        (61, 81), crs=crs, origin=(-40_000, 4_200_000))
-    # Native grids retain the fast path, without testing other projections.
-    with patch('openquake.hazardlib.correlation_models.circulant_embedding.'
-               '_legacy_crses', side_effect=AssertionError):
-        layout = RegularGridLayout.from_sites(sites)
-    assert layout.crs.startswith('+proj=tmerc')
-    assert layout.grid_shape == (61, 81)
-
-
-def test_explicit_projection():
-    sites, _ = geographic_grid((61, 81), origin=(600_000, 4_200_000))
-    # A wrong explicitly requested CRS must fail, not silently be replaced.
-    with patch('openquake.hazardlib.correlation_models.circulant_embedding.'
-               '_legacy_crses', side_effect=AssertionError):
-        with pytest.raises(ValueError, match='regular grid'):
-            RegularGridLayout.from_sites(sites, crs='EPSG:32611')
-
-
-def test_projection_bounds():
-    sites = SimpleNamespace(lons=numpy.array([12., 13., 12., 13.]),
-                            lats=numpy.array([85., 85., 86., 86.]))
-    # Invalid geographic input must not trigger a projection search.
-    with patch('openquake.hazardlib.correlation_models.circulant_embedding.'
-               '_legacy_crses', side_effect=AssertionError):
-        with pytest.raises(ValueError, match='latitude range'):
-            RegularGridLayout.from_sites(sites)
 
 
 def test_irregular_layout():
