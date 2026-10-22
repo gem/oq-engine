@@ -398,6 +398,36 @@ def _process_sources(rmaker, ratios, pnemaps, rups):
     return nctxs
 
 
+# maximum number of floats of the contributions by source, see _update_linear
+MAX_LINEAR = 2 ** 24
+
+
+def _update_linear(cm, pnemaps, R, ctxt, si, itime):
+    # Update the probability maps of the variants with the contexts of a
+    # single magnitude, for Poisson ruptures only. The rate of a row is
+    # occ_rate * R[v, s], and update_pmap_r adds rate * poe * itime to the
+    # map, so the contributions of each source are summed once, and each
+    # variant gets the sum of its contributions weighted by R[v, s]
+    #
+    # :param cm: a ContextMaker instance
+    # :param pnemaps: a list of V MapArrays, one per variant
+    # :param R: an array of shape (V, S) with the rate ratios at this mag
+    # :param ctxt: a context array with a single magnitude
+    # :param si: the source index of each row of ctxt
+    # :param itime: the time span of the temporal occurrence model
+    pmap = pnemaps[0]
+    N, L, G = pmap.array.shape
+    contribs = numpy.zeros((N, L, len(R[0]), G))  # N, L, S, G
+    for poes, _, _, _, slc in cm._gen_poes(ctxt):
+        c = ctxt[slc]
+        sidxs = pmap.sidx[c.sids]
+        # NB: the rows of the same source and site are summed by add.at
+        contrib = poes.astype(F64) * (c.occurrence_rate * itime)[:, None, None]
+        numpy.add.at(contribs, (sidxs, slice(None), si[slc]), contrib)
+    for v, pnemap in enumerate(pnemaps):
+        pnemap.array += R[v] @ contribs
+
+
 def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
     # Update the probability maps of the variants with the contexts of
     # several sources, computing the PoEs once per magnitude (see
@@ -421,6 +451,11 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
     umags, starts, counts = numpy.unique(
         ctx.mag, return_index=True, return_counts=True)
     itime = tspan
+    # the rates are linear in the ratios only for Poisson ruptures, see
+    # _update_linear; the probability mode is not linear in the rates
+    linear = pnemaps[0].rates and not any(
+        len(probs) for probs in ctx.probs_occur)
+    S = len(ratios[0])
     for mag, start, count in zip(umags, starts, counts):
         ctxt = ctx[start:start+count]
         si = sidx[start:start+count]
@@ -428,6 +463,9 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
         cm.cfactor += [len(ctxt), 1]  # as in gen_poes
+        if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
+            _update_linear(cm, pnemaps, R, ctxt, si, itime)
+            continue
         for poes, _, _, _, slc in cm._gen_poes(ctxt):
             c = ctxt[slc]
             # read the record fields once for all the variants
