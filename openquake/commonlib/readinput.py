@@ -720,11 +720,6 @@ def check_site_param(oqparam, name):
     return value
 
 
-#: Core site parameters whose NaN values would silently produce NaN
-#: hazard; lon/lat included because valid.coordinates accepts 'nan'
-CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
-
-
 def get_site_model(oqparam, h5=None):
     """
     :param oqparam:

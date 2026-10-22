@@ -1251,7 +1251,7 @@ class HazardCalculator(BaseCalculator):
             # NaN check on core params after final site-model association:
             # catches silent zero hazard from missing z1pt4 and similar
             self.sitecol.check_nan(
-                [p for p in readinput.CORE_SITE_PARAMS
+                [p for p in site.CORE_SITE_PARAMS
                  if p in oq.req_site_params])
 
             self.datastore['sitecol'] = self.sitecol
