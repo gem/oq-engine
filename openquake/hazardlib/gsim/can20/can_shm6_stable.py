@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) Stable Crust GMMs.
 The final documentation for the GMMs is being prepared. The GMMs are subject
@@ -19,8 +34,9 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 import os
 import numpy as np
 import pandas as pd
-import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
 from scipy import interpolate
+
+import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
 from openquake.hazardlib import const
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -82,8 +98,7 @@ def site_term_aa13(self, mag, ctx, dists, imt):
     PGA760_ref[ctx.vs30 > 450.] = 0.1  # fixed PGA of 0.1g used for > 450
 
     # normalize site term by prediction at 450 m/s
-    vs30ref = np.zeros_like(ctx.vs30)
-    vs30ref += 450.0
+    vs30ref = np.full_like(ctx.vs30, 450.0)
     site_term = (AB06_BA08_aa13(ctx.vs30, imt, PGA760_ref) /
                  AB06_BA08_aa13(vs30ref, imt, PGA760_ref))
 
@@ -98,20 +113,21 @@ def AB06_BA08_aa13(vs30, imt, PGA760):
     """
 
     AB06_BA08 = np.zeros_like(vs30)
+    hi = vs30 >= 760.
+    lo = ~hi
 
     # log interpolation of 760-2000 factor of AA13 for Vs30 >= 760
+    # (invert to get the 2000->vs30 factor relative to 760)
     C = COEFFS_2000_to_BC_AA13[imt]
-    AB06_BA08[vs30 >= 760.] = 10**(np.interp(np.log10(vs30[vs30 >= 760.]),
-                                   np.log10([760.0, 2000.0]),
-                                   np.log10([1.0, C['c']])))
-    AB06_BA08[vs30 >= 760.] = 1./AB06_BA08[vs30 >= 760.]
+    AB06_BA08[hi] = 1. / 10**(np.interp(np.log10(vs30[hi]),
+                                        np.log10([760.0, 2000.0]),
+                                        np.log10([1.0, C['c']])))
 
     # BA08 for Vs30 < 760
     C2 = BA08.COEFFS_SOIL_RESPONSE[imt]
-    nl = AB06._get_site_amplification_non_linear(
-        vs30[vs30 < 760.], PGA760[vs30 < 760.], C2)
-    lin = AB06._get_site_amplification_linear(vs30[vs30 < 760.], C2)
-    AB06_BA08[vs30 < 760.] = np.exp(nl + lin)
+    nl = AB06._get_site_amplification_non_linear(vs30[lo], PGA760[lo], C2)
+    lin = AB06._get_site_amplification_linear(vs30[lo], C2)
+    AB06_BA08[lo] = np.exp(nl + lin)
 
     return AB06_BA08
 
@@ -222,21 +238,18 @@ def _Hea19_L1_linear(self, imt, vs30):
     for Central and Eastern North America - Part II: Model Development and
     Evaluation, Earthquake Spectra.
     """
-
     C = self.COEFFS_HarmonL1[imt]
 
-    F = np.zeros_like(vs30)
-
-    F[C['Vc'] <= vs30] = 0.0
-
-    F[(C['VL'] < vs30) & (vs30 < C['Vc'])] = (
-        C['c1'] * np.log(vs30[(C['VL'] < vs30) & (vs30 < C['Vc'])]/C['Vc']))
-
-    F[vs30 <= C['VL']] = (
-            (C['c1'] * np.log(vs30[vs30 <= C['VL']] / C['Vc']))
-            + (C['c2'] * np.log(vs30[vs30 <= C['VL']] / C['VL']))
-            + (C['c3'] * (np.log(vs30[vs30 <= C['VL']] / C['VL']))**2.))
-
+    # three-branch piecewise:
+    #   vs30 >= Vc        → 0
+    #   VL < vs30 < Vc    → c1 * ln(vs30/Vc)
+    # vs30 <= VL        → c1*ln(vs30/Vc) + c2*ln(vs30/VL) + c3*(ln(vs30/VL))^2
+    ln_vs30_Vc = np.log(vs30 / C['Vc'])
+    ln_vs30_VL = np.log(vs30 / C['VL'])
+    mid = C['c1'] * ln_vs30_Vc
+    low = mid + C['c2'] * ln_vs30_VL + C['c3'] * ln_vs30_VL**2.
+    F = np.where(vs30 >= C['Vc'], 0.0,
+                 np.where(vs30 > C['VL'], mid, low))
     return F
 
 
@@ -297,7 +310,7 @@ def BA08_BC17(self, imt, PGArock, ctx):
     vs30 = ctx.vs30
     log_vs30 = np.log(vs30)
     F = np.zeros_like(vs30)
-    
+
     # Get indices for various Vs30 ranges
     lte760 = vs30 <= 760.
     lt3000 = vs30 < 3000.
@@ -409,7 +422,7 @@ def BC17_amp(self, imt, ctx, dist):
     rrup = dist.copy()
     rrup[rrup < 2.] = 2.
     rrup[rrup > 1200.] = 1200.
-    # clip any values less than 3 to 3, 
+    # clip any values less than 3 to 3,
     # and any values greater than 8 to 8
     mag = np.clip(ctx, 3., 8.)
 
@@ -439,7 +452,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         for the U.S. Geological Survey National Seismic Hazard Maps, in PEER
         Report No. 2017/03.
     """
-    
+
     NGA_EAST_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}

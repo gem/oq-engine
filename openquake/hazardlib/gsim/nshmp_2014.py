@@ -21,6 +21,7 @@ Module exports :class:`NSHMP2014`
 """
 import numpy as np
 import inspect
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim import base
 

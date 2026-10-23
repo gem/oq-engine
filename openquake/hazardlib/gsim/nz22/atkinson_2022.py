@@ -23,7 +23,6 @@ Module exports :class:`Atkinson2022Crust`
 """
 
 from pathlib import Path
-
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -35,13 +34,12 @@ from openquake.hazardlib.gsim.nz22.const import (
     rho_Bs,
     periods,
     theta7s,
-    theta8s,
-)
+    theta8s,)
 from openquake.hazardlib.imt import PGA, SA
 
+
 Atk22_COEFFS = Path(
-    Path(__file__).parent, "Atkinson22_coeffs_mod_v8b_sanjay_v2.csv"
-)
+    Path(__file__).parent, "Atkinson22_coeffs_mod_v8b_sanjay_v2.csv")
 
 
 def _fmag(suffix, C, mag):
@@ -49,13 +47,14 @@ def _fmag(suffix, C, mag):
     ctx.magnitude factor
     """
     if suffix == "slab":
-        # res = C['c0_' + suffix] + C['c1_' + suffix] * (mag - 6.0) + C['c2_' + suffix] * (mag - 6.0) ** 2
-        # Modified as in RevisionsToBackbonev8 from Gail received on 21.06.2022.
+        # res = C['c0_' + suffix] + C['c1_' + suffix] * (mag - 6.0) + C['c2_' +
+        # suffix] * (mag - 6.0) ** 2
+        # Modified as in RevisionsToBackbonev8 from Gail received
+        # on 21.06.2022.
         res = (
             C["c0_" + suffix]
             + C["c1_" + suffix] * mag
-            + C["c2_" + suffix] * mag**2
-        )
+            + C["c2_" + suffix] * mag**2)
     else:
         res = C["c0_crust"] + C["c1_crust"] * mag + C["c2_crust"] * mag**2
     return res
@@ -66,7 +65,6 @@ def _fz_ha18(C, ctx):
     Implements eq. 2,3,4,5 from page 5
     """
     # pseudo-depth
-
     # h = 10 ** (-0.1 + 0.2 * ctx.mag) The h term is modified after
     # receiving the modifications from Gail on Slack on 12.06.2022.  h
     # = 10 ** (0.3 + 0.11 * ctx.mag) Modified as in
@@ -121,9 +119,8 @@ def _epistemic_adjustment_lower(C, ctx):
     # events was added in Gail's V8 modifications shared on 27.06.2022
     a = np.fmax(
         np.clip(0.6 - 0.13 * np.log(ctx.rrup), 0.3, None),
-        -0.25 + 0.12 * np.log(ctx.rrup),
-    )
-    return np.clip(a, -np.inf, 0.5) + 0.15 * np.clip(ctx.mag - 7.0, 0, np.inf)
+        -0.25 + 0.12 * np.log(ctx.rrup),)
+    return np.minimum(a, 0.5) + 0.15 * np.maximum(ctx.mag - 7.0, 0)
 
 
 def _epistemic_adjustment_upper(C, ctx):
@@ -136,9 +133,8 @@ def _epistemic_adjustment_upper(C, ctx):
     # was added in Gail's V8 modifications shared on 27.06.2022
     a = np.fmax(
         np.clip(1.0 - 0.3 * np.log(ctx.rrup), 0.3, None),
-        -0.25 + 0.12 * np.log(ctx.rrup),
-    )
-    return np.clip(a, -np.inf, 0.8) + 0.15 * np.clip(ctx.mag - 7.0, 0, np.inf)
+        -0.25 + 0.12 * np.log(ctx.rrup),)
+    return np.minimum(a, 0.8) + 0.15 * np.maximum(ctx.mag - 7.0, 0)
 
 
 def fs_SS14(C, pga_rock, ctx):
@@ -160,8 +156,7 @@ def fs_SS14(C, pga_rock, ctx):
 
 def _get_pga_on_rock(suffix, C, ctx):
     pga_rock = np.exp(
-        _fmag(suffix, C, ctx.mag) + _fz_ha18(C, ctx) + _fgamma(suffix, C, ctx)
-    )
+        _fmag(suffix, C, ctx.mag) + _fz_ha18(C, ctx) + _fgamma(suffix, C, ctx))
     return pga_rock
 
 
@@ -192,8 +187,7 @@ def get_nonlinear_stddevs(suffix, C, C_PGA, imt, pga_rock, vs30):
     # Linear phi
     intra_e_sigma = np.sqrt(C["We_" + suffix] ** 2 + C["phiS2S"] ** 2)
     intra_e_sigma_pga = np.sqrt(
-        C_PGA["We_" + suffix] ** 2 + C_PGA["phiS2S"] ** 2
-    )
+        C_PGA["We_" + suffix] ** 2 + C_PGA["phiS2S"] ** 2)
     phi_lin = intra_e_sigma * np.ones(vs30.shape)
     phi_lin_pga = intra_e_sigma_pga * np.ones(vs30.shape)
 
@@ -212,8 +206,7 @@ def get_nonlinear_stddevs(suffix, C, C_PGA, imt, pga_rock, vs30):
 
     f2 = C["f4"] * (
         np.exp(C["f5"] * (np.minimum(vs30, 760.0) - 360.0))
-        - np.exp(C["f5"] * (760.0 - 360.0))
-    )
+        - np.exp(C["f5"] * (760.0 - 360.0)))
     f3 = 0.1
 
     partial_f_pga = f2 * pgar / (pgar + f3)
@@ -223,13 +216,11 @@ def get_nonlinear_stddevs(suffix, C, C_PGA, imt, pga_rock, vs30):
     phi2_NL = (
         phi_lin**2
         + partial_f_pga**2 * phi_B_pga**2
-        + 2 * partial_f_pga * phi_B_pga * phi_B * rhoW
-    )
+        + 2 * partial_f_pga * phi_B_pga * phi_B * rhoW)
     tau2_NL = (
         tau_lin**2
         + partial_f_pga**2 * tau_lin_pga**2
-        + 2 * partial_f_pga * tau_lin_pga * tau_lin * rhoB
-    )
+        + 2 * partial_f_pga * tau_lin_pga * tau_lin * rhoB)
 
     # return [partial_f_pga, np.sqrt(tau2_NL), np.sqrt(phi2_NL)]
     return [np.sqrt(tau2_NL + phi2_NL), np.sqrt(tau2_NL), np.sqrt(phi2_NL)]
@@ -247,7 +238,8 @@ def get_backarc_term(trt, imt, ctx):
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV. Hence, I make theta7 and
+    # theta8 as 0 for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
@@ -263,14 +255,11 @@ def get_backarc_term(trt, imt, ctx):
     if trt == const.TRT.SUBDUCTION_INTRASLAB:
         min_dist = 85.0
         backarc = np.bool_(ctx.backarc)
-        f_faba = np.zeros_like(dists)
-        fixed_dists = dists[backarc]
-        fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = theta7 + theta8 * np.log(fixed_dists / 40.0)
-        return f_faba * w_epi_factor
+        clipped = np.maximum(dists, min_dist)
+        faba = theta7 + theta8 * np.log(clipped / 40.0)
+        return np.where(backarc, faba, 0.) * w_epi_factor
     else:
-        f_faba = np.zeros_like(dists)
-        return f_faba
+        return np.zeros_like(dists)
 
 
 class Atkinson2022Crust(GMPE):
@@ -292,8 +281,7 @@ class Atkinson2022Crust(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.INTRA_EVENT,}
 
     REQUIRES_DISTANCES = {"rrup"}
 
@@ -320,8 +308,7 @@ class Atkinson2022Crust(GMPE):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga_rock = _get_pga_on_rock(self.suffix, C_PGA, ctx) * np.exp(
-            get_backarc_term(trt, PGA(), ctx)
-        )
+            get_backarc_term(trt, PGA(), ctx))
         # Here the backarc term is applied as multiplication because the
         # pga_rock is in linear space not in log space
 
@@ -334,8 +321,7 @@ class Atkinson2022Crust(GMPE):
                 + _fz_ha18(C, ctx)
                 + _fgamma(self.suffix, C, ctx)
                 + fs_SS14(C, pga_rock, ctx)
-                + get_backarc_term(trt, imt, ctx)
-            )
+                + get_backarc_term(trt, imt, ctx))
 
             mean[m] = mean[m] - np.log(981.0)  # Convert the cm/s^2 to g.
 
@@ -354,23 +340,20 @@ class Atkinson2022Crust(GMPE):
                     mean[m]
                     - _epistemic_adjustment_lower(C, ctx)
                     * 1.28155
-                    * epistemic_scale_factor
-                )
+                    * epistemic_scale_factor)
 
             elif self.epistemic.lower() == "upper":
                 mean[m] = (
                     mean[m]
                     + _epistemic_adjustment_upper(C, ctx)
                     * 1.28155
-                    * epistemic_scale_factor
-                )
+                    * epistemic_scale_factor)
             else:
                 mean[m] = mean[m]
             # Aleatory Uncertainty terms.
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
-                    self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30
-                )
+                    self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
 

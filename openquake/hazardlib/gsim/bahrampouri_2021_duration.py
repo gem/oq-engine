@@ -91,7 +91,7 @@ def _get_site_term(C, ctx):
     """
     fbasin = _get_basin_term(C, ctx)
 
-    fsite = np.round(C['s1'] * np.log(np.clip(ctx.vs30, None, 600.0) / 600.0) +
+    fsite = np.round(C['s1'] * np.log(np.minimum(ctx.vs30, 600.0) / 600.0) +
                      fbasin + C['s3'], 4)
 
     return fsite
