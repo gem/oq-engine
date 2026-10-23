@@ -79,7 +79,7 @@ def _get_ln_y_ref(ctx, C):
         # second line
         + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
+        * np.logaddexp(0.0, C['cn'] * (C['cm'] - ctx.mag))
         # third line
         + C['c4']
         * np.log(ctx.rrup
@@ -97,8 +97,7 @@ def _get_ln_y_ref(ctx, C):
                   * (np.cos(np.radians(ctx.dip)) ** 2)
                   / C['c9a'])
         * (1 - np.sqrt(ctx.rjb ** 2 + ctx.ztor ** 2)
-           / (ctx.rrup + 0.001))
-    )
+           / (ctx.rrup + 0.001)))
     return ln_y_ref
 
 
@@ -119,12 +118,11 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         ln_y_ref + C['phi1'] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0)
         # second line
         + C['phi2'] * (exp1 - exp2)
-        * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
+        * np.logaddexp(0.0, ln_y_ref - np.log(C['phi4']))
         # third line
         + _get_basin_term(C, ctx)
         # fourth line
-        + eta + epsilon
-    )
+        + eta + epsilon)
     return ln_y
 
 
@@ -135,7 +133,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     Implements equations 19, 20 and 21 for inter-event, intra-event
     and total standard deviations respectively.
     """
-    # aftershock flag (defaults to zero when the rupture is unlabelled)
+    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
     AS = ctx.is_aftershock
     Fmeasured = np.where(ctx.vs30measured, True, False)
     Finferred = ~Fmeasured

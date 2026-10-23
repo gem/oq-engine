@@ -23,6 +23,7 @@ import os
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
+
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, interp_table, _get_mean)
@@ -67,15 +68,13 @@ def _at_percentile(tau, var_tau, percentile):
 # Mean tau values from the global model - Table 5.1
 GLOBAL_TAU_MEAN = {
     "PGV": {"tau1": 0.3733, "tau2": 0.3639, "tau3": 0.3434, "tau4": 0.3236},
-    "SA": {"tau1": 0.4518, "tau2": 0.4270, "tau3": 0.3863, "tau4": 0.3508}
-    }
+    "SA": {"tau1": 0.4518, "tau2": 0.4270, "tau3": 0.3863, "tau4": 0.3508}}
 
 
 # Standard deviation of tau values from the global model - Table 5.1
 GLOBAL_TAU_SD = {
     "PGV": {"tau1": 0.0558, "tau2": 0.0554, "tau3": 0.0477, "tau4": 0.0449},
-    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491}
-}
+    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491}}
 
 
 # Mean tau values from the CENA constant-tau model
@@ -89,15 +88,13 @@ CENA_CONSTANT_TAU_SD = {"PGV": {"tau": 0.0554}, "SA": {"tau": 0.0688}}
 # Mean tau values from the CENA tau model
 CENA_TAU_MEAN = {
     "PGV": {"tau1": 0.3477, "tau2": 0.3281, "tau3": 0.3092},
-    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064}
-    }
+    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064}}
 
 
 # Standard deviation of tau values from the CENA tau model
 CENA_TAU_SD = {
     "PGV": {"tau1": 0.0554, "tau2": 0.0477, "tau3": 0.0449},
-    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491}
-    }
+    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491}}
 
 
 def global_tau(imt, mag, params):
@@ -170,8 +167,7 @@ TAU_SETUP = {
     "cena": {"MEAN": CENA_TAU_MEAN, "STD": CENA_TAU_SD},
     "cena_constant": {"MEAN": CENA_CONSTANT_TAU_MEAN,
                       "STD": CENA_CONSTANT_TAU_SD},
-    "global": {"MEAN": GLOBAL_TAU_MEAN, "STD": GLOBAL_TAU_SD}
-    }
+    "global": {"MEAN": GLOBAL_TAU_MEAN, "STD": GLOBAL_TAU_SD}}
 
 # Gather tau model implementation functions into dictionary
 TAU_EXECUTION = {
@@ -910,6 +906,11 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
     separately a total standard deviation model with expectation and quantiles.
     As the inter- and intra-event quantile cannot be recovered unambiguously
     from the total standard deviation quantile this form of the model is
+
+
+LOG10 = np.log(10.0)
+
+
     defined only for total standard deviation. Most likely it is this form
     that would be used for seismic hazard analysis.
 

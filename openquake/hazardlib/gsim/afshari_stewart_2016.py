@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575, RSD2080
 
 
+LOG10 = np.log(10.0)
+
+
 CONSTANTS = {"mstar": 6.0,
              "r1": 10.0,
              "r2": 50.0,

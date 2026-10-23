@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+LOG10 = np.log(10.0)
+
+
 class BooreEtAl1993GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
@@ -87,7 +90,7 @@ class BooreEtAl1993GSCBest(GMPE):
                              C['c4'] * (d[idx] - 100.))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
+            mean[m] = (mean[m] - 2.0) * LOG10 - np.log(g)
 
             sig[m] = C['sigma']
 

@@ -25,9 +25,11 @@ Module exports :class:`AbrahamsonEtAl2018SInter`
                :class:`AbrahamsonEtAl2018SSlabLow`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
 
 CONSTANTS = {"n": 1.18,
              "c": 1.88,
