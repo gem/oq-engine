@@ -69,15 +69,12 @@ def print_features(fiona_file):
 
 def print_correlation():
     """
-    Print the correlation models with their type, aliases and
-    description
+    Print the correlation models as type:name
     """
     specs = corr_registry.get_model_specs()
     for name, spec in sorted(specs.items(),
                              key=lambda kv: (kv[1].model_type, kv[0])):
-        aliases = ', '.join(spec.aliases) or '-'
-        print(f'{spec.model_type}\t{name}\t{aliases}\t'
-              f'{spec.description}')
+        print(f'{spec.model_type}:{name}')
 
 
 def print_subclass(what, cls):
