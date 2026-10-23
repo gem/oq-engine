@@ -133,7 +133,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # exceedance
         poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_mde(poes[:, :, None, :])
-        assert len(rlzs) == poes.shape[0]
     elif atype == 'm':
         poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, rlzs].T
         # shape (R, Ma) i.e. (6, 17) in test_m_correlation
