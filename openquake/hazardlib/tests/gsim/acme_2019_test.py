@@ -77,8 +77,7 @@ class ACMEAlAtikSigmaModelWrapperTest(unittest.TestCase):
             with self.subTest(period=period):
                 gmm = AlAtikSigmaModel(
                     gmpe_name='BindiEtAl2014Rjb', **kwargs)
-                result = contexts.get_mean_stds(
-                    gmm, ctx, [SA(period)], truncation_level=0)
+                result = contexts.get_mean_stds(gmm, ctx, [SA(period)])
                 np.testing.assert_allclose(result[:, 0, :], expected,
                                            rtol=0, atol=1e-7)
 
@@ -91,12 +90,10 @@ class ACMEAlAtikSigmaModelWrapperTest(unittest.TestCase):
                                kappa_val='high')
         ctx = self.ctx
         imt = SA(0.1)
-        mean_760 = contexts.get_mean_stds(
-            gmm, ctx, [imt], truncation_level=0)[0]
+        mean_760 = contexts.get_mean_stds(gmm, ctx, [imt])[0]
 
         ctx.vs30 = np.array([1500.] * 4)
-        mean_1500 = contexts.get_mean_stds( # 1500 is ignored in ACME version
-            gmm, ctx, [imt], truncation_level=0)[0]
+        mean_1500 = contexts.get_mean_stds(gmm, ctx, [imt])[0]
         # So results will be identifical
         np.testing.assert_allclose(mean_760, mean_1500)
 
