@@ -27,6 +27,7 @@ import random
 import subprocess
 
 import django
+import psutil
 import requests
 from django.contrib.auth import get_user_model
 from django.test import Client
@@ -105,9 +106,19 @@ def start_webui():
 
 
 def stop_webui(proc, _thread):
-    """Stop the temporary WebUI server process."""
+    """Stop the temporary WebUI server process and its children."""
+    # on Windows terminating a process leaves its children running, and
+    # they may keep the scratch database open; the children must be listed
+    # before the parent dies, since they are then reparented
+    try:
+        children = psutil.Process(proc.pid).children(recursive=True)
+    except psutil.NoSuchProcess:
+        children = []
+    for child in children:
+        child.kill()
     proc.terminate()
     proc.wait(timeout=10)
+    psutil.wait_procs(children, timeout=10)
 
 
 def random_string(length=10):
