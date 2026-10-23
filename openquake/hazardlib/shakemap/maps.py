@@ -117,9 +117,12 @@ def filter_unused_imts(shakemap, required_imts,
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
-    extra_fields = [field for field in ('phi', 'tau')
+    extra_fields = [field for field in ('phi', 'tau', 'CL')
                     if field in shakemap.dtype.names]
-    dtlist.extend((field, dt) for field in extra_fields)
+    # CL holds up to 3 between-event coefficients per IMT
+    dt3 = [(imt, F32, (3,)) for imt in sorted(required_imts)]
+    dtlist.extend((field, dt3 if field == 'CL' else dt)
+                  for field in extra_fields)
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:
         data[name] = shakemap[name]
