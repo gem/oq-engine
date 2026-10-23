@@ -98,12 +98,10 @@ without the internal ``dummy`` type. Each entry says what the
   model (see :ref:`extend-model`).
 - ``gmpeModel``: the GSIM for the ground motion logic tree (see
   :ref:`gm-logic-tree`).
-- ``applyToTectonicRegionType``: a branchset type accepted by the parser
-  (it is used with ``applyToBranches``, see
-  ``openquake/hazardlib/tests/lt_test.py``); it is listed in
-  ``NOAPPLY_UNCERTAINTIES``, so it does not change the sources. See
-  also the ``applyToTectonicRegionType`` filter attribute in
-  :ref:`applyTo attributes <logic-tree-apply-to>`.
+
+``applyToTectonicRegionType`` is not an uncertainty type: it is a filter
+attribute of the ``logicTreeBranchSet`` element, described in
+:ref:`applyTo attributes <logic-tree-apply-to>`.
 
 *Magnitude-frequency distribution (MFD) types*
 

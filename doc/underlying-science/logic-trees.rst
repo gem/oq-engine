@@ -97,8 +97,9 @@ branches. A branchset can applied to all the sources included in the
 initial seismic source model, to a subset of sources, to a branch
 included in a branchset occurring before in the logic tree structure
 or even just to a single source. Currently, the attributes restricting the application of a branchset are
-``applyToBranches``, ``applyToSources`` and ``applyToTectonicRegionType``;
-they are described in :ref:`applyTo attributes <logic-tree-apply-to>`.
+``applyToBranches``, ``applyToSources`` and ``applyToTectonicRegionType``
+(the latter is a filter on the tectonic region type, not an uncertainty
+type); they are described in :ref:`applyTo attributes <logic-tree-apply-to>`.
 
 The schematic represented in Figure 5.1 shows an
 example of the conceptual model adopted to describe a logic tree
