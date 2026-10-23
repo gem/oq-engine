@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Bug fix: exporting the gmf_data csv of a global SES calculation failed
+    with an IndexError, or silently exported wrong event IDs, because the
+    sigma_epsilon event IDs were looked up as positions in relevant_events
   * Internal: "oq engine --eo" no longer checks the local database file
     when a remote database server is used, and otherwise checks the
     database with os.access, so an unreadable database is reported
