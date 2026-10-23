@@ -2317,6 +2317,17 @@ def format_oqparam(oqparam):
         oqparam.asset_hazard_distance['default']
 
     ret_dict[IMPACT_FORM_LABELS['ses_seed']] = oqparam.ses_seed
+
+    # the spatial correlation really used by the calculation, if any
+    labels = dict(IMPACT_SPATIAL_CORRELATION_OPTIONS)
+    if oqparam.within_event_correlation_model:
+        params = oqparam.within_event_correlation_params or {}
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = (
+            f"{labels[oqparam.correlation_strategy]}, "
+            f"vs30_clustering={params.get('vs30_clustering')}")
+    else:
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = labels['none']
+
     if approach != 'use_shakemap_from_usgs':
         ret_dict[IMPACT_FORM_LABELS['mosaic_model']] = oqparam.mosaic_model
         ret_dict[IMPACT_FORM_LABELS['trt']] = oqparam.tectonic_region_type

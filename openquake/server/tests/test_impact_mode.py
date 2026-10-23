@@ -53,7 +53,8 @@ def test_format_oqparam_displays_selected_nodal_plane():
         time_event='day', maximum_distance={'default': [[0, 300]]},
         truncation_level=3, number_of_ground_motion_fields=10,
         asset_hazard_distance={'default': 15}, ses_seed=42,
-        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
+        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={},
+        within_event_correlation_model=None)
     inputs = format_oqparam(oqparam)
     assert inputs['Nodal plane'] == 'NP2'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
@@ -553,6 +554,9 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 tb = self.get_json('%s/traceback' % job_id)
                 raise Exception('\n'.join(tb))
             self.assertEqual(job_dic['status'], 'complete')
+            # the outputs page must say which spatial correlation was used
+            page = self.get(f'/engine/{job_id}/outputs_impact', prefix='')
+            self.assertIn(b'Circulant embedding', page.content)
             ret = self.post('%s/remove' % job_id)
             self.assertEqual(ret.status_code, 200)
 

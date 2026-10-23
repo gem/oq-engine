@@ -255,6 +255,34 @@ def test_impact_ui_level_2_provide_rupture_nrml(
 @pytest.mark.parametrize("user", [2], indirect=True)
 @pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
 @pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
+def test_impact_ui_level_2_provide_rupture_nrml_spatial_correlation(
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
+    page = ImpactPageLevel2(authenticated_page)
+    page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
+    page.choose_rupture_model()
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('circulant_embedding')
+    page.retrieve_data()
+    expect(page.rupture_map()).to_be_visible(timeout=50_000)
+    page.confirm_relocated_hypocenter_warning()
+    page.set_no_uncertainty()
+    # the body of a request with an uploaded file is not visible to
+    # Playwright, so check the value the form will submit
+    expect(correlation).to_have_value('circulant_embedding')
+    page.run_impact_calc()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("user", [2], indirect=True)
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+@pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
 def test_impact_ui_level_2_provide_rupture_params(
         application_mode, authenticated_page, user, default_usgs_id,
         should_abort_job, should_remove_job):
