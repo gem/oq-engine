@@ -125,7 +125,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # Number of epsilons
         # Number of realisations
         poes = dstore['disagg-rlzs/Mag_Dist_Eps'][
-            0, imt_idx, 0, :, :, :, rlzs]
+            0, :, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_mde(poes)
     elif atype == 'md':
         # The shape of the final `poes` is: R X A where R is the number of
