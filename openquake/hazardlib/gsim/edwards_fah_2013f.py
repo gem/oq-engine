@@ -41,6 +41,11 @@ from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_90Bars, COEFFS_FORELAND_120Bars)
 
 
+
+
+LOG10 = np.log(10.0)
+
+
 def _get_cmag1(cmag35, cmag41, cmag51, mag):
     mag = np.asarray(mag)
     return np.where(mag <= 4, cmag35, np.where(mag <= 5, cmag41, cmag51))
@@ -53,22 +58,21 @@ def _get_cmag2(cmag4, cmag5, cmag6, mag):
 
 class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
     """
-    This function implements the GMPE developed by Ben Edwards and
-    Donath Fah and published as "A Stochastic Ground-Motion Model
-    for Switzerland" Bulletin of the Seismological
-    Society of America, Vol. 103, No. 1, pp. 78–98, February 2013.
-    The GMPE was parametrized by Carlo Cauzzi to be implemented in OpenQuake.
-    This class implements the equations for 'Foreland - two
-    tectonic regionalizations defined for the Switzerland -
-    therefore this GMPE is region specific".
+    Implements the GMPE developed by Ben Edwards and Donath Fah and published
+    as "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the
+    Seismological Society of America, Vol. 103, No. 1, pp. 78–98, February
+    2013. The GMPE was parametrized by Carlo Cauzzi to be implemented in
+    OpenQuake. This class implements the equations for 'Foreland - two tectonic
+    regionalizations defined for the Switzerland - therefore this GMPE is
+    region specific".
     """
     COEFFS = COEFFS_FORELAND_10Bars
 
 
 class EdwardsFah2013Foreland3Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 3.3Bars Model :class:`EdwardsFah2013Foreland3Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 3.3Bars
+    Model :class:`EdwardsFah2013Foreland3Bars`
     """
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -101,62 +105,62 @@ class EdwardsFah2013Foreland3Bars(EdwardsFah2013Foreland10Bars):
             # representation. Note that PGV is recomputed and overwritten in this method. So,
             # we need to take the log10 again.
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log(10 ** log10_mean_3bar / (g * 100.))
+                mean[m] = log10_mean_3bar * LOG10 - np.log(g * 100.0)
             else:
-                mean[m] = np.log(10 ** log10_mean_3bar)
+                mean[m] = log10_mean_3bar * LOG10
 
 
 class EdwardsFah2013Foreland20Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 20Bars Model :class:`EdwardsFah2013Foreland20Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 20Bars
+    Model :class:`EdwardsFah2013Foreland20Bars`
     """
     COEFFS = COEFFS_FORELAND_20Bars
 
 
 class EdwardsFah2013Foreland30Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 30Bars Model :class:`EdwardsFah2013Foreland30Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 30Bars
+    Model :class:`EdwardsFah2013Foreland30Bars`
     """
     COEFFS = COEFFS_FORELAND_30Bars
 
 
 class EdwardsFah2013Foreland50Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 50Bars Model :class:`EdwardsFah2013Foreland50Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 50Bars
+    Model :class:`EdwardsFah2013Foreland50Bars`
     """
     COEFFS = COEFFS_FORELAND_50Bars
 
 
 class EdwardsFah2013Foreland60Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 60Bars Model :class:`EdwardsFah2013Foreland60Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 60Bars
+    Model :class:`EdwardsFah2013Foreland60Bars`
     """
     COEFFS = COEFFS_FORELAND_60Bars
 
 
 class EdwardsFah2013Foreland75Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 75Bars Model :class:`EdwardsFah2013Foreland75Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 75Bars
+    Model :class:`EdwardsFah2013Foreland75Bars`
     """
     COEFFS = COEFFS_FORELAND_75Bars
 
 
 class EdwardsFah2013Foreland90Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 90Bars Model :class:`EdwardsFah2013Foreland90Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 90Bars
+    Model :class:`EdwardsFah2013Foreland90Bars`
     """
     COEFFS = COEFFS_FORELAND_90Bars
 
 
 class EdwardsFah2013Foreland120Bars(EdwardsFah2013Foreland10Bars):
     """
-    This class extends :class:`EdwardsFah2013Foreland10Bars`
-    and implements the 120Bars Model :class:`EdwardsFah2013Foreland120Bars`
+    Extends :class:`EdwardsFah2013Foreland10Bars` and implements the 120Bars
+    Model :class:`EdwardsFah2013Foreland120Bars`
     """
     COEFFS = COEFFS_FORELAND_120Bars

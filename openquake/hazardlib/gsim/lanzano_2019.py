@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _get_stddevs(C):
     """
     Return standard deviations as defined in table 1.
@@ -67,7 +70,7 @@ def _site_amplification(ctx, C):
     it is given by FS = klog10(V0/800), where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
-    return C['k'] * np.log10(np.clip(ctx.vs30, -np.inf, 1500.0) / 800.0)
+    return C['k'] * np.log10(np.minimum(ctx.vs30, 1500.0) / 800.0)
 
 
 def _gen2ref_rock_scaling(C, vs30, kappa0, imt):
@@ -170,13 +173,13 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV):
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            sig[m], tau[m], phi[m] = np.array(istddevs) * LOG10
             # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
@@ -464,7 +467,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
             istddevs = _get_stddevs(C)
 
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            sig[m], tau[m], phi[m] = np.array(istddevs) * LOG10
 
             # Apply correction to reference according to Lanzano et al.
             # (2022; BSSA)
@@ -473,7 +476,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
             imean += adjustment
 
             # Convert units to g, but only for PGA and SA (not PGV):
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
 
 
 class LanzanoEtAl2019_RJB_OMO_NESS2(GMPE):
@@ -542,7 +545,7 @@ class LanzanoEtAl2019_RJB_OMO_NESS2(GMPE):
             istddevs = _get_stddevs(C)
 
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            sig[m], tau[m], phi[m] = np.array(istddevs) * LOG10
 
             # Apply correction to reference according to Sgobba et al (2021)
             COEFF_R = self.COEFFS_R[imt]
@@ -552,9 +555,9 @@ class LanzanoEtAl2019_RJB_OMO_NESS2(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV):
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
     COEFFS_R = CoeffsTable(sa_damping=5, table="""
     IMT     aR              bR              cR              f1R             f2R             hR          MrefR
