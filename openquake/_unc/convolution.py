@@ -154,7 +154,7 @@ class HistoGroup:
         """
         Convert the hazard curves distribution into a matrix and afes
         """
-        minpow = np.array(self.minpow, dtype=int)
+        minpow = np.array(self.minpow, dtype=float)
         nump = np.array(self.numpow, dtype=float)
         idx, = np.where(np.isfinite(nump))
         minp = minpow[idx].min()
@@ -162,7 +162,7 @@ class HistoGroup:
         n = int(maxp - minp) * self.res
         mat = np.full((n, len(self.pmfs)), np.nan)
         for i in idx:
-            i0 = (minpow[i] - minp) * self.res
+            i0 = int(minpow[i] - minp) * self.res
             i1 = i0 + int(nump[i]) * self.res
             mat[i0:i1, i] = self.pmfs[i]
         afes = 10**np.linspace(minp, maxp, n)
@@ -196,8 +196,10 @@ class HistoGroup:
         mat, afes = self.to_matrix()
         with hdf5.File(fname, "w") as fout:
             fout.create_dataset("histograms", data=mat)
-            fout.create_dataset("mininum_power", data=np.array(self.minpow))
-            fout.create_dataset("number_of_powers", data=np.array(self.numpow))
+            fout.create_dataset("mininum_power",
+                                data=np.array(self.minpow, dtype=float))
+            fout.create_dataset("number_of_powers",
+                                data=np.array(self.numpow, dtype=float))
             fout.create_dataset("afes", data=afes)
 
 
