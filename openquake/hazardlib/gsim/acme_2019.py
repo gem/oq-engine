@@ -18,7 +18,6 @@
 """
 ACME2019 ground-motion adaptations and standard-deviation model.
 """
-import copy
 import numpy as np
 
 from openquake.hazardlib import const, contexts
@@ -69,23 +68,10 @@ def extrapolate_in_PSA(gmpe, ctx, set_imt, imt):
     """
     Extrapolate log spectral acceleration using a log-log linear fit.
     """
-    extrap_mean = []
     t_log10 = np.log10(set_imt)
-    for d in range(len(ctx.rjb)):
-        c = copy.copy(ctx)
-        if hasattr(ctx, 'rjb'):
-            c.rjb = np.array([ctx.rjb[d]])
-        if hasattr(ctx, 'rrup'):
-            c.rrup = np.array([ctx.rrup[d]])
-        means_log10 = []
-        for im in set_imt:
-            mean_ln = contexts.get_mean_stds(gmpe, c, [SA(im)])[0]
-            means_log10.append(mean_ln[0] / LOG10)
-        mb = np.polyfit(t_log10, means_log10, 1)
-        mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
-        extrap_mean.append(mean_imt_log10 * LOG10)
-
-    return extrap_mean
+    mean_ln = contexts.get_mean_stds(gmpe, ctx, [SA(p) for p in set_imt])[0]
+    mb = np.polyfit(t_log10, mean_ln / LOG10, 1)
+    return (mb[0] * np.log10(imt) + mb[1]) * LOG10
 
 
 def get_extrapolation_periods(gmpe):
@@ -281,9 +267,9 @@ class AlAtikSigmaModel(GMPE):
             # highets but below corner
             elif self.extr and cornerp > hp and hp <= imt.period < cornerp:
                 mean_ = extrapolate_in_PSA(self.gmpe, ctx, sp, imt.period)
-            elif self.extr and cornerp > hp and imt.period > cornerp:
+            elif self.extr and cornerp > hp and imt.period >= cornerp:
                 mean_ = extrapolate_in_PSA(self.gmpe, ctx, sp, cornerp)
-                mean_ = mean + 2 * np.log(cornerp / imt.period)
+                mean_ += 2 * np.log(cornerp / imt.period)
             else:
                 mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
 
@@ -298,7 +284,7 @@ class AlAtikSigmaModel(GMPE):
                     kappa = self.KAPPATAB[imt][self.kappa_val]
 
             mean[m] = mean_ + np.log(kappa)
-            sig[m], tau[m], sig[m] = get_stddevs(
+            sig[m], tau[m], phi[m] = get_stddevs(
                 self.ergodic, self.PHI_SS, self.PHI_S2SS, self.phi_ss_quantile,
                 self.PHI_SS_MEDIAN, self.tau_model, self.TAU, ctx.mag, imt)
 

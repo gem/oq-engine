@@ -158,25 +158,6 @@ def _get_ln_y_ref(ctx, C):
     return ln_y_ref
 
 
-def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
-    """
-    Add site effects to an intensity. Implements eq. 13b.
-    """
-    eta = epsilon = 0.
-    ln_y = (
-        # first line of eq. 12
-        ln_y_ref + eta
-        # second line
-        + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
-        # third line
-        + C['phi2'] * (exp1 - exp2)
-        * np.logaddexp(0.0, ln_y_ref + eta - np.log(C['phi4']))
-        # fourth line - removed
-        # fifth line
-        + epsilon)
-    return ln_y
-
-
 def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
@@ -899,9 +880,21 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
-            ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
+            ln_y_ref = _get_ln_y_ref(ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
             exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, REF_VS) - 360))
             exp2 = np.exp(C['phi3'] * (REF_VS - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, REF_VS)
+            # Add site effects to an intensity. Implements eq. 13b.
+            eta = epsilon = 0.
+            mean[m] = (
+                # first line of eq. 12
+                ln_y_ref + eta
+                # second line
+                + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
+                # third line
+                + C['phi2'] * (exp1 - exp2)
+                * np.logaddexp(0.0, ln_y_ref + eta - np.log(C['phi4']))
+                # fourth line - removed
+                # fifth line
+                + epsilon)
