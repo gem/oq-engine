@@ -21,7 +21,9 @@ ergodic non-linear amplification model of Hashash et al. (2020)
 """
 
 import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable
+
 
 C760OVER3000 = 2.275
 

@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) Interface GMMs.
 
@@ -23,13 +38,14 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 
 """
 import numpy as np
+from scipy.constants import g
+
 import openquake.hazardlib.gsim.abrahamson_2015 as A15
 import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 import openquake.hazardlib.gsim.can20.can_shm6_active_crust as CanadaSHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 import openquake.hazardlib.gsim.zhao_2006 as ZH06
 import openquake.hazardlib.gsim.can20.can_shm6_inslab as CAN_inslab
-from scipy.constants import g
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -43,6 +59,11 @@ from openquake.hazardlib.gsim.atkinson_macias_2009 import AtkinsonMacias2009
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
 from openquake.hazardlib.gsim.ghofrani_atkinson_2014 import (
     GhofraniAtkinson2014Cascadia)
+
+
+
+
+LOG10 = np.log(10.0)
 
 
 class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
@@ -180,7 +201,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
                                                      mag=ctx.mag) +\
                 C_SINTER['SI']
             # convert from cm/s**2 to g
-            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            mean[m] = mean[m] + np.log(C_SF['MF'] * 0.01 / g)
 
             ZH06._set_stddevs(
                 sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
@@ -224,7 +245,6 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
 
 
 def _get_mean_760_am09(ctx, imt):
-
     """
     See compute method in AtkinsonMacias2009
     """
@@ -233,7 +253,7 @@ def _get_mean_760_am09(ctx, imt):
              AM09._get_distance_term(coeffs, ctx.rrup, ctx.mag))
     # Convert mean from cm/s and cm/s/s and from common logarithm to
     # natural logarithm
-    mean = np.log((10.0 ** (imean - 2.0)) / g)
+    mean = (imean - 2.0) * LOG10 - np.log(g)
     return mean
 
 
@@ -246,7 +266,8 @@ def _site_term_am09(ctx, imt):
     pga760 = _get_mean_760_am09(ctx, PGA())
     BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
-    F = CanadaSHM6_ASC._get_site_scaling_ba14(None, C, np.exp(pga760), ctx, imt)
+    F = CanadaSHM6_ASC._get_site_scaling_ba14(
+        None, C, np.exp(pga760), ctx, imt)
     return F
 
 
@@ -283,7 +304,7 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
             # AM09 is for Vs30 = 760m/s
             mean[m] = _get_mean_760_am09(ctx, imt)
             mean[m] += _site_term_am09(ctx, imt)
-            sig[m] = np.log(10.0 ** C["sigma"])
+            sig[m] = C['sigma'] * LOG10
 
             if fix:
                 mean[m] = (0.897*mean[m]) + 4.835
@@ -302,15 +323,15 @@ def _get_site_term_ga14(C, vs30, imt):
 
     # Need log site factors at Vs30 = 1100 and 2000 to calculate
     # CanadaSHM6 hard rock site factors
-    GA14_1100 = np.log(10**GA14._get_site_term(C, 1100.))
-    GA14_2000 = np.log(10**GA14._get_site_term(C, 2000.))
+    GA14_1100 = GA14._get_site_term(C, 1100.0) * LOG10
+    GA14_2000 = GA14._get_site_term(C, 2000.0) * LOG10
 
     # CanadaSHM6 hard rock site factor
     F = CanadaSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
                                         vs30[vs30 >= 1100], imt)
 
     # for Vs30 > 1100 set to CanadaSHM6 factor
-    GA14_vs[vs30 >= 1100] = np.log10(np.exp(F))
+    GA14_vs[vs30 >= 1100] = F / LOG10
 
     return GA14_vs
 
@@ -380,14 +401,15 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
+                mean[m] = (mean[m] - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log((10.0 ** (mean[m])))
+                mean[m] = mean[m] * LOG10
 
             if extrapolate:
                 mean[m] += extrapolation_factor(
                     self.extrapolate_GMM, ctx, imt, target_imt)
 
-            sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))
-            tau[m] = np.log(10.0 ** C["tau"])
-            phi[m] = np.log(10.0 ** C["sigma"])
+            sig[m] = (np.sqrt(C['tau'] ** 2.0 + C['sigma'] ** 2.0) *
+                      LOG10)
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['sigma'] * LOG10

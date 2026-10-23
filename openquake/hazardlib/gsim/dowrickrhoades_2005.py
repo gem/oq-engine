@@ -21,6 +21,7 @@ Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
@@ -28,7 +29,6 @@ from openquake.hazardlib.imt import MMI
 
 def _compute_mean(C, mag, rrup, hypo_depth, delta_R, delta_S,
                   delta_V, delta_I, vs30):
-
     """
     Compute MMI Intensity Value as per Equation in Table 5 and
     Table 7 pag 198.
@@ -36,7 +36,6 @@ def _compute_mean(C, mag, rrup, hypo_depth, delta_R, delta_S,
     # mean is calculated for all the 4 classes using the same equation.
     # For DowrickRhoades2005SSlab, the coefficients which don't appear in
     # Model 3 equationare assigned to zero
-
     mean = (C['A1'] + (C['A2'] + C['A2R'] * delta_R + C['A2V'] * delta_V) *
             mag + (C['A3'] + C['A3S'] * delta_S + C['A3V'] * delta_V) *
             np.log10(np.power((rrup**3 + C['d']**3), 1.0 / 3.0)) +
@@ -57,7 +56,6 @@ def _get_deltas(trt, rake):
     # (135<=rake<=180) or (-45<=rake<=0), 0 for all other events
     # delta_V = 1 for TVZ events, 0 for all other events
     # delta_I = 1 for interface events, 0 for all other events
-
     # All deltas = 0 for Model 3: Deep Region, pag 198
     delta_R = np.zeros_like(rake)
     delta_S = np.zeros_like(rake)

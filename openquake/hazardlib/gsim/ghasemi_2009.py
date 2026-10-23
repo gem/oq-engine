@@ -22,10 +22,12 @@ Module exports :class:'GhasemiEtAl2009'
 import numpy as np
 from scipy.constants import g
 
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_distance_scaling(C, rrup, mag):
@@ -72,16 +74,16 @@ def _get_site_type_dummy_variables(ctx):
 class GhasemiEtAl2009(GMPE):
     """
     Implements the PGA GMPE of H.Ghasemi, M.Zare, Y,Fukushima, K.Koketsu
-    (2009a) An empirical spectral ground-motion model for Iran, 
+    (2009a) An empirical spectral ground-motion model for Iran,
     J Seismol, 13:499-515, DOI 10.1007/s10950-008-9143-x.
     """
     #: The GMPE is derived from shallow earthquakes in California and Japan
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types is spectral acceleration
-    #: The attenuation relation developed by Ghasemi et. al estimates only the 'SA'.
-    #: Here in this code, the intensity measure of 'PGA' is also considered 
-    #: with the same coefficients as SA(0.05 s), in case of need.
+    #: The attenuation relation developed by Ghasemi et. al estimates only
+    #: the 'SA'. Here in this code, the intensity measure of 'PGA' is also
+    #: considered with the same coefficients as SA(0.05 s), in case of need.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the average horizontal
@@ -115,17 +117,17 @@ class GhasemiEtAl2009(GMPE):
                      _compute_site_amplification(C, ctx))
             # Original GMPE returns log10 acceleration in cm/s/s
             # Converts to natural logarithm of g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
 
 
             # Convert from common logarithm to natural logarithm
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
 
-    
-    #: The attenuation relation developed by Ghasemi et. al estimates only the 'SA'.
-    #: Here in this code, a line for intensity measure of 'PGA' is also considered 
-    #: with the same coefficients as SA(0.05 s), in case of need. 
 
+    #: The attenuation relation developed by Ghasemi et. al estimates only
+    #: the 'SA'.
+    #: Here in this code, a line for intensity measure of 'PGA' is also
+    #: considered with the same coefficients as SA(0.05 s), in case of need.
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     a1       a2       a3       a4       a6       a7       sigma
     PGA     0.868    0.405   -1.424    0.014    0.859    0.836    0.319               
