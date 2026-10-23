@@ -46,6 +46,10 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.correlation_models.base import CorrelationContext
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
+from openquake.hazardlib.correlation_models.spatial_cross_imt import (
+    loth_baker_2013)
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -1842,6 +1846,39 @@ def store_events(dstore, eids):
     return events
 
 
+def _xml_legacy_model(shakemap, gmf_dict):
+    # Loth and Baker (2013) needs the posterior components of the
+    # shake_result.hdf products: XML inputs keep the legacy model
+    model = gmf_dict.get('spatial_model')
+    if ('CL' not in shakemap.dtype.names and
+            isinstance(model, loth_baker_2013.LothBaker2013)):
+        logging.warning(
+            'LothBaker2013 requires a shake_result.hdf product: the XML '
+            'ShakeMap is sampled with JayaramBaker2009')
+        gmf_dict['spatial_model'] = JayaramBaker2009(vs30_clustering=True)
+    return gmf_dict
+
+
+def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
+    # record for the outputs page the correlation really used
+    calc.datastore['correlation_strategy_used'] = numpy.array(
+        [strategy], dtype=hdf5.vstr)
+    if gmf_dict.get('spatial_model') is None:
+        return
+    name = gmf_dict['spatial_model'].__class__.__name__
+    if 'CL' in shakemap.dtype.names:
+        # the stored posterior components are sampled with Loth and
+        # Baker (2013), whatever correlation model was requested
+        model = ('LothBaker2013 (shake_result.hdf components, approximate: '
+                 'no station conditioning, between-event terms independent '
+                 'across IMTs)')
+    else:
+        model = (f'{name} (XML ShakeMap: approximation from the marginal '
+                 'uncertainties)')
+    calc.datastore['correlation_model_used'] = numpy.array(
+        [model], dtype=hdf5.vstr)
+
+
 def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
@@ -1849,7 +1886,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     logging.info('Building GMFs')
     oq = calc.oqparam
     if gmf_dict['kind'] == 'Silva&Horspool':
-        gmf_dict = dict(gmf_dict)
+        gmf_dict = _xml_legacy_model(shakemap, dict(gmf_dict))
         rupture_dict = oq.rupture_dict or {}
         strategy = oq.correlation_strategy
         if (strategy == 'circulant_embedding' and
@@ -1859,9 +1896,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
                 'Circulant embedding is not applicable to these sites, '
                 'using cholesky_decomposition instead')
             strategy = 'cholesky_decomposition'
-        # save the strategy really used, for the outputs page
-        calc.datastore['correlation_strategy_used'] = numpy.array(
-            [strategy], dtype=hdf5.vstr)
+        _save_correlation_info(calc, shakemap, gmf_dict, strategy)
         gmf_dict.update(
             correlation_strategy=strategy,
             sites=sitecol,

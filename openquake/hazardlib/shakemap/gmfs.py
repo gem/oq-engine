@@ -25,6 +25,9 @@ from openquake.baselib import config
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, imt
 from openquake.hazardlib.correlation_models.base import ResidualComponent
+from openquake.hazardlib.correlation_models.spatial_cross_imt import (
+    loth_baker_2013)
+from openquake.hazardlib.shakemap.realization import psd_factor
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
 
@@ -338,6 +341,69 @@ def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
     return cholesky(spatial_corr, cross_corr) @ Z
 
 
+def _realization_residuals(shakemap, imts, Z, seed):
+    # Log-space residuals from the posterior phi of each point and the
+    # between-event factor CL, with the Loth and Baker (2013) correlation
+    # between the points; the station conditioning is not applied (see
+    # openquake.hazardlib.shakemap.realization for the approximation)
+    dist = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
+    # PGV is correlated with SA(1.0), the proxy used by ShakeMap
+    proxies = [imt.from_string('SA(1.0)') if im.name == 'PGV' else im
+               for im in imts]
+    R = loth_baker_2013.LothBaker2013().correlation_block(
+        dist, proxies, proxies)
+    phi = numpy.concatenate([shakemap['phi'][str(im)] for im in imts])
+    rng = numpy.random.default_rng(seed + 3)
+    E = Z.shape[1]
+    between = [shakemap['CL'][str(im)] @ rng.standard_normal((3, E))
+               for im in imts]
+    within = phi[:, None] * (psd_factor(R) @ Z)
+    return within + numpy.concatenate(between)
+
+
+def _warn_xml_approximation(shakemap, correlated, spatial_model):
+    # the legacy XML inputs have only the marginal total uncertainty
+    if (correlated and spatial_model is not None and
+            'CL' not in shakemap.dtype.names):
+        logging.warning(
+            'The correlated realizations are built from the marginal '
+            'uncertainties of the XML ShakeMap: this is an approximation '
+            'of the posterior sampling, use a shake_result.hdf product')
+
+
+def _is_loth_baker_product(shakemap, imts, spatial_model):
+    # True if the stored posterior components of a shake_result.hdf
+    # product are sampled, i.e. there is a correlation and only PGA, PGV
+    # and SA are requested
+    if 'CL' not in shakemap.dtype.names or spatial_model is None:
+        return False
+    if all(im.name in ('PGA', 'SA', 'PGV') for im in imts):
+        return True
+    logging.warning(
+        'The stored between-event components are only used for PGA, PGV and '
+        'SA: the ShakeMap is sampled with the legacy approximation')
+    return False
+
+
+def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, cholesky_limit,
+                     spatial_model, seed):
+    # only the Loth and Baker (2013) correlation is used for these products
+    if not isinstance(spatial_model, loth_baker_2013.LothBaker2013):
+        logging.warning(
+            'The ShakeMap is sampled with LothBaker2013, the requested '
+            '%s is not used', spatial_model.__class__.__name__)
+    N = len(shakemap)
+    if N * len(imts) > cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            f'M={len(imts)} x N={N}', cholesky_limit))
+    logging.warning(
+        'The correlated GMFs approximate the posterior of the ShakeMap: '
+        'the station conditioning is not applied and the between-event '
+        'terms are independent across IMTs')
+    residuals = _realization_residuals(shakemap, imts, Z, seed)
+    return mu * numpy.exp(residuals) / scale
+
+
 @calculate_gmfs.add('Silva&Horspool')
 def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
                       cross_imt_model, cholesky_limit,
@@ -353,6 +419,11 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     std_field = 'phi' if components else 'std'
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
+    _warn_xml_approximation(shakemap, correlated, spatial_model)
+    if _is_loth_baker_product(shakemap, imts, spatial_model):
+        return _loth_baker_gmfs(
+            shakemap, imts, Z, mu, scale, cholesky_limit,
+            spatial_model, correlation_seed)
     if not correlated or truncation_level <= 1E-9:
         return result
     tau_present = 'tau' in shakemap.dtype.names and tau_Z is not None

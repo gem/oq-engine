@@ -11,7 +11,8 @@ from openquake.hazardlib.shakemap.maps import \
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky, _correlate_residuals)
+    cross_correlation_matrix, cholesky, _correlate_residuals,
+    _realization_residuals)
 
 F64 = numpy.float64
 imts = [imt.from_string(x)
@@ -129,6 +130,32 @@ class ShakemapTestCase(unittest.TestCase):
                 None, 10000, 3, 0)
             empirical = numpy.corrcoef(residuals)
             numpy.testing.assert_allclose(empirical, target, atol=0.05)
+
+    def test_realization_residuals_variance(self):
+        # the residual variance of each point must be phi^2 + |CL|^2,
+        # i.e. the total variance stored by ShakeMap
+        pair = [imt.from_string('PGA'), imt.from_string('SA(0.3)')]
+        rng = numpy.random.default_rng(4)
+        N, E = 6, 100_000
+        lons = rng.uniform(0, 0.5, N)
+        lats = rng.uniform(0, 0.5, N)
+        dt = numpy.dtype([
+            ('lon', float), ('lat', float),
+            ('phi', [(str(im), float) for im in pair]),
+            ('CL', [(str(im), float, (3,)) for im in pair])])
+        shakemap = numpy.zeros(N, dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        for im in pair:
+            shakemap['phi'][str(im)] = rng.uniform(0.2, 0.5, N)
+            shakemap['CL'][str(im)][:, :1] = rng.uniform(-0.1, 0.1, (N, 1))
+        Z = rng.standard_normal((N * len(pair), E))
+        res = _realization_residuals(shakemap, pair, Z, 0)
+        variance = numpy.var(res, axis=1)
+        expected = numpy.concatenate([
+            shakemap['phi'][str(im)] ** 2 +
+            (shakemap['CL'][str(im)] ** 2).sum(axis=1) for im in pair])
+        numpy.testing.assert_allclose(variance, expected, rtol=0.03)
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
