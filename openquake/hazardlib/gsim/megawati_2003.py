@@ -27,6 +27,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _get_azimuth_correction(coe, azimuth):
     """
     This is the azimuth correction defined in the functional form (see
@@ -96,7 +99,7 @@ class MegawatiEtAl2003(GMPE):
                        _get_azimuth_correction(coe, ctx.azimuth))
             # Convert to g
             if imt.string.startswith(("PGA", "SA")):
-                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+                mean[m] = mean[m] - np.log(100.0 * g)
             # Compute std
             sig[m] = coe['sigma']
 

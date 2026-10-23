@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.cy14_site_term` implements
 
 import copy
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014

@@ -48,7 +48,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, map_getters, get_rmap_gb)
-from openquake.calculators.base import get_weights
+from openquake.calculators.base import get_weights, get_model_lts
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -1455,12 +1455,21 @@ def view_composite_source_model(token, dstore):
     return numpy.array(lst, dt('grp_id trt num_sources'))
 
 
-@view.add('branches')
-def view_branches(token, dstore):
+def _per_model(dstore, fn, names):
     """
-    Show info about the branches in the logic tree
+    Apply fn to the logic tree of each model: fn(full_lt) returns a list
+    of tuples. A single-model datastore gives a structured array with the
+    given names; a multi-model one prepends a model column.
     """
-    full_lt = dstore['full_lt']
+    lts = get_model_lts(dstore)
+    if lts[0][0] == '???':  # single model
+        return numpy.array(fn(lts[0][1]), dt(names))
+    rows = [(model, *row) for model, full_lt in lts for row in fn(full_lt)]
+    return numpy.array(rows, dt('model ' + names))
+
+
+def _branch_rows(full_lt):
+    # returns the (branch_id, abbrev, uvalue) rows of a logic tree
     smlt = full_lt.source_model_lt
     gslt = full_lt.gsim_lt
     tbl = []
@@ -1477,20 +1486,20 @@ def view_branches(token, dstore):
     if sh3 is not None:
         for k, v in sh3.items():
             tbl.append((k, v, k))
-    return numpy.array(tbl, dt('branch_id abbrev uvalue'))
+    return tbl
 
 
-@view.add('rlz')
-def view_rlz(token, dstore):
+@view.add('branches')
+def view_branches(token, dstore):
     """
-    Show info about a given realization in the logic tree
-    Example:
-
-    $ oq show rlz:0 -1
+    Show info about the branches in the logic tree
     """
-    _, rlz_id = token.split(':')
-    full_lt = dstore['full_lt']
-    rlz = full_lt.get_realizations()[int(rlz_id)]
+    return _per_model(dstore, _branch_rows, 'branch_id abbrev uvalue')
+
+
+def _rlz_rows(full_lt, rlz_id):
+    # returns the (uncertainty_type, value) pairs of a realization
+    rlz = full_lt.get_realizations()[rlz_id]
     smlt = full_lt.source_model_lt
     gslt = full_lt.gsim_lt
     xlt = full_lt.extra_lt
@@ -1508,7 +1517,28 @@ def view_rlz(token, dstore):
     elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
         for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
             tbl.append((bset.id, path))
-    return numpy.array(tbl, dt('uncertainty_type uvalue'))
+    return tbl
+
+
+@view.add('rlz')
+def view_rlz(token, dstore):
+    """
+    Show info about a given realization in the logic tree
+    Example:
+
+    $ oq show rlz:0 -1
+
+    In a multi-model datastore the realization is shown for each model
+    """
+    _, rlz_id = token.split(':')
+    lts = get_model_lts(dstore)
+    if lts[0][0] == '???':  # single model
+        tbl = _rlz_rows(lts[0][1], int(rlz_id))
+        return numpy.array(tbl, dt('uncertainty_type uvalue'))
+    rows = []
+    for model, full_lt in lts:
+        rows.extend((model, *row) for row in _rlz_rows(full_lt, int(rlz_id)))
+    return numpy.array(rows, dt('model uncertainty_type uvalue'))
 
 
 @view.add('branchsets')
@@ -1516,12 +1546,17 @@ def view_branchsets(token, dstore):
     """
     Show the branchsets in the logic tree
     """
-    flt = dstore['full_lt']
+    return text_table(_per_model(dstore, _bset_rows, 'bsno bset'),
+                      ext='org')
+
+
+def _bset_rows(flt):
+    # returns the (bsno, bset) rows of a logic tree
     clt = logictree.compose(flt.source_model_lt, flt.gsim_lt)
     rows = list(enumerate(map(repr, clt.branchsets)))
     if flt.extra_lt is not None:
         rows.append((len(rows), repr(flt.extra_lt)))
-    return text_table(rows, header=['bsno', 'bset'], ext='org')
+    return rows
 
 
 @view.add('sm_rlzs')
@@ -1532,11 +1567,6 @@ def view_sm_rlzs(token, dstore):
 
     $ oq show sm_rlzs:JPN ses.hdf5
     """
-    if ':' in token:
-        model = token.split(':')[1]
-        sm_rlzs = dstore[f'full_lt/{model}'].sm_rlzs
-    else:
-        sm_rlzs = dstore['full_lt'].sm_rlzs
     header = ['ordinal', 'lt_path', 'value', 'samples', 'weight']
 
     def row(rlz):
@@ -1544,7 +1574,17 @@ def view_sm_rlzs(token, dstore):
         return (rlz.ordinal, '_'.join(rlz.lt_path),
                 value, rlz.samples, rlz.weight)
 
-    return text_table(map(row, sm_rlzs), header, ext='org')
+    if ':' in token:
+        model = token.split(':')[1]
+        return text_table(
+            map(row, dstore[f'full_lt/{model}'].sm_rlzs), header, ext='org')
+    lts = get_model_lts(dstore)
+    if lts[0][0] == '???':  # single model
+        return text_table(map(row, lts[0][1].sm_rlzs), header, ext='org')
+    # multi-model datastore: the rows of each model with a model column
+    rows = [(model, *row(rlz))
+            for model, full_lt in lts for rlz in full_lt.sm_rlzs]
+    return text_table(rows, ['model'] + header, ext='org')
 
 
 def parse_sig_value(value):

@@ -12,14 +12,11 @@ logic-tree
 
 The OpenQuake engine provides two options for processing the whole logic tree structure.
 
-The first option uses Montecarlo sampling; the user in this case specifies a number of realizations 
-and a ``random_seed`` parameter, used to control the random generator so that when Monte Carlo
-procedures are used calculations are replicable (if the same ``random_seed`` is used you get exactly 
-the same results).
+The first option uses Monte Carlo sampling: the user specifies a number of realizations and a
+``random_seed``; see :ref:`logic-tree-sampling` for the sampling methods.
 
-In the second option, all the possible realizations are created. Below we provide an example of the latter option. 
-In this case, we set the ``number_of_logic_tree_samples`` to 0. OpenQuake engine will perform a
-complete enumeration of all the possible paths from the roots to the leaves of the logic tree structure::
+In the second option, all the possible realizations are created, by setting
+``number_of_logic_tree_samples`` to 0 (see :ref:`logic-tree-sampling`)::
 
 	[logic_tree]
 	number_of_logic_tree_samples = 0

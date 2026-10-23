@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_distance(ctx, C):
     """
     Compute the distance function, equation (9):
@@ -150,9 +153,9 @@ class TusaLangerAzzaro2019_100b(GMPE):
                      _get_site_amplification(ctx, C))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            sig[m] = C['SigmaTot'] * LOG10
 
     # Coefficients from Table S2; sigma values in log
 
@@ -180,7 +183,6 @@ class TusaLangerAzzaro2019_100b(GMPE):
     2.50 -1.728930381 -0.166838889 0.22693676 -1.185098916 -0.137311748 -0.005261833 0 0.153919922 0.144729166 0.1552 0.3283 0.3631
     3.00 -1.406186089 -0.426719968 0.260881235 -1.211453158 -0.127134138 -0.003745407 0 0.130802552 0.097627145 0.1641 0.3333 0.3715
     4.00 1.885617556 -2.36620239 0.529529019 -1.348747493 -0.192179052 -0.000443602 0 0.131001754 0.065061426 0.1901 0.3394 0.389
-
     """)
 
 
@@ -220,6 +222,4 @@ class TusaLangerAzzaro2019_60b(TusaLangerAzzaro2019_100b):
     2.50 -3.7243800 0.9726243 0.0451616 -0.7755205 -0.0064767 -0.0156130 0.0000000 0.1369619 0.1178943 0.1618000 0.3095000 0.3493000
     3.00 -2.3935960 0.1580834 0.1551687 -0.8317885 0.0409512 -0.0131034 0.0000000 0.1233762 0.0874872 0.1686000 0.3135000 0.3560000
     4.00 -0.6953882 -0.9205602 0.3079770 -0.9680341 -0.0141747 -0.0101682 0.0000000 0.1330756 0.0636314 0.1899000 0.3170000 0.3960000
-
-
     """)

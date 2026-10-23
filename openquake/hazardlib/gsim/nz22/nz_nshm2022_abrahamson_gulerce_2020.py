@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 New Zealand National Seismic Hazard Model 2022 Revision modification of Abrahamson and Gulerce 2020 GMMs.
 
@@ -25,7 +42,6 @@ Module exports :class:`NZNSHM2022_AbrahamsonGulerce2020SInter`
 """
 
 import numpy as np
-
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
@@ -37,8 +53,7 @@ from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     get_epistemic_adjustment,
     get_mean_acceleration,
     get_tau_phi,
-    SUPPORTED_REGIONS,
-)
+    SUPPORTED_REGIONS,)
 from openquake.hazardlib.gsim.nz22.const import periods, theta7s, theta8s
 
 
@@ -73,14 +88,11 @@ def get_backarc_term(trt, imt, ctx):
     if trt == const.TRT.SUBDUCTION_INTRASLAB:
         min_dist = 85.0
         backarc = np.bool_(ctx.backarc)
-        f_faba = np.zeros_like(dists)
-        fixed_dists = dists[backarc]
-        fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = theta7 + theta8 * np.log(fixed_dists / 40.0)
-        return f_faba * w_epi_factor
+        clipped = np.maximum(dists, min_dist)
+        faba = theta7 + theta8 * np.log(clipped / 40.0)
+        return np.where(backarc, faba, 0.) * w_epi_factor
     else:
-        f_faba = np.zeros_like(dists)
-        return f_faba
+        return np.zeros_like(dists)
 
 
 def get_acceleration_on_reference_rock_ba(
@@ -122,8 +134,7 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         pga1000 = get_acceleration_on_reference_rock_ba(
-            C_PGA, trt, self.region, ctx, self.apply_usa_adjustment
-        )
+            C_PGA, trt, self.region, ctx, self.apply_usa_adjustment)
         pga1000 = np.exp(pga1000)
 
         for m, imt in enumerate(imts):
@@ -135,13 +146,11 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
                 ctx,
                 pga1000,
                 imt,
-                self.apply_usa_adjustment
-            )
+                self.apply_usa_adjustment)
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor
                 mean[m] += self.sigma_mu_epsilon * get_epistemic_adjustment(
-                    C, ctx.rrup
-                )
+                    C, ctx.rrup)
             # Get the standard deviations
             tau_m, phi_m = get_tau_phi(
                 C,
@@ -151,8 +160,7 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
                 ctx.rrup,
                 ctx.vs30,
                 pga1000,
-                self.ergodic,
-            )
+                self.ergodic,)
             tau[m] = tau_m
             phi[m] = phi_m
         sig += np.sqrt(tau**2.0 + phi**2.0)
@@ -176,18 +184,15 @@ REGION_ALIASES = {
     "JPN": "Japan",
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
-    "TWN": "Taiwan",
-}
+    "TWN": "Taiwan",}
 
 
 for region in SUPPORTED_REGIONS[1:]:
     add_alias(
         "NZNSHM2022_AbrahamsonGulerce2020SInter" + REGION_ALIASES[region],
         NZNSHM2022_AbrahamsonGulerce2020SInter,
-        region=region,
-    )
+        region=region,)
     add_alias(
         "NZNSHM2022_AbrahamsonGulerce2020SSlab" + REGION_ALIASES[region],
         NZNSHM2022_AbrahamsonGulerce2020SSlab,
-        region=region,
-    )
+        region=region,)

@@ -84,20 +84,99 @@ type of epistemic uncertainty this branchset is describing:
 	...
 	</logicTree>
 
-Possible values for the ``uncertaintyType`` attribute are:
+.. _logic-tree-uncertainty-types:
 
-- ``gmpeModel``: indicates epistemic uncertainties on ground motion prediction equations
-- ``sourceModel``: indicates epistemic uncertainties on source models
-- ``maxMagGRRelative``: indicates relative (i.e. increments) epistemic uncertainties to be added (or subtracted, depending on the sign of the increment) to the Gutenberg-Richter maximum magnitude value.
-- ``bGRRelative``: indicates relative epistemic uncertainties to be applied to the Gutenberg-Richter b value.
-- ``abGRAbsolute``: indicates absolute (i.e. values used to replace original values) epistemic uncertainties on the Gutenberg-Richter a and b values.
-- ``maxMagGRAbsolute``: indicates (absolute) epistemic uncertainties on the Gutenberg-Richter maximum magnitude.
-- ``incrementalMFDAbsolute``: indicates (absolute) epistemic uncertainties on the incremental magnitude frequency distribution (i.e. alternative rates and/or minimum magnitude) of a specific source (can only be applied to individual sources)
-- ``simpleFaultGeometryAbsolute``: indicates alternative representations of the simple fault geometry for an individual simple fault source
-- ``simpleFaultDipRelative``: indicates a relative increase or decrease in fault dip for one or more simple fault sources
-- ``simpleFaultDipAbsolute``: indicates alternative values of fault dip for one or more simple fault sources
-- ``complexFaultGeometryAbsolute``: indicates alternative representations of complex fault geometry for an individual complex fault source
-- ``characteristicFaultGeometryAbsolute``: indicates alternative representations of the characteristic fault geometry for an individual characteristic fault source
+Possible values for the ``uncertaintyType`` attribute, in engine v3.27,
+are listed below. The list is the output of ``oq info uncertainty_types``
+without the internal ``dummy`` type. Each entry says what the
+``uncertaintyModel`` of a ``logicTreeBranch`` contains.
+
+*Model-level types*
+
+- ``sourceModel``: loads an initial seismic source model file.
+- ``extendModel``: adds the sources of another file to the base source
+  model (see :ref:`extend-model`).
+- ``gmpeModel``: the GSIM for the ground motion logic tree (see
+  :ref:`gm-logic-tree`).
+
+``applyToTectonicRegionType`` is not an uncertainty type: it is a filter
+attribute of the ``logicTreeBranchSet`` element, described in
+:ref:`applyTo attributes <logic-tree-apply-to>`.
+
+*Magnitude-frequency distribution (MFD) types*
+
+- ``abGRAbsolute``: replaces the Gutenberg-Richter ``a`` and ``b``; the
+  value is a pair ``a b``.
+- ``abMaxMagAbsolute``: replaces ``a``, ``b`` and the maximum magnitude;
+  the value is ``a b max_mag``.
+- ``bGRAbsolute``: replaces the Gutenberg-Richter ``b`` (a float).
+- ``bGRRelative``: adds a delta to the Gutenberg-Richter ``b`` (a float).
+- ``bACAbsolute``: replaces the ``b`` of the Anderson-Coppersmith MFD (a
+  float).
+- ``bACRelative``: adds a delta to the ``b`` of the Anderson-Coppersmith
+  MFD (a float).
+- ``maxMagGRAbsolute``: replaces the Gutenberg-Richter maximum magnitude
+  (a float).
+- ``maxMagGRRelative``: adds a delta to the Gutenberg-Richter maximum
+  magnitude (a float).
+- ``maxMagGRRelativeNoMoBalance``: as ``maxMagGRRelative``, without
+  moment balance.
+- ``maxMagAndDeltaMagACRelative``: adds the deltas of the maximum
+  magnitude and of the Anderson-Coppersmith magnitude increment; the
+  value is a pair ``delta_max_mag delta_m_AC``.
+- ``maxMagAndDeltaMagACRelativeNoMoBalance``: as the previous type,
+  without moment balance.
+- ``incrementalMFDAbsolute``: replaces the incremental MFD of a single
+  source (an ``incrementalMFD`` node with minimum magnitude, bin width and
+  rates).
+- ``truncatedGRFromSlipAbsolute``: builds a truncated Gutenberg-Richter
+  MFD from a slip rate.
+- ``setMSRAbsolute``: replaces the magnitude scaling relationship.
+- ``recomputeMmax``: recomputes the maximum magnitude, with an epsilon
+  value (a float).
+
+*Geometry types (one individual source at a time)*
+
+- ``areaSourceGeometryAbsolute``: alternative polygon of an area source.
+- ``simpleFaultGeometryAbsolute``: alternative geometry of a simple fault
+  source.
+- ``complexFaultGeometryAbsolute``: alternative geometry of a complex
+  fault source.
+- ``characteristicFaultGeometryAbsolute``: alternative surface of a
+  characteristic fault source (see :ref:`characteristic-faults`).
+
+*Source parameter types (one or more sources, use applyToSources)*
+
+- ``simpleFaultDipAbsolute``: replaces the dip of simple fault sources.
+- ``simpleFaultDipRelative``: adds a delta to the dip of simple fault
+  sources.
+- ``setAspectRatioAbsolute``: replaces the aspect ratio of the sources.
+- ``setAspectRatioRelative``: adds a delta to the aspect ratio.
+- ``setUpperSeismDepthAbsolute``: replaces the upper seismogenic depth.
+- ``setUpperSeismDepthRelative``: adds a delta to the upper seismogenic
+  depth.
+- ``setLowerSeismDepthAbsolute``: replaces the lower seismogenic depth.
+- ``setLowerSeismDepthRelative``: adds a delta to the lower seismogenic
+  depth.
+- ``setHypoDepthDistribution``: replaces the hypocentral depth
+  distribution (a ``hypoDepthDist`` list).
+
+*Correlated recurrence types (used with applyToSources and applyToBranches,
+see :ref:`correlated-uncertainties`)*
+
+- ``recurSet``: the recurrence model of a set of correlated sources
+  (``row`` elements).
+- ``recurRow``: the recurrence parameters of the sources, given the
+  ``recurSet`` branch.
+- ``rateSplit``: splits the rate between correlated sources, given the
+  ``recurRow`` branch.
+
+*Probabilistic fault displacement (PFD) types*
+
+- ``fdhaCalcRSigma``, ``fdhaPrimaryFDModel``, ``fdhaPrimarySRModel``,
+  ``fdhaSecondaryFDModel``, ``fdhaSecondarySRModel``: the models of the
+  probabilistic fault displacement hazard analysis (see
+  :ref:`probabilistic-fault-displacement`).
 
 A ``branchSet`` is defined as a sequence of ``logicTreeBranch`` elements, each specified by an ``uncertaintyModel`` 
 element (a string identifying an uncertainty model; the content of the string varies with the ``uncertaintyType`` 
@@ -212,6 +291,8 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
   of the ``characteristicFaultGeometry`` source node, as described in section :ref:`Characteristic faults <characteristic-faults>`
 
 The maximum number of logicTreeBranch elements per branchset is 183 and the uncertainty weights should sum to 1.0.
+
+.. _logic-tree-apply-to:
 
 The ``logicTreeBranchSet`` element offers also a number of optional attributes allowing for complex tree definitions:
 
@@ -349,7 +430,9 @@ The Seismic Source Model
 ************************
 
 The structure of the xml file representing the seismic source model corresponds to a list of sources, each one modelled 
-using one out of the five typologies currently supported. Below we provide a schematic example of a seismic source model::
+using one out of the five typologies currently supported; see :ref:`source-typologies`.
+
+The logic tree that selects a seismic source model is the ``sourceModel`` branchset, as in this schematic example::
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -410,6 +493,8 @@ and Youngs (2008) Ground Motion Prediction Equation.
 Advanced Features of Logic Trees
 --------------------------------
 
+.. _extend-model:
+
 ***********
 extendModel
 ***********
@@ -451,7 +536,7 @@ will make things clear:
 	  </logicTree>
 	</nrml>
 
-In this example there are two base source models, named ``commom1.xml`` and ``common2.xml`` and three possibile 
+In this example there are two base source models, named ``common1.xml`` and ``common2.xml`` and three possible 
 extensions ``extra1.xml``, ``extra2.xml`` and ``extra3.xml``. The engine will generate six effective source models by 
 extending first ``common1.xml`` and then ``common2.xml`` with ``extra1.xml``, then with ``extra2.xml`` and then with 
 ``extra3.xml`` respectively. Notice that ``extra1.xml``, ``extra2.xml`` and ``extra3.xml`` can be different versions of 
@@ -591,7 +676,7 @@ has the following structure::
 	...                         ['b23', '4.4 0.9', .334]],
 	...    ['abGRAbsolute', [], ['b31', '3.3 1.0', .333],
 	...                         ['b32', '3.2 0.9', .333],
-	...                         ['b33', '3.1 0.0', .334]],
+	...                         ['b33', '3.1 0.8', .334]],
 	...    ['maxMagGRAbsolute', [], ['b41', 7.0, .333],
 	...                             ['b42', 7.3, .333],
 	...                             ['b43', 7.6, .334]],
@@ -726,6 +811,8 @@ number::
 NB: the commands *oq show branches* and *oq show rlz* are new in engine 3.13: they may change in the future and the 
 string representation of the branch path may change too. It has already changed twice in engine 3.11 and engine 3.12. 
 You cannot rely on it across engine versions.
+
+.. _effective-realizations:
 
 *************************************
 The concept of effective realizations
@@ -900,6 +987,8 @@ out and could produce zero effective realizations, so the reduction effect could
 In any case *the warning tells the user what should be done* in order to remove the duplication and reduce the 
 calculation only to the effective realizations, i.e. which are the TRTs to discard in the *job.ini* file.
 
+.. _logic-tree-source-specific:
+
 Source Specific Logic Trees
 ---------------------------
 
@@ -907,8 +996,8 @@ There are situations in which the hazard model is comprised by a small number of
 an individual logic tree managing the uncertainty of a few parameters. In such situations we say that we have a *Source 
 Specific Logic Tree*.
 
-Such situation is esemplified by the demo that you can find in the directory ``demos/hazard/LogicTreeCase2ClassicalPSHA``, 
-which has the following logic tree, in XML form:
+Such situation is exemplified by the demo that you can find in the directory ``demos/hazard/LogicTreeCase2ClassicalPSHA``, 
+which has the logic tree in ``demos/hazard/LogicTreeCase2ClassicalPSHA/source_model_logic_tree.xml``.
 
 As you can see, each branchset has an ``applyToSources`` attribute, pointing to one of the two sources in the hazard 
 model, therefore we have a source specific logic tree.
@@ -953,9 +1042,17 @@ to a specific source. Here is the usage::
 
 Looking at the source-specific realizations is useful to assess if the logic tree can be collapsed.
 
+.. _logic-tree-sampling:
+
 **************************
 Sampling of the logic tree
 **************************
+
+The parameter ``number_of_logic_tree_samples`` selects the method: with
+``number_of_logic_tree_samples = 0`` the engine performs a complete
+enumeration of all the paths from the roots to the leaves of the logic
+tree, while a positive value samples that many paths, using the
+``random_seed`` (default 42) to make the sampling replicable.
 
 There are real life examples of very large logic trees, like the model for South Africa which features 3,194,799,993,706,229,268,480 
 branches. In such situations it is impossible to perform a computation with full enumeration. However, the engine allows 
@@ -973,7 +1070,7 @@ seeds, so the computation is done only once, in an efficient way.
 Logic tree sampling strategies
 ------------------------------
 
-Stating from version 3.10, the OpenQuake engine suppports 4 different strategies for sampling the logic tree. They are 
+Starting from version 3.10, the OpenQuake engine supports 4 different strategies for sampling the logic tree. They are 
 called, respectively, ``early_weights``, ``late_weights``, ``early_latin``, ``late_latin``. Here we will discuss how 
 they work.
 
@@ -999,42 +1096,47 @@ sampling method.
 **late_latin**
   With this sampling method, the engine randomly choose branches ignoring the weights in the logic tree, but still using an hypercube sampling; then, the hazard curve statistics are computed by taking into account the weights.
 
-More precisely, the engine calls something like the function::
+The engine samples the paths with the method ``sample_paths`` of
+the ``CompositeLogicTree`` object, which takes the number of samples,
+the seed and the sampling method::
 
-	openquake.hazardlib.lt.random_sample(
-	  branchsets, num_samples, seed, sampling_method)
+    clt.sample_paths(num_samples, seed, sampling_method)
 
-You are invited to play with it; in general the latin sampling produces samples much closer to the expected weights 
+You are invited to play with it; in general the latin sampling produces samples much closer to the expected weights
 even with few samples. Here in an example with two branchsets with weights [.4, .6] and [.2, .3, .5] respectively.::
 
-	>>> import collections
-	>>> from openquake.hazardlib.lt import random_sample
-	>>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
+    >>> import collections
+    >>> from openquake.hazardlib.lt import build
+    >>> clt = build(['sourceModel', [], ['X', 'x.xml', .4], ['Y', 'y.xml', .6]],
+    ...             ['maxMagGRRelative', [], ['A', .1, .2], ['B', .2, .3],
+    ...              ['C', .3, .5]])
+    >>> clt.get_all_paths()
+    ['XA', 'XB', 'XC', 'YA', 'YB', 'YC']
 
-With 100 samples one would expect to get the path XA 8 times, XB 12 times, XC 20 times, YA 12 times, YB 18 times, YC 30 
+With 100 samples one would expect to get the path XA 8 times, XB 12 times, XC 20 times, YA 12 times, YB 18 times, YC 30
 times. Instead we get::
 
-	>>> paths = random_sample(bsets, 100, 42, 'early_weights')
-	>>> collections.Counter(paths)
-	Counter({'YC': 26, 'XC': 24, 'YB': 17, 'XA': 13, 'YA': 10, 'XB': 10})
+    >>> paths = clt.sample_paths(100, 42, 'early_weights')
+    >>> collections.Counter(paths)
+    Counter({'YC': 28, 'XC': 24, 'YB': 20, 'XB': 10, 'YA': 9, 'XA': 9})
 
 ::
 
-	>>> paths = random_sample(bsets, 100, 42, 'late_weights')
-	>>> collections.Counter(paths)
-	Counter({'XA': 20, 'YA': 18, 'XB': 17, 'XC': 15, 'YB': 15, 'YC': 15})
+    >>> paths = clt.sample_paths(100, 42, 'late_weights')
+    >>> collections.Counter(paths)
+    Counter({'XB': 20, 'XA': 19, 'YC': 18, 'XC': 17, 'YB': 14, 'YA': 12})
 
 ::
 
-	>>> paths = random_sample(bsets, 100, 42, 'early_latin')
-	>>> collections.Counter(paths)
-	Counter({'YC': 31, 'XC': 19, 'YB': 17, 'XB': 13, 'YA': 12, 'XA': 8})
+    >>> paths = clt.sample_paths(100, 42, 'early_latin')
+    >>> collections.Counter(paths)
+    Counter({'YC': 27, 'XC': 23, 'YB': 20, 'YA': 13, 'XB': 10, 'XA': 7})
 
 ::
 
-	>>> paths = random_sample(bsets, 100, 45, 'late_latin')
-	>>> collections.Counter(paths)
-	Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})
+    >>> paths = clt.sample_paths(100, 45, 'late_latin')
+    >>> collections.Counter(paths)
+    Counter({'YA': 18, 'XB': 18, 'YC': 17, 'XA': 16, 'XC': 16, 'YB': 15})
 
 ***********************************
 GMPE logic trees with weighted IMTs

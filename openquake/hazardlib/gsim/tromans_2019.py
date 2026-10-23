@@ -19,6 +19,7 @@
 Module exports :class:`TromansEtAl2019`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import registry, GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import from_string

@@ -404,14 +404,12 @@ class Eurocode8Amplification(PitilakisEtAl2018):
 
 # Default short period amplification factors defined by Eurocode 8 Table 3.4
 EC8_FS_default = {
-    b"A": 1., b"B": 1.2, b"C": 1.35, b"D": 1.5, b"E": 1.7, b"F": 1.35
-}
+    b"A": 1., b"B": 1.2, b"C": 1.35, b"D": 1.5, b"E": 1.7, b"F": 1.35}
 
 
 # Default long period amplification factors defined by Eurocode 8 Table 3.4
 EC8_FL_default = {
-    b"A": 1., b"B": 1.6, b"C": 2.25, b"D": 3.20, b"E": 3.0, b"F": 4.0
-}
+    b"A": 1., b"B": 1.6, b"C": 2.25, b"D": 3.20, b"E": 3.0, b"F": 4.0}
 
 
 class Eurocode8AmplificationDefault(Eurocode8Amplification):

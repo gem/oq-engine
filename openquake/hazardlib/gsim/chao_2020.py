@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGD, PGV, SA
+
 
 CONSTANTS = {'mag_ref': 6.5, 'n': 2, 'vs30_ref': 760, 'rrup_ref': 0}
 
@@ -105,10 +106,14 @@ def _ftype_2(trt, suffix, C, ctx):
     """
     Factor based on the type of fault.
     """
-    res = np.full_like(ctx.rake, C['c2'])  # strike-slip
-    res[(30 <= ctx.rake) & (ctx.rake <= 150)] = C['c1']  # reverse
-    res[(-150 <= ctx.rake) & (ctx.rake <= -30)] = C['c3']  # normal
-    return res
+    return np.where(
+        (30 <= ctx.rake) & (ctx.rake <= 150),
+        C['c1'],  # reverse
+        np.where(
+            (-150 <= ctx.rake) & (ctx.rake <= -30),
+            C['c3'],  # normal
+            C['c2']   # strike-slip
+        ))
 
 
 def _fvs30(geology, C, ctx):
@@ -125,7 +130,7 @@ def _fvs30(geology, C, ctx):
 def _get_z1pt0_ref(vs30):
     """
     Get reference z1pt0 in metres
-    """ 
+    """
     return np.exp(-4.08 / 2 * np.log((
         vs30 ** 2 + 355.4 ** 2) / (1750 ** 2 + 355.4 ** 2)))
 
@@ -141,9 +146,7 @@ def _get_basin_term(C, ctx, region=None):
     z1pt0[mask] = z1pt0_ref[mask]
     result = np.zeros_like(z1pt0)
     idx = z1pt0 >= 0
-    if sum(idx) == 0:
-        return result
-    result[idx] = np.log(z1pt0[idx] / z1pt0_ref) * C['c25']
+    result[idx] = np.log(z1pt0[idx] / z1pt0_ref[idx]) * C['c25']
     return result
 
 

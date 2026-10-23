@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config
+from openquake.baselib import config, use_server
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -73,6 +73,30 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
+def check_dbfile(fname):
+    """
+    Check that the database file can be used by the current user.
+
+    :returns: True if the database file has to be created, False if
+        it exists and is readable and writable
+    :raises SystemExit: if the file or its directory exist but cannot
+        be accessed, since a missing file would otherwise be silently
+        created in place of the real one
+    """
+    dbdir = os.path.dirname(fname) or '.'
+    if os.path.exists(fname):
+        if not os.access(fname, os.R_OK | os.W_OK):
+            sys.exit(f'The database {fname} is not readable and '
+                     'writable by the current user')
+        return False
+    # os.path.exists returns False also when the directory cannot be
+    # searched, so the directory is checked on its own
+    if os.path.isdir(dbdir) and not os.access(dbdir, os.W_OK | os.X_OK):
+        sys.exit(f'The directory {dbdir} of the database is not '
+                 'writable and searchable by the current user')
+    return True
+
+
 def main(
         no_distribute=False,
         yes=False,
@@ -119,9 +143,11 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    fname = os.path.expanduser(config.server.dbfile)
-    if not os.path.exists(fname):
-        upgrade_db = True  # automatically creates the db
+    if not use_server():
+        # with a remote database server the local dbfile is not used
+        fname = os.path.expanduser(config.server.dbfile)
+        if check_dbfile(fname):
+            upgrade_db = True  # automatically creates the db
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

@@ -97,7 +97,7 @@ def _compute_hanging_wall_effect(C, rjb, rrup, dip, mag):
     hw[dip <= 70.] = (5. - rjb[dip <= 70.]) / 5.
 
     # eq. 9
-    f_m = np.clip(mag - 5.5, None, 1.)
+    f_m = np.minimum(mag - 5.5, 1.)
 
     # eq. 10
     f_rrup = C['c15'] + np.zeros_like(rrup)

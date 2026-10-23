@@ -28,6 +28,10 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
+LOG10 = np.log(10.0)
+
+
 CONSTS = {"r0": 10.0, "r1": 50.0, "r2": 100.0}
 
 
@@ -118,12 +122,12 @@ class RietbrockEdwards2019Mean(GMPE):
                                _get_distance_term(C, ctx.rjb, ctx.mag))
             # Converting from log10 to log
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log(10.0**(imean) / 980.665)
+                mean[m] = imean * LOG10 - np.log(980.665)
             else:
-                mean[m] = np.log(10 ** imean)
-            sig[m] = np.log(10.0 ** C["total"])
-            phi[m] = np.log(10.0 ** C["phi"])
-            tau[m] = np.log(10.0 ** C["tau"])
+                mean[m] = imean * LOG10
+            sig[m] = C['total'] * LOG10
+            phi[m] = C['phi'] * LOG10
+            tau[m] = C['tau'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT      c1      c2      c3      c4      c5      c6      c7      c8      c9       c10     c11   total     tau     phi

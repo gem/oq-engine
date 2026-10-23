@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_faulting_style_term(C, rake):
     """
     Compute faulting style term as a function of rake angle value as given
@@ -54,12 +57,12 @@ def _compute_mean(kind, C, mag, ctx, vs30, rake, imt):
     # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
     # is already in cm/s) and also convert from base 10 to base e.
     if imt.string == "PGA":
-        mean = np.log((10 ** mean) / g)
+        mean = mean * LOG10 - np.log(g)
     elif imt.string[:2] == "SA":
-        mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                      1e-2 / g)
+        mean = (mean * LOG10 +
+                np.log((2 * np.pi / imt.period) ** 2) + np.log(1e-2 / g))
     else:
-        mean = np.log(10 ** mean)
+        mean = mean * LOG10
 
     return mean
 
@@ -173,7 +176,7 @@ class CauzziFaccioli2008(GMPE):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(self.kind, C, ctx.mag, ctx, ctx.vs30,
                                     ctx.rake, imt)
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
