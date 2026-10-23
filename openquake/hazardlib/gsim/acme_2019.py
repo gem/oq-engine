@@ -16,33 +16,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import copy
-import warnings
 import numpy as np
+
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.projects.acme_base import (
-    get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
-        YenierAtkinson2015BSSA
-from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
-                                               get_tau_at_quantile,
-                                               get_phi_ss,
-                                               TAU_SETUP,
-                                               PHI_SETUP,
-                                               PHI_S2SS_MODEL,
-                                               TAU_EXECUTION)
-try:
-    RW = np.exceptions.RankWarning  # numpy >= 2
-except AttributeError:  # numpy < 2
-    RW = np.RankWarning
-warnings.filterwarnings("ignore", category=RW)
-PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
+    YenierAtkinson2015BSSA
+from openquake.hazardlib.gsim.nga_east import (
+    PHI_SETUP, PHI_S2SS_MODEL, TAU_EXECUTION, TAU_SETUP,
+    get_phi_s2ss_at_quantile, get_phi_ss, get_phi_ss_at_quantile,
+    get_tau_at_quantile)
 
 
-def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
+LOG10 = np.log(10.)
+
+
+def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, PHI_SS_MEDIAN,
+             imt, mag):
     """
     Returns the within-event standard deviation (phi)
     """
@@ -55,9 +47,7 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
 
     elif imt.period < 0.5 and phi_ss_quantile != 0.5:
         # compute phi at quantile 0.5 and take the maximum comp to 0.4
-        PHI_SS_0p5 = get_phi_ss_at_quantile_ACME(
-                                    PHI_SETUP[phi_model], 0.5)
-        phi_0p5 = get_phi_ss(imt, mag, PHI_SS_0p5)
+        phi_0p5 = get_phi_ss(imt, mag, PHI_SS_MEDIAN)
 
         # make adjustment if needed
         phi[:] = np.where(phi_0p5 < 0.4, 0.4 + phi - phi_0p5, phi)
@@ -69,17 +59,13 @@ def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model, imt, mag):
     return phi
 
 
-def _get_tau(tau_model, TAU, imt, mag):
+def extrapolate_in_PSA(gmpe, ctx, set_imt, imt):
     """
-    Returns the inter-event standard deviation (tau)
+    Extrapolate log spectral acceleration using a log-log linear fit.
     """
-    return TAU_EXECUTION[tau_model](imt, mag, TAU)
-
-
-def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
     extrap_mean = []
-    t_log10 = np.log10([im for im in set_imt])
-    for d in np.arange(0, len(ctx.rjb)):
+    t_log10 = np.log10(set_imt)
+    for d in range(len(ctx.rjb)):
         c = copy.copy(ctx)
         if hasattr(ctx, 'rjb'):
             c.rjb = np.array([ctx.rjb[d]])
@@ -88,60 +74,32 @@ def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
         means_log10 = []
         for im in set_imt:
             mean_ln = contexts.get_mean_stds(gmpe, c, [SA(im)])[0]
-            mean = np.exp(mean_ln[0])
-            means_log10.append(np.log10(mean))
+            means_log10.append(mean_ln[0] / LOG10)
         mb = np.polyfit(t_log10, means_log10, 1)
         mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
-        extrap_mean.append(np.log(10**mean_imt_log10))
+        extrap_mean.append(mean_imt_log10 * LOG10)
 
     return extrap_mean
 
 
-def get_acc_from_disp(disp, imt):
+def get_extrapolation_periods(gmpe):
     """
-    Method is only called when imt.period > cappingp
-    :param imt:
-        The period
-    :param disp:
-        Displacement
-    :returns:
-        Acceleration in log space
-    """
-    acc = np.log(disp * (2 * np.pi / imt)**2)
-    return acc
+    Return the spectral periods used for capping and extrapolation.
 
-
-def get_capping_period(cornerp, gmpe, imt):
+    The caller caps at the smaller of the corner period and the longest
+    selected period.
     """
-    Capping period is the smaller of the corner period and the
-    max period of coefficents provided by the GMPE
-    """
-    try:
-        coeffs = gmpe.COEFFS.sa_coeffs
-        imts = [*coeffs]
-        periods = [imt.period for imt in imts]
-        if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
-            highest_period = 2.0
-            periods = [p for p in periods if p <= highest_period]
-            set_highest = periods[-5:]
-        elif gmpe.__class__.__name__ == 'RietbrockEdwards2019Low':
-            set_highest = periods[-2:]
-        else:
-            set_highest = periods
-    except AttributeError:
-        coeffs = gmpe.COEFFS_TAB2.sa_coeffs
-        imts = [*coeffs]
-        periods = [imt.period for imt in imts]
-        if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
-            highest_period = 2.0
-            periods = [p for p in periods if p <= highest_period]
-            set_highest = periods[-5:]
-        elif gmpe.__class__.__name__ == 'RietbrockEdwards2019Low':
-            set_highest = periods[-2:]
-        else:
-            set_highest = periods
-
-    return set_highest
+    if isinstance(gmpe, YenierAtkinson2015BSSA):
+        coeffs = gmpe.COEFFS_TAB2
+    else:
+        coeffs = gmpe.COEFFS
+    periods = sorted(imt.period for imt in coeffs.sa_coeffs)
+    model_name = type(gmpe).__name__
+    if model_name == 'BindiEtAl2014Rjb':
+        return [period for period in periods if period <= 2.0][-5:]
+    if model_name == 'RietbrockEdwards2019Low':
+        return periods[-2:]
+    return periods
 
 
 def get_corner_period(mag):
@@ -158,62 +116,40 @@ def get_corner_period(mag):
     return cornerp
 
 
-def get_disp_from_acc(acc, imt):
-    """
-    Method is only called when imt.period > cappingp
-   :param acc:
-        Acceleration in log space
-   :param imt:
-        The period
-   :returns:
-        Displacement
-    """
-    disp = np.exp(acc) * imt**2 / (2 * np.pi)**2
-    return disp
-
-
-def get_stddevs(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, phi_model,
+def get_stddevs(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, PHI_SS_MEDIAN,
                 tau_model, TAU, mag, imt):
     """
     Returns the standard deviations for either the ergodic or
     non-ergodic models
     """
-    tau = _get_tau(tau_model, TAU, imt, mag)
+    tau = TAU_EXECUTION[tau_model](imt, mag, TAU)
     phi = _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile,
-                   phi_model, imt, mag)
+                   PHI_SS_MEDIAN, imt, mag)
     sigma = np.sqrt(tau ** 2 + phi ** 2)
     return [sigma, tau, phi]
 
 
-class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
-    """
-    This is a modified version of the :class:
-    `openquake.hazardlib.gsim.yenier_atkinson_2015.YenierAtkinson2015BSSA`
-    which incorporates a correction of the median ground motion based on the
-    focal mechanism.
-
-    It also fixes vs30 to 760 m/s
-    """
-    adapted = True
-
-    def __init__(self):
-        # Initialise using the super class
-        super().__init__(focal_depth=10., region='CENA')
-        # Adjust the set of required parameters for the description of the
-        # rupture by adding rake
-        _previous = list(super().REQUIRES_RUPTURE_PARAMETERS)
-        self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
-
-
 def _setup_standard_deviations(gsim):
+    """
+    Initialize tau, phi and cached median phi coefficient tables.
+    """
     # setup tau
     gsim.TAU = get_tau_at_quantile(TAU_SETUP[gsim.tau_model]["MEAN"],
                                    TAU_SETUP[gsim.tau_model]["STD"],
                                    gsim.tau_quantile)
     # setup phi
-    PHI_SETUP['global_linear'] = gsim.COEFFS_PHI_SS_GLOBAL_LINEAR
-    gsim.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[gsim.phi_model],
-                                              gsim.phi_ss_quantile)
+    if gsim.phi_model == 'global_linear':
+        phi_model = gsim.COEFFS_PHI_SS_GLOBAL_LINEAR
+    else:
+        phi_model = PHI_SETUP[gsim.phi_model]
+    gsim.PHI_SS = get_phi_ss_at_quantile(
+        phi_model, gsim.phi_ss_quantile, logratio=False)
+    # compute phi at quantile 0.5 and take the maximum comp to 0.4
+    if gsim.phi_ss_quantile == 0.5:
+        gsim.PHI_SS_MEDIAN = gsim.PHI_SS
+    else:
+        gsim.PHI_SS_MEDIAN = get_phi_ss_at_quantile(
+            phi_model, 0.5, logratio=False)
     # if required setup phis2ss
     if gsim.ergodic:
         if gsim.phi_s2ss_model == 'cena':
@@ -229,8 +165,8 @@ def _setup_standard_deviations(gsim):
 
 class AlAtikSigmaModel(GMPE):
     """
-    Implements a modifiable GMPE that uses the ground-motion standard
-    deviation model proposed by Al-Atik in 2015 as described in:
+    Takes a GMPE and applies the ground-motion standard deviation model
+    proposed by Al-Atik (2015), as described in:
 
     Al-Atik, L. (2015). "NGA-East: Ground-Motion Standard Deviation Models
     for Central and Eastern North America". PEER Report No. 2015/07, 217
@@ -312,16 +248,18 @@ class AlAtikSigmaModel(GMPE):
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        Compute mean ground motions and standard deviations.
+        """
         [mag] = np.unique(np.round(ctx.mag, 2))
+        cornerp = get_corner_period(mag)
+        # capping period only compares
+        # - highest period with a coefficient
+        # - corner period
+        # - 2.0 if it's bindi
+        sp = get_extrapolation_periods(self.gmpe)
+        hp = sp[-1]
         for m, imt in enumerate(imts):
-
-            cornerp = get_corner_period(mag)
-            # capping period only compares
-            # - highest period with a coefficient
-            # - corner period
-            # - 2.0 if it's bindi
-            sp = get_capping_period(cornerp, self.gmpe, imt)
-            hp = sp[-1]
 
             # 1 - if imt.period < cornerp, no changes needed
             if self.extr and imt.period <= cornerp and imt.period <= hp:
@@ -331,16 +269,14 @@ class AlAtikSigmaModel(GMPE):
             elif self.extr and imt.period >= cornerp and cornerp <= hp:
                 mean_ = contexts.get_mean_stds(
                     self.gmpe, ctx, [SA(cornerp)])[0]
-                disp = get_disp_from_acc(mean_, cornerp)
-                mean_ = get_acc_from_disp(disp, imt.period)
+                mean_ += 2 * np.log(cornerp / imt.period)
             # if the corner period is longer than highest and imt is above
             # highets but below corner
             elif self.extr and cornerp > hp and hp <= imt.period < cornerp:
-                mean_ = extrapolate_in_PSA(self.gmpe, ctx, hp, sp, imt.period)
+                mean_ = extrapolate_in_PSA(self.gmpe, ctx, sp, imt.period)
             elif self.extr and cornerp > hp and imt.period > cornerp:
-                mean_ = extrapolate_in_PSA(self.gmpe, ctx, hp, sp, cornerp)
-                disp = get_disp_from_acc(mean, cornerp)
-                mean_ = get_acc_from_disp(disp, imt.period)
+                mean_ = extrapolate_in_PSA(self.gmpe, ctx, sp, cornerp)
+                mean_ = mean + 2 * np.log(cornerp / imt.period)
             else:
                 mean_ = contexts.get_mean_stds(self.gmpe, ctx, [imt])[0]
 
@@ -357,10 +293,11 @@ class AlAtikSigmaModel(GMPE):
             mean[m] = mean_ + np.log(kappa)
             sig[m], tau[m], sig[m] = get_stddevs(
                 self.ergodic, self.PHI_SS, self.PHI_S2SS, self.phi_ss_quantile,
-                self.phi_model, self.tau_model, self.TAU, ctx.mag, imt)
+                self.PHI_SS_MEDIAN, self.tau_model, self.TAU, ctx.mag, imt)
 
     # PHI_SS2S coefficients, table 2.2 HID
-    COEFFS_PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\
+    COEFFS_PHI_S2SS_BRB = CoeffsTable(
+        logratio=False, sa_damping=5., table="""\
         imt   phi_s2ss
         PGA     0.0000
         0.001   0.0000
@@ -373,7 +310,8 @@ class AlAtikSigmaModel(GMPE):
         """)
 
     # Phi_ss coefficients for the global model
-    COEFFS_PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=False, sa_damping=5., table="""\
+    COEFFS_PHI_SS_GLOBAL_LINEAR = CoeffsTable(
+        logratio=False, sa_damping=5., table="""\
     imt     mean_a   var_a  mean_b  var_bs
     pgv     0.5034  0.0609  0.3585  0.0316
     pga     0.5477  0.0731  0.3505  0.0412

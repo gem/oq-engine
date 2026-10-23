@@ -5,11 +5,11 @@ import unittest
 
 from openquake.hazardlib import contexts
 from openquake.hazardlib.imt import SA
-from openquake.hazardlib.gsim.projects.acme_2019 import AlAtikSigmaModel
+from openquake.hazardlib.gsim.acme_2019 import AlAtikSigmaModel
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import get_sof_adjustment
 
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'projects')
+DATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'projects')
 
 
 class AlAtikSigmaModelTest(unittest.TestCase):
