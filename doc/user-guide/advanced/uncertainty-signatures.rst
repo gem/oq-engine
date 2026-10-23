@@ -14,7 +14,7 @@ the datastore in the ``unc_signatures`` dataset.
 
 Notice that the concept of uncertainty signatures is relevant only if your logic
 tree contains source uncertainties. The uncertainties
-on the GSIMs (``applyToTectonicRegionType``) are considered trivial
+on the GSIMs (``gmpeModel``) are considered trivial
 and not stored in ``unc_signatures``. Same for uncertainties on
 the source models (i.e. ``sourceModel/extendModel``).
 
@@ -26,8 +26,9 @@ the source models (i.e. ``sourceModel/extendModel``).
 
       :math:`G_t = \sum_i G(\mathrm{trt}_i)`
 
-   of the logic tree, is typically **much smaller** than the number
-   ``R`` of realizations: in the demo ``LogicTreeCase1ClassicalPSHA``
+   of the logic tree, i.e. the number of RateMap indices, is
+   typically **much smaller** than the number
+   ``R`` of realizations: in the demo ``LogicTreeCase2ClassicalPSHA``
    there are 324 realizations but only 36 uncertainty signatures,
    i.e. 9 times less data than one would store naively. This is what
    makes it possible to run large logic trees; see
@@ -52,10 +53,9 @@ the command ``oq show usignatures``.
 An example with applyToSources
 ------------------------------
 
-The demo ``LogicTreeCase2ClassicalPSHA`` has a ``sourceModel`` branchset
-and four uncertainty branchsets, ``abGRAbsolute`` and
-``maxMagGRAbsolute`` applied to the first and to the second source, each
-with three branches::
+The demo ``LogicTreeCase2ClassicalPSHA`` (described in
+:ref:`Case2 demo <logic-tree-case2>`) has four uncertainty branchsets, each with three
+branches, which give the following number of source model paths::
 
     sourceModel(1) x abGRAbsolute first(3) x maxMagGRAbsolute first(3)
                  x abGRAbsolute second(3) x maxMagGRAbsolute second(3)
@@ -83,7 +83,8 @@ hence each signature covers 9 realizations, i.e. the ones differing
 only in the uncertainties of the other source. In total there are 18
 realization sets, 9 per source, so that with two GMMs per tectonic
 region type Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
-tree are reduced to 36 columns of the global ``RateMap``.
+tree are reduced to 36 RateMap indices, i.e. the core size
+``Gt`` of the global ``RateMap``.
 
 NB: the global ``RateMap``, is an array of float32 numbers of shape (N, L,
 Gt), where N is the total number of hazard sites, L the total number
@@ -163,7 +164,7 @@ covering its 3 realizations; the source ``SC_10:124`` is in the
 it has 3 x 3 = 9 signatures with one realization each.
 
 The core size ``Gt=10`` of the global ``RateMap`` can be read directly from
-the table: ``BG_10`` contributes a single index of rate attribution (its
+the table: ``BG_10`` contributes a single RateMap index (its
 only signature covers the 3 realizations) and ``SC_10:124`` contributes
 9, for a total of 1 + 9 = 10:
 
@@ -171,7 +172,7 @@ only signature covers the 3 realizations) and ``SC_10:124`` contributes
 
 i.e. Gt is smaller than R=12 because the 3 realizations of the
 ``fault_background`` model have the same (empty) signature, so they have
-the same rates and share a single column.
+the same rates and share a single RateMap index.
 
 NB: even though ``mmax`` has no filters, it is not applied to ``BG_10``
 either, since a branchset following a branchset with filters applies only

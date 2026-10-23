@@ -27,8 +27,8 @@ branchsets attached with ``applyToBranches``, so that the uncertainties
 depend on the source model that was selected::
 
     <logicTreeBranchSet applyToBranches="alt2"
-        applyToSources="alt2-NVA-bkg alt2-NVA-NVA-EF1 alt2-NVA-NVA-EF2
-                        alt2-NVA-NVA-EF3 alt2-NVA-NVA-EF4"
+        applyToSources="NVA-bkg NVA-EF1 NVA-EF2
+                        NVA-EF3 NVA-EF4"
         branchSetID="alt2_rset" uncertaintyType="recurSet">
 
 Two features make these branchsets correlated:
@@ -38,8 +38,8 @@ Two features make these branchsets correlated:
   on the ``recurRow`` values: the engine rejects a branchset referring to
   branches that do not exist;
 - ``applyToSources`` lists *all* the sources that must be modified
-  together, e.g. the background source ``alt2-NVA-bkg`` and the four
-  faults ``alt2-NVA-NVA-EF1`` … ``EF4``, which is what guarantees that
+  together, e.g. the background source ``NVA-bkg`` and the four
+  faults ``NVA-EF1`` … ``NVA-EF4``, which is what guarantees that
   the same rate split is applied to the background and to the faults.
 
 The uncertainties used are ``recurSet``, ``recurRow``, ``rateSplit``,
@@ -60,30 +60,28 @@ can be fragments of the sources in the logic tree); the result is the
 ``(branchset id, value)`` pairs. This is done by
 ``lt.get_bset_value`` and ``source_reader.unc_signature``.
 
-Since the sources of a group are affected by *different* branchsets, a
-group does **not** have a single signature: in the realization
+Sources in the same group can be affected by *different* branchsets, so
+a group does not necessarily have a single signature. In the realization
 ``alt2/alt2_rs132/alt2_rspl_rs132_scn1/alt2_rs132_scn1_r00/alt2_dip45/
-alt2_lsd15`` the sources of the group ``alt2-NVA`` have the signatures
+alt2_lsd15`` the four faults (``NVA-EF1`` to ``NVA-EF4``, in group 2) and
+the background (``NVA-bkg``, in group 1) have the signatures
 
 .. code-block:: text
 
-    alt2-NVA-NVA-EF1  alt2_rset={...max_mag 6.8} alt2_rspl_132={0.05, 0.95}
+    NVA-EF1           alt2_rset={...max_mag 6.8} alt2_rspl_132={0.05, 0.95}
                       alt2_rrow_132_scn1={b 0.8, rate 0.371113} alt2_dip=45.0
     ...
-    alt2-NVA-bkg      alt2_rset={...max_mag 6.8} alt2_rspl_132={0.05, 0.95}
+    NVA-bkg           alt2_rset={...max_mag 6.8} alt2_rspl_132={0.05, 0.95}
                       alt2_rrow_132_scn1={b 0.8, rate 0.371113} alt2_lsd=15.0
 
 i.e. the four faults share one signature and the background has another
 one, because the dip is modified for the faults and the lower
 seismogenic depth for the background.
 
-The consequence is that the realizations of the group are split in
-*indices of rate attribution* (one per distinct signature of the
-sources), and since the sources of a group have different signatures, a
-realization can belong to more than one index: in this case one index
-covers the background and another one the four faults. The rates of such
-a realization are the sum of the columns of its indices, i.e. it has
-more than one gid.
+The consequence is that a realization can belong to more than one RateMap index (one per distinct signature of its sources): in this
+case one index covers the background and another one the four faults.
+The rates of such a realization are the sum of the columns of its
+indices, i.e. it has more than one gid.
 
 The uncertainties are applied to the sources in the workers, one index
 at a time, by ``source_reader.modified_groups``; the correlated
@@ -94,37 +92,33 @@ Realizations per signature
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The signatures of a source can be inspected with the command
-``oq show usignatures``: there is a row for each pair (source,
-branchset) and the column ``num_rlzs`` contains the number of realizations in
-each *realization set* of the source, i.e. in each set of
-realizations with the same uncertainties, in ascending order.
-Since the realization sets of a source can have different sizes,
-``num_rlzs`` can contain more than a single number: in the sampled version
-of the case (``R = 50``, see below) 9 of the 22 sources have
+``oq show usignatures``; the ``num_rlzs`` column is explained in
+:ref:`uncertainty-signatures`. In the sampled version
+of the case (``R = 50``, see below) 5 of the 8 sources have
 realization sets of different sizes, for instance the source
-``alt2-NVA-NVA-EF1``
+``NVA-EF1``
 
 .. code-block:: text
 
     $ oq show usignatures
-    | alt2-NVA-NVA-EF1    | 1, 2                   | alt2_rset             | (TE, west, central, 6.8)                                                                         |
+    | NVA-EF1             | 1, 1, 1, 1, 1, 1, 1, 2, 2 | alt2_rset             | (TE, west, central, 6.8)                                                                         |
     |                     |                        | alt2_rspl_132         | (0.05, 0.95), (0.15, 0.85)                                                                       |
     |                     |                        | alt2_rrow_132_scn1    | (0.8, 3.25, 0.371113)                                                                            |
     |                     |                        | alt2_dip              | 45.0                                                                                             |
     |                     |                        | alt2_rrow_132_scn2    | (0.8, 3.25, 0.371113)                                                                            |
 
-i.e. one of the 3 realizations of the source is in a realization set of
-size 1 and two are in a realization set of size 2. NB: the two
-branchsets carry the *same* values (``b_value 0.8, ref_mag 3.25, rate
-0.371113``), but since a signature is a dictionary keyed by branchset id
-they are considered different; this is why there are two realization
-sets of sizes 1 and 2 rather than a single realization set of size 3.
+i.e. the source has 11 realizations in 9 realization sets: seven sets of
+size 1 and two sets of size 2. NB: the two
+branchsets ``alt2_rrow_132_scn1`` and ``alt2_rrow_132_scn2`` carry the
+*same* values (``b 0.8, ref_mag 3.25, rate 0.371113``), but a signature
+is a tuple of ``(branchset id, value)`` pairs, so they are different
+signatures.
 
 For a given source the realization sets are disjoint and cover all its
 realizations, so summing the ``num_rlzs`` gives the number of realizations
 of the source and counting the sets gives its number of signatures; the
 sets of *different* sources of the same group do overlap instead, since
-a realization can have more than one index of rate attribution, as
+a realization can have more than one RateMap index, as
 explained above.
 
 Full enumeration
@@ -138,15 +132,15 @@ realizations, i.e. the size of the logic tree is ``R = 144``::
     |--------+-----+-------------|
     | 0      | NVA | 1           |
     | 1      | NVA | 1           |
-    | 2      | NVA | 5           |
-    | 3      | NVA | 5           |
-    | 4      | NVA | 5           |
-    | 5      | NVA | 5           |
+    | 2      | NVA | 4           |
+    | 3      | NVA | 1           |
+    | 4      | NVA | 1           |
 
 Each group has its own ``trt_smrs`` in the ``trt_smrs`` dataset
-(8, 8, 48, 48, 16, 16 realizations) and its own indices of rate
-attribution in ``core_trt_smrs``, one per realization (8, 8, 48, 48, 16,
-16): the realizations of a group are *not* grouped together, since the
+(56, 56, 128, 16, 16 entries) and its own RateMap indices in
+``core_trt_smrs``, one per realization set, which here is one per
+realization (144 in total): the realizations
+of a group are *not* grouped together, since the
 uncertainties of its sources differ from realization to realization.
 The core size of the logic tree is therefore as large as the logic tree
 itself, ``Gt = 144``, and the RateMap has shape ``(1, 6, 144)``:
@@ -154,14 +148,15 @@ itself, ``Gt = 144``, and the RateMap has shape ``(1, 6, 144)``:
 .. code-block:: text
 
     realizations R                      144
-    indices of rate attribution         144  (16 of size 1, 128 of size 2)
+    RateMap indices         144  (16 of size 1, 128 of size 2)
     core size Gt                        144
     RateMap                             (N=1, L=6, Gt=144) float32
     gids per realization                16 with 1, 128 with 2
 
-The 16 realizations with a single gid are the ones in which the dip and
-the lower seismogenic depth coincide, so that the background and the
-faults have the same signature.
+The 16 realizations with a single gid are the 8 ``alt1`` and 8 ``alt1_AB``
+realizations: those source models have only the background source
+(``NVA-bkg`` and ``NVA-AB-bkg``), so all their sources have one
+signature and there is a single gid.
 
 Sampling
 ~~~~~~~~
@@ -176,22 +171,19 @@ single GMM, so ``samples`` counts the paths collapsed by the sampling):
 
     realizations R                       50   (sampled out of 144)
     effective source-model realizations  24
-    indices of rate attribution          27   (24 of size 1, 3 of size 2)
+    RateMap indices          27   (23 of size 1, 4 of size 2)
     core size Gt                         27
     RateMap                              (N=1, L=6, Gt=27) float32
-    gids per realization                 44 with 1, 6 with 2
+    gids per realization                 42 with 1, 8 with 2
 
 Now the core size ``Gt = 27`` is smaller than the size of the logic tree
 ``R = 50``, because some of the sampled realizations share the same set
-of uncertainties: the three indices of size 2 contain two realizations
+of uncertainties: the four indices of size 2 contain two realizations
 each.
 
-Note that the sum of the sizes of the indices (30) is larger than the
-number of ``trt_smrs`` (24): the six realizations with two gids (15, 16,
-19, 20, 21, 22) are counted twice, once for the index of the background
-and once for the index of the faults; e.g. the realization 15 belongs to
-the indices 7 and 8, since the source ``alt2-NVA-bkg`` has one set of
-uncertainties in it and the four faults another one.
+Eight of the sampled realizations (38, 40, 41, 44, 45, 46, 47 and 48)
+belong to two RateMap indices: e.g. the realization 40
+belongs to the indices 7 and 8.
 
 Checking a calculation
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -216,7 +208,7 @@ themselves::
     >> len(trt_smrs), len(trt_rlzs)
     (27, 27)
     >> trt_rlzs[0]   # the realizations behind the first gid
-    array([ 0,  1, 12, ...], dtype=uint32)
+    array([ 0,  1,  2, 38], dtype=uint32)
 
 where each ``trt_rlzs[i]`` contains ``rlz + 2**24 * trti`` for the
 realizations behind the gid ``i``, i.e. the values of the ``gid``

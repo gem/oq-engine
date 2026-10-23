@@ -57,7 +57,7 @@ be considered active shallow crust sources.::
 	
 	                <logicTreeBranch branchID="b1">
 	                    <uncertaintyModel>
-	                    ChiouYoungs2008
+	                    BooreAtkinson2008
 	                    </uncertaintyModel>
 	                    <uncertaintyWeight>1.0</uncertaintyWeight>
 	                </logicTreeBranch>
@@ -178,6 +178,8 @@ Classical PSHA with non trivial logic trees
 Three demos are provided to illustrate how the logic tree formalism can be used to express epistemic uncertainties in 
 seismic hazard analysis.
 
+.. _logic-tree-case1:
+
 LogicTreeCase1ClassicalPSHA shows an example of logic tree defining two alternative source models, with sources belonging 
 to two different tectonic region types, and with two alternative GMPEs for each tectonic region type. The source model 
 logic tree is therefore defined as shown in the listing below.::
@@ -259,13 +261,15 @@ Toro et al. 2003 and Campbell 2003 for Stable Continental Crust. By processing t
 tree path enumeration mode (enabled by setting in the configuration file ``number_of_logic_tree_samples = 0``) hazard 
 results are computed for 8 logic tree paths (2 source models x 2 GMPEs for Active x 2 GMPEs for Stable).
 
+.. _logic-tree-case2:
+
 LogicTreeCase2ClassicalPSHA defines a single source model consisting of only two sources (area and simple fault) 
 belonging to different tectonic region types (Active Shallow Crust and Stable Continental Region) and both characterized 
 by a truncated Gutenberg-Richter distribution. The logic tree defines uncertainties for G-R a and b values (three 
 possible pairs for each source), maximum magnitude (three values for each source) and uncertainties on the GMPEs for each 
 tectonic region type (two GMPE per region type).
 
-To accommodate such a structure the GSIM logic tree is defined as shown in the listing below.::
+To accommodate such a structure the source model logic tree is defined as shown in the listing below.::
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -283,8 +287,8 @@ To accommodate such a structure the GSIM logic tree is defined as shown in the l
 	            </logicTreeBranchSet>
 	
 	            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-	                                applyToSources="1"
-	                                branchSetID="bs21">
+	                                applyToSources="first"
+	                                branchSetID="bs2">
 	                <logicTreeBranch branchID="b21">
 	                    <uncertaintyModel>4.6 1.1</uncertaintyModel>
 	                    <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -300,8 +304,8 @@ To accommodate such a structure the GSIM logic tree is defined as shown in the l
 	            </logicTreeBranchSet>
 	
 	            <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-	                                applyToSources="2"
-	                                branchSetID="bs31">
+	                                applyToSources="second"
+	                                branchSetID="bs3">
 	                <logicTreeBranch branchID="b31">
 	                    <uncertaintyModel>3.3 1.0</uncertaintyModel>
 	                    <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -317,8 +321,8 @@ To accommodate such a structure the GSIM logic tree is defined as shown in the l
 	            </logicTreeBranchSet>
 	
 	            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-	                                applyToSources="1"
-	                                branchSetID="bs41">
+	                                applyToSources="first"
+	                                branchSetID="bs4">
 	                <logicTreeBranch branchID="b41">
 	                    <uncertaintyModel>7.0</uncertaintyModel>
 	                    <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -334,8 +338,8 @@ To accommodate such a structure the GSIM logic tree is defined as shown in the l
 	            </logicTreeBranchSet>
 	
 	            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-	                                applyToSources="2"
-	                                branchSetID="bs51">
+	                                applyToSources="second"
+	                                branchSetID="bs5">
 	                <logicTreeBranch branchID="b51">
 	                    <uncertaintyModel>7.5</uncertaintyModel>
 	                    <uncertaintyWeight>0.333</uncertaintyWeight>
@@ -367,6 +371,8 @@ for source 2 x 2 GMPEs for Active Shallow Crust X 2 GMPEs for Stable Continental
 .. figure:: _images/hazard-curves-ltcase2.png
    
     Hazard curves as obtained from the LogicTreeCase2 demo. Solid gray lines represent individual hazard curves from the different logic tree path (a total of 324 curves). The red dashed line represents the mean hazard curve, while the red dotted lines depict the quantile levels (0.15, 0.5, 0.95).
+
+.. _logic-tree-case3:
 
 LogicTreeCase3ClassicalPSHA illustrates an example of logic tree defining relative uncertainties on G-R maximum magnitude 
 and b value. A single source model is considered containing two sources belonging to different tectonic region types and 

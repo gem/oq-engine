@@ -54,8 +54,11 @@ class ServerConfig(AppConfig):
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
 
-        # reset any computation left in the 'executing' state
-        actions.reset_is_running(dbapi.db)
+        # reset any computation left in the 'executing' state;
+        # the database may not exist yet (this happens when building
+        # the docs, since doc/conf.py calls django.setup())
+        if actions.has_job_table(dbapi.db):
+            actions.reset_is_running(dbapi.db)
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(
