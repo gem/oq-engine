@@ -276,11 +276,13 @@ pga     0.4608   0.0238
 """)
 
 
-def get_phi_ss_at_quantile(phi_model, quantile):
+def get_phi_ss_at_quantile(phi_model, quantile, logratio=True):
     """
     Returns the phi_ss values at the specified quantile as an instance of
     `class`:: openquake.hazardlib.gsim.base.CoeffsTable - applies to the
     magnitude-dependent cases
+
+    Use logratio=False for linear interpolation between spectral periods.
     """
     # Setup SA coeffs - the backward compatible Python 2.7 way
     coeffs = deepcopy(phi_model.sa_coeffs)
@@ -297,7 +299,7 @@ def get_phi_ss_at_quantile(phi_model, quantile):
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
                                     quantile)}
-    return CoeffsTable.fromdict(coeffs)
+    return CoeffsTable.fromdict(coeffs, logratio=logratio)
 
 
 def get_phi_s2ss_at_quantile(phi_model, quantile):
