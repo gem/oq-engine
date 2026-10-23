@@ -474,6 +474,7 @@ window.initImpactForm = function() {
             $('#lat').val(data.lat);
             $('#dep').val(data.dep);
             $('#mag').val(data.mag);
+            $('#maximum_distance').val(data.maximum_distance);
             $('#rake').val(data.rake);
             $('#dip').val('dip' in data ? data.dip : '90');
             $('#strike').val('strike' in data ? data.strike : '0');

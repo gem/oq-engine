@@ -217,6 +217,20 @@ IMPACT_FORM_PLACEHOLDERS = {
 # maximum value of maximum_distance (in km) allowed to level 1 users
 MAX_DISTANCE_LEVEL1 = 500
 
+# upper magnitude bounds and corresponding default maximum distances (km);
+# for magnitudes above the last bound the last distance is used
+MAG_BOUNDS = numpy.array([5.5, 6., 6.5, 7., 7.5])
+MAG_DISTANCES = numpy.array([50, 100, 150, 200, 250, 300])
+
+
+def get_default_maximum_distance(mag):
+    """
+    :param mag: magnitude of the rupture
+    :returns: the default maximum distance in km for the given magnitude
+    """
+    return int(MAG_DISTANCES[numpy.searchsorted(MAG_BOUNDS, mag)])
+
+
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'rupture_from_usgs': '',
@@ -231,7 +245,7 @@ IMPACT_FORM_DEFAULTS = {
     'time_event': 'day',
     'dip': '90',
     'strike': '0',
-    'maximum_distance': '300',
+    'maximum_distance': '',  # depends on the magnitude
     'truncation_level': '3',
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
@@ -313,7 +327,7 @@ def _validate(POST):
             value = validation_func(POST.get(field))
         except Exception as exc:
             blankable = ['dip', 'strike', 'maximum_distance_stations',
-                         'local_timestamp', 'notes']
+                         'local_timestamp', 'notes', 'maximum_distance']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
                     inputdic[field] = None
@@ -455,6 +469,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['description'] = inputdic['description']
     if 'notes' in inputdic:
         params['notes'] = inputdic['notes']
+    if params.get('maximum_distance', 0) is None:
+        params['maximum_distance'] = get_default_maximum_distance(
+            rupdic['mag'])
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
@@ -469,4 +486,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                 err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
     else:  # called by impact_get_rupture_data
+        # used by the UI to prefill the maximum distance
+        rupdic['maximum_distance'] = get_default_maximum_distance(
+            rupdic['mag'])
         return rup, rupdic, params, err
