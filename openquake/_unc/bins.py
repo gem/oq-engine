@@ -55,7 +55,7 @@ def get_bins_data(samples: np.ndarray):
     sam = samples[np.abs(samples) > SMALL]
     min_power = np.floor(np.log10(np.min(sam)))
     upv = np.ceil(np.log10(np.max(sam)))
-    num_powers = upv - min_power
+    num_powers = max(1, upv - min_power)
 
     return int(min_power), int(num_powers)
 
