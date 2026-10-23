@@ -16,9 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from types import SimpleNamespace
-
 import numpy as np
+from types import SimpleNamespace
 
 from openquake.hazardlib.gsim.abrahamson_2014 import (
     AbrahamsonEtAl2014, get_epistemic_sigma)

@@ -1,4 +1,20 @@
-
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import numpy as np
 import unittest
@@ -9,10 +25,10 @@ from openquake.hazardlib.gsim.acme_2019 import AlAtikSigmaModel
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import get_sof_adjustment
 
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'projects')
+DATA_PATH = os.path.join(os.path.dirname(__file__), 'data', 'ACME19')
 
 
-class AlAtikSigmaModelTest(unittest.TestCase):
+class ACMEAlAtikSigmaModelWrapperTest(unittest.TestCase):
 
     def test01(self):
         filename = os.path.join(DATA_PATH, 'kappa.txt')
@@ -30,7 +46,7 @@ class AlAtikSigmaModelTest(unittest.TestCase):
         contexts.get_mean_stds(gmm, ctx, [SA(0.1)], truncation_level=0)
 
     def test02(self):
-        # checks if gmpe is always being evaluated at vs30=760
+        # checks if YA15 ACME subclass is always being evaluated at vs30=760
         # see HID 2.6.2
         filename = os.path.join(DATA_PATH, 'kappa.txt')
         gmm = AlAtikSigmaModel(gmpe_name='YenierAtkinson2015ACME2019',
