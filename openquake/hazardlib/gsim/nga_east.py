@@ -906,11 +906,6 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
     separately a total standard deviation model with expectation and quantiles.
     As the inter- and intra-event quantile cannot be recovered unambiguously
     from the total standard deviation quantile this form of the model is
-
-
-LOG10 = np.log(10.0)
-
-
     defined only for total standard deviation. Most likely it is this form
     that would be used for seismic hazard analysis.
 

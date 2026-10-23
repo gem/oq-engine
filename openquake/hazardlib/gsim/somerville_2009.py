@@ -173,8 +173,10 @@ class SomervilleEtAl2009YilgarnCraton(SomervilleEtAl2009NonCratonic):
 
 class SomervilleEtAl2009NonCratonic_SS14(SomervilleEtAl2009NonCratonic):
     """
-    SomervilleEtAl2009NonCratonic model updated to apply the linear and non-linear amplification factors of Sayhan &
-    Stewart (2014) as applied in the Boore et al (2014) NGE-West 2 GMMfor use in Geoscience Australia ShakeMap
+    SomervilleEtAl2009NonCratonic model updated to apply the linear and
+    non-linear amplification factors of Sayhan & Stewart (2014) as applied
+    in the Boore et al (2014) NGE-West 2 GMM for use in Geoscience Australia
+    ShakeMap
     """
 
     #: Required site parameters is Vs30

@@ -276,24 +276,21 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     # vs30 star
     vs30_star = _get_vs30star(vs30, imt)
     # compute the site term
-    # compute site response term for ctx with vs30 greater than vlin
     vs30_rat = vs30_star / C['vlin']
-
-    # Linear site term (vs30 >= vlin)
-    # compute site response term for ctx with vs30 lower than vlin
     site_resp_term = np.zeros_like(vs30, dtype=float)
+
+    # compute site response term for ctx with vs30 greater than vlin
     idx = vs30 >= C['vlin']
     site_resp_term[idx] = (
         C['a10'] + C['b'] * CONSTS['n']) * np.log(vs30_rat[idx])
 
-    # Nonlinear site term (vs30 < vlin)
+    # compute site response term for ctx with vs30 lower than vlin
     idx = vs30 < C['vlin']
     site_resp_term[idx] = (
         C['a10'] * np.log(vs30_rat[idx]) -
         C['b'] * np.log(sa1180[idx] + C['c']) +
         C['b'] * np.log(sa1180[idx] + C['c'] * vs30_rat[idx] ** CONSTS['n']))
 
-    # Apply linear or nonlinear term based on vs30
     return site_resp_term
 
 
@@ -492,23 +489,21 @@ def get_epistemic_sigma(ctx):
     5 <= M < 6 values.
     """
     n = 2
-    # Distance-dependent coefficients for each distance range
+    # Distance bins: near (<= 10 km), mid (10-30 km), far (>= 30 km)
     rrup = ctx.rrup
     near = (rrup <= 10)
     mid = (rrup > 10) & (rrup < 30)
     far = (rrup >= 30)
 
-    # Coefficients for each magnitude range
-    # Format: [near, mid, far] distance coefficients
+    # Epistemic sigma for each magnitude bin, ordered as [near, mid, far]
     mag_coeff = {
         '5_6': [0.4*np.sqrt(n/11), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)],
         '6_7': [0.4*np.sqrt(n/2), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)],
         '7_above': [0.4*np.sqrt(n/2), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)]}
 
-    # Compute sigma_epi by combining magnitude and distance effects
     sigma_epi = np.zeros_like(ctx.mag, dtype=float)
 
-    # 5 <= M < 6
+    # M < 6, including magnitudes below the M5 calibration limit
     idx_mag1 = ctx.mag < 6
     sigma_epi[idx_mag1 & near] = mag_coeff['5_6'][0]
     sigma_epi[idx_mag1 & mid] = mag_coeff['5_6'][1]

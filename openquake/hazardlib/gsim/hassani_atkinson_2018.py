@@ -234,12 +234,12 @@ class HassaniAtkinson2018(GMPE):
         if self.CAE is not None:
             gamma = self.CAE[imt]['gamma']
         pga_rock = np.exp(
-    get_gm_rock(
-        C,
-        ctx,
-        self.kappa0,
-        self.d_sigma,
-         gamma))
+            get_gm_rock(
+                C,
+                ctx,
+                self.kappa0,
+                self.d_sigma,
+                gamma))
 
         # Compute ground-motion on soil.
         for m, imt in enumerate(imts):
