@@ -21,8 +21,10 @@ ergodic amplification model of Stewart et al. (2020)
 """
 
 import numpy as np
+
 import openquake.hazardlib.gsim.nga_east as ngae
 from openquake.hazardlib.gsim.base import CoeffsTable
+
 
 CONSTS = {"vref": 760.0,
           "vl": 200.0,
@@ -252,5 +254,4 @@ COEFFS = CoeffsTable(sa_damping=5, table="""\
      5.000  -0.55800    324.25    825.00    325.00   0.34000   0.40900   0.58700
      7.500  -0.54400    325.00    819.76    328.00   0.34500   0.42000   0.59400
     10.000  -0.50700    325.00    820.00    330.00   0.35000   0.44000   0.60000
-
 """)

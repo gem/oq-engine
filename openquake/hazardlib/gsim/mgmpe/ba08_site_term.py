@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.ba08_site_term` implements
 
 import copy
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -28,7 +29,7 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_linear,
     _get_site_amplification_non_linear,
-    _get_pga_on_rock) 
+    _get_pga_on_rock)
 
 
 def _get_ba08_site_term(imt, ctx):
@@ -40,13 +41,13 @@ def _get_ba08_site_term(imt, ctx):
     vs30 = ctx.vs30
     C_PGA = BooreAtkinson2008.COEFFS[PGA()]
     C_SR = BooreAtkinson2008.COEFFS_SOIL_RESPONSE[imt]
-        
+
     # Compute PGA on rock
     pga4nl = _get_pga_on_rock(C_PGA, ctx)
 
     # Get linear
     linear = _get_site_amplification_linear(vs30, C_SR)
-    
+
     # Get non-linear
     non_linear = _get_site_amplification_non_linear(vs30, pga4nl, C_SR)
 
@@ -79,7 +80,7 @@ class BA08SiteTerm(GMPE):
     def __init__(self, gmpe_name, **kwargs):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
-        
+
         # Check if GMM has rake in req rup params + add if missing
         if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
             self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
@@ -101,10 +102,10 @@ class BA08SiteTerm(GMPE):
         # Make sites with ref bedrock vs30
         rup_rock = copy.copy(ctx)
         rup_rock.vs30 = np.full_like(ctx.vs30, 760.)
-    
+
         # Compute mean on bedrock
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
-        
+
         # Compute and apply the site term for each IMT
         for m, imt in enumerate(imts):
             mean[m] += _get_ba08_site_term(imt, ctx)

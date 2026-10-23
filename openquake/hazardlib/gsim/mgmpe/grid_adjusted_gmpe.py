@@ -178,8 +178,7 @@ def load_residual_grids(hdf5_path):
                 if sig_action != "none":
                     load_sigma_for_term(
                         grp, term, imt_str, location,
-                        sig_action, cell_ids, grids, sig_scalars
-                        )
+                        sig_action, cell_ids, grids, sig_scalars)
 
                 # Optional per-cell SE on the mean, only used when a
                 # non-zero epsilon is set for the term
@@ -342,7 +341,6 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
         elif sig_comp == "phi":
             # Adjust phi
             phi[:] = sig_vals
-            # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
@@ -357,7 +355,6 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
         elif sig_comp == "phi":
             # Adjust phi
             phi[:] = np.sqrt(phi ** 2 + sign * sig_vals ** 2)
-            # Recompute total sigma accordingly
             sig[:] = np.sqrt(tau ** 2 + phi ** 2)
         else:
             # Adjust total sigma
@@ -388,7 +385,8 @@ def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
     return grid_lookup(entry[key], lats, lons, grid_data["h3_res"])
 
 
-def _apply_grid_corrections(grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
+def _apply_grid_corrections(
+    grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
     """
     Look up and apply corrections defined in the hdf5. The fitted
     central mean adjustment for each term is always added; a non-zero
@@ -478,7 +476,7 @@ class GridAdjustedGMPE(GMPE):
         * A dataset named "{term}_sig" - one value per h3 cell, looked up
           spatially in the same way as the mean adjustment (hypo or site
           location; not supported yet for path-based terms).
-          
+
         NOTE: Providing both a scalar adjustment and a cell-by-cell adjustment
         raises an error - you must select exactly 1 for each sigma correction.
 
@@ -509,7 +507,7 @@ class GridAdjustedGMPE(GMPE):
 
     NOTE: The corrective terms (each key in the res_terms dict) are not
     fixed - the user can specify as they wish (e.g. only include dS2S).
-    
+
     NOTE: Corrections are stored per term per IMT in the HDF5. If an IMT
     group is missing for a given term, no correction is applied for that
     IMT (no error is raised).
@@ -524,7 +522,7 @@ class GridAdjustedGMPE(GMPE):
     associated with this mgmpe module:
     oq-engine/openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
 
-    A use case (from XML) can be found in the classical QA tests (there is 
+    A use case (from XML) can be found in the classical QA tests (there is
     also a readme visualising the h3 grids stored in the hdf5):
     oq-engine/openquake/qa_tests_data/classical/case_11/grid_adjustments.hdf5
 
@@ -610,7 +608,7 @@ class GridAdjustedGMPE(GMPE):
         """
         # Compute original mean
         self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
-        
+
         # Apply grid-based corrections
         for m, imt in enumerate(imts):
             _apply_grid_corrections(self.grid_data, ctx, str(imt),
