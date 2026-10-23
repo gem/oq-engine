@@ -234,9 +234,14 @@ class Campbell2003SHARE(Campbell2003):
             # given imt
             C_ADJ = self.COEFFS_FS_ROCK[imt]
             # apply faulting style and rock adjustment factor for mean and std
-            mean[m] = mean[m] + np.log(_compute_faulting_style_term(
-                C_ADJ['Frss'], self.CONSTS_FS['pR'], self.CONSTS_FS['Fnss'],
-                self.CONSTS_FS['pN'], ctx.rake) * C_ADJ['AFrock'])
+            mean[m] = mean[m] + np.log(
+                _compute_faulting_style_term(
+                    C_ADJ['Frss'],
+                    self.CONSTS_FS['pR'],
+                    self.CONSTS_FS['Fnss'],
+                    self.CONSTS_FS['pN'],
+                    ctx.rake) * C_ADJ['AFrock']
+                    )
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
