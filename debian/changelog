@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Internal: "oq engine --eo" no longer checks the local database file
+    when a remote database server is used, and otherwise checks the
+    database with os.access, so an unreadable database is reported
+    instead of silently creating a new one
   * Bug fix: with multiple loss types, aggregated damage results overstated
     the number of undamaged buildings by dividing damaged counts by the
     number of loss types a second time
