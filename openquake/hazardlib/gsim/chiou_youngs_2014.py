@@ -36,7 +36,6 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 REF_VS = 1130.
-
 BASIN_REFERENCE_VS = 1360.
 BASIN_VS_JAPAN = 412.39
 BASIN_VS_GLOBAL = 570.94
