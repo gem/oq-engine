@@ -62,6 +62,15 @@ abrahamson_silva_2008
     :undoc-members:
     :show-inheritance:
 
+acme_2019
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.acme_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 afshari_stewart_2016
 -----------------------------------------------------
 
