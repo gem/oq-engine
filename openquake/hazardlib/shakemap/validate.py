@@ -214,6 +214,9 @@ IMPACT_FORM_PLACEHOLDERS = {
     'notes': '',
 }
 
+# maximum value of maximum_distance (in km) allowed to level 1 users
+MAX_DISTANCE_LEVEL1 = 500
+
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'rupture_from_usgs': '',
@@ -397,6 +400,14 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     err = {}
     inputdic, params, err = _validate(POST)
     if err:
+        return None, inputdic, params, err
+    maxdist = params.get('maximum_distance')
+    if (user.level < 2 and maxdist is not None
+            and maxdist > MAX_DISTANCE_LEVEL1):
+        err = {"status": "failed",
+               "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
+                             f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
+               "invalid_inputs": ['maximum_distance']}
         return None, inputdic, params, err
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
