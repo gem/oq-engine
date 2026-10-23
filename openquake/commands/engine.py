@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config
+from openquake.baselib import config, use_server
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -143,9 +143,11 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    fname = os.path.expanduser(config.server.dbfile)
-    if check_dbfile(fname):
-        upgrade_db = True  # automatically creates the db
+    if not use_server():
+        # with a remote database server the local dbfile is not used
+        fname = os.path.expanduser(config.server.dbfile)
+        if check_dbfile(fname):
+            upgrade_db = True  # automatically creates the db
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
