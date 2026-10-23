@@ -1673,11 +1673,17 @@ def get_array_shake_result_hdf(fname):
         shape = h5['arrays/vs30'].shape
         ny, nx = shape
         dt = [(imt, F32) for imt in imts]
-        array = numpy.zeros(ny * nx, [
-            ('lon', F32), ('lat', F32), ('vs30', F32),
-            ('val', dt), ('std', dt), ('phi', dt), ('tau', dt),
-            # between-event factor C @ chol(Sigma_HH_YD), padded to 3
-            ('CL', [(imt, F32, (3,)) for imt in imts])])
+        dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+                  ('val', dt), ('std', dt), ('phi', dt), ('tau', dt)]
+        # the between-event factor C @ chol(Sigma_HH_YD) is stored only if
+        # all the IMTs have it (shakemap-modules >= 1.1.4), padded to the
+        # largest number of between-event terms
+        has_cl = all('C' in imt_groups[imt] for imt in imts)
+        if has_cl:
+            width = max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
+                        for imt in imts)
+            dtlist.append(('CL', [(imt, F32, (width,)) for imt in imts]))
+        array = numpy.zeros(ny * nx, dtlist)
         lons = lon_max - (nx - 1 - numpy.arange(nx)) * xres
         lats = lat_max - numpy.arange(ny) * yres
         array['lon'] = numpy.tile(lons.astype(F32), ny)
@@ -1692,35 +1698,12 @@ def get_array_shake_result_hdf(fname):
             for field in ('std', 'phi', 'tau'):
                 if field in group:
                     array[field][imt] = group[field][()].reshape(-1)
-            if 'C' in group:
+            if has_cl:
                 # the between-event samples are C @ chol(Sigma) @ z
                 C = group['C'][()].reshape(-1, group['C'].shape[-1])
                 cl = C @ psd_factor(group['Sigma_HH_YD'][()])
                 array['CL'][imt][:, :cl.shape[1]] = cl
     return array
-
-
-def read_realization_shake_result_hdf(
-        h5, component='GREATER_OF_TWO_HORIZONTAL'):
-    # Return, for each IMT, the arrays needed to rebuild the posterior
-    # realizations: the coefficients C of the between-event terms (one row
-    # per grid point, in the same order as get_array_shake_result_hdf),
-    # their covariance Sigma_HH_YD, and the station bookkeeping.
-    group = h5[f'arrays/imts/{component}']
-    out = {}
-    for imt in group:
-        if 'C' not in group[imt]:
-            continue
-        data = group[imt]
-        out[imt] = dict(
-            C=data['C'][()].reshape(-1, data['Sigma_HH_YD'].shape[0]),
-            sigma_yd=data['Sigma_HH_YD'][()],
-            add_uncertainty=data['add_uncertainty'][()],
-            sta_per_ix=data['sta_per_ix'][()],
-            sta_lons_rad=data['sta_lons_rad'][()],
-            sta_lats_rad=data['sta_lats_rad'][()],
-            sta_phi=data['sta_phi'][()].reshape(-1))
-    return out
 
 
 def get_array_file_npy(kind, fname):

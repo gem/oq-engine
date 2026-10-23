@@ -119,9 +119,11 @@ def filter_unused_imts(shakemap, required_imts,
               ('val', dt), ('std', dt)]
     extra_fields = [field for field in ('phi', 'tau', 'CL')
                     if field in shakemap.dtype.names]
-    # CL holds up to 3 between-event coefficients per IMT
-    dt3 = [(imt, F32, (3,)) for imt in sorted(required_imts)]
-    dtlist.extend((field, dt3 if field == 'CL' else dt)
+    if 'CL' in extra_fields:
+        # CL holds the between-event coefficients of each IMT
+        width = shakemap.dtype['CL'][0].shape
+        dtcl = [(imt, F32, width) for imt in sorted(required_imts)]
+    dtlist.extend((field, dtcl if field == 'CL' else dt)
                   for field in extra_fields)
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:

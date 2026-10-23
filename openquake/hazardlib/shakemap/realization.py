@@ -1,6 +1,8 @@
-# Posterior realizations of a ShakeMap, following the conditioning used by
-# ShakeMap itself: the within-event residuals are conditioned on the
-# stations, the between-event terms are driven by C and Sigma_HH_YD.
+# Helpers for the posterior realizations of a ShakeMap. The GMFs of the
+# shake_result.hdf products are sampled in gmfs._realization_residuals,
+# without the station conditioning, because the products do not store the
+# prior within-event sigma of the points; conditional_within_residuals
+# implements the exact conditioning, to be used when they will.
 import numpy
 
 
@@ -34,37 +36,3 @@ def conditional_within_residuals(Z, R_YY, R_YD, R_DD, phi_Y, phi_D,
         numpy.block([[W_YY, W_YD], [W_YD.T, W_DD]])) @ Z
     W_DD_inv = numpy.linalg.pinv(W_DD, hermitian=True)
     return prior[:nY] - W_YD @ (W_DD_inv @ prior[nY:])
-
-
-def approximate_residuals(Z, R, phi, Zb, C_list, sigma_list):
-    """
-    Approximate posterior residuals when the prior within-event sigma of
-    the points is not stored in the product (see the conditioning notes
-    in the ShakeMap issue). The within-event part uses the stored
-    posterior phi with the joint Loth and Baker correlation R, without
-    the station conditioning; the between-event part is exact for each
-    IMT, but independent across IMTs.
-
-    :param Z: standard normal samples, shape (M * nY, E), IMT-major
-    :param R: joint correlation matrix of shape (M * nY, M * nY)
-    :param phi: within-event sigma of shape (M * nY,), IMT-major
-    :param Zb: list of M arrays, each of shape (k_m, E)
-    :param C_list: list of M arrays, each of shape (nY, k_m)
-    :param sigma_list: list of M arrays, each of shape (k_m, k_m)
-    :returns: residuals of shape (M * nY, E), IMT-major
-    """
-    within = phi[:, None] * (psd_factor(R) @ Z)
-    between = [between_event_terms(z, C, s)
-               for z, C, s in zip(Zb, C_list, sigma_list)]
-    return within + numpy.concatenate(between)
-
-
-def between_event_terms(Z, C, sigma_yd):
-    """
-    :param Z: standard normal samples, shape (k, E)
-    :param C: coefficients of the between-event terms, shape (nY, k)
-    :param sigma_yd: covariance of the between-event terms, shape (k, k)
-    :returns: between-event deviations from the median, shape (nY, E),
-              with covariance C Sigma_HH_YD C^T
-    """
-    return C @ (psd_factor(sigma_yd) @ Z)

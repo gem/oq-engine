@@ -1889,7 +1889,10 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         gmf_dict = _xml_legacy_model(shakemap, dict(gmf_dict))
         rupture_dict = oq.rupture_dict or {}
         strategy = oq.correlation_strategy
+        # shake_result.hdf products are sampled with Loth and Baker (2013)
+        # and do not use circulant embedding
         if (strategy == 'circulant_embedding' and
+                'CL' not in shakemap.dtype.names and
                 not circulant_embedding_feasible(sitecol)):
             # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
             logging.warning(

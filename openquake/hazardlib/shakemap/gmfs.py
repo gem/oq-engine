@@ -288,12 +288,9 @@ def _correlate_residuals(Z, imts, sites, spatial_model,
     if M * N > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
             f'{M=} x {N=}', cholesky_limit))
-    if sites is None:
-        lons, lats = None, None
-    else:
-        lons, lats = sites.lons, sites.lats
     return _correlate_dense(
-        Z, imts, spatial_model, cross_imt_model, context, lons, lats)
+        Z, imts, spatial_model, cross_imt_model, context,
+        sites.lons, sites.lats)
 
 
 # Dense correlation path for arbitrary site geometry.
@@ -324,12 +321,10 @@ def _correlate_legacy(Z, imts, shakemap, spatial_model,
 
 
 def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
-                     context, lons=None, lats=None):
+                     context, lons, lats):
+    # Dense correlation for the residuals of the points (lons, lats).
     N = Z.shape[0] // len(imts)
     cross_corr = cross_correlation_matrix(imts, cross_imt_model)
-    if lons is None:
-        lons = numpy.zeros(N)
-        lats = numpy.arange(N, dtype=float) * 1E-9
     dmatrix = geo.geodetic.distance_matrix(lons, lats)
     spatial_corr = spatial_correlation_array(
         dmatrix, imts, spatial_model, context)
@@ -341,7 +336,7 @@ def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
     return cholesky(spatial_corr, cross_corr) @ Z
 
 
-def _realization_residuals(shakemap, imts, Z, seed):
+def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
     # Log-space residuals from the posterior phi of each point and the
     # between-event factor CL, with the Loth and Baker (2013) correlation
     # between the points; the station conditioning is not applied (see
@@ -353,10 +348,15 @@ def _realization_residuals(shakemap, imts, Z, seed):
     R = loth_baker_2013.LothBaker2013().correlation_block(
         dist, proxies, proxies)
     phi = numpy.concatenate([shakemap['phi'][str(im)] for im in imts])
+    # one draw per event of the between-event terms of each IMT,
+    # truncated as the within-event samples Z
     rng = numpy.random.default_rng(seed + 3)
-    E = Z.shape[1]
-    between = [shakemap['CL'][str(im)] @ rng.standard_normal((3, E))
-               for im in imts]
+    between = []
+    for im in imts:
+        CL = shakemap['CL'][str(im)]
+        zb = truncnorm.rvs(-truncation_level, truncation_level,
+                           size=(CL.shape[1], Z.shape[1]), random_state=rng)
+        between.append(CL @ zb)
     within = phi[:, None] * (psd_factor(R) @ Z)
     return within + numpy.concatenate(between)
 
@@ -386,7 +386,7 @@ def _is_loth_baker_product(shakemap, imts, spatial_model):
 
 
 def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, cholesky_limit,
-                     spatial_model, seed):
+                     spatial_model, seed, truncation_level):
     # only the Loth and Baker (2013) correlation is used for these products
     if not isinstance(spatial_model, loth_baker_2013.LothBaker2013):
         logging.warning(
@@ -400,7 +400,8 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, cholesky_limit,
         'The correlated GMFs approximate the posterior of the ShakeMap: '
         'the station conditioning is not applied and the between-event '
         'terms are independent across IMTs')
-    residuals = _realization_residuals(shakemap, imts, Z, seed)
+    residuals = _realization_residuals(
+        shakemap, imts, Z, seed, truncation_level)
     return mu * numpy.exp(residuals) / scale
 
 
@@ -419,12 +420,14 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     std_field = 'phi' if components else 'std'
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
+    if truncation_level <= 1E-9:
+        return result  # Z is zero: the ShakeMap median
     _warn_xml_approximation(shakemap, correlated, spatial_model)
     if _is_loth_baker_product(shakemap, imts, spatial_model):
         return _loth_baker_gmfs(
             shakemap, imts, Z, mu, scale, cholesky_limit,
-            spatial_model, correlation_seed)
-    if not correlated or truncation_level <= 1E-9:
+            spatial_model, correlation_seed, truncation_level)
+    if not correlated:
         return result
     tau_present = 'tau' in shakemap.dtype.names and tau_Z is not None
     active = [i for i in correlated if (

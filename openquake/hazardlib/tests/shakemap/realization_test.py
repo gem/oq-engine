@@ -1,8 +1,7 @@
 import unittest
 import numpy
 from openquake.hazardlib.shakemap.realization import (
-    conditional_within_residuals, between_event_terms,
-    approximate_residuals)
+    conditional_within_residuals, psd_factor)
 
 
 def _correlation(rng, n):
@@ -34,39 +33,14 @@ class RealizationTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.cov(res), expected, atol=0.01)
 
-    def test_between_event_covariance(self):
+    def test_psd_factor(self):
+        # F @ F.T reproduces a positive semidefinite matrix, also a
+        # singular one, as the Sigma_HH_YD used for the CL field
         rng = numpy.random.default_rng(1)
-        nY, k, E = 50, 3, 200_000
-        C = rng.standard_normal((nY, k))
-        A = rng.standard_normal((k, k))
-        sigma = A @ A.T
-        Z = rng.standard_normal((k, E))
-        dev = between_event_terms(Z, C, sigma)
-        expected = C @ sigma @ C.T
-        numpy.testing.assert_allclose(
-            numpy.cov(dev), expected,
-            atol=0.03 * numpy.abs(expected).max())
-
-    def test_approximate_residuals_variance(self):
-        # per-point variance must be phi^2 + C Sigma C^T, as in ShakeMap
-        rng = numpy.random.default_rng(3)
-        M, nY, E = 2, 6, 100_000
-        R = _correlation(rng, M * nY)
-        phi = rng.uniform(0.2, 0.5, M * nY)
-        Z = rng.standard_normal((M * nY, E))
-        Cs = [rng.standard_normal((nY, k)) for k in (1, 3)]
-        sigmas = []
-        for k in (1, 3):
-            A = rng.standard_normal((k, k))
-            sigmas.append(A @ A.T / k)
-        Zb = [rng.standard_normal((k, E)) for k in (1, 3)]
-        res = approximate_residuals(Z, R, phi, Zb, Cs, sigmas)
-        tau2 = numpy.concatenate([numpy.diag(C @ s @ C.T)
-                                  for C, s in zip(Cs, sigmas)])
-        expected = numpy.diag(numpy.cov(res))
-        numpy.testing.assert_allclose(
-            expected, phi ** 2 + tau2,
-            atol=0.03 * (phi ** 2 + tau2).max())
+        A = rng.standard_normal((4, 2))
+        sigma = A @ A.T  # rank 2
+        F = psd_factor(sigma)
+        numpy.testing.assert_allclose(F @ F.T, sigma, atol=1E-12)
 
     def test_no_stations_gives_unconditioned_field(self):
         # without stations the posterior is the prior of the points

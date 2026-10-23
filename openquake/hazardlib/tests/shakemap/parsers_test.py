@@ -80,12 +80,49 @@ class ShakemapParsersTestCase(unittest.TestCase):
             array['val']['MMI'], [4, 5, 6, 7])
         self.assertIn('phi', array.dtype.names)
         self.assertIn('tau', array.dtype.names)
+        # products without the realization arrays have no CL field
+        self.assertNotIn('CL', array.dtype.names)
         filtered = filter_unused_imts(array, ['PGA'])
         self.assertEqual(filtered['val'].dtype.names, ('PGA',))
         numpy.testing.assert_array_equal(
             filtered['phi']['PGA'], array['phi']['PGA'])
         numpy.testing.assert_array_equal(
             filtered['tau']['PGA'], array['tau']['PGA'])
+
+    def test_shake_result_hdf_between_event_factor(self):
+        # CL = C @ chol(Sigma_HH_YD), padded to the largest number of
+        # between-event terms, so that CL @ CL.T = C @ Sigma_HH_YD @ C.T
+        config = {
+            'extent': {'bounds': {'extent': [10., 20., 11., 21.]}},
+            'interp': {'prediction_location': {'xres': 1., 'yres': 1.}}}
+        rng = numpy.random.default_rng(42)
+        Cs, sigmas = {}, {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 2), 400.)
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt, k in (('PGA', 1), ('SA(1.0)', 2)):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = numpy.zeros((2, 2))
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+                    A = rng.standard_normal((k, k))
+                    Cs[imt] = rng.standard_normal((4, k))
+                    sigmas[imt] = A @ A.T
+                    group['C'] = Cs[imt]
+                    group['Sigma_HH_YD'] = sigmas[imt]
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        self.assertEqual(array.dtype['CL'][0].shape, (2,))
+        for imt in Cs:
+            CL = array['CL'][imt]
+            numpy.testing.assert_allclose(
+                CL @ CL.T, Cs[imt] @ sigmas[imt] @ Cs[imt].T,
+                rtol=1E-5, atol=1E-5)
+        filtered = filter_unused_imts(array, ['SA(1.0)'])
+        numpy.testing.assert_array_equal(
+            filtered['CL']['SA(1.0)'], array['CL']['SA(1.0)'])
 
     @classmethod
     def setUp(cls):

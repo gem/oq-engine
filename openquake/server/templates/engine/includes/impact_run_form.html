@@ -57,8 +57,9 @@
                   <option value="{{ value }}" data-scope="{% if value == 'none' %}both{% elif value == 'loth_baker' %}shakemap{% else %}rupture{% endif %}"{% if value == impact_form_defaults.spatial_correlation %} selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
-                <small>Active choices use JayaramBaker2009 with
-                  vs30_clustering=True.</small>
+                <small>JayaramBaker2009 uses vs30_clustering=True;
+                  LothBaker2013 samples the components stored in the
+                  ShakeMap shake_result.hdf product.</small>
               </div>
               <div class="impact_form_row usgs_id_grp hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>

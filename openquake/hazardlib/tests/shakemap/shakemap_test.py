@@ -4,6 +4,8 @@ import numpy
 from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    loth_baker_2013 import LothBaker2013
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.shakemap.maps import \
@@ -131,6 +133,37 @@ class ShakemapTestCase(unittest.TestCase):
             empirical = numpy.corrcoef(residuals)
             numpy.testing.assert_allclose(empirical, target, atol=0.05)
 
+    def test_loth_baker_no_uncertainty_is_deterministic(self):
+        # with truncation_level=0 the stored between-event components
+        # must not add any noise: every event is the ShakeMap median
+        names = ['PGA', 'SA(0.3)']
+        N = 4
+        imt_dt = [(name, float) for name in names]
+        dt = numpy.dtype([
+            ('lon', float), ('lat', float), ('vs30', float),
+            ('val', imt_dt), ('std', imt_dt), ('phi', imt_dt),
+            ('tau', imt_dt), ('CL', [(name, float, (3,)) for name in names])])
+        shakemap = numpy.zeros(N, dt)
+        shakemap['lon'] = [0., 0.1, 0., 0.1]
+        shakemap['lat'] = [0., 0., 0.1, 0.1]
+        shakemap['vs30'] = 400.
+        for name in names:
+            shakemap['val'][name] = [10., 20., 30., 40.]
+            shakemap['std'][name] = .5
+            shakemap['phi'][name] = .4
+            shakemap['tau'][name] = .3
+            shakemap['CL'][name][:, 0] = .3
+        gmf_dict = {'kind': 'Silva&Horspool',
+                    'spatial_model': LothBaker2013(),
+                    'cross_imt_model': None,
+                    'cholesky_limit': 10000}
+        _, gmfs = to_gmfs(shakemap, gmf_dict, vs30=None, truncation_level=0,
+                          num_gmfs=3, seed=42, imts=names)
+        numpy.testing.assert_allclose(gmfs[:, 0], gmfs[:, 1])
+        numpy.testing.assert_allclose(gmfs[:, 0], gmfs[:, 2])
+        numpy.testing.assert_allclose(
+            gmfs[:, 0], numpy.tile([0.1, 0.2, 0.3, 0.4], (2, 1)).T)
+
     def test_realization_residuals_variance(self):
         # the residual variance of each point must be phi^2 + |CL|^2,
         # i.e. the total variance stored by ShakeMap
@@ -150,7 +183,8 @@ class ShakemapTestCase(unittest.TestCase):
             shakemap['phi'][str(im)] = rng.uniform(0.2, 0.5, N)
             shakemap['CL'][str(im)][:, :1] = rng.uniform(-0.1, 0.1, (N, 1))
         Z = rng.standard_normal((N * len(pair), E))
-        res = _realization_residuals(shakemap, pair, Z, 0)
+        # a large truncation level gives untruncated between-event terms
+        res = _realization_residuals(shakemap, pair, Z, 0, 99)
         variance = numpy.var(res, axis=1)
         expected = numpy.concatenate([
             shakemap['phi'][str(im)] ** 2 +
