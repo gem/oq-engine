@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Bug fix: the "too many potential logic tree paths" error suggested
+    use_rates=true even when it was already set; the message now
+    explains that use_rates only works when computing the mean
   * Bug fix: exporting the realizations of a multi-model calculation
     failed; now one realizations_MODEL csv file is written per model,
     and the realizations of a model can be extracted with

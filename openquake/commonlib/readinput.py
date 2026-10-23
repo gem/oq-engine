@@ -1154,10 +1154,18 @@ def get_full_lt(oqparam):
     elif ('classical' in oqparam.calculation_mode
           and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
+            # use_rates helps only when computing the mean, i.e. without
+            # quantiles, individual realizations or site labels
+            if oqparam.use_rates:
+                rates = ('use_rates=true is not enough: it works only when '
+                         'computing the mean, i.e. without quantiles, '
+                         'individual realizations or site labels')
+            else:
+                rates = 'or set use_rates=true (only when computing the mean)'
             raise ValueError(
-                'There are too many potential logic tree paths (%d):'
+                'There are too many potential logic tree paths (%d): '
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set use_rates=true ' % p)
+                'full enumeration, %s' % (p, rates))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt
