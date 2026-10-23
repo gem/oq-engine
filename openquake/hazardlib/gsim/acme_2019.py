@@ -15,7 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+ACME2019 ground-motion adaptations and standard-deviation model.
 
+YenierAtkinson2015ACME2019 provides the adapted YA15 mean ground motion.
+Wrap it with AlAtikSigmaModel to apply the Al-Atik standard deviations,
+long-period extrapolation and optional kappa adjustments::
+
+    AlAtikSigmaModel(gmpe_name='YenierAtkinson2015ACME2019')
+
+AlAtikSigmaModel can also wrap other GMMs, such as BindiEtAl2014Rjb
+and RietbrockEdwards2019Low which have specific considerations in
+the wrapper.
+"""
 import copy
 import numpy as np
 
@@ -170,7 +182,8 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
     which incorporates a correction of the median ground motion based on the
     focal mechanism.
 
-    NOTE: It also fixes Vs30 to 760 m/s (i.e., the user-provided Vs30 is ignored).
+    NOTE: It also fixes Vs30 to 760 m/s (i.e., the user-provided Vs30
+    is ignored).
     """
     adapted = True
 
