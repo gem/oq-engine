@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ Module exports :class:`NovakovicEtAl2018`
 import os
 import pathlib
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -34,30 +35,32 @@ TFP = pathlib.Path(__file__).parent.absolute()
 
 
 def _magnitude_scaling(C, mag):
-    """ Magnitude scaling as described in eq. 4 """
-    fm = np.zeros_like(mag)
+    """
+    Magnitude scaling as described in eq. 4 
+    """
     dff = (mag - C['Mh'])
-    idx = mag <= C['Mh']
-    fm[idx] = C['e0'] + C['e1'] * dff[idx] + C['e2'] * dff[idx]**2
-    idx = mag > C['Mh']
-    fm[idx] = C['e0'] + C['e3'] * dff[idx]
-    return fm
+
+    below_mh = C['e0'] + C['e1'] * dff + C['e2'] * dff**2
+    above_mh = C['e0'] + C['e3'] * dff
+
+    return np.where(mag <= C['Mh'], below_mh, above_mh)
 
 
 def _stress_param_scaling(C, d_sigma, mag):
-    """ Stress scaling as defined in eq. 6 """
-    fs = np.zeros_like(mag)
-    idx = d_sigma <= 100
-    fs[idx] = (C['s0'] + C['s1'] * mag[idx] + C['s2'] * mag[idx]**2 +
-               C['s3'] * mag[idx]**3 + C['s4'] * mag[idx]**4)
-    idx = d_sigma > 100
-    fs[idx] = (C['s5'] + C['s6'] * mag[idx] + C['s7'] * mag[idx]**2 +
-               C['s8'] * mag[idx]**3 + C['s9'] * mag[idx]**4)
-    return fs*np.log(d_sigma/100)
+    """
+    Stress scaling as defined in eq. 6 
+    """
+    low_sigma = C['s0'] + C['s1'] * mag + C['s2'] * mag**2 + C['s3'] * mag**3 + C['s4'] * mag**4
+    high_sigma = C['s5'] + C['s6'] * mag + C['s7'] * mag**2 + C['s8'] * mag**3 + C['s9'] * mag**4
+
+    fs = np.where(d_sigma <= 100, low_sigma, high_sigma)
+    return fs * np.log(d_sigma / 100)
 
 
 def _source_scaling(C, d_sigma, mag, hypo_depth):
-    """ Source scaling as per eq. 3 """
+    """
+    Source scaling as per eq. 3 
+    """
     if d_sigma is None:
         # Implements eq. 11 in Novokovic et al. 2018
         t1 = 0.097*(hypo_depth-10)
@@ -95,19 +98,22 @@ def _geometric_spreading(C, rrup, mag):
 
 
 def _anelastic_attenuation_term(gamma, rrup):
-    """ Compute anelastic attenuation """
+    """
+    Compute anelastic attenuation 
+    """
     return gamma * rrup
 
 
 def get_gm_rock(C, ctx, d_sigma, REA):
-    """ Compute ground-motion on bedrock """
+    """
+    Compute ground-motion on bedrock
+    """
     gamma = REA['gamma']
     calibration_factor = REA['C']
     gm = (_source_scaling(C, d_sigma, ctx.mag, ctx.hypo_depth) +
           _geometric_spreading(C, ctx.rrup, ctx.mag) +
           _anelastic_attenuation_term(gamma, ctx.rrup) +
-          calibration_factor
-          )
+          calibration_factor)
     return gm
 
 
@@ -169,6 +175,8 @@ class NovakovicEtAl2018(GMPE):
         self.d_sigma = d_sigma
         self.site_term = site_term
 
+        # Read the file and create the coefficient table for the
+        # regional adjustment
         # Read the file and create the coefficient table for the regional
         # adjustment
         if region_fle is None:
@@ -183,7 +191,9 @@ class NovakovicEtAl2018(GMPE):
         self.BEA14 = BooreEtAl2014.COEFFS
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """ Compute mean """
+        """
+        Compute mean
+        """
 
         # Compute PGA on rock. This is used for computing the soil term.
         imt = PGA()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,9 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import LSD
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_magnitude_term(rup, c0, c1):
@@ -98,12 +101,12 @@ class YoudEtAl2002(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
-            #Adjustment done by Prajakta Jadhav and Dharma Wijewickreme: 
+            #Adjustment done by Prajakta Jadhav and Dharma Wijewickreme:
             #To adopt epicentral distance of 5km for deep sources (depth>50km)
             #and within epicentral distance of 5km
             ctx = ctx.copy()
             ctx.repi[(ctx.repi < 5.) & (ctx.hypo_depth >= 50.)] = 5.0
-            
+
             R = (10 ** ((0.89 * ctx.mag) - 5.64)) + ctx.repi
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
@@ -117,8 +120,8 @@ class YoudEtAl2002(GMPE):
                 _compute_magnitude_term(ctx, c[0], c[1]) +
                 _compute_distance_term(ctx, R, c[2], c[3]) +
                 _compute_site_term(ctx, c[4], c[5], c[6], c[7]))
-            mean[m] = np.log(10.0 ** mean[m])
-            sig[m] = np.log(10.0 ** self.COEFFS_SLOPE[imt]["sigma"])
+            mean[m] = mean[m] * LOG10
+            sig[m] = self.COEFFS_SLOPE[imt]['sigma'] * LOG10
 
     COEFFS_SLOPE = CoeffsTable(table="""\
     IMT                c0     c1       c2      c3     c4     c5     c6      c7     sigma

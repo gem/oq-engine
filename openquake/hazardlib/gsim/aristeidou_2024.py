@@ -28,21 +28,24 @@ Module exports :class:`AristeidouEtAl2024`
 import pathlib
 import numpy as np
 from scipy.interpolate import interp1d
+import h5py
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import (
     RSD575, RSD595, Sa_avg2, Sa_avg3, SA, PGA, PGV, PGD, FIV3, from_string)
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
-import h5py
+
+
+LOG10 = np.log(10.0)
+
 
 ASSET_DIR = pathlib.Path(__file__).resolve().parent / "aristeidou_2024_assets"
 
 COMPONENT_MAPPING = {
     const.IMC.RotD50: "RotD50",
     const.IMC.GEOMETRIC_MEAN: "geomean",
-    const.IMC.RotD100: "RotD100",
-}
+    const.IMC.RotD100: "RotD100",}
 
 
 def load_hdf5_to_list(group):
@@ -287,8 +290,7 @@ class AristeidouEtAl2024(GMPE):
         "mechanism": [0, 4],
         "Z2pt5": [0., 7780.],
         "Rx": [-297.13, 292.39],
-        "Ztor": [0, 16.23],
-    }
+        "Ztor": [0, 16.23],}
 
     def __init__(self):
         # Load background information about the model from a hdf5 file
@@ -356,7 +358,7 @@ class AristeidouEtAl2024(GMPE):
             ctx_params.shape[0], axis=2)
 
         # Transform the standard deviations from log10 to natural logarithm
-        stddevs = np.log(10**stddevs)
+        stddevs = stddevs * LOG10
 
         # Get the means and stddevs at index corresponding to the IM
         mean[:], stddevs = _get_means_stddevs(
@@ -378,8 +380,6 @@ class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
 
 
 class AristeidouEtAl2024RotD100(AristeidouEtAl2024):
-    #: Supported intensity measure types
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA, Sa_avg2, Sa_avg3}
 
-    #: Supported intensity measure components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD100

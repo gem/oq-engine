@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2021-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -88,11 +88,10 @@ def extrapolate_in_PSA(gmpe, ctx, imt_high, set_imt, imt):
         means_log10 = []
         for im in set_imt:
             mean_ln = contexts.get_mean_stds(gmpe, c, [SA(im)])[0]
-            mean = np.exp(mean_ln[0])
-            means_log10.append(np.log10(mean))
+            means_log10.append(mean_ln[0] / LOG10)
         mb = np.polyfit(t_log10, means_log10, 1)
         mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
-        extrap_mean.append(np.log(10**mean_imt_log10))
+        extrap_mean.append(mean_imt_log10 * LOG10)
 
     return extrap_mean
 
@@ -247,6 +246,11 @@ class AlAtikSigmaModel(GMPE):
     :param tau_model:
         Choice of model for the inter-event standard deviation (tau), selecting
         from "global" {default}, "cena" or "cena_constant". default is global
+
+
+LOG10 = np.log(10.0)
+
+
     :param tau_quantile:
         tau quantile used in sigma model. default of None uses the mean.
     :param phi_model:
