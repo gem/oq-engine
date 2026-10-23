@@ -53,10 +53,9 @@ the command ``oq show usignatures``.
 An example with applyToSources
 ------------------------------
 
-The demo ``LogicTreeCase2ClassicalPSHA`` has a ``sourceModel`` branchset
-and four uncertainty branchsets, ``abGRAbsolute`` and
-``maxMagGRAbsolute`` applied to the first and to the second source, each
-with three branches::
+The demo ``LogicTreeCase2ClassicalPSHA`` (described in
+:ref:`Case2 demo <logic-tree-case2>`) has four uncertainty branchsets, each with three
+branches, which give the following number of source model paths::
 
     sourceModel(1) x abGRAbsolute first(3) x maxMagGRAbsolute first(3)
                  x abGRAbsolute second(3) x maxMagGRAbsolute second(3)

@@ -261,6 +261,8 @@ Toro et al. 2003 and Campbell 2003 for Stable Continental Crust. By processing t
 tree path enumeration mode (enabled by setting in the configuration file ``number_of_logic_tree_samples = 0``) hazard 
 results are computed for 8 logic tree paths (2 source models x 2 GMPEs for Active x 2 GMPEs for Stable).
 
+.. _logic-tree-case2:
+
 LogicTreeCase2ClassicalPSHA defines a single source model consisting of only two sources (area and simple fault) 
 belonging to different tectonic region types (Active Shallow Crust and Stable Continental Region) and both characterized 
 by a truncated Gutenberg-Richter distribution. The logic tree defines uncertainties for G-R a and b values (three 

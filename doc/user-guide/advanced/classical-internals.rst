@@ -13,7 +13,8 @@ tree are turned into a ``CompositeSourceModel``, how the epistemic
 uncertainties are managed and how the hazard rates are accumulated.
 
 Throughout the page we use the demo
-``demos/hazard/LogicTreeCase2ClassicalPSHA``, which is small enough to
+``demos/hazard/LogicTreeCase2ClassicalPSHA`` (described in
+:ref:`Case2 demo <logic-tree-case2>`), which is small enough to
 be run in a few seconds and rich enough to contain epistemic
 uncertainties::
 
