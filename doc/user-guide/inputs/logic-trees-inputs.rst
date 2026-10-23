@@ -1050,6 +1050,12 @@ Looking at the source-specific realizations is useful to assess if the logic tre
 Sampling of the logic tree
 **************************
 
+The parameter ``number_of_logic_tree_samples`` selects the method: with
+``number_of_logic_tree_samples = 0`` the engine performs a complete
+enumeration of all the paths from the roots to the leaves of the logic
+tree, while a positive value samples that many paths, using the
+``random_seed`` (default 42) to make the sampling replicable.
+
 There are real life examples of very large logic trees, like the model for South Africa which features 3,194,799,993,706,229,268,480 
 branches. In such situations it is impossible to perform a computation with full enumeration. However, the engine allows 
 to sample the branches of the complete logic tree. More precisely, for each branch sampled from the source model logic 

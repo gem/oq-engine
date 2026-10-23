@@ -96,25 +96,9 @@ starting from the roots specify the structure until the uppermost
 branches. A branchset can applied to all the sources included in the
 initial seismic source model, to a subset of sources, to a branch
 included in a branchset occurring before in the logic tree structure
-or even just to a single source. Currently, the rules controlling the
-application of a branchset incorporated into the OpenQuake engine are the
-following:
-
-- *applyToBranches*
-
-  The current branchset is applied to one or more branches of the
-  previous branching level designated through their unique ID;
-
-- *applyToSources*
-
-  The current branchset is applied to one or more sources included in
-  one of the initial seismic source models and designated through their
-  unique ID;
-
-- *applyToTectonicRegionType*
-
-  The current branchset is applied to all the sources belonging to a
-  selected tectonic region type (e.g. stable continental).
+or even just to a single source. Currently, the attributes restricting the application of a branchset are
+``applyToBranches``, ``applyToSources`` and ``applyToTectonicRegionType``;
+they are described in :ref:`applyTo attributes <logic-tree-apply-to>`.
 
 The schematic represented in Figure 5.1 shows an
 example of the conceptual model adopted to describe a logic tree

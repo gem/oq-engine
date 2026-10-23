@@ -92,12 +92,8 @@ Realizations per signature
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The signatures of a source can be inspected with the command
-``oq show usignatures``: there is a row for each pair (source,
-branchset) and the column ``num_rlzs`` contains the number of realizations in
-each *realization set* of the source, i.e. in each set of
-realizations with the same uncertainties, in ascending order.
-Since the realization sets of a source can have different sizes,
-``num_rlzs`` can contain more than a single number: in the sampled version
+``oq show usignatures``; the ``num_rlzs`` column is explained in
+:ref:`uncertainty-signatures`. In the sampled version
 of the case (``R = 50``, see below) 5 of the 8 sources have
 realization sets of different sizes, for instance the source
 ``NVA-EF1``

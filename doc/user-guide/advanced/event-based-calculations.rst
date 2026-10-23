@@ -151,7 +151,7 @@ loss estimates, collapsing the logic trees into a single branch to reduce comput
 before going through the effort of trimming the logic trees, there is an interim step that must be explored, at least 
 for large regions, like the entire continental United States. This step is to geographically divide the large region 
 into logical smaller subregions, such that the contribution to the hazard or losses in one subregion from the other 
-subregions is negligibly small or even zero. The effective realizations in each of the subregions will then be much 
+subregions is negligibly small or even zero. The :ref:`effective realizations <effective-realizations>` in each of the subregions will then be much 
 fewer than when trying to cover the entire large region in a single calculation.
 
 *******************************************************
@@ -162,7 +162,7 @@ Trimming of the logic-trees or sampling of the branches
 Trimming or sampling may be necessary if the following two conditions hold:
 
 1. You are interested in propagating the full uncertainty to the hazard and loss estimates; only the mean or quantile results are not sufficient for your analysis requirements, AND
-2. The region of interest cannot be logically divided further as described above; the logic-tree for your chosen region of interest still leads to a very large number of effective realizations.
+2. The region of interest cannot be logically divided further as described above; the logic-tree for your chosen region of interest still leads to a very large number of :ref:`effective realizations <effective-realizations>`.
 
 Sampling is the easier of the two options now. You only need to ensure that you sample a sufficient number of branches 
 to capture the underlying distribution of the hazard or loss results you are interested in. The drawback of random 
