@@ -203,6 +203,21 @@ class _SeparableCorrelationModel:
         return blocks
 
 
+def circulant_embedding_feasible(sites):
+    """
+    :returns: True if the sites, or their complete grid, can be laid out
+              on a regular correlation grid for circulant embedding
+    """
+    complete = getattr(sites, 'complete', sites)
+    for candidate in (complete, sites):
+        try:
+            RegularGridLayout.from_sites(candidate)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
 # Factorize a regular-grid correlation field and retain only selected sites.
 def _circulant_factor(sites, imts, spatial_model,
                       cross_imt_model, context):

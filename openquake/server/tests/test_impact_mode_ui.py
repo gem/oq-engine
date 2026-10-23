@@ -46,6 +46,10 @@ def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
+    # level 1 users can choose the spatial correlation as well
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('circulant_embedding')
     page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')

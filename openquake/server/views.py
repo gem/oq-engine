@@ -2291,7 +2291,7 @@ def get_impact_warnings(ds):
     return warnings
 
 
-def format_oqparam(oqparam):
+def format_oqparam(oqparam, strategy_used=None):
     ret_dict = {}
     rupdic = oqparam.rupture_dict
     approach = rupdic['approach']
@@ -2322,9 +2322,14 @@ def format_oqparam(oqparam):
     labels = dict(IMPACT_SPATIAL_CORRELATION_OPTIONS)
     if oqparam.within_event_correlation_model:
         params = oqparam.within_event_correlation_params or {}
-        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = (
-            f"{labels[oqparam.correlation_strategy]}, "
-            f"vs30_clustering={params.get('vs30_clustering')}")
+        requested = oqparam.correlation_strategy
+        used = strategy_used or requested
+        text = (f"{labels[used]}, "
+                f"vs30_clustering={params.get('vs30_clustering')}")
+        if used != requested:
+            text += (f" (requested {labels[requested]}, "
+                     f"not applicable to these sites)")
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = text
     else:
         ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = labels['none']
 
@@ -2392,7 +2397,10 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         oqparam = ds['oqparam']
-        input_params = format_oqparam(oqparam)
+        strategy_used = None  # only set if a ShakeMap job had a fallback
+        if 'correlation_strategy_used' in ds:
+            strategy_used = ds['correlation_strategy_used'][0].decode()
+        input_params = format_oqparam(oqparam, strategy_used)
         usgs_id = None
         if hasattr(oqparam.rupture_dict, 'usgs_id'):
             usgs_id = oqparam.rupture_dict['usgs_id']

@@ -53,7 +53,8 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
-from openquake.hazardlib.shakemap.gmfs import to_gmfs
+from openquake.hazardlib.shakemap.gmfs import (
+    to_gmfs, circulant_embedding_feasible)
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -1850,8 +1851,19 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     if gmf_dict['kind'] == 'Silva&Horspool':
         gmf_dict = dict(gmf_dict)
         rupture_dict = oq.rupture_dict or {}
+        strategy = oq.correlation_strategy
+        if (strategy == 'circulant_embedding' and
+                not circulant_embedding_feasible(sitecol)):
+            # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
+            logging.warning(
+                'Circulant embedding is not applicable to these sites, '
+                'using cholesky_decomposition instead')
+            strategy = 'cholesky_decomposition'
+        # save the strategy really used, for the outputs page
+        calc.datastore['correlation_strategy_used'] = numpy.array(
+            [strategy], dtype=hdf5.vstr)
         gmf_dict.update(
-            correlation_strategy=oq.correlation_strategy,
+            correlation_strategy=strategy,
             sites=sitecol,
             context=CorrelationContext(
                 mag=rupture_dict.get('mag'),
