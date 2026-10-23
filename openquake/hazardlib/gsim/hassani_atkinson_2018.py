@@ -53,8 +53,6 @@ def _get_geometrical_attenuation(rrup, r):
     rt = 50.0
     b1 = -1.3
     b2 = -0.5
-    # Direct wave spreading
-    # Surface-wave spreading
     return np.where(
         r <= rt,
         r**b1,  # Direct wave spreading
@@ -96,6 +94,7 @@ def _stress_scaling(C, d_sigma, mag):
     """
     Stress scaling as defined in eq. 3 
     """
+    # e_{\Delta,\sigma_1}
     keys = [f'g1_{i}' for i in range(0, 5)]
     e_d_sigma_1 = sum(C[k]*mag**(i) for i, k in enumerate(keys))
 

@@ -220,6 +220,7 @@ def _get_path_scaling_stewart(kind, region, C, ctx):
     """
     Returns the path scaling term defined in Equation 3
     """
+    # Calculate R in Equation 4
     rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
     if region == "CAL":
         delta_c3 = 0
@@ -481,8 +482,8 @@ class BooreEtAl2014(GMPE):
 class BooreEtAl2014HighQ(BooreEtAl2014):
     """
     Implements the Boore et al. (2014) model considering the correction to the
-    path scaling term for High Q regions (e.g. China and Turkey) The
-    modification is made to the "Dc3" coefficient
+    path scaling term for High Q regions (e.g. China and Turkey)
+    The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
@@ -599,8 +600,8 @@ class BooreEtAl2014HighQ(BooreEtAl2014):
 class BooreEtAl2014LowQ(BooreEtAl2014):
     """
     Implements the Boore et al. (2014) model considering the correction to the
-    path scaling term for Low Q regions (e.g. Italy and Japan) The modification
-    is made to the "Dc3" coefficient
+    path scaling term for Low Q regions (e.g. Italy and Japan)
+    The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT            e0          e1          e2          e3         e4          e5          e6     Mh          c1         c2          c3      h          Dc3           c        Vc          f4          f5       f6       f7        R1        R2     DfR     DfV      f1      f2      tau1      tau2

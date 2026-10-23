@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -133,7 +133,7 @@ def _set_stddevs(sig, tau, phi, ctx, C, ln_y_ref, exp1, exp2):
     Implements equations 19, 20 and 21 for inter-event, intra-event
     and total standard deviations respectively.
     """
-    # Aftershock flag (default of zero (i.e., mainshock) if rup unlabelled)
+    # aftershock flag (defaults to zero when the rupture is unlabelled)
     AS = ctx.is_aftershock
     Fmeasured = np.where(ctx.vs30measured, True, False)
     Finferred = ~Fmeasured
