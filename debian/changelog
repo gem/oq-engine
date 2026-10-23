@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Bug fix: exporting the realizations of a multi-model calculation
+    failed; now one realizations_MODEL csv file is written per model,
+    and the realizations of a model can be extracted with
+    /extract/realizations/MODEL
+  * Bug fix: "oq show rlz:N" failed on multi-model calculations; now
+    it shows the realization N of each model
+  * Bug fix: "oq show branches", "oq show branchsets" and "oq show sm_rlzs"
+    failed on multi-model calculations; now they show the rows of
+    each model with a model column
   * Bug fix: exporting the gmf_data csv of a global SES calculation failed
     with an IndexError, or silently exported wrong event IDs, because the
     sigma_epsilon event IDs were looked up as positions in relevant_events
