@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -174,8 +174,7 @@ def _compute_shallow_site_response(C, ctx, pga1100):
                             C['n']))) - np.log(pga1100[idx] + C['c'])
         fsite[idx] = C['c10'] * np.log(ctx.vs30[idx] / C['k1']) + \
             (C['k2'] * pga_scale)
-    # Any very hard rock ctx are rendered to the constant amplification
-    # factor
+    # Any very hard rock ctx are rendered to the constant amplification factor
     idx = ctx.vs30 >= 1100.
     if np.any(idx):
         fsite[idx] = stiff_factor * log(1100. / C['k1'])

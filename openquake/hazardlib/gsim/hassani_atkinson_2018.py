@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2025-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ Module exports :class:`HassaniAtkinson2018`
 import re
 import pathlib
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -30,11 +31,17 @@ from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import (
     get_fs_SeyhanStewart2014)
 
+
+LOG10 = np.log(10.0)
+
+
 TFP = pathlib.Path(__file__).parent.absolute()
 
 
 def _get_pseudo_depth(mag):
-    """ Pseudo depth as defined in eq. 17 """
+    """
+    Pseudo depth as defined in eq. 17
+    """
     return 10**(-0.405+0.235*mag)
 
 
@@ -46,18 +53,17 @@ def _get_geometrical_attenuation(rrup, r):
     rt = 50.0
     b1 = -1.3
     b2 = -0.5
-    z = np.zeros_like(rrup)
-    # Direct wave spreading
-    idx = r <= rt
-    z[idx] = r[idx]**b1
-    # Surface-wave spreading
-    idx = r > rt
-    z[idx] = rt**b1 * (r[idx]/rt)**b2
-    return z
+    return np.where(
+        r <= rt,
+        r**b1,  # Direct wave spreading
+        rt**b1 * (r/rt)**b2  # Surface-wave spreading
+    )
 
 
 def _geometrical_spreading(C, rrup, mag):
-    """ Geometrical spreading term as per eq. 15 """
+    """
+    Geometrical spreading term as per eq. 15 
+    """
     h = _get_pseudo_depth(mag)
     r = (rrup**2 + h**2)**0.5
     z = _get_geometrical_attenuation(rrup, r)
@@ -66,27 +72,28 @@ def _geometrical_spreading(C, rrup, mag):
 
 
 def _source_scaling(C, mag, d_sigma):
-    """ Source scaling as per eq. 2 """
+    """
+    Source scaling as per eq. 2 
+    """
     return _magnitude_scaling(C, mag) + _stress_scaling(C, d_sigma, mag)
 
 
 def _magnitude_scaling(C, mag):
-    """ Magnitude scaling as defined in eq. 3 """
-    fm = np.zeros_like(mag)
+    """
+    Magnitude scaling as defined in eq. 3 
+    """
     dff = (mag - C['Mh'])
 
-    idx = mag <= C['Mh']
-    fm[idx] = C['e0'] + C['e1'] * dff[idx] + C['e2'] * dff[idx]**2
+    below_mh = C['e0'] + C['e1'] * dff + C['e2'] * dff**2
+    above_mh = C['e0'] + C['e3'] * dff
 
-    idx = mag > C['Mh']
-    fm[idx] = C['e0'] + C['e3'] * dff[idx]
-
-    return fm
+    return np.where(mag <= C['Mh'], below_mh, above_mh)
 
 
 def _stress_scaling(C, d_sigma, mag):
-    """ Stress scaling as defined in eq. 3 """
-
+    """
+    Stress scaling as defined in eq. 3 
+    """
     # e_{\Delta,\sigma_1}
     keys = [f'g1_{i}' for i in range(0, 5)]
     e_d_sigma_1 = sum(C[k]*mag**(i) for i, k in enumerate(keys))
@@ -104,8 +111,9 @@ def _stress_scaling(C, d_sigma, mag):
 
 
 def _kappa_scaling(C, kappa0, d_sigma, mag):
-    """ Stress scaling as defined in eq. 3 """
-
+    """
+    Stress scaling as defined in eq. 3 
+    """
     ld = np.log10(d_sigma)
     lm = np.log10(mag)
     lk = np.log10(kappa0)
@@ -141,7 +149,9 @@ def _kappa_scaling(C, kappa0, d_sigma, mag):
 
 
 def _anelastic_attenuation(gamma, rrup):
-    """ Anelastic attenuation term """
+    """
+    Anelastic attenuation term 
+    """
     return gamma * rrup
 
 
@@ -149,8 +159,7 @@ def get_gm_rock(C, ctx, kappa0, d_sigma, CAE):
     """ Compute ground-motion on bedrock """
     gm = (_source_scaling(C, ctx.mag, d_sigma) +
           _kappa_scaling(C, kappa0, d_sigma, ctx.mag) +
-          _geometrical_spreading(C, ctx.rrup, ctx.mag)
-          )
+          _geometrical_spreading(C, ctx.rrup, ctx.mag))
     if CAE is not None:
         gm += _anelastic_attenuation(CAE, ctx.rrup)
     return gm
@@ -223,7 +232,13 @@ class HassaniAtkinson2018(GMPE):
         gamma = None
         if self.CAE is not None:
             gamma = self.CAE[imt]['gamma']
-        pga_rock = np.exp(get_gm_rock(C, ctx, self.kappa0, self.d_sigma, gamma))
+        pga_rock = np.exp(
+            get_gm_rock(
+                C,
+                ctx,
+                self.kappa0,
+                self.d_sigma,
+                gamma))
 
         # Compute ground-motion on soil.
         for m, imt in enumerate(imts):
@@ -239,9 +254,9 @@ class HassaniAtkinson2018(GMPE):
             mean[m] += get_fs_SeyhanStewart2014(TMP, imt, pga_rock, ctx.vs30)
 
             # To natural logarithm and [g]
-            mean[m] /= np.log10(np.exp(1))
+            mean[m] /= 1 / LOG10
             if re.search('SA|PGA', str(imt)):
-                mean[m] = np.log(np.exp(mean[m]) / 980.665)
+                mean[m] = mean[m] - np.log(980.665)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
           IMT    Mh            e0            e1            e2            e3            b3            b4          g1_0          g1_1          g1_2          g1_3          g1_4          g2_0          g2_1          g2_2          g2_3          g2_4         d1_0_0          d1_0_1         d1_0_2          d1_1_0          d1_1_1          d1_1_2          d1_2_0          d1_2_1          d1_2_2          d1_3_0          d1_3_1         d1_3_2         d2_0_0         d2_0_1         d2_0_2          d2_1_0          d2_1_1          d2_1_2          d2_2_0          d2_2_1          d2_2_2          d2_3_0          d2_3_1         d2_3_2         d3_0_0         d3_0_1        d3_0_2         d3_1_0          d3_1_1         d3_1_2         d3_2_0          d3_2_1         d3_2_2         d3_3_0         d3_3_1         d3_3_2        d4_0_0        d4_0_1        d4_0_2        d4_1_0         d4_1_1        d4_1_2         d4_2_0         d4_2_1        d4_2_2        d4_3_0        d4_3_1        d4_3_2

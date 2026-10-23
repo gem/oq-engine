@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,9 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+LOG10 = np.log(10.0)
 
 
 class BooreEtAl1993GSCBest(GMPE):
@@ -87,7 +90,7 @@ class BooreEtAl1993GSCBest(GMPE):
                              C['c4'] * (d[idx] - 100.))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
+            mean[m] = (mean[m] - 2.0) * LOG10 - np.log(g)
 
             sig[m] = C['sigma']
 

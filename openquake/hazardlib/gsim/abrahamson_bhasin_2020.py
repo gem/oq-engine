@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2025-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,9 +22,11 @@ Module exports: :class:`AbrahamsonBhasin2020`,
 """
 
 import numpy as np
+
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import SA, PGV, PGA 
+from openquake.hazardlib.imt import SA, PGV, PGA
 from openquake.hazardlib.gsim.base import GMPE
+
 
 not_verified = True
 
@@ -34,19 +36,15 @@ AB20_COEFFS = {
     "general": {
         "a1": 5.39, "a2": 0.799, "a3": 0.654, "a4": 0.479, "a5": -0.062,
         "a6": -0.359, "a7": -0.134, "a8": 0.023, "phi": 0.29, "tau": 0.16,
-        "sigma": 0.33
-    },
+        "sigma": 0.33},
     "pga_based": {
         "a1": 4.77, "a2": 0.738, "a3": 0.484, "a4": 0.275, "a5": -0.036,
         "a6": -0.332, "a7": -0.44, "a8": 0.0, "phi_1": 0.32, "phi_2": 0.42,
-        "tau_1": 0.12, "tau_2": 0.26, "sigma_1": 0.34, "sigma_2": 0.49,
-    },
+        "tau_1": 0.12, "tau_2": 0.26, "sigma_1": 0.34, "sigma_2": 0.49,},
     "sa1_based": {
         "a1": 4.80, "a2": 0.82, "a3": 0.55, "a4": 0.27, "a5": 0.054,
         "a6": -0.382, "a7": -0.21, "a8": 0.0, "phi_1": 0.28, "phi_2": 0.38,
-        "tau_1": 0.12, "tau_2": 0.17, "sigma_1": 0.30, "sigma_2": 0.42,
-    }
-}
+        "tau_1": 0.12, "tau_2": 0.17, "sigma_1": 0.30, "sigma_2": 0.42,}}
 
 
 M1 = 5.0
@@ -84,9 +82,9 @@ def _tri_linear_stdev_term(M: np.ndarray, stdev1: float, stdev2: float):
 
 
 def get_mean_conditional_pgv(
-    C: dict, 
-    ctx: np.recarray, 
-    base_preds: dict, 
+    C: dict,
+    ctx: np.recarray,
+    base_preds: dict,
     imt_key: str,
     ):
     f1  = _get_trilinear_magnitude_term(ctx, C)
@@ -99,12 +97,11 @@ def get_mean_conditional_pgv(
         + C["a4"] * (ctx.mag - 6.0)
         + C["a5"] * (8.5 - ctx.mag) ** 2
         + C["a6"] * np.log(ctx.rrup + 5.0 * np.exp(0.4 * (ctx.mag - 6.0)))
-        + (C["a7"] + C["a8"] * (ctx.mag - 5.0)) * np.log(ctx.vs30 / 425.0)
-    )
+        + (C["a7"] + C["a8"] * (ctx.mag - 5.0)) * np.log(ctx.vs30 / 425.0))
 
 
 def get_sig(
-    C: dict, 
+    C: dict,
     ctx: np.recarray,
     base_preds: dict,
     imt_key: str):
@@ -122,7 +119,7 @@ def get_sig(
         sigma_pgv = _tri_linear_stdev_term(M, C["sigma_1"], C["sigma_2"])
         tau_pgv   = _tri_linear_stdev_term(M, C["tau_1"],   C["tau_2"])
         phi_pgv   = _tri_linear_stdev_term(M, C["phi_1"],   C["phi_2"])
-    
+
     tau_cond = base_preds[imt_key]["tau"]
     phi_cond = base_preds[imt_key]["phi"]
 
@@ -138,16 +135,16 @@ def get_sig(
 class AbrahamsonBhasin2020(GMPE):
     """
     Implementation of a conditional GMPE of Abrahamson & Bhasin (2020)
-    for Peak Ground Velocity (PGV) applicable to active shallow crustal 
-    earthquakes. This requires characterisation of the SA at reference 
-    period (which is magnitude-dependent), in addition to magnitude and vs30, 
-    to define PGV and propagate the associated uncertainty. It also includes 
-    single-period SA variants (e.g., PGA and SA(1.0)), designed for use with 
-    seismic design maps that typically provide SA values at only a few spectral 
+    for Peak Ground Velocity (PGV) applicable to active shallow crustal
+    earthquakes. This requires characterisation of the SA at reference
+    period (which is magnitude-dependent), in addition to magnitude and vs30,
+    to define PGV and propagate the associated uncertainty. It also includes
+    single-period SA variants (e.g., PGA and SA(1.0)), designed for use with
+    seismic design maps that typically provide SA values at only a few spectral
     periods.
-    
+
     Abrahamson N, Bhasin S (2020) "Conditional Ground-Motion Model for Peak Ground
-    Velocity for Active Crustal Regions.", PEER Report 2020/05, Pacific Earthquake 
+    Velocity for Active Crustal Regions.", PEER Report 2020/05, Pacific Earthquake
     Engineering Research Center Headquarters, University of California at Berkeley.
     (October 2010).
     """

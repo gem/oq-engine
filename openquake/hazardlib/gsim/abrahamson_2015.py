@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,10 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+
+LOG10 = np.log(10.0)
+
+
 # Period-Independent Coefficients (Table 2)
 CONSTS = {
     'n': 1.18,
@@ -41,8 +45,7 @@ CONSTS = {
     'theta5': 0.0,
     'theta9': 0.4,
     'c4': 10.0,
-    'C1': 7.8
-}
+    'C1': 7.8}
 
 C1 = 7.2  # for Montalva2017
 
@@ -83,7 +86,7 @@ def get_stress_factor(imt, slab):
     Abrahamson et al. (2018)
     """
     C = BCHYDRO_SIGMA_MU[imt]
-    
+
     return (C["SIGMA_MU_SSLAB"] if slab else C["SIGMA_MU_SINTER"]) / 1.65
 
 
@@ -96,21 +99,18 @@ def _compute_magterm(C1, theta1, theta4, theta5, theta13, dc1, mag):
     dmag = C1 + dc1
     f_mag = np.where(
         mag > dmag, theta5 * (mag - dmag), theta4 * (mag - dmag))
-    
+
     return base + f_mag + theta13 * (10. - mag) ** 2.
 
 
 def _compute_backarc_term(dists, min_dist, a, b, backarc):
     """
-    Compute backarc term of original BCHydro GMM.
+    Compute backarc term of original BCHydro GMM. The f_faba term is only
+    applied to backarc sites (zero for forearc sites).
     """
-    f_faba = np.zeros_like(dists)
-    fixed_dists = dists[backarc]  # Only applies to backarc sites (f_faba
-                                  # term is zero for the forearc sites)
-    fixed_dists[fixed_dists < min_dist] = min_dist
-    f_faba[backarc] = a + b * np.log(fixed_dists / 40.)
-
-    return f_faba
+    fixed_dists = np.maximum(dists, min_dist)
+    faba = a + b * np.log(fixed_dists / 40.)
+    return np.where(backarc, faba, 0.)
 
 
 def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
@@ -124,11 +124,10 @@ def _compute_eshm20_faba_term(dists, min_dist, a, b, faba_model, xvf):
     """
     # If there is an ESHM20 FABA model apply it
     if faba_model:
-        fixed_dists = np.copy(dists)
-        fixed_dists[fixed_dists < min_dist] = min_dist
+        fixed_dists = np.maximum(dists, min_dist)
         f_faba = a + b * np.log(fixed_dists / 40.)
         return f_faba * faba_model(-1*xvf)
-    
+
     else:
         # Apply no xvf-dependent eshm20 faba term
         return np.zeros_like(xvf)
@@ -150,11 +149,11 @@ def _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model):
         dists = ctx.rhypo
         a, b = C['theta7'], C['theta8']
         min_dist = 85.
-    
+
     if kind != "eshm20":
-       # Apply the default BCHydro backarc term
-       return _compute_backarc_term(dists, min_dist, a, b,
-                                    np.bool_(ctx.backarc)) 
+        # Apply the default BCHydro backarc term
+        return _compute_backarc_term(dists, min_dist, a, b,
+                                     np.bool_(ctx.backarc))
 
     else:
         # Apply ESHM20 FABA tapering
@@ -203,8 +202,7 @@ def _compute_distance_term(kind, trt, C, ctx, theta6_adj):
 
     return _compute_dist_term(
         C1, ctx, CONSTS['c4'], dists, theta6_adj,
-        C['theta2'], theta3, C['theta6'], CONSTS['theta9'], theta10, theta14
-        )
+        C['theta2'], theta3, C['theta6'], CONSTS['theta9'], theta10, theta14)
 
 
 def _compute_focal_depth_term(trt, C, ctx):
@@ -215,7 +213,7 @@ def _compute_focal_depth_term(trt, C, ctx):
     #  For interface F_EVENT = 0 so no depth scaling returned
     if trt == const.TRT.SUBDUCTION_INTERFACE:
         return np.zeros_like(ctx.mag)
-    
+
     # For slab events compute hypocentral depth scaling using eq 3
     z_h = np.clip(ctx.hypo_depth, None, 120.)
 
@@ -230,12 +228,12 @@ def _compute_magnitude_term(kind, C, dc1, mag):
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], CONSTS['theta4'],
             CONSTS['theta5'], C['theta13'], dc1, mag)
-    
+
     elif kind == "montalva16":
         return _compute_magterm(
             CONSTS['C1'], C['theta1'], C['theta4'],
             C['theta5'], C['theta13'], dc1, mag)
-    
+
     elif kind == "montalva17":
         return _compute_magterm(
             C1, C['theta1'], C['theta4'], C['theta5'], 0., dc1, mag)
@@ -250,12 +248,11 @@ def _compute_pga_rock(kind, trt, theta6_adj, faba_model, C, dc1, ctx):
             _compute_distance_term(kind, trt, C, ctx, theta6_adj) +
             _compute_focal_depth_term(trt, C, ctx) +
             _compute_forearc_backarc_term(kind, trt, C, ctx, faba_model))
-    
+
     # Apply linear site term
     site_response = (
-        (C['theta12'] + C['b'] * CONSTS['n']) * np.log(1000. / C['vlin'])
-        )
-    
+        (C['theta12'] + C['b'] * CONSTS['n']) * np.log(1000. / C['vlin']))
+
     return mean + site_response
 
 
@@ -270,7 +267,7 @@ def _compute_site_response_term(C, ctx, pga1000):
     vs_star[vs_star > 1000.0] = 1000.
     arg = vs_star / C["vlin"]
     site_resp_term = C["theta12"] * np.log(arg)
-    
+
     # Get linear scaling term
     idx = ctx.vs30 >= C["vlin"]
     site_resp_term[idx] += (C["b"] * CONSTS["n"] * np.log(arg[idx]))
@@ -281,7 +278,7 @@ def _compute_site_response_term(C, ctx, pga1000):
         -C["b"] * np.log(pga1000[idx] + CONSTS["c"]) +
         C["b"] * np.log(pga1000[idx] + CONSTS["c"] *
                         (arg[idx] ** CONSTS["n"])))
-    
+
     return site_resp_term
 
 
@@ -358,11 +355,11 @@ class AbrahamsonEtAl2015SInter(GMPE):
                  theta6_adjustment=0, sigma_mu_epsilon=0.,
                  faba_taper_model=None, **faba_args
                  ):
-         
+
         self.ergodic = ergodic
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.theta6_adj = theta6_adjustment
-        
+
         # ESHM20 FABA model
         if faba_taper_model:
             if self.kind != "eshm20":
@@ -370,7 +367,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
                     "An ESHM20 FABA model can only be used in combination "
                     "with an ESHM20 subclass of the BCHydro GSIM.")
             assert "xvf" in self.REQUIRES_SITES_PARAMETERS
-            self.faba_model = self.ESHM20_FABA_MODELS[ # This att is only set
+            self.faba_model = self.ESHM20_FABA_MODELS[  # This att is only set
                 faba_taper_model](**faba_args)         # in ESHM20 subclasses
         else:
             self.faba_model = None
@@ -560,7 +557,6 @@ class AbrahamsonEtAl2015SInter_scaled(AbrahamsonEtAl2015SInter):
 	2		400		-0.299	1.539520753	-0.71	-0.0064		-0.2821	0.12	0.7		0.0085	-0.401	-0.061	0		0.3		0		0.6	0.43	0.74	0.6
 	3		400		0		0.776117425	-0.64	-0.0064		-0.4466	0.3		0.7		0.0054	-0.673	-0.0798	0		0.3		0		0.6	0.43	0.74	0.6
 	4		400		0		0.202413823	-0.58	-0.0064		-0.4344	0.3		0.7		0.0027	-0.627	-0.0935	0		0.3		0		0.6	0.43	0.74	0.6
-
     """)
 
 

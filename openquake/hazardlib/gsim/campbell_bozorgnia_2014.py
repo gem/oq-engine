@@ -23,7 +23,6 @@ Module exports :class:`CampbellBozorgnia2014`
 """
 import numpy as np
 
-from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
@@ -34,7 +33,7 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 
 CONSTS = {"h4": 1.0, "c": 1.88, "n": 1.18}
 
-# CyberShake basin adjustments for CB14 (only applied above 
+# CyberShake basin adjustments for CB14 (only applied above
 # 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CB14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
@@ -42,7 +41,7 @@ IMT   slope_cy
 2.0   0.764
 3.0   1.279
 4.0   1.726
-5.0   2.080 
+5.0   2.080
 7.5   3.000
 10    3.000
 """)
@@ -89,9 +88,9 @@ def _basin_term(C, imt, z2pt5, SJ, cy):
     idx = z2pt5 < 1.0
     fb[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
     idx = z2pt5 > 3.0
-    fb[idx] = basin_coeffs * exp(-0.75) * (
+    fb[idx] = basin_coeffs * np.exp(-0.75) * (
         1. - np.exp(-0.25 * (z2pt5[idx] - 3.)))
-    
+
     return fb
 
 
@@ -120,7 +119,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     z_ref_term = _basin_term(C, imt, z_ref, SJ, False)
 
     # Get basin term
-    if isinstance(a1100, np.ndarray): # Site model defined
+    if isinstance(a1100, np.ndarray):  # Site model defined
         z2pt5 = ctx.z2pt5.copy()
         # Use GMM's vs30 to z2pt5 for non-measured values
         mask = z2pt5 == -999
@@ -164,10 +163,13 @@ def _get_fault_dip_term(C, ctx):
     """
     Returns the fault dip term, defined in equation 24
     """
-    res = C["c19"] * (5.5 - ctx.mag) * ctx.dip
-    res[ctx.mag < 4.5] = C["c19"] * ctx.dip[ctx.mag < 4.5]
-    res[ctx.mag > 5.5] = 0.0
-    return res
+    return np.where(
+        ctx.mag < 4.5,
+        C["c19"] * ctx.dip,
+        np.where(
+            ctx.mag > 5.5,
+            0.,
+            C["c19"] * (5.5 - ctx.mag) * ctx.dip))
 
 
 def _get_geometric_attenuation_term(C, mag, rrup):
@@ -189,10 +191,13 @@ def _get_hanging_wall_coeffs_mag(C, mag):
     """
     Returns the hanging wall magnitude term defined in equation 14
     """
-    res = (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))
-    res[mag < 5.5] = 0.0
-    res[mag > 6.5] = 1.0 + C["a2"] * (mag[mag > 6.5] - 6.5)
-    return res
+    return np.where(
+        mag < 5.5,
+        0.,
+        np.where(
+            mag > 6.5,
+            1.0 + C["a2"] * (mag - 6.5),
+            (mag - 5.5) * (1.0 + C["a2"] * (mag - 6.5))))
 
 
 def _get_hanging_wall_coeffs_rrup(ctx):
@@ -211,7 +216,7 @@ def _get_hanging_wall_coeffs_rx(C, ctx):
     """
     r_x = ctx.rx
     # Define coefficients R1 and R2
-    r_1 = ctx.width * cos(radians(ctx.dip))
+    r_1 = ctx.width * np.cos(np.radians(ctx.dip))
     r_2 = 62.0 * ctx.mag - 350.0
     fhngrx = np.zeros(len(r_x))
     # Case when 0 <= Rx <= R1
@@ -279,10 +284,13 @@ def _get_philny(C, mag):
     Returns the intra-event random effects coefficient (phi)
     Equation 28.
     """
-    res = C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)
-    res[mag <= 4.5] = C["phi1"]
-    res[mag >= 5.5] = C["phi2"]
-    return res
+    return np.where(
+        mag <= 4.5,
+        C["phi1"],
+        np.where(
+            mag >= 5.5,
+            C["phi2"],
+            C["phi2"] + (C["phi1"] - C["phi2"]) * (5.5 - mag)))
 
 
 def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
@@ -296,7 +304,7 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
     idx = vs30 > C["k1"]
     f_site_g[idx] = f_site_g[idx] + (C["k2"] * CONSTS["n"] *
                                     np.log(vs_mod[idx]))
-    
+
      # Get nonlinear site response term
     idx = np.logical_not(idx)
     if np.any(idx):
@@ -319,20 +327,19 @@ def _get_shallow_site_response_term(SJ, C, vs30, pga_rock):
         return f_site_g + fsite_j
     else:
         return f_site_g
-    
-    
+
+
 def _get_style_of_faulting_term(C, ctx):
     """
     Returns the style-of-faulting scaling term defined in equations 4 to 6
     """
-    frv = np.zeros_like(ctx.rake)
-    fnm = np.zeros_like(ctx.rake)
-    frv[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
-    fnm[(ctx.rake > -150.) & (ctx.rake < -30.)] = 1.
+    frv = np.where((ctx.rake > 30.) & (ctx.rake < 150.), 1., 0.)
+    fnm = np.where((ctx.rake > -150.) & (ctx.rake < -30.), 1., 0.)
     fflt_f = C["c8"] * frv + C["c9"] * fnm
-    fflt_m = ctx.mag - 4.5
-    fflt_m[ctx.mag <= 4.5] = 0.
-    fflt_m[ctx.mag > 5.5] = 1.
+
+    # Magnitude-dependent scaling
+    fflt_m = np.where(ctx.mag <= 4.5, 0.,
+                      np.where(ctx.mag > 5.5, 1., ctx.mag - 4.5))
     return fflt_f * fflt_m
 
 
@@ -435,7 +442,7 @@ def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
 
     # Get phi_lny on the basement rock
     phi_lny_b = np.sqrt(_get_philny(C, ctx.mag) ** 2. - C["philnAF"] ** 2.)
-    
+
     # Get site scaling term
     alpha = _get_alpha(C, ctx.vs30, pga1100)
 
@@ -451,12 +458,12 @@ def compute_sigma(C, imt, ctx, pga1100, tau_lnpga_b, phi_lnpga_b):
     else:
         # Use formula in CB14 supplementary spreadsheet
         t = np.sqrt(tau_lny_b**2 + alpha**2 * tau_lnpga_b**2 +
-                2.0 * alpha * C["rholny"] * tau_lny_b * tau_lnpga_b) # Eq 29
+                2.0 * alpha * C["rholny"] * tau_lny_b * tau_lnpga_b)  # Eq 29
 
         p = np.sqrt(
             phi_lny_b**2 + C["philnAF"]**2 + alpha**2 * phi_lnpga_b**2
             + 2.0 * alpha * C["rholny"] * phi_lny_b * phi_lnpga_b)   # Eq 30
-        
+
     return np.sqrt(t**2 + p**2), t, p
 
 
@@ -531,7 +538,7 @@ class CampbellBozorgnia2014(GMPE):
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx, PGA(),
                                          self.usgs_basin_scaling,
                                          self.cybershake_basin_adj))
-     
+
         # Get tau_lny for PGA on the basement rock
         tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)
 

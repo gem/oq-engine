@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,13 +33,17 @@ from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean,
     get_fault_type_dummy_variables)
 
+
+LOG10 = np.log(10.0)
+
+
 #: IMT-independent coefficients. std_total is the total standard deviation,
 #: see Table 6, pag 2192 and Table 9, pag 2202. R0, R1, R2 are coefficients
 #: required for mean calculation - see equation (5) pag 2191. v1, v2, Vref
 #: are coefficients required for soil response calculation, see table 8,
 #: p. 2201
 # the std is converted from base 10 to base e
-std_total = np.log(10 ** 0.30),
+std_total = 0.3 * LOG10,
 R0 = 10.0
 R1 = 70.0
 R2 = 140.0
@@ -168,7 +172,6 @@ def _compute_non_linear_term(pga4nl, bnl):
     Compute non-linear term,
     equation (8a) to (8c), pag 108.
     """
-
     fnl = np.zeros(pga4nl.shape)
     if len(bnl) < len(fnl):  # single site case, fix shape
         bnl = np.repeat(bnl, len(fnl))
@@ -204,9 +207,8 @@ def _compute_soil_amplification(C, vs30, pga_bc, mean):
     """
     # convert from base e (as defined in BA2008) to base 10 (as used in
     # AB2006)
-    sal = np.log10(np.exp(_get_site_amplification_linear(vs30, C)))
-    sanl = np.log10(np.exp(
-        _get_site_amplification_non_linear(vs30, pga_bc, C)))
+    sal = _get_site_amplification_linear(vs30, C) / LOG10
+    sanl = _get_site_amplification_non_linear(vs30, pga_bc, C) / LOG10
 
     idxs = vs30 < 2000.0
     mean[idxs] = mean[idxs] + sal[idxs] + sanl[idxs]
@@ -263,9 +265,8 @@ def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
     pga_bc = _get_pga_bc(
         self.COEFFS_BC[PGA()], f0, f1, f2, SC, mag, rrup, vs30, scale_fac)
 
-    # compute mean values for hard-rock sites (vs30 >= 2000),
-    # and non-hard-rock sites (vs30 < 2000) and add soil amplification
-    # term
+    # compute mean values for hard-rock sites (vs30 >= 2000), and
+    # non-hard-rock sites (vs30 < 2000) and add soil amplification term
     mean = np.zeros_like(vs30)
     _compute_mean(C_HR, f0, f1, f2, SC, mag, rrup,
                   vs30 >= 2000.0, mean, scale_fac)
@@ -275,10 +276,10 @@ def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
 
     # convert from base 10 to base e
     if imt == PGV():
-        mean = np.log(10 ** mean)
+        mean = mean * LOG10
     else:
         # convert from cm/s**2 to g
-        mean = np.log((10 ** mean) * 1e-2 / g)
+        mean = mean * LOG10 + np.log(0.01 / g)
 
     return mean
 
@@ -616,9 +617,9 @@ class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):
 
 class AtkinsonBoore2006SGS(AtkinsonBoore2006):
     """
-    This class extends the original base class
+    Extends the original base class
     :class:`openquake.hazardlib.gsim.atkinson_boore_2006.AtkinsonBoore2006`
-    by introducing a distance filter for the near field, as implemented
-    by SGS for the national PSHA model for Saudi Arabia.
+    by introducing a distance filter for the near field, as implemented by SGS
+    for the national PSHA model for Saudi Arabia.
     """
     CUTOFF_RRUP = 5.

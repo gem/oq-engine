@@ -21,12 +21,15 @@ Module exports :class:`RietbrockEtAl2013SelfSimilar`,
                :class:`RietbrockEtAl2013MagDependent`
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+LOG10 = np.log(10.0)
+
 
 CONSTS = {"r0": 10.0,
           "r1": 50.0,
@@ -128,15 +131,15 @@ class RietbrockEtAl2013SelfSimilar(GMPE):
             # from cm/s**2 to g for PGA (PGV is already in cm/s) and
             # also convert from base 10 to base e
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log(10 ** imean)
+                mean[m] = imean * LOG10
 
             # Original standard deviations are in
             # logarithms of base 10. Converts to natural logarithm.
-            sig[m] = np.log(10.0 ** np.sqrt(C["tau"]**2 + C["phi"]**2))
-            tau[m] = np.log(10.0 ** C["tau"])
-            phi[m] = np.log(10.0 ** C["phi"])
+            sig[m] = np.sqrt(C['tau'] ** 2 + C['phi'] ** 2) * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['phi'] * LOG10
 
     # Coefficients from Table 5, Page 64
     COEFFS = CoeffsTable(sa_damping=5, table="""\
