@@ -96,12 +96,11 @@ def get_grp_ids(sset, uncs, an01, rlzgroups):
     :param rlzgroups: dictionary
     :returns: list of group indices, group weights
     """
-    assert uncs[0] == 0  # starts with 0 always
     gweights = {srcid: 1 for srcid in sset}
-    for unc in uncs:
+    for pos, unc in enumerate(uncs):
         srcids = an01.dfs[unc].srcid.to_numpy()
         n = len(rlzgroups[unc, srcids[0]])
-        if unc == 0:
+        if pos == 0:
             grp_ids = [(i,) for i in range(n)]
         else:
             grp_ids = [grpids + (i,) for grpids in grp_ids for i in range(n)]
@@ -114,19 +113,19 @@ def get_grp_ids(sset, uncs, an01, rlzgroups):
     return grp_ids, gweights
 
 
-def get_rlzs(an01, srcid, rlzgroups, grpids):
+def get_rlzs(an01, srcid, rlzgroups, grpids, uncs):
     # Get the indexes of the realizations for the current source
     # for the grpids in question
-    rset = set()
-    for unc, grpid in enumerate(grpids):
+    rset = None
+    for unc, grpid in zip(uncs, grpids):
         # Check if the current source is in this group
         if srcid in an01.dfs[unc].srcid.to_numpy():
             idx = set(rlzgroups[unc, srcid][grpid])
-            if not rset:  # first time
+            if rset is None:  # first time
                 rset = idx
             else:
                 rset &= idx
-    return sorted(rset)
+    return sorted(rset) if rset is not None else []
 
 
 def process(sset, uset, an01, rlzgroups, res, imt, atype):
@@ -136,13 +135,14 @@ def process(sset, uset, an01, rlzgroups, res, imt, atype):
     # Uncertainty grp_ids; for instance, in test_02_performance 
     # grp_ids = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
     # gweights = {'a': 2, 'c': 4, 'b': 1}
-    grp_ids, gweights = get_grp_ids(sset, sorted(uset), an01, rlzgroups)
+    uncs = sorted(uset)
+    grp_ids, gweights = get_grp_ids(sset, uncs, an01, rlzgroups)
 
     histos = {}
     for grpids in grp_ids:
         # build a HistoGroup for each grpids, for instance grpids = (1, 3)
         for srcid in sorted(sset):
-            rlzs = get_rlzs(an01, srcid, rlzgroups, grpids)
+            rlzs = get_rlzs(an01, srcid, rlzgroups, grpids, uncs)
             # for instance rlzs = [3, 7, 11, 15, 19, 23]
 
             _imls, afes, weights = afes_matrix_from_dstore(

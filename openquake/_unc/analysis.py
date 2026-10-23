@@ -188,12 +188,15 @@ class Analysis:
         # Process all the correlated branch sets
         for unc, df in enumerate(self.dfs):
             srcids = set(df['srcid'])
-            for uset, sset in zip(usets, ssets):
-                # if any source is in the current branch set
-                if srcids & sset:
-                    sset |= srcids
-                    uset |= {unc}
-                    break
+            matches = [i for i, sset in enumerate(ssets) if srcids & sset]
+            if matches:
+                first = matches[0]
+                ssets[first] |= srcids
+                usets[first].add(unc)
+                # A branch set can connect several existing components.
+                for i in reversed(matches[1:]):
+                    ssets[first] |= ssets.pop(i)
+                    usets[first] |= usets.pop(i)
             else:
                 # at the first loop ssets and usets are empty
                 ssets.append(srcids)

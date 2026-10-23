@@ -41,6 +41,7 @@ class HistoGroup:
     :param minpow: list of minimum powers (can contain None)
     :param numpow: list of number of powers (can contain None)
     :param normalized: if True, each histogram must be normalized
+    :param res: optional resolution, also retained for all-zero groups
     """
     @classmethod
     def new(cls, afesRL: np.ndarray,  weights: np.ndarray, res: int,
@@ -88,15 +89,18 @@ class HistoGroup:
             min_powers.append(min_power)
             num_powers.append(num_power)
 
-        return cls(ohis, min_powers, num_powers)
+        return cls(ohis, min_powers, num_powers, res=res)
 
-    def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True):
+    def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True,
+                 res=None):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
-        i, *idx = self.idxs
-        self.res = len(pmfs[i]) // int(numpow[i])
-        for i in idx:
+        if len(self.idxs) and res is None:
+            i = self.idxs[0]
+            res = len(pmfs[i]) // int(numpow[i])
+        self.res = res
+        for i in self.idxs:
             assert len(pmfs[i]) / numpow[i] == self.res
         self.pmfs = pmfs
         self.minpow = minpow
@@ -147,14 +151,17 @@ class HistoGroup:
             out2.append(min_power_o)
             out3.append(num_powers_o)
 
-        return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight)
+        return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight,
+                          res=histo_a.res or histo_b.res)
 
     # tested in test_m_convolution
     def to_matrix(self):
         """
         Convert the hazard curves distribution into a matrix and afes
         """
-        minpow = np.array(self.minpow, dtype=int)
+        if not len(self.idxs):
+            return np.empty((0, len(self.pmfs))), np.empty(0)
+        minpow = np.array(self.minpow, dtype=float)
         nump = np.array(self.numpow, dtype=float)
         idx, = np.where(np.isfinite(nump))
         minp = minpow[idx].min()
@@ -162,7 +169,7 @@ class HistoGroup:
         n = int(maxp - minp) * self.res
         mat = np.full((n, len(self.pmfs)), np.nan)
         for i in idx:
-            i0 = (minpow[i] - minp) * self.res
+            i0 = int(minpow[i] - minp) * self.res
             i1 = i0 + int(nump[i]) * self.res
             mat[i0:i1, i] = self.pmfs[i]
         afes = 10**np.linspace(minp, maxp, n)
@@ -187,7 +194,7 @@ class HistoGroup:
                 else:
                     tmp.append(weighted_percentile(mids, weights=his, perc=rty))
             out.append(tmp)
-        return np.array(out)
+        return np.array(out).reshape(len(self.idxs), len(result_types))
 
     def save(self, fname):
         """
@@ -196,8 +203,10 @@ class HistoGroup:
         mat, afes = self.to_matrix()
         with hdf5.File(fname, "w") as fout:
             fout.create_dataset("histograms", data=mat)
-            fout.create_dataset("mininum_power", data=np.array(self.minpow))
-            fout.create_dataset("number_of_powers", data=np.array(self.numpow))
+            fout.create_dataset("mininum_power",
+                                data=np.array(self.minpow, dtype=float))
+            fout.create_dataset("number_of_powers",
+                                data=np.array(self.numpow, dtype=float))
             fout.create_dataset("afes", data=afes)
 
 
