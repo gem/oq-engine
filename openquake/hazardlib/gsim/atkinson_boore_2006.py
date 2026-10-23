@@ -34,7 +34,6 @@ from openquake.hazardlib.gsim.utils import (
     get_fault_type_dummy_variables)
 
 
-
 LOG10 = np.log(10.0)
 
 
