@@ -44,6 +44,10 @@ from openquake.hazardlib.gsim.nga_east import (
 
 LOG10 = np.log(10.)
 
+EXTRAPOLATION_LIMITS = { # Intentionally specific exceptions to default
+    'BindiEtAl2014Rjb': {'max_period': 2.0, 'num_periods': 5},
+    'RietbrockEdwards2019Low': {'num_periods': 2}}
+
 
 def _get_phi(ergodic, PHI_SS, PHI_S2SS, phi_ss_quantile, PHI_SS_MEDIAN,
              imt, mag):
@@ -105,12 +109,13 @@ def get_extrapolation_periods(gmpe):
         coeffs = gmpe.COEFFS_TAB2
     else:
         coeffs = gmpe.COEFFS
-    periods = sorted(imt.period for imt in coeffs.sa_coeffs)
-    model_name = type(gmpe).__name__
-    if model_name == 'BindiEtAl2014Rjb':
-        return [period for period in periods if period <= 2.0][-5:]
-    if model_name == 'RietbrockEdwards2019Low':
-        return periods[-2:]
+    limits = EXTRAPOLATION_LIMITS.get(type(gmpe).__name__, {})
+    max_period = limits.get('max_period', np.inf)
+    periods = sorted(imt.period for imt in coeffs.sa_coeffs
+                     if imt.period <= max_period)
+    num_periods = limits.get('num_periods')
+    if num_periods is not None:
+        return periods[-num_periods:]
     return periods
 
 
