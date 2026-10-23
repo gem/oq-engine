@@ -49,7 +49,7 @@ def test_impact_ui_level_1(
     # level 1 users can choose the spatial correlation as well
     correlation = authenticated_page.locator('select#spatial_correlation')
     expect(correlation).to_be_visible()
-    correlation.select_option('circulant_embedding')
+    correlation.select_option('loth_baker')
     page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')

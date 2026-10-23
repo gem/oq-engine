@@ -54,7 +54,7 @@
                 <label for="spatial_correlation">{{ impact_form_labels.spatial_correlation }}</label>
                 <select id="spatial_correlation" class="impact-select">
                   {% for value, label in impact_spatial_correlation_options %}
-                  <option value="{{ value }}"{% if value == impact_form_defaults.spatial_correlation %} selected{% endif %}>{{ label }}</option>
+                  <option value="{{ value }}" data-scope="{% if value == 'none' %}both{% elif value == 'loth_baker' %}shakemap{% else %}rupture{% endif %}"{% if value == impact_form_defaults.spatial_correlation %} selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
                 <small>Active choices use JayaramBaker2009 with

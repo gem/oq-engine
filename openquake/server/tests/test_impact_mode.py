@@ -499,7 +499,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
                     maximum_distance='100',
-                    spatial_correlation='circulant_embedding')
+                    spatial_correlation='loth_baker')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     def test_run_by_usgs_id_point_rupture_correlation(self):

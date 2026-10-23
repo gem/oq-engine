@@ -224,7 +224,8 @@ IMPACT_SPATIAL_CORRELATION_OPTIONS = (
     ('cholesky_decomposition',
      'JayaramBaker2009 (Cholesky decomposition)'),
     ('circulant_embedding',
-     'JayaramBaker2009 (Circulant embedding)'))
+     'JayaramBaker2009 (Circulant embedding)'),
+    ('loth_baker', 'LothBaker2013 (ShakeMap products only)'))
 
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
@@ -347,7 +348,11 @@ def _validate(POST):
         params.pop('within_event_correlation_model', None)
         params.pop('within_event_correlation_params', None)
         params.pop('correlation_strategy', None)
-        if choice != 'none':
+        if choice == 'loth_baker':
+            # joint model, only for ShakeMap products (see impact_validate)
+            params['within_event_correlation_model'] = 'LothBaker2013'
+            params['within_event_correlation_params'] = {}
+        elif choice != 'none':
             params['within_event_correlation_model'] = 'JayaramBaker2009'
             params['within_event_correlation_params'] = {
                 'vs30_clustering': True}
@@ -439,6 +444,18 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    # ShakeMap jobs use the Loth and Baker (2013) model only, rupture jobs
+    # use the JayaramBaker2009 options
+    choice = POST.get('spatial_correlation', 'none')
+    if use_shakemap and choice not in ('none', 'loth_baker'):
+        err = {'status': 'failed', 'error_msg':
+               'For ShakeMap jobs the spatial correlation must be '
+               'LothBaker2013 or none'}
+        return None, inputdic, params, err
+    if not use_shakemap and choice == 'loth_baker':
+        err = {'status': 'failed', 'error_msg':
+               'LothBaker2013 is available only for ShakeMap jobs'}
+        return None, inputdic, params, err
     shakemap_version = POST.get('shakemap_version') or 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(

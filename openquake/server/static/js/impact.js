@@ -42,6 +42,27 @@ window.initImpactForm = function() {
         });
     }
 
+    // ShakeMap jobs offer only the Loth and Baker model, the other jobs the
+    // JayaramBaker2009 options: the options are kept in all_correlation_options
+    const all_correlation_options = $('#spatial_correlation option').clone();
+    function refresh_spatial_correlation_options() {
+        const select = $('#spatial_correlation');
+        const previous = select.val();
+        const scope = use_shakemap() ? 'shakemap' : 'rupture';
+        select.empty();
+        all_correlation_options.each(function () {
+            const option_scope = $(this).data('scope');
+            if (option_scope === 'both' || option_scope === scope) {
+                select.append($(this).clone());
+            }
+        });
+        if (select.find('option[value="' + previous + '"]').length) {
+            select.val(previous);
+        } else {
+            select.val('none');
+        }
+    }
+
     function use_shakemap() {
         const approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
@@ -269,6 +290,7 @@ window.initImpactForm = function() {
     }
 
     $('input[name="impact_approach"]').change(function () {
+        refresh_spatial_correlation_options();
         const selected_approach = $(this).val();
         invalidate_shakemap_versions_request();
         set_retrieve_data_btn_state('initial');
@@ -730,5 +752,6 @@ window.initImpactForm = function() {
     $("#impact_run_form > input").click(function() {
         $(this).css("background-color", "white");
     });
+    refresh_spatial_correlation_options();
     set_shakemap_version_selector();
 }
