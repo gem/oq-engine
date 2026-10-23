@@ -40,6 +40,9 @@ from openquake.hazardlib.geo import Mesh
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 
 
+LOG10 = np.log(10.0)
+
+
 CONSTANTS = {"m_c": 7.1,
              "xcro": 2.0,
              "xinto": 10.0,  # Used in subduction Interface class
@@ -194,10 +197,10 @@ def get_sof_term_asc(trt, C, ctx):
     Shallow crustal faults have a style-of-faulting dependence as
     normal faulting is found to produce higher ground motion (equation 1)
     """
-    res = np.zeros_like(ctx.rake)
     # adjustment for normal faulting
-    res[(ctx.rake <= -45.0) & (ctx.rake >= -135.0)] = C["FN_CR"]
-    return res
+    # adjustment for reverse faulting
+    normal = (ctx.rake <= -45.0) & (ctx.rake >= -135.0)
+    return np.where(normal, C["FN_CR"], 0.)
 
 
 @get_sof_term.add(const.TRT.UPPER_MANTLE)
@@ -206,12 +209,10 @@ def get_sof_term_um(trt, C, ctx):
     In the case of the upper mantle events separate coefficients
     are considered for normal, reverse and strike-slip
     """
-    res = np.zeros_like(ctx.rake)
-    # adjustment for normal faulting
-    res[(ctx.rake <= -45.0) & (ctx.rake >= -135.0)] = C["FN_UM"]
-    # adjustment for reverse faulting
-    res[(ctx.rake > 45.0) & (ctx.rake < 135.0)] = C["FRV_UM"]
-    return res
+    normal = (ctx.rake <= -45.0) & (ctx.rake >= -135.0)
+    reverse = (ctx.rake > 45.0) & (ctx.rake < 135.0)
+    return np.where(normal, C["FN_UM"],
+                    np.where(reverse, C["FRV_UM"], 0.))
 
 
 @get_sof_term.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -282,12 +283,7 @@ def get_distance_term_asc(trt, C, ctx, volc_pgns=None):
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
 
     # Geometric attenuation scaling described in equation 6
-    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
-        np.ones_like(x_ij)
-    idx = x_ij <= 30.0
-    if np.any(idx):
-        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                      x_ij[idx] + gn_exp)
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + np.minimum(x_ij, 30.) + gn_exp)
     # equation 5
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
@@ -303,12 +299,7 @@ def get_distance_term_um(trt, C, ctx, volc_pgns=None):
     """
     x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
-        np.ones_like(x_ij)
-    idx = x_ij <= 30.0
-    if np.any(idx):
-        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                      x_ij[idx] + gn_exp)
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + np.minimum(x_ij, 30.) + gn_exp)
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return (C["gUM"] * np.log(r_ij) +
@@ -349,13 +340,14 @@ def get_distance_term_sslab(trt, C, ctx, volc_pgns=None):
     cctx = copy.copy(ctx)
     # Check if need to apply non-ergodic path effect
     if volc_pgns is not None:
-        # Get distance traversed per travel path through volcanic zones (rvolc),
-        # with rvolc capped at 80km if total distance traversed through zones is 
-        # greater than 80km, and set to 12 km if zones are traversed but the
-        # total distance is less than 12 km. This min/max constraint to rvolc
-        # is detailed within the publications for the Zhao et al. 2016 GMMs
-        cctx.rvolc= get_rvolcs(ctx, volc_pgns)
-        
+        # Get distance traversed per travel path through volcanic zones
+        # (rvolc), with rvolc capped at 80km if total distance traversed
+        # through zones is greater than 80km, and set to 12 km if zones are
+        # traversed but the total distance is less than 12 km. This min/max
+        # constraint to rvolc is detailed within the publications for the
+        # Zhao et al. 2016 GMMs
+        cctx.rvolc = get_rvolcs(ctx, volc_pgns)
+
     x_ij = cctx.rrup
     # Get anelastic scaling term in equation 5
     qslh = np.where(cctx.ztor >= 50., C["eSLH"] * (0.02 * cctx.ztor - 1.0), 0)
@@ -449,7 +441,7 @@ def add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx):
 
             snc[idx2] = np.exp((c_a * (alpha - 1.) *
                                np.log(beta) * np.log(10.0 * beta) -
-                               np.log(10.0) * (c_b + ln_sf[idx2])) /
+                               LOG10 * (c_b + ln_sf[idx2])) /
                                (c_a * (alpha * np.log(10.0 * beta) -
                                 np.log(beta))))
         # For the cases when ln_a_n_max >= 1.25
@@ -528,7 +520,7 @@ def get_rvolcs(ctx, volc_pgns):
     """
     Get total distance per travel path through anelastically attenuating
     volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
-    
+
     The total rvolc per path is capped at a minimum of 12 km (if any zone
     is traversed) and a maximum of 80 km.
     """
@@ -543,8 +535,7 @@ def get_rvolcs(ctx, volc_pgns):
             ctx.lon[idx_path], ctx.lat[idx_path], FIXED_DEPTH,
             # .clon/.clat is the corresponding clst point to rup
             ctx.clon[idx_path], ctx.clat[idx_path], FIXED_DEPTH,
-            N_POINTS
-        )
+            N_POINTS)
 
         # Create mesh of discretized line
         mesh = Mesh(dsct_line[0], dsct_line[1])
@@ -552,8 +543,7 @@ def get_rvolcs(ctx, volc_pgns):
         # Distance between consecutive discretised points along the path
         line_spacing = distance(
             mesh.lons[0], mesh.lats[0], FIXED_DEPTH,
-            mesh.lons[1], mesh.lats[1], FIXED_DEPTH
-        )
+            mesh.lons[1], mesh.lats[1], FIXED_DEPTH)
 
         # Sum distance traversed in all volcanic polygons for given path
         total = 0.0
@@ -635,7 +625,7 @@ class ZhaoEtAl2016Asc(GMPE):
                        get_depth_term(trt, C, ctx) +
                        get_distance_term(trt, C, ctx, self.volc_pgns))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
-            
+
             if self.__class__.__name__.endswith('SiteSigma'):
                 for i in range(1, 5):
                     phi[m, idx[i]] += C["sc{:g}_sigma_S".format(i)]

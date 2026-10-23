@@ -22,7 +22,7 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
 import numpy as np
-from scipy.constants import g # standard acceleration of gravity in m/s**2
+from scipy.constants import g  # standard acceleration of gravity in m/s**2
 import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -53,15 +53,14 @@ def _get_us23_nshm_adjustments(ln_mean, imt, ctx, cb14_basin_term,
     # cb14 basin term for basin sites if T >= 1.9 s)
     if m9_basin_term and imt.period >= 1.9:
         # NOTE: also need to update -999 z2pt5 here so have
-        # a z2pt5 for each site to ensure always applying m9
-        # basin term where appropriate --> given always using
-        # (at least in US23 model) in combination with CB14 basin
-        # term use this relationship to estimate missing z2pt5
-        # consistently
+        # a z2pt5 for each site to ensure always applying m9 basin term
+        # where appropriate --> given always using (at least in US23
+        # model) in combination with CB14 basin term use this
+        # relationship to estimate missing z2pt5 consistently
         z2pt5 = ctx.z2pt5.copy()
-        mask = z2pt5 == -999 # None-measured values
+        mask = z2pt5 == -999  # None-measured values
         z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
-        fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
+        fb[z2pt5 >= 6.0] = np.log(2.0)  # Basin sites use m9 basin
 
     return fb
 
@@ -121,24 +120,15 @@ def _compute_site_class_term(C, vs30):
     Compute nine-th term in equation 1, p. 901.
     """
     # map vs30 value to site class, see table 2, p. 901.
-    site_term = np.zeros(len(vs30))
-
     # hard rock
-    site_term[vs30 > 1100.0] = C['CH']
-
     # rock
-    site_term[(vs30 > 600) & (vs30 <= 1100)] = C['C1']
-
     # hard soil
-    site_term[(vs30 > 300) & (vs30 <= 600)] = C['C2']
-
     # medium soil
-    site_term[(vs30 > 200) & (vs30 <= 300)] = C['C3']
-
     # soft soil
-    site_term[vs30 <= 200] = C['C4']
-
-    return site_term
+    return np.select(
+        [vs30 > 1100., vs30 > 600., vs30 > 300., vs30 > 200.],
+        [C['CH'], C['C1'], C['C2'], C['C3']],
+        default=C['C4'])
 
 
 def _compute_slab_correction_term(C, rrup):
@@ -238,7 +228,7 @@ class ZhaoEtAl2006Asc(GMPE):
                                                 W=C['WC'], mag=ctx.mag)
 
             # convert from cm/s**2 to g and back into natural log
-            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+            ln_mean = mean_i + np.log(0.01 / g)
 
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
@@ -324,8 +314,8 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
                                                 mag=ctx.mag) + C_SINTER['SI']
 
             # Convert from cm/s**2 to g then back into natural log
-            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
-            
+            ln_mean = mean_i + np.log(0.01 / g)
+
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
                                             self.cb14_basin_term,
@@ -418,7 +408,7 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
                     _compute_slab_correction_term(C_SSLAB, d)
 
             # Convert from cm/s**2 to g and back into natural log
-            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+            ln_mean = mean_i + np.log(0.01 / g)
 
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
@@ -548,7 +538,7 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
                 C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
             # Convert from cm/s**2 to g and back into natural log
-            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+            ln_mean = mean_i + np.log(0.01 / g)
 
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
@@ -630,14 +620,14 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
 
             # multiply by site factor to "convert" Japan values to Cascadia
             # values then convert from cm/s**2 to g
-            ln_mean = np.log((np.exp(mean_i) * C_SF["MF"]) * 1e-2 / g)
+            ln_mean = mean_i + np.log(C_SF['MF'] * 0.01 / g)
 
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
                                             self.cb14_basin_term,
                                             self.m9_basin_term)
-            
-            mean[m] = ln_mean + fb            
+
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
 
@@ -688,7 +678,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
 
             # multiply by site factor to "convert" Japan values to Cascadia
             # values then convert from cm/s**2 to g and back into natural log
-            ln_mean = np.log((np.exp(mean_i) * C_SF["MF"]) * 1e-2 / g)
+            ln_mean = mean_i + np.log(C_SF['MF'] * 0.01 / g)
 
             # Get basin adjustments if specified
             fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
@@ -700,10 +690,10 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
 
 class ZhaoEtAl2006AscSGS(ZhaoEtAl2006Asc):
     """
-    This class extends the original base class
+    Extends the original base class
     :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
-    by introducing a distance filter for the near field, as implemented
-    by SGS for the national PSHA model for Saudi Arabia.
+    by introducing a distance filter for the near field, as implemented by SGS
+    for the national PSHA model for Saudi Arabia.
     """
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):

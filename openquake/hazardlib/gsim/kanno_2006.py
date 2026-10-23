@@ -30,7 +30,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
-LOG10 = np.log(10)
+
+LOG10 = np.log(10.0)
 
 #: "coefficient e_1 = 0.5 was selected for all periods in the present
 #: study." (p. 881)
@@ -406,7 +407,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        log_amp = self._compute_depth_correction(ctx, coeffs)
 #
 #        # convert correction factor from common to natural logarithm
-#        ln_mean += log_amp*np.log(10.0)
+#        ln_mean += log_amp*LOG10
 #
 #        return ln_mean, [ln_stddevs]
 #
