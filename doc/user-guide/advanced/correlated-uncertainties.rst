@@ -78,8 +78,7 @@ i.e. the four faults share one signature and the background has another
 one, because the dip is modified for the faults and the lower
 seismogenic depth for the background.
 
-The consequence is that a realization can belong to more than one index
-of rate attribution (one per distinct signature of its sources): in this
+The consequence is that a realization can belong to more than one RateMap index (one per distinct signature of its sources): in this
 case one index covers the background and another one the four faults.
 The rates of such a realization are the sum of the columns of its
 indices, i.e. it has more than one gid.
@@ -123,7 +122,7 @@ For a given source the realization sets are disjoint and cover all its
 realizations, so summing the ``num_rlzs`` gives the number of realizations
 of the source and counting the sets gives its number of signatures; the
 sets of *different* sources of the same group do overlap instead, since
-a realization can have more than one index of rate attribution, as
+a realization can have more than one RateMap index, as
 explained above.
 
 Full enumeration
@@ -142,7 +141,7 @@ realizations, i.e. the size of the logic tree is ``R = 144``::
     | 4      | NVA | 1           |
 
 Each group has its own ``trt_smrs`` in the ``trt_smrs`` dataset
-(56, 56, 128, 16, 16 entries) and its own indices of rate attribution in
+(56, 56, 128, 16, 16 entries) and its own RateMap indices in
 ``core_trt_smrs``, one per realization set, which here is one per
 realization (144 in total): the realizations
 of a group are *not* grouped together, since the
@@ -153,7 +152,7 @@ itself, ``Gt = 144``, and the RateMap has shape ``(1, 6, 144)``:
 .. code-block:: text
 
     realizations R                      144
-    indices of rate attribution         144  (16 of size 1, 128 of size 2)
+    RateMap indices         144  (16 of size 1, 128 of size 2)
     core size Gt                        144
     RateMap                             (N=1, L=6, Gt=144) float32
     gids per realization                16 with 1, 128 with 2
@@ -176,7 +175,7 @@ single GMM, so ``samples`` counts the paths collapsed by the sampling):
 
     realizations R                       50   (sampled out of 144)
     effective source-model realizations  24
-    indices of rate attribution          27   (23 of size 1, 4 of size 2)
+    RateMap indices          27   (23 of size 1, 4 of size 2)
     core size Gt                         27
     RateMap                              (N=1, L=6, Gt=27) float32
     gids per realization                 42 with 1, 8 with 2
@@ -187,7 +186,7 @@ of uncertainties: the four indices of size 2 contain two realizations
 each.
 
 Eight of the sampled realizations (38, 40, 41, 44, 45, 46, 47 and 48)
-belong to two indices of rate attribution: e.g. the realization 40
+belong to two RateMap indices: e.g. the realization 40
 belongs to the indices 7 and 8.
 
 Checking a calculation

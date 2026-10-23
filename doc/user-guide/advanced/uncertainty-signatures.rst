@@ -26,7 +26,7 @@ the source models (i.e. ``sourceModel/extendModel``).
 
       :math:`G_t = \sum_i G(\mathrm{trt}_i)`
 
-   of the logic tree, i.e. the number of indices of rate attribution, is
+   of the logic tree, i.e. the number of RateMap indices, is
    typically **much smaller** than the number
    ``R`` of realizations: in the demo ``LogicTreeCase2ClassicalPSHA``
    there are 324 realizations but only 36 uncertainty signatures,
@@ -84,7 +84,7 @@ hence each signature covers 9 realizations, i.e. the ones differing
 only in the uncertainties of the other source. In total there are 18
 realization sets, 9 per source, so that with two GMMs per tectonic
 region type Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
-tree are reduced to 36 indices of rate attribution, i.e. the core size
+tree are reduced to 36 RateMap indices, i.e. the core size
 ``Gt`` of the global ``RateMap``.
 
 NB: the global ``RateMap``, is an array of float32 numbers of shape (N, L,
@@ -165,7 +165,7 @@ covering its 3 realizations; the source ``SC_10:124`` is in the
 it has 3 x 3 = 9 signatures with one realization each.
 
 The core size ``Gt=10`` of the global ``RateMap`` can be read directly from
-the table: ``BG_10`` contributes a single index of rate attribution (its
+the table: ``BG_10`` contributes a single RateMap index (its
 only signature covers the 3 realizations) and ``SC_10:124`` contributes
 9, for a total of 1 + 9 = 10:
 
@@ -173,7 +173,7 @@ only signature covers the 3 realizations) and ``SC_10:124`` contributes
 
 i.e. Gt is smaller than R=12 because the 3 realizations of the
 ``fault_background`` model have the same (empty) signature, so they have
-the same rates and share a single index of rate attribution.
+the same rates and share a single RateMap index.
 
 NB: even though ``mmax`` has no filters, it is not applied to ``BG_10``
 either, since a branchset following a branchset with filters applies only
