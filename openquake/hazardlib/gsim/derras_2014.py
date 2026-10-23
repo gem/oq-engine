@@ -21,9 +21,14 @@ Module exports :class:`DerrasEtAl2014`
 """
 import numpy as np
 from scipy.constants import g
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+LOG10 = np.log(10.0)
+
 
 # Constants used to normalise the input parameters
 CONSTANTS = {
@@ -170,19 +175,19 @@ class DerrasEtAl2014(GMPE):
             mean[m] = get_mean(self.region, self.W_1, self.B_1, C, ctx)
             if imt.string == "PGV":
                 # Convert from log10 m/s to ln cm/s
-                mean[m] = np.log(10.0 ** mean[m] * 100.)
+                mean[m] = mean[m] * LOG10 + np.log(100.0)
             else:
                 # convert from log10 m/s/s to ln g
-                mean[m] = np.log(10.0 ** mean[m] / g)
+                mean[m] = mean[m] * LOG10 - np.log(g)
             mean[m] += self.adjustment_factor
 
             # Get the standard deviations, originally given
             # in terms of log_10, so converting to log_e
             t = C["tau"]
             p = C["phi"]
-            sig[m] = np.log(10.0 ** np.sqrt(t ** 2 + p ** 2))
-            tau[m] = np.log(10.0 ** t),
-            phi[m] = np.log(10.0 ** p)
+            sig[m] = np.sqrt(t ** 2 + p ** 2) * LOG10
+            tau[m] = (t * LOG10),
+            phi[m] = p * LOG10
 
     # Coefficients for the normalised output parameters and the standard
     # deviations. The former are taken from the Electronic Supplement to the

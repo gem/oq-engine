@@ -31,6 +31,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
+
+LOG10 = np.log(10.0)
+
+
 _compute_distance = CallableDict()
 
 
@@ -191,9 +195,9 @@ class TusaLanger2016RepiBA08SE(GMPE):
                      _get_site_amplification(ctx, C))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            sig[m] = C['SigmaTot'] * LOG10
 
     # Coefficients from Table 9 (PGA) and Table 12 (SA); sigma values in log
     # Correction made to coeff b2 (0.14s) by Giuseppina Tusa in email (Jan 15, 2019)

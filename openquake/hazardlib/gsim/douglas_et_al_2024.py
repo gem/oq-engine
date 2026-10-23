@@ -46,7 +46,7 @@ def _compute_mean(C, mag, dist):
             _compute_term2(C, mag, dist) +
             _compute_term3(C, dist)
             ) - np.log(9.80665)
-    return mean 
+    return mean
 
 
 def _compute_term1(C, mag):
@@ -79,13 +79,11 @@ def _compute_term3(C, dist):
     idx_greater_100 = dist > r2
 
     f3[idx_between_50_100] = (
-            C['b9'] * (np.log(dist[idx_between_50_100]) - np.log(r1))
-            )
+            C['b9'] * (np.log(dist[idx_between_50_100]) - np.log(r1)))
 
     f3[idx_greater_100] = (
             C['b9'] * (np.log(dist[idx_greater_100]) - np.log(r1)) +
-            C['b10'] * (np.log(dist[idx_greater_100]) - np.log(r2))
-            )
+            C['b10'] * (np.log(dist[idx_greater_100]) - np.log(r2)))
 
     return f3
 
@@ -94,33 +92,28 @@ def _select_coeff_rjb(model, branch, weightopt):
     if model == 162:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_162_branch_rjb.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_162_branch_rjb.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[coeffs_df["Branch"] == branch]
     elif model == 5:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_5_branch_rjb.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_5_branch_rjb.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[
             (coeffs_df['Weighting Option'] == weightopt) &
-            (coeffs_df["Branch"] == branch)
-            ]
+            (coeffs_df["Branch"] == branch)]
     elif model == 3:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_3_branch_rjb.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_3_branch_rjb.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[
             (coeffs_df['Weighting Option'] == weightopt) &
-            (coeffs_df["Branch"] == branch)
-            ]
+            (coeffs_df["Branch"] == branch)]
 
     # Convert the column to object type first
     coeffs_df_branch = coeffs_df_branch.copy()
@@ -143,33 +136,28 @@ def _select_coeff_rrup(model, branch, weightopt):
     if model == 162:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_162_branch_rrup.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_162_branch_rrup.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[coeffs_df["Branch"] == branch]
     elif model == 5:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_5_branch_rrup.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_5_branch_rrup.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[
             (coeffs_df['Weighting Option'] == weightopt) &
-            (coeffs_df["Branch"] == branch)
-            ]
+            (coeffs_df["Branch"] == branch)]
     elif model == 3:
         coeffs_path = os.path.join(
             script_dir,
-            "Douglas_et_al_2024_COEFFS/Coeffs_3_branch_rrup.csv"
-            )
+            "Douglas_et_al_2024_COEFFS/Coeffs_3_branch_rrup.csv")
         coeffs_df = pd.read_csv(coeffs_path)
         coeffs_df.columns = coeffs_df.columns.str.strip()
         coeffs_df_branch = coeffs_df[
             (coeffs_df['Weighting Option'] == weightopt) &
-            (coeffs_df["Branch"] == branch)
-            ]
+            (coeffs_df["Branch"] == branch)]
 
     # Convert the column to object type first
     coeffs_df_branch = coeffs_df_branch.copy()
@@ -190,7 +178,7 @@ def _select_coeff_rrup(model, branch, weightopt):
 
 
 def _compute_std(mag, imt):
-    # Coefficients for periods not considered by Al Atik (2015) were 
+    # Coefficients for periods not considered by Al Atik (2015) were
     # interpolated
     sig_coeff_table = """\
         IMT    s1      s2      s3       s4
@@ -227,16 +215,13 @@ def _compute_std(mag, imt):
             stdv[mi] = C_sig['s1']
         elif m <= 5.0:
             stdv[mi] = (
-                C_sig['s1'] + (C_sig['s2'] - C_sig['s1']) * (m - 4.5) / 0.5
-                )
+                C_sig['s1'] + (C_sig['s2'] - C_sig['s1']) * (m - 4.5) / 0.5)
         elif m <= 5.5:
             stdv[mi] = (
-                C_sig['s2'] + (C_sig['s3'] - C_sig['s2']) * (m - 5.0) / 0.5
-                )
+                C_sig['s2'] + (C_sig['s3'] - C_sig['s2']) * (m - 5.0) / 0.5)
         elif m <= 6.5:
             stdv[mi] = (
-                C_sig['s3'] + (C_sig['s4'] - C_sig['s3']) * (m - 5.5) / 0.5
-                )
+                C_sig['s3'] + (C_sig['s4'] - C_sig['s3']) * (m - 5.5) / 0.5)
         else:
             stdv[mi] = C_sig['s4']
 
@@ -246,20 +231,20 @@ def _compute_std(mag, imt):
 class Douglas_Et_Al_2024Rjb(GMPE):
     """
     Implements the GMM in Douglas, J., Aldama-Bustos, G., Tallett-Williams, S,.
-    Daví, M. and Tromans, I. (2024). 
+    Daví, M. and Tromans, I. (2024).
     "Ground-motion models for earthquakes occurring in the United Kingdom."
-    Bull Earthquake Eng 22, 4265–4302. 
+    Bull Earthquake Eng 22, 4265–4302.
     https://doi.org/10.1007/s10518-024-01943-8
-    
-    This implementation includes corrections in the errata (2024), 
+
+    This implementation includes corrections in the errata (2024),
     available at: https://github.com/aldabus/DouglasEtAl_UK_HEM_GMM
-    
-    Note: Douglas et al. (2024) does not provide a standard deviation. 
+
+    Note: Douglas et al. (2024) does not provide a standard deviation.
     To facilitate its use in PSHA calculations, the central branch of the
     global ergodic model by Al Atkik (2015) is included in this code.
     However, any other aleatory variability model could be combined with the
     Douglas et al. (2024) median model.
-    
+
     :param branch:
         Branch number for the selected model:
         1 to 162 for the 162-branch model
@@ -307,8 +292,7 @@ class Douglas_Et_Al_2024Rjb(GMPE):
         self.branch = branch
         self.weightopt = weightopt
         self.COEFFS = _select_coeff_rjb(
-            self.model, self.branch, self.weightopt
-            )
+            self.model, self.branch, self.weightopt)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -329,8 +313,7 @@ class Douglas_Et_Al_2024Rjb_5branch(Douglas_Et_Al_2024Rjb):
         self.branch = branch
         self.weightopt = weightopt
         self.COEFFS = _select_coeff_rjb(
-            self.model, self.branch, self.weightopt
-            )
+            self.model, self.branch, self.weightopt)
 
 class Douglas_Et_Al_2024Rjb_3branch(Douglas_Et_Al_2024Rjb):
 
@@ -339,27 +322,26 @@ class Douglas_Et_Al_2024Rjb_3branch(Douglas_Et_Al_2024Rjb):
         self.branch = branch
         self.weightopt = weightopt
         self.COEFFS = _select_coeff_rjb(
-            self.model, self.branch, self.weightopt
-            )
+            self.model, self.branch, self.weightopt)
 
 
 class Douglas_Et_Al_2024Rrup(GMPE):
     """
     Implements the GMM in Douglas, J., Aldama-Bustos, G., Tallett-Williams, S,.
-    Daví, M. and Tromans, I. (2024). 
+    Daví, M. and Tromans, I. (2024).
     "Ground-motion models for earthquakes occurring in the United Kingdom."
-    Bull Earthquake Eng 22, 4265–4302. 
+    Bull Earthquake Eng 22, 4265–4302.
     https://doi.org/10.1007/s10518-024-01943-8
-    
-    This implementation includes corrections in the errata (2024), 
+
+    This implementation includes corrections in the errata (2024),
     available at: https://github.com/aldabus/DouglasEtAl_UK_HEM_GMM
-    
-    Note: Douglas et al. (2024) does not provide a standard deviation. 
+
+    Note: Douglas et al. (2024) does not provide a standard deviation.
     To facilitate its use in PSHA calculations, the central branch of the
     global ergodic sigma model by Al Atkik (2015) is included in this code.
     However, any other aleatory variability model could be combined with the
     Douglas et al. (2024) median model.
-    
+
     :param branch:
         Branch number for the selected model:
         1 to 162 for the 162-branch model
@@ -379,7 +361,8 @@ class Douglas_Et_Al_2024Rrup(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: Supported intensity measure types are spectral acceleration,
-    #: and peak ground acceleration (PGA is assumed to be equal to SA at 0.01 s)
+    #: and peak ground acceleration (PGA is assumed to be equal to SA at 0.01
+    #: s)
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
@@ -407,8 +390,7 @@ class Douglas_Et_Al_2024Rrup(GMPE):
         self.branch = branch
         self.weightopt = weightopt
         self.COEFFS = _select_coeff_rrup(
-            self.model, self.branch, self.weightopt
-            )
+            self.model, self.branch, self.weightopt)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -428,8 +410,7 @@ class Douglas_Et_Al_2024Rrup_5branch(Douglas_Et_Al_2024Rrup):
         self.branch = branch
         self.weightopt = weightopt
         self.COEFFS = _select_coeff_rrup(
-            self.model, self.branch, self.weightopt
-            )
+            self.model, self.branch, self.weightopt)
 
 class Douglas_Et_Al_2024Rrup_3branch(Douglas_Et_Al_2024Rrup):
 

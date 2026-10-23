@@ -23,6 +23,7 @@ Module exports :class:`CauzziFaccioli2008SWISS01`
 """
 import numpy as np
 # standard acceleration of gravity in m/s**2
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -34,24 +35,27 @@ from openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs import (
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
+LOG10 = np.log(10.0)
+
+
 class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
     """
-    This class extends
+    Extends
     :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`
-    adjusted to be used for the Swiss Hazard Model [2014].
-    This GMPE is valid for a fixed value of vs30=700m/s
+    adjusted to be used for the Swiss Hazard Model [2014]. This GMPE is valid
+    for a fixed value of vs30=700m/s
 
     #. kappa value K-adjustments corresponding to model 01 - as prepared by
-    Ben Edwards K-value for PGA were not provided but infered
-    from SA[0.01s] the model considers a fixed value of vs30=700 to match the
-    reference vs30=1100m/s
+       Ben Edwards K-value for PGA were not provided but infered
+       from SA[0.01s] the model considers a fixed value of vs30=700 to match
+       the reference vs30=1100m/s
 
     #. small-magnitude correction
 
     #. single station sigma - inter-event magnitude/distance adjustment
 
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
+    Disclaimer: these equations are modified to be used for the Swiss Seismic
+    Hazard Model [2014].
 
     The use of these models is the soly responsability of the hazard modeler.
 
@@ -83,15 +87,15 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 
         C = CauzziFaccioli2008SWISS01.COEFFS
         tau_ss = 'tau'
-        log_phi_ss = np.log(10)
+        log_phi_ss = LOG10
         for m, imt in enumerate(imts):
             _apply_adjustments(
                 C, self.COEFFS_FS_ROCK[imt], tau_ss,
                 mean[m], sig[m], tau[m], phi[m], ctx, ctx.rhypo, imt,
                 log_phi_ss)
-            sig[m] = np.log(10 ** sig[m])
-            tau[m] = np.log(10 ** tau[m])
-            phi[m] = np.log(10 ** phi[m])
+            sig[m] = sig[m] * LOG10
+            tau[m] = tau[m] * LOG10
+            phi[m] = phi[m] * LOG10
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
@@ -505,10 +509,9 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends
+    Extends
     :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`,
-    following same strategy
-    as for
+    following same strategy as for
     :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
@@ -517,9 +520,9 @@ class CauzziFaccioli2008SWISS04(CauzziFaccioli2008SWISS01):
 class CauzziFaccioli2008SWISS08(CauzziFaccioli2008SWISS01):
 
     """
-    This class extends 
-    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`, 
-    following same strategy
-    as for :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
+    Extends
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008.CauzziFaccioli2008`,
+    following same strategy as for
+    :class:`openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss.CauzziFaccioli2008SWISS01`
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
