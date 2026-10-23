@@ -174,7 +174,8 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     :returns:
         Not normalized HistoGroup
     """
-    resolution = results[0].res  # all equal resolutions
+    resolution = next((res.res for res in results if res.res is not None),
+                      None)  # all equal resolutions
     num_imls = len(results[0].pmfs)  # all equal lenghts
 
     # The minimum power is IMT dependent
@@ -222,4 +223,5 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
             # Sum the PMF
             out[low:upp] += res.pmfs[lvl] * res.weight
 
-    return HistoGroup(olst, minpow, maxrange, normalized=False)
+    return HistoGroup(olst, minpow, maxrange, normalized=False,
+                      res=resolution)
