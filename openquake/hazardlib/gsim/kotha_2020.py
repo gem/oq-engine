@@ -30,7 +30,9 @@ from scipy.constants import g
 import shapely
 from shapely import STRtree
 from shapely.geometry import shape
+
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
@@ -162,8 +164,7 @@ def _build_props_cache(props_list):
         k: np.array(
             [np.nan if p[k] is None else float(p[k]) for p in props_list],
             dtype=float)
-        for k in props_list[0] if k not in skip
-    }
+        for k in props_list[0] if k not in skip}
 
 
 def _lookup_property(feat_idx, prop_vals):
@@ -218,7 +219,7 @@ def get_distance_coefficients_2(kind, c3, c3_epsilon, C, imt, sctx):
     if c3:
         # If c3 is input then this over-rides the regionalisation
         # assumed within this model
-        return c3[imt]["c3"] * np.ones(sctx.region.shape)
+        return np.full(sctx.region.shape, c3[imt]["c3"], dtype=float)
 
     # Default c3 and tau values to the original GMPE c3 and tau
     c3_ = C["c3"] + np.zeros(sctx.region.shape)
@@ -1058,8 +1059,7 @@ ICELAND_dL2L = {
               0.456171, 0.535598, 0.573242, 0.642609, 0.706663, 0.759680,
               0.779133, 0.854368, 0.907429, 0.975106, 1.089752, 1.120093,
               1.161291, 1.239387, 1.359433, 1.476320, 1.416940, 1.270064,
-              1.107694, 1.122601, 1.233655, 1.315442, 1.153883],
-}
+              1.107694, 1.122601, 1.233655, 1.315442, 1.153883],}
 
 # Build the set of aliases
 for stress in list(ICELAND_dL2L)[1:]:

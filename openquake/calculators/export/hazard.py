@@ -466,6 +466,10 @@ def export_gmf_data_csv(ekey, dstore):
     for imt in oq.sec_imts:
         ren[imt] = imt
     df.rename(columns=ren, inplace=True)
+    try:
+        event_id = dstore['relevant_events']['id']
+    except KeyError:
+        event_id = dstore['events']['id']
     fname = dstore.build_fname('gmf', 'data', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         df, fname, comment=dstore.metadata)
@@ -474,7 +478,7 @@ def export_gmf_data_csv(ekey, dstore):
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
-        # NB: sig_eps['eid'] already contains event IDs, not indices
+        sig_eps['eid'] = event_id[sig_eps['eid']]
         sig_eps.sort(order='eid')
         header = list(sig_eps.dtype.names)
         header[0] = 'event_id'

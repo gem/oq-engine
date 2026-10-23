@@ -23,6 +23,7 @@ Module exports :class:`RamadanEtAl2023shallow`,
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -150,11 +151,11 @@ class RamadanEtAl2023shallow(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV)
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:  # PGV:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            sig[m], tau[m], phi[m] = np.array(istddevs) * LOG10
 
     # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""

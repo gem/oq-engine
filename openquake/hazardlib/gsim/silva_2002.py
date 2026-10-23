@@ -156,14 +156,14 @@ class SilvaEtAl2002MwNSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
 
 class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
     """
-    This implements the Silva et al. (2002) GMPE for the double corner model
-    with saturation as described in the report from Silva, W., N. Gregor and
-    R. Darragh (2002), titled "DEVELOPMENT OF REGIONAL HARD ROCK ATTENUATION
+    Implements the Silva et al. (2002) GMPE for the double corner model with
+    saturation as described in the report from Silva, W., N. Gregor and R.
+    Darragh (2002), titled "DEVELOPMENT OF REGIONAL HARD ROCK ATTENUATION
     RELATIONS FOR CENTRAL AND EASTERN NORTH AMERICA" available at
     www.pacificengineering.org
 
-    For the construction of verification tables - given the unavailability
-    of an independent code - we digitized values from figures included in the
+    For the construction of verification tables - given the unavailability of
+    an independent code - we digitized values from figures included in the
     report.
     """
     kind = "Mw"
@@ -211,8 +211,8 @@ class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
 
 class SilvaEtAl2002SingleCornerSaturation(SilvaEtAl2002DoubleCornerSaturation):
     """
-    This implements the Silva et al. (2002) GMPE for the single corner model
-    with saturation.
+    Implements the Silva et al. (2002) GMPE for the single corner model with
+    saturation.
     """
     kind = 'Mw'
 

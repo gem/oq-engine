@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,9 +19,11 @@
 Module exports :class:`NGAEastAUS23_vs3000`
 """
 import pathlib
+
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
+
 
 path = pathlib.Path(__file__).parent
 

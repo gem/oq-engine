@@ -25,10 +25,12 @@ Module exports :class:`Ameri2014Rjb`,
 import numpy as np
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
 
 g = 9.81  # According to G. Ameri, pers. communication (May 20th, 2019)
 
@@ -164,7 +166,7 @@ def _get_stddevs(kind, C_SIGMA, mag):
         sigma = np.sqrt(tau ** 2 + phi ** 2)
         return sigma, tau, phi
 
-    if kind not in "rjb repi":
+    if kind not in ("rjb", "repi"):
         mag = None
     tau = _compute_between_events_std(C_SIGMA, mag)
     phi = _compute_within_event_std(C_SIGMA)
@@ -259,14 +261,15 @@ class AmeriEtAl2017Rjb(GMPE):
             imean = _get_mean(self.kind, self.norm_stress_drop,
                               C, C_STRESS, ctx)
             # Convert mean to ln(SA) with SA in units of g:
-            mean[m] = np.log(10.0 ** (imean - 2.0) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             mean[m] += self.adjustment_factor
             s, t, p = _get_stddevs(self.kind, C_SIGMA, ctx.mag)
-            sig[m] = np.log(10.0 ** s)
-            tau[m] = np.log(10.0 ** t)
-            phi[m] = np.log(10.0 ** p)
+            sig[m] = s * LOG10
+            tau[m] = t * LOG10
+            phi[m] = p * LOG10
 
-    #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic supplementary material:
+    #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic
+    #: supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt           a              c1             c2             h              b1             b2             b3             e1             e2             e3             e4             f1             f2             f3                      
     pga        3.57937        -1.4864       0.231465        6.65758     -0.0240888     -0.0631411              0              0       0.167762       0.249286       0.223014     -0.0382253       0.013243              0           
@@ -298,11 +301,15 @@ class AmeriEtAl2017Rjb(GMPE):
      3.0        2.50167      -0.950629       0.164955        4.11679       0.599563     -0.0673578              0              0       0.124967       0.321712       0.607734     -0.0900985      -0.114396              0          
     """)
 
-    # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic supplementary material:
-    # NB: Coefficients from the original table have been modified so as to account for the authors' 
-    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only, 
+    # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic
+    # supplementary material:
+    # NB: Coefficients from the original table have been modified so as to
+    # account for the authors'
+    #     advice in the article (p.4707, "we recommend the heteroscedastic
+    #     model for T<=1 s only,
     #     and the homoscedastic model for longer periods".
-    #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU values for the following
+    #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU
+    #     values for the following
     #     periods: 1.3 s., 1.5 s., 1.8 s., 2.0 s., 2.6 s., 3.0 s.
     COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""
         imt             tau       tau1       tau2       phi        
@@ -335,7 +342,8 @@ class AmeriEtAl2017Rjb(GMPE):
         3.0         0.212859   0.212859   0.212859   0.283812
     """)
 
-    # Coefficients from Table "10518_2017_171_MOESM4_ESM.xlsx" in electronic supplementary material
+    # Coefficients from Table "10518_2017_171_MOESM4_ESM.xlsx" in electronic
+    # supplementary material
     # (see also Yenier and Atkinson, 2015):
     COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""
     imt      s0                        s1                        s2                        s3                        s4                        s5                        s6                        s7                        s8                        s9                        
@@ -417,7 +425,8 @@ class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
     #: Required distance measure is Repi (eq. 1).
     REQUIRES_DISTANCES = {'repi'}
 
-    #: Coefficients from Table "10518_2017_171_MOESM1_ESM.xlsx" in electronic supplementary material:
+    #: Coefficients from Table "10518_2017_171_MOESM1_ESM.xlsx" in electronic
+    #: supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
         imt           a              c1             c2             h              b1             b2             b3             e1             e2             e3             e4             f1             f2             f3                 
         pga        3.90119        -1.5472       0.203801        6.78654       0.157748     -0.0375241              0              0       0.183962       0.265793       0.223751     -0.0467904      0.0184746              0    
@@ -449,11 +458,15 @@ class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
        3.0        2.77941       -1.00223       0.130875        4.44146       0.773886     -0.0405902              0              0       0.140958       0.341313       0.606863     -0.0982915      -0.108276              0     
     """)
 
-    # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic supplementary material:
-    # NB: Coefficients from the original table have been modified so as to account for the authors' 
-    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only, 
+    # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic
+    # supplementary material:
+    # NB: Coefficients from the original table have been modified so as to
+    # account for the authors'
+    #     advice in the article (p.4707, "we recommend the heteroscedastic
+    #     model for T<=1 s only,
     #     and the homoscedastic model for longer periods".
-    #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU values for the following
+    #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU
+    #     values for the following
     #     periods: 1.3 s., 1.5 s., 1.8 s., 2.0 s., 2.6 s., 3.0 s.
     COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""
         imt             tau       tau1       tau2          phi            

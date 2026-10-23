@@ -22,6 +22,7 @@ Module exports :class:`BindiEtAl2011`.
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
@@ -180,15 +181,15 @@ class BindiEtAl2011(GMPE):
             # Convert units to g,
             # but only for PGA and SA (not PGV):
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
-            tau[m] = np.log(10.0 ** C['SigmaB'])
-            phi[m] = np.log(10.0 ** C['SigmaW'])
+            sig[m] = C['SigmaTot'] * LOG10
+            tau[m] = C['SigmaB'] * LOG10
+            phi[m] = C['SigmaW'] * LOG10
 
             if self.sgn:
                 mean[m] += self.sgn * _get_delta(

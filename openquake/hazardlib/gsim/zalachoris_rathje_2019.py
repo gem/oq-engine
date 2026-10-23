@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2017 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,12 +20,14 @@
 Module exports :class:'ZalachorisRathje2019'
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.boore_2014 import (
     _get_magnitude_scaling_term, _get_path_scaling, _get_site_scaling,
     _get_pga_on_rock)
+from openquake.hazardlib.const import LOG10
 
 
 def _get_C2_term(Cadj, rjb):
@@ -49,11 +51,11 @@ def _get_ZR19_distance_term(C_ZR19, rhypo):
     Returns the distance scaling term
     """
     Rb_ = C_ZR19["Rb"]
-    FR = np.zeros_like(rhypo)
-    FR[(rhypo < Rb_) & (rhypo >= 4)] = (
-        C_ZR19["a"] * np.log(rhypo[(rhypo < Rb_) & (rhypo >= 4)]/Rb_))
-    FR[rhypo < 4] = C_ZR19["a"] * np.log(4/Rb_)
-    return FR
+    rhypo_eff = np.maximum(rhypo, 4.)
+    return np.where(
+        rhypo >= Rb_,
+        0.,
+        C_ZR19["a"] * np.log(rhypo_eff / Rb_))
 
 
 def _get_ZR19_magnitude_term(C_ZR19, mag):
@@ -61,13 +63,15 @@ def _get_ZR19_magnitude_term(C_ZR19, mag):
     Returns the magnitude scaling term
     """
     Mb_ = C_ZR19["Mb"]
-    FM = np.full_like(
-        mag, C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"])
-    FM[mag < Mb_] = C_ZR19["b0"] + C_ZR19["Cadj"]
-    between = (mag >= Mb_) & (mag < 5.8)
-    FM[between] = (C_ZR19["b0"] + C_ZR19["b1"] * (mag[between] - Mb_) +
-                   C_ZR19["Cadj"])
-    return FM
+    b0 = C_ZR19["b0"]
+    b1 = C_ZR19["b1"]
+    cadj = C_ZR19["Cadj"]
+
+    result = np.full(mag.shape, b0 + b1 * (5.8 - Mb_) + cadj)
+    result[mag < Mb_] = b0 + cadj
+    idx = (mag >= Mb_) & (mag < 5.8)
+    result[idx] = b0 + b1 * (mag[idx] - Mb_) + cadj
+    return result
 
 
 def _get_ZR19_site_term(C_ZR19, ctx):
@@ -75,9 +79,10 @@ def _get_ZR19_site_term(C_ZR19, ctx):
     Returns the amplification factor, based on vs30
     """
     Vc_ = C_ZR19["Vc"]
-    FS = np.zeros_like(ctx.vs30)
-    FS[ctx.vs30 < Vc_] = C_ZR19["c"] * np.log(ctx.vs30[ctx.vs30 < Vc_]/Vc_)
-    return FS
+    result = np.zeros_like(ctx.vs30, dtype=float)
+    idx = ctx.vs30 < Vc_
+    result[idx] = C_ZR19["c"] * np.log(ctx.vs30[idx] / Vc_)
+    return result
 
 
 def _get_stddevs(C_ZR19):
@@ -101,9 +106,9 @@ def get_FENA(Cadj, ctx, imt):
 
     # Convert from log10 to ln
     if imt.string.startswith(("SA", "PGA")):
-        FENA = np.log(10.0 ** imean)
+        FENA = imean * LOG10
     else:
-        FENA = np.log(10.0 ** imean)
+        FENA = imean * LOG10
     return FENA
 
 
@@ -209,7 +214,7 @@ class ZalachorisRathje2019(GMPE):
 	0.046	0.7180000	0.7620000	0.5720000	0.6910000	1.4000000	0.0669000	-0.1780000	5.5000000	-1.1200000	0.1880000	-0.0095200	4.2400000	0.0000000	-0.4690000	1502.4700000	-0.1820000	-0.0066700	-9.9000000	-9.9000000	101.7000000	270.0000000	0.0670000	0.0310000	0.7500000	0.5290000	0.4990000	0.4120000
 	0.048	0.7360000	0.7800000	0.5890000	0.7090000	1.4000000	0.0671000	-0.1790000	5.5000000	-1.1200000	0.1870000	-0.0096800	4.2200000	0.0000000	-0.4630000	1502.0100000	-0.1870000	-0.0065600	-9.9000000	-9.9000000	99.7600000	270.0000000	0.0650000	0.0310000	0.7520000	0.5300000	0.5020000	0.4190000
 	0.050	0.7540000	0.7990000	0.6070000	0.7270000	1.4000000	0.0674000	-0.1810000	5.5000000	-1.1200000	0.1870000	-0.0098200	4.2000000	0.0000000	-0.4580000	1501.4200000	-0.1920000	-0.0064700	-9.9000000	-9.9000000	97.9300000	270.0000000	0.0630000	0.0300000	0.7530000	0.5320000	0.5030000	0.4260000
-	0.055	0.8000000	0.8450000	0.6480000	0.7740000	1.3900000	0.0678000	-0.1850000	5.5000000	-1.1100000	0.1870000	-0.0101000	4.1500000	0.0000000	-0.4480000	1500.7100000	-0.2040000	-0.0062500	-9.9000000	-9.9000000	96.0300000	270.0000000	0.0620000	0.0290000	0.7530000	0.5340000	0.5020000	0.4340000	
+	0.055	0.8000000	0.8450000	0.6480000	0.7740000	1.3900000	0.0678000	-0.1850000	5.5000000	-1.1100000	0.1870000	-0.0101000	4.1500000	0.0000000	-0.4480000	1500.7100000	-0.2040000	-0.0062500	-9.9000000	-9.9000000	96.0300000	270.0000000	0.0620000	0.0290000	0.7530000	0.5340000	0.5020000	0.4340000
 	0.060	0.8440000	0.8890000	0.6860000	0.8210000	1.4000000	0.0686000	-0.1890000	5.5000000	-1.1000000	0.1860000	-0.0103000	4.1100000	0.0000000	-0.4420000	1499.8300000	-0.2140000	-0.0060700	-9.9000000	-9.9000000	94.1000000	270.0100000	0.0610000	0.0270000	0.7530000	0.5360000	0.4990000	0.4410000
 	0.065	0.8870000	0.9310000	0.7190000	0.8670000	1.4000000	0.0701000	-0.1920000	5.5000000	-1.0900000	0.1850000	-0.0105000	4.0800000	0.0000000	-0.4400000	1498.7400000	-0.2220000	-0.0059300	-9.9000000	-9.9000000	92.0800000	270.0200000	0.0610000	0.0250000	0.7520000	0.5380000	0.4950000	0.4480000
 	0.067	0.9030000	0.9470000	0.7320000	0.8850000	1.4000000	0.0709000	-0.1930000	5.5000000	-1.0900000	0.1840000	-0.0105000	4.0700000	0.0000000	-0.4400000	1497.4200000	-0.2250000	-0.0058800	-9.9000000	-9.9000000	90.0100000	270.0200000	0.0610000	0.0250000	0.7500000	0.5400000	0.4890000	0.4550000

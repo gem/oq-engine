@@ -174,6 +174,7 @@ def _compute_shallow_site_response(C, ctx, pga1100):
                             C['n']))) - np.log(pga1100[idx] + C['c'])
         fsite[idx] = C['c10'] * np.log(ctx.vs30[idx] / C['k1']) + \
             (C['k2'] * pga_scale)
+    # Any very hard rock ctx are rendered to the constant amplification factor
     # Any very hard rock ctx are rendered to the constant amplification
     # factor
     idx = ctx.vs30 >= 1100.

@@ -20,6 +20,7 @@ Module exports :class:`ESHM20Craton`
 """
 
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
@@ -31,6 +32,7 @@ from openquake.hazardlib.gsim.nga_east import (
 from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
+
 
 CONST = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
 
@@ -310,23 +312,19 @@ for stress, eps1 in zip(STRESS_BRANCHES, MILLER_RICE_GAUSS_5PNT):
 add_alias(
     "ESHM20CratonShallowHighStressMidAtten",
     KothaEtAl2020ESHM20,
-    sigma_mu_epsilon=1.732051
-    )
+    sigma_mu_epsilon=1.732051)
 
 add_alias(
     "ESHM20CratonShallowHighStressSlowAtten",
     KothaEtAl2020ESHM20,
     sigma_mu_epsilon=1.732051,
-    c3_epsilon=1.732051
-    )
+    c3_epsilon=1.732051)
 
 add_alias(
     "ESHM20CratonShallowMidStressMidAtten",
-    KothaEtAl2020ESHM20,
-    )
+    KothaEtAl2020ESHM20,)
 
 add_alias(
     "ESHM20CratonShallowMidStressSlowAtten",
     KothaEtAl2020ESHM20,
-    c3_epsilon=1.732051
-    )
+    c3_epsilon=1.732051)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023, GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ from openquake.hazardlib.gsim.atkinson_boore_2006 import (
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
 PGA_SA0 = (PGA(), SA(0))
 
 def hawaii_adjust(mean, ctx, imt):
@@ -41,9 +42,10 @@ def hawaii_adjust(mean, ctx, imt):
     x1 = np.min([-0.18 + 0.17 * np.log10(freq), 0])
 
     # Equation 4 a-b-c of Atkinson (2010)
-    x0 = np.full_like(ctx.hypo_depth, 0.2)
-    x0[ctx.hypo_depth < 20.0] = np.max([0.217 - 0.321 * np.log10(freq), 0])
-    x0[ctx.hypo_depth > 35.0] = np.min([0.263 + 0.0924 * np.log10(freq), 0.35])
+    x0_shallow = np.maximum(0.217 - 0.321 * np.log10(freq), 0)
+    x0_deep = np.minimum(0.263 + 0.0924 * np.log10(freq), 0.35)
+    x0 = np.where(ctx.hypo_depth < 20.0, x0_shallow,
+                  np.where(ctx.hypo_depth > 35.0, x0_deep, 0.2))
 
     # Limiting calculation distance to 1km
     # (as suggested by C. Bruce Worden)
@@ -137,7 +139,7 @@ class BooreAtkinson2008(GMPE):
                 corr_fact = 10.0**(np.clip(3.888 - 0.674 * ctx.mag, 0, None) -
                                    (np.clip(2.933 - 0.510 * ctx.mag, 0, None) *
                                     np.log10(ctx.rjb + 10.)))
-                mean[m] = np.log(np.exp(mean[m]) * corr_fact)
+                mean[m] = mean[m] + np.log(corr_fact)
 
             if self.kind == 'hawaii':
                 hawaii_adjust(mean[m], ctx, imt)
@@ -146,7 +148,7 @@ class BooreAtkinson2008(GMPE):
                 # Atkinson (2008) GMPE
                 A08 = self.COEFFS_A08[imt]
                 f_ena = 10.0 ** (A08["c"] + A08["d"] * ctx.rjb)
-                mean[m] = np.log(np.exp(mean[m]) * f_ena)
+                mean[m] = mean[m] + np.log(f_ena)
 
             set_sig(self.kind, C, sig[m], tau[m], phi[m])
 

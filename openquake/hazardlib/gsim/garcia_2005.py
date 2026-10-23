@@ -23,6 +23,7 @@ Module exports :class:'GarciaEtAl2005SSlab',
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA, PGV
@@ -51,10 +52,10 @@ def _compute_mean(C, g, ctx, imt):
         C['c5'] * hypo_depth)
     # convert from base 10 to base e
     if imt == PGV():
-        mean = np.log(10 ** mean)
+        mean = mean * LOG10
     else:
         # convert from cm/s**2 to g
-        mean = np.log((10 ** mean) * 1e-2 / g)
+        mean = mean * LOG10 + np.log(0.01 / g)
     return mean
 
 
@@ -64,7 +65,7 @@ def _get_stddevs(C):
     """
     # the standard deviation values are converted from base 10 to base e
     stds = np.array([C['s_t'], C['s_e'], C['s_r']])
-    return np.log(10 ** stds)
+    return stds * LOG10
 
 
 class GarciaEtAl2005SSlab(GMPE):

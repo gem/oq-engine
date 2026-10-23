@@ -32,7 +32,7 @@ from openquake.hazardlib.sourceconverter import (
 from openquake.hazardlib import valid
 
 NOAPPLY_UNCERTAINTIES = [
-    'sourceModel', 'extendModel', 'gmpeModel']
+    'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
 
 U32 = numpy.uint32
 # ts is the set of realizations with the same uncertainties (see get_ts_sets)

@@ -26,10 +26,12 @@ Module exports :class:`TusaLanger2016RepiBA08SE`,
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
+
 
 _compute_distance = CallableDict()
 
@@ -191,11 +193,13 @@ class TusaLanger2016RepiBA08SE(GMPE):
                      _get_site_amplification(ctx, C))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
+            sig[m] = C['SigmaTot'] * LOG10
 
     # Coefficients from Table 9 (PGA) and Table 12 (SA); sigma values in log
+    # Correction made to coeff b2 (0.14s) by Giuseppina Tusa in email (Jan
+    # 15, 2019)
     # Correction made to coeff b2 (0.14s) by Giuseppina Tusa in email (Jan 15, 2019)
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT    a       b1      b2      c1      c2       h       c3      sA  sB      sD      SigmaIE SigmaIS SigmaTot

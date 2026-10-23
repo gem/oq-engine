@@ -25,9 +25,11 @@ exports
 """
 import numpy as np
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
 
 CONSTS = {'ref_mag': 10.}
 
@@ -51,7 +53,7 @@ def _get_stddev(coeffs):
     "ln" to denote common and natural logarithm elsewhere in the paper.
     """
     log_stddev = coeffs['sigma']
-    ln_stddev = log_stddev*np.log(10)
+    ln_stddev = log_stddev*LOG10
     return ln_stddev
 
 

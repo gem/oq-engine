@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,9 +25,11 @@ Module exports :class:`AbrahamsonEtAl2018SInter`
                :class:`AbrahamsonEtAl2018SSlabLow`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
 
 CONSTANTS = {"n": 1.18,
              "c": 1.88,
@@ -119,23 +121,21 @@ def compute_site_term(C, vs30, pga1000):
     """
     Returns the site amplification
     """
-    vsstar = np.copy(vs30)
-    vsstar[vs30 >= 1000.0] = 1000.0
-    f_site = np.zeros_like(vs30)
+    vsstar = np.minimum(vs30, 1000.0)
+
+    f_site = np.zeros_like(vs30, dtype=float)
     # Consider the cases of only linear amplification
     idx = vs30 >= C["vlin"]
-    if np.any(idx):
-        f_site[idx] = _get_linear_site_term(C, vsstar[idx])
+    f_site[idx] = _get_linear_site_term(C, vsstar[idx])
     # Consider now only the nonlinear amplification cases
-    idx = np.logical_not(idx)
-    if np.any(idx):
-        # Linear term
-        flin = C["a12"] * np.log(vsstar[idx] / C["vlin"])
-        # Nonlinear term
-        fnl = (-C["b"] * np.log(pga1000[idx] + CONSTANTS["c"])) +\
-            (C["b"] * np.log(pga1000[idx] + CONSTANTS["c"] *
-             ((vsstar[idx] / C["vlin"]) ** CONSTANTS["n"])))
-        f_site[idx] = flin + fnl
+    # Linear term
+    # Nonlinear term
+    idx = ~idx
+    flin = C["a12"] * np.log(vsstar[idx] / C["vlin"])
+    fnl = (-C["b"] * np.log(pga1000[idx] + CONSTANTS["c"])) +\
+        (C["b"] * np.log(pga1000[idx] + CONSTANTS["c"] *
+         ((vsstar[idx] / C["vlin"]) ** CONSTANTS["n"])))
+    f_site[idx] = flin + fnl
     return f_site
 
 
@@ -165,11 +165,10 @@ def _get_dln_amp(C, pga1000, vs30):
     """
     dln = np.zeros(vs30.shape)
     idx = vs30 < C["vlin"]
-    if np.any(idx):
-        dln[idx] = C["b"] * pga1000[idx] * (
-            (-1. / (pga1000[idx] + CONSTANTS["c"])) +
-            (1. / (pga1000[idx] + CONSTANTS["c"] *
-                   ((vs30[idx] / C["vlin"]) ** CONSTANTS["n"]))))
+    denom1 = pga1000[idx] + CONSTANTS["c"]
+    denom2 = (pga1000[idx] + CONSTANTS["c"] *
+              ((vs30[idx] / C["vlin"]) ** CONSTANTS["n"]))
+    dln[idx] = C["b"] * pga1000[idx] * ((-1. / denom1) + (1. / denom2))
     return dln
 
 

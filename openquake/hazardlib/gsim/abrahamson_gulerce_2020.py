@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,8 +39,7 @@ SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
 REGIONAL_TERMS = {
     "GLO": {
         "C1s": 7.5,
-        "a1": "a1",
-        },
+        "a1": "a1",},
     "USA-AK": {
         "C1s": 7.9,   # In-slab magnitude scaling breakpoint
         "a1": "a31",   # Region-specific base constant
@@ -55,40 +54,35 @@ REGIONAL_TERMS = {
         "a2-adj": None,
         "a6-adj": "a25",
         "a12-adj": "a18",
-        "Z25-adj": "a39",
-        },
+        "Z25-adj": "a39",},
     "CAM": {
         "C1s": 7.4,
         "a1": "a33",
         "a2-adj": None,
         "a6-adj": "a26",
         "a12-adj": "a19",
-        "Z25-adj": None,
-        },
+        "Z25-adj": None,},
     "JPN": {
         "C1s": 7.6,
         "a1": "a34",
         "a2-adj": None,
         "a6-adj": "a27",
         "a12-adj": "a20",
-        "Z25-adj": "a41",
-        },
+        "Z25-adj": "a41",},
     "NZL": {
         "C1s": 8.0,
         "a1": "a35",
         "a2-adj": None,
         "a6-adj": "a28",
         "a12-adj": "a21",
-        "Z25-adj": None,
-        },
+        "Z25-adj": None,},
     "SAM": {
         "C1s": 7.5,
         "a1": "a36",
         "a2-adj": None,
         "a6-adj": "a29",
         "a12-adj": "a22",
-        "Z25-adj": None,
-        },
+        "Z25-adj": None,},
     "TWN": {
         "C1s": 7.7,
         "a1": "a37",
@@ -96,8 +90,7 @@ REGIONAL_TERMS = {
         "a6-adj": "a30",
         "a12-adj": "a23",
         "Z25-adj": None,
-        },
-}
+        },}
 
 # Region- and period-independent constant values
 CONSTS = {
@@ -129,8 +122,7 @@ CONSTS = {
     "d5_phi2": 0.470,
     "d3_phi3": 0.242,
     "d4_phi3": 0.000,
-    "d5_phi3": 0.000,
-}
+    "d5_phi3": 0.000,}
 
 METRES_PER_KM = 1000.
 
@@ -268,7 +260,7 @@ def get_site_amplification_term(C, region, vs30, pga1000):
         a12 += C[REGIONAL_TERMS[region]["a12-adj"]]
     # V* is defined according to Equation 3.8 (i.e. Vs30 clipped at 1000 m/s
     # in the Erratum)
-    vstar = np.clip(vs30, -np.inf, 1000.0)
+    vstar = np.minimum(vs30, 1000.0)
     vnorm = vstar / C["vlin"]
     fsite = a12 * np.log(vnorm)
     idx = vstar >= C["vlin"]
@@ -278,8 +270,7 @@ def get_site_amplification_term(C, region, vs30, pga1000):
     # Nonlinear site term
     fsite[idx] += C["b"] * (
         np.log(pga1000[idx] + CONSTS["c"] * (vnorm[idx] ** CONSTS["n"])) -
-        np.log(pga1000[idx] + CONSTS["c"])
-        )
+        np.log(pga1000[idx] + CONSTS["c"]))
     return fsite
 
 
@@ -317,9 +308,9 @@ def _get_basin_term(C, ctx, region, imt, usgs_baf):
     # Use GMM's vs30 to z2pt5 for none-measured values
     z2pt5 = ctx.z2pt5.copy()
     mask = z2pt5 == -999
-    z25 = METRES_PER_KM * z2pt5 # From km in ctx metres
+    z25 = METRES_PER_KM * z2pt5  # From km in ctx metres
     z25[mask] = z25_ref[mask]
-        
+
     # Get USGS basin scaling factor if required (can only be for
     # CAS region)
     if usgs_baf:
@@ -473,13 +464,12 @@ def get_partial_derivative_site_pga(C, vs30, pga1000):
     on reference rock, described in equation 5.9 (corrected in Erratum)
     """
     dfsite_dlnpga = np.zeros(vs30.shape)
-    vstar = np.clip(vs30, -np.inf, 1000.0)
+    vstar = np.minimum(vs30, 1000.0)
     idx = vstar <= C["vlin"]
     vnorm = vstar[idx] / C["vlin"]
     dfsite_dlnpga[idx] = C["b"] * pga1000 * (
         (-1.0 / (pga1000 + CONSTS["c"])) +
-        (1.0 / (pga1000 + CONSTS["c"] * (vnorm ** CONSTS["n"])))
-        )
+        (1.0 / (pga1000 + CONSTS["c"] * (vnorm ** CONSTS["n"]))))
     return dfsite_dlnpga
 
 
@@ -502,7 +492,7 @@ def get_tau_phi(C, C_PGA, region, period, rrup, vs30, pga1000, ergodic):
     tau = CONSTS["tau_lin"] * np.ones(vs30.shape)
     phi_lin, phi_lin_pga = get_phi_lin_model(C, C_PGA, region, period, rrup)
     # Find the sites where nonlinear site terms apply
-    idx = np.clip(vs30, -np.inf, 1000) < C["vlin"]
+    idx = np.minimum(vs30, 1000) < C["vlin"]
     if not np.any(idx):
         # Only linear term
         if ergodic:
@@ -661,12 +651,12 @@ class AbrahamsonGulerce2020SInter(GMPE):
         self.apply_usa_adjustment = apply_usa_adjustment
         self.usgs_basin_scaling = usgs_basin_scaling
         self.sigma_mu_epsilon = sigma_mu_epsilon
-        
+
         # If running for Cascadia or Japan then z2.5 is needed
         if region in ("CAS", "JPN"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
-        
+
         # USGS basin scaling only used if region is set to Cascadia
         if self.usgs_basin_scaling and self.region != "CAS":
             raise ValueError('USGS basin scaling is only applicable to the '
@@ -701,7 +691,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
-            mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000, imt,
+            mean[m] = get_mean_acceleration(
+                C, trt, self.region, ctx, pga1000, imt,
                                             self.apply_usa_adjustment,
                                             self.usgs_basin_scaling)
 
@@ -780,8 +771,7 @@ REGION_ALIASES = {
     "JPN": "Japan",
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
-    "TWN": "Taiwan",
-}
+    "TWN": "Taiwan",}
 
 
 for region in SUPPORTED_REGIONS[1:]:

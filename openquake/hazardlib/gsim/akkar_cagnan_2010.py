@@ -162,7 +162,7 @@ class AkkarCagnan2010(GMPE):
 
             # convert from cm/s**2 to g for SA (PGA is already computed in g)
             if imt.string[:2] == "SA":
-                mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+                mean[m] = mean[m] + np.log(0.01) - np.log(g)
 
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 

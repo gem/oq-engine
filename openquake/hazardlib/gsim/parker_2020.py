@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,7 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 REGIONS = [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
 
 SAT_REGIONS = [None, "Aleutian", "CAM_N", "CAM_S", "SA_N",
-               "SA_S", "TW_E", "TW_W", "JP_Pac", "JP_Phi"]  
+               "SA_S", "TW_E", "TW_W", "JP_Pac", "JP_Phi"]
 
 BASINS = [None, "out", "Seattle"]
 
@@ -71,7 +71,7 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     fb_adj[idx_ce1] = C['C_e1']
     fb_adj[idx_ce2] = C['C_e2']
     idx_zero = fb_adj == 0.
-    if len(idx_zero) > 0: # unmodified indices must be zeros still
+    if len(idx_zero) > 0:  # unmodified indices must be zeros still
         fb_adj[idx_zero] = (C['C_e3'] * delta_z2pt5_adj)[idx_zero]
     return np.log(2.0) - fb_adj
 
@@ -181,10 +181,10 @@ def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term=False,
         return 0
 
 
-_c0 = CallableDict()
+get_c0 = CallableDict()
 
 
-@_c0.add(const.TRT.SUBDUCTION_INTERFACE)
+@get_c0.add(const.TRT.SUBDUCTION_INTERFACE)
 def _c0_1(trt, region, saturation_region, C, C_PGA):
     """
     c0 factor.
@@ -196,7 +196,7 @@ def _c0_1(trt, region, saturation_region, C, C_PGA):
     return C[c0_col], C_PGA[c0_col]
 
 
-@_c0.add(const.TRT.SUBDUCTION_INTRASLAB)
+@get_c0.add(const.TRT.SUBDUCTION_INTRASLAB)
 def _c0_2(trt, region, saturation_region, C, C_PGA):
     """
     c0 factor.
@@ -244,10 +244,10 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     Basin term for given factors.
     """
     z2 = ctx.z2pt5.copy()
-    btf = np.zeros_like(ctx.vs30)
     select = z2 != 0
-    if len(select) == 0:
-        return btf
+    if not np.any(select):
+        return np.zeros_like(ctx.vs30)
+
     vs30 = ctx.vs30[select]
     z2pt5 = z2[select]
 
@@ -259,10 +259,11 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
 
     del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
 
+    btf = np.zeros_like(ctx.vs30)
     btf[select] = np.where(
         del_z2pt5 <= (e1 / e3), e1, np.where(
             del_z2pt5 >= (e2 / e3), e2, e3 * del_z2pt5))
-    
+
     # Get USGS basin scaling factor if req (should
     # only really be applied to Cascadia region)
     if usgs_basin_scaling:
@@ -275,14 +276,14 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     if m9_basin_term and imt != PGV:
         if imt.period >= 1.9:
             m9_adj = _get_adjusted_m9_basin_term(C, z2pt5)
-            btf[z2pt5 >= 6.0] = m9_adj[z2pt5 >= 6.0] 
+            btf[z2pt5 >= 6.0] = m9_adj[z2pt5 >= 6.0]
 
     # Now that basin term has been (if required) adjusted with m9
     # correction then apply the usgs basin scaling factor (again
     # if specified)
     btf *= usgs_baf
 
-    return btf 
+    return btf
 
 
 def _linear_amplification(region, C, vs30):
@@ -438,7 +439,7 @@ class ParkerEtAl2020SInter(GMPE):
     :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
                                     based on USGS basin model
     :param float sigma_mu_epsilon: Number of standard deviations to multiply
-                                   sigma_mu (which is the standard deviations 
+                                   sigma_mu (which is the standard deviations
                                    of the median) for the epistemic uncertainty
                                    model
     :param ak23_bias_adj: Period-dependent bias adjustment as applied within
@@ -541,7 +542,7 @@ class ParkerEtAl2020SInter(GMPE):
                 m_b = self.MB_REGIONS[self.saturation_region]
             else:
                 m_b = self.MB_REGIONS["default"]
-            c0, c0_pga = _c0(
+            c0, c0_pga = get_c0(
                 trt, self.region, self.saturation_region, C, C_PGA)
             fm, fm_pga = _magnitude_scaling(
                 self.SUFFIX, C, C_PGA, ctx.mag, m_b)
@@ -565,7 +566,8 @@ class ParkerEtAl2020SInter(GMPE):
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
 
-            if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
+            # Assume don't apply to PGV
+            if self.sigma_mu_epsilon and imt != PGV:
                 # Apply epistemic uncertainty factor
                 sigma_mu_adjust = _get_sigma_mu_adjustment(
                     self.saturation_region, trt, imt, self.epi_adjs_table)

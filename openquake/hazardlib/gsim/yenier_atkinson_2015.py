@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2021-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@
 Module exports :class:`YenierAtkinson2015BSSA`
 """
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -200,7 +201,8 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     pga_rock = np.exp(pga_rock)
     if adapted:  # in acme_2019
         # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-        vs30 = np.ones_like(ctx.vs30) * 760.
+        vs30 = np.full_like(
+            ctx.vs30, 760., dtype=np.result_type(ctx.vs30, 760.))
     else:
         vs30 = ctx.vs30
     # Compute the mean on soil
@@ -222,8 +224,8 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
     """
     if region == 'CENA':
         d = focal_depth
-        t1 = np.clip(0.290 * (d - 10.), None, 0)
-        t2 = np.clip(0.229 * (m - 5.), None, 0)
+        t1 = np.minimum(0.290 * (d - 10.), 0)
+        t2 = np.minimum(0.229 * (m - 5.), 0)
         delta_sigma = np.exp(5.704 + t1 + t2)
         edelta = _get_edelta(C, m, delta_sigma)
         return edelta * np.log(delta_sigma/100.)

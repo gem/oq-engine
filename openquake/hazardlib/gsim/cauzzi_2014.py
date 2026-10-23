@@ -28,6 +28,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -55,13 +56,12 @@ def _compute_mean(clsname, sof, adjustment_factor, C, ctx, imt):
     # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
     # is already in cm/s) and also convert from base 10 to base e.
     if imt.string == "PGA":
-        mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
-                      1e-2 / g)
+        mean = mean * LOG10 + np.log((2 * np.pi / 0.01) ** 2 * 0.01 / g)
     elif imt.string[:2] == "SA":
-        mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                      1e-2 / g)
+        mean = (mean * LOG10 +
+                np.log((2 * np.pi / imt.period) ** 2 * 0.01 / g))
     else:
-        mean = np.log(10 ** mean)
+        mean = mean * LOG10
 
     return mean + adjustment_factor
 
@@ -124,18 +124,22 @@ def _get_site_amplification_term_5(clsname, sof, C, vs30):
     return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
 
 
+def _get_ec8_site_dummies(vs30):
+    # Compute Eurocode 8 site class dummy variables. Returns s_b, s_c, s_d
+    # based on Vs30 thresholds.
+    s_b = np.where((vs30 >= 360.) & (vs30 < 800.), 1.0, 0.0)
+    s_c = np.where((vs30 >= 180.) & (vs30 < 360.), 1.0, 0.0)
+    s_d = np.where(vs30 < 180., 1.0, 0.0)
+    return s_b, s_c, s_d
+
+
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8scaled")
 def _get_site_amplification_term_6(clsname, sof, C, vs30):
     """
     Returns the site amplification term on the basis of Eurocode 8
     site class
     """
-    s_b = np.zeros_like(vs30)
-    s_c = np.zeros_like(vs30)
-    s_d = np.zeros_like(vs30)
-    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-    s_d[vs30 < 180] = 1.0
+    s_b, s_c, s_d = _get_ec8_site_dummies(vs30)
     return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
 
 
@@ -147,13 +151,7 @@ def _get_site_dummy_variables_1(sof, vs30):
     """
     Returns the Eurocode 8 site class dummy variable
     """
-    s_b = np.zeros_like(vs30)
-    s_c = np.zeros_like(vs30)
-    s_d = np.zeros_like(vs30)
-    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-    s_d[vs30 < 180] = 1.0
-    return s_b, s_c, s_d
+    return _get_ec8_site_dummies(vs30)
 
 
 @_get_site_dummy_variables.add(False)
@@ -161,13 +159,7 @@ def _get_site_dummy_variables_2(sof, vs30):
     """
     Returns the Eurocode 8 site class dummy variable
     """
-    s_b = np.zeros_like(vs30)
-    s_c = np.zeros_like(vs30)
-    s_d = np.zeros_like(vs30)
-    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-    s_d[vs30 < 180.] = 1.0
-    return s_b, s_c, s_d
+    return _get_ec8_site_dummies(vs30)
 
 
 _get_stddevs = CallableDict()
@@ -178,9 +170,9 @@ def _get_stddevs_1(sof, C):
     """
     Return standard deviations assuming style-of-faulting is known
     """
-    return [np.log(10.0 ** C['sM']),
-            np.log(10.0 ** C["tM"]),
-            np.log(10.0 ** C['f'])]
+    return [C['sM'] * LOG10,
+            C['tM'] * LOG10,
+            C['f'] * LOG10]
 
 
 @_get_stddevs.add(False)
@@ -189,9 +181,9 @@ def _get_stddevs_2(sof, C):
     Returns the standard deviation terms assuming no style-of-faulting
     is known
     """
-    return [np.log(10.0 ** C['s']),
-            np.log(10.0 ** C["t"]),
-            np.log(10.0 ** C['f'])]
+    return [C['s'] * LOG10,
+            C['t'] * LOG10,
+            C['f'] * LOG10]
 
 
 def _get_style_of_faulting_term(C, rake):

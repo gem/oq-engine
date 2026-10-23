@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import deepcopy
+
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.nga_east import _at_percentile
 

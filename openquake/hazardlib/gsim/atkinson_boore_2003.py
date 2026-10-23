@@ -31,6 +31,7 @@ import numpy as np
 from scipy.constants import g
 import copy
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -71,13 +72,9 @@ def _compute_site_class_dummy_variables_SInter(kind, vs30):
     Compute site class dummy variables as explained in paragraph
     'Functional Form', page 1706.
     """
-    Sc = np.zeros_like(vs30)
-    Sd = np.zeros_like(vs30)
-    Se = np.zeros_like(vs30)
-
-    Sc[(vs30 > 360) & (vs30 <= 760)] = 1
-    Sd[(vs30 >= 180) & (vs30 <= 360)] = 1
-    Se[vs30 < 180] = 1
+    Sc = np.where((vs30 > 360.) & (vs30 <= 760.), 1, 0)
+    Sd = np.where((vs30 >= 180.) & (vs30 <= 360.), 1, 0)
+    Se = np.where(vs30 < 180., 1, 0)
 
     return Sc, Sd, Se
 
@@ -89,15 +86,10 @@ def _compute_site_class_dummy_variables_2008(kind, vs30):
     :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
     and includes dummy variable for B/C site conditions (vs30 > 760.)
     """
-    Sbc = np.zeros_like(vs30)
-    Sc = np.zeros_like(vs30)
-    Sd = np.zeros_like(vs30)
-    Se = np.zeros_like(vs30)
-
-    Sbc[vs30 > 760.] = 1
-    Sc[(vs30 > 360) & (vs30 <= 760)] = 1
-    Sd[(vs30 >= 180) & (vs30 <= 360)] = 1
-    Se[vs30 < 180] = 1
+    Sbc = np.where(vs30 > 760., 1, 0)
+    Sc = np.where((vs30 > 360.) & (vs30 <= 760.), 1, 0)
+    Sd = np.where((vs30 >= 180.) & (vs30 <= 360.), 1, 0)
+    Se = np.where(vs30 < 180., 1, 0)
 
     return Sbc, Sc, Sd, Se
 
@@ -262,15 +254,15 @@ class AtkinsonBoore2003SInter(GMPE):
                                         ctx.rrup, ctx.vs30, pga_rock, imt)
 
             # convert from log10 to ln and units from cm/s**2 to g
-            mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
+            mean[m] = mean[m] * LOG10 + np.log(0.01 / g)
 
             if imt.period == 4.0:
                 mean[m] /= 0.550
 
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
             if 's2' in C.dtype.names:  # in the Gupta subclass
-                tau[m] = np.log(10 ** C['s2'])
-                phi[m] = np.log(10 ** C['s1'])
+                tau[m] = C['s2'] * LOG10
+                phi[m] = C['s1'] * LOG10
 
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
     IMT      c1          c2          c3           c4          c5          c6          c7          sigma       s1          s2
@@ -330,15 +322,15 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
             mean[m] = _compute_mean(
                 self.kind, C, G, mag, ctx.hypo_depth, ctx.rrup,
                 ctx.vs30, pga_rock, imt)
-            mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
+            mean[m] = mean[m] * LOG10 + np.log(0.01 / g)
 
             if imt.period == 4.0:
                 mean[m] /= 0.550
 
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
             if 's2' in C.dtype.names:  # in the Gupta subclass
-                tau[m] = np.log(10 ** C['s2'])
-                phi[m] = np.log(10 ** C['s1'])
+                tau[m] = C['s2'] * LOG10
+                phi[m] = C['s1'] * LOG10
 
     COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
     IMT      c1         c2         c3         c4         c5          c6         c7         sigma      s1        s2

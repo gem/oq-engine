@@ -26,6 +26,8 @@ import numpy as np
 import pandas as pd
 from scipy.constants import g as gravity_acc
 from scipy.spatial import cKDTree
+
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib import const
 from openquake.hazardlib.geo.mesh import Mesh
@@ -283,13 +285,13 @@ class SgobbaEtAl2020(GMPE):
                        _get_distance_term(C, ctx.mag, ctx) +
                        sc + cc + self.be)
             # To natural logarithm and fraction of g
-            mean[m] = np.log(10.0**mean[m] / (gravity_acc*100))
+            mean[m] = mean[m] * LOG10 - np.log(gravity_acc * 100)
             # Get stds
             std = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 +
                           Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
-            sig[m] = np.log(10.0 ** std)
-            tau[m] = np.log(10.0 ** self.be_std)
-            phi[m] = np.log(10.0 ** np.sqrt((std ** 2 - self.be_std ** 2)))
+            sig[m] = std * LOG10
+            tau[m] = self.be_std * LOG10
+            phi[m] = np.sqrt(std ** 2 - self.be_std ** 2) * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT                a                   b1                  b2                   c1                   c2                    c3                     mref               tau_ev              tau_L2L               phi_S2S_ref   phi_S2S              phi_P2P             sigma_0            dL2L_cluster1          dL2L_cluster4         dL2L_cluster5

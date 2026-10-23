@@ -22,6 +22,7 @@ Module exports :class:`megawatiEtAl2003`.
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -96,7 +97,7 @@ class MegawatiEtAl2003(GMPE):
                        _get_azimuth_correction(coe, ctx.azimuth))
             # Convert to g
             if imt.string.startswith(("PGA", "SA")):
-                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+                mean[m] = mean[m] - np.log(100.0 * g)
             # Compute std
             sig[m] = coe['sigma']
 

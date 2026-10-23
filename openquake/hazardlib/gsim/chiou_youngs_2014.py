@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,13 +36,18 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 REF_VS = 1130.
+BASIN_REFERENCE_VS = 1360.
+BASIN_VS_JAPAN = 412.39
+BASIN_VS_GLOBAL = 570.94
+DIRECTIVITY_MAG_MIN = 5.5
+DIRECTIVITY_MAG_SPAN = 0.8
 
 
-# CyberShake basin adjustments for CY14 (only applied above 
+# CyberShake basin adjustments for CY14 (only applied above
 # 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CY14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
-IMT   phi5cy   phi6cy   
+IMT   phi5cy   phi6cy
 2     0.244    1000
 3     0.262    608
 4     0.819    1000
@@ -57,7 +62,8 @@ def japan_mean_z1pt0(vs30):
     Return z1pt0 based on Japan region CY14 relationship
     """
     return (-5.23 / 2.) * np.log(((
-        vs30 ** 2.) + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.))
+        vs30 ** 2.) + BASIN_VS_JAPAN ** 2.) /
+        (BASIN_REFERENCE_VS ** 2. + BASIN_VS_JAPAN ** 2.))
 
 
 def global_mean_z1pt0(vs30):
@@ -65,7 +71,8 @@ def global_mean_z1pt0(vs30):
     Return z1pt0 based on non-Japan region CY14 relationship
     """
     return (-7.15 / 4.) * np.log((
-        (vs30) ** 4. + 570.94 ** 4.) / (1360 ** 4. + 570.94 ** 4.))
+        (vs30) ** 4. + BASIN_VS_GLOBAL ** 4.) /
+        (BASIN_REFERENCE_VS ** 4. + BASIN_VS_GLOBAL ** 4.))
 
 
 def _get_centered_z1pt0(region, vs30, z1pt0):
@@ -103,9 +110,9 @@ def _get_ln_y_ref(ctx, C):
     Implements eq. 13a.
     """
     # Reverse faulting flag
-    Frv = 1. if 30 <= ctx.rake <= 150 else 0.
+    Frv = ((30. <= ctx.rake) & (ctx.rake <= 150.)).astype(float)
     # Normal faulting flag
-    Fnm = 1. if -120 <= ctx.rake <= -60 else 0.
+    Fnm = ((-120. <= ctx.rake) & (ctx.rake <= -60.)).astype(float)
     # A part in eq. 11
     mag_test1 = np.cosh(2. * np.clip(ctx.mag - 4.5, 0., None))
     # Centered DPP
@@ -113,9 +120,7 @@ def _get_ln_y_ref(ctx, C):
     # Centered Ztor
     centered_ztor = 0
 
-    dist_taper = np.fmax(1 - (np.fmax(ctx.rrup - 40,
-                              np.zeros_like(ctx)) / 30.),
-                         np.zeros_like(ctx))
+    dist_taper = np.fmax(1 - np.fmax(ctx.rrup - 40, 0.) / 30., 0.)
     dist_taper = dist_taper.astype(np.float64)
     ln_y_ref = (
         # first part of eq. 11
@@ -128,7 +133,7 @@ def _get_ln_y_ref(ctx, C):
         # second part
         + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
+        * np.logaddexp(0.0, C['cn'] * (C['cm'] - ctx.mag))
         # third part
         + C['c4']
         * np.log(ctx.rrup + C['c5']
@@ -141,7 +146,8 @@ def _get_ln_y_ref(ctx, C):
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * np.clip((ctx.mag - 5.5, 0) / 0.8, 0., 1.)
+        * np.clip((ctx.mag - DIRECTIVITY_MAG_MIN) /
+                  DIRECTIVITY_MAG_SPAN, 0., 1.)
         * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
         # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
@@ -164,7 +170,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
         # third line
         + C['phi2'] * (exp1 - exp2)
-        * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
+        * np.logaddexp(0.0, ln_y_ref + eta - np.log(C['phi4']))
         # fourth line - removed
         # fifth line
         + epsilon)
@@ -202,12 +208,12 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     if cy and imt.period > 1.9:
         phi5 = COEFFS_CY[imt]["phi5cy"]
         phi6 = COEFFS_CY[imt]["phi6cy"]
-        adj = 0.1 # CY_CSIM variable in java code
+        adj = 0.1  # CY_CSIM variable in java code
     else:
         phi5 = C["phi5"]
         phi6 = CONSTANTS["phi6"]
         adj = 0.
-    
+
     fb = (phi5 * (1.0 - np.exp(-dz1pt0 / phi6))) + adj
 
     return fb * usgs_baf
@@ -221,14 +227,15 @@ def get_directivity(C, ctx):
     directivity prediction parameter. Here we set the centered_dpp
     equal to zero, since the near fault directivity effect prediction is
     off by default in our calculation.
-    """    
+    """
     try:
-        cdpp =  ctx.rcdpp
+        cdpp = ctx.rcdpp
     except AttributeError:
         # No directivity term
         return 0.
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
+    f_dir *= np.clip((ctx.mag - DIRECTIVITY_MAG_MIN) / \
+                     DIRECTIVITY_MAG_SPAN, 0., 1.)
     rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
@@ -239,87 +246,63 @@ def get_directivity(C, ctx):
 get_far_field_distance_scaling = CallableDict()
 
 
+def _compute_far_field_distance_scaling(region, C, mag, rrup, delta_g):
+    # Compute far-field distance scaling term with
+    # optional region-specific adjustments.
+    # Attenuation distance scaling (geometric spreading term)
+    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
+        np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
+
+    # Magnitude dependent term
+    gamma = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
+
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+
+    # Apply region-specific adjustments
+    if region == "JPN":
+        idx = (mag > 6.0) & (mag < 6.9)
+        f_rm[idx] *= C["gjpit"]
+    elif region == "ITA":
+        idx = (mag > 6.0) & (mag < 6.9)
+        f_rm[idx] *= C["gjpit"]
+    elif region == "WEN":
+        f_rm = f_rm * C["gwn"]
+    # CAL and others: no adjustment
+
+    return f_r + f_rm
+
+
 @get_far_field_distance_scaling.add("CAL")
 def get_far_field_distance_scaling_1(region, C, mag, rrup, delta_g):
     """
-    Returns the far-field distance scaling term - both magnitude and
-    distance - for California and other regions
+    Returns far-field distance scaling for California and other regions.
     """
-    # Get the attenuation distance scaling (geometric spreading term)
-    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
-        np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
-    
-    # Get the magnitude dependent term
-    gamma = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
-    
-    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
-    f_rm = (gamma + delta_g) * rrup
-    
-    return f_r + f_rm
+    return _compute_far_field_distance_scaling(region, C, mag, rrup, delta_g)
 
 
 @get_far_field_distance_scaling.add("JPN")
 def get_far_field_distance_scaling_2(region, C, mag, rrup, delta_g):
     """
-    Returns the far-field distance scaling term - both magnitude and
-    distance - for Japan
+    Returns far-field distance scaling for Japan.
     """
-    # Get the attenuation distance scaling (geometric spreading term)
-    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
-        np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
-
-    # Get the magnitude dependent term
-    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
-    
-    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
-    f_rm = (gamma + delta_g) * rrup
-    
-    # Apply adjustment factor for Japan
-    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
-    
-    return f_r + f_rm
+    return _compute_far_field_distance_scaling(region, C, mag, rrup, delta_g)
 
 
 @get_far_field_distance_scaling.add("ITA")
 def get_far_field_distance_scaling_3(region, C, mag, rrup, delta_g):
     """
-    Returns the far-field distance scaling term - both magnitude and
-    distance - for Italy
+    Returns far-field distance scaling for Italy.
     """
-    # Get the attenuation distance scaling (geometric spreading term)
-    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
-        np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
-
-    # Get the magnitude dependent term
-    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
-    
-    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
-    f_rm = (gamma + delta_g) * rrup
-    
-    # Apply adjustment factor for Italy
-    f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
-    
-    return f_r + f_rm
+    return _compute_far_field_distance_scaling(region, C, mag, rrup, delta_g)
 
 
 @get_far_field_distance_scaling.add("WEN")
 def get_far_field_distance_scaling_4(region, C, mag, rrup, delta_g):
     """
-    Returns the far-field distance scaling term - both magnitude and
-    distance - for Wenchuan
+    Returns far-field distance scaling for Wenchuan.
     """
-    # Get the attenuation distance scaling (geometric spreading term)
-    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
-        np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
-
-    # Get the magnitude dependent term
-    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
-    
-    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
-    f_rm = (gamma + delta_g) * rrup
-    
-    # Apply adjustment factor for Wenchuan
-    return f_r + (f_rm * C["gwn"])
+    return _compute_far_field_distance_scaling(region, C, mag, rrup, delta_g)
 
 
 def get_geometric_spreading(C, mag, rrup):
@@ -344,7 +327,7 @@ def get_hanging_wall_term(C, ctx):
         fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
     return fhw
 
-    
+
 def get_delta_c1(rrup, imt, mag):
     """
     Return the delta_c1 long-period adjustment parameter as defined by equation
@@ -368,10 +351,12 @@ def get_delta_c1(rrup, imt, mag):
             s2 = -0.1342 + 0.0716 * np.maximum(mag[idx]-7, 0)
             s3 = 0.2513 - 0.0419 * np.maximum(mag[idx]-7, 0)
 
+            # Equation 3a - Note that we add a capping to rrup to avoid
+            # an overflow
             # Equation 3a - Note that we add a capping to rrup to avoid an
             # overflow
             dst = rrup[idx]
-            dst[dst>100] = 100
+            dst[dst > 100] = 100
             s = s1 + s2 / np.cosh(s3 * dst)
 
             # Equation 2
@@ -379,7 +364,7 @@ def get_delta_c1(rrup, imt, mag):
                 np.log(float(imt.period)/tb[idx]), 0)**2
 
     return delta_c1
-    
+
 
 def _get_delta_cm(conf, imt):
     """
@@ -389,11 +374,12 @@ def _get_delta_cm(conf, imt):
     # Get source function table
     source_function_table = conf.get('source_function_table')
 
-    if imt in source_function_table: # Only apply if IMT in user-defined source
+    # Only apply if IMT in user-defined source
+    if imt in source_function_table:
                                      # function table
-        # Get coeffs  
+        # Get coeffs
         C = source_function_table[imt]
-        
+
         # Get stress params
         stress_par_host = conf.get('stress_par_host')
         stress_par_targ = conf.get('stress_par_target')
@@ -410,7 +396,7 @@ def _get_delta_cm(conf, imt):
         return delta_cm
 
     else:
-        return 0. # No adjustment for given IMT
+        return 0.  # No adjustment for given IMT
 
 
 def _get_delta_g(delta_gamma_tab, ctx, imt):
@@ -418,20 +404,20 @@ def _get_delta_g(delta_gamma_tab, ctx, imt):
     Returns the delta_g parameter as defined by equation 13 in Boore et al.
     (2022) for the host-to-target region path adjustment
     """
-    if imt in delta_gamma_tab: # Only apply if IMT has coeffs in the table
+    if imt in delta_gamma_tab:  # Only apply if IMT has coeffs in the table
 
         # Get coefficients for imt
         C = delta_gamma_tab[imt]
-        
+
         # Compute delta_g (magnitude-dependent)
         delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
             ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
-    
+
         return delta_g
-    
+
     else:
-        return 0. # No adjustment for given IMT
-    
+        return 0.  # No adjustment for given IMT
+
 
 def get_ln_y_ref(region, C, ctx, conf):
     """
@@ -491,7 +477,7 @@ def get_magnitude_scaling(C, mag, delta_cm):
     Returns the magnitude scaling
     """
     f_m = np.zeros_like(mag)
-    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] + delta_cm - mag)))
+    f_m = np.logaddexp(0.0, C['cn'] * (C['cm'] + delta_cm - mag))
     f_m = (CONSTANTS["c2"] * (mag - 6.0) +
            ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m -
            (CONSTANTS["c2"] - C["c3"]) * delta_cm)
@@ -503,7 +489,7 @@ def get_linear_site_term(region, C, vs30):
     Returns the linear site scaling term
     """
     coeff = C["phi1jp"] if region == "JPN" else C["phi1"]
-    return coeff * np.clip(np.log(vs30 / REF_VS), -np.inf, 0.0)
+    return coeff * np.minimum(np.log(vs30 / REF_VS), 0.0)
 
 
 def get_nonlinear_site_term(C, vs30, y_ref):
@@ -511,7 +497,7 @@ def get_nonlinear_site_term(C, vs30, y_ref):
     Returns the nonlinear site term and the Vs-scaling factor (to be
     used in the standard deviation model
     """
-    vs = np.clip(vs30, -np.inf, REF_VS)
+    vs = np.minimum(vs30, REF_VS)
     f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
                                 np.exp(C["phi3"] * (REF_VS - 360.)))
     f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
@@ -643,7 +629,7 @@ class ChiouYoungs2014(GMPE):
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
     Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
     DOI: 10.1193/072813EQS219M
-    
+
     :param sigma_mu_epsilon:
         Epsilon for the statistical uncertainty term.
     :param use_hw:
@@ -702,7 +688,7 @@ class ChiouYoungs2014(GMPE):
 
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
-        
+
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
                  add_delta_c1=False, alpha_nm=1.0,
                  stress_par_host=None, stress_par_target=None,
@@ -712,18 +698,18 @@ class ChiouYoungs2014(GMPE):
         # set region
         self.region = region
 
-        # set sigma_mu_epsilon 
+        # set sigma_mu_epsilon
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
         # set the conf dictionary
         self.conf = {}
         self.conf['peer'] = self.__class__.__name__.endswith('PEER')
-        self.conf['use_hw'] = use_hw 
+        self.conf['use_hw'] = use_hw
         self.conf['alpha_nm'] = alpha_nm
         self.conf['add_delta_c1'] = add_delta_c1
         self.conf['stress_par_host'] = stress_par_host
         self.conf['stress_par_target'] = stress_par_target
-        
+
         # The file with the `source function table` has a structure similar to
         # a traditional coefficient table. The columns in the `source function
         # table` are:
@@ -734,7 +720,8 @@ class ChiouYoungs2014(GMPE):
         # - S2RS            param
         # - chi             i.e. χFS2RS in equation 6
         if source_function_tab is not None:
-            assert stress_par_host is not None and stress_par_target is not None
+            assert (stress_par_host is not None and
+                    stress_par_target is not None)
             with open(source_function_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['source_function_table'] = CoeffsTable(
@@ -776,7 +763,7 @@ class ChiouYoungs2014(GMPE):
             self.region, self.COEFFS[PGA()], ctx, PGA(),
             self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
             self.cybershake_basin_adj)
-        
+
         # Compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
@@ -785,21 +772,21 @@ class ChiouYoungs2014(GMPE):
                 mean[m] = pga_mean
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
-            
+
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
                     self.region, self.COEFFS[imt], ctx, imt,
                     self.COEFFS_EMME, self.conf, self.usgs_basin_scaling,
                     self.cybershake_basin_adj)
-                
+
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
-                # value of PGA when it falls below the predicted PGA 
+                # value of PGA when it falls below the predicted PGA
                 # NOTE: Not used in the EMME24 backbone model
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 and \
                         not self.COEFFS_EMME else imt_mean
-                
+
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
@@ -854,8 +841,8 @@ add_alias('ChiouYoungs2014Wenchuan', ChiouYoungs2014, region='WEN')
 
 class ChiouYoungs2014PEER(ChiouYoungs2014):
     """
-    This implements the Chiou & Youngs (2014) GMPE for use with the PEER
-    tests. In this version the total standard deviation is fixed at 0.65
+    Implements the Chiou & Youngs (2014) GMPE for use with the PEER tests. In
+    this version the total standard deviation is fixed at 0.65
     """
     #: Only the total standars deviation is defined
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -865,9 +852,9 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
 
 class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
     """
-    This implements the Chiou & Youngs (2014) GMPE include the near fault
-    effect prediction. In this version, we add the distance measure, rcdpp
-    for directivity prediction.
+    Implements the Chiou & Youngs (2014) GMPE include the near fault effect
+    prediction. In this version, we add the distance measure, rcdpp for
+    directivity prediction.
     """
     #: Required distance measures are RRup, Rjb, Rx, and Rcdpp
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'rcdpp'}
@@ -892,9 +879,13 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
-            ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
+            ln_y_ref = _get_ln_y_ref(ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
-            exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, REF_VS) - 360))
+            exp1 = np.exp(C['phi3'] * (np.minimum(ctx.vs30, REF_VS) - 360))
             exp2 = np.exp(C['phi3'] * (REF_VS - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, REF_VS)
+            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2)
+            f_nl_scaling = C['phi2'] * (exp1 - exp2)
+            sig[m], tau[m], phi[m] = get_stddevs(
+                self.conf['peer'], C, ctx, ctx.mag, np.exp(ln_y_ref),
+                f_nl_scaling)

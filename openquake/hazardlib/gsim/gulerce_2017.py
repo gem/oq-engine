@@ -57,7 +57,9 @@ def _get_basic_term(C, ctx):
     # Equation 12
     R = np.sqrt(ctx.rrup**2. + c4m**2.)
     # basic form, Equation 11
-    base_term = C['a1'] * np.ones_like(ctx.rrup) + C['a17'] * ctx.rrup
+    base_term = (np.full_like(
+        ctx.rrup, C['a1'], dtype=np.result_type(ctx.rrup, C['a1'])) +
+        C['a17'] * ctx.rrup)
     # NB: m1 > m2
     after = ctx.mag >= CONSTS['m1']
     within = (ctx.mag < CONSTS['m1']) & (ctx.mag >= CONSTS['m2'])
@@ -122,10 +124,9 @@ def _get_hanging_wall_term(C, ctx):
     r2 = 4. * r1
     #
     idx = ctx.rx < r1
-    T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
+    T3[idx] = (CONSTS['h1'] +
                CONSTS['h2'] * (ctx.rx[idx] / r1[idx]) +
                CONSTS['h3'] * (ctx.rx[idx] / r1[idx])**2)
-    #
     idx = (ctx.rx >= r1) & (ctx.rx <= r2)
     T3[idx] = 1. - (ctx.rx[idx] - r1[idx]) / (r2[idx] - r1[idx])
     # Compute depth taper t4, Equation 9
@@ -136,7 +137,6 @@ def _get_hanging_wall_term(C, ctx):
     # ry1 computed same as in ASK14
     T5 = np.zeros_like(ctx.rx)
     ry1 = ctx.rx * np.tan(np.radians(20.))
-    #
     idx = (ctx.ry0 - ry1) <= 0.0
     T5[idx] = 1.
     #
@@ -259,8 +259,6 @@ def _get_site_response_term(C, imt, vs30):
     # vs30 star, Equation 15
     vs30_star = _get_vs30star(vs30, imt)
     # compute the site term
-    site_resp_term = np.zeros_like(vs30)
-
     # Unlike ASK14, the site term here is independent of nonlinear response
     # parameters b, c, and n.
     vs30_rat = vs30_star / C['vlin']

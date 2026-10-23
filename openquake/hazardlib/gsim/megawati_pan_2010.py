@@ -22,6 +22,7 @@ Module exports :class:`megawatipan2010`.
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -91,7 +92,7 @@ class MegawatiPan2010(GMPE):
             mean[m] = (_get_magnitude_scaling(C, ctx.mag) +
                        _get_distance_scaling(C, ctx.mag, ctx.rhypo))
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+                mean[m] = mean[m] - np.log(100.0 * g)
             sig[m] = C['sigma']
 
     #: Coefficient table for rock ctx, see table 3 page 227.

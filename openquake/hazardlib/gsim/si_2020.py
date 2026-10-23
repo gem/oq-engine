@@ -22,6 +22,7 @@ Module exports :class:`SiEtAl2020SInter`
 """
 import numpy as np
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -51,8 +52,7 @@ def get_magnitude_scaling_term(C, imt, mag):
     fmag = np.where(
         mag < m_ref,
         C["a1"] * mag,
-        C["a1"] * mag + (C["a2"] - C["a1"]) * (mag - m_ref)
-    )
+        C["a1"] * mag + (C["a2"] - C["a1"]) * (mag - m_ref))
     return fmag
 
 
@@ -100,23 +100,21 @@ def get_shallow_site_response_term(C, vs30, pga760):
     """
     Returns the shallow site response term (Eq. 3.2 tp 3.4)
     """
-    vs30_comp = np.clip(vs30, -np.inf, 760.0)
+    vs30_comp = np.minimum(vs30, 760.0)
     # Nonlinear site scaling term
     f2 = 0.5 * C["f4"] * (np.exp(C["f5"] * (vs30_comp - 360.0)) -
                           np.exp(C["f5"] * (760.0 - 360.0)))
     # Linear site term
     f_site_lin = np.where(vs30 <= C["Vc"],
                           C["c"] * np.log(vs30 / C["Vref"]),
-                          C["c"] * np.log(C["Vc"] / C["Vref"])
-                          )
+                          C["c"] * np.log(C["Vc"] / C["Vref"]))
 
     f_site_nl = np.full_like(vs30, C["f1"])
     idx = f2 != 0
     f_site_nl[idx] = f_site_nl[idx] + f2[idx] * np.log(
-        (pga760[idx] + C["f3"]) / C["f3"]
-        )
+        (pga760[idx] + C["f3"]) / C["f3"])
 
-    return (f_site_lin + f_site_nl) / np.log(10.0)
+    return (f_site_lin + f_site_nl) / LOG10
 
 
 def _get_basin_term(C, ctx, region=None):
@@ -150,7 +148,7 @@ def get_mean_values(C, trt, imt, ctx, a760):
     """
     Returns the mean values for a specific IMT
     """
-    mean = np.log(10.0) * (get_base_term(trt, C) +
+    mean = LOG10 * (get_base_term(trt, C) +
                            get_magnitude_scaling_term(C, imt, ctx.mag) +
                            get_depth_scaling_term(C, ctx.hypo_depth) +
                            get_geometric_attenuation_term(C, ctx) +

@@ -114,10 +114,9 @@ followed by a TOML block of parameters, e.g.::
 
 Branch sets can be conditional: the
 ``applyToBranches`` attribute limits a branch set to specific
-upstream branches (see :ref:`applyTo attributes <logic-tree-apply-to>`).
-The PFD logic tree is also *source-oriented*: a
+upstream branches. The PFD logic tree is also *source-oriented*: a
 branch set can carry the attributes ``applyToSources`` (a
-space-separated list of source IDs) and ``applyToStyle`` (normal,
+comma-separated list of source IDs) and ``applyToStyle`` (normal,
 reverse or strike-slip), so that different model combinations can be
 applied to different sources or faulting styles. The total number of
 realizations of a displacement calculation is the product of the

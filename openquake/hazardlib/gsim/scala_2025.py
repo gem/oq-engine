@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ Module exports :class:`Scala2025CampiFlegreiRepiMW`,
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -103,7 +104,8 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
 
     #: Supported intensity measure component is the maximum of two horizontal
     #: components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
@@ -136,11 +138,11 @@ class Scala2025CampiFlegreiRepiMW(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV)
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:  # PGV:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+            sig[m], tau[m], phi[m] = np.array(istddevs) * LOG10
             # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     # Sigma values in log10
