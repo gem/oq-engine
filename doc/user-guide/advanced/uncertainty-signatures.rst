@@ -14,7 +14,7 @@ the datastore in the ``unc_signatures`` dataset.
 
 Notice that the concept of uncertainty signatures is relevant only if your logic
 tree contains source uncertainties. The uncertainties
-on the GSIMs (``applyToTectonicRegionType``) are considered trivial
+on the GSIMs (``gmpeModel``) are considered trivial
 and not stored in ``unc_signatures``. Same for uncertainties on
 the source models (i.e. ``sourceModel/extendModel``).
 
@@ -26,8 +26,9 @@ the source models (i.e. ``sourceModel/extendModel``).
 
       :math:`G_t = \sum_i G(\mathrm{trt}_i)`
 
-   of the logic tree, is typically **much smaller** than the number
-   ``R`` of realizations: in the demo ``LogicTreeCase1ClassicalPSHA``
+   of the logic tree, i.e. the number of indices of rate attribution, is
+   typically **much smaller** than the number
+   ``R`` of realizations: in the demo ``LogicTreeCase2ClassicalPSHA``
    there are 324 realizations but only 36 uncertainty signatures,
    i.e. 9 times less data than one would store naively. This is what
    makes it possible to run large logic trees; see
@@ -83,7 +84,8 @@ hence each signature covers 9 realizations, i.e. the ones differing
 only in the uncertainties of the other source. In total there are 18
 realization sets, 9 per source, so that with two GMMs per tectonic
 region type Gt = 18 x 2 = 36, i.e. the 324 realizations of the logic
-tree are reduced to 36 columns of the global ``RateMap``.
+tree are reduced to 36 indices of rate attribution, i.e. the core size
+``Gt`` of the global ``RateMap``.
 
 NB: the global ``RateMap``, is an array of float32 numbers of shape (N, L,
 Gt), where N is the total number of hazard sites, L the total number
@@ -171,7 +173,7 @@ only signature covers the 3 realizations) and ``SC_10:124`` contributes
 
 i.e. Gt is smaller than R=12 because the 3 realizations of the
 ``fault_background`` model have the same (empty) signature, so they have
-the same rates and share a single column.
+the same rates and share a single index of rate attribution.
 
 NB: even though ``mmax`` has no filters, it is not applied to ``BG_10``
 either, since a branchset following a branchset with filters applies only

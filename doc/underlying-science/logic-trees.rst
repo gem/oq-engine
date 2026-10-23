@@ -111,12 +111,6 @@ following:
   one of the initial seismic source models and designated through their
   unique ID;
 
-- *applyToSourceType*
-
-  The current branchset is applied to all the sources of a specific
-  type (e.g. simple fault sources) included in one of the initial
-  seismic source models; 
-
 - *applyToTectonicRegionType*
 
   The current branchset is applied to all the sources belonging to a
@@ -137,13 +131,10 @@ site.
 
 By default, the first branching level of a seismic source model logic
 tree contains one (or several) initial seismic source model.
-Currently is not possible to create a logic tree model by
-incrementally adding different sources as - for example - in the case
-of some of the logic tree structures included in the recently
-presented CEUS-SSC model (Central and Eastern
-United States Seismic Source Characterization for
-Nuclear Facilities. 2012). This functionality will
-be added into future versions of the software.
+Logic trees can also be extended by incrementally adding different
+sources, as needed for some structures of the CEUS-SSC model (Central and
+Eastern United States Seismic Source Characterization for Nuclear
+Facilities. 2012); see :ref:`extend-model`.
 
 **Supported epistemic uncertainties**
 
@@ -153,35 +144,13 @@ uncertainties with the command::
 
  $ oq info uncertainty_types
 
-At the time of writing (engine v3.24) there are 23 uncertainty types::
-
- 01 abGRAbsolute
- 02 abMaxMagAbsolute
- 03 applyToTectonicRegionType
- 04 areaSourceGeometryAbsolute
- 05 bGRAbsolute
- 06 bGRRelative
- 07 characteristicFaultGeometryAbsolute
- 08 complexFaultGeometryAbsolute
- 09 extendModel
- 10 gmpeModel
- 11 incrementalMFDAbsolute
- 12 maxMagGRAbsolute
- 13 maxMagGRRelative
- 14 maxMagGRRelativeNoMoBalance
- 15 recomputeMmax
- 16 setLowerSeismDepthAbsolute
- 17 setMSRAbsolute
- 18 setUpperSeismDepthAbsolute
- 19 simpleFaultDipAbsolute
- 20 simpleFaultDipRelative
- 21 simpleFaultGeometryAbsolute
- 22 sourceModel
- 23 truncatedGRFromSlipAbsolute
+The uncertainty types, with the format of their values, are listed in
+:ref:`uncertainty types <logic-tree-uncertainty-types>` (engine v3.27).
 
 You can see examples in the demos/hazard directory and in
 the directory qa_tests_data/logictree. Here we will document
-only the simplest uncertainty types.
+only some of the simplest uncertainty types; the full list is in
+:ref:`uncertainty types <logic-tree-uncertainty-types>`.
 
 - *sourceModel*
 
@@ -261,7 +230,9 @@ Logic tree processing
 ---------------------
 
 The OpenQuake engine currently provides two distinct ways to process
-logic-trees: full-path enumeration and Monte Carlo sampling.
+logic-trees: full-path enumeration and Monte Carlo sampling. The sampling
+methods are described in :ref:`logic-tree-sampling`; the description below
+is the ``early_weights`` method.
 
 Full path enumeration is a methodology which generates all the models
 admitted by a logic tree structure. For this reason, the use of this
