@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 New Zealand National Seismic Hazard Model 2022 Revision modification of Kuehn 2020 GMMs.
 Adjustment in aleatory uncertainty to account for the effect of magnitude and distance
@@ -39,16 +56,14 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     CONSTS,
     REGION_TERMS_IF,
     REGION_TERMS_SLAB,
-    Z_MODEL,
-)
+    Z_MODEL,)
 from openquake.hazardlib.gsim.nz22.const import (
     periods_AG20,
     rho_Ws,
     rho_Bs,
     periods,
     theta7s,
-    theta8s,
-)
+    theta8s,)
 
 BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN"]
 
@@ -82,17 +97,15 @@ def get_basin_term(C, ctx, region):
 
     brt = np.zeros_like(z_values)
     mask = z_values > 0.0
-    vs30 = ctx.vs30[mask]
-    if not np.any(mask):
-        # No basin amplification to be applied
-        return 0.0
-    ln_z_ref = _get_ln_z_ref(CZ, vs30)
-    if region == "NZL":
-        # Personal communication with Nico. We need to use the NZ
-        # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
-        brt[mask] = c11 + c12 * (ln_z_ref - ln_z_ref)
-    else:
-        brt[mask] = c11 + c12 * (np.log(z_values[mask]) - ln_z_ref)
+    if np.any(mask):
+        vs30 = ctx.vs30[mask]
+        ln_z_ref = _get_ln_z_ref(CZ, vs30)
+        if region == "NZL":
+            # Personal communication with Nico. We need to use the NZ
+            # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
+            brt[mask] = c11 + c12 * (ln_z_ref - ln_z_ref)
+        else:
+            brt[mask] = c11 + c12 * (np.log(z_values[mask]) - ln_z_ref)
     return brt
 
 
@@ -112,9 +125,7 @@ def get_partial_derivative_site_pga(C, vs30, pga1100):
         * pga1100
         * (
             (-1.0 / (pga1100 + CONSTS["c"]))
-            + (1.0 / (pga1100 + CONSTS["c"] * (vnorm ** CONSTS["n"])))
-        )
-    )
+            + (1.0 / (pga1100 + CONSTS["c"] * (vnorm ** CONSTS["n"])))))
     return dfsite_dlnpga
 
 
@@ -153,14 +164,12 @@ def get_nonlinear_stddevs(C, C_PGA, imt, vs30, pga1100):
     tau_nl_sq = (
         tau_lin[idx] ** 2
         + (partial_f_pga**2.0) * tau_lin_pga[idx] ** 2
-        + (2.0 * partial_f_pga * tau_lin_pga[idx] * tau_lin[idx] * rhoB)
-    )
+        + (2.0 * partial_f_pga * tau_lin_pga[idx] * tau_lin[idx] * rhoB))
 
     phi_nl_sq = (
         (phi_lin[idx] ** 2.0)
         + (partial_f_pga**2.0) * (phi_b_pga**2.0)
-        + (2.0 * partial_f_pga * phi_b_pga * phi_b * rhoW)
-    )
+        + (2.0 * partial_f_pga * phi_b_pga * phi_b * rhoW))
     tau[idx] = np.sqrt(tau_nl_sq)
     phi[idx] = np.sqrt(phi_nl_sq)
     sigma = np.sqrt(tau**2 + phi**2)
@@ -182,8 +191,8 @@ def get_backarc_term(trt, imt, ctx):
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0
-    # for periods < 0.
+    # Note that there is no correction for PGV. Hence, I make theta7 and theta8
+    # as 0 for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
@@ -199,14 +208,11 @@ def get_backarc_term(trt, imt, ctx):
     if trt == const.TRT.SUBDUCTION_INTRASLAB:
         min_dist = 85.0
         backarc = np.bool_(ctx.backarc)
-        f_faba = np.zeros_like(dists)
-        fixed_dists = dists[backarc]
-        fixed_dists[fixed_dists < min_dist] = min_dist
-        f_faba[backarc] = theta7 + theta8 * np.log(fixed_dists / 40.0)
-        return f_faba * w_epi_factor
+        clipped = np.maximum(dists, min_dist)
+        faba = theta7 + theta8 * np.log(clipped / 40.0)
+        return np.where(backarc, faba, 0.) * w_epi_factor
     else:
-        f_faba = np.zeros_like(dists)
-        return f_faba
+        return np.zeros_like(dists)
 
 
 class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
@@ -217,14 +223,15 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
     ):
-        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon)
+        super().__init__(region=region, m_b=m_b,
+                         sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.__class__.REQUIRES_SITES_PARAMETERS
-            
+
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -241,8 +248,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             m_b = (
                 REGION_TERMS_IF[self.region]["mb"]
                 if trt == const.TRT.SUBDUCTION_INTERFACE
-                else REGION_TERMS_SLAB[self.region]["mb"]
-            )
+                else REGION_TERMS_SLAB[self.region]["mb"])
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
@@ -259,7 +265,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         for imt in imts:
             if ("PGA" in imt.string) or ("SA" in imt.string) and (imt.period <= 0.1):
                 pga_soil = get_mean_values(
-                    C_PGA, self.region, 0., trt, m_b, ctx, pga1100, pre_basin=True)
+                    C_PGA, self.region, 0., trt, m_b, ctx, pga1100,
+                    pre_basin=True)
                 if pga1100.any() and self.region in BASIN_REGIONS:
                     pga_soil += get_basin_term(C_PGA, ctx, self.region)
                 pga_soil += get_backarc_term(trt, PGA(), ctx)
@@ -286,7 +293,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
-                mean[m] = get_mean_values(C, self.region, imt.period, trt, m_break,
+                mean[m] = get_mean_values(
+                    C, self.region, imt.period, trt, m_break,
                                           ctx, pga1100, pre_basin=True)
                 if pga1100.any() and self.region in BASIN_REGIONS:
                     mean[m] += get_basin_term(C, ctx, self.region)
@@ -295,8 +303,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup
-                )
+                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             if self.modified_sigma:
