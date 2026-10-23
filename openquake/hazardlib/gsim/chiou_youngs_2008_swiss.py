@@ -53,9 +53,8 @@ def get_tau(C, ctx):
 class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     """
-    This class extends :class:ChiouYoungs2008,
-    adjusted to be used for the Swiss Hazard Model [2014].
-    This GMPE is valid for a fixed value of vs30=620m/s
+    Extends :class:ChiouYoungs2008, adjusted to be used for the Swiss Hazard
+    Model [2014]. This GMPE is valid for a fixed value of vs30=620m/s
 
     1) kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
@@ -67,10 +66,9 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     3) single station sigma - inter-event magnitude/distance adjustment
 
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The use of these models in other models
-    is the soly responsability of the hazard modeler.
+    Disclaimer: these equations are modified to be used for the Swiss Seismic
+    Hazard Model [2014]. The use of these models in other models is the soly
+    responsability of the hazard modeler.
 
     Model implemented by laurentiu.danciu@gmail.com
     """
@@ -110,17 +108,15 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
 class ChiouYoungs2008SWISS06(ChiouYoungs2008SWISS01):
     """
-    This class extends :class:ChiouYoungs2008,following same strategy
-    as for :class:ChiouYoungs2008SWISS01 to be used for the
-    Swiss Hazard Model [2014].
+    Extends :class:ChiouYoungs2008,following same strategy as for
+    :class:ChiouYoungs2008SWISS01 to be used for the Swiss Hazard Model [2014].
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS06
 
 
 class ChiouYoungs2008SWISS04(ChiouYoungs2008SWISS01):
     """
-    This class extends :class:ChiouYoungs2008,following same strategy
-    as for :class:ChiouYoungs2008SWISS01 to be used for the
-    Swiss Hazard Model [2014].
+    Extends :class:ChiouYoungs2008,following same strategy as for
+    :class:ChiouYoungs2008SWISS01 to be used for the Swiss Hazard Model [2014].
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04

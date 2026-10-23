@@ -22,12 +22,14 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 
 import toml
 import numpy as np
+# Site terms imports
+# Basin terms imports
+# CEUS 2020 site term imports
+
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
-
-# Site terms imports
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
@@ -35,17 +37,12 @@ from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
     _get_bssa14_site_term)
- 
-# Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
-
-# CEUS 2020 site term imports
 from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
     get_phi_ss_at_quantile)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
-
 from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
     stewart2020_linear_scaling)
 from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
@@ -57,13 +54,11 @@ ADJUSTMENT_REQUIREMENTS = {
     'ba08_site_term': {
         'sites': {'vs30'},
         'rupture': {'rake'},
-        'distances': {'rjb'},
-    },
+        'distances': {'rjb'},},
     'bssa14_site_term': {
         'sites': {'vs30'},
         'rupture': {'rake'},
-        'distances': {'rjb'},
-    },
+        'distances': {'rjb'},},
     'cy14_site_term': {'sites': {'vs30'}},
     'nrcan15_site_term': {'sites': {'vs30'}},
     'ceus2020_site_term': {'sites': {'vs30'}},
@@ -72,18 +67,14 @@ ADJUSTMENT_REQUIREMENTS = {
     'add_between_within_stds': {
         'stddev_types': {StdDev.TOTAL,
                          StdDev.INTRA_EVENT,
-                         StdDev.INTER_EVENT},
-    },
+                         StdDev.INTER_EVENT},},
     'apply_swiss_amplification': {
-        'gmpe_sites': frozenset(['amplfactor']),
-    },
+        'gmpe_sites': frozenset(['amplfactor']),},
     'set_between_epsilon': {
-        'requires_gmpe_stddev': StdDev.INTER_EVENT,
-    },
+        'requires_gmpe_stddev': StdDev.INTER_EVENT,},
     'set_total_std_as_tau_plus_delta': {
         'requires_gmpe_stddev': StdDev.INTER_EVENT,
-    },
-}
+    },}
 
 
 # ############## HANDLER FUNCTIONS FOR CONDITIONAL GMPES ################ #
@@ -112,7 +103,7 @@ def compute_imts_subset(gmpe, imts, imts_comp, ctx_copy, mean, sig, tau, phi):
         np.zeros(shp), np.zeros(shp), np.zeros(shp), np.zeros(shp))
     gmpe.compute(
         ctx_copy, imts_comp, mean_t, sig_t, tau_t, phi_t)
-    
+
     # For instance in test case_90 one has
     # imts_map = {PGA: 0, PGV: 1, IA: 2, SA(0.2): 3, SA(1.0): 4}
     # and imts_base = {SA(1.0), SA(0.2), PGA}
@@ -147,7 +138,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
         preds[imt.string]["sig"] = sig_b[i]
         preds[imt.string]["tau"] = tau_b[i]
         preds[imt.string]["phi"] = phi_b[i]
-        
+
     # Might need underlying GSIM within conditional GMPEs compute method
     # if has ctx-dependent conditioning periods
     preds["base"] = self.gmpe
@@ -164,7 +155,7 @@ def conditional_gmpe_compute(self, imts, ctx_copy, mean, sig, tau, phi):
     if imts_base:
         compute_imts_subset(
             self.gmpe, imts, imts_base, ctx_copy, mean, sig, tau, phi)
-    
+
 
 def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
     """
@@ -176,9 +167,9 @@ def conditional_gmpe(ctx, imt, me, si, ta, ph, **kwargs):
 
     # Get predictions per IMT required by the conditional GMPEs
     base_preds = kwargs.get('base_preds')
-    
-    # If the imt is requested from a conditional gmpe... 
-    if imt.string in conditional_gmpes: 
+
+    # If the imt is requested from a conditional gmpe...
+    if imt.string in conditional_gmpes:
 
         # Get the conditional GMM specified for the given IMT
         cond = conditional_gmpes[imt.string]["gsim"]
@@ -491,8 +482,7 @@ def add_delta_to_total_std_scalar(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_sig)):
         raise ValueError(
             f"delta={delta} produces a negative GMM (total) sigma - "
-            f"minimum GMM sigma would be {new_sig.min():.6f}"
-        )
+            f"minimum GMM sigma would be {new_sig.min():.6f}")
 
     # Adjust sigma
     si[:] = new_sig
@@ -508,8 +498,7 @@ def add_delta_to_tau_std_scalar(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_tau)):
         raise ValueError(
             f"delta={delta} produces a negative tau - "
-            f"minimum tau would be {new_tau.min():.3f}"
-        )
+            f"minimum tau would be {new_tau.min():.3f}")
 
     # Adjust tau
     ta[:] = new_tau
@@ -528,8 +517,7 @@ def add_delta_to_phi_std_scalar(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_phi)):
         raise ValueError(
             f"delta={delta} produces a negative phi - "
-            f"minimum phi would be {new_phi.min():.3f}"
-        )
+            f"minimum phi would be {new_phi.min():.3f}")
 
     # Adjust phi
     ph[:] = new_phi
@@ -550,8 +538,7 @@ def add_delta_to_total_std_vector(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_sig)):
         raise ValueError(
             f"delta={sig_delta} for {imt} produces a negative total sigma "
-            f"- minimum sigma for {imt} would be {new_sig.min():.6f}"
-        )
+            f"- minimum sigma for {imt} would be {new_sig.min():.6f}")
 
     # Adjust total sigma for given IMT
     si[:] = new_sig
@@ -569,8 +556,7 @@ def add_delta_to_tau_std_vector(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_tau)):
         raise ValueError(
             f"delta={delta} for {imt} produces a negative tau - "
-            f"minimum tau for {imt} would be {new_tau.min():.3f}"
-        )
+            f"minimum tau for {imt} would be {new_tau.min():.3f}")
 
     # Adjust tau for given IMT
     ta[:] = new_tau
@@ -591,8 +577,7 @@ def add_delta_to_phi_std_vector(ctx, imt, me, si, ta, ph, delta):
     if np.any(np.isnan(new_phi)):
         raise ValueError(
             f"delta={delta} for {imt} produces a negative phi - "
-            f"minimum phi for {imt} would be {new_phi.min():.3f}"
-        )
+            f"minimum phi for {imt} would be {new_phi.min():.3f}")
 
     # Adjust phi for given IMT
     ph[:] = new_phi
@@ -753,7 +738,7 @@ class ModifiableGMPE(GMPE):
         ctx_copy = set_ref_ctx(ctx, self.params)
 
         # If necessary, compute the means and std devs for the required
-        # IMTs that are not going to be calculated using conditional GMPEs 
+        # IMTs that are not going to be calculated using conditional GMPEs
         if "conditional_gmpe" in self.params:
             if not hasattr(self, 'imts_req'):
                 self.imts_req = init_underlying_gmpes(
@@ -778,7 +763,7 @@ class ModifiableGMPE(GMPE):
             # Conditional GMPEs
             if methname in ["conditional_gmpe"]:
                 kw['base_preds'] = self.params["conditional_gmpe"]["base_preds"]
-                
+
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)

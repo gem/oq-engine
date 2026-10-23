@@ -23,6 +23,7 @@ Module exports :class:`AfshariStewart2016`,
 import numpy as np
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575, RSD2080

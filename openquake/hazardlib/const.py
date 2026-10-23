@@ -19,6 +19,10 @@ Module :mod:`openquake.hazardlib.const` defines various constants.
 from enum import Enum
 import numpy as np
 
+# Precomputed natural logarithm of 10, used by GMMs that produce log10 output
+# and need to convert to the natural-logarithm convention used in OpenQuake.
+LOG10 = np.log(10.0)
+
 
 class TRT(Enum):
     """

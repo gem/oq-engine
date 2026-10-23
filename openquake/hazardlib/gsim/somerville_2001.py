@@ -38,22 +38,19 @@ def _compute_mean(C, mag, rjb):
 
     mean += (
         C['a1'] + C['a2'] * (mag - 6.4) +
-        C['a7'] * (8.5 - mag) ** 2
-    )
+        C['a7'] * (8.5 - mag) ** 2)
 
     idx = rjb < 50.
     mean[idx] += (
         C['a3'] * np.log(d[idx]) +
         C['a4'] * (mag[idx] - 6.4) * np.log(d[idx]) +
-        C['a5'] * rjb[idx]
-    )
+        C['a5'] * rjb[idx])
 
     idx = rjb >= 50.
     mean[idx] += (
         C['a3'] * np.log(d1) +
         C['a4'] * (mag[idx] - 6.4) * np.log(d[idx]) +
-        C['a5'] * rjb[idx] + C['a6'] * (np.log(d[idx]) - np.log(d1))
-    )
+        C['a5'] * rjb[idx] + C['a6'] * (np.log(d[idx]) - np.log(d1)))
 
     return mean
 

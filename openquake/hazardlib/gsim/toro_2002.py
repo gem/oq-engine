@@ -135,13 +135,10 @@ class ToroEtAl2002(GMPE):
 
             if self.CONSTS_FS:  # fault style and rock adjustement in SHARE
                 C_ADJ = self.COEFFS_FS_ROCK[imt]
-                mean[m] = np.log(np.exp(mean[m]) * (
-                    _compute_faulting_style_term(
-                        C_ADJ['Frss'],
-                        self.CONSTS_FS['pR'],
-                        self.CONSTS_FS['Fnss'],
-                        self.CONSTS_FS['pN'],
-                        ctx.rake) * C_ADJ['AFrock']))
+                mean[m] = mean[m] + np.log(_compute_faulting_style_term(
+                    C_ADJ['Frss'], self.CONSTS_FS['pR'],
+                    self.CONSTS_FS['Fnss'], self.CONSTS_FS['pN'], ctx.rake) *
+                    C_ADJ['AFrock'])
 
     #: Coefficient tables obtained by joining tables 2, 3, and 4, pages 47,
     #: 50, 51.

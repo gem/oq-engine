@@ -21,12 +21,13 @@ Module exports :class:`DrouetBrazil2015`
                :class:`DrouetBrazil2015_with_depth`
 """
 import numpy as np
+from scipy.constants import g
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from scipy.constants import g
 
 
 _compute_distance_term = CallableDict()

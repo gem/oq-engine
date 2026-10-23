@@ -63,11 +63,11 @@ AK_BIAS = os.path.join(os.path.dirname(__file__),
                        "ngasub_interface_alaska_bias_adj",
                        "nga_sub_ak_interface_adjustment.csv")
 
-# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
+# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA)
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
 SUPPORTED_REGIONS = ["GLO",
-                     "USA-AK", "CAS", "SEA", 
+                     "USA-AK", "CAS", "SEA",
                      "CAM", "JPN", "NZL", "SAM", "TWN"]
 
 BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN", "SEA"]
@@ -80,16 +80,14 @@ REGION_TERMS_IF = {
         "c6": "mu_c_6",
         "c7": "mu_c_7",
         "mb": 7.9,
-        "file_unc": "kuehn2020_uncertainty_if_Global.hdf5",
-    },
+        "file_unc": "kuehn2020_uncertainty_if_Global.hdf5",},
     # Alaska
     "USA-AK": {
         "c1": "c_1_if_reg_Al",
         "c6": "c_6_2_reg_Al",
         "c7": "c_7_reg_Al",
         "mb": 8.6,
-        "file_unc": "kuehn2020_uncertainty_if_Alaska.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_Alaska.hdf5",},
     # Cascadia
     "CAS": {
         "c1": "c_1_if_reg_Ca",
@@ -98,16 +96,14 @@ REGION_TERMS_IF = {
         "c11": "c_11_Ca",
         "c12": "c_12_Ca",
         "mb": 8.0,
-        "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",},
     # Central America and Mexico
     "CAM": {
         "c1": "c_1_if_reg_CAM",
         "c6": "c_6_2_reg_CAM",
         "c7": "c_7_reg_CAM",
         "mb": 7.5,
-        "file_unc": "kuehn2020_uncertainty_if_CentralAmericaMexico.hdf5"
-        },
+        "file_unc": "kuehn2020_uncertainty_if_CentralAmericaMexico.hdf5"},
     # Japan
     "JPN": {
         "c1": "c_1_if_reg_Ja",
@@ -116,8 +112,7 @@ REGION_TERMS_IF = {
         "c11": "c_11_Ja",
         "c12": "c_12_Ja",
         "mb": 8.5,
-        "file_unc": "kuehn2020_uncertainty_if_Japan.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_Japan.hdf5",},
     # New Zealand
     "NZL": {
         "c1": "c_1_if_reg_NZ",
@@ -126,16 +121,14 @@ REGION_TERMS_IF = {
         "c11": "c_11_NZ",
         "c12": "c_12_NZ",
         "mb": 8.3,
-        "file_unc": "kuehn2020_uncertainty_if_NewZealand.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_NewZealand.hdf5",},
     # South America
     "SAM": {
         "c1": "c_1_if_reg_SA",
         "c6": "c_6_2_reg_SA",
         "c7": "c_7_reg_SA",
         "mb": 8.6,
-        "file_unc": "kuehn2020_uncertainty_if_SouthAmerica.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_SouthAmerica.hdf5",},
     # Taiwan
     "TWN": {
         "c1": "c_1_if_reg_Tw",
@@ -144,8 +137,7 @@ REGION_TERMS_IF = {
         "c11": "c_11_Tw",
         "c12": "c_12_Tw",
         "mb": 7.1,
-        "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",},
     # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
     "SEA": {
         "c1": "c_1_if_reg_Ca",
@@ -154,8 +146,7 @@ REGION_TERMS_IF = {
         "theta_11": "theta_11_Sea",
         "mb": 8.0,
         "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
-        },
-}
+        },}
 
 # Regional terms for the in-slab events
 REGION_TERMS_SLAB = {
@@ -165,16 +156,14 @@ REGION_TERMS_SLAB = {
         "c6": "mu_c_6",
         "c7": "mu_c_7",
         "mb": 7.6,
-        "file_unc": "kuehn2020_uncertainty_slab_Global.hdf5",
-    },
+        "file_unc": "kuehn2020_uncertainty_slab_Global.hdf5",},
     # Alaska
     "USA-AK": {
         "c1": "c_1_slab_reg_Al",
         "c6": "c_6_2_reg_Al",
         "c7": "c_7_reg_Al",
         "mb": 7.2,
-        "file_unc": "kuehn2020_uncertainty_slab_Alaska.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_Alaska.hdf5",},
     # Cascadia
     "CAS": {
         "c1": "c_1_slab_reg_Ca",
@@ -183,16 +172,14 @@ REGION_TERMS_SLAB = {
         "c11": "c_11_Ca",
         "c12": "c_12_Ca",
         "mb": 7.2,
-        "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",},
     # Central America and Mexico
     "CAM": {
         "c1": "c_1_slab_reg_CAM",
         "c6": "c_6_2_reg_CAM",
         "c7": "c_7_reg_CAM",
         "mb": 7.4,
-        "file_unc": "kuehn2020_uncertainty_slab_CentralAmericaMexico.hdf5"
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_CentralAmericaMexico.hdf5"},
     # Japan
     "JPN": {
         "c1": "c_1_slab_reg_Ja",
@@ -201,8 +188,7 @@ REGION_TERMS_SLAB = {
         "c11": "c_11_Ja",
         "c12": "c_12_Ja",
         "mb": 7.6,
-        "file_unc": "kuehn2020_uncertainty_slab_Japan.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_Japan.hdf5",},
     # New Zealand
     "NZL": {
         "c1": "c_1_slab_reg_NZ",
@@ -211,16 +197,14 @@ REGION_TERMS_SLAB = {
         "c11": "c_11_NZ",
         "c12": "c_12_NZ",
         "mb": 7.6,
-        "file_unc": "kuehn2020_uncertainty_slab_NewZealand.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_NewZealand.hdf5",},
     # South America
     "SAM": {
         "c1": "c_1_slab_reg_SA",
         "c6": "c_6_2_reg_SA",
         "c7": "c_7_reg_SA",
         "mb": 7.3,
-        "file_unc": "kuehn2020_uncertainty_slab_SouthAmerica.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_SouthAmerica.hdf5",},
     # Taiwan
     "TWN": {
         "c1": "c_1_slab_reg_Tw",
@@ -229,8 +213,7 @@ REGION_TERMS_SLAB = {
         "c11": "c_11_Tw",
         "c12": "c_12_Tw",
         "mb": 7.7,
-        "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
-        },
+        "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",},
     # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
     "SEA": {
         "c1": "c_1_slab_reg_Ca",
@@ -239,8 +222,7 @@ REGION_TERMS_SLAB = {
         "theta_11": "theta_11_Sea",
         "mb": 7.2,
         "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
-        },
-}
+        },}
 
 # Constants independent of region
 CONSTS = {"c_10": 0.0,
@@ -253,7 +235,7 @@ CONSTS = {"c_10": 0.0,
           "z_ref_slab": 50.0,
           "z_b_if": 30.0,
           "z_b_slab": 80.0,
-          "phi_lnAF": 0.3} # USGS java code sets square of this value (0.09)
+          "phi_lnAF": 0.3}  # USGS java code sets square of this value (0.09)
 
 # Basin depth model parameters for each of the regions for which a
 # basin response model is defined
@@ -263,27 +245,22 @@ Z_MODEL = {
         "c_z_1": 8.294049640102028,
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.396929655216146,
-        "c_z_4": 0.27081458999999997,
-        },
+        "c_z_4": 0.27081458999999997,},
     "JPN": {
         "c_z_1": 7.689368537500001,
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.309186400000001,
-        "c_z_4": 0.7528670225000001,
-        },
+        "c_z_4": 0.7528670225000001,},
     "NZL": {
         "c_z_1": 6.859789675000001,
         "c_z_2": 2.302585092994046,
         "c_z_3": 5.745692775,
-        "c_z_4": 0.91563524375,
-        },
+        "c_z_4": 0.91563524375,},
     "TWN": {
         "c_z_1": 6.30560665,
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.1104992125,
-        "c_z_4": 0.43671101999999995,
-        }
-}
+        "c_z_4": 0.43671101999999995,}}
 
 METRES_PER_KM = 1000.
 
@@ -354,8 +331,8 @@ def _log_hinge(x, x0, a, b0, b1, delta):
     # the cast is needed since one has xdiff =~ 100, delta=1 and
     # np.exp(100) overflows at 32 bits
     # NB: in disaggregation the contexts are saved at 32 bit!
-    return a + b0 * xdiff + (b1 - b0) * delta * np.log(
-        1 + np.exp(xdiff / delta))
+    return (a + b0 * xdiff +
+            (b1 - b0) * delta * np.logaddexp(0.0, xdiff / delta))
 
 
 def get_magnitude_scaling_term(C, trt, mbreak, mag):
@@ -417,9 +394,8 @@ def get_shallow_site_response_term(C, region, vs30, pga1100):
     if np.any(idx):
         f_site_g[idx] = f_site_g[idx] + C["k2"] * (
             np.log(pga1100[idx] + CONSTS["c"] * (vs_mod[idx] ** CONSTS["n"])) -
-            np.log(pga1100[idx] + CONSTS["c"])
-            )
-        
+            np.log(pga1100[idx] + CONSTS["c"]))
+
     return f_site_g
 
 
@@ -442,14 +418,14 @@ def _infer_z(z_values, vs30, CZ, region):
     relationship is controlled by region-dependent coefficients in
     the CZ variable.
     """
-    mask_z = z_values == -999 # None-measured values     
+    mask_z = z_values == -999  # None-measured values
     if region in ("JPN", "CAS"):
         z_values[mask_z] = np.exp(
-            _get_ln_z_ref(CZ, vs30[mask_z])) # Predictions in metres
-        z_values[~mask_z] *= METRES_PER_KM # Get ctx values in metres
+            _get_ln_z_ref(CZ, vs30[mask_z]))  # Predictions in metres
+        z_values[~mask_z] *= METRES_PER_KM  # Get ctx values in metres
     else:
         # Metres in both ctx.z1pt0 and from k20's vs30 to z1pt0
-        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z])) 
+        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z]))
 
     return z_values
 
@@ -478,7 +454,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
     # If z2pt5 region retrieve ref depth values, infer any missing
     # z2pt5 in sites and retrieve usgs basin scaling factor if req
     if region in ("CAS", "SEA", "JPN"):
-        z2pt5 = ctx.z2pt5.copy() 
+        z2pt5 = ctx.z2pt5.copy()
         if region == "JPN":
             CZ_INFER = Z_MODEL["JPN"]
         else:
@@ -489,9 +465,9 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
         # Get USGS basin scaling if required (checks during init ensure
         # can only be applied to the z2pt5-using CAS or SEA regions)
         if usgs_bs:
-            assert region != "JPN" # Sanity check
+            assert region != "JPN"  # Sanity check
             usgs_baf = _get_z2pt5_usgs_basin_scaling(
-                z_values / METRES_PER_KM, imt.period) # back to km here
+                z_values / METRES_PER_KM, imt.period)  # back to km here
 
     # If region is Seattle retrieve theta_11 as basin term (this coeff
     # is imt-dependent but are the same for interface and inslab)
@@ -502,45 +478,42 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
         # got (potentially inferred) z2pt5 for each site
         if m9_basin_term and imt != PGV:
             brt_sea = _apply_m9(
-                imt.period, brt_sea, z_values / METRES_PER_KM) # back to km
+                imt.period, brt_sea, z_values / METRES_PER_KM)  # back to km
         if usgs_bs:
-            brt_sea *= usgs_baf # Apply usgs baf if required
+            brt_sea *= usgs_baf  # Apply usgs baf if required
         return brt_sea
 
-    # None-Seattle region basin terms
-    else:
-        # Get c11, c12 and Z-model (same for interface and inslab events)
-        c11 = C[REGION_TERMS_IF[region]["c11"]]
-        c12 = C[REGION_TERMS_IF[region]["c12"]]
-        CZ = Z_MODEL[region]
+    # Non-Seattle region basin terms
+    # Get c11, c12 and Z-model (same for interface and inslab events)
+    # No basin amplification to be applied; return zero array
+    c11 = C[REGION_TERMS_IF[region]["c11"]]
+    c12 = C[REGION_TERMS_IF[region]["c12"]]
+    CZ = Z_MODEL[region]
 
-        vs30 = ctx.vs30
-        if region in ("TWN", "NZL"):
-            z1pt0 = ctx.z1pt0.copy()
-            z_values = _infer_z(z1pt0, ctx.vs30, CZ, region) # Infer z1pt0
-        elif region not in ("CAS", "JPN"):  # Already retrieved (potentially
-            z_values = np.zeros(vs30.shape) # inferred) z2pt5 values above
-            
-        brt = np.zeros_like(z_values)
-        mask = z_values > 0.0
-        if not mask.any():
-            # No basin amplification to be applied
-            return 0.0
+    vs30 = ctx.vs30
+    if region in ("TWN", "NZL"):
+        z1pt0 = ctx.z1pt0.copy()
+        z_values = _infer_z(z1pt0, ctx.vs30, CZ, region)  # Infer z1pt0
+    # Else region is CAS or JPN — z_values already set in top block
+
+    mask = z_values > 0.0
+    brt = np.zeros_like(z_values)
+    if mask.any():
         brt[mask] = c11 + c12 * (
             np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
 
-        # For KuehnEtAl2020 in US 2023 NSHM java code either the M9 basin term
-        # OR the GMM basin term is applied (i.e. it is not additive to GMM basin
-        # term here as seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
-        if m9_basin_term and imt != PGV:
-            assert region in ("CAS") # Only remaining z2pt5 region (SEA handled above)
-            brt = _apply_m9(imt.period, brt, z_values / METRES_PER_KM)
+    # For KuehnEtAl2020 in US 2023 NSHM java code either the M9 basin term
+    # OR the GMM basin term is applied (i.e. it is not additive to GMM basin
+    # term here as seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
+    if m9_basin_term and imt != PGV:
+        assert region == "CAS"  # Only remaining z2pt5 region (SEA handled above)
+        brt = _apply_m9(imt.period, brt, z_values / METRES_PER_KM)
 
-        # Apply USGS basin scaling if required
-        if usgs_bs:
-            brt *= usgs_baf
+    # Apply USGS basin scaling if required
+    if usgs_bs:
+        brt *= usgs_baf
 
-        return brt
+    return brt
 
 
 def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
@@ -565,7 +538,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
             get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
             get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
             get_depth_term(C, trt, ctx.ztor) +
-            get_shallow_site_response_term(C, region, vs30, a1100)) 
+            get_shallow_site_response_term(C, region, vs30, a1100))
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
@@ -674,7 +647,8 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     if imt.string in "PGA PGV":
         # Linear interpolation
         interp = RegularGridInterpolator(
-            (model_m, model_r), sigma_mu_model, bounds_error=False, fill_value=None)
+            (model_m, model_r), sigma_mu_model, bounds_error=False,
+            fill_value=None)
         sigma_mu = interp(np.stack((mag, rrup), axis=1))
     else:
         model_t = model["periods"]
@@ -682,11 +656,13 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         # Extend for extreme periods as needed
         if np.any(imt.period > model["periods"][-1]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]), axis=2)
+                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
+                axis=2)
             model_t = np.concatenate((model_t, [imt.period]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model), axis=2)
+                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
+                axis=2)
             model_t = np.concatenate(([imt.period], model_t), axis=0)
 
         # Linear interpolation
@@ -694,7 +670,8 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
             (model_m, model_r, np.log(model_t)), sigma_mu_model,
             bounds_error=False, fill_value=None)
         sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
+            np.stack((mag, rrup, np.full_like(mag, np.log(imt.period))),
+                     axis=1))
 
     return sigma_mu
 
@@ -705,26 +682,30 @@ def get_std_dev(C, C_PGA, ctx, pga1100, cb14_sig):
     K20 coefficients (this is used in the Alaska 2023 USGS model).
     """
     if cb14_sig:
+        # USGS implementation skips the mag-dep defined in eqs 27 and 28
+        # of CB14.
         # USGS implementation skips the mag-dep defined in eqs 27 and 28 of CB14.
         tau_lny_b = C["tau"]
         phi_lny = C["phi"]
         tau_lnpga_b = C_PGA["tau"]
         phi_lnpga_b = C_PGA["phi"]
-        rho_lny = C["rho"] 
+        rho_lny = C["rho"]
 
         # Get alpha (scalar per site describing PGA on bedrock vs given vs30)
         alpha = _get_alpha(C, ctx.vs30, pga1100)
 
-        # Compute tau using eq 29 of CB14 
+        # Compute tau using eq 29 of CB14
         alpha_tau = alpha * tau_lnpga_b
         tau = np.sqrt(
-            alpha_tau**2 + tau_lny_b**2 + (2.0 * alpha * rho_lny * tau_lny_b * tau_lnpga_b))
+            alpha_tau**2 + tau_lny_b**2 +
+            (2.0 * alpha * rho_lny * tau_lny_b * tau_lnpga_b))
 
         # Compute phi using eq 30 of CB14
         phi_lny_b = np.sqrt(phi_lny**2 - CONSTS["phi_lnAF"]**2)
         a_phi_lnpga_b = alpha * np.sqrt(phi_lnpga_b**2 - CONSTS["phi_lnAF"]**2)
         phi = np.sqrt(
-            phi_lny**2 + a_phi_lnpga_b**2 + (2.0 * rho_lny * phi_lny_b * a_phi_lnpga_b))
+            phi_lny**2 + a_phi_lnpga_b**2 +
+            (2.0 * rho_lny * phi_lny_b * a_phi_lnpga_b))
 
         # Total sigma
         sig = np.sqrt(tau**2 + phi**2)
@@ -847,7 +828,7 @@ class KuehnEtAl2020SInter(GMPE):
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
-            
+
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         # USGS basin scaling and M9 basin term is only
@@ -858,7 +839,7 @@ class KuehnEtAl2020SInter(GMPE):
                                  'basin adjustment to KuehnEtAl2020 the '
                                  'Cascadia region or the Seattle Basin '
                                  'region must be specified.')
-        
+
         self.m_b = m_b
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
@@ -872,7 +853,7 @@ class KuehnEtAl2020SInter(GMPE):
         # Alaska 2023 USGS model adjustments
         self.ak23_bias_adj = ak23_bias_adj
         self.ak23_cb14_sig = ak23_cb14_sig
-        if self.ak23_bias_adj: # NOTE: Don't raise an error if using the CB14
+        if self.ak23_bias_adj:  # NOTE: Don't raise an error if using the CB14
                                # based sigma outside Alaska USGS model context
             if (self.DEFINED_FOR_TECTONIC_REGION_TYPE is
                 not const.TRT.SUBDUCTION_INTERFACE or
@@ -940,7 +921,7 @@ class KuehnEtAl2020SInter(GMPE):
                                           trt, m_break, ctx, pga1100,
                                           m9_basin_term=self.m9_basin_term,
                                           usgs_bs=self.usgs_basin_scaling)
-                
+
             if self.ak23_bias_adj:
                 # Apply Alaska 2023 bias adjustment
                 mean[m] += self.ak23_adjs_table[imt]["bias_adj"]
@@ -988,8 +969,7 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
-    "SEA": "CascadiaSeattleBasin",
-}
+    "SEA": "CascadiaSeattleBasin",}
 
 for region in SUPPORTED_REGIONS[1:]:
     add_alias("KuehnEtAl2020SInter" + REGION_ALIASES[region],

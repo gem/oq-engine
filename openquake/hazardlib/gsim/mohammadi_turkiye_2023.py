@@ -1,4 +1,44 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+# MinMaxScaler parameters (from scx.pkl)
+# Data directory
+# Standard deviations file
+# ONNX model handling (Single bundled model)
+# Input name is shared and fixed by bundling script
+# It was 'float_input' in all original models.
+# Run inference only for the requested output
+# Fault mechanism flags (vectorized)
+# Order: Mw, Vs30, RJB, normal, reverse, strike_slip
+# IMT identification
+# Prediction in training units, then convert to OQ units
+# cm/s^2 -> g (still in ln)
+# PGV already in cm/s
+# Standard deviations from stds.csv (all in ln-units)
+#   Sigma -> intra-event
+#   Tau   -> inter-event
+#   Phi   -> total
+# Tectonic region
+# Intensity measure types
+# Component: geometric mean or closest available
+# Std dev types – order doesn't matter; mapping is defined in code.
+# Reference velocity (not really used but required by some tools)
+# Required contexts
+# Fill rows for IMT m
 """
 Mohammadi et al. (2023) Turkiye ML-based Ground-Motion Model
 """
@@ -7,6 +47,7 @@ import os
 import csv
 import gzip
 import numpy as np
+
 from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
@@ -23,21 +64,17 @@ _SCALE = np.array(
         0.00301659125188537,
         0.6000000000000001,
         0.6000000000000001,
-        0.6000000000000001,
-    ],
-    dtype=float,
-)
+        0.6000000000000001,],
+    dtype=float,)
 
 _MIN = np.array(
     [-0.5028571428571429, 0.13706965572457966, 0.19969834087481148, 0.2, 0.2, 0.2],
-    dtype=float,
-)
+    dtype=float,)
 
 # Data directory
 _DATA_DIR = os.path.join(
     os.path.dirname(__file__),
-    "mohammadi_turkiye_2023_data",
-)
+    "mohammadi_turkiye_2023_data",)
 
 # Standard deviations file
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
@@ -77,8 +114,6 @@ def _predict_ln_im(output_name: str, X_scaled: np.ndarray,
     """
     Evaluate the bundled ONNX model and return ln(IM) in training units.
     """
-    # Input name is shared and fixed by bundling script
-    # It was 'float_input' in all original models.
     input_name = sess.get_inputs()[0].name  # Should be 'float_input'
 
     # Run inference only for the requested output
@@ -203,8 +238,7 @@ class Mohammadi2023Turkiye(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.INTRA_EVENT,
         const.StdDev.INTER_EVENT,
-        const.StdDev.TOTAL,
-    }
+        const.StdDev.TOTAL,}
 
     # Reference velocity (not really used but required by some tools)
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
@@ -241,8 +275,7 @@ class Mohammadi2023Turkiye(GMPE):
         """
         for m, imt in enumerate(imts):
             ln_im, sigma_intra, tau_inter, phi_total = _mean_and_std_from_ctx(
-                self, ctx, imt
-            )
+                self, ctx, imt)
             # Fill rows for IMT m
             mean[m, :] = ln_im
             sig[m, :]  = phi_total     # TOTAL

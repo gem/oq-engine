@@ -35,6 +35,7 @@ Module exports :class:`MorikawaFujiwara2013Crustal`,
 import numpy as np
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Polygon
@@ -164,7 +165,7 @@ def _apply_nied_sigma(imts, sig, sigma_log10):
         if imt.name == 'JMA':
             sig[m] = 2 * sigma_log10
         else:
-            sig[m] = sigma_log10 * np.log(10)
+            sig[m] = sigma_log10 * LOG10
 
 
 def _infer_z1pt4_from_vs30(vs30, z1pt4, mask):
@@ -405,7 +406,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
             if imt.name == "JMA":
                 sig[m] = 2 * C['sigma'] # Already in JMA units but still JMA/2
             else:
-                sig[m] = C['sigma'] * np.log(10)  # log10 to ln
+                sig[m] = C['sigma'] * LOG10  # log10 to ln
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gSW      PH   sigma

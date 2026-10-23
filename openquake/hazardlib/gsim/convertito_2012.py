@@ -22,7 +22,7 @@ Module exports :class:'ConvertitoEtAl2012Geysers'
 import numpy as np
 from scipy.constants import g
 
-
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
@@ -106,8 +106,8 @@ class ConvertitoEtAl2012Geysers(GMPE):
                        _compute_site_scaling(C, ctx.vs30))
             # Original GMPE returns log acceleration in m/s/s
             # Converts to natural logarithm of g
-            mean[m] = np.log((10.0 ** mean[m]) / g)
-            sig[m] = np.log(10.0 ** C["sigma"])
+            mean[m] = mean[m] * LOG10 - np.log(g)
+            sig[m] = C['sigma'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        a      b       c      d    h      e  sigma

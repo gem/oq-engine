@@ -23,6 +23,7 @@ Module exports :class:`BooreEtAl1993GSCBest`,
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -87,7 +88,7 @@ class BooreEtAl1993GSCBest(GMPE):
                              C['c4'] * (d[idx] - 100.))
 
             # convert from log10 to ln and from cm/s**2 to g
-            mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
+            mean[m] = (mean[m] - 2.0) * LOG10 - np.log(g)
 
             sig[m] = C['sigma']
 

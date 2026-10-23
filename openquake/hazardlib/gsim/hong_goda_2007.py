@@ -1,6 +1,21 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+#
 # Copyright (c) 2013-2026 GEM Foundation
 #
 # openquake is free software: you can redistribute it and/or modify it
@@ -19,9 +34,11 @@
 module exports :class:`HongGoda2007RotD100`.
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
 
 CONSTS = {"Vref": 760.0, "v1": 180.0, "v2": 300.0}
 
@@ -72,11 +89,12 @@ def _get_site_amplification(C_AMP, vs30, pga_rock):
     # Get nonlinear term
     bnl = _get_bnl(C_AMP, vs30)
     #
-    f_nl_coeff = np.log(60.0 / 100.0) * np.ones_like(vs30)
+    reference = np.log(60.0 / 100.0)
+    f_nl_coeff = np.full_like(
+        vs30, reference, dtype=np.result_type(vs30, reference))
     idx = pga_rock > 60.0
     f_nl_coeff[idx] = np.log(pga_rock[idx] / 100.0)
-    return np.log(np.exp(
-        C_AMP["blin"] * np.log(vs30 / CONSTS["Vref"]) + bnl * f_nl_coeff))
+    return C_AMP['blin'] * np.log(vs30 / CONSTS['Vref']) + bnl * f_nl_coeff
 
 
 def _get_bnl(C_AMP, vs30):

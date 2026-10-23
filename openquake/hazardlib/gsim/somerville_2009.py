@@ -29,6 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim import boore_2014
 
+
 def _compute_mean(C, mag, rjb):
     """
     Compute mean value, see table 2.
@@ -172,13 +173,13 @@ class SomervilleEtAl2009YilgarnCraton(SomervilleEtAl2009NonCratonic):
 
 class SomervilleEtAl2009NonCratonic_SS14(SomervilleEtAl2009NonCratonic):
     """
-    SomervilleEtAl2009NonCratonic model updated to apply the linear and non-linear amplification factors of Sayhan & 
+    SomervilleEtAl2009NonCratonic model updated to apply the linear and non-linear amplification factors of Sayhan &
     Stewart (2014) as applied in the Boore et al (2014) NGE-West 2 GMMfor use in Geoscience Australia ShakeMap
     """
-    
+
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-    
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -188,48 +189,53 @@ class SomervilleEtAl2009NonCratonic_SS14(SomervilleEtAl2009NonCratonic):
         # get coefficients for rock PGA
         C_PGA = self.COEFFS[PGA()]
         BEA14_C_PGA = boore_2014.BooreEtAl2014.COEFFS[PGA()]
-        
+
         # get rock PGA - correct from PGA(865 m/s) to PGA(760 m/s)
         pga_rock = _compute_mean(C_PGA, ctx.mag, ctx.rjb)
-        
+
         # make array like ctx.vs30 of 865 m/s
-        sites_865 = 865. * np.ones_like(ctx.vs30)
-        
+        sites_865 = np.full_like(
+            ctx.vs30, 865., dtype=np.result_type(ctx.vs30, 865.))
+
         # use Boore et al (2014) amplification factors
         flin_865_760 = boore_2014._get_linear_site_term(BEA14_C_PGA, sites_865)
-        fnl_865_760  = boore_2014._get_nonlinear_site_term(BEA14_C_PGA, sites_865, np.exp(pga_rock))
-        
+        fnl_865_760  = boore_2014._get_nonlinear_site_term(
+            BEA14_C_PGA, sites_865, np.exp(pga_rock))
+
         # apply correction to get PGA(760 m/s)
         pga_rock_760 = pga_rock - flin_865_760 - fnl_865_760
-        
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            
+
             # get amplification model coefficients from Boore et al, 2014
             BEA14_C = boore_2014.BooreEtAl2014.COEFFS[imt]
-            
+
             # correction from 865 m/s to 760 m/s
             flin_865_760 = boore_2014._get_linear_site_term(BEA14_C, sites_865)
-            fnl_865_760 = boore_2014._get_nonlinear_site_term(BEA14_C, sites_865, np.exp(pga_rock))
-            
+            fnl_865_760 = boore_2014._get_nonlinear_site_term(
+                BEA14_C, sites_865, np.exp(pga_rock))
+
             # correction from 760 m/s to target vs30
             flin = boore_2014._get_linear_site_term(BEA14_C, ctx.vs30)
-            fnl  = boore_2014._get_nonlinear_site_term(BEA14_C, ctx.vs30, np.exp(pga_rock_760))
-            
-            mean[m] = _compute_mean(C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl 
-            
+            fnl  = boore_2014._get_nonlinear_site_term(
+                BEA14_C, ctx.vs30, np.exp(pga_rock_760))
+
+            mean[m] = _compute_mean(
+    C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl
+
             sig[m] = C['sigma']
 
-            
+
 class SomervilleEtAl2009YilgarnCraton_SS14(SomervilleEtAl2009YilgarnCraton):
     """
-    SomervilleEtAl2009YilgarnCraton model updated to apply the linear and non-linear amplification factors of Sayhan & 
+    SomervilleEtAl2009YilgarnCraton model updated to apply the linear and non-linear amplification factors of Sayhan &
     Stewart (2014) as applied in the Boore et al (2014) NGE-West 2 GMM for use in Geoscience Australia ShakeMap
     """
-    
+
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-    
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -239,34 +245,39 @@ class SomervilleEtAl2009YilgarnCraton_SS14(SomervilleEtAl2009YilgarnCraton):
         # get coefficients for rock PGA
         C_PGA = self.COEFFS[PGA()]
         BEA14_C_PGA = boore_2014.BooreEtAl2014.COEFFS[PGA()]
-        
+
         # get rock PGA - correct from PGA(865 m/s) to PGA(760 m/s)
         pga_rock = _compute_mean(C_PGA, ctx.mag, ctx.rjb)
-        
+
         # make array like ctx.vs30 of 865 m/s
-        sites_865 = 865. * np.ones_like(ctx.vs30)
-        
+        sites_865 = np.full_like(
+            ctx.vs30, 865., dtype=np.result_type(ctx.vs30, 865.))
+
         # use Boore et al (2014) amplification factors
         flin_865_760 = boore_2014._get_linear_site_term(BEA14_C_PGA, sites_865)
-        fnl_865_760  = boore_2014._get_nonlinear_site_term(BEA14_C_PGA, sites_865, np.exp(pga_rock))
-        
+        fnl_865_760  = boore_2014._get_nonlinear_site_term(
+            BEA14_C_PGA, sites_865, np.exp(pga_rock))
+
         # apply correction to get PGA(760 m/s)
         pga_rock_760 = pga_rock - flin_865_760 - fnl_865_760
-        
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            
+
             # get amplification model coefficients from Boore et al, 2014
             BEA14_C = boore_2014.BooreEtAl2014.COEFFS[imt]
-            
+
             # correction from 865 m/s to 760 m/s
             flin_865_760 = boore_2014._get_linear_site_term(BEA14_C, sites_865)
-            fnl_865_760 = boore_2014._get_nonlinear_site_term(BEA14_C, sites_865, np.exp(pga_rock))
-            
+            fnl_865_760 = boore_2014._get_nonlinear_site_term(
+                BEA14_C, sites_865, np.exp(pga_rock))
+
             # correction from 760 m/s to target vs30
             flin = boore_2014._get_linear_site_term(BEA14_C, ctx.vs30)
-            fnl  = boore_2014._get_nonlinear_site_term(BEA14_C, ctx.vs30, np.exp(pga_rock_760))
-            
-            mean[m] = _compute_mean(C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl 
-            
+            fnl  = boore_2014._get_nonlinear_site_term(
+                BEA14_C, ctx.vs30, np.exp(pga_rock_760))
+
+            mean[m] = _compute_mean(
+    C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl
+
             sig[m] = C['sigma']

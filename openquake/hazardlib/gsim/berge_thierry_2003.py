@@ -23,6 +23,7 @@ import copy
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -46,9 +47,9 @@ def _compute(self, ctx: np.recarray, imts, mean, sig, tau, phi,
         mean[m, ctx.vs30 < 800] += C['c2']
 
         # convert from log10 to ln, and from cm/s2 to g
-        mean[m] = mean[m] * np.log(10) - 2 * np.log(10) - np.log(g)
+        mean[m] = mean[m] * LOG10 - 2 * LOG10 - np.log(g)
 
-        sigma = C['sigma'] * np.log(10)
+        sigma = C['sigma'] * LOG10
         sig[m] = np.sqrt(sigma**2 + C['a']**2 * mag_conversion_sigma**2)
 
 

@@ -22,6 +22,7 @@ Module exports :class:`SkarlatoudisEtAlSSlab2013`.
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -70,7 +71,6 @@ def _get_site_type_dummy_variables(ctx):
     class A-B: Vs30 > 760 m/s
     class C: Vs30 = 360 − 760 m/s
     class D: Vs30 < 360 m/s
-
     """
     S = np.zeros(len(ctx.vs30))
     SS = np.zeros(len(ctx.vs30))
@@ -179,12 +179,12 @@ class SkarlatoudisEtAlSSlab2013(GMPE):
             # Convert units to g,
             # but only for PGA and SA (not PGV)
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
             # Return stddevs in terms of natural log scaling
-            sig[m], tau[m], phi[m] = np.log(10.0 ** stp)
+            sig[m], tau[m], phi[m] = stp * LOG10
             # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     #: Coefficients from SA from Table 1

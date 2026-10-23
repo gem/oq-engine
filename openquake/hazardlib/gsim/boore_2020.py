@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
 CONSTS = {
     "Mref": 4.5,
     "Rref": 1.0,
@@ -49,11 +50,11 @@ def _get_linear_site_term(C, vs30):
     """
     Returns the linear site scaling term (equation 6)
     """
-    flin = np.ones_like(vs30)
-    flin = flin*C["clin"] * np.log(C["Vc"]/CONSTS["Vref"])
-    flin[vs30 <= C["V1"]] = C["clin"] * np.log(C["V1"] / CONSTS["Vref"])
-    ok = (vs30 > C["V1"]) & (vs30 <= C["Vc"])
-    flin[ok] = C["clin"] * np.log(vs30[ok] / C["Vref"])
+    flin = np.full(
+        vs30.shape, C["clin"] * np.log(C["Vc"] / CONSTS["Vref"]))
+    flin[vs30 <= C['V1']] = C['clin'] * np.log(C['V1'] / CONSTS['Vref'])
+    idx = (vs30 > C['V1']) & (vs30 <= C['Vc'])
+    flin[idx] = C['clin'] * np.log(vs30[idx] / C['Vref'])
     return flin
 
 
@@ -169,7 +170,7 @@ class BooreEtAl2020(GMPE):
                        _get_path_scaling(C, ctx, ctx.mag) +
                        _get_site_scaling(C, pga_rock, ctx))
             if imt.string != "PGV":
-                mean[m] = np.log((np.exp(mean[m]) / 981.))
+                mean[m] = mean[m] - np.log(981.0)
             tau[m] = _get_inter_event_tau(C, ctx.mag)
             phi[m] = C['phi']
         sig[:] = np.sqrt(tau**2 + phi**2)

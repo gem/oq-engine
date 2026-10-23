@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 :module:`openquake.hazardlib.gsim.can15.utils` contains utility
 functions required for the implementation of CAN15 gmpes
@@ -52,9 +69,9 @@ def _get_equivalent_distances_east(wid, lng, mag, repi, focal_depth=10.,
     if ab06:
         ztor_ab06 = 21-2.5*mag
         dtop = np.max([ztor_ab06, dtop])
-    ztor = np.clip(dtop, 0, None)
+    ztor = np.maximum(dtop, 0)
     # find the average distance to the fault projection
-    dsurf = np.max([repi-0.3*lng, 0.1*np.ones_like(repi)], axis=0)
+    dsurf = np.maximum(repi - 0.3 * lng, 0.1)
     # rrup
     rrup = (dsurf**2+ztor**2)**0.5
     # return rjb and rrup
@@ -100,6 +117,6 @@ def get_equivalent_distance_inslab(mag, repi, hslab):
     """
     area = 10**(-3.225+0.89*mag)
     radius = (area / scipy.constants.pi)**0.5
-    rjb = np.max([repi-radius, np.zeros_like(repi)], axis=0)
+    rjb = np.maximum(repi - radius, 0.)
     rrup = (rjb**2+hslab**2)**0.5
     return rjb, rrup

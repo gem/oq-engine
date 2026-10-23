@@ -40,14 +40,10 @@ def get_distance_term(C, rrup, mag):
     fac = rrup > 100
     rmax100 = rrup.copy()
     rmax100[rmax100 > 100] = 100
-    fr = C["b3"] * np.log(np.sqrt(
-        rmax100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) + \
-        fac * (
-        C["b6"] * np.log(np.sqrt(
-             rrup ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2)) -
-        C["b6"] * np.log(np.sqrt(
-            100 ** 2 + (np.exp(C["b4"] + C["b5"] * (mag - 6))) ** 2))
-        )
+    h_squared = np.exp(C["b4"] + C["b5"] * (mag - 6)) ** 2
+    fr = (C["b3"] * np.log(np.sqrt(rmax100 ** 2 + h_squared)) +
+          fac * (C["b6"] * np.log(np.sqrt(rrup ** 2 + h_squared)) -
+                 C["b6"] * np.log(np.sqrt(100 ** 2 + h_squared))))
     return fr
 
 

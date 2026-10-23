@@ -25,7 +25,9 @@ Module exports :class:`SiMidorikawa1999Asc`, :class:`SiMidorikawa1999SInter`,
 """
 import numpy as np
 from scipy.constants import g
+
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA
@@ -158,11 +160,11 @@ def _apply_amplification_factor(AMP_F, mean, vs30):
     """
     assert np.all(vs30 == vs30[0])
     if abs(vs30[0]-600.) < 1e-10:
-        return mean * np.log(10)
+        return mean * LOG10
     elif abs(vs30[0]-400.) < 1e-10:
-        return mean * np.log(10) + np.log(AMP_F)
+        return mean * LOG10 + np.log(AMP_F)
     elif abs(vs30[0]-800.) < 1e-10:
-        return mean * np.log(10) - np.log(1.25)
+        return mean * LOG10 - np.log(1.25)
     else:
         raise ValueError(
             'Si and Midorikawa 1999 do not support this Vs30 value')

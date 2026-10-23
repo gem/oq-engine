@@ -24,6 +24,7 @@ Module exports :class:`FrankelEtAl1996MblgAB1987NSHMP2008`,
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, mblg_to_mw_johnston_96, clip_mean)
@@ -247,7 +248,7 @@ def _compute_mean(kind, imt, mag, rhypo):
     mean = table.ev(mag, rhypo)
 
     # convert mean from base 10 to base e
-    return mean * np.log(10)
+    return mean * LOG10
 
 
 def _compute_stddevs(C, imt, num_sites, stddev_types):
@@ -256,7 +257,7 @@ def _compute_stddevs(C, imt, num_sites, stddev_types):
     """
     stddevs = []
     for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'] * np.log(10))
+        stddevs.append(np.zeros(num_sites) + C['sigma'] * LOG10)
 
     return stddevs
 
@@ -369,7 +370,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
 
             mean[m] = _compute_mean(self.kind, imt, ctx.mag, ctx.rhypo.copy())
             mean[m] = clip_mean(imt, mean[m])
-            sig[m] = self.COEFFS[imt]['sigma'] * np.log(10)
+            sig[m] = self.COEFFS[imt]['sigma'] * LOG10
 
     # period dependent standard deviations (in base 10)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

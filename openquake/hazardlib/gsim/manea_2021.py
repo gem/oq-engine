@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,10 +24,11 @@ Module exports: `ManeaEtAl2021`
 """
 
 import numpy as np
+from scipy.constants import g
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-from scipy.constants import g
 
 
 def _compute_magnitude_term(C, mag):
@@ -57,11 +58,11 @@ def _compute_arc_regional_term(C, backarc):
     """
     term = np.zeros(len(backarc))
     # fore-arc sites
-    term[backarc == 0] = C['phi7']
     # back-arc sites
-    term[backarc == 1] = C['phi6']
     # along-arc sites
-    term[backarc == 2] = C['phi5']
+    term[backarc == 0] = C['phi7']  # fore-arc
+    term[backarc == 1] = C['phi6']  # back-arc
+    term[backarc == 2] = C['phi5']  # along-arc
     return term
 
 
@@ -90,18 +91,12 @@ def _get_site_type_dummy_variables(sites):
     class B: Vs30 = 360 − 800 m/s
     class C: Vs30 = 180 - 360 m/s
     """
-    ssa = np.zeros(len(sites.vs30))
-    ssb = np.zeros(len(sites.vs30))
-    ssc = np.zeros(len(sites.vs30))
     # SClass C; 180 m/s <= Vs30 <= 360 m/s.
-    idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
-    ssc[idx] = 1.0
     # Class B; 360 m/s <= Vs30 <= 800 m/s.
-    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
-    ssb[idx] = 1.0
     # Class A; Vs30 > 800 m/s.
-    idx = (sites.vs30 >= 800.0)
-    ssa[idx] = 1.0
+    ssc = np.where((sites.vs30 >= 180.0) & (sites.vs30 < 360.0), 1., 0.)
+    ssb = np.where((sites.vs30 >= 360.0) & (sites.vs30 < 800.), 1., 0.)
+    ssa = np.where(sites.vs30 >= 800.0, 1., 0.)
     return ssa, ssb, ssc
 
 
@@ -152,7 +147,7 @@ class ManeaEtAl2021(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             # compute mean and convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(get_mean_values(C, ctx)) * 1e-2 / g)
+            mean[m] = get_mean_values(C, ctx) + np.log(0.01 / g)
             # Get standard deviations
             tau[m] = C["tau"]
             phi[m] = C["phi"]

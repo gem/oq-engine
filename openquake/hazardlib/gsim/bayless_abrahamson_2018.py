@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 
+
 BA_COEFFS = os.path.join(os.path.dirname(__file__), "bayless_abrahamson_2018",
                          "bayless_abrahamson_2018.csv")
 
@@ -38,7 +39,7 @@ def _magnitude_scaling(C, ctx):
     """
     t1 = C['c1']
     t2 = C['c2'] * (ctx.mag - 6.)
-    tmp = np.log(1.0 + np.exp(C['cn']*(C['cM']-ctx.mag)))
+    tmp = np.logaddexp(0.0, C['cn'] * (C['cM'] - ctx.mag))
     t3 = ((C['c2'] - C['c3']) / C['cn']) * tmp
     return t1 + t2 + t3
 
@@ -59,9 +60,7 @@ def _normal_fault_effect(C, ctx):
     """
     Compute the correction coefficient for the normal faulting
     """
-    idx = (ctx.rake > -150) & (ctx.rake < -30)
-    fnm = np.zeros_like(ctx.rake)
-    fnm[idx] = 1.0
+    fnm = np.where((ctx.rake > -150) & (ctx.rake < -30), 1.0, 0.)
     return C['c10'] * fnm
 
 
@@ -109,7 +108,7 @@ def _get_basin_term(C, ctx, region=None):
     c11[(ctx.vs30 > 500)] = C['c11d']
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
-    z1ref = np.exp(-7.67/4*np.log(tmp)) # in metres
+    z1ref = np.exp(-7.67/4*np.log(tmp))  # in metres
     # Get z1pt0 (already in metres)
     z1pt0 = ctx.z1pt0.copy()
     # Use GMM's vs30 to z1pt0 for none-measured values
@@ -161,7 +160,6 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
         of the coefficients f3, f4 and f5 which are used to compute the
         non-linear term
     """
-
     vsref = 760.0
     NSITES = len(ctx.vs30)
     NFREQS = coeff_nl.shape[0]
@@ -184,7 +182,7 @@ def _get_nl_site_response(C, ctx, imt, ln_ir_outcrop, freq_nl, coeff_nl):
     f2 = coeff_nl[:, 1] * (t1 - t2)
     f3 = coeff_nl[:, 0]
 
-    fnl_0 = f2 * np.log((np.exp(ln_ir_outcrop) + f3) / f3)
+    fnl_0 = f2 * np.logaddexp(0.0, ln_ir_outcrop - np.log(f3))
     idxs = np.argmin(fnl_0, axis=0)
 
     # Applying correction as described at page 2093 in BA18
@@ -254,8 +252,7 @@ class BaylessAbrahamson2018(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    }
+        const.StdDev.INTRA_EVENT}
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}

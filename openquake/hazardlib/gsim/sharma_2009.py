@@ -26,6 +26,7 @@ import warnings
 import numpy as np
 from scipy.constants import g
 
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -200,10 +201,10 @@ class SharmaEtAl2009(GMPE):
                         _get_site_amplification(ctx, coeffs) +
                         _get_mechanism(ctx, coeffs))
             # so convert to g and thence to the natural logarithm
-            mean[m] = log_mean * np.log(10.0) - np.log(g)
+            mean[m] = log_mean * LOG10 - np.log(g)
 
             # convert standard deviations from common to natural logarithm
-            sig[m] = coeffs['sigma'] * np.log(10.0)
+            sig[m] = coeffs['sigma'] * LOG10
 
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these

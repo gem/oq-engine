@@ -29,6 +29,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.baselib.general import CallableDict
+from openquake.hazardlib.const import LOG10
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -175,12 +176,12 @@ class GhofraniAtkinson2014(GMPE):
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log((10.0 ** (imean)))
-            sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))
-            tau[m] = np.log(10.0 ** C["tau"])
-            phi[m] = np.log(10.0 ** C["sigma"])
+                mean[m] = imean * LOG10
+            sig[m] = np.sqrt(C['tau'] ** 2. + C['sigma'] ** 2.) * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['sigma'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        c0         a        b         c1         c2       c3   sig_init       af   sigma     tau   sig_tot
