@@ -1,21 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module exports :class:`NBCC2015_AA13`
 """
 import io
 import os
 import numpy as np
+
 from openquake.hazardlib.gsim.gmpe_table import (
-    GMPETable, _get_mean, _get_stddev)
-from openquake.hazardlib.gsim.base import CoeffsTable
+    GMPETable, _get_mean, _get_stddev, interp_table)
+from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.gsim.base import add_alias
-from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+
 
 dirname = os.path.dirname(__file__)
 BASE_PATH_AA13 = os.path.join(dirname, 'nbcc2015_tables')
@@ -67,8 +83,7 @@ def site_term(self, mag, ctx, dists, imt):
     PGA760_ref = np.copy(PGA760)
     PGA760_ref[ctx.vs30 > 450.] = 0.1
 
-    vs30ref = np.zeros_like(ctx.vs30)
-    vs30ref += 450.0
+    vs30ref = np.full_like(ctx.vs30, 450.0)
 
     C = self.COEFFS_2000_to_BC[imt]
     site_term = (AB06_BA08(C, ctx.vs30, imt, PGA760_ref) /
