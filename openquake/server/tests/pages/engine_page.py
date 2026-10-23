@@ -29,11 +29,12 @@ class EnginePage:
                 str(job_id), exact=True))
 
     def get_job_id_from_new_job(self):
-        executing_status = self.page.get_by_text("executing")
-        expect(executing_status).to_be_visible(timeout=50_000)
-        target_row = self.page.locator("tr").filter(
-            has_text="executing").first
-        return target_row.locator("td").first.inner_text().strip()
+        # the newest job is the first row: a fast job may already be
+        # complete when the page is checked, so accept both states
+        job_rows = self.page.locator("tr").filter(
+            has_text=re.compile("executing|complete"))
+        expect(job_rows.first).to_be_visible(timeout=50_000)
+        return job_rows.first.locator("td").first.inner_text().strip()
 
     def wait_for_job_completion(self, job_id):
         job_row = self.get_job_row(job_id)
