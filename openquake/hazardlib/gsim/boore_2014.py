@@ -101,20 +101,21 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     # Regular basin term
     else:
         dz1 = (z1pt0 / METRES_PER_KM) - \
-               bmodel_mu_z1  # Convert site z1pt0 to km
+            bmodel_mu_z1  # Convert site z1pt0 to km
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
 
     return f_dz1 * usgs_baf
 
 
-def _interpolate_magnitude(mag, val_min, val_max, mag_min=4.5, mag_max=5.5):
+def _interpolate_magnitude(mag, val_min, val_max, mag_min=4.5, mag_max=5.5,
+                           dtype=None):
     # Linearly interpolate a value between mag_min and mag_max, with constant
     # values outside this range.
     # The tau and phi magnitude transitions run from M4.5 to M5.5.
     result = np.full_like(
         mag, val_min + (val_max - val_min) * (mag - mag_min) /
-        (mag_max - mag_min))
+        (mag_max - mag_min), dtype=dtype)
     result[mag <= mag_min] = val_min
     result[mag >= mag_max] = val_max
     return result
@@ -138,7 +139,8 @@ def _get_intra_event_phi_base(kind, C, mag, rjb, vs30):
     magnitude, distance and vs30
     """
     # Magnitude Dependent phi (Equation 17)
-    base_vals = _interpolate_magnitude(mag, C["f1"], C["f2"])
+    base_vals = _interpolate_magnitude(
+        mag, C["f1"], C["f2"], dtype=rjb.dtype)
 
     # Distance dependent phi (Equation 16)
     idx1 = rjb > C["R2"]

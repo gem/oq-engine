@@ -223,8 +223,8 @@ class SomervilleEtAl2009NonCratonic_SS14(SomervilleEtAl2009NonCratonic):
             fnl  = boore_2014._get_nonlinear_site_term(
                 BEA14_C, ctx.vs30, np.exp(pga_rock_760))
 
-            mean[m] = _compute_mean(
-    C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl
+            mean[m] = (_compute_mean(C, ctx.mag, ctx.rjb) -
+                       flin_865_760 - fnl_865_760 + flin + fnl)
 
             sig[m] = C['sigma']
 
@@ -279,7 +279,7 @@ class SomervilleEtAl2009YilgarnCraton_SS14(SomervilleEtAl2009YilgarnCraton):
             fnl  = boore_2014._get_nonlinear_site_term(
                 BEA14_C, ctx.vs30, np.exp(pga_rock_760))
 
-            mean[m] = _compute_mean(
-    C, ctx.mag, ctx.rjb) - flin_865_760 - fnl_865_760 + flin + fnl
+            mean[m] = (_compute_mean(C, ctx.mag, ctx.rjb) -
+                       flin_865_760 - fnl_865_760 + flin + fnl)
 
             sig[m] = C['sigma']
