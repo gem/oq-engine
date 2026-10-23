@@ -363,7 +363,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
             not components):
         residuals = _correlate_legacy(
             corr_Z, corr_imts, shakemap, spatial_model, cross_imt_model,
-            cholesky_limit, None)
+            cholesky_limit, context)
         result[row_indices] = mu[row_indices] * numpy.exp(
             residuals) / scale[row_indices]
         return result

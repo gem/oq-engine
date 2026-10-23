@@ -1618,11 +1618,16 @@ def get_array_usgs_id(kind, id, contents={}):
     result = contents.get('download/shake_result.hdf')
     if result:
         try:
-            return get_array(
+            array = get_array(
                 kind='shake_result_hdf', fname=result['url'])
+            logging.info('Using shake_result.hdf for %s', id)
+            return array
         except (OSError, KeyError, ValueError) as exc:
+            # grid.xml has no phi/tau, so the within-event residuals
+            # will be built from the total standard deviation only
             logging.warning('Unable to read shake_result.hdf for %s: %s; '
-                            'falling back to grid.xml', id, exc)
+                            'falling back to grid.xml, without phi/tau '
+                            'components', id, exc)
     grid = contents.get('download/grid.xml')
     if not grid:
         raise MissingLink('Could not find a ShakeMap grid for %s' % id)
@@ -1630,6 +1635,7 @@ def get_array_usgs_id(kind, id, contents={}):
         'download/uncertainty.xml')
     if not uncertainty:
         logging.warning('No uncertainty.xml file')
+    logging.info('Using grid.xml for %s', id)
     return get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)

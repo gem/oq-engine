@@ -11,7 +11,7 @@ from openquake.hazardlib.shakemap.maps import \
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky)
+    cross_correlation_matrix, cholesky, _correlate_residuals)
 
 F64 = numpy.float64
 imts = [imt.from_string(x)
@@ -111,6 +111,24 @@ class ShakemapTestCase(unittest.TestCase):
                 shakemap, method, vs30=None, truncation_level=3,
                 num_gmfs=2, seed=42, imts=['PGA', 'SA(0.3)'])
             numpy.testing.assert_allclose(gmfs[:, 0], expected)
+
+    def test_strategies_reproduce_spatial_correlation(self):
+        # both factorizations must reproduce the target correlation
+        lon, lat = numpy.meshgrid(numpy.arange(5) * 0.1,
+                                  numpy.arange(5) * 0.1)
+        lons, lats = lon.ravel(), lat.ravel()
+        sites = site.SiteCollection.from_points(lons, lats)
+        model = JayaramBaker2009(vs30_clustering=False)
+        dmatrix = geo.geodetic.distance_matrix(lons, lats)
+        target = spatial_correlation_array(dmatrix, imts[:1], model)[0]
+        Z = numpy.random.default_rng(1).standard_normal((len(lons), 20000))
+        for correlation_strategy in (
+                'cholesky_decomposition', 'circulant_embedding'):
+            residuals = _correlate_residuals(
+                Z, imts[:1], sites, model, None, correlation_strategy,
+                None, 10000, 3, 0)
+            empirical = numpy.corrcoef(residuals)
+            numpy.testing.assert_allclose(empirical, target, atol=0.05)
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
