@@ -155,6 +155,20 @@ def test_view_rlz():
         assert (arr['model'] == model).sum() > 0, model
 
 
+def test_view_logic_tree():
+    # the logic tree views show the rows of each model of the parent
+    with read(RUP_HDF5) as dstore:
+        bsets = view('branchsets', dstore)
+        branches = view('branches', dstore)
+        sm_rlzs = view('sm_rlzs', dstore)
+    assert 'model' in bsets.splitlines()[0]
+    assert 'model' in sm_rlzs.splitlines()[0]
+    for model in ['EUR', 'MIE']:
+        assert ('| %s ' % model) in bsets
+        assert ('| %s ' % model) in sm_rlzs
+    ae(sorted(set(branches['model'])), ['EUR', 'MIE'])
+
+
 def test_sites():  # 5 sites
     global last_job
     calc = base.run_calc(
