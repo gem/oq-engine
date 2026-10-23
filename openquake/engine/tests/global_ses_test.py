@@ -21,6 +21,7 @@ import sys
 import shutil
 import tempfile
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
@@ -108,6 +109,21 @@ def test_one_site():
 
     # check the maximum_distance is different for MIE and EUR
     assert not hasattr(calc.oqparam, 'maximum_distance')
+
+
+def test_export_gmf_data_csv():
+    global last_job
+    calc = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5')
+    last_job = calc.datastore.calc_id
+    fname, sig_eps_csv, _sitemesh = export(
+        ('gmf_data', 'csv'), calc.datastore)
+    # sigma_epsilon event IDs must match the stored ones, not be remapped
+    sig_eps = calc.datastore['gmf_data/sigma_epsilon'][()]
+    df = pandas.read_csv(sig_eps_csv, comment='#')
+    ae(df['event_id'].to_numpy(), numpy.sort(sig_eps['eid']))
+    gmf_df = pandas.read_csv(fname, comment='#')
+    assert set(df['event_id']) <= set(gmf_df['event_id'])
 
 
 def test_sites():  # 5 sites
