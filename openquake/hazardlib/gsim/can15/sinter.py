@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2014-2023, GEM Foundation
-# 
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+#
 """
 :module:`openquake.hazardlib.gsim.sinter` implements
 :class:`SInterCan15Mid`, :class:`SInterCan15Upp`, :class:`SInterCan15Low`
@@ -74,13 +75,13 @@ class SInterCan15Mid(GMPE):
     #: 'Development of Base Model', p. 901.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
-    #: Required site parameters is Vs30.
+    #: Required site parameters are Vs30 and backarc.
     #: See table 2, p. 901.
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
-    #: Required rupture parameters are magnitude, rake, and focal depth.
+    #: Required rupture parameters are magnitude and focal depth.
     #: See paragraph 'Development of Base Model', p. 901.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is Rrup.
     #: See paragraph 'Development of Base Model', p. 902.
@@ -89,15 +90,6 @@ class SInterCan15Mid(GMPE):
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-
-    #: Required rupture parameters are magnitude and focal depth.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-
-    #: Supported tectonic region type is subduction interface
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-
-    #: Required site parameters
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
@@ -127,9 +119,9 @@ class SInterCan15Mid(GMPE):
         # Computing adjusted means
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]
-            mean[m] = (np.log(np.exp(mean_zh06[m]) * cff['mf']) * 0.1 +
+            mean[m] = ((mean_zh06[m] + np.log(cff['mf'])) * 0.1 +
                        mean_am09[m] * 0.5 + mean_ab15[m] * 0.2 +
-                       np.log(np.exp(mean_ga14[m]) * cff['mf']) * 0.2)
+                       (mean_ga14[m] + np.log(cff['mf'])) * 0.2)
             if self.sgn:
                 delta = np.minimum((0.15-0.0007 * ctx.rrup), 0.35)
                 mean[m] += self.sgn * delta
@@ -157,6 +149,5 @@ class SInterCan15Low(SInterCan15Mid):
     sgn = -1
 
 
-# must be a class to avoid breaking NRCan15SiteTerm (test event_based/case_19)
 class SInterCan15Upp(SInterCan15Mid):
     sgn = +1
