@@ -27,6 +27,7 @@ from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
 from openquake.calculators import base
 from openquake.calculators.export import export
+from openquake.calculators.views import view
 from openquake.engine import global_ses
 from openquake.commands.sample import reduce_rupture_file
 
@@ -124,6 +125,34 @@ def test_export_gmf_data_csv():
     ae(df['event_id'].to_numpy(), numpy.sort(sig_eps['eid']))
     gmf_df = pandas.read_csv(fname, comment='#')
     assert set(df['event_id']) <= set(gmf_df['event_id'])
+
+
+def test_export_realizations_csv():
+    global last_job
+    calc = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5')
+    last_job = calc.datastore.calc_id
+    fnames = export(('realizations', 'csv'), calc.datastore)
+    # one file per model, with the same columns as a single model
+    assert len(fnames) == 2
+    for model in ['EUR', 'MIE']:
+        [fname] = [f for f in fnames
+                   if os.path.basename(f).startswith(f'realizations_{model}')]
+        df = pandas.read_csv(fname, comment='#')
+        assert list(df.columns) == ['rlz_id', 'branch_path', 'weight']
+        rlzs = calc.datastore[f'full_lt/{model}'].rlzs
+        ae(df['rlz_id'].to_numpy(), numpy.arange(len(rlzs)))
+        ae(df['branch_path'].to_numpy(), rlzs['branch_path'])
+
+
+def test_view_rlz():
+    # the realization is shown for each model of the parent datastore
+    with read(RUP_HDF5) as dstore:
+        arr = view('rlz:0', dstore)
+    assert list(arr.dtype.names) == [
+        'model', 'uncertainty_type', 'uvalue']
+    for model in ['EUR', 'MIE']:
+        assert (arr['model'] == model).sum() > 0, model
 
 
 def test_sites():  # 5 sites

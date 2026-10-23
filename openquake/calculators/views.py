@@ -48,7 +48,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, map_getters, get_rmap_gb)
-from openquake.calculators.base import get_weights
+from openquake.calculators.base import get_weights, get_model_lts
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -1480,17 +1480,9 @@ def view_branches(token, dstore):
     return numpy.array(tbl, dt('branch_id abbrev uvalue'))
 
 
-@view.add('rlz')
-def view_rlz(token, dstore):
-    """
-    Show info about a given realization in the logic tree
-    Example:
-
-    $ oq show rlz:0 -1
-    """
-    _, rlz_id = token.split(':')
-    full_lt = dstore['full_lt']
-    rlz = full_lt.get_realizations()[int(rlz_id)]
+def _rlz_rows(full_lt, rlz_id):
+    # returns the (uncertainty_type, value) pairs of a realization
+    rlz = full_lt.get_realizations()[rlz_id]
     smlt = full_lt.source_model_lt
     gslt = full_lt.gsim_lt
     xlt = full_lt.extra_lt
@@ -1508,7 +1500,28 @@ def view_rlz(token, dstore):
     elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
         for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
             tbl.append((bset.id, path))
-    return numpy.array(tbl, dt('uncertainty_type uvalue'))
+    return tbl
+
+
+@view.add('rlz')
+def view_rlz(token, dstore):
+    """
+    Show info about a given realization in the logic tree
+    Example:
+
+    $ oq show rlz:0 -1
+
+    In a multi-model datastore the realization is shown for each model
+    """
+    _, rlz_id = token.split(':')
+    lts = get_model_lts(dstore)
+    if lts[0][0] == '???':  # single model
+        tbl = _rlz_rows(lts[0][1], int(rlz_id))
+        return numpy.array(tbl, dt('uncertainty_type uvalue'))
+    rows = []
+    for model, full_lt in lts:
+        rows.extend((model, *row) for row in _rlz_rows(full_lt, int(rlz_id)))
+    return numpy.array(rows, dt('model uncertainty_type uvalue'))
 
 
 @view.add('branchsets')

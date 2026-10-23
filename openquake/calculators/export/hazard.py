@@ -24,6 +24,7 @@ import itertools
 import collections
 import numpy
 import pandas
+from h5py._hl.group import Group
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
@@ -727,6 +728,14 @@ def export_disagg_csv(ekey, dstore):
 
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
+    if isinstance(dstore['full_lt'], Group):  # one file per model
+        paths = []
+        for model in dstore['full_lt']:
+            data = extract(dstore, f'realizations/{model}').array
+            path = dstore.export_path(f'realizations_{model}.csv')
+            writers.write_csv(path, data, fmt='%.7e', comment=dstore.metadata)
+            paths.append(path)
+        return paths
     data = extract(dstore, 'realizations').array
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%.7e', comment=dstore.metadata)
