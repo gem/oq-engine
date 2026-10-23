@@ -163,10 +163,32 @@ def _setup_standard_deviations(gsim):
             raise ValueError('phi_s2ss_model can be {}'.format(opts))
 
 
+class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
+    """
+    This is a modified version of the :class:
+    `openquake.hazardlib.gsim.yenier_atkinson_2015.YenierAtkinson2015BSSA`
+    which incorporates a correction of the median ground motion based on the
+    focal mechanism.
+
+    NOTE: It also fixes Vs30 to 760 m/s (i.e., the user-provided Vs30 is ignored).
+    """
+    adapted = True
+
+    #: Required rupture parameters include rake for the focal mechanism.
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth', 'rake'}
+
+    def __init__(self):
+        """
+        Initialize the CENA model with focal depth 10 km and required rake.
+        """
+        # Initialise using the super class
+        super().__init__(focal_depth=10., region='CENA')
+
+
 class AlAtikSigmaModel(GMPE):
     """
-    Takes a GMPE and applies the ground-motion standard deviation model
-    proposed by Al-Atik (2015), as described in:
+    Implements a modifiable GMPE that uses the ground-motion standard
+    deviation model proposed by Al-Atik in 2015 as described in:
 
     Al-Atik, L. (2015). "NGA-East: Ground-Motion Standard Deviation Models
     for Central and Eastern North America". PEER Report No. 2015/07, 217
