@@ -95,8 +95,12 @@ def test_registry_aliases_and_metadata():
     assert joint['LothBaker2013'].cls is LothBaker2013
     assert joint['LothBaker2013'].residual_component == (
         ResidualComponent.WITHIN_EVENT)
-    assert joint['LothBaker2013'].supported_imts == {PGA, SA}
+    assert joint['LothBaker2013'].supported_imts == {PGA, PGV, SA}
     assert joint['LothBaker2013'].calibrated_imts == {SA}
+    assert joint[
+        'LothBaker2013'
+    ].intensity_measure_type_approximations == {
+        PGA: SA(0.01), PGV: SA(1.0)}
     assert joint['MarkhvidaEtAl2018'].cls is MarkhvidaEtAl2018
     assert joint['MarkhvidaEtAl2018'].residual_component == (
         ResidualComponent.WITHIN_EVENT)

@@ -2399,10 +2399,10 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         oqparam = ds['oqparam']
-        strategy_used = None  # only set if a ShakeMap job had a fallback
+        strategy_used = None  # stored by the ShakeMap jobs
         if 'correlation_strategy_used' in ds:
             strategy_used = ds['correlation_strategy_used'][0].decode()
-        model_used = None  # only set for shake_result.hdf products
+        model_used = None  # stored by the ShakeMap jobs with a correlation
         if 'correlation_model_used' in ds:
             model_used = ds['correlation_model_used'][0].decode()
         input_params = format_oqparam(oqparam, strategy_used, model_used)

@@ -1642,29 +1642,42 @@ def get_array_usgs_id(kind, id, contents={}):
         uncertainty_url=uncertainty['url'] if uncertainty else None)
 
 
+def _hdf_json(h5, key):
+    # Decode a JSON dictionary stored in a shake_result.hdf file.
+    text = h5[key][()]
+    return json.loads(text.decode('utf8') if isinstance(text, bytes)
+                      else text)
+
+
+def _hdf_grid(h5, conf):
+    # Return lon_max, lat_max, xres, yres of the grid of the arrays. The
+    # arrays store their own grid, which can be coarser than the configured
+    # resolution when ShakeMap limits the number of points: the configured
+    # extent and resolution are used only if the grid is not stored.
+    attrs = h5['arrays/vs30'].attrs
+    if all(key in attrs for key in ('xmax', 'ymax', 'dx', 'dy')):
+        return (float(attrs['xmax']), float(attrs['ymax']),
+                float(attrs['dx']), float(attrs['dy']))
+    extent = list(map(float, conf['extent']['bounds']['extent']))
+    if -999 in extent or not numpy.isfinite(extent).all():
+        map_info = _hdf_json(h5, 'dictionaries/info.json')[
+            'output']['map_information']
+        extent = [
+            float(map_info['min']['longitude']),
+            float(map_info['min']['latitude']),
+            float(map_info['max']['longitude']),
+            float(map_info['max']['latitude'])]
+    prediction = conf['interp']['prediction_location']
+    return (extent[2], extent[3], float(prediction['xres']),
+            float(prediction['yres']))
+
+
 def get_array_shake_result_hdf(fname):
     # Convert the HDF5 grid to the common ShakeMap array representation.
     url = path2url(fname)
     with h5py.File(io.BytesIO(_download_url(url)), 'r') as h5:
-        config_text = h5['dictionaries/config'][()]
-        if isinstance(config_text, bytes):
-            config_text = config_text.decode('utf8')
-        conf = json.loads(config_text)
-        extent = list(map(float, conf['extent']['bounds']['extent']))
-        if -999 in extent or not numpy.isfinite(extent).all():
-            info_text = h5['dictionaries/info.json'][()]
-            if isinstance(info_text, bytes):
-                info_text = info_text.decode('utf8')
-            map_info = json.loads(info_text)['output']['map_information']
-            extent = [
-                float(map_info['min']['longitude']),
-                float(map_info['min']['latitude']),
-                float(map_info['max']['longitude']),
-                float(map_info['max']['latitude'])]
-        _, _, lon_max, lat_max = extent
-        prediction = conf['interp']['prediction_location']
-        xres = float(prediction['xres'])
-        yres = float(prediction['yres'])
+        conf = _hdf_json(h5, 'dictionaries/config')
+        lon_max, lat_max, xres, yres = _hdf_grid(h5, conf)
         component = conf['interp'].get(
             'component', 'GREATER_OF_TWO_HORIZONTAL')
         imt_groups = h5[f'arrays/imts/{component}']
@@ -1673,12 +1686,18 @@ def get_array_shake_result_hdf(fname):
         shape = h5['arrays/vs30'].shape
         ny, nx = shape
         dt = [(imt, F32) for imt in imts]
+        # phi and tau are stored only if all the IMTs have them, otherwise
+        # missing values would be taken as zero uncertainties
+        components = [field for field in ('phi', 'tau') if all(
+            field in imt_groups[imt] for imt in imts)]
         dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-                  ('val', dt), ('std', dt), ('phi', dt), ('tau', dt)]
+                  ('val', dt), ('std', dt)]
+        dtlist.extend((field, dt) for field in components)
         # the between-event factor C @ chol(Sigma_HH_YD) is stored only if
-        # all the IMTs have it (shakemap-modules >= 1.1.4), padded to the
-        # largest number of between-event terms
-        has_cl = all('C' in imt_groups[imt] for imt in imts)
+        # all the IMTs have it (shakemap-modules >= 1.1.4), together with
+        # phi, padded to the largest number of between-event terms
+        has_cl = 'phi' in components and all(
+            'C' in imt_groups[imt] for imt in imts)
         if has_cl:
             width = max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
                         for imt in imts)
@@ -1695,9 +1714,8 @@ def get_array_shake_result_hdf(fname):
             scale = 1 if imt in ('MMI', 'PGV') else 100
             array['val'][imt] = (mean if imt == 'MMI' else
                                  numpy.exp(mean) * scale)
-            for field in ('std', 'phi', 'tau'):
-                if field in group:
-                    array[field][imt] = group[field][()].reshape(-1)
+            for field in ('std', *components):
+                array[field][imt] = group[field][()].reshape(-1)
             if has_cl:
                 # the between-event samples are C @ chol(Sigma) @ z
                 C = group['C'][()].reshape(-1, group['C'].shape[-1])

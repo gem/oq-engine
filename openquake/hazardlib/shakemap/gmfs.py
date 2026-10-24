@@ -301,7 +301,11 @@ def _correlate_legacy(Z, imts, shakemap, spatial_model,
     if M * N > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
             f'{M=} x {N=}', cholesky_limit))
+
+    # Cross Correlation
     cross_corr = cross_correlation_matrix(imts, cross_imt_model)
+
+    # Spatial Correlation and Covariance
     dmatrix = geo.geodetic.distance_matrix(
         shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(
@@ -317,6 +321,8 @@ def _correlate_legacy(Z, imts, shakemap, spatial_model,
             raise ValueError('Cannot decompose the spatial covariance '
                              'because stddev==0 for IMT=%s' % im.string)
     covariance = spatial_covariance_array(stddev, spatial_corr)
+
+    # Cholesky Decomposition: L @ Z contains ln-unit residuals
     return cholesky(covariance, cross_corr) @ Z
 
 
@@ -411,7 +417,28 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
                       correlation_strategy='cholesky_decomposition',
                       sites=None, context=None, tau_Z=None,
                       truncation_level=3, correlation_seed=0):
-    # Implement the ShakeMap spatial correlation sampling.
+    """
+    Implementation of paper by Silva and Horspool 2019
+    https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
+    For shake_result.hdf products the stored posterior components are
+    sampled with the Loth and Baker (2013) correlation instead.
+
+    :param shakemap: site coordinates with median ShakeMap values
+    :param imts: list of required imts
+    :param Z: truncated standard normal samples of shape (M * N, E)
+    :param mu: ShakeMap medians of shape (M * N, E)
+    :param spatial_model: spatial correlation model
+    :param cross_imt_model: cross-IMT correlation model
+    :param cholesky_limit: maximum M * N for a dense factorization
+    :param correlation_strategy: cholesky_decomposition or
+        circulant_embedding
+    :param sites: site collection of the ShakeMap points, if any
+    :param context: CorrelationContext of the rupture, if any
+    :param tau_Z: between-event samples of shape (M, E), if any
+    :param truncation_level: truncation level of the samples
+    :param correlation_seed: seed of the correlated samples
+    :returns: gmfs of shape (M * N, E)
+    """
     correlated = [i for i, im in enumerate(imts) if hasattr(im, 'period')]
     N = len(shakemap)
     total_std = numpy.array([
@@ -453,6 +480,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         residuals = _correlate_legacy(
             corr_Z, corr_imts, shakemap, spatial_model, cross_imt_model,
             cholesky_limit, context)
+        # mu contains the ShakeMap medians, residuals are in ln units
         result[row_indices] = mu[row_indices] * numpy.exp(
             residuals) / scale[row_indices]
         return result

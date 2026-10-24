@@ -89,6 +89,33 @@ class ShakemapParsersTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(
             filtered['tau']['PGA'], array['tau']['PGA'])
 
+    def test_shake_result_hdf_coarsened_grid(self):
+        # ShakeMap can store a grid coarser than the configured resolution
+        # (to respect its maximum number of points): the coordinates must
+        # come from the grid attributes of the arrays
+        config = {
+            'extent': {'bounds': {'extent': [-999.] * 4}},
+            'interp': {'prediction_location': {'xres': .5, 'yres': .5}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 3), 400.)
+                h5['arrays/vs30'].attrs.update(
+                    xmin=10., xmax=12., ymin=20., ymax=21., dx=1., dy=1.)
+                group = h5.require_group(
+                    'arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA')
+                group['mean'] = numpy.zeros((2, 3))
+                group['std'] = numpy.ones((2, 3))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        numpy.testing.assert_array_equal(
+            array['lon'], [10, 11, 12, 10, 11, 12])
+        numpy.testing.assert_array_equal(
+            array['lat'], [21, 21, 21, 20, 20, 20])
+        # without phi and tau there are no uncertainty components
+        self.assertNotIn('phi', array.dtype.names)
+        self.assertNotIn('CL', array.dtype.names)
+
     def test_shake_result_hdf_between_event_factor(self):
         # CL = C @ chol(Sigma_HH_YD), padded to the largest number of
         # between-event terms, so that CL @ CL.T = C @ Sigma_HH_YD @ C.T

@@ -1873,8 +1873,11 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
                  'no station conditioning, between-event terms independent '
                  'across IMTs)')
     else:
-        model = (f'{name} (XML ShakeMap: approximation from the marginal '
-                 'uncertainties)')
+        model = (f'{name}, {strategy} (XML ShakeMap: approximation from '
+                 'the marginal uncertainties)')
+        if strategy != calc.oqparam.correlation_strategy:
+            model += (f'; {calc.oqparam.correlation_strategy} is not '
+                      'applicable to these sites')
     calc.datastore['correlation_model_used'] = numpy.array(
         [model], dtype=hdf5.vstr)
 
