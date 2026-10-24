@@ -776,6 +776,40 @@ def _overlay_region_names(ax, admin_boundaries, font_size):
             path_effects.Normal()])
 
 
+def _start_map(admin_boundaries, elements, style):
+    # Create a figure with the basemap and the borders of the regions
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=style.figsize)
+    _overlay_basemap(ax, elements.basemap_path, admin_boundaries.crs)
+    admin_boundaries.plot(ax=ax, edgecolor='black', facecolor='none',
+                          linewidth=0.8)
+    return fig, ax
+
+
+def _finish_map(fig, ax, elements, style):
+    # Add epicenter and legend, set the viewport, then add the scale bar,
+    # title and axis labels, consistently with plot_variable
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
+        ax.scatter(lon, lat, marker='*', s=150, color='yellow',
+                   edgecolor='black', linewidth=1, zorder=10,
+                   label='Epicenter')
+    if ax.get_legend_handles_labels()[0]:
+        ax.legend(framealpha=0.7, title=elements.legend_title,
+                  title_fontsize=style.font_size,
+                  fontsize=style.legend_font_size, loc='best')
+    _resolve_limits(ax, elements.x_limits, elements.y_limits,
+                    elements.epicenter)
+    if elements.scale_bar:
+        _overlay_scale_bar(ax)
+    if elements.plot_title:
+        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
+    ax.set_xlabel("Longitude", fontsize=style.font_size)
+    ax.set_ylabel("Latitude", fontsize=style.font_size)
+    ax.set_aspect('equal', adjustable='box')
+    fig.tight_layout()
+
+
 def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
                       style: MapStyleConfig = None):
     """
@@ -787,30 +821,48 @@ def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
     :param style: optional sizing and styling properties
     :returns: the matplotlib figure and axis
     """
-    import matplotlib.pyplot as plt
     style = style or MapStyleConfig()
     elements = elements or MapDataElements()
-
-    fig, ax = plt.subplots(figsize=style.figsize)
-    _overlay_basemap(ax, elements.basemap_path, admin_boundaries.crs)
-    admin_boundaries.plot(ax=ax, edgecolor='black', facecolor='none',
-                          linewidth=0.8)
-    if elements.epicenter is not None:
-        lon, lat = elements.epicenter
-        ax.scatter(lon, lat, marker='*', s=150, color='yellow',
-                   edgecolor='black', linewidth=1, zorder=10,
-                   label='Epicenter')
-        ax.legend(framealpha=0.7, fontsize=style.legend_font_size,
-                  loc='best')
-    _resolve_limits(ax, elements.x_limits, elements.y_limits,
-                    elements.epicenter)
+    fig, ax = _start_map(admin_boundaries, elements, style)
+    _finish_map(fig, ax, elements, style)
     _overlay_region_names(ax, admin_boundaries, style.city_font_size)
-    if elements.scale_bar:
-        _overlay_scale_bar(ax)
-    if elements.plot_title:
-        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
-    ax.set_xlabel("Longitude", fontsize=style.font_size)
-    ax.set_ylabel("Latitude", fontsize=style.font_size)
-    ax.set_aspect('equal', adjustable='box')
-    fig.tight_layout()
+    return fig, ax
+
+
+def plot_assets_map(lons, lats, admin_boundaries, *,
+                    elements: MapDataElements = None,
+                    style: MapStyleConfig = None):
+    """
+    Plot the locations of the assets over the borders of the
+    administrative regions, with optional basemap, cities, epicenter
+    and scale bar.
+
+    :param lons: longitudes of the assets
+    :param lats: latitudes of the assets
+    :param admin_boundaries: GeoDataFrame with the regions to display
+    :param elements: optional geographical annotations and limits
+    :param style: optional sizing and styling properties
+    :returns: the matplotlib figure and axis
+    """
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+    fig, ax = _start_map(admin_boundaries, elements, style)
+    # many assets can share the same location: plot each location once
+    lonlats = numpy.unique(numpy.column_stack([lons, lats]), axis=0)
+    # bright orange contrasts with both land and sea; the markers shrink
+    # as the number of locations grows, to limit overlaps, and the dark
+    # edge is kept only while they are big enough not to hide the fill
+    size = numpy.clip(120 / numpy.sqrt(len(lonlats)), 0.5, 12)
+    ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
+               color='#ff7f00', edgecolor='black',
+               linewidth=0.4 if size >= 4 else 0, alpha=0.9, zorder=5,
+               label='Asset locations')
+    _finish_map(fig, ax, elements, style)
+    # keep the marker in the legend readable, whatever the size in the map
+    legend = ax.get_legend()
+    for handle, text in zip(legend.legend_handles, legend.get_texts()):
+        if text.get_text() == 'Asset locations':
+            handle.set_sizes([30])
+            handle.set_linewidth(0.4)
+    _overlay_cities(ax, elements.cities, style.city_font_size)
     return fig, ax

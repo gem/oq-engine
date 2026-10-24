@@ -33,7 +33,7 @@ from openquake.calculators.export import (
     AGGRISK_FIELD_EXPLANATION, AGGRISK_FIELD_DESCRIPTION,
     EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION)
 from openquake.calculators.postproc.plots import (
-    plot_variable, plot_region_names, MapDataElements)
+    plot_variable, plot_region_names, plot_assets_map, MapDataElements)
 from openquake.hazardlib.calc.filters import upper_maxdist
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
@@ -435,17 +435,23 @@ class CountryImpactReportBuilder:
         fig, _ax = plot_region_names(self.admin_boundaries, elements=elements)
         return _fig_to_png(fig)
 
-    def _get_assets_image(self):
-        # PNG bytes of the plot of the assets, or None if not available
-        # (it is stored by the post_risk calculator in IMPACT mode)
-        try:
-            arr = self.dstore['png/assets.png'][:]
-        except KeyError:
-            logging.warning('png/assets.png not found in the datastore')
-            return None
-        buf = BytesIO()
-        PILImage.fromarray(arr).save(buf, format='png')
-        return buf.getvalue()
+    def _generate_assets_plot(self):
+        # map of the asset locations, with the same viewport and
+        # decorations of the maps in the first page (to be called after
+        # them)
+        assets = self.dstore['assetcol'].array
+        elements = MapDataElements(
+            cities=self.cities,
+            x_limits=self.x_limits,
+            y_limits=self.y_limits,
+            basemap_path=self.basemap_path,
+            epicenter=self.hypocenter,
+            scale_bar=True
+        )
+        fig, _ax = plot_assets_map(
+            assets['lon'], assets['lat'], self.admin_boundaries,
+            elements=elements)
+        return _fig_to_png(fig)
 
     def _build_disclaimer(self):
         tbl = self.Table(
@@ -745,21 +751,18 @@ class CountryImpactReportBuilder:
         return story
 
     def _build_maps_row(self):
-        body_left_style, _, title_style = self._grid_styles()
+        _, _, title_style = self._grid_styles()
         caption_style = self.ParagraphStyle(
             "MapCaption", parent=title_style, alignment=1)  # centered
         maps = [
-            ("Exposed assets", self._get_assets_image()),
+            ("Exposed assets", self._generate_assets_plot()),
             (f"Administrative regions of {self.country_name}",
              self._generate_regions_plot()),
         ]
         cells = []
         for caption, png in maps:
-            if png is None:
-                img = self.Paragraph("Map not available", body_left_style)
-            else:
-                img = self._scaled_image_from_bytes(
-                    png, self.col_w - 10, self.maps_h - self.CAPTION_H - 10)
+            img = self._scaled_image_from_bytes(
+                png, self.col_w - 10, self.maps_h - self.CAPTION_H - 10)
             cells.append([self.Paragraph(caption, caption_style), img])
         tbl = self.Table(
             [cells],
