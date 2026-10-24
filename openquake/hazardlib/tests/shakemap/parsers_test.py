@@ -151,6 +151,31 @@ class ShakemapParsersTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(
             filtered['CL']['SA(1.0)'], array['CL']['SA(1.0)'])
 
+    def test_shake_result_hdf_without_sigma(self):
+        # with C but without Sigma_HH_YD for an IMT the product is still
+        # read, with phi and tau but without the between-event factor
+        config = {
+            'extent': {'bounds': {'extent': [10., 20., 11., 21.]}},
+            'interp': {'prediction_location': {'xres': 1., 'yres': 1.}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 2), 400.)
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt in ('PGA', 'SA(1.0)'):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = numpy.zeros((2, 2))
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+                    group['C'] = numpy.ones((4, 1))
+                    if imt == 'PGA':
+                        group['Sigma_HH_YD'] = numpy.ones((1, 1))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        self.assertIn('phi', array.dtype.names)
+        self.assertIn('tau', array.dtype.names)
+        self.assertNotIn('CL', array.dtype.names)
+
     @classmethod
     def setUp(cls):
         try:

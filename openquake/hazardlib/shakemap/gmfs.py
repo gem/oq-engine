@@ -28,6 +28,7 @@ from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
 from openquake.hazardlib.shakemap.realization import psd_factor
+from openquake.hazardlib.calc.gmf import _site_positions
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
 
@@ -249,19 +250,6 @@ def _circulant_factor(sites, imts, spatial_model,
         ResidualComponent.WITHIN_EVENT, context, site_indices)
 
 
-def _site_positions(complete, selected):
-    # Map selected site IDs to the row order of the complete grid.
-    complete_sids = numpy.asarray(complete.sids)
-    selected_sids = numpy.asarray(selected.sids)
-    order = numpy.argsort(complete_sids)
-    sorted_sids = complete_sids[order]
-    positions = numpy.searchsorted(sorted_sids, selected_sids)
-    if (numpy.any(positions == len(sorted_sids)) or
-            numpy.any(sorted_sids[positions] != selected_sids)):
-        raise ValueError('Selected sites are absent from the complete grid')
-    return order[positions]
-
-
 # Apply the selected spatial factorization to sampled residuals.
 def _correlate_residuals(Z, imts, sites, spatial_model,
                          cross_imt_model, correlation_strategy, context,
@@ -355,7 +343,10 @@ def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
         dist, proxies, proxies)
     phi = numpy.concatenate([shakemap['phi'][str(im)] for im in imts])
     # one draw per event of the between-event terms of each IMT,
-    # truncated as the within-event samples Z
+    # truncated as the within-event samples Z; hence, like in the rest of
+    # the engine, the variance phi^2 + |CL|^2 is reached only for a large
+    # truncation level and is reduced by the variance of the truncated
+    # normal otherwise (see to_gmfs)
     rng = numpy.random.default_rng(seed + 3)
     between = []
     for im in imts:
@@ -576,6 +567,11 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     if truncation_level <= 1E-9:
         Z = numpy.zeros((M * N, num_gmfs))
     else:
+        # as in the scenario and event based calculators, the normal
+        # samples are truncated before being correlated, so the variance
+        # of the residuals is reduced by the variance of the truncated
+        # normal (0.29, 0.77 and 0.97 for truncation levels 1, 2 and 3)
+        # while the correlation coefficients are preserved
         Z = truncnorm.rvs(
             -truncation_level, truncation_level, loc=0, scale=1,
             size=(M * N, num_gmfs), random_state=seed)

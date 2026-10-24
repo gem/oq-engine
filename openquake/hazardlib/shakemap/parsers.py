@@ -1616,6 +1616,10 @@ def get_array_usgs_id(kind, id, contents={}):
     :param id: ShakeMap ID
     :param contents: product links from the USGS event response
     """
+    # shake_result.hdf is preferred also for the uncorrelated jobs, as
+    # requested in issue #11706: its grid and medians coincide with
+    # grid.xml up to the float32 rounding, so the results of the jobs
+    # without correlation are practically unchanged
     result = contents.get('download/shake_result.hdf')
     if result:
         try:
@@ -1694,10 +1698,12 @@ def get_array_shake_result_hdf(fname):
                   ('val', dt), ('std', dt)]
         dtlist.extend((field, dt) for field in components)
         # the between-event factor C @ chol(Sigma_HH_YD) is stored only if
-        # all the IMTs have it (shakemap-modules >= 1.1.4), together with
-        # phi, padded to the largest number of between-event terms
+        # all the IMTs have both arrays (shakemap-modules >= 1.1.4),
+        # together with phi, padded to the largest number of between-event
+        # terms; otherwise the product is used without the factor
         has_cl = 'phi' in components and all(
-            'C' in imt_groups[imt] for imt in imts)
+            'C' in imt_groups[imt] and 'Sigma_HH_YD' in imt_groups[imt]
+            for imt in imts)
         if has_cl:
             width = max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
                         for imt in imts)

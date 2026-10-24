@@ -191,6 +191,34 @@ class ShakemapTestCase(unittest.TestCase):
             (shakemap['CL'][str(im)] ** 2).sum(axis=1) for im in pair])
         numpy.testing.assert_allclose(variance, expected, rtol=0.03)
 
+    def test_realization_residuals_correlation(self):
+        # without between-event terms the residuals have the Loth and
+        # Baker (2013) correlation between points and IMTs, whatever phi;
+        # PGV is correlated through its SA(1.0) proxy
+        ims = [imt.from_string(im) for im in ('PGA', 'SA(0.3)', 'PGV')]
+        proxies = [imt.from_string(im)
+                   for im in ('PGA', 'SA(0.3)', 'SA(1.0)')]
+        # points along a parallel at 0, 5, 15, 40 and 100 km
+        lons = numpy.array([0, 5, 15, 40, 100]) / 111.195
+        lats = numpy.zeros_like(lons)
+        N, E = len(lons), 200_000
+        rng = numpy.random.default_rng(42)
+        dt = numpy.dtype([
+            ('lon', float), ('lat', float),
+            ('phi', [(str(im), float) for im in ims]),
+            ('CL', [(str(im), float, (1,)) for im in ims])])
+        shakemap = numpy.zeros(N, dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        for im in ims:
+            shakemap['phi'][str(im)] = rng.uniform(0.2, 0.8, N)
+        Z = rng.standard_normal((N * len(ims), E))
+        res = _realization_residuals(shakemap, ims, Z, 0, 99)
+        dist = geo.geodetic.distance_matrix(lons, lats)
+        expected = LothBaker2013().correlation_block(dist, proxies)
+        numpy.testing.assert_allclose(
+            numpy.corrcoef(res), expected, atol=0.01)
+
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])
         res = amplify_ground_shaking(T=3.0, vs30=780, gmvs=gmvs)
