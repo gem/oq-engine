@@ -169,7 +169,7 @@ class AlAtikSigmaModel(GMPE):
     in the current implementation of the NGA East GMMs.
 
     :param GMPE:
-        GMPE is the **kwargs describing the GMPE (its name) and the sigma
+        GMPE is the kwargs describing the GMPE (its name) and the sigma
         and kappa modifications to be imposed
     :param gmpe_name:
         GMPE class that will be adjusted by AlAtikSigmaModel
