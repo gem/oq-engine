@@ -34,6 +34,7 @@ the realizations from a set of outputs from the OQ Engine
 import logging
 import numpy as np
 from openquake._unc.analysis import Analysis
+from openquake._unc.utils import probabilities_to_rates
 
 
 # tested in test_01_performance
@@ -115,8 +116,7 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
 
     # Converting the final matrix into annual frequencies of exceedance
     oqp = dstores[srcids[0]]['oqparam']
-    afes[afes > 0.99999] = 0.99999
-    afes = - np.log(1. - afes) / oqp.investigation_time
+    afes = probabilities_to_rates(afes, oqp.investigation_time)
 
     return oqp.hazard_imtls, afes
 

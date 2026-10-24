@@ -37,6 +37,7 @@ For the description of a PMF we use:
 
 import numpy as np
 from openquake._unc.convolution import HistoGroup
+from openquake._unc.utils import probabilities_to_rates
 
 
 # used only in test_md_convolution
@@ -139,8 +140,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     else:
         raise ValueError(f'Unsupported atype: {atype}')
 
-    poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/oqp.investigation_time
+    afes = probabilities_to_rates(poes, oqp.investigation_time)
 
     # Weights
     weights = dstore.getitem('weights')[:]

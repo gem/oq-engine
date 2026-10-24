@@ -29,6 +29,37 @@
 import numpy as np
 
 
+def probabilities_to_rates(poes, investigation_time):
+    """
+    Convert Poisson exceedance probabilities to annual exceedance rates.
+
+    Inputs are promoted to float64 before evaluating ``-log1p(-p) / T``.
+    Probabilities must be finite and in [0, 1); an exact one implies an
+    infinite rate and is rejected instead of being silently capped.
+    The input array is not modified and its shape is preserved.
+
+    :param poes: scalar or array of exceedance probabilities
+    :param investigation_time: finite, positive investigation time in years
+    :returns: float64 rates
+    :raises ValueError: for invalid probabilities or investigation time
+    """
+    message = 'Investigation time must be finite and positive'
+    if np.ndim(investigation_time) != 0:
+        raise ValueError(message)
+    try:
+        investigation_time = float(investigation_time)
+    except (TypeError, ValueError):
+        raise ValueError(message) from None
+    if not np.isfinite(investigation_time) or investigation_time <= 0:
+        raise ValueError('Investigation time must be finite and positive')
+    poes = np.asarray(poes, dtype=np.float64)
+    if np.any(~np.isfinite(poes)) or np.any((poes < 0) | (poes > 1)):
+        raise ValueError('Probabilities must be finite and in [0, 1]')
+    if np.any(poes == 1):
+        raise ValueError('A probability of 1 implies an infinite rate')
+    return -np.log1p(-poes) / investigation_time
+
+
 # NB: this will be obsolete in numpy 2+
 def weighted_percentile(data, weights, perc):
     """

@@ -1,6 +1,5 @@
 """Regression tests for uncertainty propagation."""
 import unittest
-import numpy as np
 import pandas as pd
 from types import SimpleNamespace
 from openquake._unc.analysis import Analysis
