@@ -50,6 +50,17 @@
                 <label for="ses_seed">{{ impact_form_labels.ses_seed }}</label>
                 <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="{{ impact_form_defaults.ses_seed }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
+              <div class="impact_form_row">
+                <label for="spatial_correlation">{{ impact_form_labels.spatial_correlation }}</label>
+                <select id="spatial_correlation" class="impact-select">
+                  {% for value, label in impact_spatial_correlation_options %}
+                  <option value="{{ value }}" data-scope="{% if value == 'none' %}both{% elif value == 'loth_baker' %}shakemap{% else %}rupture{% endif %}"{% if value == impact_form_defaults.spatial_correlation %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <small>JayaramBaker2009 uses vs30_clustering=True;
+                  LothBaker2013 samples the components stored in the
+                  ShakeMap shake_result.hdf product.</small>
+              </div>
               <div class="impact_form_row usgs_id_grp hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ impact_form_placeholders.station_data_file_from_usgs }}" disabled />

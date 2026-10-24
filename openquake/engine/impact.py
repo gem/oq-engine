@@ -75,6 +75,7 @@ def main_cmd(usgs_id, rupture_file=None,
              description=ImpactParam.description,
              notes=ImpactParam.notes,
              region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
+             spatial_correlation='none',
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -96,6 +97,9 @@ def main_cmd(usgs_id, rupture_file=None,
         post['shakemap_version'] = shakemap_version
     post['msr'] = msr
     post['approach'] = approach
+    # validated as in the web form: none, cholesky_decomposition or
+    # circulant_embedding for rupture jobs, none or loth_baker for ShakeMaps
+    post['spatial_correlation'] = spatial_correlation
     if nodal_plane:
         if nodal_plane not in ('NP1', 'NP2'):
             callback(None, post, exc='nodal_plane must be NP1 or NP2')
@@ -156,6 +160,8 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.spatial_correlation = (
+    'none, cholesky_decomposition, circulant_embedding or loth_baker')
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

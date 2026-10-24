@@ -108,7 +108,6 @@ def test_covariance_is_symmetric_positive_definite():
 
 
 @pytest.mark.parametrize(('imt', 'message'), [
-    (PGV(), 'does not support PGV'),
     (SA(0.005), 'periods from 0.01 to 10 s'),
     (SA(10.1), 'periods from 0.01 to 10 s'),
     (SA(1.0, damping=10.0), 'only 5%-damped SA'),
@@ -116,6 +115,16 @@ def test_covariance_is_symmetric_positive_definite():
 def test_rejects_imts_outside_calibrated_domain(imt, message):
     with pytest.raises(ValueError, match=message):
         LothBaker2013().validate_imts([imt])
+
+
+def test_pgv_uses_the_sa_1_0_proxy():
+    distances = numpy.array([[0., 10.], [10., 0.]])
+    LothBaker2013().validate_imts([PGV()])
+    pgv = LothBaker2013().correlation_block(
+        distances, [PGV()], [PGV()])
+    sa1 = LothBaker2013().correlation_block(
+        distances, [SA(1.0)], [SA(1.0)])
+    numpy.testing.assert_allclose(pgv, sa1)
 
 
 def test_rejects_pga_together_with_sa_0_01():

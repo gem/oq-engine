@@ -46,6 +46,10 @@ def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
+    # level 1 users can choose the spatial correlation as well
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('loth_baker')
     page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
@@ -140,6 +144,9 @@ def test_impact_ui_level_2_build_rupture(
         should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('cholesky_decomposition')
     expect(page.rupture_identifier()).to_be_visible()
     expect(authenticated_page.locator(
         'div#shakemap_version_grp')).to_be_visible()
@@ -160,6 +167,8 @@ def test_impact_ui_level_2_build_rupture(
         page.run_impact_calc()
     assert 'name="nodal_plane"' in request.value.post_data
     assert 'NP2' in request.value.post_data
+    assert 'spatial_correlation' in request.value.post_data
+    assert 'cholesky_decomposition' in request.value.post_data
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()
         if should_abort_job:
@@ -238,6 +247,34 @@ def test_impact_ui_level_2_provide_rupture_nrml(
     page.confirm_relocated_hypocenter_warning()
     # expect(page.local_timestamp()).not_to_be_visible(timeout=30_000)
     page.set_no_uncertainty()
+    page.run_impact_calc()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("user", [2], indirect=True)
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+@pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
+def test_impact_ui_level_2_provide_rupture_nrml_spatial_correlation(
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
+    page = ImpactPageLevel2(authenticated_page)
+    page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
+    page.choose_rupture_model()
+    correlation = authenticated_page.locator('select#spatial_correlation')
+    expect(correlation).to_be_visible()
+    correlation.select_option('circulant_embedding')
+    page.retrieve_data()
+    expect(page.rupture_map()).to_be_visible(timeout=50_000)
+    page.confirm_relocated_hypocenter_warning()
+    page.set_no_uncertainty()
+    # the body of a request with an uploaded file is not visible to
+    # Playwright, so check the value the form will submit
+    expect(correlation).to_have_value('circulant_embedding')
     page.run_impact_calc()
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()

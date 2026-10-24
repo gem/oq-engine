@@ -53,7 +53,8 @@ def test_format_oqparam_displays_selected_nodal_plane():
         time_event='day', maximum_distance={'default': [[0, 300]]},
         truncation_level=3, number_of_ground_motion_fields=10,
         asset_hazard_distance={'default': 15}, ses_seed=42,
-        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
+        mosaic_model='MODEL', tectonic_region_type='TRT', inputs={},
+        within_event_correlation_model=None)
     inputs = format_oqparam(oqparam)
     assert inputs['Nodal plane'] == 'NP2'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
@@ -479,6 +480,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
+        # Exercise HDF ShakeMap ingestion and correlated impact GMFs.
         self.set_user_level_and_remove_groups(1)
         # NOTE: this case tests the extractor for losses_by_site in the
         # case discarding sites that do not correspond to any assets,
@@ -496,7 +498,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
-                    maximum_distance='100')
+                    maximum_distance='100',
+                    spatial_correlation='loth_baker')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     def test_run_by_usgs_id_point_rupture_correlation(self):
@@ -523,6 +526,37 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 tb = self.get_json('%s/traceback' % job_id)
                 raise Exception('\n'.join(tb))
             self.assertEqual(job_dic['status'], 'complete')
+            ret = self.post('%s/remove' % job_id)
+            self.assertEqual(ret.status_code, 200)
+
+    def test_provide_rup_params_spatial_correlation_then_remove_calc(self):
+        # rupture-only job without ShakeMap, through the form fields
+        self.set_user_level_and_remove_groups(2)
+        data = dict(usgs_id='UserProvided', approach='provide_rup_params',
+                    use_shakemap='false', lon='84.4', lat='27.6',
+                    dep='30', mag='7', rake='90', dip='90', strike='0',
+                    aspect_ratio='2', msr='WC1994', mosaic_model='IND',
+                    maximum_distance='100', time_event='day',
+                    truncation_level='3', ses_seed='42',
+                    number_of_ground_motion_fields='10',
+                    asset_hazard_distance='15',
+                    spatial_correlation='circulant_embedding')
+        # NOTE: no MMI outputs without a ShakeMap, so the checks done by
+        #       impact_run_then_remove do not apply here
+        with tempfile.TemporaryDirectory() as email_dir:
+            data['email_file_path'] = email_dir
+            resp = self.post('impact_run', data=data)
+            [job_id] = json.loads(resp.content.decode('utf8'))
+            job_dic = self.wait(job_id)
+            if job_dic is None:
+                raise TimeoutError()
+            if job_dic['status'] == 'failed':
+                tb = self.get_json('%s/traceback' % job_id)
+                raise Exception('\n'.join(tb))
+            self.assertEqual(job_dic['status'], 'complete')
+            # the outputs page must say which spatial correlation was used
+            page = self.get(f'/engine/{job_id}/outputs_impact', prefix='')
+            self.assertIn(b'Circulant embedding', page.content)
             ret = self.post('%s/remove' % job_id)
             self.assertEqual(ret.status_code, 200)
 
@@ -578,8 +612,9 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
                          'station_data_file_input', 'station_data_file_loaded',
-                         'description']
+                         'description', 'spatial_correlation']
         self.assertEqual(list(resp), expected_list)
+        self.assertEqual(resp['spatial_correlation'], 'none')
 
     def test_impact_get_shakemap_versions(self):
         self.set_user_level_and_remove_groups(1)

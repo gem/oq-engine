@@ -53,6 +53,9 @@ from openquake.sep.classes import SecondaryPeril
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
+CORRELATION_STRATEGIES = (
+    'cholesky_decomposition', 'circulant_embedding')
+
 __doc__ = """\
 Full list of configuration parameters
 =====================================
@@ -182,8 +185,8 @@ correlation_cutoff:
 correlation_strategy:
   How the spatially correlated within-event residuals are sampled:
   *cholesky_decomposition* factorizes the dense correlation matrix of the
-  sites, *circulant_embedding* uses an FFT on a regular grid of sites. It is
-  set to *circulant_embedding* automatically in impact mode.
+  sites, *circulant_embedding* uses an FFT on a regular grid of sites. It
+  defaults to *circulant_embedding* in impact mode unless explicitly set.
   Example: *correlation_strategy = circulant_embedding*
   Default: cholesky_decomposition
 
@@ -859,7 +862,8 @@ shakemap_id:
 
 shakemap_uri:
   Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
-  a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
+  a key named "kind" with values "usgs_id", "usgs_xml",
+  "shake_result_hdf" or "file_npy".
   Example: shakemap_uri = {
   "kind": "usgs_xml",
   "grid_url": "file:///home/michele/usp000fjta/grid.xml",
@@ -1175,8 +1179,7 @@ class OqParam(valid.ParamSet):
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 2E-4)
     correlation_strategy = valid.Param(
-        valid.Choice('cholesky_decomposition', 'circulant_embedding'),
-        'cholesky_decomposition')
+        valid.Choice(*CORRELATION_STRATEGIES), 'cholesky_decomposition')
     siteid = valid.Param(valid.base64names, ())
     cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
@@ -1484,6 +1487,8 @@ class OqParam(valid.ParamSet):
         self.fix_legacy_names(names_vals)
         given = set(names_vals)
         super().__init__(**names_vals)
+        if self.impact and 'correlation_strategy' not in given:
+            self.correlation_strategy = 'circulant_embedding'
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
@@ -2745,8 +2750,6 @@ class OqParam(valid.ParamSet):
         if self.impact and not self.region_grid_spacing:
             self.raise_invalid('region_grid_spacing must be set in impact '
                                'mode')
-        if self.impact:
-            self.correlation_strategy = 'circulant_embedding'
 
     def check_source_model(self):
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs
