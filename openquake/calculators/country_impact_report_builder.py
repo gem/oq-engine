@@ -29,11 +29,24 @@ from openquake.calculators.country_impact_report_utils import (
     _read_world_cities, build_classifiers, load_admin_boundaries,
     points_to_gdf, aggregate_losses, save_most_affected_regions,
     get_configured_path)
-from openquake.calculators.postproc.plots import plot_variable, MapDataElements
+from openquake.calculators.export import (
+    AGGRISK_FIELD_EXPLANATION, AGGRISK_FIELD_DESCRIPTION,
+    EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION)
+from openquake.calculators.postproc.plots import (
+    plot_variable, plot_region_names, MapDataElements)
 from openquake.hazardlib.calc.filters import upper_maxdist
 
 COUNTRY_PROFILES_BASE_URL = "https://github.com/gem/risk-profiles/tree/master"
 REPORT_DPI = 30 if any('pytest' in arg for arg in sys.argv) else 300
+
+
+def _fig_to_png(fig):
+    # Save a matplotlib figure as PNG bytes and close it
+    import matplotlib.pyplot as plt
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=REPORT_DPI, bbox_inches="tight")
+    plt.close(fig)
+    return buf.getvalue()
 
 
 def _humanize_summary_value(value):
@@ -55,6 +68,8 @@ class CountryImpactReportBuilder:
     NOTES_H = 80
     SAFETY_BUFFER = 20
     LOGO_W = 100
+    CAPTION_H = 20
+    NUM_PAGES = 2
 
     def __init__(
             self, iso3, adm_level, event: EventContext, options: ReportOptions,
@@ -86,6 +101,7 @@ class CountryImpactReportBuilder:
         self.ListFlowable = platypus.ListFlowable
         self.ListItem = platypus.ListItem
         self.Spacer = platypus.Spacer
+        self.PageBreak = platypus.PageBreak
         self.getSampleStyleSheet = reportlab.lib.styles.getSampleStyleSheet
         self.ParagraphStyle = reportlab.lib.styles.ParagraphStyle
         self.colors = reportlab.lib.colors
@@ -117,6 +133,7 @@ class CountryImpactReportBuilder:
 
         self.x_limits = None
         self.y_limits = None
+        self.admin_boundaries = None
         self.cities = {}
 
         self._load_country_info()
@@ -351,11 +368,21 @@ class CountryImpactReportBuilder:
         self.row_h = self.grid_total_h / 2
         self.col_w = self.page_width / 2
 
+        # second page: a row of two square maps, then the definitions
+        self.maps_h = self.col_w + self.CAPTION_H
+        self.definitions_h = (
+            self.page_height
+            - self.DISCLAIMER_H
+            - self.HEADER_H
+            - self.maps_h
+            - self.SAFETY_BUFFER
+        )
+
     def _generate_country_plots(self):
-        import matplotlib.pyplot as plt
         tags_agg_losses = list(LOSS_METADATA)
         admin_boundaries = load_admin_boundaries(
             self.country_name, self.iso3, self.adm_level)
+        self.admin_boundaries = admin_boundaries
         points_gdf = self.points_gdf
         if points_gdf is None:
             points_gdf = points_to_gdf(
@@ -392,13 +419,33 @@ class CountryImpactReportBuilder:
                 classifiers[label], meta["colors"],
                 elements=elements
             )
-            buf = BytesIO()
-            fig.savefig(buf, format="png", dpi=REPORT_DPI,
-                        bbox_inches="tight")
-            plt.close(fig)
-            buf.seek(0)
-            images[label] = buf.getvalue()
+            images[label] = _fig_to_png(fig)
         return images
+
+    def _generate_regions_plot(self):
+        # map of the region borders and names, with the same viewport
+        # of the maps in the first page (to be called after them)
+        elements = MapDataElements(
+            x_limits=self.x_limits,
+            y_limits=self.y_limits,
+            basemap_path=self.basemap_path,
+            epicenter=self.hypocenter,
+            scale_bar=True
+        )
+        fig, _ax = plot_region_names(self.admin_boundaries, elements=elements)
+        return _fig_to_png(fig)
+
+    def _get_assets_image(self):
+        # PNG bytes of the plot of the assets, or None if not available
+        # (it is stored by the post_risk calculator in IMPACT mode)
+        try:
+            arr = self.dstore['png/assets.png'][:]
+        except KeyError:
+            logging.warning('png/assets.png not found in the datastore')
+            return None
+        buf = BytesIO()
+        PILImage.fromarray(arr).save(buf, format='png')
+        return buf.getvalue()
 
     def _build_disclaimer(self):
         tbl = self.Table(
@@ -697,6 +744,118 @@ class CountryImpactReportBuilder:
         story.append(t)
         return story
 
+    def _build_maps_row(self):
+        body_left_style, _, title_style = self._grid_styles()
+        caption_style = self.ParagraphStyle(
+            "MapCaption", parent=title_style, alignment=1)  # centered
+        maps = [
+            ("Exposed assets", self._get_assets_image()),
+            (f"Administrative regions of {self.country_name}",
+             self._generate_regions_plot()),
+        ]
+        cells = []
+        for caption, png in maps:
+            if png is None:
+                img = self.Paragraph("Map not available", body_left_style)
+            else:
+                img = self._scaled_image_from_bytes(
+                    png, self.col_w - 10, self.maps_h - self.CAPTION_H - 10)
+            cells.append([self.Paragraph(caption, caption_style), img])
+        tbl = self.Table(
+            [cells],
+            colWidths=[self.col_w, self.col_w],
+            rowHeights=[self.maps_h],
+        )
+        tbl.setStyle(self.TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        return tbl
+
+    def _definition_sections(self):
+        # (title, intro, [(term, explanation), ...]) describing only the
+        # items displayed in the first page of the report
+        metrics = [(meta["label"], AGGRISK_FIELD_EXPLANATION[lt])
+                   for lt, meta in LOSS_METADATA.items()]
+        # NOTE: the summary table uses the residents as exposed value
+        # also for the fatalities (see _build_summary_table)
+        exposed = [
+            (meta["label"], EXPOSED_VALUE_EXPLANATION[
+                "residents" if lt == "occupants" else lt])
+            for lt, meta in LOSS_METADATA.items()]
+        # statistic displayed in the maps, plus the ones in the table
+        keys = {"Median": "q50", "Mean": "lossmea"}[self.loss_metric]
+        keys = {keys, "q50"} if self.no_uncertainty else {
+            keys, "q05", "q95"}
+        reported = [(AGGRISK_FIELD_DESCRIPTION[key], explanation)
+                    for key, explanation in REPORTED_VALUE_EXPLANATION.items()
+                    if key in keys]
+        return [
+            ("Impact metrics", None, metrics),
+            ("Exposed value",
+             "The exposed value depends on the impact metric:", exposed),
+            ("Reported values", None, reported),
+        ]
+
+    def _build_definitions(self):
+        body_left_style, _, title_style = self._grid_styles()
+        story = [self.Paragraph("Definitions", title_style),
+                 self.Spacer(1, 4)]
+        for title, intro, items in self._definition_sections():
+            text = f"<b>{title}</b>"
+            if intro:
+                text += f" - {intro}"
+            story.append(self.Paragraph(text, body_left_style))
+            story.append(self.ListFlowable(
+                [self.ListItem(self.Paragraph(
+                    f"<b>{term}:</b> {explanation}.", body_left_style))
+                 for term, explanation in items],
+                bulletType="bullet",
+                leftIndent=15,
+            ))
+            story.append(self.Spacer(1, 6))
+        return story
+
+    def _build_page(self, rows, row_heights):
+        # stack the given sections vertically, filling the whole page
+        page = self.Table(
+            [[row] for row in rows],
+            colWidths=[self.page_width],
+            rowHeights=row_heights,
+        )
+        page.setStyle(self.TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        return page
+
+    def _save_png(self, pdf_doc):
+        # Render each page to a crisp image at 3.0x scaling (~300 DPI
+        # equivalent) and stack the pages vertically in a single PNG
+        pages = []
+        for page in pdf_doc:
+            pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
+            pages.append(PILImage.open(BytesIO(pix.tobytes("png"))))
+        width = max(page.width for page in pages)
+        height = sum(page.height for page in pages)
+        stacked = PILImage.new("RGB", (width, height), "white")
+        y = 0
+        for page in pages:
+            stacked.paste(page, (0, y))
+            y += page.height
+        buf = BytesIO()
+        stacked.save(buf, format="png")
+        png_path = f'impact/{self.iso3}/report_png'
+        self.dstore[png_path] = buf.getvalue()
+        logging.info(
+            f'The impact report in PNG format was saved into the datastore'
+            f' as {png_path}')
+
     def build(self):
         logging.info(f'Making impact report for {self.iso3}...')
         images = self._generate_country_plots()
@@ -710,61 +869,54 @@ class CountryImpactReportBuilder:
             rightMargin=self.MARGIN,
             topMargin=self.MARGIN,
             bottomMargin=self.MARGIN,
-            # A country report is deliberately a single-page document.  Do
-            # not let ReportLab silently split the master table onto another
-            # page if its contents grow beyond the allocated layout.
+            # Each page of a country report has a fixed layout.  Do not let
+            # ReportLab silently split a page table onto another page if its
+            # contents grow beyond the allocated layout.
             allowSplitting=0,
         )
 
-        master_layout = self.Table(
+        first_page = self._build_page(
             [
-                [self._build_disclaimer()],
-                [self._build_header()],
-                [self._build_grid(images)],
-                [self._build_notes()],
+                self._build_disclaimer(),
+                self._build_header(),
+                self._build_grid(images),
+                self._build_notes(),
             ],
-            colWidths=[self.page_width],
-            rowHeights=[
+            [
                 self.DISCLAIMER_H,
                 self.HEADER_H,
                 self.grid_total_h,
                 self.NOTES_H,
+            ])
+        second_page = self._build_page(
+            [
+                self._build_disclaimer(),
+                self._build_header(),
+                self._build_maps_row(),
+                self._build_definitions(),
             ],
-        )
-
-        master_layout.setStyle(self.TableStyle([
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]))
-
-        doc.build([master_layout])
+            [
+                self.DISCLAIMER_H,
+                self.HEADER_H,
+                self.maps_h,
+                self.definitions_h,
+            ])
+        doc.build([first_page, self.PageBreak(), second_page])
 
         buffer.seek(0)
         pdf_bytes = buffer.getvalue()
         pdf_doc = self.fitz.open(stream=pdf_bytes, filetype="pdf")
         page_count = pdf_doc.page_count
-        if page_count != 1:
+        if page_count != self.NUM_PAGES:
             pdf_doc.close()
             raise RuntimeError(
-                f"Impact report for {self.iso3} has "
-                f"{page_count} pages; expected exactly one")
+                f"Impact report for {self.iso3} has {page_count} pages;"
+                f" expected exactly {self.NUM_PAGES}")
 
         pdf_path = f'impact/{self.iso3}/report_pdf'
         self.dstore[pdf_path] = pdf_bytes
         logging.info(
             f'The impact report in PDF format was saved into the datastore'
             f' as {pdf_path}')
-
-        # Generate and save an exact PNG duplicate of the layout
-        page = pdf_doc.load_page(0)
-        # Render to a crisp image at 3.0x scaling (~300 DPI equivalent)
-        pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
-        png_path = f'impact/{self.iso3}/report_png'
-        self.dstore[png_path] = pix.tobytes("png")
+        self._save_png(pdf_doc)
         pdf_doc.close()
-        logging.info(
-            f'The impact report in PNG format was saved into the datastore'
-            f' as {png_path}')

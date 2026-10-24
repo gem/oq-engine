@@ -753,3 +753,64 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     ax.set_aspect('equal', adjustable='box')
     fig.tight_layout()
     return fig, ax
+
+
+def _overlay_region_names(ax, admin_boundaries, font_size):
+    # Write the name of each region inside its visible part
+    import matplotlib.patheffects as path_effects
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    viewport = box(xmin, ymin, xmax, ymax)
+    for geom, name in zip(admin_boundaries.geometry,
+                          admin_boundaries['region_name']):
+        if geom is None or not geom.intersects(viewport):
+            continue
+        pt = viewport_label_point(geom, viewport)
+        if pt is None:
+            continue
+        txt = ax.text(pt.x, pt.y, name, ha='center', va='center',
+                      fontsize=font_size, color='black', zorder=7,
+                      clip_on=True)
+        txt.set_path_effects([
+            path_effects.Stroke(linewidth=2, foreground='white'),
+            path_effects.Normal()])
+
+
+def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
+                      style: MapStyleConfig = None):
+    """
+    Plot the borders of the administrative regions and their names,
+    with optional basemap, epicenter and scale bar.
+
+    :param admin_boundaries: GeoDataFrame with a 'region_name' column
+    :param elements: optional geographical annotations and limits
+    :param style: optional sizing and styling properties
+    :returns: the matplotlib figure and axis
+    """
+    import matplotlib.pyplot as plt
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+
+    fig, ax = plt.subplots(figsize=style.figsize)
+    _overlay_basemap(ax, elements.basemap_path, admin_boundaries.crs)
+    admin_boundaries.plot(ax=ax, edgecolor='black', facecolor='none',
+                          linewidth=0.8)
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
+        ax.scatter(lon, lat, marker='*', s=150, color='yellow',
+                   edgecolor='black', linewidth=1, zorder=10,
+                   label='Epicenter')
+        ax.legend(framealpha=0.7, fontsize=style.legend_font_size,
+                  loc='best')
+    _resolve_limits(ax, elements.x_limits, elements.y_limits,
+                    elements.epicenter)
+    _overlay_region_names(ax, admin_boundaries, style.city_font_size)
+    if elements.scale_bar:
+        _overlay_scale_bar(ax)
+    if elements.plot_title:
+        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
+    ax.set_xlabel("Longitude", fontsize=style.font_size)
+    ax.set_ylabel("Latitude", fontsize=style.font_size)
+    ax.set_aspect('equal', adjustable='box')
+    fig.tight_layout()
+    return fig, ax

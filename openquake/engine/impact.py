@@ -155,7 +155,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
-main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.make_impact_reports = 'Make two-page report for each involved country'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

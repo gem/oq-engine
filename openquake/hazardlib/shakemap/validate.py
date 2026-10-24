@@ -177,7 +177,7 @@ IMPACT_FORM_LABELS = {
     'description': 'Description',
     'notes': 'Notes',
     'no_uncertainty': 'No uncertainty',
-    'make_impact_reports': 'Make one-page country reports',
+    'make_impact_reports': 'Make two-page country reports',
     'calculation_mode': 'Calculation mode',
     'within_event_correlation_model': 'Within-event correlation model',
     'within_event_correlation_params': 'Within-event correlation params',

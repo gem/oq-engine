@@ -61,6 +61,7 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
+    EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
@@ -98,6 +99,14 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Headers': '*'}
 
 ENGINE = "python -m openquake.engine.engine".split()
+
+# impact metrics sharing the same meaning of the exposed value
+EXPOSED_VALUE_LABELS = [
+    ('Affected population and Rendered homeless', 'residents'),
+    ('Floor area lost (m²)', 'area'),
+    ('Number of injured people and fatalities', 'occupants'),
+    ('Buildings destroyed', 'number'),
+    ('Economic loss (USD)', 'economic')]
 
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
@@ -2562,44 +2571,21 @@ def extract_html_table(request, calc_id, name):
                 '<span>.</span>' if key == 'injured' else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
         ) + '</ul>'
+        exposed_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                label, EXPOSED_VALUE_EXPLANATION[key])
+            for label, key in EXPOSED_VALUE_LABELS) + '</ul>'
+        reported_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                AGGRISK_FIELD_DESCRIPTION[key], explanation)
+            for key, explanation in REPORTED_VALUE_EXPLANATION.items()
+        ) + '</ul>'
         additional_explanations = {
             'value': (
                 'The exposed value depends on the impact metric. Below we '
                 'describe the meaning of the exposed value per impact metric:'
-                '<ul>'
-                '<li><strong>Affected population and Rendered homeless:'
-                '</strong> Population that lives in the area included in the '
-                'impact analysis.</li>'
-                '<li><strong>Floor area lost (m²):</strong> Total floor area '
-                'of buildings, including all storeys, in the area included in '
-                'the impact analysis.</li>'
-                '<li><strong>Number of injured people and fatalities:'
-                '</strong> Population assumed to be inside the building stock '
-                'in the area included in the impact analysis when the event '
-                'occurs.</li>'
-                '<li><strong>Buildings destroyed:</strong> Number of buildings '
-                'in the area included in the impact analysis.</li>'
-                '<li><strong>Economic loss (USD):</strong> Replacement value '
-                'of buildings and their contents in the area included in the '
-                'impact analysis.'
-                '</li></ul>'
-            ),
-            'Reported values': (
-                '<ul>'
-                '<li><strong>Mean:</strong> Arithmetic mean of the estimated '
-                'impact values, accounting for the uncertainties propagated '
-                'through the impact analysis.</li>'
-                '<li><strong>Median:</strong> The 50th percentile of the '
-                'estimated impact distribution. Half of the estimated impact '
-                'values are below the median and half are above it.</li>'
-                '<li><strong>5th percentile:</strong> Value below which 5% '
-                'of the estimated impact values fall. It represents the lower '
-                'end of the range of plausible impacts.</li>'
-                '<li><strong>95th percentile:</strong> Value below which 95% '
-                'of the estimated impact values fall. It represents the upper '
-                'end of the range of plausible impacts.</li>'
-                '</ul>'
-            ),
+                + exposed_values),
+            'Reported values': reported_values,
         }
         explanations = {
             'Loss types': loss_types,
