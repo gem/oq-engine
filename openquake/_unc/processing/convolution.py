@@ -27,6 +27,7 @@
 # coding: utf-8
 
 import logging
+import numpy as np
 
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore, mixture
@@ -85,6 +86,22 @@ def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str,
             acc *= h
 
     return acc
+
+
+def get_mean_rates(an01, sset, imt, atype):
+    """
+    Sum source means from available original realization rates.
+
+    Each source's realization weights are normalized independently. Linearity
+    of expectation makes the sum valid for both correlated and independent
+    sources, without histogram or conditional-mixture approximation.
+    """
+    source_means = []
+    for srcid in sorted(sset):
+        _, afes, weights = afes_matrix_from_dstore(
+            an01.dstores[srcid], imt, atype)
+        source_means.append(np.average(afes, axis=0, weights=weights))
+    return np.sum(source_means, axis=0, dtype=float)
 
 
 # tested in test_02_performance 
@@ -162,4 +179,7 @@ def process(sset, uset, an01, rlzgroups, res, imt, atype):
         histos[grpids].weight /= len(sset)  # fix weight
 
     # Taking the mixture MFD
-    return mixture(list(histos.values()))
+    result = mixture(list(histos.values()))
+    # The mean is a sum of source marginals, independently of grouping.
+    result.mean_rates = get_mean_rates(an01, sset, imt, atype)
+    return result

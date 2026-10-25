@@ -218,5 +218,11 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
             # Sum the PMF
             out[low:upp] += res.pmfs[lvl] * res.weight
 
+    weights = np.array([res.weight for res in results], dtype=float)
+    mean_rates = None
+    if (weights.sum() > 0 and
+            all(res.mean_rates is not None for res in results)):
+        mean_rates = np.average([res.mean_rates for res in results],
+                                axis=0, weights=weights)
     return HistoGroup(olst, minpow, maxrange, normalized=False,
-                      res=resolution)
+                      res=resolution, mean_rates=mean_rates)

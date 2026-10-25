@@ -42,6 +42,7 @@ class HistoGroup:
     :param numpow: list of number of powers (can contain None)
     :param normalized: if True, each histogram must be normalized
     :param res: optional resolution, also retained for all-zero groups
+    :param mean_rates: optional means from original realization rates
     """
     @classmethod
     def new(cls, afesRL: np.ndarray,  weights: np.ndarray, res: int,
@@ -62,6 +63,11 @@ class HistoGroup:
         """
         afesRL = afesRL[rlzs]
         weights = weights[rlzs]
+        if len(afesRL):
+            mean_rates = np.average(afesRL, axis=0,
+                                    weights=np.asarray(weights, dtype=float))
+        else:
+            mean_rates = np.zeros(afesRL.shape[1])
 
         # Loop over each column of afesRL i.e. each set of afes computed for a
         # given intensity level
@@ -69,7 +75,7 @@ class HistoGroup:
         min_powers = []
         num_powers = []
         for lvl in range(afesRL.shape[1]):
-            dat = afesRL[:, lvl]
+            dat = afesRL[:, lvl].copy()
             if not np.any(dat > 1e-20):
                 ohis.append(None)
                 min_powers.append(None)
@@ -89,10 +95,11 @@ class HistoGroup:
             min_powers.append(min_power)
             num_powers.append(num_power)
 
-        return cls(ohis, min_powers, num_powers, res=res)
+        return cls(ohis, min_powers, num_powers, res=res,
+                   mean_rates=mean_rates)
 
     def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True,
-                 res=None):
+                 res=None, mean_rates=None):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
@@ -107,6 +114,13 @@ class HistoGroup:
         self.numpow = numpow
         self.normalized = normalized
         self.weight = weight
+        if mean_rates is None and not len(self.idxs):
+            mean_rates = np.zeros(len(pmfs))
+        self.mean_rates = (None if mean_rates is None else
+                           np.asarray(mean_rates, dtype=float))
+        if (self.mean_rates is not None and
+                self.mean_rates.shape != (len(pmfs),)):
+            raise ValueError('Mean rates must have one value per histogram')
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
             if normalized and pmf is not None and np.abs(
                     1.0 - np.sum(pmf)) > TOLERANCE:
@@ -151,8 +165,12 @@ class HistoGroup:
             out2.append(min_power_o)
             out3.append(num_powers_o)
 
+        mean_rates = None
+        if histo_a.mean_rates is not None and histo_b.mean_rates is not None:
+            mean_rates = histo_a.mean_rates + histo_b.mean_rates
         return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight,
-                          res=histo_a.res or histo_b.res)
+                          res=histo_a.res or histo_b.res,
+                          mean_rates=mean_rates)
 
     # tested in test_m_convolution
     def to_matrix(self):
@@ -179,7 +197,9 @@ class HistoGroup:
         """
         :param result_types:
             Example: with [-1, 0.50, 0.84] we return mean, median and 84th
-            percentile for the mid points of the underlying bins (not None)
+            percentile for histograms that are not None. Means use original
+            realization rates when available, otherwise bin midpoints.
+            Percentiles continue to use the underlying bin midpoints.
         """
         out = []
         for i in self.idxs:
@@ -190,7 +210,10 @@ class HistoGroup:
             tmp = []
             for rty in result_types:
                 if rty == -1:  # mean
-                    tmp.append(np.average(mids, weights=his))
+                    if self.mean_rates is None:
+                        tmp.append(np.average(mids, weights=his))
+                    else:
+                        tmp.append(self.mean_rates[i])
                 else:
                     tmp.append(weighted_percentile(mids, weights=his, perc=rty))
             out.append(tmp)
@@ -208,6 +231,8 @@ class HistoGroup:
             fout.create_dataset("number_of_powers",
                                 data=np.array(self.numpow, dtype=float))
             fout.create_dataset("afes", data=afes)
+            if self.mean_rates is not None:
+                fout.create_dataset("mean_rates", data=self.mean_rates)
 
 
 def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
