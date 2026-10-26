@@ -137,17 +137,29 @@ window.initImpactForm = function() {
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
         $('#rupture-map').hide();
-        hide_level_1_maximum_distance();
     }
 
-    // In the level 1 interface the maximum distance is shown only after retrieving the data,
-    // because its default depends on the magnitude and any previous edit would be overwritten
-    function hide_level_1_maximum_distance() {
-        const row = $('#maximum_distance_row[hidden]');
-        if (row.length) {
-            row.css('display', 'none');
-            $('input#maximum_distance').val(window.IMPACT.impact_form_defaults.maximum_distance);
+    // Called when the USGS ID or the ShakeMap version changes: everything populated by
+    // retrieving the data refers to the previous event, so it is cleared and hidden
+    // until the data is retrieved again (and the calculation can not be launched)
+    function invalidate_retrieved_data(reset_rupture_inputs = true) {
+        if (reset_rupture_inputs) {
+            reset_rupture_form_inputs();
         }
+        for (const field of ['local_timestamp', 'maximum_distance', 'description']) {
+            $('input#' + field).val(window.IMPACT.impact_form_defaults[field]);
+        }
+        $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
+        $('#mosaic_model').empty();
+        $('#trt').empty();
+        $('#intensity-map').hide();
+        $('#pga-map').hide();
+        $('#shakemap-image-row').hide();
+        // in the level 1 interface these rows are shown only after retrieving the data;
+        // user inputs not depending on the event (e.g. the notes) are hidden but kept
+        $('div.after_get_rupture_btn[hidden]').css('display', 'none');
+        // re-enabled after retrieving the data
+        $('#submit_impact_calc').prop('disabled', true);
     }
 
     let shakemap_versions_request = null;
@@ -336,13 +348,16 @@ window.initImpactForm = function() {
     let usgsTypingTimer = null;
     const USGS_ID_TYPING_DELAY = 500; // milliseconds
 
-    // a different ShakeMap version may have a different magnitude
-    $('select#shakemap_version').on('change', hide_level_1_maximum_distance);
+    $('select#shakemap_version').on('change', function () {
+        // the nodal planes and their info depend on the USGS ID only,
+        // not on the ShakeMap version, so they are kept
+        invalidate_retrieved_data(get_selected_approach() !== 'build_rup_from_usgs');
+    });
 
     $('input[name="usgs_id"]').on('input', function () {
         invalidate_shakemap_versions_request();
         clearTimeout(usgsTypingTimer);
-        reset_rupture_form_inputs();
+        invalidate_retrieved_data();
         const selected_approach = get_selected_approach();
         if (approaches_requiring_shakemap_version.includes(
                 selected_approach)) {

@@ -59,6 +59,17 @@ def test_impact_ui_level_1(
     expect(page.maximum_distance()).to_be_visible()
     expect(page.maximum_distance()).not_to_have_value('')
     expect(page.maximum_distance()).to_be_editable()
+    # selecting another ShakeMap version invalidates the retrieved data
+    page.select_another_shakemap_version()
+    for elem in (page.intensity_map(), page.pga_map(), page.local_timestamp(),
+                 page.maximum_distance(), page.description()):
+        expect(elem).not_to_be_visible()
+    expect(page.run_impact_calc_btn()).to_be_disabled()
+    page.select_shakemap_version(
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
+    page.retrieve_data()
+    expect(page.maximum_distance()).to_be_visible(timeout=30_000)
+    expect(page.run_impact_calc_btn()).to_be_enabled()
     page.set_time_of_the_event('Night')
     expect(page.no_uncertainty_ckb()).to_have_count(0)
     page.set_make_impact_reports()
