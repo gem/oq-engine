@@ -42,6 +42,7 @@ from openquake.calculators.base import dcache
 from openquake.calculators.checkers import assert_close
 from openquake.calculators.views import text_table
 from openquake._unc.propagate_uncertainties import propagate
+from openquake._unc.utils import probabilities_to_rates
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -91,11 +92,11 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         self.res_conv = h.get_stats([-1, 0.50])
 
         # Testing the mean
-        expected_mea = -np.log(1 - mean)
+        expected_mea = probabilities_to_rates(mean, oqp.investigation_time)
         aac(expected_mea, self.res_conv[:, 0], rtol=5e-3)
 
         # Testing the median
-        expected_med = -np.log(1 - median)
+        expected_med = probabilities_to_rates(median, oqp.investigation_time)
         aac(expected_med, self.res_conv[:, 1], rtol=1e-1)
 
         if PLOTTING:
@@ -110,7 +111,9 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
         # Plot mean from oq
@@ -138,7 +141,9 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8)
 
         lbl = 'OQ Full Path Enumeration'
@@ -164,7 +169,9 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
         # All realizations
         for i_rlz in range(0, self.n_rlz):
-            poe = -np.log(1 - self.dstore['hcurves-rlzs'][0, i_rlz, 0, :])
+            poe = probabilities_to_rates(
+                self.dstore['hcurves-rlzs'][0, i_rlz, 0, :],
+                self.dstore['oqparam'].investigation_time)
             if i_rlz == 0:
                 plt.plot(self.imls, poe, '-', color='lightblue', alpha=0.8,
                          label='LT realization')
@@ -176,10 +183,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         plt.plot(self.imls, expected_mea, '-',
                      label='Mean from OQ Full Path Enumeration')
         lab = '16th percentile from POINT'
-        expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 1, 0, :])
+        expected_pct = probabilities_to_rates(
+            self.dstore['hcurves-stats'][0, 1, 0, :],
+            self.dstore['oqparam'].investigation_time)
         plt.plot(self.imls, expected_pct, '--r', mfc='none', label=lab, lw=1)
         lab = '84th percentile from POINT'
-        expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 3, 0, :])
+        expected_pct = probabilities_to_rates(
+            self.dstore['hcurves-stats'][0, 3, 0, :],
+            self.dstore['oqparam'].investigation_time)
         plt.plot(self.imls, expected_pct, '-.r', mfc='none',
                  label=lab, lw=1)
 
@@ -447,7 +458,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Read oq mean result
         dstore = dcache.get(str(TFF / 'data_calc/test_case01/job_all.ini'))
         mean = dstore['hcurves-stats'][0, 0, 0, :]
-        afe = -np.log(1 - mean)
+        afe = probabilities_to_rates(
+            mean, dstore['oqparam'].investigation_time)
 
         # Convolution
         fname_c = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
