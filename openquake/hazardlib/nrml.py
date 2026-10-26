@@ -211,7 +211,7 @@ def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
     source_ids = []
     groups = []  # expect a sequence of sourceGroup nodes
-    for ordinal, src_group in enumerate(node):
+    for src_group in node:
         if 'sourceGroup' not in src_group.tag:
             raise InvalidFile(
                 '%s: you have an incorrect declaration '
@@ -222,9 +222,6 @@ def get_source_model_05(node, fname, converter=default):
             # a source group can be empty if source_id filtering is on
             for src in sg:
                 source_ids.append(src.source_id)
-            # the position of the group in the file, needed to merge the
-            # pieces of a group split in chunks, see source_reader
-            sg.ordinal = ordinal
             groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:
@@ -345,30 +342,21 @@ def read_source_models(fnames, converter):
             sm = to_python(fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
-        yield check_source_model(sm, fname, converter)
+        sm.fname = fname
 
+        if os.environ.get('OQ_POINTLIKE'):  # debugging pointlike sources
+            for sg in sm.src_groups:
+                sg.sources = [src for src in sg if src.code in b'PAM']
 
-def check_source_model(sm, fname, converter):
-    """
-    Set the .fname attribute and check the investigation time of the
-    nonparametric sources (if any)
-
-    :returns: the source model
-    """
-    sm.fname = fname
-    if os.environ.get('OQ_POINTLIKE'):  # debugging pointlike sources
-        for sg in sm.src_groups:
-            sg.sources = [src for src in sg if src.code in b'PAM']
-
-    # check investigation time for NonParametricSeismicSources
-    cit = converter.investigation_time
-    np = [s for sg in sm.src_groups for s in sg if hasattr(s, 'data')]
-    if np and sm.investigation_time != cit:
-        raise ValueError(
-            'The source model %s contains an investigation_time '
-            'of %s, while the job.ini has %s' % (
-                fname, sm.investigation_time, cit))
-    return sm
+        # check investigation time for NonParametricSeismicSources
+        cit = converter.investigation_time
+        np = [s for sg in sm.src_groups for s in sg if hasattr(s, 'data')]
+        if np and sm.investigation_time != cit:
+            raise ValueError(
+                'The source model %s contains an investigation_time '
+                'of %s, while the job.ini has %s' % (
+                    fname, sm.investigation_time, cit))
+        yield sm
 
 
 def read(source, stop=None):

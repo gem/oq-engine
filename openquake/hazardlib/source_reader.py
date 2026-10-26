@@ -16,11 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import io
-import re
 import time
 import copy
-import bisect
 import hashlib
 import json
 import os.path
@@ -51,20 +48,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
-
-# the source model files bigger than CHUNK_SIZE are split in chunks, read
-# in parallel; the cuts are at the start of a source and never inside
-# groups of mutex sources/ruptures or clusters
-CHUNK_SIZE = 50 * 2**20
-SRC_START = re.compile(
-    rb'<(?:\w+:)?(?:areaSource|characteristicFaultSource|complexFaultSource|'
-    rb'kiteFaultSource|multiFaultSource|multiPointSource|'
-    rb'nonParametricSeismicSource|pointSource|simpleFaultSource)\b')
-GRP_START = re.compile(rb'<(?:\w+:)?sourceGroup\b[^>]*>')
-GRP_END = re.compile(rb'</(?:\w+:)?sourceGroup\s*>')
-SM_START = re.compile(rb'<(?:\w+:)?sourceModel\b[^>]*>')
-SM_END = re.compile(rb'</(?:\w+:)?sourceModel\s*>')
-UNSPLITTABLE = re.compile(rb'mutex|cluster\s*=\s*"true"')
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -185,112 +168,18 @@ def _sample_atomic_groups(src_groups, sample, applied):
             if not sg.atomic or id(sg) in selected_ids]
 
 
-def get_num_chunks(fname, sample):
-    """
-    :returns: the number of chunks in which to split a source model file
-    """
-    if sample:  # sampling the chunks would change the sampled sources
-        return 1
-    return max(1, os.path.getsize(fname) // CHUNK_SIZE)
-
-
-# returns the cut positions in the XML text of a source model, i.e. the
-# start of the sources and of the groups, excluding the first source of
-# each group and the sources in groups which cannot be split
-def _get_cuts(data, body_start, groups):
-    if not groups:  # NRML 0.4
-        return [m.start() for m in SRC_START.finditer(data, body_start)]
-    cuts = [grp[0] for grp in groups[1:]]  # the starts of the groups
-    for start, tag_end, end, _ in groups:
-        srcs = [m.start() for m in SRC_START.finditer(data, tag_end, end)]
-        tag = data[start:tag_end]
-        if (srcs and not UNSPLITTABLE.search(tag) and
-                not data[tag_end:srcs[0]].strip()):
-            cuts.extend(srcs[1:])
-    return sorted(cuts)
-
-
-def _get_chunk(data, ichunk, nchunks):
-    # returns the XML text of the given chunk of a source model file and
-    # the number of groups before the chunk, or None if the chunk is empty
-    sm_start = SM_START.search(data)
-    sm_end = None
-    for sm_end in SM_END.finditer(data, sm_start.end()):
-        pass  # take the last one
-    body_start, body_end = sm_start.end(), sm_end.start()
-    if b'<!--' in data[body_start:] or b'<![CDATA[' in data[body_start:]:
-        # do not risk to cut inside a comment, read the file in one go
-        return (data, 0) if ichunk == 0 else None
-    groups = [(st.start(), st.end(), en.start(), en.end()) for st, en in zip(
-        GRP_START.finditer(data, body_start), GRP_END.finditer(data))]
-    cuts = _get_cuts(data, body_start, groups)
-    bounds = [body_start]
-    size = (body_end - body_start) / nchunks
-    for k in range(1, nchunks):
-        idx = bisect.bisect_left(cuts, body_start + k * size)
-        if idx < len(cuts) and cuts[idx] > bounds[-1]:
-            bounds.append(cuts[idx])
-    bounds.append(body_end)
-    if ichunk >= len(bounds) - 1:
-        return None
-    a, b = bounds[ichunk], bounds[ichunk + 1]
-    starts = [g[0] for g in groups]
-    # the number of groups starting before the chunk and the group
-    # containing the start of the chunk, if any
-    offset = bisect.bisect_left(starts, a)
-    g = offset - 1
-    if g >= 0 and a < groups[g][2]:
-        head = data[groups[g][0]:groups[g][1]]  # repeat the group tag
-        offset = g
-    else:
-        head = b''
-    # the group containing the end of the chunk, if any
-    g = bisect.bisect_left(starts, b) - 1
-    if g >= 0 and b < groups[g][2]:
-        tail = data[groups[g][2]:groups[g][3]]  # close the group
-    else:
-        tail = b''
-    text = data[:body_start] + head + data[a:b] + tail + data[body_end:]
-    return text, offset
-
-
-# read a chunk of a source model file
-def _read_chunk(fname, ichunk, nchunks, converter):
-    with open(fname, 'rb') as f:
-        chunk = _get_chunk(f.read(), ichunk, nchunks)
-    if chunk is None:
-        return None
-    data, offset = chunk
-    bio = io.BytesIO(data)
-    bio.name = fname
-    [node] = nrml.read(bio)
-    sm = nrml.node_to_obj(node, fname, converter)
-    for sg in sm.src_groups:
-        if hasattr(sg, 'ordinal'):  # NRML 0.5
-            sg.ordinal += offset
-    return nrml.check_source_model(sm, fname, converter)
-
-
-def read_source_model(fname, branch, converter, applied, sample, chunk,
-                      monitor):
+def read_source_model(fname, branch, converter, applied, sample, monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
     :param applied: list of source IDs within applyToSources
     :param sample: a string with the sampling factor (if any)
-    :param chunk: a pair (chunk index, number of chunks)
     :param monitor: a Monitor instance
-    :returns: a dictionary (fname, chunk index) -> SourceModel
+    :returns: a SourceModel instance
     """
     t0 = time.time()
-    ichunk, nchunks = chunk
-    if nchunks == 1:
-        [sm] = nrml.read_source_models([fname], converter)
-    else:
-        sm = _read_chunk(fname, ichunk, nchunks, converter)
-        if sm is None:  # empty chunk
-            return {}
+    [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
     if sample:
         sm.src_groups = _sample_atomic_groups(sm.src_groups, sample, applied)
@@ -314,43 +203,7 @@ def read_source_model(fname, branch, converter, applied, sample, chunk,
         for src in sg:
             src.checksum = content_hash(src)
     sm.rtime = time.time() - t0  # save the read time
-    return {(fname, ichunk): sm}
-
-
-def _merge_chunks(dic):
-    # convert a dictionary (fname, ichunk) -> chunk into a dictionary
-    # fname -> source model, by merging the chunks of the same file; the
-    # result is the same as reading the file in one go, see nrml
-    chunks = general.AccumDict(accum=[])
-    for (fname, _ichunk), sm in sorted(dic.items()):
-        chunks[fname].append(sm)
-    out = {}
-    for fname, sms in chunks.items():
-        sm = sms[0]
-        if len(sms) > 1:
-            # the pieces of the same group are identified by the ordinal
-            # of the group (NRML 0.5) or by the TRT (NRML 0.4)
-            pieces = general.AccumDict(accum=[])
-            for chunk in sms:
-                for sg in chunk.src_groups:
-                    pieces[getattr(sg, 'ordinal', sg.trt)].append(sg)
-            groups = []
-            for key in sorted(pieces):  # in the order of the file
-                grp, *others = pieces[key]
-                if others:
-                    # NRML 0.5 groups keep the sources in the order of the
-                    # file, while NRML 0.4 groups sort them by source_id
-                    srcs = [src for g in pieces[key] for src in g]
-                    grp.sources = srcs if isinstance(key, int) else sorted(
-                        srcs, key=operator.attrgetter('source_id'))
-                    mags = [g.max_mag for g in pieces[key]
-                            if g.max_mag is not None]
-                    grp.max_mag = max(mags) if mags else None
-                groups.append(grp)
-            sm.src_groups = sorted(groups)
-            sm.rtime = sum(chunk.rtime for chunk in sms)
-        out[fname] = sm
-    return out
+    return {fname: sm}
 
 
 # NB:this is called after reduce_sources, so ";" is not added
@@ -461,14 +314,11 @@ def get_csm(oq, full_lt, dstore=None):
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        nchunks = get_num_chunks(path, ss)
-        for ichunk in range(nchunks):
-            allargs.append((path, rows[0]['branch'], converter, applied, ss,
-                            (ichunk, nchunks)))
+        allargs.append((path, rows[0]['branch'], converter, applied, ss))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter, applied, ss, (0, 1)))
-    smdict = _merge_chunks(parallel.Starmap(
-        read_source_model, allargs, h5=dstore if dstore else None).reduce())
+        allargs.append((path, '', converter, applied, ss))
+    smdict = parallel.Starmap(read_source_model, allargs,
+                              h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:
