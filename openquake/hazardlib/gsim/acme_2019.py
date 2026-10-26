@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-ACME2019 ground-motion adaptations and standard-deviation model.
+Module exports :class:`AlAtikSigmaModel`
 """
 import numpy as np
 

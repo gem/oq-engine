@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Mohammadi et al. (2023) Turkiye ML-based Ground-Motion Model
+Module exports :class:`Mohammadi2023Turkiye`
 """
 
 import os

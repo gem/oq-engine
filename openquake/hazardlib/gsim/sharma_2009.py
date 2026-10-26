@@ -17,10 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.sharma_2009`
-exports
-:class:`SharmaEtAl2009`
+Module exports :class:`SharmaEtAl2009`
 """
 import warnings
 import numpy as np

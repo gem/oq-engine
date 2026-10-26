@@ -17,9 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements SERA site amplification models
-class:`PitilakisEtAl2018`, `PitilakisEtAl2020`, `Eurocode8Amplification`,
-`Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
+Module exports :class:`PitilakisEtAl2018`
+               :class:`PitilakisEtAl2020`
+               :class:`Eurocode8Amplification`
+               :class:`Eurocode8AmplificationDefault`
+               :class:`SandikkayaDinsever2018`
 """
 import numpy as np
 import copy

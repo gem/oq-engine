@@ -17,11 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.nath_2012`
-exports
-:class:`NathEtAl2012Lower`
-:class:`NathEtAl2012Upper`
+Module exports :class:`NathEtAl2012Lower`
+               :class:`NathEtAl2012Upper`
 """
 import numpy as np
 
