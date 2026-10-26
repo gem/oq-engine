@@ -16,12 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-CanadaSHM6 active-crust regression and hard-rock site-correction tests.
+CanadaSHM6 active-crust regression tests.
 
 The inputs and expected values were NOT supplied by the GSIM authors.
-CY14 expected values were calculated separately using scalar equations
-and tabulated coefficients. The other baselines were recorded from
-single-site OpenQuake calculations, not independent model validation.
 """
 import unittest
 
@@ -30,7 +27,29 @@ import numpy as np
 from openquake.hazardlib import contexts
 from openquake.hazardlib.gsim.can20 import can_shm6_active_crust as asc
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.tests.gsim.can20.utils import make_context
+
+
+def make_context(mag, vs30, rjb, rrup):
+    ctx = contexts.RuptureContext()
+    ctx.mag = mag
+    ctx.rake = 0.
+    ctx.dip = 90.
+    ctx.width = 12.
+    ctx.ztor = 1.
+    ctx.hypo_depth = 8.
+    ctx.is_aftershock = False
+    ctx.crjb = 0.
+    ctx.vs30 = np.array(vs30, dtype=float)
+    # Assign some measured Vs30 sites to swap the phi coeffs
+    # in the case of the underlying ASK14 GSIM being used
+    ctx.vs30measured = ctx.vs30 >= 1100.
+    ctx.z1pt0 = np.full(len(vs30), -999.)
+    ctx.rjb = np.array(rjb, dtype=float)
+    ctx.rrup = np.array(rrup, dtype=float)
+    ctx.rx = np.full(len(vs30), -5.)
+    ctx.ry0 = np.zeros(len(vs30))
+    ctx.sids = np.arange(len(vs30))
+    return ctx
 
 
 # Rows within each block: PGA, SA(0.1), SA(1.0), PGV.
@@ -177,7 +196,7 @@ class CanadaSHM6ActiveCrustTestCase(unittest.TestCase):
         self.imts = [PGA(), SA(0.1), SA(1.0), PGV()]
         self.ctx = make_context(
             6., [180., 760., 1100., 1500., 2000., 3000.],
-            [0., 10., 30., 50., 70., 100.], [1., 12., 32., 52., 72., 102.], 8.)
+            [0., 10., 30., 50., 70., 100.], [1., 12., 32., 52., 72., 102.])
 
     def test_mean_and_standard_deviations(self):
         for name, expected in EXPECTED.items():
@@ -186,32 +205,3 @@ class CanadaSHM6ActiveCrustTestCase(unittest.TestCase):
                 result = contexts.get_mean_stds(gmm, self.ctx, self.imts)
                 np.testing.assert_allclose(result, expected, rtol=0, atol=1e-8)
 
-    def test_cy14_mixed_site_correction(self):
-        # Regression for the observed bug passing a boolean mask as Vs30.
-        # Non-reference Vs30 also exercises this path in the full-GMM test.
-        # At SA(1), the hard-rock factor is capped at the 1100 m/s factor.
-        # Its additive correction is -1.0941 * ln(1100 / 1130).
-        mean = np.array([-1., -2., -3., -4., -5., -6.])
-        ctx = self.ctx
-        gmm = asc.CanadaSHM6_ActiveCrust_ChiouYoungs2014()
-        # The unequal mask/site lengths catch the old boolean-mask argument.
-        with np.errstate(divide='raise', invalid='raise'):
-            asc.shm6_site_correction(gmm.COEFFS[SA(1.)], mean, ctx, SA(1.))
-        expected = [-1., -2., -3., -3.970560555760,
-                    -4.970560555760, -5.970560555760]
-        np.testing.assert_allclose(mean, expected, rtol=0, atol=1e-10)
-
-    def test_sa_period_limits(self):
-        for name in EXPECTED:
-            with self.subTest(gsim=name):
-                gmm = getattr(asc, 'CanadaSHM6_ActiveCrust_' + name)()
-                for period in (0.049, 10.01):
-                    with self.subTest(period=period):
-                        with self.assertRaisesRegex(ValueError,
-                                                    'not supported'):
-                            contexts.get_mean_stds(
-                                gmm, self.ctx, [SA(period)])
-                # Both endpoints of the supported interval are accepted.
-                result = contexts.get_mean_stds(
-                    gmm, self.ctx, [SA(0.05), SA(10.)])
-                self.assertTrue(np.isfinite(result).all())

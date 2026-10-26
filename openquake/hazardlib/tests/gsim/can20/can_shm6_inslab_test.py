@@ -13,11 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-CanadaSHM6 in-slab regression tests, including both fixed-depth variants.
+CanadaSHM6 in-slab regression tests.
 
 The inputs and expected values were NOT supplied by the GSIM authors.
-Expected values were recorded from single-site OpenQuake calculations.
-They are regression baselines, not independent scientific validation.
 """
 import unittest
 
@@ -26,7 +24,20 @@ import numpy as np
 from openquake.hazardlib import contexts
 from openquake.hazardlib.gsim.can20 import can_shm6_inslab as inslab
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.tests.gsim.can20.utils import make_context
+
+
+def make_context(mag, vs30, rrup, rhypo, hypo_depth):
+    ctx = contexts.RuptureContext()
+    ctx.mag = mag
+    ctx.hypo_depth = hypo_depth
+    ctx.vs30 = np.array(vs30, dtype=float)
+    ctx.backarc = np.zeros(len(vs30), dtype=bool)
+    ctx.rrup = np.array(rrup, dtype=float)
+    # Each class overrides hypo_depth with its fixed HYPO_DEPTH, but the
+    # initial value is needed before compute runs; Garcia 2005 reads rhypo.
+    ctx.rhypo = np.array(rhypo, dtype=float)
+    ctx.sids = np.arange(len(vs30))
+    return ctx
 
 
 # Blocks: log mean, total sigma, tau and phi.
@@ -177,9 +188,11 @@ class CanadaSHM6InSlabTestCase(unittest.TestCase):
         for name, expected in EXPECTED.items():
             with self.subTest(gsim=name):
                 gmm = getattr(inslab, 'CanadaSHM6_InSlab_' + name)()
+                rrup = [40., 90., 210.]
                 ctx = make_context(
-                    7.5, [180., 760., 2000.], [20., 80., 200.],
-                    [40., 90., 210.], gmm.HYPO_DEPTH)
+                    7.5, [180., 760., 2000.], rrup,
+                    np.hypot([20., 80., 200.], gmm.HYPO_DEPTH),
+                    gmm.HYPO_DEPTH)
                 ctx.backarc = np.array([False, True, False])
                 result = contexts.get_mean_stds(gmm, ctx, imts)
                 np.testing.assert_allclose(result, expected, rtol=0, atol=1e-8)

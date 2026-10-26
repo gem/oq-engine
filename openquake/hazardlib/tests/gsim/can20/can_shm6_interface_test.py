@@ -16,8 +16,6 @@
 CanadaSHM6 interface regression tests.
 
 The inputs and expected values were NOT supplied by the GSIM authors.
-Expected values were recorded from single-site OpenQuake calculations.
-They are regression baselines, not independent scientific validation.
 """
 import unittest
 
@@ -26,7 +24,19 @@ import numpy as np
 from openquake.hazardlib import contexts
 from openquake.hazardlib.gsim.can20 import can_shm6_interface as interface
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.tests.gsim.can20.utils import make_context
+
+
+def make_context(mag, vs30, rjb, rrup):
+    ctx = contexts.RuptureContext()
+    ctx.mag = mag
+    ctx.rake = 0.
+    ctx.vs30 = np.array(vs30, dtype=float)
+    ctx.z1pt0 = np.full(len(vs30), -999.)
+    ctx.backarc = np.zeros(len(vs30), dtype=bool)
+    ctx.rjb = np.array(rjb, dtype=float)
+    ctx.rrup = np.array(rrup, dtype=float)
+    ctx.sids = np.arange(len(vs30))
+    return ctx
 
 
 # Blocks: log mean, total sigma, tau and phi (where supported).
@@ -99,7 +109,7 @@ class CanadaSHM6InterfaceTestCase(unittest.TestCase):
     def setUp(self):
         self.imts = [PGA(), SA(0.1), SA(1.0), PGV()]
         self.ctx = make_context(
-            7.5, [180., 760., 2000.], [5., 60., 180.], [30., 80., 200.], 30.)
+            7.5, [180., 760., 2000.], [5., 60., 180.], [30., 80., 200.])
         self.ctx.backarc = np.array([False, True, False])
 
     def test_mean_and_standard_deviations(self):
@@ -107,6 +117,6 @@ class CanadaSHM6InterfaceTestCase(unittest.TestCase):
             with self.subTest(gsim=name):
                 gmm = getattr(interface, 'CanadaSHM6_Interface_' + name)()
                 result = contexts.get_mean_stds(gmm, self.ctx, self.imts)
-                # Atkinson-Macias defines total sigma only.
+                # Atkinson-Macias defines total sigma only
                 result = result[:len(expected)]
                 np.testing.assert_allclose(result, expected, rtol=0, atol=1e-8)

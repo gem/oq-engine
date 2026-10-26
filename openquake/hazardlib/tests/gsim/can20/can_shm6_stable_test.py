@@ -13,11 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-CanadaSHM6 stable-crust regression tests for AA13 and NGA-East submodels.
+CanadaSHM6 stable-crust regression tests.
 
 The inputs and expected values were NOT supplied by the GSIM authors.
-Expected values were recorded from single-site OpenQuake calculations.
-They are regression baselines, not independent scientific validation.
 """
 import unittest
 
@@ -26,7 +24,16 @@ import numpy as np
 from openquake.hazardlib import contexts
 from openquake.hazardlib.gsim.can20 import can_shm6_stable as stable
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.tests.gsim.can20.utils import make_context
+
+
+def make_context(mag, vs30, rhypo, rrup):
+    ctx = contexts.RuptureContext()
+    ctx.mag = mag
+    ctx.vs30 = np.array(vs30, dtype=float)
+    ctx.rhypo = np.array(rhypo, dtype=float)
+    ctx.rrup = np.array(rrup, dtype=float)
+    ctx.sids = np.arange(len(vs30))
+    return ctx
 
 
 # Blocks: log mean and total sigma (tau and phi are not defined).
@@ -312,10 +319,10 @@ class CanadaSHM6StableCrustTestCase(unittest.TestCase):
 
     def setUp(self):
         self.imts = [PGA(), SA(0.1), SA(1.0), PGV()]
+        rjb = np.array([20., 50., 100., 200., 300.])
+        rhypo = np.hypot(rjb, 10.)
         self.ctx = make_context(
-            6.5, [180., 450., 760., 2000., 3000.],
-            [20., 50., 100., 200., 300.],
-            np.hypot([20., 50., 100., 200., 300.], 10.), 10.)
+            6.5, [180., 450., 760., 2000., 3000.], rhypo, rhypo)
 
     def test_aa13_mean_and_total_sigma(self):
         for submodel, expected in EXPECTED_AA13.items():
@@ -325,7 +332,7 @@ class CanadaSHM6StableCrustTestCase(unittest.TestCase):
                 np.testing.assert_allclose(
                     result[:2], expected, rtol=0, atol=1e-8)
 
-    def test_ngae_mean_and_total_sigma(self):
+    def test_ngaeast_mean_and_total_sigma(self):
         for submodel, expected in EXPECTED_NGAE.items():
             with self.subTest(submodel=submodel):
                 gmm = stable.CanadaSHM6_StableCrust_NGAEast(submodel=submodel)
