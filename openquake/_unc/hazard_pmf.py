@@ -185,12 +185,8 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
         nump = np.array(res.numpow, dtype=float)
         ok = ~np.isnan(minp)
 
-        if i == 0:
-            minpow[ok] = minp[ok]
-            maxpow[ok] = nump[ok] + minp[ok]
-        else:
-            minpow[ok] = np.minimum(minpow[ok], minp[ok])
-            maxpow[ok] = np.maximum(maxpow[ok], minp[ok] + nump[ok])
+        minpow[ok] = np.fmin(minpow[ok], minp[ok])
+        maxpow[ok] = np.fmax(maxpow[ok], minp[ok] + nump[ok])
 
     ok = ~np.isnan(minpow)
     maxrange = minpow.copy()
