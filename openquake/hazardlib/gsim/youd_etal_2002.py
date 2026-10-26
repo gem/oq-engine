@@ -17,10 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.youd_etal_2002`
-exports
-:class:`YoudEtAl2002`
+Module exports :class:`YoudEtAl2002`
 """
 
 import numpy as np

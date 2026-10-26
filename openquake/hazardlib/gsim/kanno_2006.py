@@ -17,11 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.kanno_2006`
-exports
-:class:`Kanno2006Shallow`
-:class:`Kanno2006Deep`
+Module exports :class:`Kanno2006Shallow`
+               :class:`Kanno2006Deep`
 """
 import numpy as np
 from scipy.constants import g
