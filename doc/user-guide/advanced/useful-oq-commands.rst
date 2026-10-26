@@ -243,7 +243,7 @@ the vs30 file with a nearest neighbour algorithm::
 	  -2, --z2pt5           build the z2pt5
 	  -3, --vs30measured    build the vs30measured
 	  --sentinel-z, -999    assign dummy -999 to z1pt0/z2pt5
-	  -r, --regular-grid   build a complete regular UTM grid for CE
+	  -r, --regular-grid   build a complete regular grid for circulant embedding
 	  -e [EXPOSURE_XML [EXPOSURE_XML ...]], --exposure-xml [EXPOSURE_XML [EXPOSURE_XML ...]]
 	                        exposure(s) in XML format
 	  -s SITES_CSV, --sites-csv SITES_CSV
@@ -318,14 +318,14 @@ For example::
 
 ``--exposure-xml exposure.xml`` can be used instead of ``--sites-csv``.
 The grid is constructed with equal steps along the x and y axes of one local
-UTM projection, then converted back to longitude and latitude. This differs
-from the existing geographic gridding, whose kilometre steps along parallels
-and meridians do not guarantee the projected lattice required by circulant
-embedding (CE). Without ``--regular-grid``, existing behaviour is unchanged.
+transverse Mercator projection, then converted back to longitude and latitude.
+This differs from the existing geographic gridding, whose kilometre steps
+along parallels and meridians do not guarantee the lattice required by
+circulant embedding (CE). Without ``--regular-grid``, behaviour is unchanged.
 
 The bounds are expanded by one grid spacing and snapped outward to multiples
-of the spacing from the UTM origin. All cells are retained, including those
-without assets. Assigning the nearest Vs30 values does not move or remove
+of the spacing from the projected origin. All cells are retained, including
+those without assets. Assigning the nearest Vs30 values does not move or remove
 sites. The exported coordinates are checked with the engine's CE grid detector
 after writing. Existing site-parameter options, including ``--sentinel-z``,
 keep their current defaults and behaviour.
@@ -348,8 +348,9 @@ use ``--rupture`` with a positive ``--maximum-distance``::
         --z1pt0 --z2pt5 --sentinel-z --vs30measured \
         --output site_model_grid.csv
 
-Rupture mode selects regular UTM gridding automatically. The input must contain
-exactly one NRML/XML or OpenQuake CSV rupture; multiple surfaces are supported.
+Rupture mode selects regular projected gridding automatically. The input must
+contain exactly one NRML/XML or OpenQuake CSV rupture; multiple surfaces are
+supported.
 ``--rupture-mesh-spacing`` defaults to 1 km for XML surface discretization.
 CSV ruptures already contain their meshes. Rupture, exposure and sites inputs
 are mutually exclusive in the new gridding modes.

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
+Module exports :class:`Taherian2024Offshore`
+
 Taherian et al. 2024 GMPE - Offshore scenarios with embedded scalers
 """
 

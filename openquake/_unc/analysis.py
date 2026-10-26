@@ -38,6 +38,7 @@ import pandas as pd
 
 from openquake.calculators.base import dcache
 from openquake._unc.dsg_mde import get_afes_from_dstore as afes_from
+from openquake._unc.utils import probabilities_to_rates
 
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -307,8 +308,7 @@ class Analysis:
         for imag in range(Ma):
             for idst in range(D):
                 poes = mag_dst_rlz[imag, idst, :]
-                poes[poes > 0.99999] = 0.99999
-                afes = -np.log(1. - poes) / self.itime
+                afes = probabilities_to_rates(poes, self.itime)
                 afe = np.sum(afes * weights)
                 if afe > 0:
                     oute.append(afe)

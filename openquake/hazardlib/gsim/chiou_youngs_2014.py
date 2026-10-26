@@ -20,6 +20,7 @@
 Module exports :class:`ChiouYoungs2014`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
+               :class:`ChiouYoungs2014ACME2019`
 """
 import numpy as np
 

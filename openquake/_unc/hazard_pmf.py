@@ -37,6 +37,7 @@ For the description of a PMF we use:
 
 import numpy as np
 from openquake._unc.convolution import HistoGroup
+from openquake._unc.utils import probabilities_to_rates
 
 
 # used only in test_md_convolution
@@ -139,11 +140,10 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     else:
         raise ValueError(f'Unsupported atype: {atype}')
 
-    poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/oqp.investigation_time
+    afes = probabilities_to_rates(poes, oqp.investigation_time)
 
     # Weights
-    weights = dstore.getitem('weights')[:]
+    weights = np.asarray(dstore.getitem('weights')[:], dtype=float)
     if atype in ['mde', 'md', 'm']:
         rmap = dstore['best_rlzs'][0]
         weights = weights[rmap][rlzs]
@@ -166,6 +166,7 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     """
     Given a list of HistoGroup this computes a mixture distribution
     corresponding to a weighted sum of the inputs.
+    Both positive-bin and zero masses are multiplied by component weights.
 
     :param results:
         It's a list of HistoGroup. The number of elements is equal to the
@@ -173,7 +174,8 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     :returns:
         Not normalized HistoGroup
     """
-    resolution = results[0].res  # all equal resolutions
+    resolution = next((res.res for res in results if res.res is not None),
+                      None)  # all equal resolutions
     num_imls = len(results[0].pmfs)  # all equal lenghts
 
     # The minimum power is IMT dependent
@@ -217,4 +219,14 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
             # Sum the PMF
             out[low:upp] += res.pmfs[lvl] * res.weight
 
-    return HistoGroup(olst, minpow, maxrange, normalized=False)
+    zero_mass = np.sum([res.zero_mass * res.weight for res in results],
+                       axis=0, dtype=float)
+    weights = np.array([res.weight for res in results], dtype=float)
+    mean_rates = None
+    if (weights.sum() > 0 and
+            all(res.mean_rates is not None for res in results)):
+        mean_rates = np.average([res.mean_rates for res in results],
+                                axis=0, weights=weights)
+    return HistoGroup(olst, minpow, maxrange, normalized=False,
+                      res=resolution, mean_rates=mean_rates,
+                      zero_mass=zero_mass)
