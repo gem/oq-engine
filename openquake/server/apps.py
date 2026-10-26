@@ -20,8 +20,9 @@ import os
 import importlib
 from django.apps import AppConfig
 from django.conf import settings
-from openquake.baselib import config
-from openquake.commonlib import dbapi
+from django.core.exceptions import ImproperlyConfigured
+from openquake.baselib import config, multi_user
+from openquake.commonlib import auth, dbapi
 from openquake.server.db import actions
 
 # optional dependencies needed in IMPACT mode: (module, package, purpose)
@@ -47,6 +48,11 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
+        if multi_user() and auth.API_KEY == 'changeme':
+            raise ImproperlyConfigured(
+                "The server authkey must not be 'changeme'. Set authkey in "
+                "the [webapi] section of openquake.cfg or set OQ_API_KEY "
+                "before starting the service.")
         if settings.TEST:
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
 

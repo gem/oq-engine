@@ -37,6 +37,7 @@ import sys
 import json
 import glob
 import shutil
+import secrets
 import getpass
 import tempfile
 import argparse
@@ -592,6 +593,7 @@ def create_cfg(inst):
     else:
         with open(inst.CFG, "w") as cfg:
             cfg.write(inst.CONFIG)
+            cfg.write(f"\n[webapi]\nauthkey = {secrets.token_hex(32)}\n")
         print(f"Created {inst.CFG}")
 
 
