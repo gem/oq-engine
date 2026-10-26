@@ -242,11 +242,11 @@ The selected projection is reused for station interpolation; geographic sites
 are not moved or resampled. An explicit CRS passed to
 ``RegularGridLayout.from_sites`` is always respected.
 
-The projection is an implementation choice, not a requirement of circulant
-embedding itself. Projected distances approximate distances on the Earth's
-surface, so even a valid embedding is exact for the chosen planar covariance,
-not an exact geodesic covariance.
-The projection must remain suitable for the geographic extent of the grid.
+Other suitable planar projections can also be used for circulant embedding.
+A valid embedding reproduces the covariance model evaluated using distances
+in the chosen projection. Those distances approximate distances along the
+Earth's surface, so the projection must be suitable for the grid's geographic
+extent.
 This concerns correlation sampling; it does not replace the rupture-distance
 calculations used by ground-motion models or distance filtering.
 
