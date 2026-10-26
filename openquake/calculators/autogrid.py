@@ -20,11 +20,12 @@ Calibration of ps_grid_spacing and pointsource_distance, performed in
 preclassical when the user sets ``ps_grid_spacing = auto``.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region (with a single GMPE per group), both for a
-reference setting (no gridding and all nodal planes and hypocenters
-within 100 km) and for a set of candidate pairs (ps_grid_spacing,
-pointsource_distance); the cheapest candidate with a 99th percentile of
-the relative error on the hazard maps below a tolerance is chosen.
+spread over the region (with a single GMPE per group and two IMTs),
+both for a reference setting (no gridding and all nodal planes and
+hypocenters within 100 km) and for a set of candidate pairs
+(ps_grid_spacing, pointsource_distance); the cheapest candidate with a
+99th percentile of the relative error on the hazard maps below a
+tolerance is chosen.
 """
 import copy
 import time
@@ -37,6 +38,7 @@ from openquake.hazardlib.map_array import MapArray, compute_hmaps
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import SourceFilter, split_source
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
@@ -49,6 +51,9 @@ PS_DISTANCES = [50., 100.]  # candidate values in km
 REFERENCE = (0., 100.)
 TOLERANCE = .05  # on the 99th percentile of the relative error
 MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
+# the calibration uses only the IMTs with the periods closest to these:
+# the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
+PERIODS = [.2, 1.]
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
 MAXDIST = 300.  # in km, see _get_nsites
 MIN_NSITES = 100  # minimum size of the sample of sites
@@ -151,14 +156,27 @@ def _gen_args(blocks, sites, cmakers, psgs, psd):
             yield weight, (srcs, sites, cmaker, (psgs, psd))
 
 
-# ContextMakers with a single GMPE: the error of the gridding is
-# geometric and does not depend much on the GMPE, while the cost of the
-# calibration is proportional to the number of GMPEs; NB: all the IMTs
-# are needed, since in SAM the largest errors are at intermediate periods
+# the IMTs with the periods closest to PERIODS, or all the IMTs if
+# there are less than 3 IMTs of kind PGA or SA
+def _calib_imts(imtls):
+    imts = [imt for imt in imtls if imt == 'PGA' or imt.startswith('SA(')]
+    if len(imts) < 3:
+        return list(imtls)
+    periods = numpy.array([from_string(imt).period for imt in imts])
+    chosen = {imts[numpy.abs(periods - period).argmin()]
+              for period in PERIODS}
+    return [imt for imt in imtls if imt in chosen]
+
+
+# ContextMakers with a single GMPE and two IMTs (see PERIODS): the error
+# of the gridding is geometric and does not depend much on the GMPE,
+# while the cost of the calibration is proportional to the number of
+# GMPEs and IMTs
 def _calib_cmakers(cmakers, groups):
     out = {}
     for grp_id in groups:
-        cmaker = copy.copy(cmakers[grp_id])
+        cmaker = cmakers[grp_id].restrict(
+            _calib_imts(cmakers[grp_id].imtls))
         gsim, rlzs = next(iter(cmaker.gsims.items()))
         cmaker.gsims = {gsim: rlzs}
         out[grp_id] = cmaker
