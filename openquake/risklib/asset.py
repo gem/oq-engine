@@ -169,9 +169,8 @@ class CostCalculator(object):
                 lt = lt[:-4]  # rstrip _ins
             if lt == 'number':
                 unit = 'units'
-            elif lt.startswith('occupants_'):  # occupants_day, ...
-                unit = 'people'
-            elif lt in ('affectedpop', 'injured', 'occupants', 'residents'):
+            elif lt.startswith('occupants') or lt in (
+                    'affectedpop', 'injured', 'residents'):
                 unit = 'people'
             elif lt == 'embodied_carbon':
                 unit = 'CO2eqv'

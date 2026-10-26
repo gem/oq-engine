@@ -519,7 +519,7 @@ def check_time_event(oqparam, occupancy_periods):
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event != 'avg' and (
+    if time_event not in (None, 'avg') and (
             time_event not in occupancy_periods):
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
@@ -1112,9 +1112,9 @@ class HazardCalculator(BaseCalculator):
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
                 raise ValueError('Missing exposure both in hazard and risk!'
                                  f' [hc_id={oq.hazard_calculation_id}]')
-            hte = oq_hazard.time_event  # None or avg means all the times
-            if (hte not in (None, 'avg') and oq.time_event and
-                    hte != oq.time_event):
+            # None or avg in the hazard mean that all the times are stored
+            if oq.time_event and oq_hazard.time_event not in (
+                    None, 'avg', oq.time_event):
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (

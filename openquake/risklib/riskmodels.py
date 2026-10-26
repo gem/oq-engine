@@ -318,13 +318,12 @@ class RiskModel(object):
             time_event is not set, the occupants are computed for the
             day, night and transit periods present in the assets
         """
-        lts = []
+        lts = []  # keep the order, it determines the random draws
         for lt in self.loss_types:
             if lt == 'occupants' and self.time_event is None and \
                     self.calcmode in scientific.OCC_TIME_MODES:
-                for te in scientific.TIME_EVENTS:
-                    if 'occupants_' + te in assets.columns:
-                        lts.append('occupants_' + te)
+                lts.extend(f'occupants_{te}' for te in scientific.TIME_EVENTS
+                           if f'occupants_{te}' in assets.columns)
             else:
                 lts.append(lt)
         return lts
