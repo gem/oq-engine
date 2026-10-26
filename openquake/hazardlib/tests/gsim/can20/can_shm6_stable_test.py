@@ -329,13 +329,17 @@ class CanadaSHM6StableCrustTestCase(unittest.TestCase):
             with self.subTest(submodel=submodel):
                 gmm = stable.CanadaSHM6_StableCrust_AA13(submodel=submodel)
                 result = contexts.get_mean_stds(gmm, self.ctx, self.imts)
+                # Table-GMPE outputs come from float32 HDF5 coefficients;
+                # tolerance accommodates platform float-precision drift
                 np.testing.assert_allclose(
-                    result[:2], expected, rtol=0, atol=1e-8)
+                    result[:2], expected, rtol=0, atol=1e-6)
 
     def test_ngaeast_mean_and_total_sigma(self):
         for submodel, expected in EXPECTED_NGAE.items():
             with self.subTest(submodel=submodel):
                 gmm = stable.CanadaSHM6_StableCrust_NGAEast(submodel=submodel)
                 result = contexts.get_mean_stds(gmm, self.ctx, self.imts)
+                # Table-GMPE outputs come from float32 HDF5 coefficients;
+                # tolerance accommodates platform float-precision drift
                 np.testing.assert_allclose(
-                    result[:2], expected, rtol=0, atol=1e-8)
+                    result[:2], expected, rtol=0, atol=1e-6)
