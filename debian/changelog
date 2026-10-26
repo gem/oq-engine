@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Bug fix: "oq extract agg_losses" failed with a TypeError when the
+    calculation was aggregated by id, and the site_id tags of the
+    aggregated losses were shifted by one site
   * Bug fix: the "too many potential logic tree paths" error suggested
     use_rates=true even when it was already set; the message now
     explains that use_rates only works when computing the mean
