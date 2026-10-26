@@ -11,10 +11,10 @@
     in ChiouYoungs2014ACME2019 with a unit test now exposing it)
  
   [Michele Simionato]
-  * Reading the source models is much faster: the big files are read in
-    chunks, in parallel, the garbage collector is disabled during the
-    reading and some slow checks were optimized; building the composite
-    source model of AUS now takes 72 seconds instead of 252
+  * Reading the source models is much faster: the garbage collector is
+    disabled during the reading, the biggest files are read first and
+    some slow checks were optimized; building the composite source model
+    of AUS now takes 100 seconds instead of 252
   * The contexts are now passed to the GMPEs in chunks of at most 50,000
     rows, since the GMPEs are memory bound on very large arrays (as the
     ones of big CollapsedPointSources): in the Tonga model with
