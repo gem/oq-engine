@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * The classical tasks are now submitted in order of decreasing weight,
+    so that the heaviest tasks do not end up running alone at the end
   * Bug fix: "oq extract agg_losses" failed with a TypeError when the
     calculation was aggregated by id, and the site_id tags of the
     aggregated losses were shifted by one site
