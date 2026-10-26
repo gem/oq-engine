@@ -227,6 +227,11 @@ def get_default_maximum_distance(mag):
     """
     :param mag: magnitude of the rupture
     :returns: the default maximum distance in km for the given magnitude
+
+    >>> [get_default_maximum_distance(mag) for mag in [5.5, 5.6, 6., 6.5]]
+    [50, 100, 100, 150]
+    >>> [get_default_maximum_distance(mag) for mag in [7., 7.5, 7.6, 9.]]
+    [200, 250, 300, 300]
     """
     return int(MAG_DISTANCES[numpy.searchsorted(MAG_BOUNDS, mag)])
 

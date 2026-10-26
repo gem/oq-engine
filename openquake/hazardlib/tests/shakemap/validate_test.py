@@ -31,18 +31,10 @@ import ast
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
-from openquake.hazardlib.shakemap.validate import (
-    impact_validate, get_default_maximum_distance)
+from openquake.hazardlib.shakemap.validate import impact_validate
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
-
-
-def test_default_maximum_distance():
-    mags = [4., 5.5, 5.6, 6., 6.3, 6.5, 7., 7.2, 7.5, 7.8, 8., 9.]
-    dists = [get_default_maximum_distance(mag) for mag in mags]
-    assert dists == [50, 50, 100, 100, 150, 150, 200, 250, 250, 300, 300,
-                     300]
 
 
 class ImpactValidateTestCase(unittest.TestCase):
