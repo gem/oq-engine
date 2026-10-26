@@ -58,7 +58,7 @@ class AnalysisTestCase(unittest.TestCase):
         # check the correlation dataframe
         exp = '''\
     srcid  ipath
-unc             
+unc
 0       b      2
 0       c      3
 1       a     -1

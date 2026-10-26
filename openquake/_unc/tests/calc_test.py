@@ -52,7 +52,7 @@ aae = np.testing.assert_almost_equal
 aac = np.testing.assert_allclose
 
 # Options
-PLOTTING = False
+PLOTTING = True
 NSAMPLES = [500, 1000, 10000]
 # NSAMPLES = [500, 1000, 10000, 100000]
 
@@ -74,7 +74,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     def test_against_oq(self):
         # Convolution Vs OQ
 
-
         # Convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
         tmpdir = tempfile.mkdtemp()
@@ -93,7 +92,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
         # Testing the mean
         expected_mea = probabilities_to_rates(mean, oqp.investigation_time)
-        aac(expected_mea, self.res_conv[:, 0], rtol=5e-3)
+        aac(expected_mea, self.res_conv[:, 0], rtol=2e-3)
 
         # Testing the median
         expected_med = probabilities_to_rates(median, oqp.investigation_time)
@@ -106,8 +105,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             self.plot3(expected_mea, expected_med)
 
     def plot1(self, expected_mea):
-        # ------------------------------------------------------------ FIGURE 1
-        fig, axs = plt.subplots(1, 1)
+        """ Figure 1 """
+        _, ax1 = plt.subplots(1, 1)
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
@@ -123,21 +122,38 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # Plot convolution results
         lab = 'Mean from POINT'
         plt.plot(self.imls, self.res_conv[:, 0], 'o', mfc='none', label=lab)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.legend()
-        plt.xlabel('Intensity measure level, IML [g]')
-        plt.ylabel('Annual Frequency of exceedance, AFoE []')
-        plt.title('Test Case 01 - Mean PGA')
-        plt.grid(which='major', ls='--', color='grey')
-        plt.grid(which='minor', ls=':', color='lightgrey')
+
+        # Second axis
+        ax2 = ax1.twinx()
+
+        # Plot Ratio
+        lab = 'Computed / Expected'
+        ratio = self.res_conv[:, 0] / expected_mea
+        plt.plot(self.imls, ratio, '--', label=lab, color='white', lw=3)
+        plt.plot(self.imls, ratio, '--', label=lab, color='green', lw=1.5)
+
+        # Set axes and labels
+        ax1.set_xscale('log')
+        ax1.set_yscale('log')
+        ax2.set_yscale('log')
+        ax2.yaxis.set_major_formatter('{x:.5f}')
+        ax2.yaxis.set_minor_formatter('{x:.5f}')
+        ax2.tick_params(axis='y', which='both',
+                        labelrotation=45, labelsize=7)
+        ax1.legend()
+        ax1.set_xlabel('Intensity measure level, IML [g]')
+        ax1.set_ylabel('Annual Frequency of exceedance, AFoE []')
+        ax2.set_ylabel('(AFoE Computed) / (AFoE Expected)')
+        ax1.set_title('Test Case 01 - Mean PGA')
+        ax1.grid(which='major', ls='--', color='grey')
+        ax1.grid(which='minor', ls=':', color='lightgrey')
         tmp = os.path.join(TFF, 'figs', 'calc_test-case01_mean.png')
         plt.savefig(tmp)
         plt.show()
 
     def plot2(self, expected_med):
         # ------------------------------------------------------------ FIGURE 2
-        fig, axs = plt.subplots(1, 1)
+        _, axs = plt.subplots(1, 1)
 
         self.n_rlz = self.dstore['hcurves-rlzs'].shape[1]
         for i_rlz in range(0, self.n_rlz):
@@ -165,7 +181,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
     def plot3(self, expected_mea, expected_med):
         # Plotting mean and median and percentiles
-        fig, axs = plt.subplots(1, 1)
+        _, axs = plt.subplots(1, 1)
 
         # All realizations
         for i_rlz in range(0, self.n_rlz):
