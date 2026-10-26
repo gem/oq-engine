@@ -123,6 +123,9 @@ def check_newlines(bytes):
     return 0
 
 
+# F82 selects the pyflakes errors that are always serious:
+# F821 undefined name, F822 undefined name in __all__,
+# F823 local variable referenced before assignment
 def test_serious_violations():
     try:
         from flake8.main import application
