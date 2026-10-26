@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,7 @@ from openquake.hazardlib.gsim.utils_chapman_guo_2021 import (get_psa_df,
 # Guo (2021) site amplification model.
 # NOTE: values for SA(0.6) have been computed through a weighted interpolation
 # of SA(0.5) and SA(0.75) values as required for GEM Global Hazard Maps/Mosaic.
-PSAS= os.path.join(os.path.dirname(__file__), "chapman_guo_2021", 
+PSAS = os.path.join(os.path.dirname(__file__), "chapman_guo_2021",
                    'chapman_guo_2021_psa_ratios.csv')
 
 
@@ -73,6 +73,12 @@ pga     -0.040   -0.346
 7.500    0.448   -0.173
 10.00    0.401   -0.173
 """)
+
+
+# Weights of the collapsed epistemic site amplification model:
+# -sigma and +sigma branches get 0.185 each, the central branch gets 0.63.
+LOG0185 = np.log(0.185)
+LOG063 = np.log(0.63)
 
 
 # Coefficients for EPRI sigma model taken from Table 5.5 of Goulet et al.
@@ -172,7 +178,7 @@ def get_us23_adjs(ctx, imt, bias_adj=False, cpa=False, psa_df=None):
             vs30 = ctx.vs30[mask_vs30]
             vs30[vs30 > 2000.] = 2000.
             b_adj[mask_vs30] += b_coeffs['vs30_b'] * np.log(vs30 / 1000.0)
-        u_adj = (1.0 - z_scale) * b_adj # Scale by z_sed factor
+        u_adj = (1.0 - z_scale) * b_adj  # Scale by z_sed factor
     else:
         u_adj = None
 
@@ -240,14 +246,10 @@ def get_stewart_2019_phis2s(imt, vs30):
     v_1 = 1200.
     v_2 = 1500.
     C = COEFFS_USGS_SIGMA_PANEL[imt]
-    phis2s = C["s2s1"] + np.zeros(vs30.shape)
-    idx = vs30 > v_2
-    phis2s[idx] = C["s2s2"]
-    idx = np.logical_and(vs30 > v_1, vs30 <= v_2)
-    if np.any(idx):
-        phis2s[idx] = C["s2s1"] - ((C["s2s1"] - C["s2s2"]) / (v_2 - v_1)) *\
-            (vs30[idx] - v_1)
-    return phis2s
+    # vs30 <= v_1: s2s1; v_1 < vs30 <= v_2: linear interp; vs30 > v_2: s2s2
+    taper = C["s2s1"] - ((C["s2s1"] - C["s2s2"]) / (v_2 - v_1)) * (vs30 - v_1)
+    return np.where(vs30 > v_2, C["s2s2"],
+                    np.where(vs30 > v_1, taper, C["s2s1"]))
 
 
 @_get_mean.add("usgs")
@@ -367,8 +369,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
                 else:
                     psa_df = None
                 # Get the adjustment params
-                u_adj, cstl = get_us23_adjs(ctx, imt, self.usgs_2023_bias_adj,
-                                            self.coastal_plains_site_amp, psa_df)
+                u_adj, cstl = get_us23_adjs(
+                    ctx, imt, self.usgs_2023_bias_adj,
+                    self.coastal_plains_site_amp, psa_df)
             else:
                 u_adj, cstl = None, None
 
@@ -383,13 +386,13 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             # Get collapsed amplification model for -sigma, 0, +sigma
             # with weights of 0.185, 0.63, 0.185 respectively
             if self.epistemic_site:
-                f_rk = np.log((np.exp(pga_r) + C_NL["f3"]) / C_NL["f3"])
+                f_rk = np.logaddexp(0.0, pga_r - np.log(C_NL['f3']))
                 site_amp_sigma = get_site_amplification_sigma(
                     self, ctx.vs30, f_rk, C_LIN, C_F760, C_NL)
-                mean[m] = np.log(
-                    0.185 * np.exp(imean - site_amp_sigma) +
-                    0.63 * np.exp(imean) +
-                    0.185 * np.exp(imean + site_amp_sigma)) + cpa_term
+                mean[m] = np.logaddexp.reduce([
+                    imean - site_amp_sigma + LOG0185,
+                    imean + LOG063,
+                    imean + site_amp_sigma + LOG0185]) + cpa_term
             else:
                 mean[m] = imean + cpa_term
 

@@ -631,7 +631,9 @@ def _strip_colons(sources):
 
 def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     """
-    Generates task arguments from atomic and non-atomic groups
+    Generates task arguments from atomic and non-atomic groups, as tuples
+    (cmaker, tilegetters, grp_keys, atomic, weights), where weights are
+    the weights of the grp_keys
     """
     out = []
     atomic = []
@@ -644,9 +646,11 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         else:
             if n > 1:
                 grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
+                weights = [sum(src.weight for src in blk) for blk in blocks]
             else:
                 grp_keys = [str(grp_id)]
-            out.append((cmaker, tilegetters, grp_keys, False))
+                weights = [extra['weight']]
+            out.append((cmaker, tilegetters, grp_keys, False, weights))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     weights_ = AccumDict(accum={})
@@ -687,7 +691,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         if csm.oq.disagg_by_src:
             # disagg_by_src requires all the groups in a single task,
             # otherwise the rates are attributed to the wrong source
-            out.append((cmaker_[gid], tgetters, keys, True))
+            out.append((cmaker_[gid], tgetters, keys, True,
+                        [getweight(k) for k in keys]))
             logging.info('Not splitting %d atomic groups, since '
                          'disagg_by_src is set', len(keys))
             continue
@@ -695,7 +700,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         nblocks = 0
         for ws in block_splitter(keys, max_weight, getweight, nokey):
             nblocks += 1
-            out.append((cmaker_[gid], tgetters, list(ws), True))
+            out.append((cmaker_[gid], tgetters, list(ws), True,
+                        [getweight(k) for k in ws]))
         logging.info('Split %d atomic groups with total weight %.1f '
                      'in %d blocks', len(keys),
                      sum(getweight(k) for k in keys), nblocks)

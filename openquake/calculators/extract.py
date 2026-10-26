@@ -229,18 +229,13 @@ def extract_oqparam(dstore, dummy):
     return ArrayWrapper((), {'json': js})
 
 
-# used by the QGIS plugin in scenario
-@extract.add('realizations')
-def extract_realizations(dstore, dummy):
-    """
-    Extract an array of realizations. Use it as /extract/realizations
-    """
-    oq = dstore['oqparam']
+def _realizations_array(dstore, oq, path, full_lt):
+    # path is the datastore path of full_lt, like 'full_lt' or
+    # 'full_lt/EUR' in a multi-model datastore
     scenario = 'scenario' in oq.calculation_mode
-    full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        gsims = encode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
+        gsims = encode(dstore.getitem(f'{path}/gsim_lt')['uncertainty'])
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         bplen = max(len(gsim) for gsim in gsims)  # list of bytes
@@ -260,6 +255,23 @@ def extract_realizations(dstore, dummy):
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
     return arr
+
+
+# used by the QGIS plugin in scenario
+@extract.add('realizations')
+def extract_realizations(dstore, model):
+    """
+    Extract an array of realizations. Use it as /extract/realizations
+    or, in a multi-model datastore, as /extract/realizations/MODEL
+    """
+    oq = dstore['oqparam']
+    if not isinstance(dstore['full_lt'], Group):  # single model
+        return _realizations_array(dstore, oq, 'full_lt', dstore['full_lt'])
+    if model not in dstore['full_lt']:
+        raise ValueError('Multi-model datastore: specify a model among %s'
+                         % list(dstore['full_lt']))
+    path = f'full_lt/{model}'
+    return _realizations_array(dstore, oq, path, dstore[path])
 
 
 @extract.add('weights')

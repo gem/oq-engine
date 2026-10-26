@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,7 @@ from openquake.hazardlib.gsim.utils import (
     clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
 
 _compute_mean = CallableDict()
 
@@ -93,17 +94,13 @@ def _compute_term3(C, rrup):
     according to the erratum.
     """
     f3 = np.zeros_like(rrup)
-
     idx_between_70_130 = (rrup > 70) & (rrup <= 130)
     idx_greater_130 = rrup > 130
-
-    f3[idx_between_70_130] = (
-        C['c9'] * (np.log(rrup[idx_between_70_130]) - np.log(70)))
-
+    f3[idx_between_70_130] = C['c9'] * (
+        np.log(rrup[idx_between_70_130]) - np.log(70))
     f3[idx_greater_130] = (
         C['c9'] * (np.log(rrup[idx_greater_130]) - np.log(70)) +
         C['c10'] * (np.log(rrup[idx_greater_130]) - np.log(130)))
-
     return f3
 
 
@@ -237,12 +234,14 @@ class Campbell2003SHARE(Campbell2003):
             # given imt
             C_ADJ = self.COEFFS_FS_ROCK[imt]
             # apply faulting style and rock adjustment factor for mean and std
-            mean[m] = np.log(np.exp(mean[m]) * _compute_faulting_style_term(
-                C_ADJ['Frss'],
-                self.CONSTS_FS['pR'],
-                self.CONSTS_FS['Fnss'],
-                self.CONSTS_FS['pN'],
-                ctx.rake) * C_ADJ['AFrock'])
+            mean[m] = mean[m] + np.log(
+                _compute_faulting_style_term(
+                    C_ADJ['Frss'],
+                    self.CONSTS_FS['pR'],
+                    self.CONSTS_FS['Fnss'],
+                    self.CONSTS_FS['pN'],
+                    ctx.rake) * C_ADJ['AFrock']
+                    )
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\

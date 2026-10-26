@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,9 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+LOG10 = np.log(10.0)
 
 
 def _get_magnitude_term(C, mag):
@@ -73,9 +76,9 @@ def _get_stddevs(C):
     """
     Return standard deviations, converting from log10 to log
     """
-    return [np.log(10.0 ** C["sigma"]),
-            np.log(10.0 ** C["tau"]),
-            np.log(10.0 ** C["phi"])]
+    return [C['sigma'] * LOG10,
+            C['tau'] * LOG10,
+            C['phi'] * LOG10]
 
 
 class Atkinson2015(GMPE):
@@ -125,9 +128,9 @@ class Atkinson2015(GMPE):
                      _get_distance_term(C, ctx.rhypo, ctx.mag, rsat))
             # Convert mean from cm/s and cm/s/s
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
@@ -149,10 +152,10 @@ class Atkinson2015(GMPE):
 
 class Atkinson2015AltDistSat(Atkinson2015):
     """
-    This class implements the alternative effective depth term provided on
-    page 986 of Atkinson (2015) for the use of stronger distance-saturation
-    effects than implemented within the default model.
-    
+    Implements the alternative effective depth term provided on page 986 of
+    Atkinson (2015) for the use of stronger distance-saturation effects than
+    implemented within the default model.
+
     It should be noted that this class uses the coefficients obtained using the
     Yenier and Atkinson (2014) effective depth term i.e. those used within the
     base gsim class too, with modification only to the effective depth term

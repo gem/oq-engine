@@ -1,4 +1,26 @@
   [Michele Simionato]
+  * Bug fix: "oq extract agg_losses" failed with a TypeError when the
+    calculation was aggregated by id, and the site_id tags of the
+    aggregated losses were shifted by one site
+  * Bug fix: the "too many potential logic tree paths" error suggested
+    use_rates=true even when it was already set; the message now
+    explains that use_rates only works when computing the mean
+  * Bug fix: exporting the realizations of a multi-model calculation
+    failed; now one realizations_MODEL csv file is written per model,
+    and the realizations of a model can be extracted with
+    /extract/realizations/MODEL
+  * Bug fix: "oq show rlz:N" failed on multi-model calculations; now
+    it shows the realization N of each model
+  * Bug fix: "oq show branches", "oq show branchsets" and "oq show sm_rlzs"
+    failed on multi-model calculations; now they show the rows of
+    each model with a model column
+  * Bug fix: exporting the gmf_data csv of a global SES calculation failed
+    with an IndexError, or silently exported wrong event IDs, because the
+    sigma_epsilon event IDs were looked up as positions in relevant_events
+  * Internal: "oq engine --eo" no longer checks the local database file
+    when a remote database server is used, and otherwise checks the
+    database with os.access, so an unreadable database is reported
+    instead of silently creating a new one
   * Bug fix: with multiple loss types, aggregated damage results overstated
     the number of undamaged buildings by dividing damaged counts by the
     number of loss types a second time
@@ -18,7 +40,11 @@
   * Optimised raytracing performance in GridAdjustedGMPE by avoiding
     construction of OQ Polygon and OQ Mesh objecion for each travel
     path.
+
   [Michele Simionato]
+  * Bug fix: the conditional spectra were not normalized by the total
+    weight of the ruptures, so the mean and standard deviation were wrong
+    (the mean conditional spectrum was not consistent with the IMLs)
   * Internal: changed the Starmap mechanism to use read-only datastores
     whenever possible, to avoid corruption in case of out-of-memory
 

@@ -33,6 +33,10 @@ from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
+LOG10 = np.log(10.0)
+
+
 CONSTS = {"Mref": 5.5,
           "Mh": 6.75,
           "Rref": 1.0,
@@ -182,15 +186,15 @@ class BindiEtAl2014Rjb(GMPE):
             if imt.string.startswith(('PGA', 'SA')):
                 # Convert units to g,
                 # but only for PGA and SA (not PGV)
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
             mean[m] += self.adjustment_factor
-            sig[m] = np.log(10.0 ** C['sigma'])
-            tau[m] = np.log(10.0 ** C['tau'])
-            phi[m] = np.log(10.0 ** C['phi'])
+            sig[m] = C['sigma'] * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['phi'] * LOG10
 
     #: Coefficients from Table 2
 

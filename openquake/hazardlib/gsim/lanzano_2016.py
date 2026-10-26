@@ -28,6 +28,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.baselib.general import CallableDict
 
+
+LOG10 = np.log(10.0)
+
+
 _compute_distance = CallableDict()
 
 
@@ -208,15 +212,15 @@ class LanzanoEtAl2016_RJB(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV):
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
-            tau[m] = np.log(10.0 ** C['tau'])
-            phi[m] = np.log(10.0 ** C['phi'])
+            sig[m] = C['SigmaTot'] * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['phi'] * LOG10
 
     #: Coefficients from SA PGA and PGV from Table S2
 

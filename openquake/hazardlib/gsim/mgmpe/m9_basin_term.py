@@ -36,7 +36,7 @@ def _apply_m9_basin_term(ctx, imt, mean):
         fb_m9 = np.log(2.0)
         idx = ctx.z2pt5 >= 6.0 # Apply only to sites with z2pt5 >= 6
         mean[idx] += fb_m9
-            
+
     return mean
 
 
@@ -45,8 +45,8 @@ class M9BasinTerm(GMPE):
     Implements a modified GMPE class that can be used to implement the "M9"
     US 2023 NSHM basin amplification adjustment (an additive factor for long
     period ground-motions in the Seattle Basin region).
-     
-    This implementation is based on the description of the M9 adjustment 
+
+    This implementation is based on the description of the M9 adjustment
     within the Moschetti et al. (2024) EQ Spectra article on the conterminous
     US 2023 NSHM GMC (pp. 1178).
 
@@ -64,7 +64,7 @@ class M9BasinTerm(GMPE):
     REQUIRES_SITES_PARAMETERS = {'z2pt5'}
 
     # Others are set from underlying GMM
-    REQUIRES_DISTANCES = set() 
+    REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
@@ -75,13 +75,13 @@ class M9BasinTerm(GMPE):
     def __init__(self, gmpe_name, **kwargs):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
-        
-        # Need z2pt5 in req site params to ensure in ctx site col 
+
+        # Need z2pt5 in req site params to ensure in ctx site col
         if 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS = frozenset(
                 self.gmpe.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
 
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):      
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

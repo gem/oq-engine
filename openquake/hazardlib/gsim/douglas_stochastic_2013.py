@@ -58,6 +58,7 @@ Module exports
 import numpy as np
 from scipy.constants import g
 from math import sqrt
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -104,6 +105,10 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     """
     Implements the GMPE for induced seismicity in Geothermal Areas derived
     from stochastic simulations of ground motion constructed by:
+
+
+LOG10 = np.log(10.0)
+
 
     Douglas, J., Edwards, B., Convertito, V., Sharma, N., Tramelli, A.,
         Kraaijpoel, D., Cabrera, B. M., Maercklin, N., and Troise, C. (2013)
@@ -191,7 +196,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
             #: and cm/s for PGV
             if not imt.string == "PGV":
                 # Convert mean from log(cm/s/s) to g
-                mean[m] = np.log(np.exp(mean[m]) / (100. * g))
+                mean[m] = mean[m] - np.log(100.0 * g)
 
     # IMT > 0.5 seconds removed from the present implementation
     # For median values, PGA is assumed equivalent to Sa (0.005 s)

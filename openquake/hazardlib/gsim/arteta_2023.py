@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ Module exports :class:`ArtetaEtAl2023_Vs30`
                :class:`ArtetaEtAl2023`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -120,8 +121,7 @@ class ArtetaEtAl2023_Vs30(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT])
 
     #: Site amplification is dependent only upon Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -251,10 +251,10 @@ class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT])
 
-    #: Site amplification is dependent on the period and amplitude of HVRSR spectra
+    #: Site amplification is dependent on the period and amplitude of HVRSR
+    #: spectra
     REQUIRES_SITES_PARAMETERS = {'THV', 'PHV'}
 
     #: Required rupture parameters are only mag and hypo depth for ASCR model

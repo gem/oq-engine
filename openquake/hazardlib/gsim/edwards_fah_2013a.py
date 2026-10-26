@@ -29,6 +29,7 @@ Module exports
 """
 import numpy as np
 from scipy.constants import g
+
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV, PGA, SA
@@ -135,15 +136,13 @@ def _get_stddevs(C, mag, c1_rrup, log_phi_ss, mean_phi_ss):
 
 class EdwardsFah2013Alpine10Bars(GMPE):
     """
-    This function implements the GMPE developed by Ben Edwars and Donath Fah
-    and published as "A Stochastic Ground-Motion Model for Switzerland"
-    Bulletin of the Seismological Society of America,
-    Vol. 103, No. 1, pp. 78–98, February 2013.
-    The GMPE was parametrized by Carlo Cauzzi to be implemented in OpenQuake.
-    This class implements the equations for 'Alpine' and 'Foreland - two
-    tectonic regionalizations defined for the Switzerland -
-    therefore this GMPE is region specific".
-    @ implemented by laurentiu.danciu@sed.ethz.zh
+    Implements the GMPE developed by Ben Edwars and Donath Fah and published as
+    "A Stochastic Ground-Motion Model for Switzerland" Bulletin of the
+    Seismological Society of America, Vol. 103, No. 1, pp. 78–98, February
+    2013. The GMPE was parametrized by Carlo Cauzzi to be implemented in
+    OpenQuake. This class implements the equations for 'Alpine' and 'Foreland -
+    two tectonic regionalizations defined for the Switzerland - therefore this
+    GMPE is region specific". @ implemented by laurentiu.danciu@sed.ethz.zh
     """
     #: Supported tectonic region type is ALPINE which
     #: is a sub-region of Active Shallow Crust.
@@ -211,8 +210,8 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 class EdwardsFah2013Alpine20Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 20Bars Model :class:`EdwardsFah2013Alpine20Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 20Bars Model
+    :class:`EdwardsFah2013Alpine20Bars`
     """
     COEFFS = COEFFS_ALPINE_20Bars
 
@@ -220,8 +219,8 @@ class EdwardsFah2013Alpine20Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine30Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 30Bars Model :class:`EdwardsFah2013Alpine30Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 30Bars Model
+    :class:`EdwardsFah2013Alpine30Bars`
     """
     COEFFS = COEFFS_ALPINE_30Bars
 
@@ -229,8 +228,8 @@ class EdwardsFah2013Alpine30Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine50Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 50Bars Model :class:`EdwardsFah2013Alpine50Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 50Bars Model
+    :class:`EdwardsFah2013Alpine50Bars`
     """
     COEFFS = COEFFS_ALPINE_50Bars
 
@@ -238,8 +237,8 @@ class EdwardsFah2013Alpine50Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine60Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 60Bars Model :class:`EdwardsFah2013Alpine60Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 60Bars Model
+    :class:`EdwardsFah2013Alpine60Bars`
     """
     COEFFS = COEFFS_ALPINE_60Bars
 
@@ -247,8 +246,8 @@ class EdwardsFah2013Alpine60Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine75Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 75Bars Model :class:`EdwardsFah2013Alpine75Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 75Bars Model
+    :class:`EdwardsFah2013Alpine75Bars`
     """
     COEFFS = COEFFS_ALPINE_75Bars
 
@@ -256,8 +255,8 @@ class EdwardsFah2013Alpine75Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine90Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 90Bars Model :class:`EdwardsFah2013Alpine90Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 90Bars Model
+    :class:`EdwardsFah2013Alpine90Bars`
     """
     COEFFS = COEFFS_ALPINE_90Bars
 
@@ -265,7 +264,7 @@ class EdwardsFah2013Alpine90Bars(EdwardsFah2013Alpine10Bars):
 class EdwardsFah2013Alpine120Bars(EdwardsFah2013Alpine10Bars):
 
     """
-    This class extends :class:`EdwardsFah2013Alpine10Bars`
-    and implements the 120Bars Model :class:`EdwardsFah2013Alpine120Bars`
+    Extends :class:`EdwardsFah2013Alpine10Bars` and implements the 120Bars
+    Model :class:`EdwardsFah2013Alpine120Bars`
     """
     COEFFS = COEFFS_ALPINE_120Bars

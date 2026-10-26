@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2015-2024 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,9 +18,11 @@ Module exports :class:`Allen2022`
 """
 
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
 
 def _get_distance_scaling(C, rhypo):
     """
@@ -37,8 +39,7 @@ def _get_distance_scaling(C, rhypo):
     return np.where(
         rhypo <= Rx,
         C["c3"] * np.log10(rhypo),
-        C["c3"] * np.log10(Rx) + C["c4"] * (np.log10(rhypo) - np.log10(Rx)),
-    )
+        C["c3"] * np.log10(Rx) + C["c4"] * (np.log10(rhypo) - np.log10(Rx)),)
 
 
 def _get_magnitude_scaling(C, mag):
@@ -84,8 +85,7 @@ def _get_near_source_correction(C, rhypo):
     return np.where(
         rhypo <= Rx,
         C["n0"] * (np.log10(rhypo) - np.log10(Rx)),
-        0.0,
-    )
+        0.0,)
 
 
 def _get_site_scaling(C, vs30, vs30_strict):
@@ -103,8 +103,7 @@ def _get_site_scaling(C, vs30, vs30_strict):
         if np.any((vs30 < 220) | (vs30 > 800)):
             raise ValueError(
                 "Allen2022 site term is calibrated for 220 <= Vs30 <= 800 "
-                "m/s; set vs30_strict=False to clamp out-of-range values."
-            )
+                "m/s; set vs30_strict=False to clamp out-of-range values.")
     else:
         vs30 = np.clip(vs30, 220, 800)
     return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.0))
@@ -153,8 +152,7 @@ class Allen2022(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.INTRA_EVENT,}
 
     ## Vs30 (m/s) required for site scaling [Equation 6].
     REQUIRES_SITES_PARAMETERS = {"vs30"}
@@ -187,8 +185,7 @@ class Allen2022(GMPE):
                 + _get_magnitude_scaling(C, ctx.mag)
                 + _get_depth_scaling(C, ctx.hypo_depth)
                 + _get_near_source_correction(C, ctx.rhypo)
-                + _get_site_scaling(C, ctx.vs30, self.vs30_strict)
-            )
+                + _get_site_scaling(C, ctx.vs30, self.vs30_strict))
 
             tau[m] = C["tau"]
             phi[m] = C["phi"]

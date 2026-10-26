@@ -32,6 +32,9 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
 
+LOG10 = np.log(10.0)
+
+
 # magnitude values for lookup table from minimum magnitude 4.4 to maximum
 # magnitude 8.2
 MAGS = np.linspace(4.4, 8.2, 20)
@@ -247,7 +250,7 @@ def _compute_mean(kind, imt, mag, rhypo):
     mean = table.ev(mag, rhypo)
 
     # convert mean from base 10 to base e
-    return mean * np.log(10)
+    return mean * LOG10
 
 
 def _compute_stddevs(C, imt, num_sites, stddev_types):
@@ -256,7 +259,7 @@ def _compute_stddevs(C, imt, num_sites, stddev_types):
     """
     stddevs = []
     for _ in stddev_types:
-        stddevs.append(np.zeros(num_sites) + C['sigma'] * np.log(10))
+        stddevs.append(np.zeros(num_sites) + C['sigma'] * LOG10)
 
     return stddevs
 
@@ -369,7 +372,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
 
             mean[m] = _compute_mean(self.kind, imt, ctx.mag, ctx.rhypo.copy())
             mean[m] = clip_mean(imt, mean[m])
-            sig[m] = self.COEFFS[imt]['sigma'] * np.log(10)
+            sig[m] = self.COEFFS[imt]['sigma'] * LOG10
 
     # period dependent standard deviations (in base 10)
     COEFFS = CoeffsTable(sa_damping=5, table="""\

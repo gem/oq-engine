@@ -13,7 +13,8 @@ tree are turned into a ``CompositeSourceModel``, how the epistemic
 uncertainties are managed and how the hazard rates are accumulated.
 
 Throughout the page we use the demo
-``demos/hazard/LogicTreeCase2ClassicalPSHA``, which is small enough to
+``demos/hazard/LogicTreeCase2ClassicalPSHA`` (described in
+:ref:`Case2 demo <logic-tree-case2>`), which is small enough to
 be run in a few seconds and rich enough to contain epistemic
 uncertainties::
 
@@ -288,7 +289,7 @@ realizations obtained by varying the uncertainties of ``second``, which
 do not apply to ``first``: the ordinals of each row are the 3x3
 combinations of the branches of ``bs3`` and ``bs5``. The fault source
 ``second`` has the analogous 9 signatures, built from ``bs3`` and
-``bs5``, therefore there are 18 indices of rate attribution, 9 per
+``bs5``, therefore there are 18 RateMap indices, 9 per
 source, stored in the ``core_trt_smrs`` dataset.
 
 The advantage is visible in the size of the CSM and in the number of
@@ -388,8 +389,7 @@ The rates are stored in the ``_rates`` dataset as a table of
     >> len(df)  # 579 rows for 36 gids and 19 IMLs in the demo
 
 A ``gid`` is just a global index to identify the rates;
-``FullLogicTree.get_gids`` allocates one consecutive gid per index of
-rate attribution and per GMM, so there are 36 ``gids`` for the 18 indices
+``FullLogicTree.get_gids`` allocates one consecutive gid per RateMap index and per GMM, so there are 36 ``gids`` for the 18 indices
 of the demo, and a ``gid`` carries no information by itself. The
 realizations behind a ``gid`` are given by
 ``FullLogicTree.get_trt_rlzs``, which associates to each gid an array

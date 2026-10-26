@@ -29,6 +29,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_distance_term(C, rhypo):
     """
     Returns the distance scaling term
@@ -103,14 +106,14 @@ class DostEtAl2004(GMPE):
                      _compute_distance_term(C, ctx.rhypo))
             # Convert mean from cm/s and cm/s/s
             if imt.string == "PGA":
-                mean[m] = np.log(10.0 ** imean / g)
+                mean[m] = imean * LOG10 - np.log(g)
             else:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
-            sig[m] = np.log(10.0 ** C["sigma"])
+            sig[m] = C['sigma'] * LOG10
             if self.kind == "bommer":
-                tau[m] = np.log(10.0 ** C["tau"])
-                phi[m] = np.log(10.0 ** C["phi"])
+                tau[m] = C['tau'] * LOG10
+                phi[m] = C['phi'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c0     c1        c2      c3   sigma

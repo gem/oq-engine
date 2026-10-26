@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,9 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z1pt0_usgs_basin_scaling
 
 
+LOG10 = np.log(10.0)
+
+
 # Equation constants that are IMT-independent
 CONSTS = {
     "Mref": 4.5,
@@ -42,7 +45,7 @@ CONSTS = {
     "v1": 225.0,
     "v2": 300.0}
 
-# CyberShake basin adjustments for BSSA14 (only applied above 
+# CyberShake basin adjustments for BSSA14 (only applied above
 # 1.9 seconds so we don't provide values listed below 2 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
@@ -71,10 +74,10 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
 
     # Get z1pt0
     if hasattr(ctx, "z1pt0"):
-        z1pt0 = ctx.z1pt0.copy() # Site z1pt0 in metres
+        z1pt0 = ctx.z1pt0.copy()  # Site z1pt0 in metres
         # Use GMM's vs30 to z1pt0 for non-measured values
         mask = z1pt0 == -999
-        z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM # mu_z1 to metres
+        z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM  # mu_z1 to metres
 
     # Get USGS basin scaling factor if required
     if usgs_bs:
@@ -83,25 +86,39 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
         usgs_baf = np.ones(len(ctx.vs30))
 
     # Get basin model or return no basin term
-    if region == "nobasin" or imt.period < 0.65:  
-        return np.zeros(len(ctx.vs30), dtype=float) # Switched off
-    
+    if region == "nobasin" or imt.period < 0.65:
+        return np.zeros(len(ctx.vs30), dtype=float)  # Switched off
+
     # If cybershake basin adj and SA(T > 1.9)
-    if cy and imt.period > 1.9: 
+    if cy and imt.period > 1.9:
         C_cy = COEFFS_CY[imt]
         dz1_cy = np.full(len(ctx.vs30), C_cy["dz1cy"])
-        cy_csim = 0.1 # CY_CSIM variable in java code
+        cy_csim = 0.1  # CY_CSIM variable in java code
         f_dz1 = np.where(dz1_cy <= C_cy["f6cy"],
                          C_cy["f6cy"] * dz1_cy,
                          C_cy["f7cy"]) + cy_csim
-    
+
     # Regular basin term
     else:
-        dz1 = (z1pt0 / METRES_PER_KM) - bmodel_mu_z1 # Convert site z1pt0 to km
+        dz1 = (z1pt0 / METRES_PER_KM) - \
+            bmodel_mu_z1  # Convert site z1pt0 to km
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
-        
+
     return f_dz1 * usgs_baf
+
+
+def _interpolate_magnitude(mag, val_min, val_max, mag_min=4.5, mag_max=5.5,
+                           dtype=None):
+    # Linearly interpolate a value between mag_min and mag_max, with constant
+    # values outside this range.
+    # The tau and phi magnitude transitions run from M4.5 to M5.5.
+    result = np.full_like(
+        mag, val_min + (val_max - val_min) * (mag - mag_min) /
+        (mag_max - mag_min), dtype=dtype)
+    result[mag <= mag_min] = val_min
+    result[mag >= mag_max] = val_max
+    return result
 
 
 def _get_inter_event_tau(C, mag):
@@ -109,10 +126,7 @@ def _get_inter_event_tau(C, mag):
     Returns the inter-event standard deviation (tau), which is dependent
     on magnitude
     """
-    tau = np.full_like(mag, C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5))
-    tau[mag <= 4.5] = C["tau1"]
-    tau[mag >= 5.5] = C["tau2"]
-    return tau
+    return _interpolate_magnitude(mag, C["tau1"], C["tau2"])
 
 
 _get_intra_event_phi = CallableDict()
@@ -125,9 +139,8 @@ def _get_intra_event_phi_base(kind, C, mag, rjb, vs30):
     magnitude, distance and vs30
     """
     # Magnitude Dependent phi (Equation 17)
-    base_vals = np.full_like(rjb, C["f1"] + (C["f2"] - C["f1"]) * (mag - 4.5))
-    base_vals[mag <= 4.5] = C["f1"]
-    base_vals[mag >= 5.5] = C["f2"]
+    base_vals = _interpolate_magnitude(
+        mag, C["f1"], C["f2"], dtype=rjb.dtype)
 
     # Distance dependent phi (Equation 16)
     idx1 = rjb > C["R2"]
@@ -151,10 +164,7 @@ def _get_intra_event_phi_stewart(kind, C, mag, rjb, vs30):
 
     In SBSA15, the intra-event standard deviation only depends on magnitude
     """
-    phi = np.full_like(mag, C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
-    phi[mag <= 4.5] = C["phi1"]
-    phi[mag >= 5.5] = C["phi2"]
-    return phi
+    return _interpolate_magnitude(mag, C["phi1"], C["phi2"])
 
 
 def _get_linear_site_term(C, vs30):
@@ -200,6 +210,7 @@ def _get_path_scaling_base(kind, region, C, ctx):
     """
     Returns the path scaling term given by equation (3)
     """
+    # Calculate R in Equation 4
     rval = np.sqrt(ctx.rjb ** 2.0 + C["h"] ** 2.0)
     scaling = (C["c1"] + C["c2"] * (ctx.mag - CONSTS["Mref"])) * np.log(
         rval / CONSTS["Rref"])
@@ -337,7 +348,7 @@ class BooreEtAl2014(GMPE):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-        """ 
+        """
         if self.usgs_basin_scaling and self.region == 'nobasin':
             raise ValueError('USGS basin scaling requires a '
                              'basin region to be specified.')
@@ -359,7 +370,7 @@ class BooreEtAl2014(GMPE):
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2      
+    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.200000   -1.243000   0.148900   -0.003440   5.300000   0.000000   -0.840000   1300.000000   -0.100000   -0.008440   -9.900000   -9.900000   105.000000   272.000000   0.082000   0.080000   0.644000   0.552000   0.401000   0.346000
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.500000   -1.134000   0.191700   -0.008088   4.500000   0.000000   -0.600000   1500.000000   -0.150000   -0.007010   -9.900000   -9.900000   110.000000   270.000000   0.100000   0.070000   0.695000   0.495000   0.398000   0.348000
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.500000   -1.134000   0.191600   -0.008088   4.500000   0.000000   -0.603720   1500.200000   -0.148330   -0.007010   -9.900000   -9.900000   111.670000   270.000000   0.096000   0.070000   0.698000   0.499000   0.402000   0.345000
@@ -472,9 +483,8 @@ class BooreEtAl2014(GMPE):
 
 class BooreEtAl2014HighQ(BooreEtAl2014):
     """
-    This class implements the Boore et al. (2014) model considering the
-    correction to the path scaling term for High Q regions (e.g. China and
-    Turkey)
+    Implements the Boore et al. (2014) model considering the correction to the
+    path scaling term for High Q regions (e.g. China and Turkey)
     The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -591,9 +601,8 @@ class BooreEtAl2014HighQ(BooreEtAl2014):
 
 class BooreEtAl2014LowQ(BooreEtAl2014):
     """
-    This class implements the Boore et al. (2014) model considering the
-    correction to the path scaling term for Low Q regions (e.g. Italy and
-    Japan)
+    Implements the Boore et al. (2014) model considering the correction to the
+    path scaling term for Low Q regions (e.g. Italy and Japan)
     The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\

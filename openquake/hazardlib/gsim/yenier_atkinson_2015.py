@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,8 +18,10 @@
 
 """
 Module exports :class:`YenierAtkinson2015BSSA`
+               :class:`YenierAtkinson2015ACME2019`
 """
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -198,9 +200,10 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     tmp = PGA()
     pga_rock = _get_mean_on_rock(region, focal_depth, C2, C3, C4, ctx, tmp)
     pga_rock = np.exp(pga_rock)
-    if adapted:  # in acme_2019
+    if adapted:  # in YenierAtkinson2015ACME2019
         # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-        vs30 = np.ones_like(ctx.vs30) * 760.
+        vs30 = np.full_like(
+            ctx.vs30, 760., dtype=np.result_type(ctx.vs30, 760.))
     else:
         vs30 = ctx.vs30
     # Compute the mean on soil
@@ -209,7 +212,7 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     C = gmm.COEFFS[imt]
     mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
-        # acme_2019 considers the SoF correction
+        # ACME2019 considers the SoF correction
         famp = [get_sof_adjustment(rake, imt) for rake in ctx.rake]
         mean += np.log(famp)
     return mean
@@ -222,8 +225,8 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
     """
     if region == 'CENA':
         d = focal_depth
-        t1 = np.clip(0.290 * (d - 10.), None, 0)
-        t2 = np.clip(0.229 * (m - 5.), None, 0)
+        t1 = np.minimum(0.290 * (d - 10.), 0)
+        t2 = np.minimum(0.229 * (m - 5.), 0)
         delta_sigma = np.exp(5.704 + t1 + t2)
         edelta = _get_edelta(C, m, delta_sigma)
         return edelta * np.log(delta_sigma/100.)
@@ -436,3 +439,26 @@ class YenierAtkinson2015BSSA(GMPE):
    PGA -0.004667    -0.009808
    PGV -0.002792    -0.006313
 """)
+
+
+class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
+    """
+    This is a modified version of the :class:
+    `openquake.hazardlib.gsim.yenier_atkinson_2015.YenierAtkinson2015BSSA`
+    which incorporates a correction of the median ground motion based on the
+    focal mechanism.
+
+    NOTE: It also fixes Vs30 to 760 m/s (i.e., the user-provided Vs30
+    is ignored).
+    """
+    adapted = True
+
+    #: Required rupture parameters include rake for the focal mechanism.
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth', 'rake'}
+
+    def __init__(self):
+        """
+        Initialize the CENA model with focal depth 10 km and required rake.
+        """
+        # Initialise using the super class
+        super().__init__(focal_depth=10., region='CENA')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.campbell_bozorgnia_2003 import (
-    _compute_magnitude_scaling, _compute_faulting_mechanism 
-)
+    _compute_magnitude_scaling, _compute_faulting_mechanism )
 
 
 def _get_mean(C, mag, rake, dip, rrup, rjb, vs30):
@@ -45,7 +44,6 @@ def _get_mean(C, mag, rake, dip, rrup, rjb, vs30):
 def _compute_distance_scaling(C, mag, rrup, vs30):
     """
     Compute distance scaling term (eq.3, page 319).
-
     """
     svfs , ssr, sfr = _get_site_type_dummy_variables(vs30)
     g = C['c5'] + C['c6'] * (svfs + ssr) + C['c7'] * sfr
@@ -97,7 +95,7 @@ def _compute_hanging_wall_effect(C, rjb, rrup, dip, mag, rake, vs30):
     frv = (dip > 45) & (22.5 <= rake) & (rake <= 157.5)
     # flag for thrust faulting
     fth = (dip <= 45) & (22.5 <= rake) & (rake <= 157.5)
-    
+
     svfs , ssr, sfr = _get_site_type_dummy_variables(vs30)
 
     # eq. 8

@@ -18,6 +18,8 @@
 
 import os
 import sys
+import gc
+import time
 import pytest
 import requests
 import glob
@@ -154,6 +156,19 @@ def _isolate_database():
     return dbfile
 
 
+def _remove_dbfile(dbfile):
+    # Windows may keep the file locked for a moment after the connections
+    # are closed: retry, collecting garbage in between, then let it fail
+    for _ in range(50):
+        try:
+            pathlib.Path(dbfile).unlink(missing_ok=True)
+            return
+        except PermissionError:
+            gc.collect()
+            time.sleep(0.2)
+    pathlib.Path(dbfile).unlink(missing_ok=True)
+
+
 def _prepare_server_data():
     global _server_cfg_path, _server_old_cfg_path
     global _test_datadir, _old_datadir
@@ -199,7 +214,7 @@ def server_test_data():
     # The engine has a separate SQLite connection, which locks the file on
     # Windows even after all Django connections have been closed.
     dbapi.db.close()
-    pathlib.Path(_test_dbfile).unlink(missing_ok=True)
+    _remove_dbfile(_test_dbfile)
     shutil.rmtree(_test_datadir)
 
 

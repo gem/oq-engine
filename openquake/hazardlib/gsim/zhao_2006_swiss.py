@@ -36,9 +36,8 @@ from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
     """
-    This class extends :class:ZhaoEtAl2006Asc,
-    adjusted to be used for the Swiss Hazard Model [2014].
-    This GMPE is valid for a fixed value of vs30=700m/s
+    Extends :class:ZhaoEtAl2006Asc, adjusted to be used for the Swiss Hazard
+    Model [2014]. This GMPE is valid for a fixed value of vs30=700m/s
 
     #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
@@ -50,17 +49,16 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
     #. single station sigma - inter-event magnitude/distance adjustment
 
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The hazard modeller is solely responsible for the use of this GMPE
-    in a different tectonic context.
+    Disclaimer: these equations are modified to be used for the Swiss Seismic
+    Hazard Model [2014]. The hazard modeller is solely responsible for the use
+    of this GMPE in a different tectonic context.
 
     Model implemented by laurentiu.danciu@gmail.com
     """
 
-    # Supported standard deviation type originally only total, but reported as a
-    # combination of mean and magnitude/distance single station sigma.
-    # updated to return inter and intra event component of st.dev (June 2023)                                                                         
+    # Supported standard deviation type originally only total, but reported as
+    # a combination of mean and magnitude/distance single station sigma.
+    # updated to return inter and intra event component of st.dev (June 2023)
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
@@ -119,16 +117,15 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 class ZhaoEtAl2006AscSWISS03(ZhaoEtAl2006AscSWISS05):
 
     """
-    This class extends :class:ZhaoEtAl2006Asc,following same strategy
-    as for :class:ZhaoEtAl2006AscSWISS05
+    Extends :class:ZhaoEtAl2006Asc,following same strategy as for
+    :class:ZhaoEtAl2006AscSWISS05
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS03
 
 
 class ZhaoEtAl2006AscSWISS08(ZhaoEtAl2006AscSWISS05):
     """
-    This class extends :class:ZhaoEtAl2006Asc,following same strategy
-    as for :class:ZhaoEtAl2006AscSWISS05 to be used for the
-    Swiss Hazard Model [2014].
+    Extends :class:ZhaoEtAl2006Asc,following same strategy as for
+    :class:ZhaoEtAl2006AscSWISS05 to be used for the Swiss Hazard Model [2014].
     """
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08

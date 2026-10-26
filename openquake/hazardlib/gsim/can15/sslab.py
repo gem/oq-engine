@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 :module:`openquake.hazardlib.gsim.nrcan15` implements
 :class:`SSlabCan15Mid`, :class:`SSlabCan15Upp`,
@@ -11,6 +29,9 @@ from openquake.hazardlib.gsim.can15.western import get_sigma
 from openquake.hazardlib.gsim.can15 import utils
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006SSlab
+
+
+LOG10 = np.log(10.0)
 
 
 class SSlabCan15Mid(ZhaoEtAl2006SSlab):
@@ -59,7 +80,7 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         super().compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
             cff = self.COEFFS_SITE[imt]
-            mean[m] = np.log(np.exp(mean[m]) * 10**cff['mf']) + self.delta
+            mean[m] = (mean[m] + cff['mf'] * LOG10) + self.delta
             sig[m] = get_sigma(imt)
 
     # These are the coefficients included in Table 1 of Atkinson and Adams
@@ -87,7 +108,7 @@ class SSlabCan15Low(SSlabCan15Mid):
     """
     # adjust mean values using the recommended delta (see Atkinson and
     # Adams, 2013; page 992)
-    delta = -np.log(10.**0.15)
+    delta = -(0.15 * LOG10)
 
 
 class SSlabCan15Upp(SSlabCan15Mid):
@@ -96,4 +117,4 @@ class SSlabCan15Upp(SSlabCan15Mid):
     """
     # adjust mean values using the recommended delta (see Atkinson and
     # Adams, 2013; page 992)
-    delta = np.log(10.**0.15)
+    delta = 0.15 * LOG10

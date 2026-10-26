@@ -850,3 +850,28 @@ class GetCountryOrModelTestCase(unittest.TestCase):
 
     def test_no_match(self):
         self.assertEqual(get_country_or_model('/x/nothing/job.ini'), '')
+
+
+class PotentialPathsTestCase(unittest.TestCase):
+    # a classical case with 2 potential logic tree paths
+    INI = os.path.join(os.path.dirname(case_34.__file__), '..',
+                       'case_07', 'job.ini')
+
+    def get_full_lt(self, **kw):
+        oq = readinput.get_oqparam(self.INI, kw=kw)
+        oq.max_potential_paths = 1
+        return readinput.get_full_lt(oq)
+
+    def test_mean_only_with_use_rates(self):
+        self.get_full_lt(use_rates='true')  # no error
+
+    def test_quantiles_with_use_rates(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.get_full_lt(use_rates='true',
+                             quantile_hazard_curves='0.1,0.9')
+        self.assertIn('use_rates=true is not enough', str(ctx.exception))
+
+    def test_quantiles_without_use_rates(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.get_full_lt(quantile_hazard_curves='0.1,0.9')
+        self.assertIn('or set use_rates=true', str(ctx.exception))

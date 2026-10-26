@@ -25,6 +25,7 @@ Module exports :class:`BozorgniaCampbell2016VH`
                :class:`BozorgniaCampbell2016LowQJapanSiteVH`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA

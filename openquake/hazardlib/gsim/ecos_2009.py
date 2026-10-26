@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -115,13 +115,13 @@ class ECOS2009(GMPE):
 
 class ECOS2009Highest(ECOS2009):
     """
-    This class implements the version using "three highest intensity levels",
-    fixed depth (h=10km) and the weighting scheme "no weighting".
+    Implements the version using "three highest intensity levels", fixed depth
+    (h=10km) and the weighting scheme "no weighting".
 
-    See page 18 for general equation (8) - needs to be solved for I_obs -
-    and equation (9) for estimating coefficients c0,c1,c2,c3.
-    Coefficients a,b are taken from Table 4 on page 19.
-    Coefficients alpha,beta are taken from Table 5 on page 19.
+    See page 18 for general equation (8) - needs to be solved for I_obs - and
+    equation (9) for estimating coefficients c0,c1,c2,c3. Coefficients a,b are
+    taken from Table 4 on page 19. Coefficients alpha,beta are taken from Table
+    5 on page 19.
     """
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -140,13 +140,13 @@ class ECOS2009Highest(ECOS2009):
 
 class ECOS2009VariableDepth(ECOS2009):
     """
-    This class implements the version using "all intensity levels",
-    variable hypocentral depth and the weighting scheme "no weighting".
+    Implements the version using "all intensity levels", variable hypocentral
+    depth and the weighting scheme "no weighting".
 
-    See page 18 for general equation (8) - needs to be solved for I_obs -
-    and equation (9) for estimating coefficients c0,c1,c2,c3.
-    Coefficients a,b are taken from Table 4 on page 19.
-    Coefficients alpha,beta are taken from Table 5 on page 19.
+    See page 18 for general equation (8) - needs to be solved for I_obs - and
+    equation (9) for estimating coefficients c0,c1,c2,c3. Coefficients a,b are
+    taken from Table 4 on page 19. Coefficients alpha,beta are taken from Table
+    5 on page 19.
     """
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {

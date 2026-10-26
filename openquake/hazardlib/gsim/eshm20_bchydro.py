@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -176,8 +176,7 @@ AbrahamsonEtAl2015SInter.ESHM20_FABA_MODELS = {
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
     "Sigmoid": FABATaperSigmoid,
-    "Gaussian": FABATaperGaussian,
-}
+    "Gaussian": FABATaperGaussian,}
 
 
 class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):

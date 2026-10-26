@@ -35,6 +35,9 @@ from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_distance(ctx, imt, C):
     """
     Compute the second term of the equation described on p. 199:
@@ -172,18 +175,18 @@ class AkkarBommer2010(GMPE):
             # Convert units to g,
             # but only for PGA and SA (not PGV):
             if imt.string.startswith(("SA", "PGA")):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGV:
-                mean[m] = np.log(10.0 ** imean)
+                mean[m] = imean * LOG10
 
             # apply scaling factor for SA at 4 s
             if imt.string[:2] == 'SA' and imt.period == 4.0:
                 mean[m] /= 0.8
 
-            sig[m] = np.log(10 ** C['SigmaTot'])
-            tau[m] = np.log(10 ** C['tau'])
-            phi[m] = np.log(10 ** C['Sigma1'])
+            sig[m] = C['SigmaTot'] * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['Sigma1'] * LOG10
 
     #: For PGA and SA up to 0.05 seconds, coefficients are taken from table 5,
     #: page 385 of 'Extending ground-motion prediction equations for spectral
@@ -267,23 +270,22 @@ class AkkarBommer2010(GMPE):
 class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     """
-    This class extends :class:`AkkarBommer2010`
-    adjusted to be used for the Swiss Hazard Model [2014].
-    This GMPE is valid for a fixed value of vs30=600m/s
+    Extends :class:`AkkarBommer2010` adjusted to be used for the Swiss Hazard
+    Model [2014]. This GMPE is valid for a fixed value of vs30=600m/s
 
+    # kappa value K-adjustments corresponding to model 01 - as prepared by Ben
     # kappa value
-    K-adjustments corresponding to model 01 - as prepared by Ben Edwards
-    K-value for PGA were not provided but infered from SA[0.01s]
-    the model considers a fixed value of vs30=600 to match the
-    reference vs30=1100m/s
+    Edwards K-value for PGA were not provided but infered from SA[0.01s] the
+    model considers a fixed value of vs30=600 to match the reference
+    vs30=1100m/s
 
     # small-magnitude correction
 
     # single station sigma - inter-event magnitude/distance adjustment
 
-    Disclaimer: these equations are modified to be used for the
-    Swiss Seismic Hazard Model [2014].
-    The use of these models is the soly responsability of the hazard modeler.
+    Disclaimer: these equations are modified to be used for the Swiss Seismic
+    Hazard Model [2014]. The use of these models is the soly responsability of
+    the hazard modeler.
 
     Model implemented by laurentiu.danciu@gmail.com
     """
@@ -306,22 +308,22 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         ctx.vs30 = 600.
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tau'
-        log_phi_ss = np.log(10)
+        log_phi_ss = LOG10
         for m, imt in enumerate(imts):
             _apply_adjustments(
                 AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
                 mean[m], sig[m], tau[m], phi[m], ctx, ctx.rjb, imt, log_phi_ss)
-            sig[m] = np.log(10 ** sig[m])
-            tau[m] = np.log(10 ** tau[m])
-            phi[m] = np.log(10 ** phi[m])
+            sig[m] = sig[m] * LOG10
+            tau[m] = tau[m] * LOG10
+            phi[m] = phi[m] * LOG10
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
 
 class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     """
-    This class extends :class:`AkkarBommer2010` following same strategy
-    as for :class:`AkkarBommer2010SWISS01`
+    Extends :class:`AkkarBommer2010` following same strategy as for
+    :class:`AkkarBommer2010SWISS01`
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
@@ -331,11 +333,11 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
 
 class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     """
-    This class extends :class:`AkkarBommer2010` following same strategy
-    as for :class:`AkkarBommer2010SWISS01` to be used for the
-    Swiss Hazard Model [2014].
+    Extends :class:`AkkarBommer2010` following same strategy as for
+    :class:`AkkarBommer2010SWISS01` to be used for the Swiss Hazard Model
+    [2014].
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT} 
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08

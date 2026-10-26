@@ -125,7 +125,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # Number of epsilons
         # Number of realisations
         poes = dstore['disagg-rlzs/Mag_Dist_Eps'][
-            0, imt_idx, 0, :, :, :, rlzs]
+            0, :, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_mde(poes)
     elif atype == 'md':
         # The shape of the final `poes` is: R X A where R is the number of
@@ -133,7 +133,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # exceedance
         poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_mde(poes[:, :, None, :])
-        assert len(rlzs) == poes.shape[0]
     elif atype == 'm':
         poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, rlzs].T
         # shape (R, Ma) i.e. (6, 17) in test_m_correlation
@@ -186,12 +185,8 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
         nump = np.array(res.numpow, dtype=float)
         ok = ~np.isnan(minp)
 
-        if i == 0:
-            minpow[ok] = minp[ok]
-            maxpow[ok] = nump[ok] + minp[ok]
-        else:
-            minpow[ok] = np.minimum(minpow[ok], minp[ok])
-            maxpow[ok] = np.maximum(maxpow[ok], minp[ok] + nump[ok])
+        minpow[ok] = np.fmin(minpow[ok], minp[ok])
+        maxpow[ok] = np.fmax(maxpow[ok], minp[ok] + nump[ok])
 
     ok = ~np.isnan(minpow)
     maxrange = minpow.copy()

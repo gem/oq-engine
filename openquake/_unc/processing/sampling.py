@@ -86,7 +86,8 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
                 # These are the weights assigned to each group
                 weights_per_group = [
                     wei[grp].sum() for grp in rlzgroups[unc, srcid]]
-                weights = rounding(weights_per_group, 2)
+                weights = np.array(weights_per_group, dtype=float)
+                weights /= weights.sum()
 
                 # 'sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
@@ -179,14 +180,3 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
 
             # Save the weight for this sample
             weir[sam] *= wei[idx]
-
-
-def rounding(weights, digits):
-    """
-    >>> rounding([.123, .234, .51, .133], 2)
-    array([0.12, 0.23, 0.51, 0.14])
-    """
-    out = np.round(weights, digits)
-    out[-1] = 1. - out[:-1].sum()
-    return out
-

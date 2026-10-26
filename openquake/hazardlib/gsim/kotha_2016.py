@@ -30,6 +30,10 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
+LOG10 = np.log(10.0)
+
+
 KOTHA_CSV = os.path.join(os.path.dirname(__file__), "kotha_2016", 
                          'kotha_2016.csv')
 
@@ -144,10 +148,10 @@ class KothaEtAl2016(GMPE):
             # Units of GMPE are in terms of m/s (corrected in an Erratum)
             # Convert to g
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log(np.exp(mean[m]) / g)
+                mean[m] = mean[m] - np.log(g)
             else:
                 # For PGV convert from m/s to cm/s/s
-                mean[m] = np.log(np.exp(mean[m]) * 100.)
+                mean[m] = mean[m] + np.log(100.0)
 
             # Get standard deviations
             sig[m] = C['sigma']
