@@ -334,6 +334,12 @@ agg_id
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # agg_losses with the id tag, which is not an index in tagcol
+        aw = extract(self.calc.datastore, 'agg_losses/structural')
+        losses = self.calc.datastore['avg_losses-stats/structural'][:]
+        numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
+                                      rtol=1E-5)
+
     def test_case_04(self):
         # Turkey with SHARE logic tree
         self.run_calc(case_04.__file__, 'job.ini')
@@ -480,6 +486,12 @@ agg_id
                               delta=4E-4)
 
         self.check_case_master()
+
+        # agg_losses with the id tag, which is not an index in tagcol
+        aw = extract(self.calc.datastore, 'agg_losses/structural')
+        losses = self.calc.datastore['avg_losses-stats/structural'][:]
+        numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
+                                      rtol=1E-5)
 
     def test_from_ses(self):
         self.run_calc(case_master.__file__, 'job_risk.ini')
