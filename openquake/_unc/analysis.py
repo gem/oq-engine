@@ -38,6 +38,7 @@ import pandas as pd
 
 from openquake.calculators.base import dcache
 from openquake._unc.dsg_mde import get_afes_from_dstore as afes_from
+from openquake._unc.utils import probabilities_to_rates
 
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -188,12 +189,15 @@ class Analysis:
         # Process all the correlated branch sets
         for unc, df in enumerate(self.dfs):
             srcids = set(df['srcid'])
-            for uset, sset in zip(usets, ssets):
-                # if any source is in the current branch set
-                if srcids & sset:
-                    sset |= srcids
-                    uset |= {unc}
-                    break
+            matches = [i for i, sset in enumerate(ssets) if srcids & sset]
+            if matches:
+                first = matches[0]
+                ssets[first] |= srcids
+                usets[first].add(unc)
+                # A branch set can connect several existing components.
+                for i in reversed(matches[1:]):
+                    ssets[first] |= ssets.pop(i)
+                    usets[first] |= usets.pop(i)
             else:
                 # at the first loop ssets and usets are empty
                 ssets.append(srcids)
@@ -304,8 +308,7 @@ class Analysis:
         for imag in range(Ma):
             for idst in range(D):
                 poes = mag_dst_rlz[imag, idst, :]
-                poes[poes > 0.99999] = 0.99999
-                afes = -np.log(1. - poes) / self.itime
+                afes = probabilities_to_rates(poes, self.itime)
                 afe = np.sum(afes * weights)
                 if afe > 0:
                     oute.append(afe)

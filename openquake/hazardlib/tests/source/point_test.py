@@ -564,6 +564,18 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
             self.assertAlmostEqual(src1.location.x, src2.location.x)
             self.assertAlmostEqual(src1.location.y, src2.location.y)
 
+    def test_antimeridian(self):
+        # with these rates the weighted average of the longitudes is
+        # 180.00000000000003 in absolute value, outside the valid range;
+        # it happened in Alaska with ps_grid_spacing=15
+        for lon in (-180., 180.):
+            ps1 = make_point_source(
+                lon=lon, lat=52., mfd=EvenlyDiscretizedMFD(5, 1, [.003]))
+            ps2 = make_point_source(
+                lon=lon, lat=52.1, mfd=EvenlyDiscretizedMFD(5, 1, [.011]))
+            cps = CollapsedPointSource('1', [ps1, ps2])
+            self.assertEqual(cps.location.x, lon)
+
 
 class PointSourceDipFracsTestCase(unittest.TestCase):
 

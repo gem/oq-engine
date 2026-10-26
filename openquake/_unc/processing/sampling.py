@@ -34,6 +34,7 @@ the realizations from a set of outputs from the OQ Engine
 import logging
 import numpy as np
 from openquake._unc.analysis import Analysis
+from openquake._unc.utils import probabilities_to_rates
 
 
 # tested in test_01_performance
@@ -81,12 +82,14 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
 
                 # ID of the first source with a given correlated uncertainty
                 srcid = an01.dfs[unc].srcid.to_numpy()[0]
-                wei = an01.dstores[srcid]['weights'][:]
+                wei = np.asarray(
+                    an01.dstores[srcid]['weights'][:], dtype=float)
 
                 # These are the weights assigned to each group
                 weights_per_group = [
                     wei[grp].sum() for grp in rlzgroups[unc, srcid]]
-                weights = rounding(weights_per_group, 2)
+                weights = np.array(weights_per_group, dtype=float)
+                weights /= weights.sum()
 
                 # 'sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
@@ -101,7 +104,8 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
             isrc, = np.where(srcids == srcid)
 
             # for instance [0.25, 0.25, 0.25, 0.25]
-            wei = an01.dstores[srcid]['weights'][:]
+            wei = np.asarray(an01.dstores[srcid]['weights'][:], dtype=float)
+            wei = wei / wei.sum()
 
             # Sampling
             # for instance [3, 3, 0, ..., 2, 3, 3] with 1E5 elements
@@ -114,8 +118,7 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
 
     # Converting the final matrix into annual frequencies of exceedance
     oqp = dstores[srcids[0]]['oqparam']
-    afes[afes > 0.99999] = 0.99999
-    afes = - np.log(1. - afes) / oqp.investigation_time
+    afes = probabilities_to_rates(afes, oqp.investigation_time)
 
     return oqp.hazard_imtls, afes
 
@@ -153,7 +156,7 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
         # investigated. `wei` contains the weights assigned to each one
         # of the realizations admitted by the logic tree of the current
         # source
-        wei = an01.dstores[srcid]['weights'][:]
+        wei = np.asarray(an01.dstores[srcid]['weights'][:], dtype=float)
         poes = an01.dstores[srcid]['hcurves-rlzs'][:]
 
         # Index of the current source
@@ -179,14 +182,3 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
 
             # Save the weight for this sample
             weir[sam] *= wei[idx]
-
-
-def rounding(weights, digits):
-    """
-    >>> rounding([.123, .234, .51, .133], 2)
-    array([0.12, 0.23, 0.51, 0.14])
-    """
-    out = np.round(weights, digits)
-    out[-1] = 1. - out[:-1].sum()
-    return out
-

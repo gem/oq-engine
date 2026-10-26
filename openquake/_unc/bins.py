@@ -45,17 +45,17 @@ def get_bins_data(samples: np.ndarray):
     """
 
     # If all the values are 0
-    if np.all(np.abs(samples) < SMALL):
+    if np.all(samples == 0):
         return None, None
 
     # Fixing 0 values
-    samples[samples < SMALL] = SMALL * 1.01
+    samples[samples == 0] = SMALL * 1.01
 
     # Find histogram params
-    sam = samples[np.abs(samples) > SMALL]
+    sam = samples[samples > 0]
     min_power = np.floor(np.log10(np.min(sam)))
     upv = np.ceil(np.log10(np.max(sam)))
-    num_powers = upv - min_power
+    num_powers = max(1, upv - min_power)
 
     return int(min_power), int(num_powers)
 

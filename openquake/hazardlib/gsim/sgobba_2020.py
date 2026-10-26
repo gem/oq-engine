@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.gsim.sgobba_2020` implements
-:class:`~openquake.hazardlib.gsim.sgobba_2020.SgobbaEtAl2020`
+Module exports :class:`SgobbaEtAl2020`
 """
 
 import os
