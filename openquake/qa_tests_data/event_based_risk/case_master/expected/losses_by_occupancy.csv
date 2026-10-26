@@ -1,3 +1,3 @@
-occupancy,business_interruption,contents,nonstructural,occupants_day,occupants_night,occupants_transit,structural,occupants_avg
-Com,5.29544E+01,2.62514E+02,3.97357E+02,5.21296E-04,1.55916E-03,1.10267E-03,0.00000E+00,1.06104E-03
-Res,1.18840E+02,1.20230E+03,3.88256E+03,1.20951E-03,3.46144E-03,2.41557E-03,1.89164E+02,2.36217E-03
+occupancy,business_interruption,contents,nonstructural,occupants_day,occupants_night,occupants_transit,occupants_avg,structural
+Com,5.29544E+01,2.62514E+02,3.97357E+02,5.21296E-04,1.55916E-03,1.10267E-03,1.04335E-03,0.00000E+00
+Res,1.19185E+02,1.42010E+03,3.89422E+03,1.23456E-03,3.56851E-03,2.45970E-03,2.34268E-03,1.91253E+02

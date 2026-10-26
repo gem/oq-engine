@@ -18,9 +18,9 @@
     8,756 s and the total CPU time was halved
   * Scenario risk: if time_event is not specified, the occupants losses
     are computed and stored for day, night and transit, limited to
-    the periods present in the exposure; the default time_event is
-    now unset instead of "avg", and occupants_avg is computed at
-    export time and by the extract API
+    the periods present in the exposure, together with occupants_avg
+    from the exposure; the default time_event is now unset instead of
+    "avg"
   * Bug fix: "oq extract agg_losses" failed with a TypeError when the
     calculation was aggregated by id, and the site_id tags of the
     aggregated losses were shifted by one site

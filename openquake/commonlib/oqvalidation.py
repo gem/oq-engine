@@ -2154,6 +2154,7 @@ class OqParam(valid.ParamSet):
         for lt in self.all_cost_types:
             if lt == 'occupants' and self.occupants_by_time:
                 names.extend('occupants_' + te for te in self.time_events)
+                names.append('occupants_avg')
             else:
                 names.append(lt)
         return names

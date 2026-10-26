@@ -77,7 +77,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
-affectedpop injured embodied_carbon
+affectedpop injured embodied_carbon occupants_avg
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1830,16 +1830,6 @@ class RiskComputer(dict):
 
 
 # ####################### Consequences ##################################### #
-
-
-def occ_periods(loss_types):
-    """
-    :returns: the occupants loss types by time event (occupants_day, ...)
-        if there are more than one, otherwise an empty list, since the
-        average of a single period would duplicate it
-    """
-    occ = [lt for lt in loss_types if lt.startswith('occupants_')]
-    return occ if len(occ) > 1 else []
 
 
 def consequence(consequence, assets, coeff, loss_type, time_event):

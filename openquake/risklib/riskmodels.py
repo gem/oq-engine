@@ -316,7 +316,8 @@ class RiskModel(object):
         """
         :returns: the loss types to compute for the given assets. If
             time_event is not set, the occupants are computed for the
-            day, night and transit periods present in the assets
+            day, night and transit periods present in the assets, and
+            for the occupants_avg column
         """
         lts = []  # keep the order, it determines the random draws
         for lt in self.loss_types:
@@ -324,6 +325,7 @@ class RiskModel(object):
                     self.calcmode in scientific.OCC_TIME_MODES:
                 lts.extend(f'occupants_{te}' for te in scientific.TIME_EVENTS
                            if f'occupants_{te}' in assets.columns)
+                lts.append('occupants_avg')
             else:
                 lts.append(lt)
         return lts
