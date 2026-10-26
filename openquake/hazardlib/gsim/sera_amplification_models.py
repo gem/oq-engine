@@ -22,6 +22,8 @@ Module exports :class:`PitilakisEtAl2018`
                :class:`Eurocode8Amplification`
                :class:`Eurocode8AmplificationDefault`
                :class:`SandikkayaDinsever2018`
+
+Implements SERA site amplification models.
 """
 import numpy as np
 import copy

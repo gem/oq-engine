@@ -18,6 +18,8 @@
 
 """
 Module exports :class:`Mohammadi2023Turkiye`
+
+Mohammadi et al. (2023) Turkiye ML-based Ground-Motion Model
 """
 
 import os
