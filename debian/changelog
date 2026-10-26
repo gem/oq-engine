@@ -1,3 +1,10 @@
+  [Christopher Brooks]
+  * Added some regression tests for the can20 GMMs
+  * Fixed several bugs present in the ACME 2019 GMMs (phi overwriting
+    total sigma in AlAtikSigmaModel, interpolation/extrapolation bugs
+    in AlAtikSigmaModel, incorrect number of arguments in the CY14 ACME
+    2019 variant)
+ 
   [Michele Simionato]
   * Bug fix: the "too many potential logic tree paths" error suggested
     use_rates=true even when it was already set; the message now
