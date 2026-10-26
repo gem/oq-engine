@@ -20,10 +20,11 @@ Calibration of ps_grid_spacing and pointsource_distance, performed in
 preclassical when the user sets ``ps_grid_spacing = auto``.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region, both exactly (no gridding, all nodal planes and
-hypocenters) and for a set of candidate pairs (ps_grid_spacing,
-pointsource_distance); the cheapest candidate with a 99th percentile of
-the relative error on the hazard maps below a tolerance is chosen.
+spread over the region, both for a reference setting (no gridding and
+all nodal planes and hypocenters within 100 km) and for a set of
+candidate pairs (ps_grid_spacing, pointsource_distance); the cheapest
+candidate with a 99th percentile of the relative error on the hazard
+maps below a tolerance is chosen.
 """
 import copy
 import time
@@ -41,10 +42,15 @@ from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km, cheapest first
 PS_DISTANCES = [50., 100.]  # candidate values in km
-EXACT = (0., 1000.)  # no gridding, all nodal planes and hypocenters
+# reference (ps_grid_spacing, pointsource_distance): no gridding and all
+# nodal planes and hypocenters within 100 km; using 1000 km would be
+# exact but too expensive with large maximum distances (e.g. in AUS)
+REFERENCE = (0., 100.)
 TOLERANCE = .05  # on the 99th percentile of the relative error
 MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
-NSITES = 300  # size of the sample of sites
+NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
+MAXDIST = 300.  # in km, see _get_nsites
+MIN_NSITES = 100  # minimum size of the sample of sites
 
 
 def calib_task(srcs, sites, cmaker, key, monitor):
@@ -66,22 +72,24 @@ def calib_task(srcs, sites, cmaker, key, monitor):
 
 
 # split the area and multipoint sources in point sources; the point
-# sources of the composite source model are not modified
+# sources of the composite source model are not modified; a source with
+# a single point is not split by split_source, so it is not gridded by
+# the engine and it is ignored, since it gives no gridding error
 def _get_points(sg):
     points = []
     for src in sg:
         if src.code in b'AM' and not src.bysrc_unc:
-            points.extend(split_source(src))
+            points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     return points
 
 
-# yield pairs (weight, args) for the calibration tasks of the given grid
-# spacing and distances; the gridding is performed only once; the tasks
-# are balanced by number of ruptures times number of sites within the
-# maximum distance from the location of the source
-def _gen_args(groups, sites, cmakers, psgs, distances, num_tasks):
+# split the sources of the groups, gridded with the given spacing, in
+# blocks (weight, srcs) for each group; the blocks are balanced by number
+# of ruptures times number of sites within the maximum distance from the
+# location of the source
+def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
     kdt = KDTree(sites.xyz)
     pairs = {}  # grp_id -> [(src, weight), ...]
     for grp_id, points in groups.items():
@@ -89,33 +97,49 @@ def _gen_args(groups, sites, cmakers, psgs, distances, num_tasks):
         for src in srcs:
             if not hasattr(src, 'id'):  # new CollapsedPointSource
                 src.id = src.offset = 0  # needed to build the contexts
-        cmaker = cmakers[grp_id]
-        maxdist = max(d for _, d in cmaker.oq.maximum_distance[cmaker.trt])
         locs = numpy.array([(src.location.x, src.location.y,
                              src.location.z) for src in srcs])
         nsites = kdt.query_ball_point(
-            spherical_to_cartesian(*locs.T), maxdist, return_length=True)
+            spherical_to_cartesian(*locs.T), _maxdist(cmakers[grp_id]),
+            return_length=True)
         pairs[grp_id] = [(src, src.num_ruptures * (n + 1))
                          for src, n in zip(srcs, nsites)]
     tot = sum(w for prs in pairs.values() for _, w in prs)
-    blocks = {grp_id: list(block_splitter(prs, tot / num_tasks,
-                                          lambda p: p[1]))
-              for grp_id, prs in pairs.items()}
-    for psd in distances:
-        for grp_id in blocks:
-            cmaker = copy.copy(cmakers[grp_id])
-            cmaker.pointsource_distance = psd
-            for block in blocks[grp_id]:
-                srcs = [src for src, _ in block]
-                yield block.weight, (srcs, sites, cmaker, (psgs, psd))
+    return {grp_id: [(blk.weight, [src for src, _ in blk])
+                     for blk in block_splitter(prs, tot / num_tasks,
+                                               lambda p: p[1])]
+            for grp_id, prs in pairs.items()}
 
 
-def sample_sites(sitecol):
+# yield pairs (weight, args) for the calibration tasks of the candidate
+# (psgs, psd), given the blocks of sources gridded with spacing psgs
+def _gen_args(blocks, sites, cmakers, psgs, psd):
+    for grp_id, blks in blocks.items():
+        cmaker = copy.copy(cmakers[grp_id])
+        cmaker.pointsource_distance = psd
+        for weight, srcs in blks:
+            yield weight, (srcs, sites, cmaker, (psgs, psd))
+
+
+# maximum distance of the given ContextMaker
+def _maxdist(cmaker):
+    return max(d for _, d in cmaker.oq.maximum_distance[cmaker.trt])
+
+
+# the cost of each site grows with the area within the maximum distance,
+# so the size of the sample is reduced for large maximum distances
+def _get_nsites(groups, cmakers):
+    maxdist = max(_maxdist(cmakers[grp_id]) for grp_id in groups)
+    ratio = min(1., (MAXDIST / maxdist) ** 2)
+    return max(MIN_NSITES, int(NSITES * ratio))
+
+
+def sample_sites(sitecol, nsites=NSITES):
     """
-    :returns: around NSITES sites evenly spread over the region, obtained
+    :returns: around nsites sites evenly spread over the region, obtained
               by taking every n-th site in geohash order
     """
-    step = int(numpy.ceil(len(sitecol) / NSITES))
+    step = int(numpy.ceil(len(sitecol) / nsites))
     idx = numpy.sort(numpy.argsort(sitecol.geohash(8))[::step])
     sites = SiteCollection.from_(sitecol.array[idx])
     sites.make_complete()  # reset the sids from 0 to len(sites) - 1
@@ -125,9 +149,11 @@ def sample_sites(sitecol):
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     Determine ps_grid_spacing and pointsource_distance by comparing the
-    hazard maps of the point sources on a sample of sites with the exact
-    ones. The grid spacings are tried from the largest (the cheapest) and
-    the calibration stops as soon as a candidate is within the tolerance.
+    hazard maps of the point sources on a sample of sites with the
+    reference ones. The grid spacings are tried from the largest (the
+    cheapest) and, for each spacing, the distances from the smallest
+    (the cheapest); the calibration stops at the first candidate within
+    the tolerance.
 
     :returns: (ps_grid_spacing, pointsource_distance) or None if there
               are no point sources
@@ -141,41 +167,46 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
         distances = [oq.pointsource_distance['default']]
     else:
         distances = PS_DISTANCES
-    sites = sample_sites(sitecol)
+    sites = sample_sites(sitecol, _get_nsites(groups, cmakers))
     logging.info('Calibrating ps_grid_spacing among %s and '
                  'pointsource_distance among %s on %d sites',
                  GRID_SPACINGS, distances, len(sites))
-    exact = None
+    num_tasks = parallel.num_cores * 2
+    ref = None
     rows = []  # (psgs, psd, time, p99, mean)
     for psgs in GRID_SPACINGS:
-        logging.info('Trying ps_grid_spacing=%s', psgs)
-        cands = [(psgs, distances)]
-        if exact is None:  # compute the exact rates in the first round
-            cands.append((EXACT[0], [EXACT[1]]))
-        rates, times = _run(cands, groups, sites, cmakers, h5)
-        if exact is None:
-            exact = get_hmaps(rates.pop(EXACT), oq)
-            exact_time = times[EXACT]
-        rows.extend(_get_rows(rates, times, exact, oq))
-        good = [row for row in rows if row[3] <= TOLERANCE]
-        if good:
+        blocks = _get_blocks(groups, sites, cmakers, psgs, num_tasks)
+        for psd in distances:
+            logging.info('Trying ps_grid_spacing=%s, pointsource_distance=%s',
+                         psgs, psd)
+            allargs = list(_gen_args(blocks, sites, cmakers, psgs, psd))
+            if ref is None:  # compute the reference rates in the first round
+                refblocks = _get_blocks(
+                    groups, sites, cmakers, REFERENCE[0], num_tasks)
+                allargs.extend(
+                    _gen_args(refblocks, sites, cmakers, *REFERENCE))
+            rates, times = _run(allargs, h5)
+            if ref is None:
+                ref = get_hmaps(rates.pop(REFERENCE), oq)
+                ref_time = times[REFERENCE]
+            rows.extend(_get_rows(rates, times, ref, oq))
+            if rows[-1][3] <= TOLERANCE:
+                break
+        if rows[-1][3] <= TOLERANCE:
             break
     lines = ['%5.0f %5.0f %9.1f %8.4f %8.4f' % row for row in rows]
-    logging.info('Calibration on %d sites (exact time=%.1fs)\n'
+    logging.info('Calibration on %d sites (reference time=%.1fs)\n'
                  ' psgs   psd      time      p99     mean\n%s',
-                 len(sites), exact_time, '\n'.join(lines))
-    if good:  # the cheapest candidate within the tolerance
-        return min(good, key=lambda row: row[2])[:2]
+                 len(sites), ref_time, '\n'.join(lines))
+    if rows[-1][3] <= TOLERANCE:  # the first candidate within tolerance
+        return rows[-1][:2]
     return min(rows, key=lambda row: row[3])[:2]  # the most precise
 
 
-# run the calibration tasks for the given candidates in parallel; the
-# heaviest tasks are submitted first, so that they do not end up last
-# with most of the cores idle
-def _run(cands, groups, sites, cmakers, h5):
-    num_tasks = parallel.num_cores * 2
-    allargs = [pair for psgs, distances in cands for pair in _gen_args(
-        groups, sites, cmakers, psgs, distances, num_tasks)]
+# run the given calibration tasks in parallel; the heaviest tasks are
+# submitted first, so that they do not end up last with most of the
+# cores idle
+def _run(allargs, h5):
     smap = parallel.Starmap(calib_task, h5=h5)
     for _, args in sorted(allargs, key=lambda pair: -pair[0]):
         smap.submit(args)
@@ -198,11 +229,11 @@ def get_hmaps(rates, oq):
 
 # yield a row (psgs, psd, time, p99, mean) for each candidate, where
 # p99 and mean refer to the relative error on the relevant hazard maps
-def _get_rows(rates, times, exact, oq):
-    ok = exact > MIN_HMAP
+def _get_rows(rates, times, ref, oq):
+    ok = ref > MIN_HMAP
     for key in rates:
         hmaps = get_hmaps(rates[key], oq)
         # if no hazard map is relevant any candidate is good
-        errs = numpy.abs(hmaps[ok] - exact[ok]) / exact[ok] if ok.any(
+        errs = numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any(
             ) else numpy.zeros(1)
         yield key + (times[key], numpy.percentile(errs, 99), errs.mean())
