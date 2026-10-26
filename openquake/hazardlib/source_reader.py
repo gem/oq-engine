@@ -197,6 +197,11 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                 sg.sources = (kept + rand) or [srcs[0]]
             else:
                 sg.sources = []
+    # compute the content hashes here, in parallel, since they are needed
+    # by add_bangs and check_same_sources (40 seconds in AUS)
+    for sg in sm.src_groups:
+        for src in sg:
+            src.checksum = content_hash(src)
     sm.rtime = time.time() - t0  # save the read time
     return {fname: sm}
 
@@ -721,6 +726,14 @@ def content_hash(src, exclude=NOT_CONTENT):
     return hashlib.md5(pickle.dumps(dic, protocol=4)).hexdigest()
 
 
+# the content hash computed in read_source_model or computed now; NB:
+# BaseSeismicSource.checksum is a class attribute, hence the check on vars
+def _get_checksum(src):
+    if 'checksum' not in vars(src):
+        src.checksum = content_hash(src)
+    return src.checksum
+
+
 # called by reduce_sources
 def add_checksums(srcs):
     """
@@ -759,10 +772,9 @@ def add_bangs(smdict):
             if any(getattr(src, 'mutex_weight', 0) for src in srcs):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
-            add_checksums(srcs)
             gb = general.AccumDict(accum=[])
             for src in srcs:
-                gb[checksum(src)].append(src)
+                gb[_get_checksum(src)].append(src)
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
@@ -801,7 +813,7 @@ def check_same_sources(smdict, fname):
             continue
         byhash = general.AccumDict(accum=[])
         for smfile, src in pairs:
-            byhash[content_hash(src)].append((smfile, src))
+            byhash[_get_checksum(src)].append((smfile, src))
         for same in byhash.values():
             smfiles = {smfile for smfile, _ in same}
             # NB: the original IDs, without the bangs added by add_bangs
