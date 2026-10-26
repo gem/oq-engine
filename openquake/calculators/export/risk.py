@@ -77,11 +77,8 @@ def get_aggtags(dstore):
 
 
 def _add_occ_avg(out, occ, tagnames, manyrlzs):
-    """
-    Add to `out` the rows of the average occupants losses, computed
-    from the occupants losses of the time events present in the exposure
-    """
-    # the average is computed for each tag and realization
+    # add to `out` the average occupants losses over the time events,
+    # computed for each tag and realization
     occdf = pandas.DataFrame(occ)
     keys = list(tagnames) + ['rlz_id']
     avg = occdf.groupby(keys)[['loss', 'aval']].mean().reset_index()

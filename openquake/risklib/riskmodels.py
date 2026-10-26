@@ -439,11 +439,13 @@ class RiskModel(object):
         :returns: a DataFrame with columns eid, eid, loss
         """
         # occupants_day, occupants_night, occupants_transit -> occupants
-        lt = 'occupants' if loss_type.startswith('occupants_') else loss_type
+        if loss_type.startswith('occupants_'):
+            lt, te = 'occupants', loss_type[10:]
+        else:
+            lt, te = loss_type, self.time_event
         imt = self.imt_by_lt[lt, peril]
         sid = assets['site_id']
         if lt in ('occupants', 'injured'):
-            te = loss_type[10:] if lt != loss_type else self.time_event
             val = assets['occupants_%s' % (te or 'avg')].to_numpy()
         elif lt == 'affectedpop':
             val = assets['value-residents'].to_numpy()
