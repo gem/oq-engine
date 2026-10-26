@@ -33,7 +33,7 @@ import logging
 import numpy
 from scipy.spatial import KDTree
 from openquake.baselib import parallel
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, DictArray, block_splitter
 from openquake.hazardlib.map_array import MapArray, compute_hmaps
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import SourceFilter, split_source
@@ -54,6 +54,7 @@ MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
 # the calibration uses only the IMTs with the periods closest to these:
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
+LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
 MAXDIST = 300.  # in km, see _get_nsites
 MIN_NSITES = 100  # minimum size of the sample of sites
@@ -168,15 +169,16 @@ def _calib_imts(imtls):
     return [imt for imt in imtls if imt in chosen]
 
 
-# ContextMakers with a single GMPE and two IMTs (see PERIODS): the error
-# of the gridding is geometric and does not depend much on the GMPE,
-# while the cost of the calibration is proportional to the number of
-# GMPEs and IMTs
+# ContextMakers with a single GMPE, two IMTs (see PERIODS) and half of
+# the levels: the error of the gridding is geometric and does not depend
+# much on the GMPE, while the cost of the calibration is proportional to
+# the number of GMPEs, IMTs and levels
 def _calib_cmakers(cmakers, groups):
     out = {}
     for grp_id in groups:
-        cmaker = cmakers[grp_id].restrict(
-            _calib_imts(cmakers[grp_id].imtls))
+        imtls = cmakers[grp_id].imtls
+        cmaker = cmakers[grp_id].copy(imtls=DictArray(
+            {imt: imtls[imt][::LEVEL_STEP] for imt in _calib_imts(imtls)}))
         gsim, rlzs = next(iter(cmaker.gsims.items()))
         cmaker.gsims = {gsim: rlzs}
         out[grp_id] = cmaker
