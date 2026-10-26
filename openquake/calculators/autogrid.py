@@ -77,9 +77,9 @@ def _get_points(sg):
     return points
 
 
-# yield the arguments of the calibration tasks for the given grid spacing
-# and distances; the gridding is performed only once; the tasks are
-# balanced by number of ruptures times number of sites within the
+# yield pairs (weight, args) for the calibration tasks of the given grid
+# spacing and distances; the gridding is performed only once; the tasks
+# are balanced by number of ruptures times number of sites within the
 # maximum distance from the location of the source
 def _gen_args(groups, sites, cmakers, psgs, distances, num_tasks):
     kdt = KDTree(sites.xyz)
@@ -98,15 +98,16 @@ def _gen_args(groups, sites, cmakers, psgs, distances, num_tasks):
         pairs[grp_id] = [(src, src.num_ruptures * (n + 1))
                          for src, n in zip(srcs, nsites)]
     tot = sum(w for prs in pairs.values() for _, w in prs)
-    blocks = {grp_id: [[src for src, _ in block] for block in
-                       block_splitter(prs, tot / num_tasks, lambda p: p[1])]
+    blocks = {grp_id: list(block_splitter(prs, tot / num_tasks,
+                                          lambda p: p[1]))
               for grp_id, prs in pairs.items()}
     for psd in distances:
         for grp_id in blocks:
             cmaker = copy.copy(cmakers[grp_id])
             cmaker.pointsource_distance = psd
             for block in blocks[grp_id]:
-                yield block, sites, cmaker, (psgs, psd)
+                srcs = [src for src, _ in block]
+                yield block.weight, (srcs, sites, cmaker, (psgs, psd))
 
 
 def sample_sites(sitecol):
@@ -141,9 +142,13 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     else:
         distances = PS_DISTANCES
     sites = sample_sites(sitecol)
+    logging.info('Calibrating ps_grid_spacing among %s and '
+                 'pointsource_distance among %s on %d sites',
+                 GRID_SPACINGS, distances, len(sites))
     exact = None
     rows = []  # (psgs, psd, time, p99, mean)
     for psgs in GRID_SPACINGS:
+        logging.info('Trying ps_grid_spacing=%s', psgs)
         cands = [(psgs, distances)]
         if exact is None:  # compute the exact rates in the first round
             cands.append((EXACT[0], [EXACT[1]]))
@@ -164,14 +169,16 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     return min(rows, key=lambda row: row[3])[:2]  # the most precise
 
 
-# run the calibration tasks for the given candidates in parallel
+# run the calibration tasks for the given candidates in parallel; the
+# heaviest tasks are submitted first, so that they do not end up last
+# with most of the cores idle
 def _run(cands, groups, sites, cmakers, h5):
     num_tasks = parallel.num_cores * 2
+    allargs = [pair for psgs, distances in cands for pair in _gen_args(
+        groups, sites, cmakers, psgs, distances, num_tasks)]
     smap = parallel.Starmap(calib_task, h5=h5)
-    for psgs, distances in cands:
-        for args in _gen_args(
-                groups, sites, cmakers, psgs, distances, num_tasks):
-            smap.submit(args)
+    for _, args in sorted(allargs, key=lambda pair: -pair[0]):
+        smap.submit(args)
     rates, times = AccumDict(accum=0), AccumDict(accum=0)
     for key, rts, dt in smap:
         rates[key] += rts
