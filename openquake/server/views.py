@@ -1293,11 +1293,17 @@ def impact_run_with_shakemap(request):
         internal_api.impact_run, internal_api.make_form(post, request.FILES))
 
 
-def extract_report_from_datastore(dstore, iso3, file_format):
+def extract_report_from_datastore(dstore, iso3, file_format, page=1):
     impact_group = dstore['impact']
     if iso3 not in impact_group:
         raise ValueError(f"ISO3 '{iso3}' not found")
-    data = impact_group[iso3][f'report_{file_format}'][()]
+    # the PNG of the first page is stored as report_png, the following
+    # ones as report_png_2, report_png_3, ...
+    name = f'report_{file_format}' + ('' if page == 1 else f'_{page}')
+    if name not in impact_group[iso3]:
+        raise ValueError(
+            f"Page {page} of the {file_format} report not found for '{iso3}'")
+    data = impact_group[iso3][name][()]
     return bytes(data)
 
 
@@ -1369,6 +1375,10 @@ def build_impact_resources(request, calc_id, dstore):
         for file_format in ('pdf', 'png'):
             query = urlencode(dict(iso3=iso3, format=file_format))
             urls[file_format] = f'{report_url}?{query}'
+        # reports produced by older engine versions have a single page
+        if f'impact/{iso3}/report_png_2' in dstore:
+            query = urlencode(dict(iso3=iso3, format='png', page=2))
+            urls['png_page2'] = f'{report_url}?{query}'
         outputs['country_reports'][iso3] = urls
     return outputs
 
@@ -1404,9 +1414,17 @@ def impact_report(request, calc_id):
         return HttpResponse(
             f'Invalid format parameter "{file_format}".'
             f' Choose "pdf" or "png".', status=400)
+    # the PDF contains all pages, while there is a PNG for each page
+    page = request.GET.get("page", "1") if file_format == "png" else "1"
+    if not page.isdigit() or int(page) < 1:
+        return HttpResponse(
+            f'Invalid page parameter "{page}".'
+            f' It must be a positive integer.', status=400)
+    page = int(page)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
+            report_bytes = extract_report_from_datastore(
+                ds, iso3, file_format, page)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -1415,9 +1433,10 @@ def impact_report(request, calc_id):
             status=400
         )
     if file_format == "png":
+        suffix = '' if page == 1 else f'_page{page}'
         response = HttpResponse(report_bytes, content_type="image/png")
         response["Content-Disposition"] = (
-            f"inline; filename=impact_report_{iso3}.png")
+            f"inline; filename=impact_report_{iso3}{suffix}.png")
     else:
         response = HttpResponse(report_bytes, content_type="application/pdf")
         response["Content-Disposition"] = (

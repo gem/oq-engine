@@ -839,25 +839,17 @@ class CountryImpactReportBuilder:
 
     def _save_png(self, pdf_doc):
         # Render each page to a crisp image at 3.0x scaling (~300 DPI
-        # equivalent) and stack the pages vertically in a single PNG
-        pages = []
-        for page in pdf_doc:
+        # equivalent), saving one PNG per page; the first page keeps the
+        # name report_png for backward compatibility, the following ones
+        # are saved as report_png_2, report_png_3, ...
+        for pageno, page in enumerate(pdf_doc, 1):
             pix = page.get_pixmap(matrix=self.fitz.Matrix(3.0, 3.0))
-            pages.append(PILImage.open(BytesIO(pix.tobytes("png"))))
-        width = max(page.width for page in pages)
-        height = sum(page.height for page in pages)
-        stacked = PILImage.new("RGB", (width, height), "white")
-        y = 0
-        for page in pages:
-            stacked.paste(page, (0, y))
-            y += page.height
-        buf = BytesIO()
-        stacked.save(buf, format="png")
-        png_path = f'impact/{self.iso3}/report_png'
-        self.dstore[png_path] = buf.getvalue()
-        logging.info(
-            f'The impact report in PNG format was saved into the datastore'
-            f' as {png_path}')
+            suffix = '' if pageno == 1 else f'_{pageno}'
+            png_path = f'impact/{self.iso3}/report_png{suffix}'
+            self.dstore[png_path] = pix.tobytes("png")
+            logging.info(
+                f'Page {pageno} of the impact report in PNG format was saved'
+                f' into the datastore as {png_path}')
 
     def build(self):
         logging.info(f'Making impact report for {self.iso3}...')

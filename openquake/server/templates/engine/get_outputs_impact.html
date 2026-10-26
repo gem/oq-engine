@@ -79,6 +79,12 @@
                 <a href="{{ report_urls.png }}" class="btn btn-sm" target="_blank">
                     Show impact report ({{ iso3 }})</a>
               </div>
+              {% if report_urls.png_page2 %}
+              <div class="my-pngs">
+                <a href="{{ report_urls.png_page2 }}" class="btn btn-sm" target="_blank">
+                    Show impact report ({{ iso3 }}, page 2)</a>
+              </div>
+              {% endif %}
               {% endfor %}
             </div>
             <div class="outputs-general-btns-center"></div>
