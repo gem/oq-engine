@@ -115,6 +115,9 @@ def calc_average(pointsources):
             acc[key] = acc[key][0]
         else:
             acc[key] = numpy.average(acc[key], weights=rate_w)
+    # the average of points on the antimeridian can exceed 180 in
+    # absolute value by a few ulps, see test_antimeridian
+    acc['lon'] = numpy.clip(acc['lon'], -180., 180.)
     return acc
 
 
