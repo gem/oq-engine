@@ -49,6 +49,12 @@ F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
 
+# in classical calculations the source model files bigger than BIG_FILE
+# are read by STRIDE tasks, each one keeping one source over STRIDE: the
+# order of the sources changes, which is irrelevant for classical
+BIG_FILE = 10 * 2**20
+STRIDE = 5
+
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', U16),                   # 1
@@ -168,18 +174,20 @@ def _sample_atomic_groups(src_groups, sample, applied):
             if not sg.atomic or id(sg) in selected_ids]
 
 
-def read_source_model(fname, branch, converter, applied, sample, monitor):
+def read_source_model(fname, branch, converter, applied, sample, stride,
+                      monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
     :param applied: list of source IDs within applyToSources
     :param sample: a string with the sampling factor (if any)
+    :param stride: None or a pair (k, n) to keep only the k-th source over n
     :param monitor: a Monitor instance
-    :returns: a SourceModel instance
+    :returns: a dictionary (fname, k) -> SourceModel
     """
     t0 = time.time()
-    [sm] = nrml.read_source_models([fname], converter)
+    [sm] = nrml.read_source_models([fname], converter, stride)
     sm.branch = branch
     if sample:
         sm.src_groups = _sample_atomic_groups(sm.src_groups, sample, applied)
@@ -203,7 +211,36 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
         for src in sg:
             src.checksum = content_hash(src)
     sm.rtime = time.time() - t0  # save the read time
-    return {fname: sm}
+    return {(fname, stride[0] if stride else 0): sm}
+
+
+# merge the source models of the same file read with different strides,
+# i.e. convert a dictionary (fname, k) -> sm into a dictionary fname -> sm;
+# the groups are the same as reading the file in one go (the pieces of a
+# group are identified by the ordinal in NRML 0.5 and by the TRT in NRML
+# 0.4), while the order of the sources can be different
+def _merge_strides(dic):
+    sms = general.AccumDict(accum=[])
+    for (fname, _k), sm in sorted(dic.items()):
+        sms[fname].append(sm)
+    out = {}
+    for fname, [sm, *others] in sms.items():
+        if others:
+            pieces = general.AccumDict(accum=[])
+            for piece in [sm] + others:
+                for sg in piece.src_groups:
+                    pieces[getattr(sg, 'ordinal', sg.trt)].append(sg)
+            groups = []
+            for key in sorted(pieces):
+                grp, *rest = pieces[key]
+                for other in rest:
+                    for src in other:
+                        grp.update(src)
+                groups.append(grp)
+            sm.src_groups = sorted(groups)
+            sm.rtime += sum(other.rtime for other in others)
+        out[fname] = sm
+    return out
 
 
 # NB:this is called after reduce_sources, so ";" is not added
@@ -314,13 +351,20 @@ def get_csm(oq, full_lt, dstore=None):
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter, applied, ss))
+        branch = rows[0]['branch']
+        if (oq.calculation_mode in CLASSICAL_MODES and not ss and
+                os.path.getsize(path) > BIG_FILE):
+            for k in range(STRIDE):
+                allargs.append((path, branch, converter, applied, ss,
+                                (k, STRIDE)))
+        else:
+            allargs.append((path, branch, converter, applied, ss, None))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter, applied, ss))
+        allargs.append((path, '', converter, applied, ss, None))
     # read the biggest files first, so that they do not end up last
     allargs.sort(key=lambda args: os.path.getsize(args[0]), reverse=True)
-    smdict = parallel.Starmap(read_source_model, allargs,
-                              h5=dstore if dstore else None).reduce()
+    smdict = _merge_strides(parallel.Starmap(
+        read_source_model, allargs, h5=dstore if dstore else None).reduce())
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:

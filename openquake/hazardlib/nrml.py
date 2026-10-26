@@ -211,7 +211,7 @@ def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
     source_ids = []
     groups = []  # expect a sequence of sourceGroup nodes
-    for src_group in node:
+    for ordinal, src_group in enumerate(node):
         if 'sourceGroup' not in src_group.tag:
             raise InvalidFile(
                 '%s: you have an incorrect declaration '
@@ -222,6 +222,9 @@ def get_source_model_05(node, fname, converter=default):
             # a source group can be empty if source_id filtering is on
             for src in sg:
                 source_ids.append(src.source_id)
+            # the position of the group in the file, used to merge the
+            # groups of the same file read with strides, see source_reader
+            sg.ordinal = ordinal
             groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:
@@ -328,18 +331,21 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter):
+def read_source_models(fnames, converter, stride=None):
     """
     :param fnames:
         list of source model files
     :param converter:
         a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     :yields:
         SourceModel instances
     """
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
-            sm = to_python(fname, converter)
+            [node] = read(fname, stride=stride)
+            sm = node_to_obj(node, fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
@@ -359,15 +365,19 @@ def read_source_models(fnames, converter):
         yield sm
 
 
-def read(source, stop=None):
+def read(source, stop=None, stride=None):
     """
     Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
 
     :param source:
         a file name or file object open for reading
+    :param stop:
+        the tag where to stop the parsing (if any)
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     """
-    vparser = ValidatingXmlParser(validators, stop)
+    vparser = ValidatingXmlParser(validators, stop, stride)
     nrml = vparser.parse_file(source)
     if striptag(nrml.tag) != 'nrml':
         raise ValueError('%s: expected a node of kind nrml, got %s' %
