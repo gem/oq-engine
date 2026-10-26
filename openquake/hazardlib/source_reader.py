@@ -317,6 +317,8 @@ def get_csm(oq, full_lt, dstore=None):
         allargs.append((path, rows[0]['branch'], converter, applied, ss))
     for path in allpaths - set(smpaths):  # geometry models
         allargs.append((path, '', converter, applied, ss))
+    # read the biggest files first, so that they do not end up last
+    allargs.sort(key=lambda args: os.path.getsize(args[0]), reverse=True)
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
