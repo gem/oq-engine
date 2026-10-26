@@ -20,12 +20,11 @@ Calibration of ps_grid_spacing and pointsource_distance, performed in
 preclassical when the user sets ``ps_grid_spacing = auto``.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region (with a single GMPE per group and only the IMTs
-with the shortest and the longest period), both for a reference setting
-(no gridding and all nodal planes and hypocenters within 100 km) and for
-a set of candidate pairs (ps_grid_spacing, pointsource_distance); the
-cheapest candidate with a 99th percentile of the relative error on the
-hazard maps below a tolerance is chosen.
+spread over the region (with a single GMPE per group), both for a
+reference setting (no gridding and all nodal planes and hypocenters
+within 100 km) and for a set of candidate pairs (ps_grid_spacing,
+pointsource_distance); the cheapest candidate with a 99th percentile of
+the relative error on the hazard maps below a tolerance is chosen.
 """
 import copy
 import time
@@ -143,16 +142,14 @@ def _gen_args(blocks, sites, cmakers, psgs, psd):
             yield weight, (srcs, sites, cmaker, (psgs, psd))
 
 
-# ContextMakers with a single GMPE and only the IMTs with the shortest
-# and the longest period: the error of the gridding is geometric and does
-# not depend much on the GMPE, while the cost of the calibration is
-# proportional to the number of GMPEs and IMTs
+# ContextMakers with a single GMPE: the error of the gridding is
+# geometric and does not depend much on the GMPE, while the cost of the
+# calibration is proportional to the number of GMPEs; NB: all the IMTs
+# are needed, since in SAM the largest errors are at intermediate periods
 def _calib_cmakers(cmakers, groups):
     out = {}
     for grp_id in groups:
-        imts = list(cmakers[grp_id].imtls)
-        cmaker = cmakers[grp_id].restrict(
-            [imts[0], imts[-1]] if len(imts) > 1 else imts)
+        cmaker = copy.copy(cmakers[grp_id])
         gsim, rlzs = next(iter(cmaker.gsims.items()))
         cmaker.gsims = {gsim: rlzs}
         out[grp_id] = cmaker
@@ -214,9 +211,8 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     if not groups:
         return None
     logging.info('Calibrating ps_grid_spacing among %s and '
-                 'pointsource_distance among %s on %d sites with IMTs %s '
-                 'and one GMPE per group', GRID_SPACINGS, distances,
-                 len(sites), list(imtls))
+                 'pointsource_distance among %s on %d sites with one GMPE '
+                 'per group', GRID_SPACINGS, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # (psgs, psd, time, p99, mean)
