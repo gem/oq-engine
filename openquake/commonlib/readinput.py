@@ -22,6 +22,7 @@ Utilities to read the input files recognized by the OpenQuake engine.
 
 import io
 import os
+import gc
 import re
 import ast
 import sys
@@ -1234,7 +1235,17 @@ def get_composite_source_model(oqparam, dstore=None):
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    # the garbage collector is disabled while reading the source models,
+    # since it would traverse the millions of objects being created many
+    # times: in AUS this reduces the time from 183 to 105 seconds (the
+    # unpickling from 66 to 8 seconds) without increasing the memory
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    finally:
+        if enabled:
+            gc.enable()
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
