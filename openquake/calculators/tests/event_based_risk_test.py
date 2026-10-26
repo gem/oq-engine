@@ -481,6 +481,12 @@ agg_id
 
         self.check_case_master()
 
+        # agg_losses with the id tag, which is not an index in tagcol
+        aw = extract(self.calc.datastore, 'agg_losses/structural')
+        losses = self.calc.datastore['avg_losses-stats/structural'][:]
+        numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
+                                      rtol=1E-5)
+
     def test_from_ses(self):
         self.run_calc(case_master.__file__, 'job_risk.ini')
 
