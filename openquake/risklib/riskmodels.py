@@ -307,9 +307,27 @@ class RiskModel(object):
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
-               for peril in self.risk_functions for lt in self.loss_types}
+               for peril in self.risk_functions
+               for lt in self.calc_types(assets)}
         # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
+
+    def calc_types(self, assets):
+        """
+        :returns: the loss types to compute for the given assets. If
+            time_event is not set, the occupants are computed for the
+            day, night and transit periods present in the assets
+        """
+        lts = []
+        for lt in self.loss_types:
+            if lt == 'occupants' and self.time_event is None and \
+                    self.calcmode in scientific.OCC_TIME_MODES:
+                for te in scientific.TIME_EVENTS:
+                    if 'occupants_' + te in assets.columns:
+                        lts.append('occupants_' + te)
+            else:
+                lts.append(lt)
+        return lts
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}
@@ -420,18 +438,21 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        imt = self.imt_by_lt[loss_type, peril]
+        # occupants_day, occupants_night, occupants_transit -> occupants
+        lt = 'occupants' if loss_type.startswith('occupants_') else loss_type
+        imt = self.imt_by_lt[lt, peril]
         sid = assets['site_id']
-        if loss_type in 'occupants injured':
-            val = assets['occupants_%s' % self.time_event].to_numpy()
-        elif loss_type == 'affectedpop':
+        if lt in ('occupants', 'injured'):
+            te = loss_type[10:] if lt != loss_type else self.time_event
+            val = assets['occupants_%s' % (te or 'avg')].to_numpy()
+        elif lt == 'affectedpop':
             val = assets['value-residents'].to_numpy()
         else:
-            val = assets['value-' + loss_type].to_numpy()
+            val = assets['value-' + lt].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
-        vf = self.risk_functions[peril][loss_type]
+        vf = self.risk_functions[peril][lt]
         df = vf(asset_df, gmf_df, imt, rndgen,
-                self.minimum_asset_loss.get(loss_type, 0.))
+                self.minimum_asset_loss.get(lt, 0.))
         return df
 
     scenario = ebrisk = scenario_risk = event_based_risk

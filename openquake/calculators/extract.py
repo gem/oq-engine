@@ -40,7 +40,7 @@ from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats, compute_stats2
 from openquake.hazardlib.source import rupture
-from openquake.risklib.scientific import LOSSTYPE, LOSSID
+from openquake.risklib.scientific import LOSSTYPE, LOSSID, occ_periods
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import base, getters
@@ -170,6 +170,36 @@ def avglosses(dstore, loss_types, kind):
         lst.append(dstore['avg_losses-%s/%s' % (kind, loss_type)][()])
     # shape L, A, R -> A, R, L
     return numpy.array(lst).transpose(1, 2, 0)
+
+
+def occ_avg_losses(dstore, kind):
+    """
+    :param kind: 'rlzs' or 'stats'
+    :returns: the average of the occupants periods of shape (A, R) or
+        (A, S), or None if there is less than two periods
+    """
+    occ = occ_periods(dstore['oqparam'].loss_types)
+    if not occ:
+        return None
+    return numpy.mean([dstore['avg_losses-%s/%s' % (kind, lt)][()]
+                       for lt in occ], axis=0)
+
+
+def _with_occ_avg(losses, loss_dt):
+    """
+    :param losses: structured array of shape (A,) with the fields of loss_dt
+    :returns: the same array with the extra field occupants_avg, if the
+        occupants are computed for more than one time event
+    """
+    occ = occ_periods(loss_dt.names)
+    if not occ:
+        return losses
+    dt = numpy.dtype(loss_dt.descr + [('occupants_avg', F32)])
+    out = numpy.zeros(losses.shape, dt)
+    for name in loss_dt.names:
+        out[name] = losses[name]
+    out['occupants_avg'] = numpy.mean([losses[lt] for lt in occ], axis=0)
+    return out
 
 
 def extract_(dstore, dspath):
@@ -1037,7 +1067,14 @@ def extract_agg_losses(dstore, what):
     tags = query_string.split('&') if query_string else []
     if not loss_type:
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
-    if 'avg_losses-stats/' + loss_type in dstore:
+    if loss_type == 'occupants_avg':
+        kind = 'stats' if 'avg_losses-stats' in dstore else 'rlzs'
+        stats = (list(dstore['oqparam'].hazard_stats()) if kind == 'stats'
+                 else ['mean'])
+        losses = occ_avg_losses(dstore, kind)
+        if losses is None:
+            raise KeyError('No occupants_avg in %s' % dstore)
+    elif 'avg_losses-stats/' + loss_type in dstore:
         stats = list(dstore['oqparam'].hazard_stats())
         losses = dstore['avg_losses-stats/' + loss_type][:]
     elif 'avg_losses-rlzs/' + loss_type in dstore:
@@ -1108,8 +1145,12 @@ def extract_aggregate(dstore, what):
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, [lt])
     else:
         array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
-                          loss_types)
+        names = list(loss_types)
+        occ = occ_avg_losses(dstore, suffix[1:])
+        if occ is not None:
+            array = numpy.column_stack([array, occ[:, ridx]])
+            names.append('occupants_avg')
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, names)
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname)[1:])
     aw.shape_descr = tagnames
@@ -1145,19 +1186,19 @@ def extract_losses_by_asset(dstore, what):
         for r in range(R):
             # I am exporting the 'mean' and ignoring the 'stddev'
             losses = cast(losses_by_asset[:, r]['mean'], loss_dt)
-            data = util.compose_arrays(assets, losses)
+            data = util.compose_arrays(assets, _with_occ_avg(losses, loss_dt))
             yield 'rlz-%03d' % r, data
     elif 'avg_losses-stats' in dstore:
         # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
-            data = util.compose_arrays(assets, losses)
+            data = util.compose_arrays(assets, _with_occ_avg(losses, loss_dt))
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
         avg_losses = avglosses(dstore, loss_dt.names, 'rlzs')
         losses = cast(avg_losses, loss_dt)
-        data = util.compose_arrays(assets, losses)
+        data = util.compose_arrays(assets, _with_occ_avg(losses, loss_dt))
         yield 'rlz-000', data
 
 

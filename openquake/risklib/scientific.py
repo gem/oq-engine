@@ -45,6 +45,11 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+# the time events used when the occupants depend on the time
+TIME_EVENTS = ['day', 'night', 'transit']
+# the calculation modes where the occupants losses depend on time_event
+OCC_TIME_MODES = ('scenario_risk', 'event_based_risk', 'ebrisk')
+
 PERILTYPE = numpy.array(
     ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
 LOSSTYPE = numpy.array('''\
@@ -1827,6 +1832,16 @@ class RiskComputer(dict):
 # ####################### Consequences ##################################### #
 
 
+def occ_periods(loss_types):
+    """
+    :returns: the occupants loss types by time event (occupants_day, ...)
+        if there are more than one, otherwise an empty list, since the
+        average of a single period would duplicate it
+    """
+    occ = [lt for lt in loss_types if lt.startswith('occupants_')]
+    return occ if len(occ) > 1 else []
+
+
 def consequence(consequence, assets, coeff, loss_type, time_event):
     """
     :param consequence: kind of consequence
@@ -1845,7 +1860,8 @@ def consequence(consequence, assets, coeff, loss_type, time_event):
         return coeff
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        values = assets[f'occupants_{time_event}'] / assets['value-number']
+        te = time_event or 'avg'
+        values = assets[f'occupants_{te}'] / assets['value-number']
         return values.reshape(-1, 1) * coeff
     elif consequence == 'homeless':
         values = assets['value-residents'] / assets['value-number']
@@ -1862,15 +1878,16 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
+    te = time_event or 'avg'
     if xltype == 'affectedpop':
         return aval['residents']
     elif xltype == 'injured':  # like fatalities
-        return aval[f'occupants_{time_event}']
+        return aval[f'occupants_{te}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        return aval[f'occupants_{time_event}']
+        return aval[f'occupants_{te}']
     elif consequence == 'homeless':
         return aval['residents']
     elif 'loss' in consequence:

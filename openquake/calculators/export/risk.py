@@ -76,6 +76,24 @@ def get_aggtags(dstore):
     return aggtags
 
 
+def _add_occ_avg(out, occ, tagnames, manyrlzs):
+    """
+    Add to `out` the rows of the average occupants losses, computed
+    from the occupants losses of the time events present in the exposure
+    """
+    # the average is computed for each tag and realization
+    occdf = pandas.DataFrame(occ)
+    keys = list(tagnames) + ['rlz_id']
+    avg = occdf.groupby(keys)[['loss', 'aval']].mean().reset_index()
+    out['loss_type'].extend(['occupants_avg'] * len(avg))
+    for tagname in tagnames:
+        out[tagname].extend(avg[tagname])
+    if manyrlzs:
+        out['rlz_id'].extend(avg.rlz_id)
+    out['loss_value'].extend(avg.loss)
+    out['loss_ratio'].extend(avg.loss / avg.aval)
+
+
 def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     cols = [col for col in aggrisk.columns
@@ -89,11 +107,12 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
         pairs.append((tagnames, numpy.isin(aggrisk.agg_id, agg_ids)))
     for tagnames, ok in pairs:
         out = general.AccumDict(accum=[])
+        occ = []  # occupants losses by period, for the average
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = scientific.LOSSTYPE[lid]
             if loss_type == 'occupants':
-                loss_type += '_' + oq.time_event
+                loss_type += '_' + oq.time_event  # time_event is set
             if loss_type == 'claim':  # temporary hack
                 continue
             out['loss_type'].extend([loss_type] * n)
@@ -108,8 +127,16 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
                         col, agg_values, agg_id, loss_type, oq.time_event)
                     out[col + '_value'].extend(df[col])
                     out[col + '_ratio'].extend(df[col] / aval)
+                    if col == 'loss' and loss_type.startswith('occupants_'):
+                        tags = aggtags[agg_id] if tagnames else ()
+                        for rlz_id, loss in zip(df.rlz_id, df[col]):
+                            occ.append(dict(
+                                zip(tagnames, tags), loss_type=loss_type,
+                                rlz_id=rlz_id, loss=loss, aval=aval))
                 else:  # in ScenarioDamageTestCase:test_case_12
                     out[col].extend(df[col])
+        if len({row['loss_type'] for row in occ}) > 1:
+            _add_occ_avg(out, occ, tagnames, manyrlzs)
         dsdic = {'dmg_0': 'no_damage'}
         for s, ls in enumerate(oq.limit_states, 1):
             dsdic['dmg_%d' % s] = ls
@@ -235,9 +262,12 @@ def export_avg_losses(ekey, dstore):
     """
     dskey = ekey[0]
     oq = dstore['oqparam']
-    dt = [(ln, F32) for ln in oq.ext_loss_types]
     name, value, rlzs_or_stats = _get_data(
         dstore, dskey, oq.ext_loss_types, oq.hazard_stats())
+    # the average of the occupants periods present in the exposure
+    occ = scientific.occ_periods(oq.ext_loss_types)
+    lts = oq.ext_loss_types + ['occupants_avg'] if occ else oq.ext_loss_types
+    dt = [(ln, F32) for ln in lts]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -249,6 +279,9 @@ def export_avg_losses(ekey, dstore):
         array = numpy.zeros(len(values), dt)
         for li, ln in enumerate(oq.ext_loss_types):
             array[ln] = values[:, li]
+        if occ:
+            idx = [oq.ext_loss_types.index(lt) for lt in occ]
+            array['occupants_avg'] = values[:, idx].mean(axis=1)
         writer.save(compose_arrays(assets, array), dest, comment=md,
                     renamedict=dict(id='asset_id'))
     return writer.getsaved()
