@@ -20,11 +20,12 @@ Calibration of ps_grid_spacing and pointsource_distance, performed in
 preclassical when the user sets ``ps_grid_spacing = auto``.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region, both for a reference setting (no gridding and
-all nodal planes and hypocenters within 100 km) and for a set of
-candidate pairs (ps_grid_spacing, pointsource_distance); the cheapest
-candidate with a 99th percentile of the relative error on the hazard
-maps below a tolerance is chosen.
+spread over the region (with a single GMPE per group and only the IMTs
+with the shortest and the longest period), both for a reference setting
+(no gridding and all nodal planes and hypocenters within 100 km) and for
+a set of candidate pairs (ps_grid_spacing, pointsource_distance); the
+cheapest candidate with a 99th percentile of the relative error on the
+hazard maps below a tolerance is chosen.
 """
 import copy
 import time
@@ -51,6 +52,10 @@ MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
 MAXDIST = 300.  # in km, see _get_nsites
 MIN_NSITES = 100  # minimum size of the sample of sites
+# the points farther than the maximum distance plus MARGIN (in km) from
+# all the sample sites are ignored; the margin keeps complete the grid
+# cells crossing the maximum distance
+MARGIN = 100.
 
 
 def calib_task(srcs, sites, cmaker, key, monitor):
@@ -71,18 +76,35 @@ def calib_task(srcs, sites, cmaker, key, monitor):
     return key, rmap.array.mean(axis=2), time.time() - t0
 
 
-# split the area and multipoint sources in point sources; the point
-# sources of the composite source model are not modified; a source with
-# a single point is not split by split_source, so it is not gridded by
-# the engine and it is ignored, since it gives no gridding error
-def _get_points(sg):
+# split the area and multipoint sources in point sources, keeping only
+# the points close to the sample sites (a multipoint source without close
+# points is not split at all); the point sources of the composite source
+# model are not modified; a source with a single point is not split by
+# split_source, so it is not gridded by the engine and it is ignored,
+# since it gives no gridding error
+def _get_points(sg, kdt, maxdist):
     points = []
     for src in sg:
+        if src.code == b'M' and not _close(
+                kdt, src.mesh.lons, src.mesh.lats, maxdist).any():
+            continue
         if src.code in b'AM' and not src.bysrc_unc:
             points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
+    if points:
+        close = _close(kdt, [p.location.x for p in points],
+                       [p.location.y for p in points], maxdist)
+        points = [p for p, c in zip(points, close) if c]
     return points
+
+
+# returns a boolean array, True for the locations within the maximum
+# distance plus MARGIN from some site
+def _close(kdt, lons, lats, maxdist):
+    xyz = spherical_to_cartesian(lons, lats, numpy.zeros(len(lons)))
+    nsites = kdt.query_ball_point(xyz, maxdist + MARGIN, return_length=True)
+    return nsites > 0
 
 
 # split the sources of the groups, gridded with the given spacing, in
@@ -119,6 +141,22 @@ def _gen_args(blocks, sites, cmakers, psgs, psd):
         cmaker.pointsource_distance = psd
         for weight, srcs in blks:
             yield weight, (srcs, sites, cmaker, (psgs, psd))
+
+
+# ContextMakers with a single GMPE and only the IMTs with the shortest
+# and the longest period: the error of the gridding is geometric and does
+# not depend much on the GMPE, while the cost of the calibration is
+# proportional to the number of GMPEs and IMTs
+def _calib_cmakers(cmakers, groups):
+    out = {}
+    for grp_id in groups:
+        imts = list(cmakers[grp_id].imtls)
+        cmaker = cmakers[grp_id].restrict(
+            [imts[0], imts[-1]] if len(imts) > 1 else imts)
+        gsim, rlzs = next(iter(cmaker.gsims.items()))
+        cmaker.gsims = {gsim: rlzs}
+        out[grp_id] = cmaker
+    return out
 
 
 # maximum distance of the given ContextMaker
@@ -158,19 +196,27 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     :returns: (ps_grid_spacing, pointsource_distance) or None if there
               are no point sources
     """
-    groups = {sg.sources[0].grp_id: _get_points(sg)
-              for sg in csm.src_groups if not sg.atomic}
-    groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
-    if not groups:
+    sgs = {sg.sources[0].grp_id: sg for sg in csm.src_groups
+           if not sg.atomic and any(src.code in b'AMP' for src in sg)}
+    if not sgs:
         return None
     if oq.psd_given:
         distances = [oq.pointsource_distance['default']]
     else:
         distances = PS_DISTANCES
-    sites = sample_sites(sitecol, _get_nsites(groups, cmakers))
+    cmakers = _calib_cmakers(cmakers, sgs)
+    imtls = cmakers[next(iter(sgs))].imtls
+    sites = sample_sites(sitecol, _get_nsites(sgs, cmakers))
+    kdt = KDTree(sites.xyz)
+    groups = {grp_id: _get_points(sg, kdt, _maxdist(cmakers[grp_id]))
+              for grp_id, sg in sgs.items()}
+    groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
+    if not groups:
+        return None
     logging.info('Calibrating ps_grid_spacing among %s and '
-                 'pointsource_distance among %s on %d sites',
-                 GRID_SPACINGS, distances, len(sites))
+                 'pointsource_distance among %s on %d sites with IMTs %s '
+                 'and one GMPE per group', GRID_SPACINGS, distances,
+                 len(sites), list(imtls))
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # (psgs, psd, time, p99, mean)
@@ -187,9 +233,9 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
                     _gen_args(refblocks, sites, cmakers, *REFERENCE))
             rates, times = _run(allargs, h5)
             if ref is None:
-                ref = get_hmaps(rates.pop(REFERENCE), oq)
+                ref = get_hmaps(rates.pop(REFERENCE), imtls, oq)
                 ref_time = times[REFERENCE]
-            rows.extend(_get_rows(rates, times, ref, oq))
+            rows.extend(_get_rows(rates, times, ref, imtls, oq))
             if rows[-1][3] <= TOLERANCE:
                 break
         if rows[-1][3] <= TOLERANCE:
@@ -217,22 +263,23 @@ def _run(allargs, h5):
     return rates, times
 
 
-def get_hmaps(rates, oq):
+def get_hmaps(rates, imtls, oq):
     """
     :param rates: an array of shape (N, L)
+    :param imtls: a DictArray with M IMTs
     :returns: the hazard maps, an array of shape (N, M, P)
     """
     curves = -numpy.expm1(-rates * oq.investigation_time)
-    curves = curves.reshape(len(rates), len(oq.imtls), -1)
-    return compute_hmaps(curves, oq.imtls, oq.poes or [.002105])
+    curves = curves.reshape(len(rates), len(imtls), -1)
+    return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
 # yield a row (psgs, psd, time, p99, mean) for each candidate, where
 # p99 and mean refer to the relative error on the relevant hazard maps
-def _get_rows(rates, times, ref, oq):
+def _get_rows(rates, times, ref, imtls, oq):
     ok = ref > MIN_HMAP
     for key in rates:
-        hmaps = get_hmaps(rates[key], oq)
+        hmaps = get_hmaps(rates[key], imtls, oq)
         # if no hazard map is relevant any candidate is good
         errs = numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any(
             ) else numpy.zeros(1)
