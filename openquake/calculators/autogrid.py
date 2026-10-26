@@ -37,10 +37,11 @@ from openquake.hazardlib.map_array import MapArray, compute_hmaps
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import SourceFilter, split_source
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
-GRID_SPACINGS = [50., 25., 15.]  # candidate values in km, cheapest first
+GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [50., 100.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and all
 # nodal planes and hypocenters within 100 km; using 1000 km would be
@@ -59,7 +60,11 @@ MARGIN = 100.
 
 def calib_task(srcs, sites, cmaker, key, monitor):
     """
-    :returns: (key, rates averaged on the gsims, cpu time)
+    :returns: (key, rates averaged on the gsims, [cpu time, weight])
+
+    The weight is computed as in ContextMaker.estimate_weight, from the
+    number of contexts and (rupture, site) pairs; unlike the time on the
+    sample, it ranks correctly the cost of the full calculation
     """
     t0 = time.time()
     cmaker.init_monitoring(monitor)
@@ -67,12 +72,16 @@ def calib_task(srcs, sites, cmaker, key, monitor):
     sf = SourceFilter(sites, cmaker.oq.maximum_distance)
     rmap = MapArray(sites.sids, cmaker.imtls.size, len(cmaker.gsims),
                     rates=True).fill(0)
+    weight = 0
     for src in srcs:
         close = sf.get_close_sites(src)
         if close is not None:
             for ctx in cmaker.get_ctxs(src, close):
+                weight += len(ctx)
                 cmaker.update(rmap, ctx)
-    return key, rmap.array.mean(axis=2), time.time() - t0
+            weight += src.num_ruptures * len(close) / PAIR_COST
+    return key, rmap.array.mean(axis=2), numpy.array(
+        [time.time() - t0, weight])
 
 
 # split the area and multipoint sources in point sources, keeping only
@@ -185,10 +194,11 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     Determine ps_grid_spacing and pointsource_distance by comparing the
     hazard maps of the point sources on a sample of sites with the
-    reference ones. The grid spacings are tried from the largest (the
-    cheapest) and, for each spacing, the distances from the smallest
-    (the cheapest); the calibration stops at the first candidate within
-    the tolerance.
+    reference ones. All the grid spacings are tried, each one with the
+    distances from the smallest (the cheapest) up to the first within
+    the tolerance; the candidate within the tolerance with the smallest
+    weight is chosen. NB: the largest spacing is not always the
+    cheapest, since big cells make more sites close to the sources.
 
     :returns: (ps_grid_spacing, pointsource_distance) or None if there
               are no point sources
@@ -215,34 +225,36 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
                  'per group', GRID_SPACINGS, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
-    rows = []  # (psgs, psd, time, p99, mean)
-    for psgs in GRID_SPACINGS:
-        blocks = _get_blocks(groups, sites, cmakers, psgs, num_tasks)
-        for psd in distances:
-            logging.info('Trying ps_grid_spacing=%s, pointsource_distance=%s',
-                         psgs, psd)
-            allargs = list(_gen_args(blocks, sites, cmakers, psgs, psd))
-            if ref is None:  # compute the reference rates in the first round
-                refblocks = _get_blocks(
-                    groups, sites, cmakers, REFERENCE[0], num_tasks)
-                allargs.extend(
-                    _gen_args(refblocks, sites, cmakers, *REFERENCE))
-            rates, times = _run(allargs, h5)
-            if ref is None:
-                ref = get_hmaps(rates.pop(REFERENCE), imtls, oq)
-                ref_time = times[REFERENCE]
-            rows.extend(_get_rows(rates, times, ref, imtls, oq))
-            if rows[-1][3] <= TOLERANCE:
-                break
-        if rows[-1][3] <= TOLERANCE:
+    rows = []  # (psgs, psd, time, weight, p99, mean)
+    blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
+              for psgs in GRID_SPACINGS}
+    pending = GRID_SPACINGS  # spacings without a candidate within tolerance
+    for psd in distances:
+        logging.info('Trying ps_grid_spacing=%s with pointsource_distance=%s',
+                     pending, psd)
+        allargs = [args for psgs in pending for args in _gen_args(
+            blocks[psgs], sites, cmakers, psgs, psd)]
+        if ref is None:  # compute the reference rates in the first round
+            refblocks = _get_blocks(
+                groups, sites, cmakers, REFERENCE[0], num_tasks)
+            allargs.extend(_gen_args(refblocks, sites, cmakers, *REFERENCE))
+        rates, costs = _run(allargs, h5)
+        if ref is None:
+            ref = get_hmaps(rates.pop(REFERENCE), imtls, oq)
+            ref_time = costs[REFERENCE][0]
+        new = list(_get_rows(rates, costs, ref, imtls, oq))
+        rows.extend(new)
+        pending = [row[0] for row in new if row[4] > TOLERANCE]
+        if not pending:
             break
-    lines = ['%5.0f %5.0f %9.1f %8.4f %8.4f' % row for row in rows]
+    lines = ['%5.0f %5.0f %9.1f %11.0f %8.4f %8.4f' % row for row in rows]
     logging.info('Calibration on %d sites (reference time=%.1fs)\n'
-                 ' psgs   psd      time      p99     mean\n%s',
+                 ' psgs   psd      time      weight      p99     mean\n%s',
                  len(sites), ref_time, '\n'.join(lines))
-    if rows[-1][3] <= TOLERANCE:  # the first candidate within tolerance
-        return rows[-1][:2]
-    return min(rows, key=lambda row: row[3])[:2]  # the most precise
+    good = [row for row in rows if row[4] <= TOLERANCE]
+    if good:  # the candidate within the tolerance with the smallest weight
+        return min(good, key=lambda row: row[3])[:2]
+    return min(rows, key=lambda row: row[4])[:2]  # the most precise
 
 
 # run the given calibration tasks in parallel; the heaviest tasks are
@@ -252,11 +264,11 @@ def _run(allargs, h5):
     smap = parallel.Starmap(calib_task, h5=h5)
     for _, args in sorted(allargs, key=lambda pair: -pair[0]):
         smap.submit(args)
-    rates, times = AccumDict(accum=0), AccumDict(accum=0)
-    for key, rts, dt in smap:
+    rates, costs = AccumDict(accum=0), AccumDict(accum=0)
+    for key, rts, cost in smap:
         rates[key] += rts
-        times[key] += dt
-    return rates, times
+        costs[key] += cost
+    return rates, costs
 
 
 def get_hmaps(rates, imtls, oq):
@@ -270,13 +282,14 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-# yield a row (psgs, psd, time, p99, mean) for each candidate, where
+# yield a row (psgs, psd, time, weight, p99, mean) for each candidate, where
 # p99 and mean refer to the relative error on the relevant hazard maps
-def _get_rows(rates, times, ref, imtls, oq):
+def _get_rows(rates, costs, ref, imtls, oq):
     ok = ref > MIN_HMAP
     for key in rates:
         hmaps = get_hmaps(rates[key], imtls, oq)
         # if no hazard map is relevant any candidate is good
         errs = numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any(
             ) else numpy.zeros(1)
-        yield key + (times[key], numpy.percentile(errs, 99), errs.mean())
+        yield key + tuple(costs[key]) + (
+            numpy.percentile(errs, 99), errs.mean())
