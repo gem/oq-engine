@@ -8,6 +8,14 @@
     pointsource_distance are safe also for big cells
   * Bug fix: gridding point sources close to the antimeridian with
     ps_grid_spacing could fail with "longitude -180.000000 outside range"
+  * The contexts are now passed to the GMPEs in chunks of at most 50,000
+    rows, since the GMPEs are memory bound on very large arrays (as the
+    ones of big CollapsedPointSources): in the Tonga model with
+    ps_grid_spacing=50 "computing mean_std" went down from 43,645 s to
+    8,756 s and the total CPU time was halved
+  * Bug fix: "oq extract agg_losses" failed with a TypeError when the
+    calculation was aggregated by id, and the site_id tags of the
+    aggregated losses were shifted by one site
   * Bug fix: the "too many potential logic tree paths" error suggested
     use_rates=true even when it was already set; the message now
     explains that use_rates only works when computing the mean
