@@ -405,9 +405,11 @@ class AssetCollection(object):
         aids_by_tag = general.AccumDict(accum=set())
         for aid, ass in enumerate(self):
             for tagname in self.tagnames:
-                # the id is not a tag index, the asset position is
+                # id and site_id are 0-based, the tag index is 1-based
                 if tagname == 'id':
                     tagidx = ass['ordinal'] + 1
+                elif tagname == 'site_id':
+                    tagidx = ass['site_id'] + 1
                 else:
                     tagidx = ass[tagname]
                 tag = self.tagcol.get_tag(tagname, tagidx)
