@@ -220,6 +220,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [_tot, fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
+        # the site_id tags must label the assets of the same site
+        assetcol = self.calc.datastore['assetcol']
+        for tag, aids in assetcol.get_aids_by_tag().items():
+            if tag.startswith('site_id='):
+                sids = set(assetcol.array['site_id'][list(aids)])
+                self.assertEqual(sids, {int(tag[len('site_id='):])})
+
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
