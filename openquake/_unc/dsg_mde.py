@@ -87,7 +87,7 @@ def get_afes_from_dstore(dstore, name, imt_idx: int,
     afes = probabilities_to_rates(poes, oqp.investigation_time)
 
     # Realization weights
-    weights = dstore['weights'][idxs]
+    weights = np.asarray(dstore['weights'][idxs], dtype=float)
 
     # Central value for each bin
     binc = {}

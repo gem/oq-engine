@@ -143,7 +143,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     afes = probabilities_to_rates(poes, oqp.investigation_time)
 
     # Weights
-    weights = dstore.getitem('weights')[:]
+    weights = np.asarray(dstore.getitem('weights')[:], dtype=float)
     if atype in ['mde', 'md', 'm']:
         rmap = dstore['best_rlzs'][0]
         weights = weights[rmap][rlzs]
@@ -166,6 +166,7 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     """
     Given a list of HistoGroup this computes a mixture distribution
     corresponding to a weighted sum of the inputs.
+    Both positive-bin and zero masses are multiplied by component weights.
 
     :param results:
         It's a list of HistoGroup. The number of elements is equal to the
@@ -218,6 +219,8 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
             # Sum the PMF
             out[low:upp] += res.pmfs[lvl] * res.weight
 
+    zero_mass = np.sum([res.zero_mass * res.weight for res in results],
+                       axis=0, dtype=float)
     weights = np.array([res.weight for res in results], dtype=float)
     mean_rates = None
     if (weights.sum() > 0 and
@@ -225,4 +228,5 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
         mean_rates = np.average([res.mean_rates for res in results],
                                 axis=0, weights=weights)
     return HistoGroup(olst, minpow, maxrange, normalized=False,
-                      res=resolution, mean_rates=mean_rates)
+                      res=resolution, mean_rates=mean_rates,
+                      zero_mass=zero_mass)

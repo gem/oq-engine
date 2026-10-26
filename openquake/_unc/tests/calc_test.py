@@ -249,6 +249,9 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             TFF, 'data_calc', 'test_case02_expected_convolution.hdf5')
         with hdf5.File(fname, "r") as f:
             aae(computed_mtx, f["histograms"][:], decimal=2)
+            aae(h.zero_mass, f["zero_mass"][:])
+        aac(np.nansum(computed_mtx, axis=0) + h.zero_mass,
+            np.ones(len(h.pmfs)), rtol=0, atol=1e-13)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])

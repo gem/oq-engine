@@ -60,11 +60,12 @@ def probabilities_to_rates(poes, investigation_time):
     return -np.log1p(-poes) / investigation_time
 
 
-# NB: this will be obsolete in numpy 2+
+# This quantile convention interpolates between weighted CDF midpoints.
 def weighted_percentile(data, weights, perc):
     """
     Given a vector of values and one of associated weights computes the
     requested percentile.
+    Zero-weight entries are ignored and the CDF is accumulated in float64.
 
     :param data:
         Vector with data
@@ -75,9 +76,23 @@ def weighted_percentile(data, weights, perc):
     :returns:
         A float with the value for a given percentile
     """
+    data = np.asarray(data, dtype=float)
+    weights = np.asarray(weights, dtype=float)
+    if data.ndim != 1 or weights.shape != data.shape:
+        raise ValueError('Data and weights must be matching vectors')
+    if np.any(~np.isfinite(data)) or np.any(~np.isfinite(weights)):
+        raise ValueError('Data and weights must be finite')
+    if np.any(weights < 0) or not np.any(weights > 0):
+        raise ValueError('Weights must be nonnegative with a positive sum')
+    if (np.any(~np.isfinite(perc)) or
+            np.any((np.asarray(perc) < 0) | (np.asarray(perc) > 1))):
+        raise ValueError('Percentile must be in [0, 1]')
+    # Zero-weight bins do not anchor the CDF or its endpoints.
+    occupied = weights > 0
+    data, weights = data[occupied], weights[occupied]
     ix = np.argsort(data)
-    data = data[ix]  # sort data
-    weights = weights[ix]  # sort weights
-    # 'like' a CDF function
-    cdf = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights)
+    data, weights = data[ix], weights[ix]
+    # Interpolate between weighted CDF midpoints, accumulated in float64.
+    total = weights.sum(dtype=float)
+    cdf = (np.cumsum(weights, dtype=float) - 0.5 * weights) / total
     return np.interp(perc, cdf, data)

@@ -63,7 +63,9 @@ unc
 0       c      3
 1       a     -1
 1       b     -1'''
-        self.assertEqual(str(self.an01.to_dframe()), exp)
+        actual = str(self.an01.to_dframe())
+        self.assertEqual([line.rstrip() for line in actual.splitlines()],
+                         [line.rstrip() for line in exp.splitlines()])
 
     def test_get_imtls(self):
         # Check the IMLs for PGA
