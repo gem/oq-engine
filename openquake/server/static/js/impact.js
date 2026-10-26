@@ -137,6 +137,17 @@ window.initImpactForm = function() {
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
         $('#rupture-map').hide();
+        hide_level_1_maximum_distance();
+    }
+
+    // In the level 1 interface the maximum distance is shown only after retrieving the data,
+    // because its default depends on the magnitude and any previous edit would be overwritten
+    function hide_level_1_maximum_distance() {
+        const row = $('#maximum_distance_row[hidden]');
+        if (row.length) {
+            row.css('display', 'none');
+            $('input#maximum_distance').val(window.IMPACT.impact_form_defaults.maximum_distance);
+        }
     }
 
     let shakemap_versions_request = null;
@@ -324,6 +335,9 @@ window.initImpactForm = function() {
 
     let usgsTypingTimer = null;
     const USGS_ID_TYPING_DELAY = 500; // milliseconds
+
+    // a different ShakeMap version may have a different magnitude
+    $('select#shakemap_version').on('change', hide_level_1_maximum_distance);
 
     $('input[name="usgs_id"]').on('input', function () {
         invalidate_shakemap_versions_request();

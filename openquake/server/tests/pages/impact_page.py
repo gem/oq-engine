@@ -94,6 +94,9 @@ class ImpactPage(EnginePage):
     def local_timestamp(self):
         return self.page.locator('input#local_timestamp')
 
+    def maximum_distance(self):
+        return self.page.locator('input#maximum_distance')
+
     def no_uncertainty_ckb(self):
         return self.page.locator('input#no_uncertainty')
 

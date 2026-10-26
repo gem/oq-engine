@@ -47,6 +47,7 @@ def test_impact_ui_level_1(
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
     page.set_rupture_identifier('us6000t7zp')
+    expect(page.maximum_distance()).not_to_be_visible()
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
@@ -54,6 +55,10 @@ def test_impact_ui_level_1(
     expect(page.pga_map()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
+    # the default maximum distance depends on the magnitude
+    expect(page.maximum_distance()).to_be_visible()
+    expect(page.maximum_distance()).not_to_have_value('')
+    expect(page.maximum_distance()).to_be_editable()
     page.set_time_of_the_event('Night')
     expect(page.no_uncertainty_ckb()).to_have_count(0)
     page.set_make_impact_reports()
