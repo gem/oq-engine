@@ -1800,9 +1800,12 @@ class OqParam(valid.ParamSet):
                 pass
         # all_cost_types includes occupants and exclude perils
         self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
-        # fix minimum_asset_loss
+        # fix minimum_asset_loss, the occupants_<time_event> losses
+        # use the minimum_asset_loss of occupants
+        mal = self.minimum_asset_loss
         self.minimum_asset_loss = {
-            ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
+            ln: calc.filters.getdefault(
+                mal, 'occupants' if ln.startswith('occupants_') else ln)
             for ln in self.loss_types}
 
     def validate(self):

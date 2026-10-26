@@ -495,6 +495,17 @@ agg_id
         numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
                                       rtol=1E-5)
 
+    def test_minimum_asset_loss_occupants(self):
+        # the occupants_<time_event> losses use the minimum_asset_loss
+        # of occupants, there is no 'default' key
+        mal = ("{'business_interruption': 0, 'contents': 0,"
+               " 'nonstructural': 0, 'occupants': 0, 'structural': 1}")
+        self.run_calc(case_master.__file__, 'job.ini',
+                      minimum_asset_loss=mal)
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.minimum_asset_loss['occupants_day'], 0)
+        self.assertEqual(oq.minimum_asset_loss['structural'], 1)
+
     def test_from_ses(self):
         self.run_calc(case_master.__file__, 'job_risk.ini')
 
