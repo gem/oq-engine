@@ -95,6 +95,7 @@ EPS = 1E-3
 #: on which the GSIMs are actually evaluated. Determined heuristically
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
+MAX_CTX = 50_000  # max number of rows passed to the GMPEs, see _gen_poes
 
 
 bymag = operator.attrgetter('mag')
@@ -1232,7 +1233,18 @@ class ContextMaker(object):
         return self.get_pmap(ctx, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
-        # NB: by construction ctx.mag contains a single magnitude
+        # NB: by construction ctx.mag contains a single magnitude;
+        # the GMPEs are up to 2x slower per row on very large arrays (they
+        # become memory bound), so the contexts are processed in chunks,
+        # as it is important for big CollapsedPointSources
+        for start in range(0, len(ctx), MAX_CTX):
+            stop = min(start + MAX_CTX, len(ctx))
+            for poes, mea, sig, tau, slc in self._gen_chunk_poes(
+                    ctx[start:stop]):
+                yield (poes, mea, sig, tau,
+                       slice(slc.start + start, slc.stop + start))
+
+    def _gen_chunk_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 

@@ -1002,6 +1002,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute(self, ds):
         oq = self.oqparam
         allargs = []
+        weights = []  # estimated weight of each task
         self.rmap = {}
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
@@ -1018,7 +1019,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # (as in case_36)
         gid_dic = read_gid_dic(ds, self.full_lt)
         gids = group_gids(self.csm.src_groups, gid_dic)
-        for cmaker, tilegetters, grp_keys, atomic in data:
+        for cmaker, tilegetters, grp_keys, atomic, grp_weights in data:
             num_blocks += sum('-' in key for key in grp_keys)
             # the rates are accumulated in a RateMap in the master, unless
             # the task returns an array of rates, i.e. unless there are
@@ -1041,11 +1042,17 @@ class ClassicalCalculator(base.HazardCalculator):
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
                     allargs.append((grp_keys, tgetter, cmaker, ds))
+                    weights.append(sum(grp_weights) / len(tilegetters))
                 else:
                     # send a grp_key at the time
-                    for grp_key in grp_keys:
+                    for grp_key, w in zip(grp_keys, grp_weights):
                         allargs.append(([grp_key], tgetter, cmaker, ds))
+                        weights.append(w / len(tilegetters))
             maxtiles = max(maxtiles, len(tilegetters))
+        # submit the heaviest tasks first, so that they do not end up last
+        # with most of the cores idle
+        order = numpy.argsort(-numpy.array(weights), kind='stable')
+        allargs = [allargs[i] for i in order]
         if num_blocks and not self.few_sites:
             logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '
