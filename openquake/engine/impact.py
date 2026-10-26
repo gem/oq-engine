@@ -61,7 +61,7 @@ def main_cmd(usgs_id, rupture_file=None,
              callback=trivial_callback, *,
              shakemap_version=None, nodal_plane=None, time_event='day',
              maximum_distance='', mosaic_model=None, trt=None,
-             truncation_level='3',
+             truncation_level='',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None,
@@ -143,7 +143,8 @@ main_cmd.maximum_distance = (
     'Maximum distance in km (by default it depends on the magnitude)')
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
 main_cmd.trt = 'Tectonic region type'
-main_cmd.truncation_level = 'Truncation level'
+main_cmd.truncation_level = (
+    'Truncation level (by default it depends on the magnitude)')
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'

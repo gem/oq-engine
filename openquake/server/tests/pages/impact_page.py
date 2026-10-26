@@ -106,6 +106,9 @@ class ImpactPage(EnginePage):
     def maximum_distance(self):
         return self.page.locator('input#maximum_distance')
 
+    def truncation_level(self):
+        return self.page.locator('input#truncation_level')
+
     def description(self):
         return self.page.locator('input#description')
 

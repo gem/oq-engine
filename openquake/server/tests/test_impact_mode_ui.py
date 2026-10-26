@@ -138,6 +138,13 @@ def test_impact_ui_level_2_use_point_rupture(
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
+    # M 7.8: the defaults depending on the magnitude
+    expect(page.maximum_distance()).to_have_value('300')
+    expect(page.truncation_level()).to_have_value('3')
+    # unchecking "No uncertainty" restores the default truncation level
+    page.no_uncertainty_ckb().check()
+    page.no_uncertainty_ckb().uncheck()
+    expect(page.truncation_level()).to_have_value('3')
     page.set_no_uncertainty()
     page.run_impact_calc()
     if should_abort_job or should_remove_job:

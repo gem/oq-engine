@@ -236,6 +236,31 @@ def get_default_maximum_distance(mag):
     return int(MAG_DISTANCES[numpy.searchsorted(MAG_BOUNDS, mag)])
 
 
+# upper magnitude bounds and corresponding default truncation levels;
+# for magnitudes above the last bound the last level is used
+TRUNC_MAG_BOUNDS = numpy.array([5.5, 6.5, 7.5])
+TRUNC_LEVELS = numpy.array([0, 1, 2, 3])
+
+
+def get_default_truncation_level(mag):
+    """
+    :param mag: magnitude of the rupture
+    :returns: the default truncation level for the given magnitude
+
+    >>> [get_default_truncation_level(mag) for mag in [5.5, 5.6, 6.5, 6.6]]
+    [0, 1, 1, 2]
+    >>> [get_default_truncation_level(mag) for mag in [7.5, 7.6, 9.]]
+    [2, 3, 3]
+    """
+    return int(TRUNC_LEVELS[numpy.searchsorted(TRUNC_MAG_BOUNDS, mag)])
+
+
+# form fields whose default depends on the magnitude of the rupture
+MAG_DEPENDENT_DEFAULTS = {
+    'maximum_distance': get_default_maximum_distance,
+    'truncation_level': get_default_truncation_level}
+
+
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'rupture_from_usgs': '',
@@ -251,7 +276,7 @@ IMPACT_FORM_DEFAULTS = {
     'dip': '90',
     'strike': '0',
     'maximum_distance': '',  # depends on the magnitude
-    'truncation_level': '3',
+    'truncation_level': '',  # depends on the magnitude
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
     'region_grid_spacing': '10' if TEST_MODE else '1',
@@ -332,7 +357,8 @@ def _validate(POST):
             value = validation_func(POST.get(field))
         except Exception as exc:
             blankable = ['dip', 'strike', 'maximum_distance_stations',
-                         'local_timestamp', 'notes', 'maximum_distance']
+                         'local_timestamp', 'notes', 'maximum_distance',
+                         'truncation_level']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
                     inputdic[field] = None
@@ -474,9 +500,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['description'] = inputdic['description']
     if 'notes' in inputdic:
         params['notes'] = inputdic['notes']
-    if params.get('maximum_distance', 0) is None:
-        params['maximum_distance'] = get_default_maximum_distance(
-            rupdic['mag'])
+    for field, get_default in MAG_DEPENDENT_DEFAULTS.items():
+        if params.get(field, 0) is None:
+            params[field] = get_default(rupdic['mag'])
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
@@ -491,7 +517,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                 err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
     else:  # called by impact_get_rupture_data
-        # used by the UI to prefill the maximum distance
-        rupdic['maximum_distance'] = get_default_maximum_distance(
-            rupdic['mag'])
+        # used by the UI to prefill the fields depending on the magnitude
+        for field, get_default in MAG_DEPENDENT_DEFAULTS.items():
+            rupdic[field] = get_default(rupdic['mag'])
         return rup, rupdic, params, err

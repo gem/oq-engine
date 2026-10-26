@@ -142,6 +142,17 @@ window.initImpactForm = function() {
     // Called when the USGS ID or the ShakeMap version changes: everything populated by
     // retrieving the data refers to the previous event, so it is cleared and hidden
     // until the data is retrieved again (and the calculation can not be launched)
+    // the truncation level depending on the magnitude, restored when unchecking "No uncertainty"
+    let default_truncation_level = window.IMPACT.impact_form_defaults.truncation_level;
+
+    function set_default_truncation_level(value) {
+        default_truncation_level = value;
+        // with "No uncertainty" checked the truncation level stays 0
+        if (!$('input#no_uncertainty').is(':checked')) {
+            $('input#truncation_level').val(value);
+        }
+    }
+
     function invalidate_retrieved_data(reset_rupture_inputs = true) {
         if (reset_rupture_inputs) {
             reset_rupture_form_inputs();
@@ -149,6 +160,7 @@ window.initImpactForm = function() {
         for (const field of ['local_timestamp', 'maximum_distance', 'description']) {
             $('input#' + field).val(window.IMPACT.impact_form_defaults[field]);
         }
+        set_default_truncation_level(window.IMPACT.impact_form_defaults.truncation_level);
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
         $('#mosaic_model').empty();
         $('#trt').empty();
@@ -260,6 +272,7 @@ window.initImpactForm = function() {
         }
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
         $('#no_uncertainty').prop('checked', false);
+        default_truncation_level = window.IMPACT.impact_form_defaults.truncation_level;
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }
@@ -429,7 +442,7 @@ window.initImpactForm = function() {
         } else {
             $('#number_of_ground_motion_fields').val(
                 window.IMPACT.impact_form_defaults.number_of_ground_motion_fields);
-            $('#truncation_level').val(window.IMPACT.impact_form_defaults.truncation_level)
+            $('#truncation_level').val(default_truncation_level);
         }
     });
 
@@ -504,6 +517,7 @@ window.initImpactForm = function() {
             $('#dep').val(data.dep);
             $('#mag').val(data.mag);
             $('#maximum_distance').val(data.maximum_distance);
+            set_default_truncation_level(data.truncation_level);
             $('#rake').val(data.rake);
             $('#dip').val('dip' in data ? data.dip : '90');
             $('#strike').val('strike' in data ? data.strike : '0');

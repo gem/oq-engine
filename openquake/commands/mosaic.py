@@ -327,7 +327,7 @@ def impact(exposure_hdf5='', *,
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = ''
-    truncation_level = '3'
+    truncation_level = ''  # depends on the magnitude
     ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
