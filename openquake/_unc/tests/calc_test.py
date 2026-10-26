@@ -52,7 +52,7 @@ aae = np.testing.assert_almost_equal
 aac = np.testing.assert_allclose
 
 # Options
-PLOTTING = True
+PLOTTING = False
 NSAMPLES = [500, 1000, 10000]
 # NSAMPLES = [500, 1000, 10000, 100000]
 
