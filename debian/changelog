@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Bug fix: gridding point sources close to the antimeridian with
+    ps_grid_spacing could fail with "longitude -180.000000 outside range"
   * Bug fix: the "too many potential logic tree paths" error suggested
     use_rates=true even when it was already set; the message now
     explains that use_rates only works when computing the mean
