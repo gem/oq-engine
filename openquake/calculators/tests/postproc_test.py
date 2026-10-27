@@ -18,6 +18,7 @@
 
 import json
 import unittest
+from unittest import mock
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -31,6 +32,7 @@ from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
+from openquake.hazardlib import source_reader
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.views import view
@@ -281,6 +283,12 @@ class PostProcTestCase(CalculatorTestCase):
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+    def test_median_spectrum2_strided(self):
+        # the median spectrum depends on the order of the source groups,
+        # which must not change when reading the source models with strides
+        with mock.patch.object(source_reader, 'BIG_FILE', 0):
+            self.test_median_spectrum2()
 
 
 class SeismicityClassTestCase(unittest.TestCase):
