@@ -34,9 +34,12 @@ You have to remove the data directories manually, if you so wish.
 import os
 import re
 import sys
+import pwd
 import json
 import glob
+import stat
 import shutil
+import secrets
 import getpass
 import tempfile
 import argparse
@@ -181,12 +184,13 @@ SERVICE = """\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After= {afterservice}
+After={afterservice}
 
 [Service]
 User=openquake
 Group=openquake
 Environment=
+EnvironmentFile={django_secret_file}
 WorkingDirectory={OQDATA}
 ExecStart=/opt/openquake/venv/bin/oq {command}
 Type=exec
@@ -473,7 +477,6 @@ def create_openquake_user(inst):
     """
     if inst not in (server, devel_server):
         return
-    import pwd
 
     try:
         pwd.getpwnam("openquake")
@@ -651,16 +654,39 @@ def create_services(inst):
     for service in ["webui"]:
         service_name = f"openquake-{service}.service"
         service_path = "/etc/systemd/system/" + service_name
+        secret_dir = "/etc/openquake"
+        secret_name = "django_secret.env"
+        secret_file = os.path.join(secret_dir, secret_name)
         afterservice = "network.target"
         command = service + " -s start"
         if not os.path.exists(service_path):
             with open(service_path, "w") as f:
                 srv = SERVICE.format(
                     service=service,
-                    OQDATA=inst.OQDATA,
                     afterservice=afterservice,
-                    command=command)
+                    django_secret_file=secret_file,
+                    OQDATA=inst.OQDATA,
+                    command=command,
+                )
                 f.write(srv)
+        openquake_user = pwd.getpwnam("openquake")
+        if not os.path.isdir(secret_dir):
+            os.mkdir(secret_dir)
+            os.chmod(secret_dir, stat.S_IRWXU)
+            os.chown(secret_dir,
+                     openquake_user.pwd_uid,
+                     openquake_user.pwd_gid)
+        if not os.path.exists(secret_file):
+            with open(secret_file, "w") as f:
+                key = "".join(
+                    secrets.choice(
+                        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
+                    for i in range(50))
+                f.write(f"DJANGO_SECRET_KEY='{key}'")
+            os.chmod(secret_dir, stat.S_IRWU)
+            os.chown(secret_file,
+                     openquake_user.pwd_uid,
+                     openquake_user.pwd_gid)
         subprocess.check_call(["systemctl", "enable", "--now", service_name])
         subprocess.check_call(["systemctl", "start", service_name])
 

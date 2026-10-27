@@ -1,5 +1,11 @@
 import os
 
+# For 'devel' and 'user' installations, generate a new key with:
+# python3 -c 'import secrets ; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)") for i in range(50)))'
+# and assign it to the currently empty default value of os.getenv below.
+# For 'server' and 'devel_server' installations, follow the installation documentation.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
+
 APPLICATION_MODE = <'AELO'|'IMPACT'>
 ALLOWED_HOSTS = (<domain_name_of_the_server>, 'localhost', '127.0.0.1')
 DISABLE_VERSION_WARNING = True

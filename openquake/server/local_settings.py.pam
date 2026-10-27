@@ -2,7 +2,14 @@
 #  - https://github.com/FirefighterBlu3/python-pam
 #  - https://github.com/cnobile2012/django-pam
 
+import os
 from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
+
+# For 'devel' and 'user' installations, generate a new key with:
+# python3 -c 'import secrets ; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)") for i in range(50)))'
+# and assign it to the currently empty default value of os.getenv below.
+# For 'server' and 'devel_server' installations, follow the installation documentation.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
 
 # Enable authentication
 APPLICATION_MODE = 'RESTRICTED'
