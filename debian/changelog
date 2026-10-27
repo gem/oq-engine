@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Added the option ps_grid_spacing=auto: the engine determines
+    ps_grid_spacing and pointsource_distance (if not given) by comparing
+    the hazard maps of the point sources on a sample of sites with the
+    exact ones, choosing the cheapest candidate
+  * The distance used to decide if a site is close to a CollapsedPointSource
+    now includes the extent of the source, so that small values of
+    pointsource_distance are safe also for big cells and the precision is good
   * Faster computation of the PoEs: the truncated normal distribution is
     computed with fused loops, skipping the levels where the PoE is zero,
     and the probability maps are updated without temporary arrays; in
@@ -25,13 +32,6 @@
     in ChiouYoungs2014ACME2019 with a unit test now exposing it)
 
   [Michele Simionato]
-  * Added the option ps_grid_spacing=auto: the engine determines
-    ps_grid_spacing and pointsource_distance (if not given) by comparing
-    the hazard maps of the point sources on a sample of sites with the
-    exact ones, choosing the cheapest candidate within 5%
-  * The distance used to decide if a site is close to a CollapsedPointSource
-    now includes the extent of the source, so that small values of
-    pointsource_distance are safe also for big cells
   * Bug fix: gridding point sources close to the antimeridian with
     ps_grid_spacing could fail with "longitude -180.000000 outside range"
   * The contexts are now passed to the GMPEs in chunks of at most 50,000
