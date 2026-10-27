@@ -180,6 +180,7 @@ a great deal of work trying to split slow sources in more manageable
 fast sources.
 
 """
+import gc
 import os
 import re
 import ast
@@ -431,7 +432,16 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         t0 = time.time()
-        val = self.pik.unpickle()
+        # disabling the garbage collector makes the unpickling of
+        # millions of objects (for instance the sources returned by
+        # preclassical) much faster
+        enabled = gc.isenabled()
+        gc.disable()
+        try:
+            val = self.pik.unpickle()
+        finally:
+            if enabled:
+                gc.enable()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
