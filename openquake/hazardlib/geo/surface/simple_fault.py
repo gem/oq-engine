@@ -184,11 +184,22 @@ class SimpleFaultSurface(BaseSurface):
         strike = fault_trace[0].azimuth(fault_trace[-1])
         azimuth = (strike + 90.0) % 360
 
+        # Use a down-dip spacing that divides the distance between the
+        # top and the bottom edge evenly, so that the bottom edge (and
+        # thus the lower seismogenic depth and the dip) is preserved
+        # exactly. Passing mesh_spacing directly to equally_spaced_points
+        # rounds the number of intervals and shifts or overshoots the
+        # bottom edge, see issue #12009.
+        down_dip_distance = ((vdist_bottom - vdist_top) /
+                             math.sin(math.radians(dip)))
+        num_intervals = max(1, int(round(down_dip_distance / mesh_spacing)))
+        down_dip_spacing = down_dip_distance / num_intervals
+
         mesh = []
         for point in fault_trace.resample(mesh_spacing):
             top = point.point_at(hdist_top, vdist_top, azimuth)
             bottom = point.point_at(hdist_bottom, vdist_bottom, azimuth)
-            mesh.append(top.equally_spaced_points(bottom, mesh_spacing))
+            mesh.append(top.equally_spaced_points(bottom, down_dip_spacing))
 
         # number of rows corresponds to number of points along dip
         # number of columns corresponds to number of points along strike
