@@ -2168,8 +2168,7 @@ class OqParam(valid.ParamSet):
             event of the exposure because time_event is not specified
         """
         return (self.time_event is None and
-                self.calculation_mode in scientific.OCC_TIME_MODES and
-                len(self.time_events) > 0)
+                self.calculation_mode in scientific.OCC_TIME_MODES)
 
     @property
     def time_events(self):
@@ -2177,15 +2176,15 @@ class OqParam(valid.ParamSet):
         :returns: the time events (day, night, transit) of the exposure,
             all of them until the exposure is read
         """
-        return getattr(self, '_time_events', scientific.TIME_EVENTS)
+        return getattr(self, 'exposure_time_events', scientific.TIME_EVENTS)
 
     def set_time_events(self, occupancy_periods):
         """
         Set the time events present in the exposure, as a string
         """
         periods = occupancy_periods.split()
-        self._time_events = [te for te in scientific.TIME_EVENTS
-                             if te in periods]
+        self.exposure_time_events = [te for te in scientific.TIME_EVENTS
+                                     if te in periods]
 
     @property
     def ext_loss_types(self):

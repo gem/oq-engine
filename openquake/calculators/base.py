@@ -1101,6 +1101,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assetcol'):
             # the occupants are computed only for the exposure time events
             oq.set_time_events(self.assetcol.occupancy_periods)
+            self.datastore['oqparam'] = oq
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 oq.ground_motion_fields and self.N > 1000 and
                 len(oq.min_iml) == 0):

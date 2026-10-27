@@ -331,7 +331,7 @@ class RiskModel(object):
                     # so that the other loss types do not change; the time
                     # events use an independent generator
                     res[peril, 'occupants_avg'] = meth(
-                        peril, lt, assets, gmf_df, rndgen)
+                        peril, 'occupants_avg', assets, gmf_df, rndgen)
                     trng = time_rng(rndgen)
                     for te in scientific.TIME_EVENTS:
                         col = f'occupants_{te}'
