@@ -382,6 +382,8 @@ class CompositeSourceModel:
         :param maximum_distance: dictionary trt -> magdist interpolator
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
+        # NB: the magnitudes are converted into strings at the end, since
+        # converting them source by source was taking 20 seconds in AUS
         mags = AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
@@ -389,15 +391,15 @@ class CompositeSourceModel:
                     # fast lane for MultiPointSources, assuming thet have
                     # all the same mfd
                     mfd = next(iter(src.mfd))
-                    magstrs = {magstr(item[0]) for item in
-                               mfd.get_annual_occurrence_rates()}
+                    mags[sg.trt].update(
+                        item[0] for item in mfd.get_annual_occurrence_rates())
                 else:
-                    magstrs = src.get_magstrs()
-                mags[sg.trt].update(magstrs)
+                    mags[sg.trt].update(src.get_raw_mags())
         out = {}
         for trt in mags:
             minmag = maximum_distance(trt).x[0]
-            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
+            magstrs = {magstr(mag) for mag in mags[trt]}
+            out[trt] = sorted(m for m in magstrs if float(m) >= minmag)
         return out
 
     def get_floating_spinning_factors(self):
