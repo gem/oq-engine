@@ -62,10 +62,6 @@ class SplitMFTestCase(unittest.TestCase):
             self.assertEqual(list(seg.ts_samples['trt_smr']), [0, 1, 2])
 
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 QA = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     __file__))), 'qa_tests_data')
 

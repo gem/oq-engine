@@ -211,7 +211,7 @@ def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
     source_ids = []
     groups = []  # expect a sequence of sourceGroup nodes
-    for ordinal, src_group in enumerate(node):
+    for src_group in node:
         if 'sourceGroup' not in src_group.tag:
             raise InvalidFile(
                 '%s: you have an incorrect declaration '
@@ -222,9 +222,6 @@ def get_source_model_05(node, fname, converter=default):
             # a source group can be empty if source_id filtering is on
             for src in sg:
                 source_ids.append(src.source_id)
-            # the position of the group in the file, used to merge the
-            # groups of the same file read with strides, see source_reader
-            sg.ordinal = ordinal
             groups.append(sg)
     itime = node.get('investigation_time')
     if itime is not None:

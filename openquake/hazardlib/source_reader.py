@@ -52,7 +52,7 @@ checksum = operator.attrgetter('checksum')
 # in classical calculations the source model files bigger than BIG_FILE
 # are read by STRIDE tasks, each one keeping one source over STRIDE: the
 # order of the sources changes, which is irrelevant for classical
-BIG_FILE = 10 * 2**20
+BIG_FILE = 2**20
 STRIDE = 5
 
 source_info_dt = numpy.dtype([
@@ -216,30 +216,17 @@ def read_source_model(fname, branch, converter, applied, sample, stride,
 
 # merge the source models of the same file read with different strides,
 # i.e. convert a dictionary (fname, k) -> sm into a dictionary fname -> sm;
-# the groups are the same as reading the file in one go (the pieces of a
-# group are identified by the ordinal in NRML 0.5 and by the TRT in NRML
-# 0.4), while the order of the sources can be different
+# the groups are simply concatenated, since they are rebuilt anyway by
+# build_groups; sorting by k makes the order independent from the order
+# in which the tasks finish
 def _merge_strides(dic):
-    sms = general.AccumDict(accum=[])
-    for (fname, _k), sm in sorted(dic.items()):
-        sms[fname].append(sm)
     out = {}
-    for fname, [sm, *others] in sms.items():
-        if others:
-            pieces = general.AccumDict(accum=[])
-            for piece in [sm] + others:
-                for sg in piece.src_groups:
-                    pieces[getattr(sg, 'ordinal', sg.trt)].append(sg)
-            groups = []
-            for key in sorted(pieces):
-                grp, *rest = pieces[key]
-                for other in rest:
-                    for src in other:
-                        grp.update(src)
-                groups.append(grp)
-            sm.src_groups = sorted(groups)
-            sm.rtime += sum(other.rtime for other in others)
-        out[fname] = sm
+    for (fname, _k), sm in sorted(dic.items()):
+        if fname not in out:
+            out[fname] = sm
+        else:
+            out[fname].src_groups.extend(sm.src_groups)
+            out[fname].rtime += sm.rtime
     return out
 
 
@@ -347,18 +334,23 @@ def get_csm(oq, full_lt, dstore=None):
     applied = set()
     for srcs in full_lt.source_model_lt.info.applytosources.values():
         applied.update(srcs)
+    # striding is disabled for event based, where the order of the sources
+    # matters, for correlated branchsets, since check_correlated needs the
+    # full groups, and for the median spectrum, which depends on the
+    # order of the groups
+    correlated = any(bset.correlated
+                     for bset in full_lt.source_model_lt.branchsets)
+    strided = (oq.calculation_mode in CLASSICAL_MODES and not ss and
+               not correlated and 'median_spectrum' not in oq.postproc_func)
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        branch = rows[0]['branch']
-        if (oq.calculation_mode in CLASSICAL_MODES and not ss and
-                os.path.getsize(path) > BIG_FILE):
-            for k in range(STRIDE):
-                allargs.append((path, branch, converter, applied, ss,
-                                (k, STRIDE)))
-        else:
-            allargs.append((path, branch, converter, applied, ss, None))
+        big = strided and os.path.getsize(path) > BIG_FILE
+        for stride in ([(k, STRIDE) for k in range(STRIDE)] if big
+                       else [None]):
+            allargs.append((path, rows[0]['branch'], converter, applied, ss,
+                            stride))
     for path in allpaths - set(smpaths):  # geometry models
         allargs.append((path, '', converter, applied, ss, None))
     # read the biggest files first, so that they do not end up last
@@ -772,14 +764,6 @@ def content_hash(src, exclude=NOT_CONTENT):
     return hashlib.md5(pickle.dumps(dic, protocol=4)).hexdigest()
 
 
-# the content hash computed in read_source_model or computed now; NB:
-# BaseSeismicSource.checksum is a class attribute, hence the check on vars
-def _get_checksum(src):
-    if 'checksum' not in vars(src):
-        src.checksum = content_hash(src)
-    return src.checksum
-
-
 # called by reduce_sources
 def add_checksums(srcs):
     """
@@ -820,7 +804,7 @@ def add_bangs(smdict):
                                    'duplicated: %s', srcid)
             gb = general.AccumDict(accum=[])
             for src in srcs:
-                gb[_get_checksum(src)].append(src)
+                gb[checksum(src)].append(src)
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
@@ -842,7 +826,7 @@ def check_same_sources(smdict, fname):
     :param fname: the source model logic tree file, used in the warning
     """
     # NB: the atomic groups are skipped, since their sources cannot be
-    # duplicated anyway (see add_bangs); the sources are hashed only if
+    # duplicated anyway (see add_bangs); the sources are compared only if
     # their code and TRT appear in more than one source model file, to
     # save time
     bykey = general.AccumDict(accum=[])  # (code, trt) -> [(smfile, src)]
@@ -859,7 +843,7 @@ def check_same_sources(smdict, fname):
             continue
         byhash = general.AccumDict(accum=[])
         for smfile, src in pairs:
-            byhash[_get_checksum(src)].append((smfile, src))
+            byhash[checksum(src)].append((smfile, src))
         for same in byhash.values():
             smfiles = {smfile for smfile, _ in same}
             # NB: the original IDs, without the bangs added by add_bangs

@@ -529,7 +529,8 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
 
     def test_case_23_bis_strided(self):
-        # correlated uncertainties with the source models read with strides
+        # the striding must be disabled with correlated uncertainties,
+        # since check_correlated needs the full groups
         with mock.patch.object(source_reader, 'BIG_FILE', 0):
             self.test_case_23_bis()
         ns = len(self.calc.datastore['source_info'])
