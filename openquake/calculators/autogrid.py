@@ -160,8 +160,6 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
            if not sg.atomic and any(src.code in b'AMP' for src in sg)}
     if not sgs:
         return None
-    distances = ([oq.pointsource_distance['default']] if oq.psd_given
-                 else PS_DISTANCES)
     # ContextMakers with a single GMPE, the IMTs of _calib_imts and one
     # level every LEVEL_STEP: the error of the gridding is geometric and
     # does not depend much on the GMPE, while the cost of the calibration
@@ -169,7 +167,6 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     imts = _calib_imts(oq)
     cmakers = {grp_id: cmakers[grp_id].restrict(imts, LEVEL_STEP).copy(
         gsims=dict(list(cmakers[grp_id].gsims.items())[:1])) for grp_id in sgs}
-    imtls = cmakers[next(iter(sgs))].imtls
     maxdist = {grp_id: cmakers[grp_id].maximum_distance.y[-1]
                for grp_id in sgs}
     # the cost of each site grows with the area within the maximum
@@ -184,6 +181,14 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
     if not groups:
         return None
+    return _select_candidate(groups, cmakers, sites, oq, h5)
+
+
+# compare candidates on the prepared sample and return the best parameters
+def _select_candidate(groups, cmakers, sites, oq, h5):
+    imtls = next(iter(cmakers.values())).imtls
+    distances = ([oq.pointsource_distance['default']] if oq.psd_given
+                 else PS_DISTANCES)
     logging.info('Calibrating ps_grid_spacing among %s and '
                  'pointsource_distance among %s on %d sites with one GMPE '
                  'per group', GRID_SPACINGS, distances, len(sites))
