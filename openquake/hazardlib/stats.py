@@ -19,39 +19,29 @@
 Utilities to compute mean and quantile curves
 """
 import math
+import functools
+import numba
 import numpy
 import pandas
 from scipy.stats import norm
+from scipy.special import ndtri
 from openquake.baselib.general import AccumDict, agg_probs
 from openquake.baselib.performance import compile
-try:
-    import numba
-    SQRT05 = math.sqrt(0.5)
-
-    @numba.vectorize("float64(float64)")
-    def ndtr(z):
-        return 0.5 * (1.0 + math.erf(z * SQRT05))
-except ImportError:
-    from scipy.special import ndtr
+SQRT05 = math.sqrt(0.5)
 
 
-@compile(["float64[:,:](float64, float64[:,:])",
-          "float64[:](float64, float64[:])"])
-def truncnorm_sf(phi_b, values):
-    """
-    Fast survival function for truncated normal distribution.
-    Assumes zero mean, standard deviation equal to one and symmetric
-    truncation. It is faster than using scipy.stats.truncnorm.sf.
+@numba.vectorize("float64(float64)")
+def ndtr(z):
+    return 0.5 * (1.0 + math.erf(z * SQRT05))
 
-    :param phi_b:
-         ndtr(truncation_level); assume phi_b > .5
-    :param values:
-         Numpy array of values as input to a survival function for the given
-         distribution.
-    :returns:
-         Numpy array of survival function results in a range between 0 and 1.
-         For phi_b close to .5 returns a step function 1 1 1 1 .5 0 0 0 0 0.
-    """
+
+# survival function of the truncated normal distribution for a single
+# value x; the values beyond tmax (see get_tmax) give exactly 0, so erf is
+# not called for them; used in truncnorm_sf and in contexts._set_poes
+@compile("float64(float64, float64, float64)")
+def _truncnorm_sf(phi_b, tmax, x):
+    if x > tmax:
+        return 0.
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
     # "CDF" in comments refers to cumulative distribution function
@@ -70,7 +60,51 @@ def truncnorm_sf(phi_b, values):
     # ``SF(x) = (Z - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(a) - CDF(x) + CDF(a)) / Z``,
     # ``SF(x) = (CDF(b) - CDF(x)) / Z``.
-    return ((phi_b - ndtr(values)) / z).clip(0., 1.)
+    p = (phi_b - .5 * (1. + math.erf(x * SQRT05))) / z
+    return min(max(p, 0.), 1.)
+
+
+@compile(["float64[:,:](float64, float64, float64[:,:])",
+          "float64[:](float64, float64, float64[:])"])
+def _truncnorm_sf_array(phi_b, tmax, values):
+    out = numpy.empty(values.shape)
+    flat = out.reshape(-1)
+    for i, x in enumerate(values.flat):
+        flat[i] = _truncnorm_sf(phi_b, tmax, x)
+    return out
+
+
+@functools.lru_cache()
+def get_tmax(phi_b):
+    """
+    :param phi_b: ndtr(truncation_level)
+    :returns: the value of x beyond which truncnorm_sf(phi_b, x) is 0
+    """
+    if phi_b < 1.:
+        # the margin makes sure that ndtr(tmax) >= phi_b
+        return ndtri(phi_b) + 1E-6
+    elif phi_b == 1.:  # no truncation
+        return 9.  # erf(9 * SQRT05) is exactly 1.
+    return numpy.inf  # invalid phi_b, do not skip anything
+
+
+def truncnorm_sf(phi_b, values):
+    """
+    Fast survival function for truncated normal distribution.
+    Assumes zero mean, standard deviation equal to one and symmetric
+    truncation. It is faster than using scipy.stats.truncnorm.sf.
+
+    :param phi_b:
+         ndtr(truncation_level); assume phi_b > .5
+    :param values:
+         Numpy array of values as input to a survival function for the given
+         distribution.
+    :returns:
+         Numpy array of survival function results in a range between 0 and 1.
+         For phi_b close to .5 returns a step function 1 1 1 1 .5 0 0 0 0 0.
+    """
+    return _truncnorm_sf_array(
+        phi_b, get_tmax(phi_b), numpy.asarray(values, float))
 
 
 def norm_cdf(x, a, s):

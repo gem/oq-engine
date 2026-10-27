@@ -335,18 +335,21 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 mags.add(rup.mag)
         return sorted(mags)
 
+    def get_raw_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained, with repetitions
+        """
+        if hasattr(self, 'mags'):  # MultiFaultSource
+            return self.mags
+        elif hasattr(self, 'data'):  # nonparametric
+            return [item[0].mag for item in self.data]
+        return [item[0] for item in self.get_annual_occurrence_rates()]
+
     def get_magstrs(self):
         """
         :returns: the magnitudes of the ruptures contained as strings
         """
-        if hasattr(self, 'mags'):  # MultiFaultSource
-            mags = {magstr(mag) for mag in self.mags}
-        elif hasattr(self, 'data'):  # nonparametric
-            mags = {magstr(item[0].mag) for item in self.data}
-        else:
-            mags = {magstr(item[0]) for item in
-                    self.get_annual_occurrence_rates()}
-        return sorted(mags)
+        return sorted({magstr(mag) for mag in self.get_raw_mags()})
 
     def __iter__(self):
         """

@@ -33,7 +33,7 @@ from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
-from openquake.hazardlib.stats import ndtr, truncnorm_sf
+from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
@@ -95,7 +95,7 @@ EPS = 1E-3
 #: on which the GSIMs are actually evaluated. Determined heuristically
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
-MAX_CTX = 50_000  # max number of rows passed to the GMPEs, see _gen_poes
+MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 
 
 bymag = operator.attrgetter('mag')
@@ -477,15 +477,25 @@ def genctxs_Pp(src, sitecol, cmaker):
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float32[:,:])")
-def _set_poes(mean_std, loglevels, phi_b, out):
-    L1 = loglevels.size // len(loglevels)
-    for m, levels in enumerate(loglevels):
+# collapse the ruptures, then truncnorm_sf will be called less times;
+# the loops are fused, i.e. no temporary arrays are allocated, and
+# the scalar function _truncnorm_sf skips the levels where the PoE is 0
+@compile("(float64[:,:,:], float64[:,:], float64, float64, float32[:,:])")
+def _set_poes_(mean_std, loglevels, phi_b, tmax, out):
+    M, L1 = loglevels.shape
+    N = mean_std.shape[2]
+    for m in range(M):
         mL1 = m * L1
-        mea, std = mean_std[:, m]  # shape N
-        for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+        for n in range(N):
+            mea = mean_std[0, m, n]
+            std = mean_std[1, m, n]
+            for lvl in range(L1):
+                out[mL1 + lvl, n] = _truncnorm_sf(
+                    phi_b, tmax, (loglevels[m, lvl] - mea) / std)
+
+
+def _set_poes(mean_std, loglevels, phi_b, out):
+    _set_poes_(mean_std, loglevels, phi_b, get_tmax(phi_b), out)
 
 
 def _fix(gsimdict, betw):
