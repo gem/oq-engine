@@ -1235,10 +1235,12 @@ def get_composite_source_model(oqparam, dstore=None):
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    # the garbage collector is disabled while reading the source models,
-    # since it would traverse the millions of objects being created many
-    # times: in AUS this reduces the time from 183 to 105 seconds (the
-    # unpickling from 66 to 8 seconds) without increasing the memory
+    # the garbage collector is disabled while building the composite
+    # source model, since it would traverse many times the millions of
+    # objects created by _merge_strides, add_bangs, build_groups, etc.
+    # (the unpickling is managed in parallel.Result.get): in AUS this
+    # reduces the time from ~135 to ~90 seconds without increasing the
+    # memory
     enabled = gc.isenabled()
     gc.disable()
     try:
