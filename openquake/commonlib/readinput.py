@@ -1415,7 +1415,8 @@ def get_exposure(oqparam, h5=None):
                 # used in the tests
                 loss_types = f['crmAfrica'].attrs['loss_types']
                 oq.all_cost_types = loss_types
-                oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
+                # use oq.loss_types to include the occupants_<time_event>
+                oq.minimum_asset_loss = {lt: 0 for lt in oq.loss_types}
     else:
         exposure = asset.Exposure.read_all(
             oq.inputs['exposure'], oq.calculation_mode,

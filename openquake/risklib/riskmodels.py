@@ -258,6 +258,21 @@ class PerilDict(dict):
             raise KeyError(('groundshaking', lt))
 
 
+# offset of the seeds of the occupants time events, far from the event seeds
+OCC_TIME_SEED = 2 ** 31
+
+
+def time_rng(rndgen):
+    """
+    :returns: a MultiEventRNG independent of rndgen, or None
+    """
+    if rndgen is None:
+        return None
+    return scientific.MultiEventRNG(
+        rndgen.master_seed + OCC_TIME_SEED, list(rndgen.rng),
+        rndgen.asset_correlation)
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -306,29 +321,27 @@ class RiskModel(object):
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
-               for peril in self.risk_functions
-               for lt in self.calc_types(assets)}
+        byt = (self.time_event is None and
+               self.calcmode in scientific.OCC_TIME_MODES)
+        res = {}
+        for peril in self.risk_functions:
+            for lt in self.loss_types:
+                if lt == 'occupants' and byt:
+                    # the average uses the same random numbers as before,
+                    # so that the other loss types do not change; the time
+                    # events use an independent generator
+                    res[peril, 'occupants_avg'] = meth(
+                        peril, lt, assets, gmf_df, rndgen)
+                    trng = time_rng(rndgen)
+                    for te in scientific.TIME_EVENTS:
+                        col = f'occupants_{te}'
+                        if col in assets.columns:
+                            res[peril, col] = meth(
+                                peril, col, assets, gmf_df, trng)
+                else:
+                    res[peril, lt] = meth(peril, lt, assets, gmf_df, rndgen)
         # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
-
-    def calc_types(self, assets):
-        """
-        :returns: the loss types to compute for the given assets. If
-            time_event is not set, the occupants are computed for the
-            day, night and transit periods present in the assets, and
-            for the occupants_avg column
-        """
-        lts = []  # keep the order, it determines the random draws
-        for lt in self.loss_types:
-            if lt == 'occupants' and self.time_event is None and \
-                    self.calcmode in scientific.OCC_TIME_MODES:
-                lts.extend(f'occupants_{te}' for te in scientific.TIME_EVENTS
-                           if f'occupants_{te}' in assets.columns)
-                lts.append('occupants_avg')
-            else:
-                lts.append(lt)
-        return lts
 
     def __toh5__(self):
         return self.risk_functions, {'taxonomy': self.taxonomy}

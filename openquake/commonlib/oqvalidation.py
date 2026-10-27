@@ -1801,12 +1801,14 @@ class OqParam(valid.ParamSet):
         # all_cost_types includes occupants and exclude perils
         self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss, the occupants_<time_event> losses
-        # use the minimum_asset_loss of occupants
-        mal = self.minimum_asset_loss
-        self.minimum_asset_loss = {
-            ln: calc.filters.getdefault(
-                mal, 'occupants' if ln.startswith('occupants_') else ln)
-            for ln in self.loss_types}
+        # use the minimum_asset_loss of occupants; the default key is
+        # kept in mal, since the dict may be already fixed (no default)
+        mal = {'default': 0, **self.minimum_asset_loss}
+        self.minimum_asset_loss = {}
+        for ln in self.loss_types:
+            occ = 'occupants' if ln.startswith('occupants_') else ln
+            self.minimum_asset_loss[ln] = mal.get(
+                ln, mal.get(occ, mal['default']))
 
     def validate(self):
         """
