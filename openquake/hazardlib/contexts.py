@@ -95,7 +95,7 @@ EPS = 1E-3
 #: on which the GSIMs are actually evaluated. Determined heuristically
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
-MAX_CTX = 50_000  # max number of rows passed to the GMPEs, see _gen_poes
+MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 
 
 bymag = operator.attrgetter('mag')

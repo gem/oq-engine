@@ -34,7 +34,7 @@
   [Michele Simionato]
   * Bug fix: gridding point sources close to the antimeridian with
     ps_grid_spacing could fail with "longitude -180.000000 outside range"
-  * The contexts are now passed to the GMPEs in chunks of at most 50,000
+  * The contexts are now passed to the GMPEs in chunks of at most 10,000
     rows, since the GMPEs are memory bound on very large arrays (as the
     ones of big CollapsedPointSources): in the Tonga model with
     ps_grid_spacing=50 "computing mean_std" went down from 43,645 s to
