@@ -528,7 +528,7 @@ hazard_uhs-std.csv
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
 
-    def test_case_23_bis_strided(self):
+    def test_case_23_strided(self):
         # the striding must be disabled with correlated uncertainties,
         # since check_correlated needs the full groups
         with mock.patch.object(source_reader, 'BIG_FILE', 0):

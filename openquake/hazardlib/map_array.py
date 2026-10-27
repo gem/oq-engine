@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import math
 import logging
 import warnings
 import numpy
@@ -235,25 +236,30 @@ sig_m = t.void(t.float32[:, :, :],                     # pmap
                t.float64)                              # itime
 
 
+# NB: the parametric ruptures are managed with scalar loops over the
+# levels and the gsims, contiguous in memory, to avoid allocating
+# temporary arrays for each rupture; this is 4x faster
 @compile(sig_i)
 def update_pmap_i(arr, poes, rates, probs_occur, sidxs, itime):
-    _N, _L, G = arr.shape
+    _N, L, G = arr.shape
     for poe, rate, probs, sidx in zip(poes, rates, probs_occur, sidxs):
-        no_probs = len(probs) == 0
-        for g in range(G):
-            if no_probs:
-                arr[sidx, :, g] *= numpy.exp(-rate * poe[:, g] * itime)
-            else:  # nonparametric rupture
+        if len(probs) == 0:
+            for lvl in range(L):
+                for g in range(G):
+                    arr[sidx, lvl, g] *= math.exp(-rate * poe[lvl, g] * itime)
+        else:  # nonparametric rupture
+            for g in range(G):
                 arr[sidx, :, g] *= get_pnes(rate, probs, poe[:, g], itime)
 
 
 @compile(sig_i)
 def update_pmap_r(arr, poes, rates, probs_occur, sidxs, itime):
-    _N, _L, G = arr.shape
+    _N, L, G = arr.shape
     for poe, rate, probs, sidx in zip(poes, rates, probs_occur, sidxs):
         if len(probs) == 0:
-            for g in range(G):
-                arr[sidx, :, g] += rate * poe[:, g] * itime
+            for lvl in range(L):
+                for g in range(G):
+                    arr[sidx, lvl, g] += rate * poe[lvl, g] * itime
         else:  # nonparametric rupture
             for g in range(G):
                 arr[sidx, :, g] += - numpy.log(
