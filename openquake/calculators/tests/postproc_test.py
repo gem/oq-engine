@@ -286,7 +286,7 @@ class PostProcTestCase(CalculatorTestCase):
 
     def test_median_spectrum2_strided(self):
         # the median spectrum depends on the order of the source groups,
-        # so the striding must be disabled
+        # which must not change when reading the source models with strides
         with mock.patch.object(source_reader, 'BIG_FILE', 0):
             self.test_median_spectrum2()
 

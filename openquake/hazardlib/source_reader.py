@@ -335,13 +335,12 @@ def get_csm(oq, full_lt, dstore=None):
     for srcs in full_lt.source_model_lt.info.applytosources.values():
         applied.update(srcs)
     # striding is disabled for event based, where the order of the sources
-    # matters, for correlated branchsets, since check_correlated needs the
-    # full groups, and for the median spectrum, which depends on the
-    # order of the groups
+    # matters, and for correlated branchsets, since check_correlated needs
+    # the full groups
     correlated = any(bset.correlated
                      for bset in full_lt.source_model_lt.branchsets)
     strided = (oq.calculation_mode in CLASSICAL_MODES and not ss and
-               not correlated and 'median_spectrum' not in oq.postproc_func)
+               not correlated)
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
@@ -578,10 +577,12 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     if atomic:
         logging.info('Found %d atomic groups', len(atomic))
     # NB: the sources are grouped by trt_smrs and TOM, so that there is
-    # one cmaker for each set of realizations, see get_cmakers
+    # one cmaker for each set of realizations, see get_cmakers; the groups
+    # are sorted by TRT index, trt_smrs and TOM, so that their order does
+    # not depend on the order of the sources in the files
     red_sources = 0
-    for trt, sources in acc.items():
-        grps, red = _group_sources(trt, sources)
+    for trt in sorted(acc, key=lambda trt: (full_lt.trti.get(trt, 0), trt)):
+        grps, red = _group_sources(trt, acc[trt])
         out.extend(grps)
         red_sources += red
     if red_sources:
@@ -1011,7 +1012,8 @@ def split_by_tom(sources):
     def key(src):
         tom = getattr(src, 'temporal_occurrence_model', None)
         return (tom.__class__.__name__, src.code == b'F')
-    return general.groupby(sources, key).values()
+    return [srcs for _, srcs in sorted(
+        general.groupby(sources, key).items())]
 
 
 def _group_sources(trt, sources):
@@ -1028,7 +1030,7 @@ def _group_sources(trt, sources):
             red += 1
         lst.extend(srcs)
     src_groups = []
-    for sources in general.groupby(lst, trt_smrs).values():
+    for _, sources in sorted(general.groupby(lst, trt_smrs).items()):
         for grp in split_by_tom(sources):
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     return src_groups, red
