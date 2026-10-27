@@ -625,13 +625,14 @@ class SiteCollection(object):
     def reduce(self, nsites):
         """
         :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+                  evenly spread over the region, obtained by taking every
+                  n-th site in geohash order
         """
-        N = len(self.complete)
-        n = N // nsites
+        n = int(numpy.ceil(len(self) / nsites))
         if n <= 1:
             return self
-        sids, = numpy.where(self.complete.sids % n == 0)
-        return self.filtered(sids)
+        idx = numpy.sort(numpy.argsort(self.geohash(8))[::n])
+        return self.filtered(self.sids[idx])
 
     def add_col(self, colname, dtype, values=None):
         """

@@ -1156,6 +1156,18 @@ class Starmap(object):
             self.socket.close()
 
 
+def heaviest_first(allargs, weights):
+    """
+    :param allargs: a list of task arguments
+    :param weights: a list of weights, one for each task
+    :returns: the task arguments sorted by decreasing weight, so that the
+              heaviest tasks are submitted first and do not end up last
+              with most of the cores idle
+    """
+    order = numpy.argsort(-numpy.array(weights), kind='stable')
+    return [allargs[i] for i in order]
+
+
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
                      maxweight=None, weight=lambda item: 1,
                      key=lambda item: 'Unspecified',

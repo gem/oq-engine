@@ -1049,10 +1049,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         allargs.append(([grp_key], tgetter, cmaker, ds))
                         weights.append(w / len(tilegetters))
             maxtiles = max(maxtiles, len(tilegetters))
-        # submit the heaviest tasks first, so that they do not end up last
-        # with most of the cores idle
-        order = numpy.argsort(-numpy.array(weights), kind='stable')
-        allargs = [allargs[i] for i in order]
+        allargs = parallel.heaviest_first(allargs, weights)
         if num_blocks and not self.few_sites:
             logging.info(f'{oq.split_time=:.0f} seconds')
         logging.warning('This is a calculation with %d tasks, maxtiles=%d, '

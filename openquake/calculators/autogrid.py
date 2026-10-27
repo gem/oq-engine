@@ -27,21 +27,18 @@ both for a reference setting (no gridding and pointsource_distance =
 99th percentile of the relative error on the hazard maps below a
 tolerance is chosen.
 """
-import copy
 import time
 import logging
 import numpy
-from scipy.spatial import KDTree
 from openquake.baselib import parallel
 from openquake.baselib.general import AccumDict, DictArray, block_splitter
-from openquake.hazardlib.map_array import MapArray, compute_hmaps
+from openquake.hazardlib.map_array import compute_hmaps
+from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import SourceFilter, split_source
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [50., 100.]  # candidate values in km
@@ -66,7 +63,7 @@ MARGIN = 100.
 
 def calibration(srcs, sites, cmaker, key, monitor):
     """
-    :returns: (key, rates averaged on the gsims, [cpu time, weight])
+    :returns: (key, rates of shape (N, L), [cpu time, weight])
 
     The weight is computed as in ContextMaker.estimate_weight, from the
     number of contexts and (rupture, site) pairs; unlike the time on the
@@ -74,20 +71,14 @@ def calibration(srcs, sites, cmaker, key, monitor):
     """
     t0 = time.time()
     cmaker.init_monitoring(monitor)
-    cmaker.tom = PoissonTOM(cmaker.investigation_time)
-    sf = SourceFilter(sites, cmaker.oq.maximum_distance)
-    rmap = MapArray(sites.sids, cmaker.imtls.size, len(cmaker.gsims),
-                    rates=True).fill(0)
-    weight = 0
-    for src in srcs:
-        close = sf.get_close_sites(src)
-        if close is not None:
-            for ctx in cmaker.get_ctxs(src, close):
-                weight += len(ctx)
-                cmaker.update(rmap, ctx)
-            weight += src.num_ruptures * len(close) / PAIR_COST
-    return key, rmap.array.mean(axis=2), numpy.array(
-        [time.time() - t0, weight])
+    ctx = cmaker.from_srcs(srcs, sites)  # sets src.nsites
+    rates = numpy.zeros((len(sites), cmaker.imtls.size))
+    if len(ctx):
+        rmap = cmaker.get_rmap(ctx)
+        rates[rmap.sids] = rmap.array[:, :, 0]  # there is a single gsim
+    pairs = sum(src.num_ruptures * src.nsites for src in srcs)
+    weight = len(ctx) + pairs / PAIR_COST
+    return key, rates, numpy.array([time.time() - t0, weight])
 
 
 # split the area and multipoint sources in point sources, keeping only
@@ -96,48 +87,35 @@ def calibration(srcs, sites, cmaker, key, monitor):
 # model are not modified; a source with a single point is not split by
 # split_source, so it is not gridded by the engine and it is ignored,
 # since it gives no gridding error
-def _get_points(sg, kdt, maxdist):
+def _get_points(sg, sf, maxdist):
     points = []
     for src in sg:
-        if src.code == b'M' and not _close(
-                kdt, src.mesh.lons, src.mesh.lats, maxdist).any():
+        if src.code == b'M' and not sf.count_close(
+                src.mesh.lons, src.mesh.lats, maxdist + MARGIN).any():
             continue
         if src.code in b'AM' and not src.bysrc_unc:
             points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
-        close = _close(kdt, [p.location.x for p in points],
-                       [p.location.y for p in points], maxdist)
+        close = sf.count_close([p.location.x for p in points],
+                               [p.location.y for p in points],
+                               maxdist + MARGIN)
         points = [p for p, c in zip(points, close) if c]
     return points
-
-
-# returns a boolean array, True for the locations within the maximum
-# distance plus MARGIN from some site
-def _close(kdt, lons, lats, maxdist):
-    xyz = spherical_to_cartesian(lons, lats, numpy.zeros(len(lons)))
-    nsites = kdt.query_ball_point(xyz, maxdist + MARGIN, return_length=True)
-    return nsites > 0
 
 
 # split the sources of the groups, gridded with the given spacing, in
 # blocks (weight, srcs) for each group; the blocks are balanced by number
 # of ruptures times number of sites within the maximum distance from the
 # location of the source
-def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
-    kdt = KDTree(sites.xyz)
+def _get_blocks(groups, sf, cmakers, psgs, num_tasks):
     pairs = {}  # grp_id -> [(src, weight), ...]
     for grp_id, points in groups.items():
         srcs = grid_point_sources(points, psgs) if psgs else points
-        for src in srcs:
-            if not hasattr(src, 'id'):  # new CollapsedPointSource
-                src.id = src.offset = 0  # needed to build the contexts
-        locs = numpy.array([(src.location.x, src.location.y,
-                             src.location.z) for src in srcs])
-        nsites = kdt.query_ball_point(
-            spherical_to_cartesian(*locs.T), _maxdist(cmakers[grp_id]),
-            return_length=True)
+        nsites = sf.count_close([src.location.x for src in srcs],
+                                [src.location.y for src in srcs],
+                                cmakers[grp_id].maximum_distance.y[-1])
         pairs[grp_id] = [(src, src.num_ruptures * (n + 1))
                          for src, n in zip(srcs, nsites)]
     tot = sum(w for prs in pairs.values() for _, w in prs)
@@ -147,67 +125,27 @@ def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
             for grp_id, prs in pairs.items()}
 
 
-# yield pairs (weight, args) for the calibration tasks of the candidate
-# (psgs, psd), given the blocks of sources gridded with spacing psgs
-def _gen_args(blocks, sites, cmakers, psgs, psd):
-    for grp_id, blks in blocks.items():
-        cmaker = copy.copy(cmakers[grp_id])
-        cmaker.pointsource_distance = psd
-        for weight, srcs in blks:
-            yield weight, (srcs, sites, cmaker, (psgs, psd))
-
-
-# the IMTs with the periods closest to PERIODS, or all the IMTs if
-# there are less than 3 IMTs of kind PGA or SA
-def _calib_imts(imtls):
-    imts = [imt for imt in imtls if imt == 'PGA' or imt.startswith('SA(')]
-    if len(imts) < 3:
-        return list(imtls)
-    periods = numpy.array([from_string(imt).period for imt in imts])
-    chosen = {imts[numpy.abs(periods - period).argmin()]
-              for period in PERIODS}
-    return [imt for imt in imtls if imt in chosen]
-
-
-# ContextMakers with a single GMPE, two IMTs (see PERIODS) and half of
-# the levels: the error of the gridding is geometric and does not depend
-# much on the GMPE, while the cost of the calibration is proportional to
-# the number of GMPEs, IMTs and levels
+# ContextMakers with a single GMPE, the IMTs with the periods closest to
+# PERIODS (all the IMTs if there are less than 3 IMTs of kind PGA or SA)
+# and one level every LEVEL_STEP: the error of the gridding is geometric
+# and does not depend much on the GMPE, while the cost of the calibration
+# is proportional to the number of GMPEs, IMTs and levels
 def _calib_cmakers(cmakers, groups):
     out = {}
     for grp_id in groups:
-        imtls = cmakers[grp_id].imtls
-        cmaker = cmakers[grp_id].copy(imtls=DictArray(
-            {imt: imtls[imt][::LEVEL_STEP] for imt in _calib_imts(imtls)}))
+        cmaker = cmakers[grp_id]
+        imtls = cmaker.imtls
+        imts = [imt for imt in imtls if imt == 'PGA' or imt.startswith('SA(')]
+        if len(imts) < 3:
+            imts = list(imtls)
+        else:
+            periods = numpy.array([from_string(imt).period for imt in imts])
+            imts = {imts[numpy.abs(periods - period).argmin()]
+                    for period in PERIODS}
         gsim, rlzs = next(iter(cmaker.gsims.items()))
-        cmaker.gsims = {gsim: rlzs}
-        out[grp_id] = cmaker
+        out[grp_id] = cmaker.copy(gsims={gsim: rlzs}, imtls=DictArray(
+            {imt: imtls[imt][::LEVEL_STEP] for imt in imtls if imt in imts}))
     return out
-
-
-# maximum distance of the given ContextMaker
-def _maxdist(cmaker):
-    return max(d for _, d in cmaker.oq.maximum_distance[cmaker.trt])
-
-
-# the cost of each site grows with the area within the maximum distance,
-# so the size of the sample is reduced for large maximum distances
-def _get_nsites(groups, cmakers):
-    maxdist = max(_maxdist(cmakers[grp_id]) for grp_id in groups)
-    ratio = min(1., (MAXDIST / maxdist) ** 2)
-    return max(MIN_NSITES, int(NSITES * ratio))
-
-
-def sample_sites(sitecol, nsites=NSITES):
-    """
-    :returns: around nsites sites evenly spread over the region, obtained
-              by taking every n-th site in geohash order
-    """
-    step = int(numpy.ceil(len(sitecol) / nsites))
-    idx = numpy.sort(numpy.argsort(sitecol.geohash(8))[::step])
-    sites = SiteCollection.from_(sitecol.array[idx])
-    sites.make_complete()  # reset the sids from 0 to len(sites) - 1
-    return sites
 
 
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
@@ -227,15 +165,21 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
            if not sg.atomic and any(src.code in b'AMP' for src in sg)}
     if not sgs:
         return None
-    if oq.psd_given:
-        distances = [oq.pointsource_distance['default']]
-    else:
-        distances = PS_DISTANCES
+    distances = ([oq.pointsource_distance['default']] if oq.psd_given
+                 else PS_DISTANCES)
     cmakers = _calib_cmakers(cmakers, sgs)
     imtls = cmakers[next(iter(sgs))].imtls
-    sites = sample_sites(sitecol, _get_nsites(sgs, cmakers))
-    kdt = KDTree(sites.xyz)
-    groups = {grp_id: _get_points(sg, kdt, _maxdist(cmakers[grp_id]))
+    maxdist = {grp_id: cmakers[grp_id].maximum_distance.y[-1]
+               for grp_id in sgs}
+    # the cost of each site grows with the area within the maximum
+    # distance, so the size of the sample is reduced for large distances
+    ratio = min(1., (MAXDIST / max(maxdist.values())) ** 2)
+    # a complete SiteCollection, so that the tasks receive only the sample
+    sites = SiteCollection.from_(
+        sitecol.reduce(max(MIN_NSITES, int(NSITES * ratio))).array)
+    sites.make_complete()
+    sf = SourceFilter(sites)
+    groups = {grp_id: _get_points(sg, sf, maxdist[grp_id])
               for grp_id, sg in sgs.items()}
     groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
     if not groups:
@@ -246,18 +190,19 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # (psgs, psd, time, weight, p99, mean)
-    blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
-              for psgs in GRID_SPACINGS}
+    # NB: the reference has ps_grid_spacing=0, i.e. no gridding
+    blocks = {psgs: _get_blocks(groups, sf, cmakers, psgs, num_tasks)
+              for psgs in [REFERENCE[0]] + GRID_SPACINGS}
     pending = GRID_SPACINGS  # spacings without a candidate within tolerance
     for psd in distances:
         logging.info('Trying ps_grid_spacing=%s with pointsource_distance=%s',
                      pending, psd)
-        allargs = [args for psgs in pending for args in _gen_args(
-            blocks[psgs], sites, cmakers, psgs, psd)]
-        if ref is None:  # compute the reference rates in the first round
-            refblocks = _get_blocks(
-                groups, sites, cmakers, REFERENCE[0], num_tasks)
-            allargs.extend(_gen_args(refblocks, sites, cmakers, *REFERENCE))
+        # the reference rates are computed in the first round
+        keys = [(psgs, psd) for psgs in pending] + [REFERENCE] * (ref is None)
+        allargs = [(weight, (srcs, sites, cmakers[grp_id].copy(
+                    pointsource_distance=key[1]), key))
+                   for key in keys for grp_id, blks in blocks[key[0]].items()
+                   for weight, srcs in blks]
         rates, costs = _run(allargs, h5)
         if ref is None:
             ref = get_hmaps(rates.pop(REFERENCE), imtls, oq)
@@ -277,13 +222,11 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     return min(rows, key=lambda row: row[4])[:2]  # the most precise
 
 
-# run the given calibration tasks in parallel; the heaviest tasks are
-# submitted first, so that they do not end up last with most of the
-# cores idle
+# run the given calibration tasks in parallel, the heaviest first
 def _run(allargs, h5):
-    smap = parallel.Starmap(calibration, h5=h5)
-    for _, args in sorted(allargs, key=lambda pair: -pair[0]):
-        smap.submit(args)
+    weights, args = zip(*allargs)
+    smap = parallel.Starmap(
+        calibration, parallel.heaviest_first(args, weights), h5=h5)
     rates, costs = AccumDict(accum=0), AccumDict(accum=0)
     for key, rts, cost in smap:
         rates[key] += rts
@@ -297,8 +240,8 @@ def get_hmaps(rates, imtls, oq):
     :param imtls: a DictArray with M IMTs
     :returns: the hazard maps, an array of shape (N, M, P)
     """
-    curves = -numpy.expm1(-rates * oq.investigation_time)
-    curves = curves.reshape(len(rates), len(imtls), -1)
+    curves = to_probs(rates, oq.investigation_time).reshape(
+        len(rates), len(imtls), -1)
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
