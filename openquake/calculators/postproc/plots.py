@@ -776,7 +776,7 @@ def _overlay_region_names(ax, admin_boundaries, font_size):
             path_effects.Normal()])
 
 
-def _start_map(admin_boundaries, elements, style):
+def _plot_basemap_with_borders(admin_boundaries, elements, style):
     # Create a figure with the basemap and the borders of the regions
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=style.figsize)
@@ -786,7 +786,7 @@ def _start_map(admin_boundaries, elements, style):
     return fig, ax
 
 
-def _finish_map(fig, ax, elements, style):
+def _add_map_decorations(fig, ax, elements, style):
     # Add epicenter and legend, set the viewport, then add the scale bar,
     # title and axis labels, consistently with plot_variable
     if elements.epicenter is not None:
@@ -823,8 +823,8 @@ def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
     """
     style = style or MapStyleConfig()
     elements = elements or MapDataElements()
-    fig, ax = _start_map(admin_boundaries, elements, style)
-    _finish_map(fig, ax, elements, style)
+    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
+    _add_map_decorations(fig, ax, elements, style)
     _overlay_region_names(ax, admin_boundaries, style.city_font_size)
     return fig, ax
 
@@ -846,7 +846,7 @@ def plot_assets_map(lons, lats, admin_boundaries, *,
     """
     style = style or MapStyleConfig()
     elements = elements or MapDataElements()
-    fig, ax = _start_map(admin_boundaries, elements, style)
+    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
     # many assets can share the same location: plot each location once
     lonlats = numpy.unique(numpy.column_stack([lons, lats]), axis=0)
     # bright orange contrasts with both land and sea; the markers shrink
@@ -857,7 +857,7 @@ def plot_assets_map(lons, lats, admin_boundaries, *,
                color='#ff7f00', edgecolor='black',
                linewidth=0.4 if size >= 4 else 0, alpha=0.9, zorder=5,
                label='Asset locations')
-    _finish_map(fig, ax, elements, style)
+    _add_map_decorations(fig, ax, elements, style)
     # keep the marker in the legend readable, whatever the size in the map
     legend = ax.get_legend()
     for handle, text in zip(legend.legend_handles, legend.get_texts()):
