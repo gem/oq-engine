@@ -31,7 +31,7 @@ import time
 import logging
 import numpy
 from openquake.baselib import parallel
-from openquake.baselib.general import AccumDict, block_splitter
+from openquake.baselib.general import AccumDict, WeightedSequence, block_splitter
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
@@ -52,7 +52,7 @@ MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
 PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
-MAXDIST = 300.  # in km, see _get_nsites
+MAXDIST = 300.  # in km, used to reduce the sample for large distances
 MIN_NSITES = 100  # minimum size of the sample of sites
 # the points farther than the maximum distance plus MARGIN (in km) from
 # all the sample sites are ignored; the margin keeps complete the grid
@@ -62,7 +62,8 @@ MARGIN = 100.
 
 def calibration(srcs, sites, cmaker, key, monitor):
     """
-    :returns: (key, rates of shape (N, L), [cpu time, weight])
+    :returns: a dictionary key -> AccumDict(rates, time, weight), with
+              rates of shape (N, L), for Starmap.reduce
 
     The weight is computed as in ContextMaker.estimate_weight, from the
     number of contexts and (rupture, site) pairs; unlike the time on the
@@ -76,8 +77,8 @@ def calibration(srcs, sites, cmaker, key, monitor):
         rmap = cmaker.get_rmap(ctx)
         rates[rmap.sids] = rmap.array[:, :, 0]  # there is a single gsim
     pairs = sum(src.num_ruptures * src.nsites for src in srcs)
-    weight = len(ctx) + pairs / PAIR_COST
-    return key, rates, numpy.array([time.time() - t0, weight])
+    return {key: AccumDict(dict(rates=rates, time=time.time() - t0,
+                               weight=len(ctx) + pairs / PAIR_COST))}
 
 
 # split the area and multipoint sources in point sources, keeping only
@@ -105,23 +106,21 @@ def _get_points(sg, sf, maxdist):
 
 
 # split the sources of the groups, gridded with the given spacing, in
-# blocks (weight, srcs) for each group; the blocks are balanced by number
+# WeightedSequences of sources; the blocks are balanced by number
 # of ruptures times number of sites within the maximum distance from the
 # location of the source
 def _get_blocks(groups, sf, cmakers, psgs, num_tasks):
-    pairs = {}  # grp_id -> [(src, weight), ...]
+    pairs = []  # (src, weight), grouped by grp_id
     for grp_id, points in groups.items():
-        srcs = grid_point_sources(points, psgs) if psgs else points
+        srcs = grid_point_sources(points, psgs)
         nsites = sf.count_close([src.location.x for src in srcs],
                                 [src.location.y for src in srcs],
                                 cmakers[grp_id].maximum_distance.y[-1])
-        pairs[grp_id] = [(src, src.num_ruptures * (n + 1))
-                         for src, n in zip(srcs, nsites)]
-    tot = sum(w for prs in pairs.values() for _, w in prs)
-    return {grp_id: [(blk.weight, [src for src, _ in blk])
-                     for blk in block_splitter(prs, tot / num_tasks,
-                                               lambda p: p[1])]
-            for grp_id, prs in pairs.items()}
+        pairs.extend((src, src.num_ruptures * (n + 1))
+                     for src, n in zip(srcs, nsites))
+    maxweight = sum(w for _, w in pairs) / num_tasks
+    return [WeightedSequence(blk) for blk in block_splitter(
+        pairs, maxweight, lambda p: p[1], lambda p: p[0].grp_id)]
 
 
 # the IMTs with the periods closest to PERIODS, or all the IMTs if there
@@ -193,15 +192,12 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
                      pending, psd)
         # the reference rates are computed in the first round
         keys = [(psgs, psd) for psgs in pending] + [REFERENCE] * (ref is None)
-        allargs = [(weight, (srcs, sites, cmakers[grp_id].copy(
-                    pointsource_distance=key[1]), key))
-                   for key in keys for grp_id, blks in blocks[key[0]].items()
-                   for weight, srcs in blks]
-        rates, costs = _run(allargs, h5)
+        results = _run(blocks, keys, sites, cmakers, h5)
         if ref is None:
-            ref = get_hmaps(rates.pop(REFERENCE), imtls, oq)
-            ref_time = costs[REFERENCE][0]
-        new = list(_get_rows(rates, costs, ref, imtls, oq))
+            result = results.pop(REFERENCE)
+            ref = get_hmaps(result['rates'], imtls, oq)
+            ref_time = result['time']
+        new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
         pending = [row[0] for row in new if row[4] > TOLERANCE]
         if not pending:
@@ -217,15 +213,13 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
 
 
 # run the given calibration tasks in parallel, the heaviest first
-def _run(allargs, h5):
-    weights, args = zip(*allargs)
-    smap = parallel.Starmap(
-        calibration, parallel.heaviest_first(args, weights), h5=h5)
-    rates, costs = AccumDict(accum=0), AccumDict(accum=0)
-    for key, rts, cost in smap:
-        rates[key] += rts
-        costs[key] += cost
-    return rates, costs
+def _run(blocks, keys, sites, cmakers, h5):
+    args = [(blk, sites, cmakers[blk[0].grp_id].copy(
+        pointsource_distance=psd), (psgs, psd))
+        for psgs, psd in keys for blk in blocks[psgs]]
+    weights = [blk.weight for blk, *_ in args]
+    return parallel.Starmap(
+        calibration, parallel.heaviest_first(args, weights), h5=h5).reduce()
 
 
 def get_hmaps(rates, imtls, oq):
@@ -241,12 +235,12 @@ def get_hmaps(rates, imtls, oq):
 
 # yield a row (psgs, psd, time, weight, p99, mean) for each candidate, where
 # p99 and mean refer to the relative error on the relevant hazard maps
-def _get_rows(rates, costs, ref, imtls, oq):
+def _get_rows(results, ref, imtls, oq):
     ok = ref > MIN_HMAP
-    for key in rates:
-        hmaps = get_hmaps(rates[key], imtls, oq)
+    for key, result in results.items():
+        hmaps = get_hmaps(result['rates'], imtls, oq)
         # if no hazard map is relevant any candidate is good
-        errs = numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any(
-            ) else numpy.zeros(1)
-        yield key + tuple(costs[key]) + (
-            numpy.percentile(errs, 99), errs.mean())
+        errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
+                else numpy.zeros(1))
+        yield key + (result['time'], result['weight'],
+                     numpy.percentile(errs, 99), errs.mean())
