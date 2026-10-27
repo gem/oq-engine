@@ -11,6 +11,10 @@
     in ChiouYoungs2014ACME2019 with a unit test now exposing it)
  
   [Michele Simionato]
+  * Faster computation of the PoEs: the truncated normal distribution is
+    computed with fused loops, skipping the levels where the PoE is zero,
+    and the probability maps are updated without temporary arrays; in
+    the performance.zip demo "get_poes" went down from 1,324 s to 899 s
   * The contexts are now passed to the GMPEs in chunks of at most 50,000
     rows, since the GMPEs are memory bound on very large arrays (as the
     ones of big CollapsedPointSources): in the Tonga model with
