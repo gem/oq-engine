@@ -81,19 +81,19 @@ def calibration(srcs, sites, cmaker, key, monitor):
 
 
 # split the area and multipoint sources in point sources, keeping only
-# the points close to the sample sites (a multipoint source without close
-# points is not split at all); the point sources of the composite source
-# model are not modified; a source with a single point is not split by
-# split_source, so it is not gridded by the engine and it is ignored,
-# since it gives no gridding error
+# the points close to the sample sites (a source without close points is
+# not split at all, which is important since splitting is slow); the
+# point sources of the composite source model are not modified; a source
+# with a single point is not split by split_source, so it is not gridded
+# by the engine and it is ignored, since it gives no gridding error
 def _get_points(sg, sf, maxdist):
     points = []
     for src in sg:
-        if src.code == b'M' and not sf.count_close(
-                src.mesh.lons, src.mesh.lats, maxdist + MARGIN).any():
-            continue
         if src.code in b'AM' and not src.bysrc_unc:
-            points.extend(s for s in split_source(src) if s.code == b'P')
+            mesh = (src.mesh if src.code == b'M' else
+                    src.polygon.discretize(src.area_discretization))
+            if sf.count_close(mesh.lons, mesh.lats, maxdist + MARGIN).any():
+                points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
