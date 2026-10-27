@@ -623,8 +623,9 @@ class HazardCalculator(BaseCalculator):
                 'pointsource-distance')
         elif 'classical' in oq.calculation_mode:
             if oq.ps_grid_spacing:
-                logging.info('Using pointsource_distance=%s + %d',
-                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+                logging.info('Using pointsource_distance=%s and '
+                             'ps_grid_spacing=%s', oq.pointsource_distance,
+                             oq.ps_grid_spacing)
             else:
                 logging.info('Using pointsource_distance=%s',
                              oq.pointsource_distance)
