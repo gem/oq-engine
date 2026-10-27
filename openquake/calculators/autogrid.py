@@ -40,7 +40,7 @@ from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.site import SiteCollection
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
-PS_DISTANCES = [50., 100.]  # candidate values in km
+PS_DISTANCES = [25., 50., 100.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
