@@ -21,8 +21,8 @@ preclassical when the user sets ``ps_grid_spacing = auto``.
 
 The rates of the point sources are computed on a sample of sites evenly
 spread over the region (with a single GMPE per group and two IMTs),
-both for a reference setting (no gridding and all nodal planes and
-hypocenters within 100 km) and for a set of candidate pairs
+both for a reference setting (no gridding and pointsource_distance =
+100 km) and for a set of candidate pairs
 (ps_grid_spacing, pointsource_distance); the cheapest candidate with a
 99th percentile of the relative error on the hazard maps below a
 tolerance is chosen.
@@ -45,9 +45,9 @@ from openquake.hazardlib.geo.utils import spherical_to_cartesian
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [50., 100.]  # candidate values in km
-# reference (ps_grid_spacing, pointsource_distance): no gridding and all
-# nodal planes and hypocenters within 100 km; using 1000 km would be
-# exact but too expensive with large maximum distances (e.g. in AUS)
+# reference (ps_grid_spacing, pointsource_distance): no gridding and
+# pointsource_distance = 100 km; using 1000 km would be exact but too
+# expensive with large maximum distances (e.g. in AUS)
 REFERENCE = (0., 100.)
 TOLERANCE = .05  # on the 99th percentile of the relative error
 MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
@@ -64,7 +64,7 @@ MIN_NSITES = 100  # minimum size of the sample of sites
 MARGIN = 100.
 
 
-def calib_task(srcs, sites, cmaker, key, monitor):
+def calibration(srcs, sites, cmaker, key, monitor):
     """
     :returns: (key, rates averaged on the gsims, [cpu time, weight])
 
@@ -281,7 +281,7 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
 # submitted first, so that they do not end up last with most of the
 # cores idle
 def _run(allargs, h5):
-    smap = parallel.Starmap(calib_task, h5=h5)
+    smap = parallel.Starmap(calibration, h5=h5)
     for _, args in sorted(allargs, key=lambda pair: -pair[0]):
         smap.submit(args)
     rates, costs = AccumDict(accum=0), AccumDict(accum=0)

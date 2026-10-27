@@ -498,13 +498,6 @@ def pdata_to_psources(pdata):
     return out
 
 
-# max distance in km between the centroid and the underlying point sources
-def _extent(lon, lat, pointsources):
-    lons = numpy.array([src.location.x for src in pointsources])
-    lats = numpy.array([src.location.y for src in pointsources])
-    return geodetic.geodetic_distance(lon, lat, lons, lats).max()
-
-
 class CollapsedPointSource(PointSource):
     """
     Source typology representing a cluster of point sources around a
@@ -533,7 +526,18 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
-        self.extent = _extent(self.lon, self.lat, pointsources)
+        self.extent = self.get_extent(pointsources)
+
+    def get_extent(self, pointsources):
+        """
+        :param pointsources: the underlying point sources
+        :returns: the max distance in km between the centroid and the
+                  underlying point sources
+        """
+        lons = numpy.array([src.location.x for src in pointsources])
+        lats = numpy.array([src.location.y for src in pointsources])
+        return geodetic.geodetic_distance(
+            self.lon, self.lat, lons, lats).max()
 
     @property
     def pointsources(self):
@@ -623,7 +627,7 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
-        self.extent = _extent(self.lon, self.lat, pointsources)
+        self.extent = self.get_extent(pointsources)
 
     def get_psdist(self, m, mag, psdist, magdist, radii=None):
         """
@@ -633,14 +637,8 @@ class CollapsedPointSource(PointSource):
             the cell, so that a site close to an underlying point source
             is never considered far
         """
-        try:
-            extent = self.extent
-        except AttributeError:  # source stored by an older engine
-            raise RuntimeError(
-                'The CollapsedPointSource %s was built by an older engine '
-                'version: you must rerun the preclassical calculation '
-                'instead of reusing it with --hc' % self.source_id)
-        return extent + super().get_psdist(m, mag, psdist, magdist, radii)
+        return self.extent + super().get_psdist(
+            m, mag, psdist, magdist, radii)
 
     def count_ruptures(self):
         """
