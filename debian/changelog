@@ -37,7 +37,8 @@
     are computed and stored for day, night and transit, limited to
     the periods present in the exposure, together with occupants_avg
     from the exposure; the default time_event is now unset instead of
-    "avg"
+    "avg". Some outputs now use "occupants_avg" instead of "occupants"
+    for the average occupancy losses
   * Bug fix: "oq extract agg_losses" failed with a TypeError when the
     calculation was aggregated by id, and the site_id tags of the
     aggregated losses were shifted by one site
