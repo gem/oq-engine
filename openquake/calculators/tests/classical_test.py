@@ -692,6 +692,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # it also checks running a classical after a preclassical
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
+        self.assertEqual(self.calc.oqparam.pointsource_distance,
+                         {'default': 50})
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
