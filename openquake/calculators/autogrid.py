@@ -60,10 +60,9 @@ LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
 MAXDIST = 300.  # in km, used to reduce the sample for large distances
 MIN_NSITES = 100  # minimum size of the sample of sites
-# the points farther than the maximum distance plus MARGIN (in km) from
-# all the sample sites are ignored; the margin keeps complete the grid
-# cells crossing the maximum distance
-MARGIN = 100.
+# the points of a cell are within a diagonal from the location of the
+# collapsed point source, which is inside the cell
+DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
 
 
 def calibration(srcs, sites, cmaker, key, monitor):
@@ -87,6 +86,26 @@ def calibration(srcs, sites, cmaker, key, monitor):
                                weight=len(ctx) + pairs / PAIR_COST))}
 
 
+# the points farther than the maximum distance plus the margin from all
+# the sample sites are ignored; the engine keeps a (collapsed) point
+# source if its location is within the maximum distance plus its
+# max_radius from a site, so the margin keeps complete the grid cells
+# crossing the maximum distance; NB: the points of an area source have
+# all the same max_radius, so only the first point is considered
+def _get_margin(sg, maxdist):
+    radius = 0.
+    for src in sg:
+        if src.code in b'AM' and not src.bysrc_unc:
+            points = [next(iter(src))] if src.code == b'A' else src
+        elif src.code == b'P':
+            points = [src]
+        else:
+            continue
+        for point in points:
+            radius = max(radius, point.max_radius(maxdist))
+    return DIAGONAL + radius
+
+
 # split the area and multipoint sources in point sources, keeping only
 # the points close to the sample sites (a source without close points is
 # not split at all, which is important since splitting is slow); the
@@ -94,20 +113,21 @@ def calibration(srcs, sites, cmaker, key, monitor):
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
 def _get_points(sg, sites, maxdist):
+    dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
         if src.code in b'AM' and not src.bysrc_unc:
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
-            if sites.count_close(Mesh(mesh.lons, mesh.lats),
-                                 maxdist + MARGIN, inclusive=True).any():
+            if sites.count_close(Mesh(mesh.lons, mesh.lats), dist,
+                                 inclusive=True).any():
                 points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
         mesh = Mesh.from_coords(
             [(p.location.x, p.location.y) for p in points], sort=False)
-        close = sites.count_close(mesh, maxdist + MARGIN, inclusive=True)
+        close = sites.count_close(mesh, dist, inclusive=True)
         points = [p for p, c in zip(points, close) if c]
     return points
 
