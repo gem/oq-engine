@@ -1,15 +1,3 @@
-  [Christopher Brooks]
-  * Added some regression tests for the can20 GMMs and fixed a bug in
-    use of "CanadaSHM6_hardrock_site_factor" with the ChiouYoungs2014
-    that resulted in passing of the boolean mask of "vs30_ge1100" as
-    the Vs30 values, so hard-rock sites were corrected using a Vs30 of
-    1 m/s (i.e., the mask being True for that site's idx) rather than
-    the actual Vs30 value of each site
-  * Fixed several bugs present in the ACME 2019 GMMs (phi overwriting
-    total sigma in AlAtikSigmaModel, interpolation/extrapolation bugs
-    in AlAtikSigmaModel, wrong number of args in an untested function
-    in ChiouYoungs2014ACME2019 with a unit test now exposing it)
- 
   [Michele Simionato]
   * Faster computation of the PoEs: the truncated normal distribution is
     computed with fused loops, skipping the levels where the PoE is zero,
@@ -23,6 +11,20 @@
   * The task results are unpickled with the garbage collector disabled:
     in the preclassical phase of Melbourne (AUS model, 3,145 sites) the
     unpickling went down from 108 seconds to 15
+
+  [Christopher Brooks]
+  * Added some regression tests for the can20 GMMs and fixed a bug in
+    use of "CanadaSHM6_hardrock_site_factor" with the ChiouYoungs2014
+    that resulted in passing of the boolean mask of "vs30_ge1100" as
+    the Vs30 values, so hard-rock sites were corrected using a Vs30 of
+    1 m/s (i.e., the mask being True for that site's idx) rather than
+    the actual Vs30 value of each site
+  * Fixed several bugs present in the ACME 2019 GMMs (phi overwriting
+    total sigma in AlAtikSigmaModel, interpolation/extrapolation bugs
+    in AlAtikSigmaModel, wrong number of args in an untested function
+    in ChiouYoungs2014ACME2019 with a unit test now exposing it)
+
+  [Michele Simionato]
   * The contexts are now passed to the GMPEs in chunks of at most 50,000
     rows, since the GMPEs are memory bound on very large arrays (as the
     ones of big CollapsedPointSources): in the Tonga model with
