@@ -406,16 +406,19 @@ class CompositeSourceModel:
         """
         :returns: (floating rupture factor, spinning rupture factor)
         """
-        data = []
+        # NB: the sums are accumulated without building a list of pairs,
+        # since appending hundreds of thousands of tuples would trigger
+        # the garbage collector on the millions of objects of the model
+        n = nhypos = nplanes = 0
         for sg in self.src_groups:
             for src in sg:
                 if hasattr(src, 'hypocenter_distribution'):
-                    data.append(
-                        (len(src.hypocenter_distribution.data),
-                         len(src.nodal_plane_distribution.data)))
-        if not data:
+                    nhypos += len(src.hypocenter_distribution.data)
+                    nplanes += len(src.nodal_plane_distribution.data)
+                    n += 1
+        if not n:
             return numpy.array([1, 1])
-        return numpy.array(data).mean(axis=0)
+        return numpy.array([nhypos, nplanes]) / n
 
     def update_source_info(self, source_data, preclassical):
         """

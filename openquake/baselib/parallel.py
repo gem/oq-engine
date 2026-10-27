@@ -180,7 +180,6 @@ a great deal of work trying to split slow sources in more manageable
 fast sources.
 
 """
-import gc
 import os
 import re
 import ast
@@ -204,7 +203,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
@@ -435,13 +434,8 @@ class Result(object):
         # disabling the garbage collector makes the unpickling of
         # millions of objects (for instance the sources returned by
         # preclassical) much faster
-        enabled = gc.isenabled()
-        gc.disable()
-        try:
+        with gc_disabled():
             val = self.pik.unpickle()
-        finally:
-            if enabled:
-                gc.enable()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
