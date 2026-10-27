@@ -672,21 +672,21 @@ def create_services(inst):
         openquake_user = pwd.getpwnam("openquake")
         if not os.path.isdir(secret_dir):
             os.mkdir(secret_dir)
-            os.chmod(secret_dir, stat.S_IRWXU)
-            os.chown(secret_dir,
-                     openquake_user.pwd_uid,
-                     openquake_user.pwd_gid)
+        os.chmod(secret_dir, stat.S_IRWXU)
+        os.chown(secret_dir,
+                 openquake_user.pw_uid,
+                 openquake_user.pw_gid)
         if not os.path.exists(secret_file):
             with open(secret_file, "w") as f:
                 key = "".join(
                     secrets.choice(
                         "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
                     for i in range(50))
-                f.write(f"DJANGO_SECRET_KEY='{key}'")
-            os.chmod(secret_dir, stat.S_IRWU)
-            os.chown(secret_file,
-                     openquake_user.pwd_uid,
-                     openquake_user.pwd_gid)
+                f.write(f"DJANGO_SECRET_KEY='{key}'\n")
+        os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+        os.chown(secret_file,
+                 openquake_user.pw_uid,
+                 openquake_user.pw_gid)
         subprocess.check_call(["systemctl", "enable", "--now", service_name])
         subprocess.check_call(["systemctl", "start", service_name])
 
