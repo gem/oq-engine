@@ -1001,6 +1001,17 @@ def extract_aggrisk_tags(dstore, what):
                             for id2, name2 in zip(id2s, name2s)}
             out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
         total = out.groupby('loss_type', as_index=False).sum()
+        if len(qdf):
+            # Portfolio quantiles must come from the full portfolio losses,
+            # not from summing the quantiles of the individual groups.
+            K = aggdf.agg_id.max()
+            loss_ids = {name: lid for lid, name in LOSSTYPE.items()}
+            for idx, row in total.iterrows():
+                loss_id = loss_ids.get(row.loss_type)
+                if loss_id is None or (K, loss_id) not in qdf.index:
+                    continue
+                qvalues = qdf.loc[(K, loss_id)].to_numpy()
+                total.loc[idx, qfields] = qvalues
         total[aggby] = '*total*'
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
