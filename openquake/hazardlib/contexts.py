@@ -17,16 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
-import math
 import time
 import logging
-import functools
 import warnings
 import operator
 import numpy
 import shapely
 from scipy.interpolate import interp1d
-from scipy.special import ndtri
 
 from openquake.baselib import config
 from openquake.baselib.general import (
@@ -36,7 +33,7 @@ from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
-from openquake.hazardlib.stats import ndtr
+from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
@@ -66,7 +63,6 @@ F64 = numpy.float64
 
 
 TWO20 = 2**20
-SQRT05 = math.sqrt(0.5)
 
 
 TWO16 = 2**16
@@ -482,41 +478,24 @@ def genctxs_Pp(src, sitecol, cmaker):
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then truncnorm_sf will be called less times;
-# the loops are fused (no temporary arrays) and the levels with
-# x = (iml - mea) / std > tmax are set to 0 without calling erf, since
-# truncnorm_sf would return exactly 0: the results are identical
+# the loops are fused, i.e. no temporary arrays are allocated, and
+# the scalar function _truncnorm_sf skips the levels where the PoE is 0
 @compile("(float64[:,:,:], float64[:,:], float64, float64, float32[:,:])")
 def _set_poes_(mean_std, loglevels, phi_b, tmax, out):
     M, L1 = loglevels.shape
     N = mean_std.shape[2]
-    z = phi_b * 2. - 1.
     for m in range(M):
         mL1 = m * L1
         for n in range(N):
             mea = mean_std[0, m, n]
             std = mean_std[1, m, n]
             for lvl in range(L1):
-                x = (loglevels[m, lvl] - mea) / std
-                if x > tmax:
-                    out[mL1 + lvl, n] = 0.
-                else:  # same formula as truncnorm_sf
-                    p = (phi_b - .5 * (1. + math.erf(x * SQRT05))) / z
-                    out[mL1 + lvl, n] = min(max(p, 0.), 1.)
-
-
-# the value of x beyond which truncnorm_sf(phi_b, x) is exactly 0
-@functools.lru_cache()
-def _get_tmax(phi_b):
-    if phi_b < 1.:
-        # the margin makes sure that ndtr(tmax) >= phi_b
-        return ndtri(phi_b) + 1E-6
-    elif phi_b == 1.:  # no truncation
-        return 9.  # erf(9 * SQRT05) is exactly 1.
-    return numpy.inf  # invalid phi_b, do not skip anything
+                out[mL1 + lvl, n] = _truncnorm_sf(
+                    phi_b, tmax, (loglevels[m, lvl] - mea) / std)
 
 
 def _set_poes(mean_std, loglevels, phi_b, out):
-    _set_poes_(mean_std, loglevels, phi_b, _get_tmax(phi_b), out)
+    _set_poes_(mean_std, loglevels, phi_b, get_tmax(phi_b), out)
 
 
 def _fix(gsimdict, betw):
