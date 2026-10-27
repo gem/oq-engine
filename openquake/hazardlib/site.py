@@ -624,9 +624,9 @@ class SiteCollection(object):
 
     def reduce(self, nsites):
         """
-        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        :returns: a filtered SiteCollection with at most nsites sites
                   evenly spread over the region, obtained by taking every
-                  n-th site in geohash order
+                  n-th site in geohash order, with n = ceil(N / nsites)
         """
         n = int(numpy.ceil(len(self) / nsites))
         if n <= 1:

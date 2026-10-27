@@ -467,7 +467,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        self.populate_csm()
+        # the garbage collector is disabled while receiving, gridding and
+        # weighting the sources, since there can be millions of them: in
+        # Melbourne it was wasting ~50 seconds in the reduce
+        with general.gc_disabled():
+            self.populate_csm()
         return self.csm
 
     def post_execute(self, csm):
@@ -494,8 +498,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        self.max_weight = store_csm(
-            self.datastore, self.csm, self.sitecol, self.cmakers)
+        with general.gc_disabled():
+            self.max_weight = store_csm(
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

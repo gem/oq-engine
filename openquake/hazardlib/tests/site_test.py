@@ -256,10 +256,13 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         self.assertEqual(len(reducedcol), 1)
 
     def test_reduce(self):
+        # at most nsites sites are returned, taken every n-th site in
+        # geohash order with n = ceil(N / nsites)
         col = self.SITES
         self.assertEqual(len(col.reduce(1)), 1)
         self.assertEqual(len(col.reduce(2)), 2)
-        self.assertEqual(len(col.reduce(3)), 4)
+        self.assertEqual(len(col.reduce(3)), 2)
+        self.assertEqual(len(col.reduce(4)), 4)
 
     def test_lower_res(self):
         # collapsing together two points on the same hexagon
