@@ -3,6 +3,12 @@
     ps_grid_spacing and pointsource_distance (if not given) by comparing
     the hazard maps of the point sources on a sample of sites with the
     exact ones, choosing the cheapest candidate
+  * Faster preclassical for large models: the discretization of the area
+    sources is 4.8 times faster (vectorized check of the points inside the
+    polygon) and the garbage collector is disabled while receiving,
+    gridding, checking and storing the sources; for instance in AUS the
+    computation of the rupture floating factor went down from 29 seconds
+    to 1 second
   * The distance used to decide if a site is close to a CollapsedPointSource
     now includes the extent of the source, so that small values of
     pointsource_distance are safe also for big cells and the precision is good
