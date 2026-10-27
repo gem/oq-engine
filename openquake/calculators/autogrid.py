@@ -31,12 +31,11 @@ import time
 import logging
 import numpy
 from openquake.baselib import parallel
-from openquake.baselib.general import AccumDict, DictArray, block_splitter
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.calc.filters import SourceFilter, split_source
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.site import SiteCollection
 
@@ -125,27 +124,16 @@ def _get_blocks(groups, sf, cmakers, psgs, num_tasks):
             for grp_id, prs in pairs.items()}
 
 
-# ContextMakers with a single GMPE, the IMTs with the periods closest to
-# PERIODS (all the IMTs if there are less than 3 IMTs of kind PGA or SA)
-# and one level every LEVEL_STEP: the error of the gridding is geometric
-# and does not depend much on the GMPE, while the cost of the calibration
-# is proportional to the number of GMPEs, IMTs and levels
-def _calib_cmakers(cmakers, groups):
-    out = {}
-    for grp_id in groups:
-        cmaker = cmakers[grp_id]
-        imtls = cmaker.imtls
-        imts = [imt for imt in imtls if imt == 'PGA' or imt.startswith('SA(')]
-        if len(imts) < 3:
-            imts = list(imtls)
-        else:
-            periods = numpy.array([from_string(imt).period for imt in imts])
-            imts = {imts[numpy.abs(periods - period).argmin()]
-                    for period in PERIODS}
-        gsim, rlzs = next(iter(cmaker.gsims.items()))
-        out[grp_id] = cmaker.copy(gsims={gsim: rlzs}, imtls=DictArray(
-            {imt: imtls[imt][::LEVEL_STEP] for imt in imtls if imt in imts}))
-    return out
+# the IMTs with the periods closest to PERIODS, or all the IMTs if there
+# are less than 3 IMTs with a period (PGA included)
+def _calib_imts(oq):
+    imts = oq.imt_periods()
+    if len(imts) < 3:
+        return list(oq.imtls)
+    periods = numpy.array([imt.period for imt in imts])
+    chosen = {imts[numpy.abs(periods - period).argmin()].string
+              for period in PERIODS}
+    return [imt for imt in oq.imtls if imt in chosen]
 
 
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
@@ -167,7 +155,13 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
         return None
     distances = ([oq.pointsource_distance['default']] if oq.psd_given
                  else PS_DISTANCES)
-    cmakers = _calib_cmakers(cmakers, sgs)
+    # ContextMakers with a single GMPE, the IMTs of _calib_imts and one
+    # level every LEVEL_STEP: the error of the gridding is geometric and
+    # does not depend much on the GMPE, while the cost of the calibration
+    # is proportional to the number of GMPEs, IMTs and levels
+    imts = _calib_imts(oq)
+    cmakers = {grp_id: cmakers[grp_id].restrict(imts, LEVEL_STEP).copy(
+        gsims=dict(list(cmakers[grp_id].gsims.items())[:1])) for grp_id in sgs}
     imtls = cmakers[next(iter(sgs))].imtls
     maxdist = {grp_id: cmakers[grp_id].maximum_distance.y[-1]
                for grp_id in sgs}

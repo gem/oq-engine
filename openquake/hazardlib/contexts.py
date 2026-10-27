@@ -717,13 +717,14 @@ class ContextMaker(object):
             new.set_imts_conv()
         return new
 
-    def restrict(self, imts):
+    def restrict(self, imts, step=1):
         """
         :param imts: a list of IMT strings subset of the full list
-        :returns: a new ContextMaker involving less IMTs
+        :param step: keep one level every step (default all the levels)
+        :returns: a new ContextMaker involving less IMTs (and levels)
         """
         new = copy.copy(self)
-        new.imtls = DictArray({imt: self.imtls[imt] for imt in imts})
+        new.imtls = DictArray({imt: self.imtls[imt][::step] for imt in imts})
         new.set_imts_conv()
         return new
 
