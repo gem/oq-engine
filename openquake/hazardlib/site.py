@@ -28,7 +28,7 @@ try:
 except ImportError:  # old version
     from h3.api.numpy_int import (
         geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
-from scipy.spatial import distance
+from scipy.spatial import KDTree, distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
@@ -800,11 +800,28 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def count_close(self, location, distance):
+    def count_close(self, location, distance, inclusive=False):
         """
-        :returns: the number of sites within the distance from the location
+        :param location: a Point, a record with 'hypo', or a Mesh
+        :param distance: a distance in km
+        :param inclusive: include sites exactly at the distance (default False)
+        :returns: the number of sites within the distance from the location,
+                  or an array of counts for a Mesh, in flattened mesh order
+
+        NB: mesh queries are vectorized and reuse a KDTree, so they are much
+        faster than calling SourceFilter.close_sids on many point sources.
         """
-        return (self.get_cdist(location) < distance).sum()
+        if not isinstance(location, Mesh):
+            compare = numpy.less_equal if inclusive else numpy.less
+            return compare(self.get_cdist(location), distance).sum()
+        if distance < 0 or (distance == 0 and not inclusive):
+            return numpy.zeros(location.lons.size, dtype=int)
+        if not hasattr(self, 'kdt'):
+            self.kdt = KDTree(self.xyz)
+        if not inclusive:
+            distance = numpy.nextafter(distance, -numpy.inf)
+        return self.kdt.query_ball_point(location.xyz, distance,
+                                         return_length=True)
 
     def __iter__(self):
         """

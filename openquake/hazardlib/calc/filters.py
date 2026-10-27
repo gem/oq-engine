@@ -569,21 +569,6 @@ class SourceFilter(object):
                 return self.sitecol.sids
             return self.sitecol.within_bbox(bbox)
 
-    def count_close(self, lons, lats, dist):
-        """
-        :param lons: an array of longitudes
-        :param lats: an array of latitudes
-        :param dist: a distance in km
-        :returns: the number of sites within the distance from each location
-
-        NB: this is vectorized, so it is much faster than calling
-        close_sids on many point sources
-        """
-        if not hasattr(self, 'kdt'):
-            self.kdt = KDTree(self.sitecol.xyz)
-        xyz = spherical_to_cartesian(lons, lats, numpy.zeros(len(lons)))
-        return self.kdt.query_ball_point(xyz, dist, return_length=True)
-
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):
             self.kdt = KDTree(self.sitecol.xyz)

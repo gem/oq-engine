@@ -24,6 +24,7 @@ from shapely import wkt
 from openquake.baselib import hdf5
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.mesh import Mesh
 
 assert_eq = numpy.testing.assert_equal
 
@@ -263,6 +264,41 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         self.assertEqual(len(col.reduce(2)), 2)
         self.assertEqual(len(col.reduce(3)), 2)
         self.assertEqual(len(col.reduce(4)), 4)
+
+    def test_count_close(self):
+        col = self.SITES
+        location = Point(10, 20, 30)
+        self.assertEqual(col.count_close(location, 0.), 0)
+        self.assertEqual(col.count_close(location, 0., inclusive=True), 1)
+        self.assertEqual(col.count_close(location, 1.), 1)
+        self.assertEqual(col.count_close(Point(10, 20), 1.), 0)
+        record = numpy.zeros((), [('hypo', float, 3)])
+        record['hypo'] = (10, 20, 30)
+        self.assertEqual(col.count_close(record, 1.), 1)
+
+    def test_count_close_mesh(self):
+        col = self.SITES
+        mesh = Mesh.from_coords(
+            [(10, 20, 30), (0, 2, 0), (90, 0, 0)], sort=False)
+        assert_eq(col.count_close(mesh, 1.), [1, 1, 0])
+        assert_eq(col.count_close(mesh, 0.), [0, 0, 0])
+        assert_eq(col.count_close(mesh, -1.), [0, 0, 0])
+        assert_eq(col.count_close(mesh, 0., inclusive=True), [1, 1, 0])
+        # A filtered collection must count only its own sites.
+        assert_eq(col.filtered([2]).count_close(mesh, 1.), [0, 1, 0])
+        surface = Mesh(mesh.lons, mesh.lats)
+        assert_eq(col.count_close(surface, 1.), [0, 1, 0])
+
+    def test_count_close_dateline(self):
+        col = SiteCollection.from_points([179.8, -179.8, 0.], [0., 0., 0.])
+        mesh = Mesh.from_coords([(-179.9, 0.), (0., 0.)], sort=False)
+        assert_eq(col.count_close(mesh, 50.), [2, 1])
+        # Exercise a nonzero cutoff using a site directly below the query.
+        col = SiteCollection.from_points([0.], [0.], [5.])
+        mesh = Mesh.from_coords([(0., 0.)])
+        self.assertEqual(col.count_close(Point(0., 0.), 5.), 0)
+        assert_eq(col.count_close(mesh, 5.), [0])
+        assert_eq(col.count_close(mesh, 5., inclusive=True), [1])
 
     def test_lower_res(self):
         # collapsing together two points on the same hexagon

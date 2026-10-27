@@ -29,15 +29,21 @@ tolerance is chosen.
 """
 import time
 import logging
+from collections import namedtuple
 import numpy
 from openquake.baselib import parallel
-from openquake.baselib.general import AccumDict, WeightedSequence, block_splitter
+from openquake.baselib.general import (
+    AccumDict, WeightedSequence, block_splitter)
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
-from openquake.hazardlib.calc.filters import SourceFilter, split_source
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.contexts import PAIR_COST
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
+
+Candidate = namedtuple('Candidate',
+    'ps_grid_spacing pointsource_distance time weight p99 mean')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [25., 50., 100.]  # candidate values in km
@@ -87,20 +93,21 @@ def calibration(srcs, sites, cmaker, key, monitor):
 # point sources of the composite source model are not modified; a source
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
-def _get_points(sg, sf, maxdist):
+def _get_points(sg, sites, maxdist):
     points = []
     for src in sg:
         if src.code in b'AM' and not src.bysrc_unc:
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
-            if sf.count_close(mesh.lons, mesh.lats, maxdist + MARGIN).any():
+            if sites.count_close(Mesh(mesh.lons, mesh.lats),
+                                 maxdist + MARGIN, inclusive=True).any():
                 points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
-        close = sf.count_close([p.location.x for p in points],
-                               [p.location.y for p in points],
-                               maxdist + MARGIN)
+        mesh = Mesh.from_coords(
+            [(p.location.x, p.location.y) for p in points], sort=False)
+        close = sites.count_close(mesh, maxdist + MARGIN, inclusive=True)
         points = [p for p, c in zip(points, close) if c]
     return points
 
@@ -109,13 +116,14 @@ def _get_points(sg, sf, maxdist):
 # WeightedSequences of sources; the blocks are balanced by number
 # of ruptures times number of sites within the maximum distance from the
 # location of the source
-def _get_blocks(groups, sf, cmakers, psgs, num_tasks):
+def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
     pairs = []  # (src, weight), grouped by grp_id
     for grp_id, points in groups.items():
         srcs = grid_point_sources(points, psgs)
-        nsites = sf.count_close([src.location.x for src in srcs],
-                                [src.location.y for src in srcs],
-                                cmakers[grp_id].maximum_distance.y[-1])
+        mesh = Mesh.from_coords(
+            [(src.location.x, src.location.y) for src in srcs], sort=False)
+        nsites = sites.count_close(
+            mesh, cmakers[grp_id].maximum_distance.y[-1], inclusive=True)
         pairs.extend((src, src.num_ruptures * (n + 1))
                      for src, n in zip(srcs, nsites))
     maxweight = sum(w for _, w in pairs) / num_tasks
@@ -171,8 +179,7 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     sites = SiteCollection.from_(
         sitecol.reduce(max(MIN_NSITES, int(NSITES * ratio))).array)
     sites.make_complete()
-    sf = SourceFilter(sites)
-    groups = {grp_id: _get_points(sg, sf, maxdist[grp_id])
+    groups = {grp_id: _get_points(sg, sites, maxdist[grp_id])
               for grp_id, sg in sgs.items()}
     groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
     if not groups:
@@ -182,9 +189,9 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
                  'per group', GRID_SPACINGS, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
-    rows = []  # (psgs, psd, time, weight, p99, mean)
+    rows = []  # candidates with time, weight, p99 and mean relative error
     # NB: the reference has ps_grid_spacing=0, i.e. no gridding
-    blocks = {psgs: _get_blocks(groups, sf, cmakers, psgs, num_tasks)
+    blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
               for psgs in [REFERENCE[0]] + GRID_SPACINGS}
     pending = GRID_SPACINGS  # spacings without a candidate within tolerance
     for psd in distances:
@@ -192,34 +199,32 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
                      pending, psd)
         # the reference rates are computed in the first round
         keys = [(psgs, psd) for psgs in pending] + [REFERENCE] * (ref is None)
-        results = _run(blocks, keys, sites, cmakers, h5)
+        # run the calibration tasks in parallel, the heaviest first
+        args = [(blk, sites, cmakers[blk[0].grp_id].copy(
+            pointsource_distance=psd), (psgs, psd))
+            for psgs, psd in keys for blk in blocks[psgs]]
+        weights = [blk.weight for blk, *_ in args]
+        args = parallel.heaviest_first(args, weights)
+        results = parallel.Starmap(calibration, args, h5=h5).reduce()
         if ref is None:
             result = results.pop(REFERENCE)
             ref = get_hmaps(result['rates'], imtls, oq)
             ref_time = result['time']
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
-        pending = [row[0] for row in new if row[4] > TOLERANCE]
+        pending = [row.ps_grid_spacing for row in new if row.p99 > TOLERANCE]
         if not pending:
             break
     lines = ['%5.0f %5.0f %9.1f %11.0f %8.4f %8.4f' % row for row in rows]
     logging.info('Calibration on %d sites (reference time=%.1fs)\n'
                  ' psgs   psd      time      weight      p99     mean\n%s',
                  len(sites), ref_time, '\n'.join(lines))
-    good = [row for row in rows if row[4] <= TOLERANCE]
+    good = [row for row in rows if row.p99 <= TOLERANCE]
     if good:  # the candidate within the tolerance with the smallest weight
-        return min(good, key=lambda row: row[3])[:2]
-    return min(rows, key=lambda row: row[4])[:2]  # the most precise
-
-
-# run the given calibration tasks in parallel, the heaviest first
-def _run(blocks, keys, sites, cmakers, h5):
-    args = [(blk, sites, cmakers[blk[0].grp_id].copy(
-        pointsource_distance=psd), (psgs, psd))
-        for psgs, psd in keys for blk in blocks[psgs]]
-    weights = [blk.weight for blk, *_ in args]
-    return parallel.Starmap(
-        calibration, parallel.heaviest_first(args, weights), h5=h5).reduce()
+        best = min(good, key=lambda row: row.weight)
+    else:
+        best = min(rows, key=lambda row: row.p99)  # the most precise
+    return best.ps_grid_spacing, best.pointsource_distance
 
 
 def get_hmaps(rates, imtls, oq):
@@ -233,7 +238,7 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-# yield a row (psgs, psd, time, weight, p99, mean) for each candidate, where
+# yield a Candidate with spacing, distance, time, weight, p99 and mean, where
 # p99 and mean refer to the relative error on the relevant hazard maps
 def _get_rows(results, ref, imtls, oq):
     ok = ref > MIN_HMAP
@@ -242,5 +247,5 @@ def _get_rows(results, ref, imtls, oq):
         # if no hazard map is relevant any candidate is good
         errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
                 else numpy.zeros(1))
-        yield key + (result['time'], result['weight'],
-                     numpy.percentile(errs, 99), errs.mean())
+        yield Candidate(*key, result['time'], result['weight'],
+                        numpy.percentile(errs, 99), errs.mean())
