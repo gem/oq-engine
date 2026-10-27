@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Added the option ps_grid_spacing=auto: the engine determines
+    ps_grid_spacing and pointsource_distance (if not given) by comparing
+    the hazard maps of the point sources on a sample of sites with the
+    exact ones, choosing the cheapest candidate
   * Faster preclassical for large models: the discretization of the area
     sources is 4.8 times faster (vectorized check of the points inside the
     polygon) and the garbage collector is disabled while receiving,
@@ -34,6 +38,8 @@
     in ChiouYoungs2014ACME2019 with a unit test now exposing it)
 
   [Michele Simionato]
+  * Bug fix: gridding point sources close to the antimeridian with
+    ps_grid_spacing could fail with "longitude -180.000000 outside range"
   * The contexts are now passed to the GMPEs in chunks of at most 10,000
     rows, since the GMPEs are memory bound on very large arrays (as the
     ones of big CollapsedPointSources): in the Tonga model with

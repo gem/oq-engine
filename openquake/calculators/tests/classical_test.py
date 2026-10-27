@@ -688,12 +688,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
     def test_case_43(self):
-        # this is a test for pointsource_distance and ps_grid_spacing
+        # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
-        self.assertEqual(self.calc.oqparam.pointsource_distance,
-                         {'default': 50})
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        self.assertEqual(oq.pointsource_distance['default'], 25.)
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
