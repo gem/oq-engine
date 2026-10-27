@@ -422,3 +422,35 @@ class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
                                                      2.0, 4.0, 30.0, 1.0)
         self.assertAlmostEqual(surface.get_width(), 4.0, places=2)
+
+
+class SimpleFaultSurfaceFromFaultDataLowerDepthTestCase(unittest.TestCase):
+    """
+    Check that the down-dip mesh spacing preserves the lower seismogenic
+    depth and the dip, even when it does not divide the down-dip distance
+    evenly. See https://github.com/GEM/oq-engine/issues/12009.
+    """
+    def setUp(self):
+        self.fault_trace = Line([Point(0.0, 0.0), Point(0.0, 0.3)])
+
+    def _surface(self, mesh_spacing):
+        return SimpleFaultSurface.from_fault_data(
+            self.fault_trace, upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=7.0, dip=90.0, mesh_spacing=mesh_spacing)
+
+    def test_bottom_edge_preserved(self):
+        # 7 km down-dip width: a spacing of 5 km used to stop at 5 km
+        # and a spacing of 4 km used to overshoot to 8 km
+        for mesh_spacing in (5.0, 4.0):
+            surface = self._surface(mesh_spacing)
+            numpy.testing.assert_allclose(
+                surface.mesh.depths.max(), 7.0, rtol=1e-6)
+            numpy.testing.assert_allclose(
+                surface.mesh.depths.min(), 0.0, rtol=1e-6)
+
+    def test_even_down_dip_spacing(self):
+        surface = self._surface(5.0)
+        # closest even division of 7 km: two intervals of 3.5 km each
+        depths = surface.mesh.depths[:, 0]
+        numpy.testing.assert_allclose(numpy.diff(depths), 3.5, rtol=1e-6)
+
