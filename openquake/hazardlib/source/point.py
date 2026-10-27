@@ -526,6 +526,18 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
+        self.extent = self.get_extent(pointsources)
+
+    def get_extent(self, pointsources):
+        """
+        :param pointsources: the underlying point sources
+        :returns: the max distance in km between the centroid and the
+                  underlying point sources
+        """
+        lons = numpy.array([src.location.x for src in pointsources])
+        lats = numpy.array([src.location.y for src in pointsources])
+        return geodetic.geodetic_distance(
+            self.lon, self.lat, lons, lats).max()
 
     @property
     def pointsources(self):
@@ -615,6 +627,18 @@ class CollapsedPointSource(PointSource):
             [(1., NodalPlane(self.strike, self.dip, self.rake))])
         self.hypocenter_distribution = PMF([(1., self.dep)])
         self.hypo_dip_fracs = (self.hypo_dip_frac,)
+        self.extent = self.get_extent(pointsources)
+
+    def get_psdist(self, m, mag, psdist, magdist, radii=None):
+        """
+        :returns:
+            the effective pointsource distance for the given magnitude,
+            measured from the centroid, i.e. including the extent of
+            the cell, so that a site close to an underlying point source
+            is never considered far
+        """
+        return self.extent + super().get_psdist(
+            m, mag, psdist, magdist, radii)
 
     def count_ruptures(self):
         """

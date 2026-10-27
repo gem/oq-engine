@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * The distance used to decide if a site is close to a CollapsedPointSource
+    now includes the extent of the source, so that small values of
+    pointsource_distance are safe also for big cells and the precision is good
   * Faster computation of the PoEs: the truncated normal distribution is
     computed with fused loops, skipping the levels where the PoE is zero,
     and the probability maps are updated without temporary arrays; in
