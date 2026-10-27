@@ -18,10 +18,12 @@
 
 import sys
 import unittest
+from unittest import mock
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.general import decode
-from openquake.hazardlib import source_group, InvalidFile, rmap_maker
+from openquake.hazardlib import (
+    source_group, source_reader, InvalidFile, rmap_maker)
 from openquake.hazardlib.calc.mean_rates import (
     to_rates, to_probs)
 from openquake.commonlib import readinput
@@ -525,6 +527,12 @@ hazard_uhs-std.csv
         self.run_calc(case_23.__file__, 'correlated.ini')
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-corr-PGA.csv', fname)
+
+    def test_case_23_strided(self):
+        # the striding must be disabled with correlated uncertainties,
+        # since check_correlated needs the full groups
+        with mock.patch.object(source_reader, 'BIG_FILE', 0):
+            self.test_case_23_bis()
         ns = len(self.calc.datastore['source_info'])
         # with the uncertainties applied in the workers there is one row
         # per base source and no ';i' suffix for the 7 sources modified by

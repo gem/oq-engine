@@ -53,7 +53,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp,
     AccumDict)
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
@@ -1234,9 +1234,16 @@ def get_composite_source_model(oqparam, dstore=None):
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    csm = source_reader.get_csm(oqparam, full_lt, dstore)
-    _check_csm(csm, oqparam, dstore)
-    oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
+    # the garbage collector is disabled while building and checking the
+    # composite source model, since it would traverse many times the
+    # millions of objects created by _merge_strides, add_bangs,
+    # build_groups, etc. (the unpickling is managed in
+    # parallel.Result.get): in AUS this reduces the time from ~135 to ~90
+    # seconds without increasing the memory
+    with gc_disabled():
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+        _check_csm(csm, oqparam, dstore)
+        oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
 
 

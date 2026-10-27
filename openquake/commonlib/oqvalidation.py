@@ -1508,7 +1508,7 @@ class OqParam(valid.ParamSet):
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
         if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
-            self.pointsource_distance = dict(default=50+self.ps_grid_spacing)
+            self.pointsource_distance = dict(default=50)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):

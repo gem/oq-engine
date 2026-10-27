@@ -203,7 +203,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
@@ -431,7 +431,11 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         t0 = time.time()
-        val = self.pik.unpickle()
+        # disabling the garbage collector makes the unpickling of
+        # millions of objects (for instance the sources returned by
+        # preclassical) much faster
+        with gc_disabled():
+            val = self.pik.unpickle()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__

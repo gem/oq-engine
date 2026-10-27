@@ -16,8 +16,11 @@
 
 # pylint: disable=missing-docstring
 
+import os
 import unittest
 import numpy
+from openquake.hazardlib import nrml
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi_point import MultiPointSource
 from openquake.hazardlib.geo.mesh import Mesh
@@ -59,5 +62,39 @@ class SplitMFTestCase(unittest.TestCase):
             self.assertEqual(list(seg.ts_samples['trt_smr']), [0, 1, 2])
 
 
-if __name__ == '__main__':
-    unittest.main()
+QA = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    __file__))), 'qa_tests_data')
+
+
+def get_sources(sms):
+    return sorted((sg.trt, src.source_id)
+                  for sm in sms for sg in sm.src_groups for src in sg)
+
+
+class StrideTestCase(unittest.TestCase):
+    # reading a source model with strides gives the same sources, while
+    # the atomic groups are kept whole in the first reading
+    def check(self, fname, conv):
+        [whole] = nrml.read_source_models([fname], conv)
+        strided = [sm for k in range(3) for sm in nrml.read_source_models(
+            [fname], conv, (k, 3))]
+        self.assertEqual(get_sources(strided), get_sources([whole]))
+        for k, sm in enumerate(strided):
+            atomic = [[src.source_id for src in sg]
+                      for sg in sm.src_groups if sg.atomic]
+            expected = [[src.source_id for src in sg]
+                        for sg in whole.src_groups if sg.atomic]
+            self.assertEqual(atomic, expected if k == 0 else [])
+        return strided
+
+    def test_nrml04(self):
+        fname = os.path.join(QA, 'classical_risk/case_4/source_model.xml')
+        conv = SourceConverter(50., 2., 4., .1, 10.)
+        strided = self.check(fname, conv)
+        self.assertEqual([len(get_sources([sm])) for sm in strided],
+                         [13, 13, 13])
+
+    def test_mutex(self):
+        fname = os.path.join(QA, 'classical/case_27/source_model.xml')
+        conv = SourceConverter(50., 1., 1., 1., 10.)
+        self.check(fname, conv)
