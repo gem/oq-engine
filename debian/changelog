@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
+    now computed from the total losses of each GMF instead of summing the
+    quantiles of the individual groups
   * Faster preclassical for large models: the discretization of the area
     sources is 4.8 times faster (vectorized check of the points inside the
     polygon) and the garbage collector is disabled while receiving,
