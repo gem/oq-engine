@@ -22,7 +22,6 @@ Utilities to read the input files recognized by the OpenQuake engine.
 
 import io
 import os
-import gc
 import re
 import ast
 import sys
@@ -54,7 +53,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp,
     AccumDict)
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
@@ -1241,13 +1240,8 @@ def get_composite_source_model(oqparam, dstore=None):
     # (the unpickling is managed in parallel.Result.get): in AUS this
     # reduces the time from ~135 to ~90 seconds without increasing the
     # memory
-    enabled = gc.isenabled()
-    gc.disable()
-    try:
+    with gc_disabled():
         csm = source_reader.get_csm(oqparam, full_lt, dstore)
-    finally:
-        if enabled:
-            gc.enable()
     _check_csm(csm, oqparam, dstore)
     oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
