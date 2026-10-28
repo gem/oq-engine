@@ -1408,29 +1408,35 @@ class SlowTasksTestCase(unittest.TestCase):
     The Starmap can generate subtasks with a different name (classical ->
     baseclassical) when the tasks are too slow, and each row of the
     starmap_info holds the efficiency (total_time / num_cores / max_time)
-    of the busy times of the workers. NB: this cannot be tested by running
-    a calculation, since starmap_info is written only if there is more than
-    one core, and with OQ_DISTRIBUTE=no there is a single core.
+    and the max_time of the busy times of the workers. NB: this cannot be
+    tested by running a calculation, since starmap_info is written only if
+    there is more than one core, and with OQ_DISTRIBUTE=no there is a
+    single core.
     """
-    # each case is a list of (taskname, efficiency) rows in the
+    # each case is a list of (taskname, efficiency, maxtime) rows in the
     # starmap_info, followed by the expected outcome
     CASES = [
         # no info at all
         ([], False),
         # a single row, as in a classical calculation without splitting
-        ([('classical', .9)], False),
-        ([('classical', .4)], True),
+        ([('classical', .9, 20.)], False),
+        ([('classical', .4, 20.)], True),
         # the threshold is inclusive: an efficiency equal to MIN_EFFICIENCY
         # is acceptable
-        ([('classical', .7)], False),
-        ([('classical', .69)], True),
+        ([('classical', .7, 20.)], False),
+        ([('classical', .69, 20.)], True),
         # a split Starmap has a single classical row, since the busy times
         # of the baseclassical subtasks are summed to the classical ones
-        ([('classical', .5)], True),
+        ([('classical', .5, 20.)], True),
+        # tasks so fast that the busy times are dominated by the startup
+        # of the workers: the efficiency is meaningless (see eshm20)
+        ([('classical', .24, .7)], False),
+        # the time threshold is inclusive
+        ([('classical', .5, 10.)], True),
         # a stray baseclassical row is not considered
-        ([('baseclassical', .5)], False),
+        ([('baseclassical', .5, 20.)], False),
         # a calculation with no classical Starmap has no slow tasks
-        ([('postclassical', .3)], False),
+        ([('postclassical', .3, 20.)], False),
     ]
 
     def check(self, rows):
