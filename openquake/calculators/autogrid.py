@@ -46,7 +46,7 @@ Candidate = namedtuple('Candidate',
     'ps_grid_spacing pointsource_distance time weight mean_err p99_err')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
-PS_DISTANCES = [25., 50., 100.]  # candidate values in km
+PS_DISTANCES = [15., 25., 50.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
@@ -234,7 +234,6 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
         if ref is None:
             result = results.pop(REFERENCE)
             ref = get_hmaps(result['rates'], imtls, oq)
-            ref_time = result['time']
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
         pending = [row.ps_grid_spacing for row in new
@@ -242,16 +241,15 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
         if not pending:
             break
     # the errors are shown as percentages
-    logging.info('Using the relative error on the hazard maps for sites '
-                 'above %s g', MIN_HMAP)
     lines = ['%5.0f %5.0f %9.1f %11.0f %10.2f %9.2f' % (
         row.ps_grid_spacing, row.pointsource_distance, row.time,
         row.weight, 100 * row.mean_err, 100 * row.p99_err)
         for row in rows]
-    logging.info('Calibration on %d sites (reference time=%.1fs)\n'
+    logging.info('Calibration on %d sites (relative error on the hazard '
+                 'maps for sites above %s g)\n'
                  ' psgs   psd      time      weight  mean_err%%  p99_err%%'
                  '\n%s',
-                 len(sites), ref_time, '\n'.join(lines))
+                 len(sites), MIN_HMAP, '\n'.join(lines))
     good = [row for row in rows if row.p99_err <= TOLERANCE]
     if good:  # the candidate within the tolerance with the smallest weight
         best = min(good, key=lambda row: row.weight)
