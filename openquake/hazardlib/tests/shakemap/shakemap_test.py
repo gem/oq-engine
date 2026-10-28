@@ -1,5 +1,6 @@
 import os.path
 import unittest
+from unittest import mock
 import numpy
 from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
@@ -218,6 +219,43 @@ class ShakemapTestCase(unittest.TestCase):
         expected = LothBaker2013().correlation_block(dist, proxies)
         numpy.testing.assert_allclose(
             numpy.corrcoef(res), expected, atol=0.01)
+
+    def test_realization_residuals_many_points(self):
+        # 2500 points and 5 IMTs exceed the old limit M * N <= 10000;
+        # the sites associated to the same point share its residuals
+        ims = [imt.from_string(im) for im in (
+            'PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)')]
+        lon, lat = numpy.meshgrid(numpy.arange(50) * .02,
+                                  numpy.arange(50) * .02)
+        lons = numpy.concatenate([lon.ravel(), [0., .5]])
+        lats = numpy.concatenate([lat.ravel(), [0., .5]])
+        N, E = len(lons), 3
+        dt = numpy.dtype([
+            ('lon', float), ('lat', float),
+            ('phi', [(str(im), float) for im in ims]),
+            ('CL', [(str(im), float, (1,)) for im in ims])])
+        shakemap = numpy.zeros(N, dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        for im in ims:
+            shakemap['phi'][str(im)] = .5
+        Z = numpy.random.default_rng(42).standard_normal((N * 5, E))
+        res = _realization_residuals(shakemap, ims, Z, 0, 3).reshape(5, N, E)
+        self.assertTrue(numpy.isfinite(res).all())
+        aae(res[:, 0], res[:, N - 2])  # the point (0, 0)
+        aae(res[:, 25 * 50 + 25], res[:, N - 1])  # the point (.5, .5)
+
+    def test_realization_residuals_memory_budget(self):
+        shakemap = numpy.zeros(4, [
+            ('lon', float), ('lat', float), ('phi', [('PGA', float)]),
+            ('CL', [('PGA', float, (1,))])])
+        shakemap['lon'] = [0, .1, .2, .3]
+        with mock.patch('openquake.hazardlib.shakemap.gmfs.'
+                        '_correlation_budget', return_value=100):
+            with self.assertRaisesRegex(ValueError, 'correlated_gmf_gb'):
+                _realization_residuals(
+                    shakemap, [imt.from_string('PGA')],
+                    numpy.zeros((4, 2)), 0, 3)
 
     def test_amplify(self):
         gmvs = numpy.array([0.1, 0.2, 0.3])

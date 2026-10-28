@@ -22,13 +22,14 @@ from scipy.stats import truncnorm
 from scipy import interpolate
 
 from openquake.baselib import config
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, humansize
 from openquake.hazardlib import geo, imt
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
 from openquake.hazardlib.shakemap.realization import psd_factor
-from openquake.hazardlib.calc.gmf import _site_positions
+from openquake.hazardlib.calc.gmf import (
+    _site_positions, _correlation_budget, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
 
@@ -330,17 +331,61 @@ def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
     return cholesky(spatial_corr, cross_corr) @ Z
 
 
+def _spatial_factor(dist, corr_range):
+    # factor of the exponential correlation exp(-3 d / range); the
+    # eigendecomposition is used only if the Cholesky decomposition fails
+    corr = numpy.multiply(dist, -3 / corr_range, dtype=numpy.float64)
+    numpy.exp(corr, out=corr)
+    try:
+        return numpy.linalg.cholesky(corr)
+    except numpy.linalg.LinAlgError:
+        return psd_factor(corr)
+
+
+def _loth_baker_residuals(lons, lats, imts, Z, seed, truncation_level):
+    # Unit-variance Loth and Baker (2013) residuals of shape (M, N, E),
+    # sampled with the linear model of coregionalization of the model,
+    # B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I: this is the same distribution as the
+    # dense (M * N, M * N) factorization, with two (U, U) factorizations,
+    # U being the number of distinct points; the sites associated to the
+    # same ShakeMap point have distance zero and share its residuals
+    M, E = len(imts), Z.shape[1]
+    points, first, inverse = numpy.unique(
+        numpy.column_stack([lons, lats]), axis=0,
+        return_index=True, return_inverse=True)
+    U = len(points)
+    # peak memory measured for 10_000 points: about 40 bytes per pair,
+    # for the distance matrix and its temporaries, the correlation and
+    # the factor
+    required = 40 * U ** 2
+    if required > _correlation_budget():
+        raise ValueError(
+            f'Sampling the Loth and Baker (2013) correlation on {U} '
+            f'ShakeMap points requires about {humansize(required)}, more '
+            'than the correlated_gmf_gb of openquake.cfg; set a proper '
+            '`region_grid_spacing` so that your exposure involves less '
+            'sites')
+    model = loth_baker_2013.LothBaker2013()
+    B1, B2, B3 = model.coregionalization(imts)
+    # the nugget uses the samples Z of the distinct points, while the
+    # two spatial structures use new samples, truncated in the same way
+    res = numpy.einsum('ij,jue->iue', psd_factor(B3),
+                       Z.reshape(M, -1, E)[:, first])
+    rng = numpy.random.default_rng(seed + 4)
+    dist = geo.geodetic.distance_matrix(points[:, 0], points[:, 1])
+    for B, corr_range in ((B1, loth_baker_2013.SHORT_RANGE),
+                          (B2, loth_baker_2013.LONG_RANGE)):
+        z = _truncated_normals((U, M * E), truncation_level, rng)
+        field = (_spatial_factor(dist, corr_range) @ z).reshape(U, M, E)
+        res += numpy.einsum('ij,uje->iue', psd_factor(B), field)
+    return res[:, inverse.reshape(-1)]
+
+
 def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
     # Log-space residuals from the posterior phi of each point and the
     # between-event factor CL, with the Loth and Baker (2013) correlation
     # between the points; the station conditioning is not applied (see
     # openquake.hazardlib.shakemap.realization for the approximation)
-    dist = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    # PGV is correlated with SA(1.0), the proxy used by ShakeMap
-    proxies = [imt.from_string('SA(1.0)') if im.name == 'PGV' else im
-               for im in imts]
-    R = loth_baker_2013.LothBaker2013().correlation_block(
-        dist, proxies, proxies)
     phi = numpy.concatenate([shakemap['phi'][str(im)] for im in imts])
     # one draw per event of the between-event terms of each IMT,
     # truncated as the within-event samples Z; hence, like in the rest of
@@ -354,8 +399,10 @@ def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
         zb = truncnorm.rvs(-truncation_level, truncation_level,
                            size=(CL.shape[1], Z.shape[1]), random_state=rng)
         between.append(CL @ zb)
-    within = phi[:, None] * (psd_factor(R) @ Z)
-    return within + numpy.concatenate(between)
+    within = _loth_baker_residuals(
+        shakemap['lon'], shakemap['lat'], imts, Z, seed, truncation_level)
+    return (phi[:, None] * within.reshape(phi.shape[0], -1) +
+            numpy.concatenate(between))
 
 
 def _warn_xml_approximation(shakemap, correlated, spatial_model):
@@ -382,17 +429,13 @@ def _is_loth_baker_product(shakemap, imts, spatial_model):
     return False
 
 
-def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, cholesky_limit,
+def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
                      spatial_model, seed, truncation_level):
     # only the Loth and Baker (2013) correlation is used for these products
     if not isinstance(spatial_model, loth_baker_2013.LothBaker2013):
         logging.warning(
             'The ShakeMap is sampled with LothBaker2013, the requested '
             '%s is not used', spatial_model.__class__.__name__)
-    N = len(shakemap)
-    if N * len(imts) > cholesky_limit:
-        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
-            f'M={len(imts)} x N={N}', cholesky_limit))
     logging.warning(
         'The correlated GMFs approximate the posterior of the ShakeMap: '
         'the station conditioning is not applied and the between-event '
@@ -420,7 +463,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     :param mu: ShakeMap medians of shape (M * N, E)
     :param spatial_model: spatial correlation model
     :param cross_imt_model: cross-IMT correlation model
-    :param cholesky_limit: maximum M * N for a dense factorization
+    :param cholesky_limit: maximum M * N for a dense factorization of the
+        legacy (XML) correlation
     :param correlation_strategy: cholesky_decomposition or
         circulant_embedding
     :param sites: site collection of the ShakeMap points, if any
@@ -443,7 +487,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     _warn_xml_approximation(shakemap, correlated, spatial_model)
     if _is_loth_baker_product(shakemap, imts, spatial_model):
         return _loth_baker_gmfs(
-            shakemap, imts, Z, mu, scale, cholesky_limit,
+            shakemap, imts, Z, mu, scale,
             spatial_model, correlation_seed, truncation_level)
     if not correlated:
         return result

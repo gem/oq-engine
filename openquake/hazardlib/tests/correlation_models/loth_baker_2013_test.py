@@ -127,6 +127,20 @@ def test_pgv_uses_the_sa_1_0_proxy():
     numpy.testing.assert_allclose(pgv, sa1)
 
 
+def test_coregionalization_rebuilds_the_correlation_block():
+    # B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I is the joint correlation of the model
+    distances = numpy.array([[0., 5., 30.], [5., 0., 25.], [30., 25., 0.]])
+    imts = [PGA(), SA(0.3), PGV()]
+    B1, B2, B3 = LothBaker2013().coregionalization(imts)
+    R1 = numpy.exp(-3 * distances / 20)
+    R2 = numpy.exp(-3 * distances / 70)
+    expected = (numpy.kron(B1, R1) + numpy.kron(B2, R2) +
+                numpy.kron(B3, numpy.eye(3)))
+    numpy.testing.assert_allclose(
+        LothBaker2013().correlation_block(distances, imts), expected,
+        atol=1E-12)
+
+
 def test_rejects_pga_together_with_sa_0_01():
     with pytest.raises(ValueError, match='cannot combine PGA and SA\\(0.01\\)'):
         LothBaker2013().validate_imts([PGA(), SA(0.01)])

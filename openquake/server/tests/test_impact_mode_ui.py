@@ -46,10 +46,11 @@ def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
-    # level 1 users can choose the spatial correlation as well
+    # level 1 users can choose the spatial correlation as well; ShakeMap
+    # jobs use LothBaker2013 by default
     correlation = authenticated_page.locator('select#spatial_correlation')
     expect(correlation).to_be_visible()
-    correlation.select_option('loth_baker')
+    expect(correlation).to_have_value('loth_baker')
     page.set_rupture_identifier('us6000t7zp')
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
@@ -146,6 +147,8 @@ def test_impact_ui_level_2_build_rupture(
     page.set_approach('Build rupture from USGS nodal plane solutions')
     correlation = authenticated_page.locator('select#spatial_correlation')
     expect(correlation).to_be_visible()
+    # the jobs without ShakeMap are not correlated by default
+    expect(correlation).to_have_value('none')
     correlation.select_option('cholesky_decomposition')
     expect(page.rupture_identifier()).to_be_visible()
     expect(authenticated_page.locator(

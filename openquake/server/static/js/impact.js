@@ -45,9 +45,16 @@ window.initImpactForm = function() {
     // ShakeMap jobs offer only the Loth and Baker model, the other jobs the
     // JayaramBaker2009 options: the options are kept in all_correlation_options
     const all_correlation_options = $('#spatial_correlation option').clone();
+    // ShakeMap jobs are correlated by default, with the model used by
+    // ShakeMap for the conditioning; the other jobs use the form default
+    function default_spatial_correlation() {
+        return use_shakemap() ? 'loth_baker' :
+            window.IMPACT.impact_form_defaults['spatial_correlation'];
+    }
+
+    // called when the page is loaded and when the approach changes
     function refresh_spatial_correlation_options() {
         const select = $('#spatial_correlation');
-        const previous = select.val();
         const scope = use_shakemap() ? 'shakemap' : 'rupture';
         select.empty();
         all_correlation_options.each(function () {
@@ -56,11 +63,7 @@ window.initImpactForm = function() {
                 select.append($(this).clone());
             }
         });
-        if (select.find('option[value="' + previous + '"]').length) {
-            select.val(previous);
-        } else {
-            select.val('none');
-        }
+        select.val(default_spatial_correlation());
     }
 
     function use_shakemap() {
@@ -257,8 +260,7 @@ window.initImpactForm = function() {
             selector.empty();
         }
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
-        $('#spatial_correlation').val(
-            window.IMPACT.impact_form_defaults['spatial_correlation']);
+        $('#spatial_correlation').val(default_spatial_correlation());
         $('#no_uncertainty').prop('checked', false);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();

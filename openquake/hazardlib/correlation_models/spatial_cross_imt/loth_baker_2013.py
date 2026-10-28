@@ -110,6 +110,10 @@ _B3 = numpy.array([
 ])
 _TABLES = (_B1, _B2, _B3)
 
+# Ranges in km of the exponential short- and long-range structures.
+SHORT_RANGE = 20.
+LONG_RANGE = 70.
+
 
 def _period_interval(period):
     index = numpy.searchsorted(_PERIODS, period, side='right') - 1
@@ -199,8 +203,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        short_range = numpy.exp(-3 * distances / 20)
-        long_range = numpy.exp(-3 * distances / 70)
+        short_range = numpy.exp(-3 * distances / SHORT_RANGE)
+        long_range = numpy.exp(-3 * distances / LONG_RANGE)
         same_site = distances == 0
         blocks = []
         for imt1 in imts1:
@@ -213,3 +217,22 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                     b1 * short_range + b2 * long_range + b3 * same_site)
             blocks.append(row)
         return numpy.block(blocks)
+
+    def coregionalization(self, imts):
+        """Return the coregionalization matrices ``(B1, B2, B3)``.
+
+        The joint correlation of the model is the linear model of
+        coregionalization ``B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I``, where ``R1`` and
+        ``R2`` are exponential spatial correlations with ranges
+        ``SHORT_RANGE`` and ``LONG_RANGE`` and ``I`` is the nugget. Each
+        matrix has shape ``(M, M)``, so a joint field can be sampled with
+        spatial factorizations of size ``N`` instead of ``M * N``.
+        """
+        self.validate_imts(imts)
+        periods = [_correlation_period(imt) for imt in imts]
+        matrices = numpy.zeros((3, len(imts), len(imts)))
+        for i, period1 in enumerate(periods):
+            for j, period2 in enumerate(periods):
+                matrices[:, i, j] = _interpolate_coefficients(
+                    period1, period2)
+        return tuple(matrices)
