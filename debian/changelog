@@ -2,8 +2,8 @@
   * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
     polygon: the distances of the sites within 40 km of a rupture can
     change by a few meters. Faster dip and strike of the floating ruptures
-    of simple faults. In the demos the SimpleFault calculation went from
-    8.5 to 8.3 seconds and the ComplexFault one from 17.8 to 16.5 seconds
+    of simple faults. In a calculation for Alaska "building contexts" got
+    4x faster but usually the speedup is minor
   * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
     now computed from the total losses of each GMF instead of summing the
     quantiles of the individual groups
