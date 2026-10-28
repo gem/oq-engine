@@ -75,6 +75,7 @@ def main_cmd(usgs_id, rupture_file=None,
              description=ImpactParam.description,
              notes=ImpactParam.notes,
              region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
+             spatial_correlation=None,
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -104,6 +105,14 @@ def main_cmd(usgs_id, rupture_file=None,
         approach = 'build_rup_from_usgs'
         post['approach'] = approach
         userlevel = 2
+    if spatial_correlation is None:
+        # as in the web form, the jobs using the ShakeMap (i.e. with
+        # userlevel=1, see impact_validate) are correlated by default with
+        # the model used by ShakeMap for the conditioning
+        spatial_correlation = 'loth_baker' if userlevel == 1 else 'none'
+    # validated as in the web form: none, cholesky_decomposition or
+    # circulant_embedding for rupture jobs, none or loth_baker for ShakeMaps
+    post['spatial_correlation'] = spatial_correlation
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
@@ -156,6 +165,9 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.spatial_correlation = (
+    'none, cholesky_decomposition, circulant_embedding or loth_baker; '
+    'by default loth_baker if the ShakeMap is used, otherwise none')
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

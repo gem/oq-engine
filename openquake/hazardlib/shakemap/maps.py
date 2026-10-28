@@ -70,7 +70,8 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
         filtered_imts)
 
 
-@get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
+@get_sitecol_shakemap.add(
+    'usgs_xml', 'usgs_id', 'file_npy', 'shake_result_hdf')
 def get_sitecol_usgs(uridict, required_imts, sitecol=None,
                      assoc_dist=None, assoc_mode='warn', imt_mode='strict'):
     """
@@ -116,10 +117,18 @@ def filter_unused_imts(shakemap, required_imts,
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
+    extra_fields = [field for field in ('phi', 'tau', 'CL')
+                    if field in shakemap.dtype.names]
+    if 'CL' in extra_fields:
+        # CL holds the between-event coefficients of each IMT
+        width = shakemap.dtype['CL'][0].shape
+        dtcl = [(imt, F32, width) for imt in sorted(required_imts)]
+    dtlist.extend((field, dtcl if field == 'CL' else dt)
+                  for field in extra_fields)
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:
         data[name] = shakemap[name]
-    for name in ('val', 'std'):
+    for name in ('val', 'std', *extra_fields):
         for im in required_imts:
             data[name][im] = shakemap[name][im]
     return data

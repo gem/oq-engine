@@ -161,3 +161,21 @@ def test_shakemap():
         #     print(f.read())
         for fname in fnames:
             os.remove(fname)
+
+
+@pytest.mark.parametrize('kw, level, expected', [
+    ({}, 1, 'loth_baker'),  # the ShakeMap is used
+    ({'nodal_plane': 'NP1'}, 2, 'none'),  # the rupture is built
+    ({'spatial_correlation': 'none'}, 1, 'none')])
+def test_cli_default_spatial_correlation(kw, level, expected):
+    # oq impact correlates by default the jobs using the ShakeMap,
+    # as the web form does
+    from openquake.engine import impact
+    err = {'status': 'failed', 'error_msg': 'stop'}
+    with patch.object(impact, 'impact_validate',
+                      return_value=(None, {}, {}, err)) as validate:
+        impact.main_cmd('us6000t7zp', exposure_hdf5='exposure.hdf5',
+                        callback=lambda *args, **kw: None, **kw)
+    post, user = validate.call_args.args[:2]
+    assert user.level == level
+    assert post['spatial_correlation'] == expected
