@@ -1393,6 +1393,7 @@ class FakeDatastoreCalculator:
     ClassicalCalculator.post_execute
     """
     SLOW_TASK_ERROR = True
+    MIN_EFFICIENCY = ClassicalCalculator.MIN_EFFICIENCY
 
     def __init__(self, h5):
         self.datastore = mock.MagicMock(calc_id=1)
@@ -1405,42 +1406,37 @@ class SlowTasksTestCase(unittest.TestCase):
     """
     Check the detection of slow tasks in ClassicalCalculator.post_execute.
     The Starmap can generate subtasks with a different name (classical ->
-    baseclassical) when the tasks are too slow, and the rows must be
-    combined and not compared, since they are components of the busy time
-    of the same workers. NB: this cannot be tested by running a
-    calculation, since starmap_info is written only if there is more than
-    one core, and with OQ_DISTRIBUTE=no there is a single core.
+    baseclassical) when the tasks are too slow, and each row of the
+    starmap_info holds the efficiency (total_time / num_cores / max_time)
+    and the max_time of the busy times of the workers. NB: this cannot be
+    tested by running a calculation, since starmap_info is written only if
+    there is more than one core, and with OQ_DISTRIBUTE=no there is a
+    single core.
     """
-    # each case is a list of (taskname, mean, std, min, max) rows in the
+    # each case is a list of (taskname, efficiency, maxtime) rows in the
     # starmap_info, followed by the expected outcome
     CASES = [
         # no info at all
         ([], False),
         # a single row, as in a classical calculation without splitting
-        ([('classical', 10., 1., 9., 11.)], False),
-        ([('classical', 10., 4., 4., 16.)], True),
+        ([('classical', .9, 20.)], False),
+        ([('classical', .4, 20.)], True),
+        # the threshold is inclusive: an efficiency equal to MIN_EFFICIENCY
+        # is acceptable
+        ([('classical', .7, 20.)], False),
+        ([('classical', .69, 20.)], True),
+        # a split Starmap has a single classical row, since the busy times
+        # of the baseclassical subtasks are summed to the classical ones
+        ([('classical', .5, 20.)], True),
         # tasks so fast that the busy times are dominated by the startup
-        # of the workers: the ratio 1.5 is meaningless (see eshm20)
-        ([('classical', .15, .225, .1, .4)], False),
-        # a split Starmap: the classical tasks only decide to split, so
-        # they are fast and must be discarded, while the baseclassical
-        # ones do the actual work
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 3., 9., 15.)], False),
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 9., 3., 21.)], True),
-        # a fast but noisy row must not trigger the alarm, since the rows
-        # are combined: sqrt(3**2 + .6**2) / 31.5 = 0.097
-        ([('classical', 30., 3., 27., 33.),
-          ('baseclassical', 1.5, .6, .9, 2.1)], False),
-        # combining two equally noisy rows divides the relative spread
-        # by sqrt(2), so a spread of .4 per row is not enough
-        ([('classical', 10., 4., 4., 16.),
-          ('baseclassical', 10., 4., 4., 16.)], False),
-        ([('classical', 10., 5., 5., 15.),
-          ('baseclassical', 10., 5., 5., 15.)], True),
+        # of the workers: the efficiency is meaningless (see eshm20)
+        ([('classical', .24, .7)], False),
+        # the time threshold is inclusive
+        ([('classical', .5, 10.)], True),
+        # a stray baseclassical row is not considered
+        ([('baseclassical', .5, 20.)], False),
         # a calculation with no classical Starmap has no slow tasks
-        ([('postclassical', 12., 9., 3., 21.)], False),
+        ([('postclassical', .3, 20.)], False),
     ]
 
     def check(self, rows):
