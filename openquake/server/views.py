@@ -2351,6 +2351,26 @@ def format_oqparam(oqparam):
     return ret_dict
 
 
+def _get_impact_losses(ds):
+    # returns (losses, losses_header, weights_precision) for the table in
+    # the impact outputs page, or a message and None, None if the hazard
+    # is too low to compute the risk
+    try:
+        losses = views.view('aggrisk', ds)
+    except KeyError:
+        max_avg_gmf = ds['avg_gmf'][0].max()
+        msg = (f'The risk can not be computed since the hazard is too low:'
+               f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+        return msg, None, None
+    # the fatalities are displayed for day, night and transit, not on average
+    losses = losses[[n for n in losses.dtype.names if n != 'occupants_avg']]
+    # display only the descriptions, not the internal names of the fields
+    losses_header = [
+        AGGRISK_FIELD_DESCRIPTION.get(field, field.capitalize())
+        for field in losses.dtype.names]
+    return losses, losses_header, determine_precision(losses['weight'])
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2364,22 +2384,7 @@ def web_engine_get_outputs_impact(request, calc_id):
     time_job_after_event = None
     time_job_after_event_str = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            losses = views.view('aggrisk', ds)
-        except KeyError:
-            max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (
-                f'The risk can not be computed since the hazard is too low:'
-                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
-            losses_header = None
-            weights_precision = None
-        else:
-            losses_header = [
-                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
-                if field in AGGRISK_FIELD_DESCRIPTION
-                else field.capitalize()
-                for field in losses.dtype.names]
-            weights_precision = determine_precision(losses['weight'])
+        losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
         input_params = format_oqparam(oqparam)
         usgs_id = None
