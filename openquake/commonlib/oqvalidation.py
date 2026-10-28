@@ -1226,8 +1226,7 @@ class OqParam(valid.ParamSet):
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
-    horiz_comp_to = valid.Param(
-        valid.Choice('', *imc_conversion.TARGET_NAMES), '')
+    horiz_comp_to = valid.Param(str, '')
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
@@ -1511,6 +1510,11 @@ class OqParam(valid.ParamSet):
                     f'only pick one'
                 )
             self.horiz_comp_to = 'geometric_mean'
+        if self.horiz_comp_to and (
+                self.horiz_comp_to not in imc_conversion.TARGET_NAMES):
+            self.raise_invalid(
+                f'horiz_comp_to={self.horiz_comp_to!r}, '
+                f'pick one of {sorted(imc_conversion.TARGET_NAMES)}')
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
