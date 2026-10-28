@@ -215,24 +215,39 @@ def mean_inclination_azimuth(xi, yi, xa, ya, on_surface):
 # consistently with the buffered polygon of _get_proj_enclosing_polygon
 def _rect_jb_distances(grid, xx, yy, tol):
     pts = numpy.stack([xx, yy], axis=-1)[:, None]  # shape (N, 1, 2)
-    # the edges of the cells, along the rows and along the columns
-    a = numpy.concatenate([grid[:, :-1].reshape(-1, 2),
-                           grid[:-1, :].reshape(-1, 2)])
-    b = numpy.concatenate([grid[:, 1:].reshape(-1, 2),
-                           grid[1:, :].reshape(-1, 2)])
+    p00, p01 = grid[:-1, :-1].reshape(-1, 2), grid[:-1, 1:].reshape(-1, 2)
+    p11, p10 = grid[1:, 1:].reshape(-1, 2), grid[1:, :-1].reshape(-1, 2)
+    triangles = [(p00, p01, p11), (p00, p11, p10)]
+    areas = numpy.array([_cross(v1 - v0, v2 - v0) for v0, v1, v2 in triangles])
+    if (areas > 1E-12).all() or (areas < -1E-12).all():
+        # all the cells have the same orientation, so the projected mesh
+        # is not folded and the closest point of the projection to an
+        # outside point is on the perimeter of the mesh
+        a = numpy.concatenate([grid[0, :-1], grid[-1, :-1],
+                               grid[:-1, 0], grid[:-1, -1]])
+        b = numpy.concatenate([grid[0, 1:], grid[-1, 1:],
+                               grid[1:, 0], grid[1:, -1]])
+    else:  # degenerate or folded mesh, consider all the edges
+        a = numpy.concatenate([grid[:, :-1].reshape(-1, 2),
+                               grid[:-1, :].reshape(-1, 2)])
+        b = numpy.concatenate([grid[:, 1:].reshape(-1, 2),
+                               grid[1:, :].reshape(-1, 2)])
     ab = b - a
     ab2 = (ab * ab).sum(axis=-1)
     ap = pts - a  # shape (N, E, 2)
     t = numpy.clip((ap * ab).sum(axis=-1) / numpy.where(ab2, ab2, 1), 0, 1)
     dist = numpy.linalg.norm(ap - t[..., None] * ab, axis=-1).min(axis=1)
 
-    # the triangles of the cells, with non-zero area to avoid false
-    # positives with the points aligned with a degenerate triangle
-    p00, p01 = grid[:-1, :-1].reshape(-1, 2), grid[:-1, 1:].reshape(-1, 2)
-    p11, p10 = grid[1:, 1:].reshape(-1, 2), grid[1:, :-1].reshape(-1, 2)
-    inside = numpy.zeros(len(xx), bool)
-    for v0, v1, v2 in [(p00, p01, p11), (p00, p11, p10)]:
-        area = _cross(v1 - v0, v2 - v0)
+    # only the points in the bounding box of the mesh can be inside a cell
+    lo, hi = grid.reshape(-1, 2).min(axis=0), grid.reshape(-1, 2).max(axis=0)
+    inbox = ((pts[:, 0] >= lo) & (pts[:, 0] <= hi)).all(axis=1)
+    if not inbox.any():
+        return numpy.maximum(dist - tol, 0)
+    pts = pts[inbox]
+    inside = numpy.zeros(len(pts), bool)
+    for (v0, v1, v2), area in zip(triangles, areas):
+        # discard the degenerate triangles, to avoid false positives
+        # with the points aligned with them
         ok = numpy.abs(area) > 1E-12
         v0, v1, v2 = v0[ok], v1[ok], v2[ok]
         c0 = _cross(v1 - v0, pts - v0)
@@ -240,7 +255,7 @@ def _rect_jb_distances(grid, xx, yy, tol):
         c2 = _cross(v0 - v2, pts - v2)
         inside |= (((c0 >= 0) & (c1 >= 0) & (c2 >= 0)) |
                    ((c0 <= 0) & (c1 <= 0) & (c2 <= 0))).any(axis=1)
-    dist[inside] = 0
+    dist[numpy.where(inbox)[0][inside]] = 0
     return numpy.maximum(dist - tol, 0)
 
 
