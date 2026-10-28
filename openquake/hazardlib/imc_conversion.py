@@ -61,9 +61,8 @@ TARGET_NAMES = {
 }
 
 
-# --- Ratio table ---------------------------------------------------------
 # Every direct ratio is a Ratio record keyed by (source, target). The
-# triple returned by ``ratio_at(imt)`` is (conv_median, conv_sigma,
+# triple returned by ratio_at(imt) is (conv_median, conv_sigma,
 # ratio_sigma), where:
 #   conv_median  : median of source_IM / target_IM
 #   conv_sigma   : standard deviation of ln(ratio)
@@ -214,7 +213,7 @@ def apply_conversion(src_imc, tgt_imc, imt):
 def apply_in_place(mean_sig, steps):
     """
     Apply a sequence of steps to a (mean, sigma) pair in place. Each step
-    is ``(kind, conv_median, conv_sigma, ratio_sigma)``:
+    is (kind, conv_median, conv_sigma, ratio_sigma):
 
         "forward": me -= ln(conv_median)
                    si = sqrt((si**2 - conv_sigma**2) / ratio_sigma**2)
