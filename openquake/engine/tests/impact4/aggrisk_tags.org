@@ -1,7 +1,7 @@
 | ID_0    | loss_type         | value       | lossmea   | q05       | q50       | q95       | ID      | NAME                         |
 |---------+-------------------+-------------+-----------+-----------+-----------+-----------+---------+------------------------------|
 | NZL     | contents          | 169_535_008 | 11.3464   | 9.867E-04 | 0.0032    | 0.0060    | nan     | nan                          |
-| NZL     | structural        | 668_144_832 | 2_228     | 0.0056    | 378.2     | 8_450     | nan     | nan                          |
+| NZL     | structural        | 668_144_832 | 2_228     | 0.0056    | 382.4     | 9_084     | nan     | nan                          |
 | NZL     | occupants_day     | 709.4       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | nan     | nan                          |
 | NZL     | occupants_night   | 3_403       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | nan     | nan                          |
 | NZL     | occupants_transit | 1_704       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | nan     | nan                          |
@@ -10,12 +10,12 @@
 | NZL     | residents         | 3_591       | 9.571E-08 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
 | NZL     | affectedpop       | 3_591       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
 | NZL     | injured           | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
-| NZL     | embodied_carbon   | 75_944      | 0.9133    | 0.0199    | 0.2850    | 4.0438    | nan     | nan                          |
+| NZL     | embodied_carbon   | 75_944      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | nan     | nan                          |
 | NZL     | occupants_avg     | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
 | *total* | affectedpop       | 3_591       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
 | *total* | area              | 354_882     | 9.988E-06 | 3.120E-06 | 9.900E-06 | 1.818E-05 | nan     | nan                          |
 | *total* | contents          | 169_535_008 | 11.3464   | 9.867E-04 | 0.0032    | 0.0060    | nan     | nan                          |
-| *total* | embodied_carbon   | 75_944      | 0.9133    | 0.0199    | 0.2850    | 4.0438    | nan     | nan                          |
+| *total* | embodied_carbon   | 75_944      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | nan     | nan                          |
 | *total* | injured           | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
 | *total* | number            | 1_707       | 6.066E-08 | 2.000E-08 | 6.000E-08 | 1.100E-07 | nan     | nan                          |
 | *total* | occupants_avg     | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
@@ -23,27 +23,27 @@
 | *total* | occupants_night   | 3_403       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | nan     | nan                          |
 | *total* | occupants_transit | 1_704       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | nan     | nan                          |
 | *total* | residents         | 3_591       | 9.571E-08 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
-| *total* | structural        | 668_144_832 | 2_228     | 0.0056    | 378.2     | 8_450     | nan     | nan                          |
+| *total* | structural        | 668_144_832 | 2_228     | 0.0056    | 382.4     | 9_084     | nan     | nan                          |
 | nan     | contents          | 817_627     | 1.954E-04 | 0.0       | 0.0       | 9.867E-04 | 003     | Kaipara District             |
-| nan     | structural        | 3_539_962   | 41.3940   | 0.0       | 0.0       | 438.4     | 003     | Kaipara District             |
+| nan     | structural        | 3_539_962   | 41.3940   | 0.0       | 0.0       | 455.8     | 003     | Kaipara District             |
 | nan     | area              | 1_968       | 6.179E-07 | 0.0       | 0.0       | 3.120E-06 | 003     | Kaipara District             |
 | nan     | number            | 11.0000     | 3.961E-09 | 0.0       | 0.0       | 2.000E-08 | 003     | Kaipara District             |
-| nan     | embodied_carbon   | 368.3       | 0.0036    | 0.0       | 0.0       | 0.0454    | 003     | Kaipara District             |
+| nan     | embodied_carbon   | 368.3       | 0.0036    | 0.0       | 0.0       | 0.0475    | 003     | Kaipara District             |
 | nan     | contents          | 252_115     | 4.697E-04 | 4.933E-04 | 4.933E-04 | 4.933E-04 | 018     | Otorohanga District          |
-| nan     | structural        | 1_195_690   | 63.4882   | 0.0028    | 0.0028    | 376.6     | 018     | Otorohanga District          |
+| nan     | structural        | 1_195_690   | 63.4882   | 0.0028    | 0.0028    | 381.3     | 018     | Otorohanga District          |
 | nan     | area              | 666.0       | 1.485E-06 | 1.560E-06 | 1.560E-06 | 1.560E-06 | 018     | Otorohanga District          |
 | nan     | number            | 4.0000      | 9.521E-09 | 1.000E-08 | 1.000E-08 | 1.000E-08 | 018     | Otorohanga District          |
-| nan     | embodied_carbon   | 178.1399    | 0.1246    | 6.328E-07 | 0.0237    | 0.7051    | 018     | Otorohanga District          |
+| nan     | embodied_carbon   | 178.1399    | 0.1246    | 6.328E-07 | 0.0237    | 0.7117    | 018     | Otorohanga District          |
 | nan     | contents          | 1_391_920   | 4.924E-04 | 4.933E-04 | 4.933E-04 | 4.933E-04 | 024     | Rotorua District             |
-| nan     | structural        | 5_837_126   | 354.8     | 0.0028    | 65.3689   | 1_635     | 024     | Rotorua District             |
+| nan     | structural        | 5_837_126   | 354.8     | 0.0028    | 65.3943   | 1_693     | 024     | Rotorua District             |
 | nan     | area              | 3_240       | 1.560E-06 | 1.560E-06 | 1.560E-06 | 1.560E-06 | 024     | Rotorua District             |
 | nan     | number            | 17.0000     | 1.000E-08 | 1.000E-08 | 1.000E-08 | 1.000E-08 | 024     | Rotorua District             |
-| nan     | embodied_carbon   | 538.9       | 0.4913    | 0.0190    | 0.1896    | 2.1161    | 024     | Rotorua District             |
+| nan     | embodied_carbon   | 538.9       | 0.4913    | 0.0198    | 0.1897    | 2.1917    | 024     | Rotorua District             |
 | nan     | contents          | 426_922     | 11.3293   | 0.0       | 0.0       | 6.989E-04 | 032     | Central Hawke's Bay District |
-| nan     | structural        | 1_707_686   | 78.4314   | 0.0       | 3.4000    | 502.8     | 032     | Central Hawke's Bay District |
+| nan     | structural        | 1_707_686   | 78.4314   | 0.0       | 6.9253    | 577.8     | 032     | Central Hawke's Bay District |
 | nan     | area              | 948.0       | 5.437E-07 | 0.0       | 1.560E-06 | 1.560E-06 | 032     | Central Hawke's Bay District |
 | nan     | number            | 5.0000      | 3.485E-09 | 0.0       | 1.000E-08 | 1.000E-08 | 032     | Central Hawke's Bay District |
-| nan     | embodied_carbon   | 142.6185    | 0.0632    | 0.0       | 0.0258    | 0.4409    | 032     | Central Hawke's Bay District |
+| nan     | embodied_carbon   | 142.6185    | 0.0632    | 0.0       | 0.0266    | 0.5031    | 032     | Central Hawke's Bay District |
 | nan     | contents          | 63_006      | 1.970E-04 | 0.0       | 0.0       | 6.301E-04 | 034     | Stratford District           |
 | nan     | structural        | 357_034     | 0.5649    | 0.0       | 0.0       | 0.0036    | 034     | Stratford District           |
 | nan     | occupants_day     | 0.5540      | 1.732E-09 | 0.0       | 0.0       | 5.540E-09 | 034     | Stratford District           |
@@ -54,7 +54,7 @@
 | nan     | residents         | 2.8010      | 8.758E-09 | 0.0       | 0.0       | 2.801E-08 | 034     | Stratford District           |
 | nan     | affectedpop       | 2.8010      | 8.758E-09 | 0.0       | 0.0       | 2.801E-08 | 034     | Stratford District           |
 | nan     | injured           | 1.5120      | 4.728E-09 | 0.0       | 0.0       | 1.512E-08 | 034     | Stratford District           |
-| nan     | embodied_carbon   | 80.3159     | 0.0042    | 0.0       | 0.0       | 0.0236    | 034     | Stratford District           |
+| nan     | embodied_carbon   | 80.3159     | 0.0042    | 0.0       | 0.0       | 0.0275    | 034     | Stratford District           |
 | nan     | occupants_avg     | 1.5120      | 4.728E-09 | 0.0       | 0.0       | 1.512E-08 | 034     | Stratford District           |
 | nan     | contents          | 711_368     | 3.528E-04 | 0.0       | 6.301E-04 | 6.301E-04 | 036     | Ruapehu District             |
 | nan     | structural        | 2_950_484   | 8.1034    | 0.0       | 0.0036    | 0.0036    | 036     | Ruapehu District             |
@@ -66,10 +66,10 @@
 | nan     | residents         | 9.7232      | 1.523E-08 | 0.0       | 2.719E-08 | 2.719E-08 | 036     | Ruapehu District             |
 | nan     | affectedpop       | 9.7232      | 1.523E-08 | 0.0       | 2.719E-08 | 2.719E-08 | 036     | Ruapehu District             |
 | nan     | injured           | 5.2479      | 8.231E-09 | 0.0       | 1.470E-08 | 1.470E-08 | 036     | Ruapehu District             |
-| nan     | embodied_carbon   | 240.4       | 0.0272    | 0.0       | 8.032E-07 | 0.0871    | 036     | Ruapehu District             |
+| nan     | embodied_carbon   | 240.4       | 0.0272    | 0.0       | 8.032E-07 | 0.0876    | 036     | Ruapehu District             |
 | nan     | occupants_avg     | 5.2479      | 8.231E-09 | 0.0       | 1.470E-08 | 1.470E-08 | 036     | Ruapehu District             |
 | nan     | contents          | 714_067     | 0.0142    | 0.0       | 0.0       | 8.926E-04 | 044     | Porirua City                 |
-| nan     | structural        | 2_856_269   | 41.5269   | 0.0       | 0.0       | 622.9     | 044     | Porirua City                 |
+| nan     | structural        | 2_856_269   | 41.5269   | 0.0       | 0.0       | 629.6     | 044     | Porirua City                 |
 | nan     | occupants_day     | 5.7600      | 7.500E-10 | 0.0       | 0.0       | 7.200E-09 | 044     | Porirua City                 |
 | nan     | occupants_night   | 27.6100     | 3.594E-09 | 0.0       | 0.0       | 3.450E-08 | 044     | Porirua City                 |
 | nan     | occupants_transit | 13.8300     | 1.802E-09 | 0.0       | 0.0       | 1.730E-08 | 044     | Porirua City                 |
@@ -78,10 +78,10 @@
 | nan     | residents         | 29.1399     | 3.794E-09 | 0.0       | 0.0       | 3.642E-08 | 044     | Porirua City                 |
 | nan     | affectedpop       | 29.1399     | 3.794E-09 | 0.0       | 0.0       | 3.642E-08 | 044     | Porirua City                 |
 | nan     | injured           | 15.7300     | 2.052E-09 | 0.0       | 0.0       | 1.970E-08 | 044     | Porirua City                 |
-| nan     | embodied_carbon   | 216.3       | 0.0029    | 0.0       | 0.0       | 0.0433    | 044     | Porirua City                 |
+| nan     | embodied_carbon   | 216.3       | 0.0029    | 0.0       | 0.0       | 0.0436    | 044     | Porirua City                 |
 | nan     | occupants_avg     | 15.7300     | 2.052E-09 | 0.0       | 0.0       | 1.970E-08 | 044     | Porirua City                 |
 | nan     | contents          | 4_407_635   | 3.535E-06 | 0.0       | 0.0       | 8.926E-04 | 046     | Lower Hutt City              |
-| nan     | structural        | 18_186_430  | 6.2712    | 0.0       | 0.0       | 282.7     | 046     | Lower Hutt City              |
+| nan     | structural        | 18_186_430  | 6.2712    | 0.0       | 0.0       | 329.9     | 046     | Lower Hutt City              |
 | nan     | occupants_day     | 27.2900     | 1.099E-10 | 0.0       | 0.0       | 5.600E-09 | 046     | Lower Hutt City              |
 | nan     | occupants_night   | 130.9000    | 5.258E-10 | 0.0       | 0.0       | 2.680E-08 | 046     | Lower Hutt City              |
 | nan     | occupants_transit | 65.5300     | 2.629E-10 | 0.0       | 0.0       | 1.340E-08 | 046     | Lower Hutt City              |
@@ -90,10 +90,10 @@
 | nan     | residents         | 138.1083    | 5.541E-10 | 0.0       | 0.0       | 2.824E-08 | 046     | Lower Hutt City              |
 | nan     | affectedpop       | 138.1083    | 5.541E-10 | 0.0       | 0.0       | 2.824E-08 | 046     | Lower Hutt City              |
 | nan     | injured           | 74.5600     | 2.982E-10 | 0.0       | 0.0       | 1.520E-08 | 046     | Lower Hutt City              |
-| nan     | embodied_carbon   | 1_428       | 4.260E-04 | 0.0       | 0.0       | 0.0190    | 046     | Lower Hutt City              |
+| nan     | embodied_carbon   | 1_428       | 4.260E-04 | 0.0       | 0.0       | 0.0223    | 046     | Lower Hutt City              |
 | nan     | occupants_avg     | 74.5600     | 2.982E-10 | 0.0       | 0.0       | 1.520E-08 | 046     | Lower Hutt City              |
 | nan     | contents          | 47_865_952  | 0.0012    | 0.0       | 0.0016    | 0.0021    | 076     | Auckland                     |
-| nan     | structural        | 199_653_120 | 1_634     | 0.0       | 163.3885  | 6_370     | 076     | Auckland                     |
+| nan     | structural        | 199_653_120 | 1_634     | 0.0       | 167.2368  | 6_727     | 076     | Auckland                     |
 | nan     | occupants_day     | 362.3       | 1.341E-08 | 0.0       | 1.690E-08 | 2.260E-08 | 076     | Auckland                     |
 | nan     | occupants_night   | 1_738       | 6.395E-08 | 0.0       | 8.060E-08 | 1.078E-07 | 076     | Auckland                     |
 | nan     | occupants_transit | 870.1       | 3.197E-08 | 0.0       | 4.030E-08 | 5.390E-08 | 076     | Auckland                     |
@@ -102,17 +102,17 @@
 | nan     | residents         | 1_834       | 6.737E-08 | 0.0       | 8.492E-08 | 1.136E-07 | 076     | Auckland                     |
 | nan     | affectedpop       | 1_834       | 3.441E-06 | 0.0       | 8.492E-08 | 1.136E-07 | 076     | Auckland                     |
 | nan     | injured           | 990.1       | 3.642E-08 | 0.0       | 4.590E-08 | 6.140E-08 | 076     | Auckland                     |
-| nan     | embodied_carbon   | 17_441      | 0.1959    | 0.0       | 0.0082    | 0.8598    | 076     | Auckland                     |
+| nan     | embodied_carbon   | 17_441      | 0.1959    | 0.0       | 0.0083    | 0.8861    | 076     | Auckland                     |
 | nan     | occupants_avg     | 990.1       | 3.642E-08 | 0.0       | 4.590E-08 | 6.140E-08 | 076     | Auckland                     |
-| nan     | affectedpop       | 2_014       | 3.469E-06 | 0.0       | 1.121E-07 | 2.334E-07 | *total* | *total*                      |
-| nan     | area              | 129_761     | 9.988E-06 | 3.120E-06 | 1.146E-05 | 2.214E-05 | *total* | *total*                      |
-| nan     | contents          | 56_650_612  | 11.3464   | 9.867E-04 | 0.0032    | 0.0078    | *total* | *total*                      |
-| nan     | embodied_carbon   | 20_633      | 0.9133    | 0.0190    | 0.2474    | 4.3403    | *total* | *total*                      |
-| nan     | injured           | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.261E-07 | *total* | *total*                      |
-| nan     | number            | 584.0       | 6.066E-08 | 2.000E-08 | 7.000E-08 | 1.300E-07 | *total* | *total*                      |
-| nan     | occupants_avg     | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.261E-07 | *total* | *total*                      |
-| nan     | occupants_day     | 397.8       | 1.902E-08 | 0.0       | 2.230E-08 | 4.634E-08 | *total* | *total*                      |
-| nan     | occupants_night   | 1_909       | 9.081E-08 | 0.0       | 1.064E-07 | 2.214E-07 | *total* | *total*                      |
-| nan     | occupants_transit | 955.4       | 4.542E-08 | 0.0       | 5.320E-08 | 1.108E-07 | *total* | *total*                      |
-| nan     | residents         | 2_014       | 9.571E-08 | 0.0       | 1.121E-07 | 2.334E-07 | *total* | *total*                      |
-| nan     | structural        | 236_283_808 | 2_228     | 0.0056    | 232.2     | 10_229    | *total* | *total*                      |
+| nan     | affectedpop       | 2_014       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | *total* | *total*                      |
+| nan     | area              | 129_761     | 9.988E-06 | 3.120E-06 | 9.900E-06 | 1.818E-05 | *total* | *total*                      |
+| nan     | contents          | 56_650_612  | 11.3464   | 9.867E-04 | 0.0032    | 0.0060    | *total* | *total*                      |
+| nan     | embodied_carbon   | 20_633      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | *total* | *total*                      |
+| nan     | injured           | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | *total* | *total*                      |
+| nan     | number            | 584.0       | 6.066E-08 | 2.000E-08 | 6.000E-08 | 1.100E-07 | *total* | *total*                      |
+| nan     | occupants_avg     | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | *total* | *total*                      |
+| nan     | occupants_day     | 397.8       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | *total* | *total*                      |
+| nan     | occupants_night   | 1_909       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | *total* | *total*                      |
+| nan     | occupants_transit | 955.4       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | *total* | *total*                      |
+| nan     | residents         | 2_014       | 9.571E-08 | 0.0       | 1.121E-07 | 2.052E-07 | *total* | *total*                      |
+| nan     | structural        | 236_283_808 | 2_228     | 0.0056    | 382.4     | 9_084     | *total* | *total*                      |
