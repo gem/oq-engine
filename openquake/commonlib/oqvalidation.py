@@ -46,7 +46,7 @@ from openquake.hazardlib.correlation_models.base import (
     SpatialCrossIMTCorrelationModel, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
-from openquake.hazardlib import valid, InvalidFile, site
+from openquake.hazardlib import valid, InvalidFile, site, imc_conversion
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
@@ -411,9 +411,23 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to:
+  Convert GMM predictions to the specified horizontal component.
+  Supported values are "geometric_mean", "gmroti50", "rotd50", "rotd100",
+  "greater_of_two_horizontal" and "random_horizontal". The ratios come from
+  Beyer & Bommer (2006) and Boore & Kishida (2017) and are implemented in
+  "openquake/hazardlib/imc_conversion". Only pairs with a directly-tabulated
+  ratio in those papers are supported. GSIMs whose native component is
+  already the target are left unchanged; GSIMs whose native component has
+  no direct ratio to the target (either because the component is not
+  covered at all, or because the papers do not publish that particular
+  pair) are logged to inform the user.
+  Example: *horiz_comp_to = rotd50*
+  Default: '' (no conversion applied)
+
 horiz_comp_to_geom_mean:
-  Apply the correction to the geometric mean when possible,
-  depending on the GMPE and the Intensity Measure Component
+  Deprecated alias for "horiz_comp_to=geometric_mean". If true behaves exactly
+  as if "horiz_comp_to=geometric_mean" had been set.
   Example: *horiz_comp_to_geom_mean = true*.
   Default: False
 
@@ -1212,6 +1226,8 @@ class OqParam(valid.ParamSet):
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to = valid.Param(
+        valid.Choice('', *imc_conversion.TARGET_NAMES), '')
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
@@ -1487,6 +1503,14 @@ class OqParam(valid.ParamSet):
         self.fix_legacy_names(names_vals)
         given = set(names_vals)
         super().__init__(**names_vals)
+        if self.horiz_comp_to_geom_mean:
+            if self.horiz_comp_to and self.horiz_comp_to != 'geometric_mean':
+                self.raise_invalid(
+                    f'horiz_comp_to_geom_mean=true conflicts with use '
+                    f'horiz_comp_to={self.horiz_comp_to!r} - you can '
+                    f'only pick one'
+                    )
+            self.horiz_comp_to = 'geometric_mean'
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
