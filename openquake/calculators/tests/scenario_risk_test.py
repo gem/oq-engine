@@ -419,3 +419,27 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         #[fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         #self.assertEqualFiles('expected/avg_gmf.csv', fname,
         #                      ignore_gsd_fields, delta=1E-5)
+
+    def test_aggregate_quantiles(self):
+        # the portfolio quantiles must be computed from the total losses
+        # of each GMF (weighted by gmm_weight / num_gmfs), not by summing
+        # the quantiles of the individual taxonomies
+        self.run_calc(case_master.__file__, 'job.ini',
+                      aggregate_by='taxonomy', quantiles='0.05 0.5 0.95')
+        dstore = self.calc.datastore
+        K = len(dstore['agg_keys'])  # id of the portfolio total
+        aq = dstore.read_df('aggrisk_quantiles')
+        ev = dstore['events'][:]
+        weights = dstore['weights'][:]
+        num_events = numpy.bincount(ev['rlz_id'], minlength=len(weights))
+        ws = weights[ev['rlz_id']] / num_events[ev['rlz_id']]
+        rbe = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
+        for loss_id in range(5):
+            df = rbe[rbe.loss_id == loss_id].groupby('event_id').loss.sum()
+            # events without losses contribute zero
+            losses = numpy.zeros(len(ev))
+            losses[ev['id'].searchsorted(df.index.to_numpy())] = df.to_numpy()
+            expected = numpy.quantile(
+                losses, [0.05, 0.5, 0.95], weights=ws, method='inverted_cdf')
+            [row] = aq[(aq.agg_id == K) & (aq.loss_id == loss_id)].values
+            aac(row[2:], expected, rtol=1E-5)

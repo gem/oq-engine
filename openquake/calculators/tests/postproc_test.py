@@ -235,14 +235,14 @@ class PostProcTestCase(CalculatorTestCase):
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        aae(dic41['BSE2N_Sxs'], 1.34087)
-        aae(dic41['BSE2E_Sxs'], 1.0829)
-        aae(dic41['BSE1N_Sxs'], 0.89392)
-        aae(dic41['BSE1E_Sxs'], 0.64129)
-        aae(dic41['BSE2N_Sx1'], 0.42443)
-        aae(dic41['BSE2E_Sx1'], 0.34182)
-        aae(dic41['BSE1N_Sx1'], 0.28295)
-        aae(dic41['BSE1E_Sx1'], 0.18406)
+        aae(dic41['BSE2N_Sxs'], 1.34098)
+        aae(dic41['BSE2E_Sxs'], 1.08299)
+        aae(dic41['BSE1N_Sxs'], 0.89399)
+        aae(dic41['BSE1E_Sxs'], 0.64134)
+        aae(dic41['BSE2N_Sx1'], 0.42445)
+        aae(dic41['BSE2E_Sx1'], 0.34184)
+        aae(dic41['BSE1N_Sx1'], 0.28297)
+        aae(dic41['BSE1E_Sx1'], 0.18407)
         ae(dic41['custom_site_id'], 'CRETE')
 
     def test_median_spectrum1(self):

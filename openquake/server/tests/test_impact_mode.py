@@ -550,6 +550,15 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                     maximum_distance='100', make_impact_reports=True)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
+    def test_level_1_maximum_distance_too_large(self):
+        self.set_user_level_and_remove_groups(1)
+        data = dict(usgs_id='us6000phrk', maximum_distance='501')
+        resp = self.post('impact_run', data=data)
+        self.assertEqual(resp.status_code, 400)
+        js = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(js['invalid_inputs'], ['maximum_distance'])
+        self.assertIn('cannot exceed 500 km', js['error_msg'])
+
     # check that the URL 'run' cannot be accessed in IMPACT mode
     def test_can_not_run_normal_calc(self):
         self.set_user_level_and_remove_groups(1)

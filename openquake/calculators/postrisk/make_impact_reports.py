@@ -31,7 +31,7 @@ from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, get_configured_path,
     points_to_gdf)
 from openquake.commonlib import logs, datastore
-from openquake.commonlib.readinput import get_close_countries
+from openquake.commonlib.readinput import get_close_countries, get_rupture
 
 cd = pathlib.Path(__file__).parent
 
@@ -187,6 +187,19 @@ def _get_shakemap_version(rupdic):
         return None
 
 
+def _get_rupture(oqparam):
+    # Return the rupture if a rupture model was given, otherwise None,
+    # so that the epicenter will be displayed in the maps as a fallback
+    if 'rupture_model' not in oqparam.inputs:
+        return None
+    try:
+        return get_rupture(oqparam)
+    except Exception:
+        logging.warning('Could not read the rupture model; the maps will'
+                        ' display the epicenter instead', exc_info=True)
+        return None
+
+
 def _get_threshold_deg(threshold_deg, mag):
     if threshold_deg is None:
         threshold_deg = get_dynamic_threshold(mag)
@@ -228,7 +241,7 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
 
     event_ctx = EventContext(
         name=event_name, date=event_date, hypocenter=(lon, lat),
-        shakemap_version=shakemap_version)
+        shakemap_version=shakemap_version, rupture=_get_rupture(oqparam))
     report_opts = ReportOptions(
         disclaimer_txt=DISCLAIMER_TXT,
         basemap_path=_get_basemap_path(), threshold_deg=threshold_deg,

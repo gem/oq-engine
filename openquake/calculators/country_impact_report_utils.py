@@ -65,11 +65,14 @@ class EventContext:
     :param date: event date and time as a formatted string
     :param hypocenter: event longitude and latitude
     :param shakemap_version: optional version identifier of the ShakeMap
+    :param rupture: optional rupture, displayed in the maps instead of
+                    the epicenter
     """
     name: str
     date: str
     hypocenter: tuple[float, float]
     shakemap_version: str = None
+    rupture: object = None
 
 
 @dataclass

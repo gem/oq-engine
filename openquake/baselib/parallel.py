@@ -180,7 +180,6 @@ a great deal of work trying to split slow sources in more manageable
 fast sources.
 
 """
-import gc
 import os
 import re
 import ast
@@ -204,7 +203,7 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
@@ -435,13 +434,8 @@ class Result(object):
         # disabling the garbage collector makes the unpickling of
         # millions of objects (for instance the sources returned by
         # preclassical) much faster
-        enabled = gc.isenabled()
-        gc.disable()
-        try:
+        with gc_disabled():
             val = self.pik.unpickle()
-        finally:
-            if enabled:
-                gc.enable()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
@@ -1044,6 +1038,7 @@ class Starmap(object):
 
     def _loop_tasks(self):
         self.busytime = AccumDict()  # name -> pid -> time
+        self.subtask_names = set()  # names of the subtasks generated
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -1075,6 +1070,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self._task_ended(res, finished)
             elif res.func:  # add subtask
+                self.subtask_names.add(res.func.__name__)
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
             else:
@@ -1087,11 +1083,16 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        # NB: a Starmap can generate tasks with different names, as
+        # NB: a Starmap can generate subtasks with different names, as
         # preclassical -> filter_weight, or classical -> baseclassical
         # when the tasks are split for being too slow (see the comment
-        # in classical.py); there is one row per task name, so that the
-        # tasks of different kinds are not mixed together
+        # in classical.py); the busy times of the subtasks are summed to
+        # the ones of the Starmap, per worker, so that the efficiency is
+        # computed from the total busy times and ascribed to the Starmap
+        for name in self.subtask_names & set(self.busytime):
+            base = self.busytime.pop(name)
+            parent = self.busytime.setdefault(self.name, AccumDict(accum=0.))
+            parent += base
         for name, dic in self.busytime.items():
             if len(dic) > 1:  # no statistics with a single core
                 times = numpy.array(list(dic.values()))
@@ -1154,6 +1155,18 @@ class Starmap(object):
     def __del__(self):
         if hasattr(self, 'socket'):
             self.socket.close()
+
+
+def heaviest_first(allargs, weights):
+    """
+    :param allargs: a list of task arguments
+    :param weights: a list of weights, one for each task
+    :returns: the task arguments sorted by decreasing weight, so that the
+              heaviest tasks are submitted first and do not end up last
+              with most of the cores idle
+    """
+    order = numpy.argsort(-numpy.array(weights), kind='stable')
+    return [allargs[i] for i in order]
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

@@ -26,9 +26,9 @@
                 <label class="after_get_rupture_btn" for="no_uncertainty"><input type="checkbox" id="no_uncertainty" value="no" class="after_get_rupture_btn"> {{ impact_form_labels.no_uncertainty }}</label>
               </div>
               {% endif %}
-              <div class="impact_form_row" {% if user_level < 2 %}hidden{% endif %}>
+              <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="maximum_distance">{{ impact_form_labels.maximum_distance }}</label>
-                <input class="impact-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ impact_form_placeholders.maximum_distance }}" value="{{ impact_form_defaults.maximum_distance }}" {% if user_level < 2 %}disabled{% endif %}/>
+                <input class="impact-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{% if user_level < 2 %}0 ≤ float ≤ {{ impact_max_distance_level1 }}{% else %}{{ impact_form_placeholders.maximum_distance }}{% endif %}" value="{{ impact_form_defaults.maximum_distance }}"/>
               </div>
               <div class="impact_form_row hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="truncation_level">{{ impact_form_labels.truncation_level }}</label>

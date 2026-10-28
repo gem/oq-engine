@@ -724,6 +724,21 @@ def positivefloat(value):
     return f
 
 
+def positivefloat_or_auto(value):
+    """
+    :param value: input string
+    :returns: positive float or the string "auto"
+
+    >>> positivefloat_or_auto('auto')
+    'auto'
+    >>> positivefloat_or_auto('50')
+    50.0
+    """
+    if value == 'auto':
+        return value
+    return positivefloat(value)
+
+
 def positivefloats(value):
     """
     :param value:

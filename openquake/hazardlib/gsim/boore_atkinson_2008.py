@@ -54,7 +54,7 @@ def hawaii_adjust(mean, ctx, imt):
 
     # Limiting calculation distance to 1km
     # (as suggested by C. Bruce Worden)
-    rjb = [d if d > 1 else 1 for d in ctx.rjb]
+    rjb = np.where(ctx.rjb > 1, ctx.rjb, 1)
 
     # Equation 2 and 5 of Atkinson (2010)
     mean += (x0 + x1 * np.log10(rjb)) / np.log10(np.e)
