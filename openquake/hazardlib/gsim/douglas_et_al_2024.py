@@ -208,24 +208,16 @@ def _compute_std(mag, imt):
     # Select coefficient for the given period
     C_sig = Sig_COEFFS[imt]
 
-    stdv = np.zeros(len(mag))
-
-    for mi, m in enumerate(mag):
-        if m <= 4.5:
-            stdv[mi] = C_sig['s1']
-        elif m <= 5.0:
-            stdv[mi] = (
-                C_sig['s1'] + (C_sig['s2'] - C_sig['s1']) * (m - 4.5) / 0.5)
-        elif m <= 5.5:
-            stdv[mi] = (
-                C_sig['s2'] + (C_sig['s3'] - C_sig['s2']) * (m - 5.0) / 0.5)
-        elif m <= 6.5:
-            stdv[mi] = (
-                C_sig['s3'] + (C_sig['s4'] - C_sig['s3']) * (m - 5.5) / 0.5)
-        else:
-            stdv[mi] = C_sig['s4']
-
-    return stdv
+    mag = np.asarray(mag, float)
+    # piecewise linear in magnitude; np.select checks the conditions in
+    # order, as the former if/elif chain did, and the default is s4
+    conds = [mag <= 4.5, mag <= 5.0, mag <= 5.5, mag <= 6.5]
+    choices = [
+        C_sig['s1'],
+        C_sig['s1'] + (C_sig['s2'] - C_sig['s1']) * (mag - 4.5) / 0.5,
+        C_sig['s2'] + (C_sig['s3'] - C_sig['s2']) * (mag - 5.0) / 0.5,
+        C_sig['s3'] + (C_sig['s4'] - C_sig['s3']) * (mag - 5.5) / 0.5]
+    return np.select(conds, choices, default=C_sig['s4'])
 
 
 class Douglas_Et_Al_2024Rjb(GMPE):

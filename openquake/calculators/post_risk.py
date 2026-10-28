@@ -365,7 +365,10 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 if oq.quantiles and not col.startswith('dmg_'):
                     ls, ws = quantiles[agg_id, loss_id]
                     ls.extend(sorted_losses)
-                    ws.extend([weights[rlz_id]] * len(sorted_losses))
+                    weight = weights[rlz_id]
+                    if oq.calculation_mode == 'scenario_risk':
+                        weight /= ne
+                    ws.extend([weight] * len(sorted_losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -378,7 +381,17 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     out = general.AccumDict(accum=[])
     if quantiles:
         for (agg_id, loss_id), (losses, ws) in quantiles.items():
-            qs = weighted_quantiles(oq.quantiles, losses, ws)
+            if oq.calculation_mode == 'scenario_risk':
+                # Each GMF is one equally weighted simulation within its rlz.
+                order = numpy.argsort(losses)
+                losses = numpy.asarray(losses)[order]
+                qweights = numpy.asarray(ws)[order]
+                cweights = qweights.cumsum()
+                indices = numpy.searchsorted(
+                    cweights, numpy.asarray(oq.quantiles) * cweights[-1])
+                qs = losses[numpy.minimum(indices, len(losses) - 1)]
+            else:
+                qs = weighted_quantiles(oq.quantiles, losses, ws)
             out['agg_id'].append(agg_id)
             out['loss_id'].append(loss_id)
             for q, qvalue in zip(oq.quantiles, qs):

@@ -107,30 +107,35 @@ def fnc(ra, *args):
 
 def get_ras(repi, theta, mag, coeff):
     """
-    Computes equivalent distance
+    Computes equivalent distance, for all the sites at once
 
     :param repi:
-        Epicentral distance
+        Epicentral distances (array)
     :param theta:
-        Azimuth value
+        Azimuth values (array)
     :param mag:
-        Magnitude
+        Magnitudes (array)
     :param coeff:
         GMPE coefficients
+    :returns:
+        an array of equivalent distances
     """
+    repi = np.asarray(repi, float)
     rx = 100.
-    ras = 200.
+    ras = np.full(repi.shape, 200.)
     #
     # calculate the difference between epicentral distances
     dff = fnc(ras, repi, theta, mag, coeff)
-    while abs(dff) > 1e-3:
+    # the step is the same for all the sites, while each site stops
+    # as soon as its difference is small enough
+    active = np.abs(dff) > 1e-3
+    while active.any():
         # update the value of distance computed
-        if dff > 0.:
-            ras = ras - rx
-        else:
-            ras = ras + rx
+        step = np.where(dff > 0., -rx, rx)
+        ras = np.where(active, ras + step, ras)
         dff = fnc(ras, repi, theta, mag, coeff)
         rx = rx / 2.
+        active &= np.abs(dff) > 1e-3
         if rx < 1e-3:
             break
     return ras
@@ -171,18 +176,15 @@ class YuEtAl2013Ms(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        mag = ctx.mag
         for m, imt in enumerate(imts):
             coeff = self.COEFFS[imt]
             a1ca, a1cb, a1cc, a1cd, a1ce, a2ca, a2cb, a2cc, a2cd, a2ce = gc(
-                coeff, ctx.mag)
+                coeff, mag)
 
             # Get correction coefficients. Here for each site we find the
             # the geometry of the ellipses
-            ras = []
-            for epi, mag, theta in zip(ctx.repi, ctx.mag, ctx.azimuth):
-                res = get_ras(epi, theta, mag, coeff)
-                ras.append(res)
-            ras = np.array(ras)
+            ras = get_ras(ctx.repi, ctx.azimuth, mag, coeff)
             rbs = rbf(ras, coeff, ctx.mag)
 
             # Compute values of ground motion for the two cases. The value of
@@ -275,11 +277,7 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
 
             # Get correction coefficients. Here for each site we find the
             # the geometry of the ellipses
-            ras = []
-            for epi, mg, theta in zip(ctx.repi, mag, ctx.azimuth):
-                res = get_ras(epi, theta, mg, coeff)
-                ras.append(res)
-            ras = np.array(ras)
+            ras = get_ras(ctx.repi, ctx.azimuth, mag, coeff)
             rbs = rbf(ras, coeff, mag)
 
             # Compute values of ground motion for the two cases. The value of

@@ -577,7 +577,7 @@ def classical(grp_keys, tilegetter, cmaker, dstore, monitor):
     # this is what repairs the stragglers when the initial split underestimates the
     # cost of a group. The split is not triggered by the tests, since they
     # have few sites; the reference test is classical/share_small in
-    # oq-risk-tests (split_time = 5)
+    # oq-risk-tests (split_time = 2)
     if dt > 2 * oq.split_time:
         for blk in blks[1:]:
             yield baseclassical, blk, tilegetter, cmaker, remove_zeros, dstore
