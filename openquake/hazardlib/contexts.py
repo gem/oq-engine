@@ -40,7 +40,6 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
-from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
@@ -368,38 +367,34 @@ def _quintets(cmaker, src, sitecol):
                     yield m, mag, mdist, allpla, close
 
 
-# split ruptures with the same magnitude in cells of size `spacing` (by
-# using the cartesian coordinates of their middle points) and returns a
-# list of pairs (rups, sites); the sites farther than 5 * spacing from the
-# center of a cell see a single representative rupture with the occurrence
-# rate of the whole cell, similarly to what ps_grid_spacing does for the
-# point sources, while the close sites see all the ruptures of the cell
-def _collapse_far(rups, sites, spacing):
-    if not numpy.isfinite(rups[0].occurrence_rate):  # nonpoissonian
-        return [(rups, sites)]
-    mids = [rup.surface.get_middle_point() for rup in rups]
-    xyz = spherical_to_cartesian([p.longitude for p in mids],
-                                 [p.latitude for p in mids],
-                                 [p.depth for p in mids])
-    _, inv, counts = numpy.unique(numpy.floor(xyz / spacing).astype(int),
-                                  axis=0, return_inverse=True,
-                                  return_counts=True)
-    order = inv.ravel().argsort(kind='stable')
-    out = []
-    for idx in numpy.split(order, counts.cumsum()[:-1]):
-        cell = rups[idx]
-        center = xyz[idx].mean(axis=0)
-        far = numpy.linalg.norm(sites.xyz - center, axis=1) > 5 * spacing
-        if len(idx) == 1 or not far.any():
-            out.append((cell, sites))
-            continue
-        # the representative is the rupture closest to the center
-        best = numpy.linalg.norm(xyz[idx] - center, axis=1).argmin()
-        rep = copy.copy(cell[best])
-        rep.occurrence_rate = sum(rup.occurrence_rate for rup in cell)
-        out.append((numpy.array([rep]), sites.filter(far)))
-        if not far.all():
-            out.append((cell, sites.filter(~far)))
+# merge the rows of a context array referring to the same site, with the
+# same rupture parameters and with distances equal within the relative
+# precision `prec` (on log(1 + d)), by summing the occurrence rates; the
+# distances of the merged rows are the averages weighted with the rates
+def _collapse_ctx(ctx, rparams, dparams, prec):
+    if len(ctx) < 2 or not numpy.isfinite(ctx.occurrence_rate).all():
+        return ctx  # nothing to collapse or nonpoissonian ruptures
+    dparams = [par for par in sorted(set(dparams) | {'rrup'})
+               if par in ctx.dtype.names]
+    cols = [ctx.sids.astype(numpy.int64)]
+    for par in sorted(rparams):
+        if par in ctx.dtype.names:
+            cols.append(numpy.round(ctx[par] * 1000).astype(numpy.int64))
+    for par in dparams:
+        d = ctx[par]
+        logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
+        cols.append(numpy.round(logd / prec).astype(numpy.int64))
+    _, idx, inv = numpy.unique(numpy.column_stack(cols), axis=0,
+                               return_index=True, return_inverse=True)
+    if len(idx) == len(ctx):
+        return ctx
+    inv = inv.ravel()
+    rates = ctx.occurrence_rate
+    tot = numpy.bincount(inv, rates)
+    out = ctx[idx]  # a copy
+    for par in dparams:
+        out[par] = numpy.bincount(inv, rates * ctx[par]) / tot
+    out.occurrence_rate = tot
     return out
 
 
@@ -651,7 +646,6 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
@@ -676,7 +670,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
-        self.fault_grid_spacing = getattr(self.oq, 'fault_grid_spacing', 0)
+        self.collapse_precision = getattr(self.oq, 'collapse_precision', 0)
         self.split_sources = self.oq.split_sources
 
     def _init2(self, param, extraparams):
@@ -1251,16 +1245,19 @@ class ContextMaker(object):
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol) for rups in split_array(
                     numpy.array(allrups), u32mags)]
-                spacing = self.fault_grid_spacing
-                if spacing and step == 1 and src.code in b'SCK':
-                    rups_sites = [pair for rups, sites in rups_sites
-                                  for pair in _collapse_far(
-                                      rups, sites, spacing)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
+        prec = self.collapse_precision
+        if (prec and step == 1 and src_id != -1 and src.code in b'SCK'):
+            ctxs = list(ctxs)
+            if not ctxs:  # no rupture is close to the sites
+                return iter([])
+            return iter([_collapse_ctx(
+                self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
+                self.REQUIRES_DISTANCES, prec)])
         if len(rups_sites) == 1 and not self.minimum_distance:
             # fast lane for event based with no minimum_distance
             return ctxs
@@ -1279,8 +1276,7 @@ class ContextMaker(object):
             return -numpy.log(probs) / self.investigation_time
 
     # not used by the engine, it is meant for notebooks
-    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
-                 collapse_level=-1):
+    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={}):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites

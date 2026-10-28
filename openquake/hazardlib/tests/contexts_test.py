@@ -26,7 +26,8 @@ from openquake.hazardlib import site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    ContextMaker, get_distances, _collapse_ctx)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -382,3 +383,25 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class CollapseCtxTestCase(unittest.TestCase):
+    def test(self):
+        # the first two rows have the same site, rupture parameters and
+        # distances within 1%, so they are merged; the others differ by
+        # distance, site or rake
+        ctx = numpy.rec.fromarrays(
+            [[0, 0, 0, 1, 0], [6.5] * 5, [90., 90., 90., 90., 0.],
+             [106., 106.2, 150., 106., 106.], [107., 107.2, 152., 107., 107.],
+             [.01, .03, .01, .01, .01]],
+            names='sids,mag,rake,rjb,rrup,occurrence_rate')
+        out = _collapse_ctx(ctx, {'mag', 'rake'}, {'rjb'}, .01)
+        self.assertEqual(len(out), 4)
+        [row] = out[(out.sids == 0) & (out.rake == 90.) & (out.rjb < 120)]
+        numpy.testing.assert_allclose(row.occurrence_rate, .04)
+        numpy.testing.assert_allclose(row.rjb, (106 * .01 + 106.2 * .03) / .04)
+        numpy.testing.assert_allclose(row.rrup, (107 * .01 + 107.2 * .03) / .04)
+
+        # nonpoissonian ruptures are not collapsed
+        ctx.occurrence_rate[:] = numpy.nan
+        self.assertEqual(len(_collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
