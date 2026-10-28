@@ -154,6 +154,7 @@ WSGI_APPLICATION = 'openquake.server.wsgi.application'
 INSTALLED_APPS += (
     'django.contrib.staticfiles',
     'openquake.server',
+    'openquake.server.webui',
 )
 
 # A sample logging configuration. The only tangible logging
