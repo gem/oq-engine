@@ -943,6 +943,16 @@ def _set_total_quantiles(total, qdf, qfields, K):
             total.loc[idx, qfields] = qdf.loc[(K, loss_id)].to_numpy()
 
 
+def _add_name_2(out, exposure_hdf5):
+    # add the NAME_2 column, mapping each ID_2 to its name
+    with hdf5.File(exposure_hdf5) as f:
+        id2s = f['tagcol/ID_2'][:]
+        name2s = f['NAME_2'][:]
+        name2dic = {id2.decode('utf8'): name2.decode('utf8')
+                    for id2, name2 in zip(id2s, name2s)}
+    out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -993,7 +1003,8 @@ def extract_aggrisk_tags(dstore, what):
                     if lt == 'affectedpop':
                         valuelt = 'residents'
                     elif lt in ['occupants', 'injured']:
-                        valuelt = 'occupants_' + oq.time_event
+                        # without a time_event use the average occupants
+                        valuelt = 'occupants_' + (oq.time_event or 'avg')
                     acc['value'].append(df.loc[agg_id][valuelt])
                     acc['lossmea'].append(row.loss)
                 if len(qdf):
@@ -1004,13 +1015,7 @@ def extract_aggrisk_tags(dstore, what):
             continue
         out = pandas.DataFrame(acc)
         if aggby == ['ID_2']:
-            exposure_hdf5 = oq.inputs['exposure'][0]
-            with hdf5.File(exposure_hdf5) as f:
-                id2s = f['tagcol/ID_2'][:]
-                name2s = f['NAME_2'][:]
-                name2dic = {id2.decode('utf8'): name2.decode('utf8')
-                            for id2, name2 in zip(id2s, name2s)}
-            out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
+            _add_name_2(out, oq.inputs['exposure'][0])
         total = out.groupby('loss_type', as_index=False).sum()
         _set_total_quantiles(total, qdf, qfields, aggdf.agg_id.max())
         total[aggby] = '*total*'

@@ -16,10 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
+import tempfile
+
 import numpy
+import pandas
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
+from openquake.risklib import scientific
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -268,6 +274,40 @@ class ScenarioRiskTestCase(CalculatorTestCase):
             'expected/avg_losses-rlz-000_443.csv', fname)
         [_, fname] = export(('exposure', 'zip'), self.calc.datastore)
         self.assertEqualFiles('expected/assetcol.csv', fname)
+
+    def test_occupants_avg_only(self):
+        # An exposure with only average occupancy still produces losses.
+        with tempfile.TemporaryDirectory() as tmp:
+            shutil.copytree(os.path.dirname(case_11.__file__), tmp,
+                            dirs_exist_ok=True)
+            xml = os.path.join(tmp, 'exposure_model.xml')
+            with open(xml, encoding='utf-8') as f:
+                text = f.read().replace('day night transit', 'avg')
+            with open(xml, 'w', encoding='utf-8') as f:
+                f.write(text)
+            csv = os.path.join(tmp, 'exposure.csv')
+            df = pandas.read_csv(csv).drop(columns=['day', 'transit'])
+            df.rename(columns={'night': 'occupants_avg'}).to_csv(
+                csv, index=False)
+            self.run_calc(tmp, 'job.ini')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.time_events, [])
+        self.assertIn('occupants_avg', oq.loss_types)
+        df = self.calc.datastore.read_df('aggrisk')
+        loss = df.loc[df.loss_id == scientific.LOSSID['occupants_avg'],
+                      'loss']
+        aac(loss, [90.])
+
+    def test_occupants_minimum_loss(self):
+        # The average and each period use the occupants threshold.
+        self.run_calc(case_11.__file__, 'job.ini',
+                      minimum_asset_loss="{'occupants': 70}")
+        df = self.calc.datastore.read_df('aggrisk')
+        lids = set(df.loss_id)
+        self.assertIn(scientific.LOSSID['occupants_night'], lids)
+        self.assertNotIn(scientific.LOSSID['occupants_avg'], lids)
+        self.assertNotIn(scientific.LOSSID['occupants_day'], lids)
+        self.assertNotIn(scientific.LOSSID['occupants_transit'], lids)
 
     def test_case_12(self):
         # testing affected, injured
