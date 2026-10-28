@@ -43,7 +43,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
 
 Candidate = namedtuple('Candidate',
-    'ps_grid_spacing pointsource_distance time weight p99 mean')
+    'ps_grid_spacing pointsource_distance time weight mean_err p99_err')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [25., 50., 100.]  # candidate values in km
@@ -214,7 +214,7 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
                  'per group', GRID_SPACINGS, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
-    rows = []  # candidates with time, weight, p99 and mean relative error
+    rows = []  # candidates with time, weight, mean_err and p99_err
     # NB: the reference has ps_grid_spacing=0, i.e. no gridding
     blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
               for psgs in [REFERENCE[0]] + GRID_SPACINGS}
@@ -237,18 +237,26 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
             ref_time = result['time']
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
-        pending = [row.ps_grid_spacing for row in new if row.p99 > TOLERANCE]
+        pending = [row.ps_grid_spacing for row in new
+                   if row.p99_err > TOLERANCE]
         if not pending:
             break
-    lines = ['%5.0f %5.0f %9.1f %11.0f %8.4f %8.4f' % row for row in rows]
+    # the errors are shown as percentages
+    logging.info('Using the relative error on the hazard maps for sites '
+                 'above %s g', MIN_HMAP)
+    lines = ['%5.0f %5.0f %9.1f %11.0f %10.2f %9.2f' % (
+        row.ps_grid_spacing, row.pointsource_distance, row.time,
+        row.weight, 100 * row.mean_err, 100 * row.p99_err)
+        for row in rows]
     logging.info('Calibration on %d sites (reference time=%.1fs)\n'
-                 ' psgs   psd      time      weight      p99     mean\n%s',
+                 ' psgs   psd      time      weight  mean_err%%  p99_err%%'
+                 '\n%s',
                  len(sites), ref_time, '\n'.join(lines))
-    good = [row for row in rows if row.p99 <= TOLERANCE]
+    good = [row for row in rows if row.p99_err <= TOLERANCE]
     if good:  # the candidate within the tolerance with the smallest weight
         best = min(good, key=lambda row: row.weight)
     else:
-        best = min(rows, key=lambda row: row.p99)  # the most precise
+        best = min(rows, key=lambda row: row.p99_err)  # the most precise
     return best.ps_grid_spacing, best.pointsource_distance
 
 
@@ -263,8 +271,8 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-# yield a Candidate with spacing, distance, time, weight, p99 and mean, where
-# p99 and mean refer to the relative error on the relevant hazard maps
+# yield a Candidate with spacing, distance, time, weight, mean_err and p99_err,
+# where mean_err and p99_err refer to the relative error on the hazard maps
 def _get_rows(results, ref, imtls, oq):
     ok = ref > MIN_HMAP
     for key, result in results.items():
@@ -273,4 +281,4 @@ def _get_rows(results, ref, imtls, oq):
         errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
                 else numpy.zeros(1))
         yield Candidate(*key, result['time'], result['weight'],
-                        numpy.percentile(errs, 99), errs.mean())
+                        errs.mean(), numpy.percentile(errs, 99))
