@@ -98,6 +98,22 @@ def sqrt(array):
     return numpy.sqrt(array)
 
 
+def _weighted_angle_terms(cosine, area, sign=1):
+    # Express sine via cosine; this is faster than sin(arccos(cosine)).
+    # The area-weighted vector components can then be summed for the mean.
+    return area * cosine, area * sqrt(1 - cosine * cosine) * sign
+
+
+def _azimuth_terms(along, west, north, area):
+    # A negative west projection means the edge points west, so its azimuth
+    # is negative. Treat zero as positive for edges pointing north or south.
+    sign = numpy.sign(numpy.sign(numpy.sum(along * west, axis=-1)) + 0.1)
+    # The north projection gives the azimuth cosine. Like inclination, the
+    # weighted mean is computed from the sum of circular vector components.
+    cosine = numpy.sum(along * north, axis=-1)
+    return _weighted_angle_terms(cosine, area, sign)
+
+
 def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
                      br_normal, br_area):
     # inclination calculation
@@ -114,10 +130,7 @@ def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
     # the angle of vector sum of all those vectors and that angle
     # is the weighted average; here we return the 2d vectors of each
     # cell, so that the sum can be performed on any set of cells
-    xx = tl_area * incl_cos
-    # express sine via cosine using Pythagorean trigonometric identity,
-    # this is a bit faster than sin(arccos(incl_cos))
-    yy = tl_area * sqrt(1 - incl_cos * incl_cos)
+    xi, yi = _weighted_angle_terms(incl_cos, tl_area)
 
     # bottom-right triangles
     en = earth_surface_tangent_normal[1:, 1:]
@@ -128,9 +141,8 @@ def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
     # weighted angle vectors are calculated independently for top-left
     # and bottom-right triangles of each cell in a mesh. here we
     # combine both, see mean_inclination_azimuth for the weighted mean
-    xx += br_area * incl_cos
-    yy += br_area * sqrt(1 - incl_cos * incl_cos)
-    return xx, yy
+    xbr, ybr = _weighted_angle_terms(incl_cos, br_area)
+    return xi + xbr, yi + ybr
 
 
 def calc_azimuth(points, along_azimuth, tl_area, br_area):
@@ -152,39 +164,14 @@ def calc_azimuth(points, along_azimuth, tl_area, br_area):
     # them on other normals and thus calculate an angle in between
     along_azimuth = geo_utils.normalized(along_azimuth)
 
-    # process top-left triangles
-    # here we identify the sign of direction of the triangles' azimuthal
-    # edges: is edge pointing west or east? for finding that we project
-    # those edges to vectors directing to west by calculating scalar
-    # product and get the sign of resulting value: if it is negative
-    # than the resulting azimuth should be negative as top edge is pointing
-    # west.
-    sign = numpy.sign(numpy.sign(
-        numpy.sum(along_azimuth[:-1] * norms_west[:-1, :-1], axis=-1))
-        # we run numpy.sign(numpy.sign(...) + 0.1) to make resulting values
-        # be only either -1 or 1 with zero values (when edge is pointing
-        # strictly north or south) expressed as 1 (which means "don't
-        # change the sign")
-        + 0.1)
-
-    # the length of projection of azimuthal edge on norms_north is cosine
-    # of edge's azimuth
-    az_cos = numpy.sum(along_azimuth[:-1] * norms_north[:-1, :-1], axis=-1)
-    # use the same approach for finding the weighted mean
-    # as for inclination (see above)
-    xx = tl_area * az_cos
-    # the only difference is that azimuth is defined in a range
-    # [0, 360), so we need to have two reference planes and change
-    # sign of projection on one normal to sign of projection to another one
-    yy = tl_area * sqrt(1 - az_cos * az_cos) * sign
-    # bottom-right triangles
-    sign = numpy.sign(numpy.sign(
-        numpy.sum(along_azimuth[1:] * norms_west[1:, 1:], axis=-1))
-        + 0.1)
-    az_cos = numpy.sum(along_azimuth[1:] * norms_north[1:, 1:], axis=-1)
-    xx += br_area * az_cos
-    yy += br_area * sqrt(1 - az_cos * az_cos) * sign
-    return xx, yy
+    # Calculate terms for the top-left triangles.
+    xa, ya = _azimuth_terms(along_azimuth[:-1], norms_west[:-1, :-1],
+                            norms_north[:-1, :-1], tl_area)
+    # For azimuth's [0, 360) range, west sets the sine's sign.
+    # Calculate the bottom-right triangles and combine both cell halves.
+    xbr, ybr = _azimuth_terms(along_azimuth[1:], norms_west[1:, 1:],
+                              norms_north[1:, 1:], br_area)
+    return xa + xbr, ya + ybr
 
 
 def mean_inclination_azimuth(xi, yi, xa, ya, on_surface):
@@ -197,15 +184,13 @@ def mean_inclination_azimuth(xi, yi, xa, ya, on_surface):
     # on the earth surface the inclination is zero
     inclination = 0 if on_surface else numpy.degrees(numpy.arctan2(yi, xi))
     azimuth = numpy.degrees(numpy.arctan2(ya, xa))
-    if azimuth < 0:
-        azimuth += 360
     if inclination > 90:
         # average inclination is over 90 degree, that means that we need
         # to reverse azimuthal direction in order for inclination to be
         # in range [0, 90]
         inclination = 180 - inclination
-        azimuth = (azimuth + 180) % 360
-    return inclination, azimuth
+        azimuth += 180
+    return inclination, azimuth % 360
 
 
 # Joyner-Boore distances of the points (xx, yy) from a 2D mesh of projected
@@ -822,8 +807,9 @@ class RectangularMesh(Mesh):
         angle doesn't exceed 90 degree.
         """
         terms = self.get_inclination_azimuth_terms()
+        xi, yi, xa, ya = (term.sum() for term in terms)
         return mean_inclination_azimuth(
-            *[term.sum() for term in terms], (self.depths == 0).all())
+            xi, yi, xa, ya, (self.depths == 0).all())
 
     def get_inclination_azimuth_terms(self):
         """

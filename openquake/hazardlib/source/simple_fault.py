@@ -67,9 +67,9 @@ def _cum_terms(mesh):
     zeros = numpy.zeros((len(terms[0]), 1))
     cums = [numpy.concatenate([zeros, term.cumsum(axis=1)], axis=1)
             for term in terms]
-    onsurf = [(mesh.depths[r:r + 2] == 0).all()
-              for r in range(len(terms[0]))]
-    return cums, onsurf
+    on_surface = ((mesh.depths[:-1] == 0).all(axis=1) &
+                  (mesh.depths[1:] == 0).all(axis=1))
+    return cums, on_surface
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -343,7 +343,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
         if not only_rates:
-            cums, onsurf = _cum_terms(whole_fault_mesh)
+            cums, on_surface = _cum_terms(whole_fault_mesh)
 
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
@@ -379,10 +379,12 @@ class SimpleFaultSource(ParametricSeismicSource):
                     surface = SimpleFaultSurface(mesh)
                     # the dip and strike of the top row of cells, i.e. the
                     # same values computed by surface.get_dip(), but faster
-                    last = first_col + rup_cols - 1
+                    last_col = first_col + rup_cols - 1
+                    xi, yi, xa, ya = (
+                        cum[first_row, last_col] - cum[first_row, first_col]
+                        for cum in cums)
                     surface.dip, surface.strike = mean_inclination_azimuth(
-                        *[cum[first_row, last] - cum[first_row, first_col]
-                          for cum in cums], onsurf[first_row])
+                        xi, yi, xa, ya, on_surface[first_row])
 
                     if self.hypo_depth_list:
                         yield from self._iter_ruptures_hypo_depth(
