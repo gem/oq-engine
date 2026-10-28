@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Fixed YuEtAl2013Ms and YuEtAl2013Mw in hazardlib: when called with
+    contexts having different magnitudes, the mean used the magnitude of
+    the last site for all the sites; now each site uses its own magnitude.
+    Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
+    YuEtAl2013, BooreAtkinson2008, PankowPechmann2004) have had their loops
+    over the sites vectorized, with unchanged results
   * Faster standard deviations for the ParkerEtAl2020SInter GMPE by
     vectorizing the loop over the sites (measured a 10x speedup in
     "computing mean_stds" in Alaska)
