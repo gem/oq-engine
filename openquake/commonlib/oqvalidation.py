@@ -707,6 +707,15 @@ ps_grid_spacing:
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
+fault_grid_spacing:
+  Used in classical calculations to collapse the ruptures of simple,
+  complex and kite fault sources for far away sites: the ruptures with
+  the same magnitude are grouped in cells of the given size (in km) and
+  the sites farther than 5 times the spacing from a cell see a single
+  rupture with the occurrence rate of the whole cell.
+  Example: *fault_grid_spacing = 10*.
+  Default: 0, meaning no collapsing
+
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
   Example: quantiles = 0.15 0.50 0.85
@@ -1268,6 +1277,7 @@ class OqParam(valid.ParamSet):
     postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat_or_auto, 0)
+    fault_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(

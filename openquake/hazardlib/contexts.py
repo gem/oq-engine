@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
+from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
@@ -367,6 +368,41 @@ def _quintets(cmaker, src, sitecol):
                     yield m, mag, mdist, allpla, close
 
 
+# split ruptures with the same magnitude in cells of size `spacing` (by
+# using the cartesian coordinates of their middle points) and returns a
+# list of pairs (rups, sites); the sites farther than 5 * spacing from the
+# center of a cell see a single representative rupture with the occurrence
+# rate of the whole cell, similarly to what ps_grid_spacing does for the
+# point sources, while the close sites see all the ruptures of the cell
+def _collapse_far(rups, sites, spacing):
+    if not numpy.isfinite(rups[0].occurrence_rate):  # nonpoissonian
+        return [(rups, sites)]
+    mids = [rup.surface.get_middle_point() for rup in rups]
+    xyz = spherical_to_cartesian([p.longitude for p in mids],
+                                 [p.latitude for p in mids],
+                                 [p.depth for p in mids])
+    _, inv, counts = numpy.unique(numpy.floor(xyz / spacing).astype(int),
+                                  axis=0, return_inverse=True,
+                                  return_counts=True)
+    order = inv.ravel().argsort(kind='stable')
+    out = []
+    for idx in numpy.split(order, counts.cumsum()[:-1]):
+        cell = rups[idx]
+        center = xyz[idx].mean(axis=0)
+        far = numpy.linalg.norm(sites.xyz - center, axis=1) > 5 * spacing
+        if len(idx) == 1 or not far.any():
+            out.append((cell, sites))
+            continue
+        # the representative is the rupture closest to the center
+        best = numpy.linalg.norm(xyz[idx] - center, axis=1).argmin()
+        rep = copy.copy(cell[best])
+        rep.occurrence_rate = sum(rup.occurrence_rate for rup in cell)
+        out.append((numpy.array([rep]), sites.filter(far)))
+        if not far.all():
+            out.append((cell, sites.filter(~far)))
+    return out
+
+
 # helper used to populate contexts for planar ruptures
 def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
                     src_id, src_offset, tom):
@@ -640,6 +676,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
+        self.fault_grid_spacing = getattr(self.oq, 'fault_grid_spacing', 0)
         self.split_sources = self.oq.split_sources
 
     def _init2(self, param, extraparams):
@@ -1214,6 +1251,11 @@ class ContextMaker(object):
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol) for rups in split_array(
                     numpy.array(allrups), u32mags)]
+                spacing = self.fault_grid_spacing
+                if spacing and step == 1 and src.code in b'SCK':
+                    rups_sites = [pair for rups, sites in rups_sites
+                                  for pair in _collapse_far(
+                                      rups, sites, spacing)]
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
