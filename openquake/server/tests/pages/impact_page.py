@@ -35,6 +35,15 @@ class ImpactPage(EnginePage):
         selector.select_option(value=value)
         expect(selector).to_have_value(value)
 
+    def select_another_shakemap_version(self):
+        selector = self.page.locator('select#shakemap_version')
+        current = selector.input_value()
+        values = selector.locator('option').evaluate_all(
+            'items => items.map(item => item.value)')
+        [value, *_] = [val for val in values if val != current]
+        selector.select_option(value=value)
+        expect(selector).to_have_value(value)
+
     def retrieve_data(self):
         self.page.locator('.modal-backdrop').wait_for(
             state='detached', timeout=15_000)
@@ -93,6 +102,18 @@ class ImpactPage(EnginePage):
 
     def local_timestamp(self):
         return self.page.locator('input#local_timestamp')
+
+    def maximum_distance(self):
+        return self.page.locator('input#maximum_distance')
+
+    def truncation_level(self):
+        return self.page.locator('input#truncation_level')
+
+    def description(self):
+        return self.page.locator('input#description')
+
+    def run_impact_calc_btn(self):
+        return self.page.locator('#submit_impact_calc')
 
     def no_uncertainty_ckb(self):
         return self.page.locator('input#no_uncertainty')
