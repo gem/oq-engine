@@ -43,10 +43,10 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
 
 Candidate = namedtuple('Candidate',
-    'ps_grid_spacing pointsource_distance time weight p99 mean')
+    'ps_grid_spacing pointsource_distance time weight mean_err p99_err')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
-PS_DISTANCES = [25., 50., 100.]  # candidate values in km
+PS_DISTANCES = [15., 25., 50.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
@@ -60,10 +60,9 @@ LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
 MAXDIST = 300.  # in km, used to reduce the sample for large distances
 MIN_NSITES = 100  # minimum size of the sample of sites
-# the points farther than the maximum distance plus MARGIN (in km) from
-# all the sample sites are ignored; the margin keeps complete the grid
-# cells crossing the maximum distance
-MARGIN = 100.
+# the points of a cell are within a diagonal from the location of the
+# collapsed point source, which is inside the cell
+DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
 
 
 def calibration(srcs, sites, cmaker, key, monitor):
@@ -87,6 +86,26 @@ def calibration(srcs, sites, cmaker, key, monitor):
                                weight=len(ctx) + pairs / PAIR_COST))}
 
 
+# the points farther than the maximum distance plus the margin from all
+# the sample sites are ignored; the engine keeps a (collapsed) point
+# source if its location is within the maximum distance plus its
+# max_radius from a site, so the margin keeps complete the grid cells
+# crossing the maximum distance; NB: the points of an area source have
+# all the same max_radius, so only the first point is considered
+def _get_margin(sg, maxdist):
+    radius = 0.
+    for src in sg:
+        if src.code in b'AM' and not src.bysrc_unc:
+            points = [next(iter(src))] if src.code == b'A' else src
+        elif src.code == b'P':
+            points = [src]
+        else:
+            continue
+        for point in points:
+            radius = max(radius, point.max_radius(maxdist))
+    return DIAGONAL + radius
+
+
 # split the area and multipoint sources in point sources, keeping only
 # the points close to the sample sites (a source without close points is
 # not split at all, which is important since splitting is slow); the
@@ -94,20 +113,21 @@ def calibration(srcs, sites, cmaker, key, monitor):
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
 def _get_points(sg, sites, maxdist):
+    dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
         if src.code in b'AM' and not src.bysrc_unc:
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
-            if sites.count_close(Mesh(mesh.lons, mesh.lats),
-                                 maxdist + MARGIN, inclusive=True).any():
+            if sites.count_close(Mesh(mesh.lons, mesh.lats), dist,
+                                 inclusive=True).any():
                 points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
         mesh = Mesh.from_coords(
             [(p.location.x, p.location.y) for p in points], sort=False)
-        close = sites.count_close(mesh, maxdist + MARGIN, inclusive=True)
+        close = sites.count_close(mesh, dist, inclusive=True)
         points = [p for p, c in zip(points, close) if c]
     return points
 
@@ -194,7 +214,7 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
                  'per group', GRID_SPACINGS, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
-    rows = []  # candidates with time, weight, p99 and mean relative error
+    rows = []  # candidates with time, weight, mean_err and p99_err
     # NB: the reference has ps_grid_spacing=0, i.e. no gridding
     blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
               for psgs in [REFERENCE[0]] + GRID_SPACINGS}
@@ -214,21 +234,27 @@ def _select_candidate(groups, cmakers, sites, oq, h5):
         if ref is None:
             result = results.pop(REFERENCE)
             ref = get_hmaps(result['rates'], imtls, oq)
-            ref_time = result['time']
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
-        pending = [row.ps_grid_spacing for row in new if row.p99 > TOLERANCE]
+        pending = [row.ps_grid_spacing for row in new
+                   if row.p99_err > TOLERANCE]
         if not pending:
             break
-    lines = ['%5.0f %5.0f %9.1f %11.0f %8.4f %8.4f' % row for row in rows]
-    logging.info('Calibration on %d sites (reference time=%.1fs)\n'
-                 ' psgs   psd      time      weight      p99     mean\n%s',
-                 len(sites), ref_time, '\n'.join(lines))
-    good = [row for row in rows if row.p99 <= TOLERANCE]
+    # the errors are shown as percentages
+    lines = ['%5.0f %5.0f %9.1f %11.0f %10.2f %9.2f' % (
+        row.ps_grid_spacing, row.pointsource_distance, row.time,
+        row.weight, 100 * row.mean_err, 100 * row.p99_err)
+        for row in rows]
+    logging.info('Calibration on %d sites (relative error on the hazard '
+                 'maps for sites above %s g)\n'
+                 ' psgs   psd      time      weight  mean_err%%  p99_err%%'
+                 '\n%s',
+                 len(sites), MIN_HMAP, '\n'.join(lines))
+    good = [row for row in rows if row.p99_err <= TOLERANCE]
     if good:  # the candidate within the tolerance with the smallest weight
         best = min(good, key=lambda row: row.weight)
     else:
-        best = min(rows, key=lambda row: row.p99)  # the most precise
+        best = min(rows, key=lambda row: row.p99_err)  # the most precise
     return best.ps_grid_spacing, best.pointsource_distance
 
 
@@ -243,8 +269,8 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-# yield a Candidate with spacing, distance, time, weight, p99 and mean, where
-# p99 and mean refer to the relative error on the relevant hazard maps
+# yield a Candidate with spacing, distance, time, weight, mean_err and p99_err,
+# where mean_err and p99_err refer to the relative error on the hazard maps
 def _get_rows(results, ref, imtls, oq):
     ok = ref > MIN_HMAP
     for key, result in results.items():
@@ -253,4 +279,4 @@ def _get_rows(results, ref, imtls, oq):
         errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
                 else numpy.zeros(1))
         yield Candidate(*key, result['time'], result['weight'],
-                        numpy.percentile(errs, 99), errs.mean())
+                        errs.mean(), numpy.percentile(errs, 99))
