@@ -1197,7 +1197,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # source model logic tree branch and few sites, see the sslt test
         # in oq-risk-tests, with 2 tasks and 16 workers)
         ntasks = len(self.datastore['grp_keys'])
-        if ntasks < 4 * parallel.num_cores:
+        if ntasks < 2 * parallel.num_cores:
             logging.info('Only %d tasks for %d workers, not checking for '
                          'slow tasks', ntasks, parallel.num_cores)
             return
