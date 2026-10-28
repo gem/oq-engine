@@ -34,7 +34,6 @@ You have to remove the data directories manually, if you so wish.
 import os
 import re
 import sys
-import pwd
 import json
 import glob
 import stat
@@ -46,6 +45,11 @@ import argparse
 import platform
 import subprocess
 from urllib.request import urlopen, Request
+try:
+    # used for "server" modes only, not available on windows
+    import pwd
+except ModuleNotFoundError:
+    pass
 
 VENV_ERROR = ("venv is missing! Please see the documentation of your "
               "Operating System to install it")
