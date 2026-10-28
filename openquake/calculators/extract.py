@@ -932,6 +932,17 @@ def extract_exposure_by_lse(dstore, what):
 
 
 # tested in impact_test and partially in case_1_ins
+# set the quantiles of the portfolio total rows: they must come from the
+# full portfolio losses, not from summing the quantiles of the groups
+def _set_total_quantiles(total, qdf, qfields, K):
+    if not len(qdf):  # no quantiles to set
+        return
+    for idx, row in total.iterrows():
+        loss_id = LOSSID[row.loss_type]
+        if (K, loss_id) in qdf.index:
+            total.loc[idx, qfields] = qdf.loc[(K, loss_id)].to_numpy()
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -1001,6 +1012,7 @@ def extract_aggrisk_tags(dstore, what):
                             for id2, name2 in zip(id2s, name2s)}
             out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
         total = out.groupby('loss_type', as_index=False).sum()
+        _set_total_quantiles(total, qdf, qfields, aggdf.agg_id.max())
         total[aggby] = '*total*'
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
