@@ -246,7 +246,7 @@ def _rates_by_mag(sources):
             raise ValueError('%s has no MFD' % type(src).__name__)
         dic = {}
         for mag, rate in src.get_annual_occurrence_rates():
-            mag = round(mag, 3)
+            mag = round(mag, 2)
             dic[mag] = dic.get(mag, 0.) + rate
         out.append(dic)
     return out
@@ -436,7 +436,7 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
     # :param sidxs: a list of arrays with the source index of each row
     ctx = concat(ctxs)
     sidx = numpy.concatenate(sidxs)
-    ctx.mag = numpy.round(ctx.mag, 3)
+    ctx.mag = numpy.round(ctx.mag, 2)
     # sorting by magnitude (stable, so the order within each magnitude is
     # preserved) allows to process each magnitude as a contiguous slice
     order = numpy.argsort(ctx.mag, kind='stable')
@@ -560,7 +560,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         tom = PoissonTOM(cmaker.oq.investigation_time)
         pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
         ctx = cmaker.from_srcs([sources[0]], sitecol)
-        magrates = [{numpy.round(mag, 3): rate
+        magrates = [{numpy.round(mag, 2): rate
                      for mag, rate in src.get_annual_occurrence_rates()}
                      for src in sources]
         for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):

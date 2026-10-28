@@ -982,7 +982,7 @@ class ContextMaker(object):
         """
         surface = rup.surface
         if param == 'mag':
-            return numpy.round(rup.mag, 3)
+            return numpy.round(rup.mag, 2)
         elif param == 'strike':
             return msparam['strike'] if msparam else surface.get_strike()
         elif param == 'dip':
@@ -1299,7 +1299,7 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, mea_sig, ctxt with poes of shape (N, L, G)
         """
-        ctx.mag = numpy.round(ctx.mag, 3)
+        ctx.mag = numpy.round(ctx.mag, 2)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
