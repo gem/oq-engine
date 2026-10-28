@@ -1,9 +1,7 @@
   [Michele Simionato]
-  * Faster standard deviations for the ParkerEtAl2020SInter GMPE (subduction
-    interface, used by the complex fault sources): the loop over the sites
-    is replaced by vectorized operations; in the subduction-only Alaska
-    model the classical calculation went down from 1961 seconds (measured
-    under the profiler) to 724 seconds, with the same hazard curves
+  * Faster standard deviations for the ParkerEtAl2020SInter GMPE by
+    vectorizing the loop over the sites (measured a 10x speedup in
+    "computing mean_stds" in Alaska)
   * Added the option ps_grid_spacing=auto: the engine determines
     ps_grid_spacing and pointsource_distance (if not given) by comparing
     the hazard maps of the point sources on a sample of sites with the
