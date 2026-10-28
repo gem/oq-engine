@@ -68,6 +68,8 @@ TARGET_NAMES = {
 #   conv_median  : median of source_IM / target_IM
 #   conv_sigma   : standard deviation of ln(ratio)
 #   ratio_sigma  : total_sigma(source) / total_sigma(target)
+# NOTE: For BK17-sourced entries PGV defaults to (1.0, 0.0, 1.0) because
+# BK17 Table 2 only tabulates PGA and SA.
 
 class Ratio(NamedTuple):
     paper: str          # inline citation, e.g. 'BK17 Table 2 col 1'
@@ -114,6 +116,10 @@ _RATIOS = {
         sa=(0.08, 1.106, 0.56, 1.158, 4.40, 1.178, 8.70, 1.241, 1.241),
         pga=(1.106, 0.0, 1.0),
         pgv=(1.0, 0.0, 1.0)),
+    # BB06 also publishes this ratio as Env/GMxy but flags its
+    # distribution as non-lognormal and unsuitable for PSHA; BK17
+    # Table 1 identifies Env with Larger and refits lognormally so
+    # we use that set of ratios over the BB06 ones
     (IMC.GREATER_OF_TWO_HORIZONTAL, IMC.GEOMETRIC_MEAN): Ratio(
         paper='BK17 Table 2 col 5 (Larger/GMAR)',
         kind='bk17',

@@ -18,7 +18,6 @@
 
 import copy
 import time
-import logging
 import warnings
 import operator
 import numpy
