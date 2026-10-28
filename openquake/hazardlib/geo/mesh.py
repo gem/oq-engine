@@ -99,7 +99,7 @@ def sqrt(array):
 
 
 def _weighted_angle_terms(cosine, area, sign=1):
-    # Express sine via cosine; this is faster than sin(arccos(cosine)).
+    # Derive the sine magnitude from cosine; azimuth supplies its sign.
     # The area-weighted vector components can then be summed for the mean.
     return area * cosine, area * sqrt(1 - cosine * cosine) * sign
 
