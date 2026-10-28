@@ -86,10 +86,9 @@ class Comparator(object):
         if imt not in imtls:
             sys.exit('%s not found. The available IMTs are %s' %
                      (imt, list(imtls)))
-        imti = {imt: i for i, imt in enumerate(imtls)}
-        m = imti[imt]
+        # the extractor already selects the IMT, so m is always 0
         what += '?kind=mean&imt=' + imt
-        arrays = [extractor.get(what).mean[sids, m, :]]
+        arrays = [extractor.get(what).mean[sids, 0, :]]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
@@ -97,7 +96,7 @@ class Comparator(object):
                 aac(oq.imtls[imt], imtls[imt], rtol, atol)
             elif what.startswith('hmaps'):  # array NMP
                 aac(oq.poes, poes, rtol, atol)
-            arrays.append(extractor.get(what).mean[sids, m, :])
+            arrays.append(extractor.get(what).mean[sids, 0, :])
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
