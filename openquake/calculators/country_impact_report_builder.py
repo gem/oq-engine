@@ -105,6 +105,7 @@ class CountryImpactReportBuilder:
         self.event_date = event.date
         self.shakemap_version = event.shakemap_version
         self.hypocenter = event.hypocenter
+        self.rupture = event.rupture
 
         # Unpacking ReportOptions
         self.disclaimer_txt = options.disclaimer_txt
@@ -385,6 +386,7 @@ class CountryImpactReportBuilder:
                 y_limits=self.y_limits,
                 basemap_path=self.basemap_path,
                 epicenter=self.hypocenter,
+                rupture=self.rupture,
                 scale_bar=True
             )
             fig, ax = plot_variable(
@@ -568,9 +570,11 @@ class CountryImpactReportBuilder:
             self.Spacer(1, 6),
         ]
 
+        # the maximum distance is computed from the rupture, if available
+        source = 'rupture' if self.rupture is not None else 'epicentre'
         exposed_value_txt = (
             f'The exposed value refers to the assets and population located'
-            f' within a {self.maximum_distance} km radius of the epicentre.')
+            f' within a {self.maximum_distance} km radius of the {source}.')
         left_bundle.append(
             self.Paragraph(exposed_value_txt, body_left_style))
         if self.no_uncertainty:

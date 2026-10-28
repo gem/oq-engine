@@ -701,7 +701,9 @@ prefer_global_site_params:
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
-  *pointsource_distance* to be set too.
+  *pointsource_distance* to be set too. If set to *auto*, the engine
+  determines ps_grid_spacing (and pointsource_distance, if not set)
+  by comparing the hazard on a sample of sites with the exact one.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
@@ -1265,7 +1267,7 @@ class OqParam(valid.ParamSet):
     postrisk_func = valid.Param(valid.mod_func, '')
     postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
-    ps_grid_spacing = valid.Param(valid.positivefloat, 0)
+    ps_grid_spacing = valid.Param(valid.positivefloat_or_auto, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -1507,7 +1509,11 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
+        self.psd_given = 'pointsource_distance' in names_vals
+        self.auto_grid = self.ps_grid_spacing == 'auto'
+        if self.auto_grid:  # set in preclassical, see autogrid.calibrate
+            self.ps_grid_spacing = 0.
+        elif self.ps_grid_spacing and not self.psd_given:
             self.pointsource_distance = dict(default=50)
 
         # cut maximum_distance with minimum_magnitude
