@@ -115,6 +115,27 @@ LOSS_METADATA = {
 }
 
 
+def get_report_time_event(oqparam):
+    """
+    :param oqparam: an OqParam instance
+    :returns: the time of the event (day, night, transit or avg) considered
+        in the reports, i.e. the one selected by the user
+    """
+    return oqparam.report_time_event or oqparam.time_event or 'avg'
+
+
+def get_fatalities_loss_type(oqparam):
+    """
+    :param oqparam: an OqParam instance
+    :returns: the loss type of the fatalities displayed in the reports,
+        i.e. occupants_<time event> when the occupants losses are computed
+        for all the time events, otherwise occupants
+    """
+    if oqparam.occupants_by_time:
+        return 'occupants_' + get_report_time_event(oqparam)
+    return 'occupants'
+
+
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded
 # per process (the common case). Increase to 2 if both adm1 and adm2 files
 # are ever used within the same process.

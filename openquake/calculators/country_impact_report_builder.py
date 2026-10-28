@@ -28,7 +28,7 @@ from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, _read_countries_info,
     _read_world_cities, build_classifiers, load_admin_boundaries,
     points_to_gdf, aggregate_losses, save_most_affected_regions,
-    get_configured_path)
+    get_configured_path, get_report_time_event)
 from openquake.calculators.postproc.plots import plot_variable, MapDataElements
 from openquake.hazardlib.calc.filters import upper_maxdist
 
@@ -309,7 +309,8 @@ class CountryImpactReportBuilder:
         meta.append(f'Number of ground motion fields:'
                     f' {oqparam.number_of_ground_motion_fields}')
         meta.append(f'Truncation level: {oqparam.truncation_level}')
-        meta.append(f'Considered time of the event: {oqparam.time_event}')
+        meta.append('Considered time of the event: '
+                    f'{get_report_time_event(oqparam)}')
         return notes_data
 
     def _get_cities_in_viewport(self, num_cities=15):

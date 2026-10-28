@@ -50,12 +50,14 @@ def test_format_oqparam_displays_selected_nodal_plane():
             'shakemap_desc': 'v10', 'nodal_plane': 'NP2', 'lon': 1,
             'lat': 2, 'dep': 3, 'mag': 4, 'msr': 'WC1994',
             'aspect_ratio': 2, 'rake': 90, 'dip': 45, 'strike': 10},
-        time_event='day', maximum_distance={'default': [[0, 300]]},
+        time_event=None, report_time_event='night',
+        maximum_distance={'default': [[0, 300]]},
         truncation_level=3, number_of_ground_motion_fields=10,
         asset_hazard_distance={'default': 15}, ses_seed=42,
         mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
     inputs = format_oqparam(oqparam)
     assert inputs['Nodal plane'] == 'NP2'
+    assert inputs['Time of the event'] == 'night'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
         'Magnitude scaling relationship')
 
