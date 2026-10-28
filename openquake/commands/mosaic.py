@@ -315,7 +315,7 @@ def impact(exposure_hdf5='', *,
            rupfname=FAMOUS,
            stations='',
            mosaic_model='',
-           maximum_distance='300',
+           maximum_distance='',
            maximum_distance_stations='',
            asset_hazard_distance='15',
            number_of_ground_motion_fields='10'):
@@ -327,7 +327,7 @@ def impact(exposure_hdf5='', *,
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     trt = ''
-    truncation_level = '3'
+    truncation_level = ''  # depends on the magnitude
     ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
@@ -369,7 +369,8 @@ impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
                    'or file rupture_model.xml')
 impact.stations = 'Path to a csv file with the station data'
 impact.mosaic_model = 'Mosaic model 3-characters code'
-impact.maximum_distance = 'Maximum distance in km'
+impact.maximum_distance = (
+    'Maximum distance in km (by default it depends on the magnitude)')
 impact.maximum_distance_stations = "Maximum distance from stations in km"
 impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 
