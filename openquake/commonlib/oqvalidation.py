@@ -1506,10 +1506,10 @@ class OqParam(valid.ParamSet):
         if self.horiz_comp_to_geom_mean:
             if self.horiz_comp_to and self.horiz_comp_to != 'geometric_mean':
                 self.raise_invalid(
-                    f'horiz_comp_to_geom_mean=true conflicts with use '
+                    f'horiz_comp_to_geom_mean=true conflicts with '
                     f'horiz_comp_to={self.horiz_comp_to!r} - you can '
                     f'only pick one'
-                    )
+                )
             self.horiz_comp_to = 'geometric_mean'
         self._set_truncation_levels(names_vals)
         self.check_siteid()

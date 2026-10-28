@@ -18,7 +18,7 @@ Horizontal-component intensity-measure-component (IMC) conversion.
 
 Only pairs for which Beyer & Bommer (2006) or Boore & Kishida (2017)
 publish a direct ratio are supported currently. The eight directly
-tabulate pairs are:
+tabulated pairs are:
 
     GMRotI50 <-> GEOM        (BB06 Table 3)
     RANDOM   <-> GEOM        (BB06 Table 3)
@@ -195,11 +195,8 @@ def apply_conversion(src_imc, tgt_imc, imt):
     src_imc to tgt_imc at the given IMT.
 
     :param src_imc: the GSIM's native IMC
-
     :param tgt_imc: the desired target IMC
-    
     :param imt: the intensity measure type
-    
     :returns:
         A tuple of steps for "apply_in_place" function to use.
     """

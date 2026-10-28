@@ -743,7 +743,7 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
         self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
         # per-gsim, per-imt horizontal-component conversion steps; each
-        # entry is a tuple of (kind, median_ratio, sigma_ratio, residual_std)
+        # entry is a tuple of (kind, conv_median, conv_sigma, ratio_sigma)
         # steps produced by imc_conversion.apply_conversion, converting the
         # gsim's native component to self.horiz_comp_target
         self.conv = {}

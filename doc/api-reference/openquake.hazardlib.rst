@@ -48,6 +48,14 @@ const
     :undoc-members:
     :show-inheritance:
 
+imc_conversion
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.imc_conversion
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 correlation
 --------------------------------------
 
