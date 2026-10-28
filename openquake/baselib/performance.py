@@ -55,8 +55,7 @@ task_info_dt = numpy.dtype(
 # tasks with different names, as classical -> baseclassical when the
 # tasks are split for being too slow
 starmap_info_dt = numpy.dtype(
-    [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
-     ('min', numpy.float32), ('max', numpy.float32)])
+    [('taskname', '<S50'), ('efficiency', numpy.float32)])
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -374,16 +373,15 @@ class Monitor(object):
 
     def save_starmap_info(self, h5, name, times):
         """
-        Called at the end of a Starmap. Store stats about the times per
-        core for the tasks called `name`; the same Starmap can generate
-        tasks with different names, in which case there is one row for
-        each name.
+        Called at the end of a Starmap. Store the efficiency of the times
+        per core for the tasks called `name`, i.e. total_time / num_cores
+        / max_time; the same Starmap can generate tasks with different
+        names, in which case there is one row for each name.
         """
-        t = (name, times.mean(), times.std(), times.min(), times.max())
-        data = numpy.array([t], starmap_info_dt)
+        eff = times.mean() / times.max()
+        data = numpy.array([(name, eff)], starmap_info_dt)
         _save(h5, 'starmap_info', data)
-        logging.info('%s: mean time per core=%ds, std=%.1fs, min=%ds, '
-                     'max=%ds', name, t[1], t[2], t[3], t[4])
+        logging.info('%s: efficiency=%.2f', name, eff)
 
     def reset(self):
         """
