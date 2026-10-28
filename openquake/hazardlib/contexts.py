@@ -717,13 +717,14 @@ class ContextMaker(object):
             new.set_imts_conv()
         return new
 
-    def restrict(self, imts):
+    def restrict(self, imts, step=1):
         """
         :param imts: a list of IMT strings subset of the full list
-        :returns: a new ContextMaker involving less IMTs
+        :param step: keep one level every step (default all the levels)
+        :returns: a new ContextMaker involving less IMTs (and levels)
         """
         new = copy.copy(self)
-        new.imtls = DictArray({imt: self.imtls[imt] for imt in imts})
+        new.imtls = DictArray({imt: self.imtls[imt][::step] for imt in imts})
         new.set_imts_conv()
         return new
 
@@ -927,6 +928,9 @@ class ContextMaker(object):
         :param srcs: a list of Source objects with consistent TOM
         :param sitecol: a SiteCollection instance
         :returns: a context array
+
+        NB: the number of close sites is stored in the .nsites attribute
+        of each source
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
@@ -934,6 +938,7 @@ class ContextMaker(object):
             if src.id == -1:  # not set yet
                 src.id = i
             sites = srcfilter.get_close_sites(src)
+            src.nsites = 0 if sites is None else len(sites)
             if sites is not None:
                 ctxs.extend(self.get_ctxs(src, sites))
         return concat(ctxs)
@@ -1318,14 +1323,20 @@ class ContextMaker(object):
         self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def get_rmap(self, ctx):
+    def get_rmap(self, ctx, tom=None):
         """
-        Used for debugging
-
         :param ctx: a context array
-        :returns: a MapArray of annual rates of shape (N, L, G)
+        :param tom: temporal occurrence model (default PoissonTom)
+        :returns: a MapArray of rates of shape (N, L, G)
+
+        NB: the rates are accumulated directly, without converting
+        probabilities into rates
         """
-        rmap = (~self.get_pmap(ctx)).to_rates()
+        sids = numpy.unique(ctx.sids)
+        rmap = MapArray(sids, size(self.imtls), len(self.gsims), rates=True)
+        rmap.fill(0)
+        self.tom = tom or PoissonTOM(self.investigation_time)
+        self.update(rmap, ctx)
         rmap.gid = self.gid
         rmap.wei = self.wei
         return rmap
