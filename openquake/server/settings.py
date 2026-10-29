@@ -27,8 +27,6 @@ from openquake.baselib import config
 from openquake.commonlib import datastore, auth
 from openquake.server.utils import get_django_secret_key
 
-logging.basicConfig(level=logging.INFO)
-
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
 
