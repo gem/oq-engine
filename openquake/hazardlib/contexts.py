@@ -1124,9 +1124,13 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         for rup in same_mag_rups:
             # NB: the monitor is entered once per rupture, since the
-            # building of the contexts is the critical section
+            # building of the contexts is the critical section; the
+            # contexts are yielded outside the monitor, otherwise the time
+            # spent by the caller (the PoE update) would be counted too.
+            # Only the contexts of a single rupture are held in memory
             with self.ctx_mon:
-                yield from self._genctx(rup, sites, src_id, magdist)
+                ctxs = list(self._genctx(rup, sites, src_id, magdist))
+            yield from ctxs
 
     def _genctx(self, rup, sites, src_id, magdist):
         """
