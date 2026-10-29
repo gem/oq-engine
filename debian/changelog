@@ -303,7 +303,8 @@
     linearly, since they are dispersions. Combined with the fix above, the
     MCE spectra of the AELO models increase (by 34% for the PGA in the
     PAC model, by 0.8% in the KOR model), since the previous values were
-    based on sigmas which were too large and thus underestimated the
+    based on sigmas which were too small (the linear average is never
+    larger than the quadrature one) and thus underestimated the
     deterministic MCE
   * The reduction of a source model logic tree to a single source (i.e. the
     `source_id` parameter and the `reduce_smlt` command) is now performed on
