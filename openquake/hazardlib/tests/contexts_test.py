@@ -405,3 +405,33 @@ class CollapseCtxTestCase(unittest.TestCase):
         # nonpoissonian ruptures are not collapsed
         ctx.occurrence_rate[:] = numpy.nan
         self.assertEqual(len(collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
+
+    def test_exact_rupture_parameters(self):
+        # Small differences must survive, including for signed parameters.
+        for par, value in [('mag', 6.5), ('hypo_lon', -120.), ('hypo_lat', -30.),
+                           ('hypo_depth', -.1), ('ztor', 5.),
+                           ('width', 10.)]:
+            with self.subTest(par=par):
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, [value, value, value + .0001],
+                     [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(
+                    out[par], [value, value + .0001])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_angles(self):
+        # Group by rounded angles while retaining original context values.
+        for par, value in [('dip', 30.), ('strike', 120.), ('rake', -90.)]:
+            with self.subTest(par=par):
+                angles = [value + .01, value + .04, value + .06]
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, angles, [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(out[par],
+                                                 [angles[0], angles[2]])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])

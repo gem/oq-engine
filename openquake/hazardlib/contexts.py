@@ -369,12 +369,15 @@ def _quintets(cmaker, src, sitecol):
 
 def collapse_ctx(ctx, rparams, dparams, prec):
     """
-    Merge context rows for the same site and binned rupture parameters
-    and distances, summing occurrence rates and averaging distances
-    with occurrence rates as weights. Nonpoissonian contexts are unchanged.
+    Merge rows for the same site with matching rupture parameters and
+    binned distances. Round dip, strike and rake to one decimal place
+    for matching; compare other rupture parameters exactly. Sum occurrence
+    rates and average distances with those rates as weights.
+    Nonpoissonian contexts are unchanged.
 
     :param ctx: context recarray with sids and occurrence_rate fields
-    :param rparams: rupture parameter names, rounded to three decimals
+    :param rparams: rupture parameter names; dip, strike and rake are rounded
+                   to one decimal place, other parameters are kept exact
     :param dparams: distance parameter names; rrup is always included
     :param prec: positive bin width on sign(d) * log(1 + abs(d))
     :returns: collapsed recarray, or ctx if no rows are merged
@@ -402,16 +405,20 @@ def collapse_ctx(ctx, rparams, dparams, prec):
     names = set(ctx.dtype.names)
     dparams = sorted((set(dparams) | {'rrup'}) & names)
     cols = [ctx.sids.astype(numpy.int64)]
+    # Round geometry angles to 0.1 degrees; keep other rupture values.
     for par in sorted(set(rparams) & names):
-        cols.append(numpy.round(ctx[par] * 1000).astype(numpy.int64))
+        values = ctx[par]
+        if par in {'dip', 'strike', 'rake'}:
+            values = numpy.round(values, 1)
+        cols.append(values)
     for par in dparams:
         d = ctx[par]
         logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
         cols.append(numpy.round(logd / prec).astype(numpy.int64))
-    # For the doctest, column_stack(cols) is [[0, 6500, 467],
-    #                                       [0, 6500, 467],
-    #                                       [1, 6500, 467]]:
-    # Fields: sids, mag (scaled by 1000), rrup (distance bin).
+    # For the doctest, column_stack(cols) is [[0., 6.5, 467.],
+    #                                       [0., 6.5, 467.],
+    #                                       [1., 6.5, 467.]]:
+    # Fields: sids, mag (unchanged), rrup (distance bin).
     # Equal rows are merged.
     _, idx, inv = numpy.unique(numpy.column_stack(cols), axis=0,
                                return_index=True, return_inverse=True)

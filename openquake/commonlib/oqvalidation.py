@@ -167,7 +167,8 @@ collapse_gsim_logic_tree:
 collapse_precision:
   Used in classical calculations to collapse the contexts of simple,
   complex and kite fault sources: the contexts of the same site with the
-  same rupture parameters and with distances equal within the given
+  same rupture parameters (dip, strike and rake rounded to one decimal
+  place) and with distances equal within the given
   relative precision (on log(1 + d)) are merged by summing their
   occurrence rates. The far away sites benefit the most, since many
   ruptures are at similar distances from them.
