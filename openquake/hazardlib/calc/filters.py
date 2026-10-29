@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.utils import (
 F32 = numpy.float32
 U32 = numpy.uint32
 MINMAG = 2.5
-MAXMAG = 10.2  # to avoid breaking PAC
+MAXMAG = 11  # upper limit never measured, to keep all magnitudes
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
