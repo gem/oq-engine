@@ -18,16 +18,18 @@ import unittest
 import numpy as np
 
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.hazardlib import imt, imc_conversion
+from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.const import IMC
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.imt import PGA, PGV, SA
 
-PGA = imt.from_string('PGA')
-SA_SHORT = imt.from_string('SA(0.05)')   # below BB06 lower knot
-SA_MID = imt.from_string('SA(0.5)')      # inside BB06 piecewise
-SA_PIVOT = imt.from_string('SA(1.0)')
+PGA = PGA()
+PGV = PGV()
+SA_SHORT = SA(0.05)   # below BB06 lower knot
+SA_MID = SA(0.5)      # inside BB06 piecewise
+SA_PIVOT = SA(1.0)
 
 
 class ApplyConversionTestCase(unittest.TestCase):
@@ -44,11 +46,30 @@ class ApplyConversionTestCase(unittest.TestCase):
             self.assertEqual(
                 imc_conversion.apply_conversion(tgt, tgt, SA_PIVOT), ())
 
-    def test_bb06_direct_pga(self):
-        # BB06 Table 3: GMRotI50/GMAR PGA entry
-        steps = imc_conversion.apply_conversion(
+    def test_gmroti50_mixed_source(self):
+        # BB06 Table 3 drives SA; BK17 e-supp fills the PGA/PGV gap
+        # (BB06 Table 2 has no GMRotI50/GMxy row)
+        pga_steps = imc_conversion.apply_conversion(
             IMC.GMRotI50, IMC.GEOMETRIC_MEAN, PGA)
-        self.assertEqual(steps, (('forward', 1.0, 0.02, 1.0),))
+        self.assertEqual(pga_steps, (('forward', 1.013, 0.076, 1.0),))
+        pgv_steps = imc_conversion.apply_conversion(
+            IMC.GMRotI50, IMC.GEOMETRIC_MEAN, PGV)
+        self.assertEqual(pgv_steps, (('forward', 1.011, 0.085, 1.0),))
+
+    def test_bb06_random_pga_pgv(self):
+        # BB06 Table 2 Random/GMxy row
+        pga_steps = imc_conversion.apply_conversion(
+            IMC.RANDOM_HORIZONTAL, IMC.GEOMETRIC_MEAN, PGA)
+        self.assertEqual(pga_steps, (('forward', 1.0, 0.07, 1.03),))
+        pgv_steps = imc_conversion.apply_conversion(
+            IMC.RANDOM_HORIZONTAL, IMC.GEOMETRIC_MEAN, PGV)
+        self.assertEqual(pgv_steps, (('forward', 1.0, 0.09, 1.03),))
+
+    def test_bk17_direct_pgv(self):
+        # BK17 e-supp RotD50/GMAR PGV row: 1.021, 0.088
+        steps = imc_conversion.apply_conversion(
+            IMC.RotD50, IMC.GEOMETRIC_MEAN, PGV)
+        self.assertEqual(steps, (('forward', 1.021, 0.088, 1.0),))
 
     def test_bb06_sa_flat_below_knot(self):
         # T=0.05 s < 0.15 s -> hits the flat extrapolation branch
@@ -68,32 +89,22 @@ class ApplyConversionTestCase(unittest.TestCase):
                          ('forward', 1.0, 1.0))
 
     def test_bk17_direct_pga(self):
-        # BK17 Table 2 col 2: RotD50/GMAR PGA = R1 = 1.009; sigma unchanged
+        # BK17 e-supp RotD50/GMAR PGA row: 1.014, 0.086
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GEOMETRIC_MEAN, PGA)
-        self.assertEqual(len(steps), 1)
-        kind, conv_median, conv_sigma, ratio_sigma = steps[0]
-        self.assertEqual(kind, 'forward')
-        self.assertAlmostEqual(conv_median, 1.009)
-        self.assertEqual((conv_sigma, ratio_sigma), (0.0, 1.0))
+        self.assertEqual(steps, (('forward', 1.014, 0.086, 1.0),))
 
     def test_bk17_direct_between_two_non_geom(self):
         # BK17 col 1 directly tabulates (RotD50, GMRotI50); no pivot
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GMRotI50, PGA)
-        self.assertEqual(len(steps), 1)
-        kind, conv_median, _, _ = steps[0]
-        self.assertEqual(kind, 'forward')
-        self.assertAlmostEqual(conv_median, 0.999)  # R1 from BK17 col 1
+        self.assertEqual(steps, (('forward', 1.001, 0.048, 1.0),))
 
     def test_reverse_direction_tag(self):
         # GEOM -> RotD50 reuses the BK17 col 2 ratio tagged 'reverse'
         steps = imc_conversion.apply_conversion(
             IMC.GEOMETRIC_MEAN, IMC.RotD50, PGA)
-        self.assertEqual(len(steps), 1)
-        kind, conv_median, _, _ = steps[0]
-        self.assertEqual(kind, 'reverse')
-        self.assertAlmostEqual(conv_median, 1.009)
+        self.assertEqual(steps, (('reverse', 1.014, 0.086, 1.0),))
 
     def test_pair_without_direct_ratio_raises(self):
         # RotD100 -> GEOM has no direct ratio in either BB06 or BK17
@@ -137,13 +148,14 @@ class ApplyInPlaceTestCase(unittest.TestCase):
         np.testing.assert_array_equal(si, [0.6])
 
     def test_single_forward_step_shifts_mean(self):
-        # RotD50 -> GEOM at PGA divides exp(me) by 1.009
+        # RotD50 -> GEOM at PGA divides exp(me) by 1.014; sigma shrinks
+        # by sqrt(0.6**2 - 0.086**2) because ratio_sigma=1
         me, si = self._mean_sig()
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GEOMETRIC_MEAN, PGA)
         imc_conversion.apply_in_place((me, si), steps)
-        np.testing.assert_allclose(me, [0.5 - np.log(1.009)])
-        np.testing.assert_array_equal(si, [0.6])
+        np.testing.assert_allclose(me, [0.5 - np.log(1.014)])
+        np.testing.assert_allclose(si, [(0.6 ** 2 - 0.086 ** 2) ** 0.5])
 
     def test_round_trip_direct_ratio(self):
         # RotD50 -> GMRotI50 then back round-trips mean and sigma
@@ -204,6 +216,7 @@ class ContextMakerConversionTestCase(unittest.TestCase):
         # direct ratio to GEOM, so the GSIM is left unconverted.
         cmaker = self._cmaker('rotd100', AkkarBommer2010())
         self.assertEqual(next(iter(cmaker.conv.values())), {})
+
 
 
 class LogUnsupportedTestCase(unittest.TestCase):

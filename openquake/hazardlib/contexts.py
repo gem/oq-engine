@@ -902,16 +902,18 @@ class ContextMaker(object):
         Convert ground-motion from the GSIM's native horizontal component
         to "horiz_comp_target".
 
-        The ratio used for each component pair is:
+        The ratio used for each component pair is (SA source listed;
+        PGA/PGV come from BB06 Table 2 or the BK17 electronic
+        supplement as applicable):
 
-        - GMRotI50 <-> GEOM:      Beyer & Bommer 2006 Table 3
-        - RANDOM   <-> GEOM:      Beyer & Bommer 2006 Table 3
-        - RotD50   <-> GEOM:      Boore & Kishida 2017 Table 2 col 2
-        - Larger   <-> GEOM:      Boore & Kishida 2017 Table 2 col 5
-        - RotD50   <-> GMRotI50:  Boore & Kishida 2017 Table 2 col 1
-        - Larger   <-> GMRotI50:  Boore & Kishida 2017 Table 2 col 4
-        - Larger   <-> RotD50:    Boore & Kishida 2017 Table 2 col 6
-        - RotD100  <-> RotD50:    Boore & Kishida 2017 Table 2 col 3
+        - GMRotI50 <-> GEOM:      BB06 Table 3 (SA); BK17 e-supp (PGA/PGV)
+        - RANDOM   <-> GEOM:      BB06 Tables 2, 3
+        - RotD50   <-> GEOM:      BK17 Table 2 col 2 + e-supp
+        - Larger   <-> GEOM:      BK17 Table 2 col 5 + e-supp
+        - RotD50   <-> GMRotI50:  BK17 Table 2 col 1 + e-supp
+        - Larger   <-> GMRotI50:  BK17 Table 2 col 4 + e-supp
+        - Larger   <-> RotD50:    BK17 Table 2 col 6 + e-supp
+        - RotD100  <-> RotD50:    BK17 Table 2 col 3 + e-supp
 
         GSIMs whose native component has no direct ratio to the target
         (e.g. RANDOM <-> RotD50, RotD100 <-> GEOM) are logged and left

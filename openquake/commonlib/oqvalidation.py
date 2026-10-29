@@ -423,12 +423,14 @@ horiz_comp_to:
   Convert GMM predictions to the specified horizontal component.
   Supported values are "geometric_mean", "gmroti50", "rotd50", "rotd100",
   "greater_of_two_horizontal" and "random_horizontal". The ratios come from
-  Beyer & Bommer (2006) and Boore & Kishida (2017) and are implemented in
+  Beyer & Bommer (2006) tables 2-3 and Boore & Kishida (2017) table 2 plus
+  the BK17 electronic supplement (PGA/PGV ratios for BK17-sourced pairs
+  live in the e-supplement, not in the paper body) and are implemented in
   "openquake/hazardlib/imc_conversion". Only pairs with a directly-tabulated
-  ratio in those papers are supported. GSIMs whose native component is
+  ratio in those sources are supported. GSIMs whose native component is
   already the target are left unchanged; GSIMs whose native component has
   no direct ratio to the target (either because the component is not
-  covered at all, or because the papers do not publish that particular
+  covered at all, or because the sources do not publish that particular
   pair) are logged to inform the user.
   Example: *horiz_comp_to = rotd50*
   Default: '' (no conversion applied)
@@ -1511,7 +1513,7 @@ class OqParam(valid.ParamSet):
         given = set(names_vals)
         super().__init__(**names_vals)
         if self.horiz_comp_to_geom_mean:
-            if self.horiz_comp_to and self.horiz_comp_to != 'geometric_mean':
+            if self.horiz_comp_to not in ('', 'geometric_mean'):
                 self.raise_invalid(
                     f'horiz_comp_to_geom_mean=true conflicts with '
                     f'horiz_comp_to={self.horiz_comp_to!r} - you can '

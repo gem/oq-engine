@@ -18,20 +18,41 @@ Horizontal-component intensity-measure-component (IMC) conversion.
 
 Only pairs for which Beyer & Bommer (2006) or Boore & Kishida (2017)
 publish a direct ratio are supported currently. The eight directly
-tabulated pairs are:
+tabulated pairs, with their SA source (PGA/PGV sources noted
+separately below) are:
 
-    GMRotI50 <-> GEOM        (BB06 Table 3)
-    RANDOM   <-> GEOM        (BB06 Table 3)
-    RotD50   <-> GEOM        (BK17 Table 2 col 2)
-    RotD50   <-> GMRotI50    (BK17 Table 2 col 1)
-    RotD100  <-> RotD50      (BK17 Table 2 col 3)
-    Larger   <-> GEOM        (BK17 Table 2 col 5)
-    Larger   <-> GMRotI50    (BK17 Table 2 col 4)
-    Larger   <-> RotD50      (BK17 Table 2 col 6)
+    GMRotI50 <-> GEOM        (SA: BB06 Table 3)
+    RANDOM   <-> GEOM        (SA: BB06 Table 3; PGA/PGV: BB06 Table 2)
+    RotD50   <-> GEOM        (SA: BK17 Table 2 col 2)
+    RotD50   <-> GMRotI50    (SA: BK17 Table 2 col 1)
+    RotD100  <-> RotD50      (SA: BK17 Table 2 col 3)
+    Larger   <-> GEOM        (SA: BK17 Table 2 col 5)
+    Larger   <-> GMRotI50    (SA: BK17 Table 2 col 4)
+    Larger   <-> RotD50      (SA: BK17 Table 2 col 6)
 
 Any other pair (e.g. RANDOM <-> RotD50, RotD100 <-> GEOM) is left
 unconverted; callers skip the GSIM (i.e., no conversion) and log a
 notice.
+
+Every direct ratio is a Ratio record keyed by (source, target). The
+triple returned by ratio_at(imt) is (conv_median, conv_sigma,
+ratio_sigma), where:
+
+    conv_median  : median of source_IM / target_IM
+    conv_sigma   : standard deviation of ln(ratio)
+    ratio_sigma  : total_sigma(source) / total_sigma(target)
+
+PGA and PGV medians and conv_sigma for every BK17-sourced pair, plus
+the GMRotI50/GEOM pair (whose SA is BB06 Table 3 but whose PGA/PGV
+BB06 does not publish), come from the BK17 electronic supplement,
+specifically the Rrup <= 200 km, M 2-9 all-magnitude CSVs:
+
+    nga-w2.gmean.Rot_Ratios.Sdev.RrupMin_0000.RrupMax_0200.Mmin_2.00.Mmax_9.00.4paper.csv
+    nga-w2.gmean.Larger_Ratios.Sdev.RrupMin_0000.RrupMax_0200.Mmin_2.00.Mmax_9.00.4paper.csv
+
+For PGA/PGV from the e-supplement, ratio_sigma is kept at 1.0 as an
+approximation; the full propagation per BK17 eq. (3) inflates the
+output sigma by only ~1% across all periods (BK17 p. 339 Table 3).
 
 References
 ----------
@@ -61,76 +82,65 @@ TARGET_NAMES = {
 }
 
 
-# Every direct ratio is a Ratio record keyed by (source, target). The
-# triple returned by ratio_at(imt) is (conv_median, conv_sigma,
-# ratio_sigma), where:
-#   conv_median  : median of source_IM / target_IM
-#   conv_sigma   : standard deviation of ln(ratio)
-#   ratio_sigma  : total_sigma(source) / total_sigma(target)
-# NOTE: For BK17-sourced entries PGV defaults to (1.0, 0.0, 1.0) because
-# BK17 Table 2 only tabulates PGA and SA.
-
 class Ratio(NamedTuple):
-    paper: str          # inline citation, e.g. 'BK17 Table 2 col 1'
-    kind: str           # 'bb06' or 'bk17' selects the SA evaluator
-    sa: tuple           # paper-specific SA coefficients
-    pga: tuple          # (conv_median, conv_sigma, ratio_sigma) at PGA
-    pgv: tuple          # (conv_median, conv_sigma, ratio_sigma) at PGV
+    paper: str   # inline citation, e.g. 'BK17 Table 2 col 1 + e-supp'
+    kind: str    # 'bb06' or 'bk17' selects the SA evaluator
+    sa: tuple    # paper-specific SA coefficients
+    pga: tuple   # (conv_median, conv_sigma, ratio_sigma) at PGA
+    pgv: tuple   # (conv_median, conv_sigma, ratio_sigma) at PGV
 
 
 _RATIOS = {
     (IMC.GMRotI50, IMC.GEOMETRIC_MEAN): Ratio(
-        paper='BB06 Table 3 (GMRotI50/GMxy)',
+        paper='SA: BB06 Table 3 | PGA/PGV: BK17 e-supp (GMRotI50/GMAR)',
         kind='bb06',
         sa=(1.0, 1.0, 0.03, 0.04, 1.0),
-        pga=(1.0, 0.02, 1.0),
-        pgv=(1.0, 0.03, 1.0)),
+        pga=(1.013, 0.076, 1.0),
+        pgv=(1.011, 0.085, 1.0)),
     (IMC.RANDOM_HORIZONTAL, IMC.GEOMETRIC_MEAN): Ratio(
-        paper='BB06 Table 3 (Random/GMxy)',
+        paper='BB06 Tables 2, 3 (Random/GMxy)',
         kind='bb06',
         sa=(1.0, 1.0, 0.07, 0.11, 1.05),
         pga=(1.0, 0.07, 1.03),
-        pgv=(1.0, 0.0, 1.0)),
+        pgv=(1.0, 0.09, 1.03)),
     (IMC.RotD50, IMC.GMRotI50): Ratio(
-        paper='BK17 Table 2 col 1 (RotD50/GMRotI50)',
+        paper='BK17 Table 2 col 1 + e-supp (RotD50/GMRotI50)',
         kind='bk17',
         sa=(0.06, 0.999, 0.71, 1.019, 4.21, 1.028, 10.00, 1.057, 1.057),
-        pga=(0.999, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
+        pga=(1.001, 0.048, 1.0),
+        pgv=(1.010, 0.061, 1.0)),
     (IMC.RotD50, IMC.GEOMETRIC_MEAN): Ratio(
-        paper='BK17 Table 2 col 2 (RotD50/GMAR)',
+        paper='BK17 Table 2 col 2 + e-supp (RotD50/GMAR)',
         kind='bk17',
         sa=(0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077, 1.077),
-        pga=(1.009, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
+        pga=(1.014, 0.086, 1.0),
+        pgv=(1.021, 0.088, 1.0)),
     (IMC.RotD100, IMC.RotD50): Ratio(
-        paper='BK17 Table 2 col 3 (RotD100/RotD50)',
+        paper='BK17 Table 2 col 3 + e-supp (RotD100/RotD50)',
         kind='bk17',
         sa=(0.12, 1.188, 0.41, 1.225, 3.14, 1.241, 10.00, 1.287, 1.287),
-        pga=(1.188, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
+        pga=(1.201, 0.085, 1.0),
+        pgv=(1.218, 0.087, 1.0)),
     (IMC.GREATER_OF_TWO_HORIZONTAL, IMC.GMRotI50): Ratio(
-        paper='BK17 Table 2 col 4 (Larger/GMRotI50)',
+        paper='BK17 Table 2 col 4 + e-supp (Larger/GMRotI50)',
         kind='bk17',
         sa=(0.08, 1.106, 0.56, 1.158, 4.40, 1.178, 8.70, 1.241, 1.241),
-        pga=(1.106, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
-    # BB06 also publishes this ratio as Env/GMxy but flags its
-    # distribution as non-lognormal and unsuitable for PSHA; BK17
-    # Table 1 identifies Env with Larger and refits lognormally so
-    # we use that set of ratios over the BB06 ones
+        pga=(1.117, 0.104, 1.0),
+        pgv=(1.138, 0.114, 1.0)),
+    # BB06 Env/GMxy == BK17 Larger/GMAR. BB06 flags this ratio as non-lognormal
+    # and advises against GM->Env in PSHA; BK17 refits from NGA-West2 and used
     (IMC.GREATER_OF_TWO_HORIZONTAL, IMC.GEOMETRIC_MEAN): Ratio(
-        paper='BK17 Table 2 col 5 (Larger/GMAR)',
+        paper='BK17 Table 2 col 5 + e-supp (Larger/GMAR)',
         kind='bk17',
         sa=(0.10, 1.117, 0.53, 1.165, 4.48, 1.195, 8.70, 1.266, 1.266),
-        pga=(1.117, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
+        pga=(1.132, 0.121, 1.0),
+        pgv=(1.150, 0.129, 1.0)),
     (IMC.GREATER_OF_TWO_HORIZONTAL, IMC.RotD50): Ratio(
-        paper='BK17 Table 2 col 6 (Larger/RotD50)',
+        paper='BK17 Table 2 col 6 + e-supp (Larger/RotD50)',
         kind='bk17',
         sa=(0.10, 1.107, 0.45, 1.133, 4.36, 1.149, 8.78, 1.178, 1.178),
-        pga=(1.107, 0.0, 1.0),
-        pgv=(1.0, 0.0, 1.0)),
+        pga=(1.116, 0.095, 1.0),
+        pgv=(1.127, 0.098, 1.0)),
 }
 
 
