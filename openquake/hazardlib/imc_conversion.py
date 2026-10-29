@@ -53,9 +53,8 @@ Rrup <= 200 km, M 2-9 all-magnitude CSVs:
 BK17 PGA (for the six BK17-sourced pairs) is kept at R1, the first
 knot of the SA line-segment fit. Equation (2) clamps to R1 at T=0,
 so R1 is the mathematically consistent T->0 plateau. The real
-e-supp PGA differs by ~0.5-1.5%; we keep R1 to avoid regenerating
-~40 QA expected files pinned to this historical behavior (it would
-also affect Mosaic and AELO calculations).
+e-supp PGA differs by ~0.5-1.5% but to minimise Mosaic/AELO changes
+we retain the R1 values.
 
 For PGV from the e-supplement, ratio_sigma is kept at 1.0 as an
 approximation; the full propagation per BK17 eq. (3) inflates the
