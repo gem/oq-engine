@@ -1189,10 +1189,10 @@ class ClassicalCalculator(base.HazardCalculator):
         # the tasks are too slow, but their busy times are already summed
         # to the classical ones, so there is a single row per Starmap
         ser = info[info.index.isin([b'classical'])]
-        # NB: with less than 10 seconds of busy time per worker the
+        # NB: with less than 4 seconds of busy time per worker the
         # efficiency is dominated by the startup of the workers and it is
         # meaningless, so the check is skipped (see eshm20)
-        ser = ser[ser['maxtime'] >= 10]
+        ser = ser[ser['maxtime'] >= 4]
         if not len(ser):
             return
         # NB: the check is meaningful only if there are enough tasks to

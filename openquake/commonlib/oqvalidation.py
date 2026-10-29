@@ -164,8 +164,16 @@ calculation_mode:
 collapse_gsim_logic_tree:
   INTERNAL
 
-collapse_level:
-  INTERNAL
+collapse_precision:
+  Used in classical calculations to collapse the contexts of the Poissonian
+  sources (all but the nonparametric ones): the contexts of the same site
+  with the same rupture parameters (dip, strike and rake rounded to one
+  decimal place) and with distances equal within the given
+  relative precision (on log(1 + d)) are merged by summing their
+  occurrence rates. The far away sites benefit the most, since many
+  ruptures are at similar distances from them.
+  Example: *collapse_precision = 0.02*.
+  Default: 0, meaning no collapsing
 
 collect_rlzs:
   Collect all realizations into a single effective realization. If not given
@@ -1178,7 +1186,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(int, -1)
+    collapse_precision = valid.Param(valid.positivefloat, 0)
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -1543,7 +1551,7 @@ class OqParam(valid.ParamSet):
         if self.auto_grid:  # set in preclassical, see autogrid.calibrate
             self.ps_grid_spacing = 0.
         elif self.ps_grid_spacing and not self.psd_given:
-            self.pointsource_distance = dict(default=50)
+            self.pointsource_distance = dict(default=25)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
