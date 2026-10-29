@@ -367,19 +367,43 @@ def _quintets(cmaker, src, sitecol):
                     yield m, mag, mdist, allpla, close
 
 
-# merge the rows of a context array referring to the same site, with the
-# same rupture parameters and with distances equal within the relative
-# precision `prec` (on log(1 + d)), by summing the occurrence rates; the
-# distances of the merged rows are the averages weighted with the rates
-def _collapse_ctx(ctx, rparams, dparams, prec):
+def collapse_ctx(ctx, rparams, dparams, prec):
+    """
+    Merge context rows for the same site and binned rupture parameters
+    and distances, summing occurrence rates and averaging distances
+    with occurrence rates as weights. Nonpoissonian contexts are unchanged.
+
+    :param ctx: context recarray with sids and occurrence_rate fields
+    :param rparams: rupture parameter names, rounded to three decimals
+    :param dparams: distance parameter names; rrup is always included
+    :param prec: positive bin width on sign(d) * log(1 + abs(d))
+    :returns: collapsed recarray, or ctx if no rows are merged
+
+    Parameter names absent from ctx are ignored. Distances are grouped
+    by rounding their transformed values divided by prec.
+
+    The first two rows below share a site, magnitude and distance bin.
+    Their rates sum to 0.04 and their weighted distance is 106.15 km.
+    The third row stays separate because it belongs to another site.
+
+    >>> ctx = numpy.rec.fromarrays(
+    ...     [[0, 0, 1], [6.5] * 3, [106., 106.2, 106.], [.01, .03, .02]],
+    ...     names='sids,mag,rrup,occurrence_rate')
+    >>> out = collapse_ctx(ctx, {'mag'}, {'rrup'}, prec=.01)
+    >>> out.sids.tolist()
+    [0, 1]
+    >>> out.occurrence_rate.round(2).tolist()
+    [0.04, 0.02]
+    >>> out.rrup.round(2).tolist()
+    [106.15, 106.0]
+    """
     if len(ctx) < 2 or not numpy.isfinite(ctx.occurrence_rate).all():
         return ctx  # nothing to collapse or nonpoissonian ruptures
-    dparams = [par for par in sorted(set(dparams) | {'rrup'})
-               if par in ctx.dtype.names]
+    names = set(ctx.dtype.names)
+    dparams = sorted((set(dparams) | {'rrup'}) & names)
     cols = [ctx.sids.astype(numpy.int64)]
-    for par in sorted(rparams):
-        if par in ctx.dtype.names:
-            cols.append(numpy.round(ctx[par] * 1000).astype(numpy.int64))
+    for par in sorted(set(rparams) & names):
+        cols.append(numpy.round(ctx[par] * 1000).astype(numpy.int64))
     for par in dparams:
         d = ctx[par]
         logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
@@ -670,7 +694,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
-        self.collapse_precision = getattr(self.oq, 'collapse_precision', 0)
+        self.collapse_precision = param.get('collapse_precision', 0)
         self.split_sources = self.oq.split_sources
 
     def _init2(self, param, extraparams):
@@ -1253,11 +1277,11 @@ class ContextMaker(object):
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
         prec = self.collapse_precision
-        if (prec and step == 1 and src_id != -1 and src.code in b'SCK'):
+        if prec and step == 1 and src_id != -1 and src.code in b'SCK':
             ctxs = list(ctxs)
             if not ctxs:  # no rupture is close to the sites
                 return iter([])
-            return iter([_collapse_ctx(
+            return iter([collapse_ctx(
                 self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
                 self.REQUIRES_DISTANCES, prec)])
         if len(rups_sites) == 1 and not self.minimum_distance:

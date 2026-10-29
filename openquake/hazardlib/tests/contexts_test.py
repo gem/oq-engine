@@ -27,7 +27,7 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    ContextMaker, get_distances, _collapse_ctx)
+    ContextMaker, get_distances, collapse_ctx)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -395,7 +395,7 @@ class CollapseCtxTestCase(unittest.TestCase):
              [106., 106.2, 150., 106., 106.], [107., 107.2, 152., 107., 107.],
              [.01, .03, .01, .01, .01]],
             names='sids,mag,rake,rjb,rrup,occurrence_rate')
-        out = _collapse_ctx(ctx, {'mag', 'rake'}, {'rjb'}, .01)
+        out = collapse_ctx(ctx, {'mag', 'rake'}, {'rjb'}, .01)
         self.assertEqual(len(out), 4)
         [row] = out[(out.sids == 0) & (out.rake == 90.) & (out.rjb < 120)]
         numpy.testing.assert_allclose(row.occurrence_rate, .04)
@@ -404,4 +404,4 @@ class CollapseCtxTestCase(unittest.TestCase):
 
         # nonpoissonian ruptures are not collapsed
         ctx.occurrence_rate[:] = numpy.nan
-        self.assertEqual(len(_collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
+        self.assertEqual(len(collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
