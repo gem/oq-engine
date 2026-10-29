@@ -24,7 +24,7 @@ import tempfile
 import logging
 
 from openquake.baselib import config
-from openquake.commonlib import datastore, auth
+from openquake.commonlib import datastore
 from openquake.server.utils import get_django_secret_key
 
 # optionally overridden in local_settings.py
@@ -288,13 +288,14 @@ if STANDALONE and WEBUI:
 
 if not TEST:
     try:
-        # Try to load a local_settings.py from the current folder; this is useful
-        # when packages are used. A custom local_settings.py can be placed in
-        # /usr/share/openquake/engine, avoiding changes inside the python package
+        # Try to load a local_settings.py from the current folder; this is
+        # useful when packages are used. A custom local_settings.py can be
+        # placed in /usr/share/openquake/engine, avoiding changes inside the
+        # python package
         from local_settings import *  # noqa
     except ImportError:
-        # If no local_settings.py is availble in the current folder let's try to
-        # load it from openquake/server/local_settings.py
+        # If no local_settings.py is availble in the current folder let's try
+        # to load it from openquake/server/local_settings.py
         try:
             from openquake.server.local_settings import *  # noqa
         except ImportError:
