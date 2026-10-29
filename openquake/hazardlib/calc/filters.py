@@ -217,7 +217,7 @@ class IntegrationDistance(dict):
 
         >>> md = IntegrationDistance.new('50')
         >>> md
-        {'default': [(2.5, 50), (10.2, 50)]}
+        {'default': [(2.5, 50), (11, 50)]}
         """
         if value == 'magdist':
             items_by_trt = {'default': [(3, 0), (6, 150), (10, 600)]}
@@ -249,7 +249,7 @@ class IntegrationDistance(dict):
         >>> maxdist = IntegrationDistance.new('200')
         >>> maxdist.cut({"Active Shallow Crust": 5.2, "default": 4.})
         >>> maxdist
-        {'default': [(4.0, 200.0), (10.2, 200)], 'Active Shallow Crust': [(5.2, 200.0), (10.2, 200)]}
+        {'default': [(4.0, 200.0), (11, 200)], 'Active Shallow Crust': [(5.2, 200.0), (11, 200)]}
         """
         if 'default' not in self:
             maxval = max(self.values(),
