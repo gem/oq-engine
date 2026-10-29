@@ -1523,7 +1523,7 @@ class OqParam(valid.ParamSet):
         if self.auto_grid:  # set in preclassical, see autogrid.calibrate
             self.ps_grid_spacing = 0.
         elif self.ps_grid_spacing and not self.psd_given:
-            self.pointsource_distance = dict(default=50)
+            self.pointsource_distance = dict(default=25)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
