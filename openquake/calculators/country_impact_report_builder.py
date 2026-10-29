@@ -68,7 +68,7 @@ class CountryImpactReportBuilder:
     NOTES_H = 80
     SAFETY_BUFFER = 20
     LOGO_W = 100
-    CAPTION_H = 20
+    CAPTION_H = 16
     NUM_PAGES = 2
 
     def __init__(
@@ -403,10 +403,10 @@ class CountryImpactReportBuilder:
         images = {}
         for meta in LOSS_METADATA.values():
             label = meta["label"]
-            plot_title = f'{self.loss_metric} {meta["title"]}'
+            # NOTE: the title is added as a caption by _map_with_caption,
+            # to have the same format for all maps in the report
             elements = MapDataElements(
-                plot_title=plot_title,
-                # legend_title=label,  # already in plot title
+                # legend_title=label,  # already in the caption
                 cities=self.cities,
                 x_limits=self.x_limits,
                 y_limits=self.y_limits,
@@ -569,6 +569,22 @@ class CountryImpactReportBuilder:
         )
         return body_left_style, body_right_style, title_style
 
+    def _map_with_caption(self, caption, png, max_h):
+        # Caption above a map, with the same format for all the maps in
+        # the report, and the map scaled to fit in the remaining space
+        caption_style = self.ParagraphStyle(
+            "MapCaption",
+            parent=self.styles["Normal"],
+            fontName="NotoSans-Bold",
+            fontSize=10,
+            leading=12,
+            spaceAfter=3,  # keep clear of the map frame
+            alignment=1,  # centered
+        )
+        img = self._scaled_image_from_bytes(
+            png, self.col_w - 10, max_h - self.CAPTION_H)
+        return [self.Paragraph(caption, caption_style), img]
+
     def _build_summary_table(self, body_left_style, body_right_style):
         col_header = ("Estimated losses" if self.no_uncertainty
                       else "Range of losses (5% - 95%)")
@@ -655,21 +671,12 @@ class CountryImpactReportBuilder:
         left_bundle = self._build_left_bundle(
             summary_table, body_left_style, title_style)
 
-        img_top_right = self._scaled_image_from_bytes(
-            images[LOSS_METADATA['number']['label']],
-            self.col_w - 10,
-            self.row_h - 10,
-        )
-        img_bot_left = self._scaled_image_from_bytes(
-            images[LOSS_METADATA['occupants']['label']],
-            self.col_w - 10,
-            self.row_h - 10,
-        )
-        img_bot_right = self._scaled_image_from_bytes(
-            images[LOSS_METADATA['residents']['label']],
-            self.col_w - 10,
-            self.row_h - 10,
-        )
+        img_top_right, img_bot_left, img_bot_right = [
+            self._map_with_caption(
+                f'{self.loss_metric} {LOSS_METADATA[lt]["title"]}',
+                images[LOSS_METADATA[lt]['label']],
+                self.row_h - 10)
+            for lt in ('number', 'occupants', 'residents')]
         tbl = self.Table(
             [
                 [left_bundle, img_top_right],
@@ -751,19 +758,14 @@ class CountryImpactReportBuilder:
         return story
 
     def _build_maps_row(self):
-        _, _, title_style = self._grid_styles()
-        caption_style = self.ParagraphStyle(
-            "MapCaption", parent=title_style, alignment=1)  # centered
-        maps = [
-            ("Exposed assets", self._generate_assets_plot()),
-            (f"Administrative regions of {self.country_name}",
-             self._generate_regions_plot()),
+        cells = [
+            self._map_with_caption(
+                "Exposed assets", self._generate_assets_plot(),
+                self.maps_h - 10),
+            self._map_with_caption(
+                f"Administrative regions of {self.country_name}",
+                self._generate_regions_plot(), self.maps_h - 10),
         ]
-        cells = []
-        for caption, png in maps:
-            img = self._scaled_image_from_bytes(
-                png, self.col_w - 10, self.maps_h - self.CAPTION_H - 10)
-            cells.append([self.Paragraph(caption, caption_style), img])
         tbl = self.Table(
             [cells],
             colWidths=[self.col_w, self.col_w],
