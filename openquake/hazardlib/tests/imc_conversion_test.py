@@ -217,7 +217,6 @@ class ContextMakerConversionTestCase(unittest.TestCase):
         self.assertEqual(next(iter(cmaker.conv.values())), {})
 
 
-
 class LogUnsupportedTestCase(unittest.TestCase):
     """
     Testing the log_unsupported deduplication. The same
