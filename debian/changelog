@@ -1,3 +1,11 @@
+  [Christopher Brooks]
+  * Extended the IMC conversion to support more horizontal component
+    definitions: the job parameter "horiz_comp_to_geom_mean" is replaced
+    by "horiz_comp_to", which accepts targets such as geometric mean,
+    RotD50 and RotD100 (the old boolean flag still works). Conversions
+    use the ratios tabulated by Beyer & Bommer (2006) and Boore &
+    Kishida (2017)
+ 
   [Michele Simionato]
   * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
     polygon: the distances of the sites within 40 km of a rupture can
