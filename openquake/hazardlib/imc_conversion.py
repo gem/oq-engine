@@ -53,6 +53,8 @@ specifically the Rrup <= 200 km, M 2-9 all-magnitude CSVs:
 For PGA/PGV from the e-supplement, ratio_sigma is kept at 1.0 as an
 approximation; the full propagation per BK17 eq. (3) inflates the
 output sigma by only ~1% across all periods (BK17 p. 339 Table 3).
+BK17 SA still uses conv_sigma=0, ratio_sigma=1 for the same reason:
+the ~1% figure applies at SA periods too.
 
 References
 ----------
