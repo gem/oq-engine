@@ -1432,7 +1432,11 @@ class SlowTasksTestCase(unittest.TestCase):
         # of the workers: the efficiency is meaningless (see eshm20)
         ([('classical', .24, .7)], False),
         # the time threshold is inclusive
-        ([('classical', .5, 10.)], True),
+        ([('classical', .5, 4.)], True),
+        # below the time threshold the check is skipped (see eshm20)
+        ([('classical', .5, 3.9)], False),
+        # alaska has a busy time of about 4.8 seconds and must be checked
+        ([('classical', .5, 4.8)], True),
         # a stray baseclassical row is not considered
         ([('baseclassical', .5, 20.)], False),
         # a calculation with no classical Starmap has no slow tasks
