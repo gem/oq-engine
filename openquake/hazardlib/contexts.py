@@ -504,9 +504,10 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     return zeroctx.flatten()  # shape N*U
 
 
-def genctxs_Pp(src, sitecol, cmaker):
+def genctxs_Pp(src, sitecol, cmaker, prec=0):
     """
-    Context generator for point sources and collapsed point sources
+    Context generator for point sources and collapsed point sources;
+    the contexts are collapsed with precision `prec` if it is nonzero
     """
     dd = cmaker.defaultdict.copy()
     tom = getattr(src, 'temporal_occurrence_model', None)
@@ -536,6 +537,11 @@ def genctxs_Pp(src, sitecol, cmaker):
             ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
                                   pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
+        # summing the rates is exact only for Poissonian occurrences
+        poissonian = not isinstance(tom, NegativeBinomialTOM)
+        if prec and poissonian and len(ctxt):
+            ctxt = collapse_ctx(ctxt, cmaker.REQUIRES_RUPTURE_PARAMETERS,
+                                 cmaker.REQUIRES_DISTANCES, prec)
         if len(ctxt):
             yield ctxt
 
@@ -1229,6 +1235,17 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             yield from self.genctxs(rups, sites, src_id)
 
+    # the rows of different magnitudes never merge, since the magnitude
+    # is one of the rupture parameters, so the collapse is done one
+    # magnitude at a time, which keeps the memory bounded
+    def _collapse_by_mag(self, rups_sites, src_id, prec):
+        for rups, sites in rups_sites:  # ruptures with the same magnitude
+            ctxs = list(self.genctxs(rups, sites, src_id))
+            if ctxs:  # otherwise no rupture is close to the sites
+                yield collapse_ctx(
+                    self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
+                    self.REQUIRES_DISTANCES, prec)
+
     def _build_dparam(self, src, sitecol):
         dparams = {'rjb', 'tuw'}
         if self.fewsites:
@@ -1260,7 +1277,11 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None):
-            return genctxs_Pp(src, sitecol, self)
+            # collapse only in classical, as for the other sources
+            prec = 0
+            if step == 1 and src_id != -1:
+                prec = self.collapse_precision
+            return genctxs_Pp(src, sitecol, self, prec)
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1287,15 +1308,11 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = -1
-        ctxs = self.gen_contexts(rups_sites, src_id)
         prec = self.collapse_precision
-        if prec and step == 1 and src_id != -1 and src.code in b'SCK':
-            ctxs = list(ctxs)
-            if not ctxs:  # no rupture is close to the sites
-                return iter([])
-            return iter([collapse_ctx(
-                self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
-                self.REQUIRES_DISTANCES, prec)])
+        # the non-parametric sources (code N) have no occurrence rates
+        if (prec and step == 1 and src_id != -1 and src.code != b'N'):
+            return self._collapse_by_mag(rups_sites, src_id, prec)
+        ctxs = self.gen_contexts(rups_sites, src_id)
         if len(rups_sites) == 1 and not self.minimum_distance:
             # fast lane for event based with no minimum_distance
             return ctxs
