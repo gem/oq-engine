@@ -191,11 +191,6 @@
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
     with circulant-embedding-based correlated GMF simulations.
 
-  [Claudio Schill]
-  * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
-    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
-    5 <= M < 6 bin values, instead of the M > 7 bin.
-
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: the uncertainties
     on the magnitude and on the b-value were ignored for multiPointSources
@@ -308,7 +303,8 @@
     linearly, since they are dispersions. Combined with the fix above, the
     MCE spectra of the AELO models increase (by 34% for the PGA in the
     PAC model, by 0.8% in the KOR model), since the previous values were
-    based on sigmas which were too large and thus underestimated the
+    based on sigmas which were too small (the linear average is never
+    larger than the quadrature one) and thus underestimated the
     deterministic MCE
   * The reduction of a source model logic tree to a single source (i.e. the
     `source_id` parameter and the `reduce_smlt` command) is now performed on

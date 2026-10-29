@@ -1234,6 +1234,8 @@ class ContextMaker(object):
             with self.ir_mon:
                 allrups = list(src.iter_ruptures(
                     shift_hypo=self.shift_hypo, step=step))
+                # used in estimate_weight to correct for the subsampling
+                src.num_sampled = len(allrups)
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = sorted([rup for rup in allrups
@@ -1497,15 +1499,18 @@ class ContextMaker(object):
             # import is local to avoid a circular dependency
             from openquake.hazardlib.lt import get_ts_sets
             C = src.num_ruptures * src.nsites * len(get_ts_sets(src))
+        elif src.code in b'pP':  # no subsampling
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            step = (1 if src.code in b'pP' else
-                    20 if src.num_ruptures >= 400 else 4)
+            step = 20 if src.num_ruptures >= 400 else 4
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
-            # the corrections compensate the subsampling of the ruptures
-            if src.code in b'SFN':
-                C *= step**2
-            elif src.code in b'CKX':
-                C *= step
+            # compensate the subsampling of the ruptures with the actual
+            # ratio between all the ruptures and the sampled ones; using
+            # step or step**2 overestimates, since a slice [::step] keeps
+            # ceil(n/step) elements and a simple fault one rupture wide is
+            # sampled only along the length (4x-16x more contexts in alaska)
+            if C:  # then src.num_sampled > 0
+                C *= src.num_ruptures / src.num_sampled
         src.dt = time.time() - t0
         if not C:
             return EPS
