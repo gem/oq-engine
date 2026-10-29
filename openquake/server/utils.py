@@ -20,10 +20,12 @@ import os
 import getpass
 import requests
 import logging
+import secrets
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
+from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
@@ -180,3 +182,36 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30,
         logging.warning('Unable to connect to %s within %s retries'
                         % (url, max_retries))
     return success
+
+
+def get_django_secret_key():
+    SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
+    if SECRET_KEY:
+        logging.info(
+            'Using Django SECRET_KEY from DJANGO_SECRET_KEY env variable')
+    else:
+        secret_file_path = os.path.join(os.path.expanduser('~'),
+                                        '.oq_django_secret_key')
+        if os.path.exists(secret_file_path):
+            if os.path.isfile(secret_file_path):
+                with open(secret_file_path, 'r') as secret_file:
+                    SECRET_KEY = secret_file.read().strip()
+                logging.info(
+                    f'Using Django SECRET_KEY from {secret_file_path}')
+            else:
+                raise ImproperlyConfigured(
+                    f'{secret_file_path} exists but is not a regular file')
+        if not SECRET_KEY:
+            SECRET_KEY = "".join(
+                secrets.choice(
+                    "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
+                for i in range(50))
+
+            def opener(path, flags):
+                return os.open(path, flags, 0o600)
+
+            with open(secret_file_path, 'w', opener=opener) as secret_file:
+                secret_file.write(SECRET_KEY)
+            logging.info(
+                f'A new Django SECRET_KEY was written to {secret_file_path}')
+    return SECRET_KEY

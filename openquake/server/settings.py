@@ -25,6 +25,9 @@ import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore, auth
+from openquake.server.utils import get_django_secret_key
+
+logging.basicConfig(level=logging.INFO)
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -128,8 +131,6 @@ LANGUAGE_CODE = 'en-us'
 # to load the internationalization machinery.
 USE_I18N = True
 
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = auth.API_KEY
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -466,3 +467,12 @@ if LOCKDOWN:
 for app in OQP_INSTALLED_APPS:
     if app not in INSTALLED_APPS:
         INSTALLED_APPS += (app,)
+
+try:
+    # it is defined if it was specified in local_settings.py
+    # NOTE: if it is defined in local_settings.py it has priority over the
+    #       DJANGO_SECRET_KEY env variable and the ~/.oq_django_secret_key file
+    SECRET_KEY  # noqa
+    logging.info('Using Django SECRET_KEY from local_settings.py')
+except NameError:
+    SECRET_KEY = get_django_secret_key()
