@@ -408,6 +408,11 @@ def collapse_ctx(ctx, rparams, dparams, prec):
         d = ctx[par]
         logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
         cols.append(numpy.round(logd / prec).astype(numpy.int64))
+    # For the doctest, column_stack(cols) is [[0, 6500, 467],
+    #                                       [0, 6500, 467],
+    #                                       [1, 6500, 467]]:
+    # Fields: sids, mag (scaled by 1000), rrup (distance bin).
+    # Equal rows are merged.
     _, idx, inv = numpy.unique(numpy.column_stack(cols), axis=0,
                                return_index=True, return_inverse=True)
     if len(idx) == len(ctx):
