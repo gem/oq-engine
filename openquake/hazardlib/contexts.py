@@ -367,6 +367,73 @@ def _quintets(cmaker, src, sitecol):
                     yield m, mag, mdist, allpla, close
 
 
+def collapse_ctx(ctx, rparams, dparams, prec):
+    """
+    Merge rows for the same site with matching rupture parameters and
+    binned distances. Round dip, strike and rake to one decimal place
+    for matching; compare other rupture parameters exactly. Sum occurrence
+    rates and average distances with those rates as weights.
+    Nonpoissonian contexts are unchanged.
+
+    :param ctx: context recarray with sids and occurrence_rate fields
+    :param rparams: rupture parameter names; dip, strike and rake are rounded
+                   to one decimal place, other parameters are kept exact
+    :param dparams: distance parameter names; rrup is always included
+    :param prec: positive bin width on sign(d) * log(1 + abs(d))
+    :returns: collapsed recarray, or ctx if no rows are merged
+
+    Parameter names absent from ctx are ignored. Distances are grouped
+    by rounding their transformed values divided by prec.
+
+    The first two rows below share a site, magnitude and distance bin.
+    Their rates sum to 0.04 and their weighted distance is 106.15 km.
+    The third row stays separate because it belongs to another site.
+
+    >>> ctx = numpy.rec.fromarrays(
+    ...     [[0, 0, 1], [6.5] * 3, [106., 106.2, 106.], [.01, .03, .02]],
+    ...     names='sids,mag,rrup,occurrence_rate')
+    >>> out = collapse_ctx(ctx, {'mag'}, {'rrup'}, prec=.01)
+    >>> out.sids.tolist()
+    [0, 1]
+    >>> out.occurrence_rate.round(2).tolist()
+    [0.04, 0.02]
+    >>> out.rrup.round(2).tolist()
+    [106.15, 106.0]
+    """
+    if len(ctx) < 2 or not numpy.isfinite(ctx.occurrence_rate).all():
+        return ctx  # nothing to collapse or nonpoissonian ruptures
+    names = set(ctx.dtype.names)
+    dparams = sorted((set(dparams) | {'rrup'}) & names)
+    cols = [ctx.sids.astype(numpy.int64)]
+    # Round geometry angles to 0.1 degrees; keep other rupture values.
+    for par in sorted(set(rparams) & names):
+        values = ctx[par]
+        if par in {'dip', 'strike', 'rake'}:
+            values = numpy.round(values, 1)
+        cols.append(values)
+    for par in dparams:
+        d = ctx[par]
+        logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
+        cols.append(numpy.round(logd / prec).astype(numpy.int64))
+    # For the doctest, column_stack(cols) is [[0., 6.5, 467.],
+    #                                       [0., 6.5, 467.],
+    #                                       [1., 6.5, 467.]]:
+    # Fields: sids, mag (unchanged), rrup (distance bin).
+    # Equal rows are merged.
+    _, idx, inv = numpy.unique(numpy.column_stack(cols), axis=0,
+                               return_index=True, return_inverse=True)
+    if len(idx) == len(ctx):
+        return ctx
+    inv = inv.ravel()
+    rates = ctx.occurrence_rate
+    tot = numpy.bincount(inv, rates)
+    out = ctx[idx]  # a copy
+    for par in dparams:
+        out[par] = numpy.bincount(inv, rates * ctx[par]) / tot
+    out.occurrence_rate = tot
+    return out
+
+
 # helper used to populate contexts for planar ruptures
 def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
                     src_id, src_offset, tom):
@@ -615,7 +682,6 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
@@ -640,6 +706,7 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
+        self.collapse_precision = param.get('collapse_precision', 0)
         self.split_sources = self.oq.split_sources
 
     def _init2(self, param, extraparams):
@@ -1221,6 +1288,14 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
+        prec = self.collapse_precision
+        if prec and step == 1 and src_id != -1 and src.code in b'SCK':
+            ctxs = list(ctxs)
+            if not ctxs:  # no rupture is close to the sites
+                return iter([])
+            return iter([collapse_ctx(
+                self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
+                self.REQUIRES_DISTANCES, prec)])
         if len(rups_sites) == 1 and not self.minimum_distance:
             # fast lane for event based with no minimum_distance
             return ctxs
@@ -1239,8 +1314,7 @@ class ContextMaker(object):
             return -numpy.log(probs) / self.investigation_time
 
     # not used by the engine, it is meant for notebooks
-    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
-                 collapse_level=-1):
+    def get_poes(self, srcs, sitecol, tom=None, rup_mutex={}):
         """
         :param srcs: a list of sources with the same TRT
         :param sitecol: a SiteCollection instance with N sites
