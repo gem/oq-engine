@@ -89,22 +89,22 @@ class ApplyConversionTestCase(unittest.TestCase):
                          ('forward', 1.0, 1.0))
 
     def test_bk17_direct_pga(self):
-        # BK17 e-supp RotD50/GMAR PGA row: 1.014, 0.086
+        # BK17 RotD50/GMAR: PGA uses R1 proxy from Table 2 col 2 (1.009)
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GEOMETRIC_MEAN, PGA)
-        self.assertEqual(steps, (('forward', 1.014, 0.086, 1.0),))
+        self.assertEqual(steps, (('forward', 1.009, 0.0, 1.0),))
 
     def test_bk17_direct_between_two_non_geom(self):
         # BK17 col 1 directly tabulates (RotD50, GMRotI50); no pivot
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GMRotI50, PGA)
-        self.assertEqual(steps, (('forward', 1.001, 0.048, 1.0),))
+        self.assertEqual(steps, (('forward', 0.999, 0.0, 1.0),))
 
     def test_reverse_direction_tag(self):
         # GEOM -> RotD50 reuses the BK17 col 2 ratio tagged 'reverse'
         steps = imc_conversion.apply_conversion(
             IMC.GEOMETRIC_MEAN, IMC.RotD50, PGA)
-        self.assertEqual(steps, (('reverse', 1.014, 0.086, 1.0),))
+        self.assertEqual(steps, (('reverse', 1.009, 0.0, 1.0),))
 
     def test_pair_without_direct_ratio_raises(self):
         # RotD100 -> GEOM has no direct ratio in either BB06 or BK17
@@ -148,14 +148,13 @@ class ApplyInPlaceTestCase(unittest.TestCase):
         np.testing.assert_array_equal(si, [0.6])
 
     def test_single_forward_step_shifts_mean(self):
-        # RotD50 -> GEOM at PGA divides exp(me) by 1.014; sigma shrinks
-        # by sqrt(0.6**2 - 0.086**2) because ratio_sigma=1
+        # RotD50 -> GEOM at PGA divides exp(me) by 1.009 (R1 proxy)
         me, si = self._mean_sig()
         steps = imc_conversion.apply_conversion(
             IMC.RotD50, IMC.GEOMETRIC_MEAN, PGA)
         imc_conversion.apply_in_place((me, si), steps)
-        np.testing.assert_allclose(me, [0.5 - np.log(1.014)])
-        np.testing.assert_allclose(si, [(0.6 ** 2 - 0.086 ** 2) ** 0.5])
+        np.testing.assert_allclose(me, [0.5 - np.log(1.009)])
+        np.testing.assert_array_equal(si, [0.6])
 
     def test_round_trip_direct_ratio(self):
         # RotD50 -> GMRotI50 then back round-trips mean and sigma
