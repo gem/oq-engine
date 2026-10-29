@@ -191,11 +191,6 @@
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
     with circulant-embedding-based correlated GMF simulations.
 
-  [Claudio Schill]
-  * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
-    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
-    5 <= M < 6 bin values, instead of the M > 7 bin.
-
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: the uncertainties
     on the magnitude and on the b-value were ignored for multiPointSources
