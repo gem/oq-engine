@@ -409,6 +409,19 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
+    def test_injured_by_time(self):
+        # without time_event the injured losses are computed for each
+        # time event of the exposure, like the occupants losses
+        self.run_calc(occupants.__file__, 'job.ini')
+        oq = self.calc.datastore['oqparam']
+        df = self.calc.datastore.read_df('aggrisk')
+        lids = set(df.loss_id)
+        for lt in ['injured_day', 'injured_night', 'injured_transit',
+                   'injured_avg']:
+            self.assertIn(lt, oq.loss_types)
+            self.assertIn(scientific.LOSSID[lt], lids)
+        self.assertNotIn('injured', oq.loss_types)
+
     def check_case_master(self):
         # check total variance of the occupants_day losses
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)

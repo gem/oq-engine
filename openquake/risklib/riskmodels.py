@@ -258,18 +258,20 @@ class PerilDict(dict):
             raise KeyError(('groundshaking', lt))
 
 
-# offset of the seeds of the occupants time events, far from the event seeds
-OCC_TIME_SEED = 2 ** 31
+# offsets of the seeds of the time-dependent losses, far from the event
+# seeds and different from each other; they must fit in 32 bits
+TIME_SEEDS = {'occupants': 2 ** 31, 'injured': 2 ** 31 + 2 ** 30}
 
 
-def time_rng(rndgen):
+def time_rng(rndgen, base):
     """
-    :returns: a MultiEventRNG independent of rndgen, or None
+    :returns: a MultiEventRNG independent of rndgen and of the other
+        time-dependent loss types (base is one of TIME_LOSSES), or None
     """
     if rndgen is None:
         return None
     return scientific.MultiEventRNG(
-        rndgen.master_seed + OCC_TIME_SEED, list(rndgen.rng),
+        rndgen.master_seed + TIME_SEEDS[base], list(rndgen.rng),
         rndgen.asset_correlation)
 
 
@@ -326,18 +328,18 @@ class RiskModel(object):
         res = {}
         for peril in self.risk_functions:
             for lt in self.loss_types:
-                if lt == 'occupants' and byt:
+                if lt in scientific.TIME_LOSSES and byt:
                     # the average uses the same random numbers as before,
                     # so that the other loss types do not change; the time
                     # events use an independent generator
-                    res[peril, 'occupants_avg'] = meth(
-                        peril, 'occupants_avg', assets, gmf_df, rndgen)
-                    trng = time_rng(rndgen)
+                    avg = f'{lt}_avg'
+                    res[peril, avg] = meth(peril, avg, assets, gmf_df, rndgen)
+                    trng = time_rng(rndgen, lt)
                     for te in scientific.TIME_EVENTS:
                         col = f'occupants_{te}'
                         if col in assets.columns:
-                            res[peril, col] = meth(
-                                peril, col, assets, gmf_df, trng)
+                            res[peril, f'{lt}_{te}'] = meth(
+                                peril, f'{lt}_{te}', assets, gmf_df, trng)
                 else:
                     res[peril, lt] = meth(peril, lt, assets, gmf_df, rndgen)
         # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
@@ -452,11 +454,11 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        # occupants_day, occupants_night, occupants_transit -> occupants
-        if loss_type.startswith('occupants_'):
-            lt, te = 'occupants', loss_type[10:]
-        else:
-            lt, te = loss_type, self.time_event
+        # occupants_day, injured_avg, ... -> occupants, day; injured, avg
+        lt, te = loss_type, self.time_event
+        for base in scientific.TIME_LOSSES:
+            if loss_type.startswith(base + '_'):
+                lt, te = base, loss_type[len(base) + 1:]
         imt = self.imt_by_lt[lt, peril]
         sid = assets['site_id']
         if lt in ('occupants', 'injured'):

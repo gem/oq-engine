@@ -9,14 +9,20 @@
 | NZL     | number            | 1_707       | 6.066E-08 | 2.000E-08 | 6.000E-08 | 1.100E-07 | nan     | nan                          |
 | NZL     | residents         | 3_591       | 9.571E-08 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
 | NZL     | affectedpop       | 3_591       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
-| NZL     | injured           | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
 | NZL     | embodied_carbon   | 75_944      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | nan     | nan                          |
 | NZL     | occupants_avg     | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
+| NZL     | injured_day       | 709.4       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | nan     | nan                          |
+| NZL     | injured_night     | 3_403       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | nan     | nan                          |
+| NZL     | injured_transit   | 1_704       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | nan     | nan                          |
+| NZL     | injured_avg       | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
 | *total* | affectedpop       | 3_591       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | nan     | nan                          |
 | *total* | area              | 354_882     | 9.988E-06 | 3.120E-06 | 9.900E-06 | 1.818E-05 | nan     | nan                          |
 | *total* | contents          | 169_535_008 | 11.3464   | 9.867E-04 | 0.0032    | 0.0060    | nan     | nan                          |
 | *total* | embodied_carbon   | 75_944      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | nan     | nan                          |
-| *total* | injured           | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
+| *total* | injured_avg       | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
+| *total* | injured_day       | 709.4       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | nan     | nan                          |
+| *total* | injured_night     | 3_403       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | nan     | nan                          |
+| *total* | injured_transit   | 1_704       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | nan     | nan                          |
 | *total* | number            | 1_707       | 6.066E-08 | 2.000E-08 | 6.000E-08 | 1.100E-07 | nan     | nan                          |
 | *total* | occupants_avg     | 1_939       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | nan     | nan                          |
 | *total* | occupants_day     | 709.4       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | nan     | nan                          |
@@ -53,9 +59,12 @@
 | nan     | number            | 1.0000      | 3.127E-09 | 0.0       | 0.0       | 1.000E-08 | 034     | Stratford District           |
 | nan     | residents         | 2.8010      | 8.758E-09 | 0.0       | 0.0       | 2.801E-08 | 034     | Stratford District           |
 | nan     | affectedpop       | 2.8010      | 8.758E-09 | 0.0       | 0.0       | 2.801E-08 | 034     | Stratford District           |
-| nan     | injured           | 1.5120      | 4.728E-09 | 0.0       | 0.0       | 1.512E-08 | 034     | Stratford District           |
 | nan     | embodied_carbon   | 80.3159     | 0.0042    | 0.0       | 0.0       | 0.0275    | 034     | Stratford District           |
 | nan     | occupants_avg     | 1.5120      | 4.728E-09 | 0.0       | 0.0       | 1.512E-08 | 034     | Stratford District           |
+| nan     | injured_day       | 0.5540      | 1.732E-09 | 0.0       | 0.0       | 5.540E-09 | 034     | Stratford District           |
+| nan     | injured_night     | 2.6540      | 8.299E-09 | 0.0       | 0.0       | 2.654E-08 | 034     | Stratford District           |
+| nan     | injured_transit   | 1.3300      | 4.159E-09 | 0.0       | 0.0       | 1.330E-08 | 034     | Stratford District           |
+| nan     | injured_avg       | 1.5120      | 4.728E-09 | 0.0       | 0.0       | 1.512E-08 | 034     | Stratford District           |
 | nan     | contents          | 711_368     | 3.528E-04 | 0.0       | 6.301E-04 | 6.301E-04 | 036     | Ruapehu District             |
 | nan     | structural        | 2_950_484   | 8.1034    | 0.0       | 0.0036    | 0.0036    | 036     | Ruapehu District             |
 | nan     | occupants_day     | 1.9272      | 3.024E-09 | 0.0       | 5.400E-09 | 5.400E-09 | 036     | Ruapehu District             |
@@ -65,9 +74,12 @@
 | nan     | number            | 10.0000     | 5.599E-09 | 0.0       | 1.000E-08 | 1.000E-08 | 036     | Ruapehu District             |
 | nan     | residents         | 9.7232      | 1.523E-08 | 0.0       | 2.719E-08 | 2.719E-08 | 036     | Ruapehu District             |
 | nan     | affectedpop       | 9.7232      | 1.523E-08 | 0.0       | 2.719E-08 | 2.719E-08 | 036     | Ruapehu District             |
-| nan     | injured           | 5.2479      | 8.231E-09 | 0.0       | 1.470E-08 | 1.470E-08 | 036     | Ruapehu District             |
 | nan     | embodied_carbon   | 240.4       | 0.0272    | 0.0       | 8.032E-07 | 0.0876    | 036     | Ruapehu District             |
 | nan     | occupants_avg     | 5.2479      | 8.231E-09 | 0.0       | 1.470E-08 | 1.470E-08 | 036     | Ruapehu District             |
+| nan     | injured_day       | 1.9272      | 3.024E-09 | 0.0       | 5.400E-09 | 5.400E-09 | 036     | Ruapehu District             |
+| nan     | injured_night     | 9.2169      | 1.445E-08 | 0.0       | 2.580E-08 | 2.580E-08 | 036     | Ruapehu District             |
+| nan     | injured_transit   | 4.6103      | 7.223E-09 | 0.0       | 1.290E-08 | 1.290E-08 | 036     | Ruapehu District             |
+| nan     | injured_avg       | 5.2479      | 8.231E-09 | 0.0       | 1.470E-08 | 1.470E-08 | 036     | Ruapehu District             |
 | nan     | contents          | 714_067     | 0.0142    | 0.0       | 0.0       | 8.926E-04 | 044     | Porirua City                 |
 | nan     | structural        | 2_856_269   | 41.5269   | 0.0       | 0.0       | 629.6     | 044     | Porirua City                 |
 | nan     | occupants_day     | 5.7600      | 7.500E-10 | 0.0       | 0.0       | 7.200E-09 | 044     | Porirua City                 |
@@ -77,9 +89,12 @@
 | nan     | number            | 8.0000      | 1.042E-09 | 0.0       | 0.0       | 1.000E-08 | 044     | Porirua City                 |
 | nan     | residents         | 29.1399     | 3.794E-09 | 0.0       | 0.0       | 3.642E-08 | 044     | Porirua City                 |
 | nan     | affectedpop       | 29.1399     | 3.794E-09 | 0.0       | 0.0       | 3.642E-08 | 044     | Porirua City                 |
-| nan     | injured           | 15.7300     | 2.052E-09 | 0.0       | 0.0       | 1.970E-08 | 044     | Porirua City                 |
 | nan     | embodied_carbon   | 216.3       | 0.0029    | 0.0       | 0.0       | 0.0436    | 044     | Porirua City                 |
 | nan     | occupants_avg     | 15.7300     | 2.052E-09 | 0.0       | 0.0       | 1.970E-08 | 044     | Porirua City                 |
+| nan     | injured_day       | 5.7600      | 7.500E-10 | 0.0       | 0.0       | 7.200E-09 | 044     | Porirua City                 |
+| nan     | injured_night     | 27.6100     | 3.594E-09 | 0.0       | 0.0       | 3.450E-08 | 044     | Porirua City                 |
+| nan     | injured_transit   | 13.8300     | 1.802E-09 | 0.0       | 0.0       | 1.730E-08 | 044     | Porirua City                 |
+| nan     | injured_avg       | 15.7300     | 2.052E-09 | 0.0       | 0.0       | 1.970E-08 | 044     | Porirua City                 |
 | nan     | contents          | 4_407_635   | 3.535E-06 | 0.0       | 0.0       | 8.926E-04 | 046     | Lower Hutt City              |
 | nan     | structural        | 18_186_430  | 6.2712    | 0.0       | 0.0       | 329.9     | 046     | Lower Hutt City              |
 | nan     | occupants_day     | 27.2900     | 1.099E-10 | 0.0       | 0.0       | 5.600E-09 | 046     | Lower Hutt City              |
@@ -89,9 +104,12 @@
 | nan     | number            | 18.0000     | 1.962E-10 | 0.0       | 0.0       | 1.000E-08 | 046     | Lower Hutt City              |
 | nan     | residents         | 138.1083    | 5.541E-10 | 0.0       | 0.0       | 2.824E-08 | 046     | Lower Hutt City              |
 | nan     | affectedpop       | 138.1083    | 5.541E-10 | 0.0       | 0.0       | 2.824E-08 | 046     | Lower Hutt City              |
-| nan     | injured           | 74.5600     | 2.982E-10 | 0.0       | 0.0       | 1.520E-08 | 046     | Lower Hutt City              |
 | nan     | embodied_carbon   | 1_428       | 4.260E-04 | 0.0       | 0.0       | 0.0223    | 046     | Lower Hutt City              |
 | nan     | occupants_avg     | 74.5600     | 2.982E-10 | 0.0       | 0.0       | 1.520E-08 | 046     | Lower Hutt City              |
+| nan     | injured_day       | 27.2900     | 1.099E-10 | 0.0       | 0.0       | 5.600E-09 | 046     | Lower Hutt City              |
+| nan     | injured_night     | 130.9000    | 5.258E-10 | 0.0       | 0.0       | 2.680E-08 | 046     | Lower Hutt City              |
+| nan     | injured_transit   | 65.5300     | 2.629E-10 | 0.0       | 0.0       | 1.340E-08 | 046     | Lower Hutt City              |
+| nan     | injured_avg       | 74.5600     | 2.982E-10 | 0.0       | 0.0       | 1.520E-08 | 046     | Lower Hutt City              |
 | nan     | contents          | 47_865_952  | 0.0012    | 0.0       | 0.0016    | 0.0021    | 076     | Auckland                     |
 | nan     | structural        | 199_653_120 | 1_634     | 0.0       | 167.2368  | 6_727     | 076     | Auckland                     |
 | nan     | occupants_day     | 362.3       | 1.341E-08 | 0.0       | 1.690E-08 | 2.260E-08 | 076     | Auckland                     |
@@ -101,14 +119,20 @@
 | nan     | number            | 510.0       | 2.373E-08 | 0.0       | 3.000E-08 | 4.000E-08 | 076     | Auckland                     |
 | nan     | residents         | 1_834       | 6.737E-08 | 0.0       | 8.492E-08 | 1.136E-07 | 076     | Auckland                     |
 | nan     | affectedpop       | 1_834       | 3.441E-06 | 0.0       | 8.492E-08 | 1.136E-07 | 076     | Auckland                     |
-| nan     | injured           | 990.1       | 3.642E-08 | 0.0       | 4.590E-08 | 6.140E-08 | 076     | Auckland                     |
 | nan     | embodied_carbon   | 17_441      | 0.1959    | 0.0       | 0.0083    | 0.8861    | 076     | Auckland                     |
 | nan     | occupants_avg     | 990.1       | 3.642E-08 | 0.0       | 4.590E-08 | 6.140E-08 | 076     | Auckland                     |
+| nan     | injured_day       | 362.3       | 1.341E-08 | 0.0       | 1.690E-08 | 2.260E-08 | 076     | Auckland                     |
+| nan     | injured_night     | 1_738       | 6.395E-08 | 0.0       | 8.060E-08 | 1.078E-07 | 076     | Auckland                     |
+| nan     | injured_transit   | 870.1       | 3.197E-08 | 0.0       | 4.030E-08 | 5.390E-08 | 076     | Auckland                     |
+| nan     | injured_avg       | 990.1       | 3.642E-08 | 0.0       | 4.590E-08 | 6.140E-08 | 076     | Auckland                     |
 | nan     | affectedpop       | 2_014       | 3.469E-06 | 0.0       | 1.121E-07 | 2.052E-07 | *total* | *total*                      |
 | nan     | area              | 129_761     | 9.988E-06 | 3.120E-06 | 9.900E-06 | 1.818E-05 | *total* | *total*                      |
 | nan     | contents          | 56_650_612  | 11.3464   | 9.867E-04 | 0.0032    | 0.0060    | *total* | *total*                      |
 | nan     | embodied_carbon   | 20_633      | 0.9133    | 0.0211    | 0.2851    | 4.1750    | *total* | *total*                      |
-| nan     | injured           | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | *total* | *total*                      |
+| nan     | injured_avg       | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | *total* | *total*                      |
+| nan     | injured_day       | 397.8       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | *total* | *total*                      |
+| nan     | injured_night     | 1_909       | 9.081E-08 | 0.0       | 1.064E-07 | 1.946E-07 | *total* | *total*                      |
+| nan     | injured_transit   | 955.4       | 4.542E-08 | 0.0       | 5.320E-08 | 9.740E-08 | *total* | *total*                      |
 | nan     | number            | 584.0       | 6.066E-08 | 2.000E-08 | 6.000E-08 | 1.100E-07 | *total* | *total*                      |
 | nan     | occupants_avg     | 1_087       | 5.173E-08 | 0.0       | 6.060E-08 | 1.109E-07 | *total* | *total*                      |
 | nan     | occupants_day     | 397.8       | 1.902E-08 | 0.0       | 2.230E-08 | 4.074E-08 | *total* | *total*                      |

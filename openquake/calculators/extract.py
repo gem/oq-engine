@@ -1005,6 +1005,8 @@ def extract_aggrisk_tags(dstore, what):
                     elif lt in ['occupants', 'injured']:
                         # without a time_event use the average occupants
                         valuelt = 'occupants_' + (oq.time_event or 'avg')
+                    elif lt.startswith('injured_'):  # injured_day, ...
+                        valuelt = 'occupants_' + lt[len('injured_'):]
                     acc['value'].append(df.loc[agg_id][valuelt])
                     acc['lossmea'].append(row.loss)
                 if len(qdf):
