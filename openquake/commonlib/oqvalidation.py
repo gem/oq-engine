@@ -954,7 +954,8 @@ tectonic_region_type:
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "avg", "day", "night", "transit". If not specified,
-  the losses for day, night and transit are all computed and stored.
+  the occupants and injured losses for day, night, transit and avg are
+  all computed and stored.
   Example: *time_event = day*.
   Default: None
 
@@ -1815,14 +1816,16 @@ class OqParam(valid.ParamSet):
         # all_cost_types includes occupants and exclude perils
         self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss, the occupants_<time_event> losses
-        # use the minimum_asset_loss of occupants; the default key is
-        # kept in mal, since the dict may be already fixed (no default)
+        # use the minimum_asset_loss of occupants, the injured_<time_event>
+        # losses the one of injured; the default key is kept in mal,
+        # since the dict may be already fixed (no default)
         mal = {'default': 0, **self.minimum_asset_loss}
         self.minimum_asset_loss = {}
         for ln in self.loss_types:
-            occ = 'occupants' if ln.startswith('occupants_') else ln
+            base = next((b for b in scientific.TIME_LOSSES
+                         if ln.startswith(b + '_')), ln)
             self.minimum_asset_loss[ln] = mal.get(
-                ln, mal.get(occ, mal['default']))
+                ln, mal.get(base, mal['default']))
 
     def validate(self):
         """
@@ -2168,9 +2171,9 @@ class OqParam(valid.ParamSet):
             return []
         names = []
         for lt in self.all_cost_types:
-            if lt == 'occupants' and self.occupants_by_time:
-                names.extend('occupants_' + te for te in self.time_events)
-                names.append('occupants_avg')
+            if lt in scientific.TIME_LOSSES and self.occupants_by_time:
+                names.extend(f'{lt}_{te}' for te in self.time_events)
+                names.append(f'{lt}_avg')
             else:
                 names.append(lt)
         return names
