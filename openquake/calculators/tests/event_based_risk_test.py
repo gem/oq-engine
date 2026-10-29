@@ -26,6 +26,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
+from openquake.risklib import scientific
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
@@ -409,10 +410,11 @@ agg_id
                                   fname, delta=1E-4)
 
     def check_case_master(self):
-        # check total variance
+        # check total variance of the occupants_day losses
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
+        lid = scientific.LOSSID['occupants_day']
         elt_df = self.calc.datastore.read_df(
-            'risk_by_event', 'event_id', dict(agg_id=K, loss_id=4))
+            'risk_by_event', 'event_id', dict(agg_id=K, loss_id=lid))
         elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
         elt_df.sort_index(inplace=True)
         del elt_df['agg_id']
@@ -492,6 +494,17 @@ agg_id
         losses = self.calc.datastore['avg_losses-stats/structural'][:]
         numpy.testing.assert_allclose(aw.array.sum(), losses[:, 0].sum(),
                                       rtol=1E-5)
+
+    def test_minimum_asset_loss_occupants(self):
+        # the occupants_<time_event> losses use the minimum_asset_loss
+        # of occupants, there is no 'default' key
+        mal = ("{'business_interruption': 0, 'contents': 0,"
+               " 'nonstructural': 0, 'occupants': 0, 'structural': 1}")
+        self.run_calc(case_master.__file__, 'job.ini',
+                      minimum_asset_loss=mal)
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.minimum_asset_loss['occupants_day'], 0)
+        self.assertEqual(oq.minimum_asset_loss['structural'], 1)
 
     def test_from_ses(self):
         self.run_calc(case_master.__file__, 'job_risk.ini')

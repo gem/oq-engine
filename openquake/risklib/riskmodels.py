@@ -258,6 +258,21 @@ class PerilDict(dict):
             raise KeyError(('groundshaking', lt))
 
 
+# offset of the seeds of the occupants time events, far from the event seeds
+OCC_TIME_SEED = 2 ** 31
+
+
+def time_rng(rndgen):
+    """
+    :returns: a MultiEventRNG independent of rndgen, or None
+    """
+    if rndgen is None:
+        return None
+    return scientific.MultiEventRNG(
+        rndgen.master_seed + OCC_TIME_SEED, list(rndgen.rng),
+        rndgen.asset_correlation)
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -306,8 +321,25 @@ class RiskModel(object):
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
-               for peril in self.risk_functions for lt in self.loss_types}
+        byt = (self.time_event is None and
+               self.calcmode in scientific.OCC_TIME_MODES)
+        res = {}
+        for peril in self.risk_functions:
+            for lt in self.loss_types:
+                if lt == 'occupants' and byt:
+                    # the average uses the same random numbers as before,
+                    # so that the other loss types do not change; the time
+                    # events use an independent generator
+                    res[peril, 'occupants_avg'] = meth(
+                        peril, 'occupants_avg', assets, gmf_df, rndgen)
+                    trng = time_rng(rndgen)
+                    for te in scientific.TIME_EVENTS:
+                        col = f'occupants_{te}'
+                        if col in assets.columns:
+                            res[peril, col] = meth(
+                                peril, col, assets, gmf_df, trng)
+                else:
+                    res[peril, lt] = meth(peril, lt, assets, gmf_df, rndgen)
         # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
 
@@ -420,16 +452,21 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        imt = self.imt_by_lt[loss_type, peril]
+        # occupants_day, occupants_night, occupants_transit -> occupants
+        if loss_type.startswith('occupants_'):
+            lt, te = 'occupants', loss_type[10:]
+        else:
+            lt, te = loss_type, self.time_event
+        imt = self.imt_by_lt[lt, peril]
         sid = assets['site_id']
-        if loss_type in 'occupants injured':
-            val = assets['occupants_%s' % self.time_event].to_numpy()
-        elif loss_type == 'affectedpop':
+        if lt in ('occupants', 'injured'):
+            val = assets['occupants_%s' % (te or 'avg')].to_numpy()
+        elif lt == 'affectedpop':
             val = assets['value-residents'].to_numpy()
         else:
-            val = assets['value-' + loss_type].to_numpy()
+            val = assets['value-' + lt].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
-        vf = self.risk_functions[peril][loss_type]
+        vf = self.risk_functions[peril][lt]
         df = vf(asset_df, gmf_df, imt, rndgen,
                 self.minimum_asset_loss.get(loss_type, 0.))
         return df

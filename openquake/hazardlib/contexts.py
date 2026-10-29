@@ -1518,7 +1518,9 @@ class ContextMaker(object):
         # much more expensive than its nctxs suggests. The number of pairs
         # is the relevant quantity, discounted by PAIR_COST
         pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
-        return (src.nctxs + pairs / PAIR_COST) / N
+        # the GSIMs of the group are evaluated on all the surviving
+        # contexts, so their number multiplies the cost of the contexts
+        return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """

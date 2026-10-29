@@ -952,9 +952,10 @@ tectonic_region_type:
 
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "avg", "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit". If not specified,
+  the losses for day, night and transit are all computed and stored.
   Example: *time_event = day*.
-  Default: "avg"
+  Default: None
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1336,7 +1337,7 @@ class OqParam(valid.ParamSet):
     strict = valid.Param(valid.boolean, True)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
-        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
+        valid.NoneOr(valid.Choice('avg', 'day', 'night', 'transit')), None)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncated_mvn = valid.Param(valid.boolean, False)
     # the default for the truncation_level is 99. (no truncation)
@@ -1812,10 +1813,15 @@ class OqParam(valid.ParamSet):
                 pass
         # all_cost_types includes occupants and exclude perils
         self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
-        # fix minimum_asset_loss
-        self.minimum_asset_loss = {
-            ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
-            for ln in self.loss_types}
+        # fix minimum_asset_loss, the occupants_<time_event> losses
+        # use the minimum_asset_loss of occupants; the default key is
+        # kept in mal, since the dict may be already fixed (no default)
+        mal = {'default': 0, **self.minimum_asset_loss}
+        self.minimum_asset_loss = {}
+        for ln in self.loss_types:
+            occ = 'occupants' if ln.startswith('occupants_') else ln
+            self.minimum_asset_loss[ln] = mal.get(
+                ln, mal.get(occ, mal['default']))
 
     def validate(self):
         """
@@ -2161,8 +2167,37 @@ class OqParam(valid.ParamSet):
             return []
         names = []
         for lt in self.all_cost_types:
-            names.append(lt)
+            if lt == 'occupants' and self.occupants_by_time:
+                names.extend('occupants_' + te for te in self.time_events)
+                names.append('occupants_avg')
+            else:
+                names.append(lt)
         return names
+
+    @property
+    def occupants_by_time(self):
+        """
+        :returns: True if the occupants losses are computed for each time
+            event of the exposure because time_event is not specified
+        """
+        return (self.time_event is None and
+                self.calculation_mode in scientific.OCC_TIME_MODES)
+
+    @property
+    def time_events(self):
+        """
+        :returns: the time events (day, night, transit) of the exposure,
+            all of them until the exposure is read
+        """
+        return getattr(self, 'exposure_time_events', scientific.TIME_EVENTS)
+
+    def set_time_events(self, occupancy_periods):
+        """
+        Set the time events present in the exposure, as a string
+        """
+        periods = occupancy_periods.split()
+        self.exposure_time_events = [te for te in scientific.TIME_EVENTS
+                                     if te in periods]
 
     @property
     def ext_loss_types(self):
