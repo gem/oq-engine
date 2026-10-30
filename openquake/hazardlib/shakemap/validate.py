@@ -96,7 +96,10 @@ class ImpactParam:
             notes=self.notes,
             calculation_mode=self.calculation_mode,
             rupture_dict=str(rupdic),
-            time_event=self.time_event,
+            # time_event is not set, so the occupants losses are computed
+            # for day, night and transit; the selected time is used only
+            # in the country reports
+            report_time_event=self.time_event,
             maximum_distance=str(self.maximum_distance),
             region_grid_spacing=str(self.region_grid_spacing),
             mosaic_model=self.mosaic_model,

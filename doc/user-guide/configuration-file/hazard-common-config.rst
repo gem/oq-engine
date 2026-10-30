@@ -134,3 +134,76 @@ Most parameters are very specific to particular GMPEs and particular
 calculations, so you need to study the implementation of the specific
 feature you are interested in to know what they mean and how they
 work.
+
+*********************************
+horizontal-component conversion
+*********************************
+
+If the GMPEs in the logic tree predict ground motion on different
+horizontal components, the engine can convert them to a common target
+component by adding one line in the ``[calculation]`` section::
+
+    horiz_comp_to = geometric_mean
+
+Supported target values: ``geometric_mean``, ``gmroti50``, ``rotd50``,
+``rotd100``, ``greater_of_two_horizontal``, ``random_horizontal``.
+
+Only the pairs tabulated in Beyer & Bommer (2006, BB06) and
+Boore & Kishida (2017, BK17) are supported; pivoting through an
+intermediate component is not performed. If a GMPE's native component
+has no direct ratio to the requested target it is left unconverted and
+an INFO log line is emitted.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Pair (undirected)
+     - Source
+   * - ``gmroti50`` ↔ ``geometric_mean``
+     - BB06 Table 3
+   * - ``random_horizontal`` ↔ ``geometric_mean``
+     - BB06 Table 3
+   * - ``rotd50`` ↔ ``geometric_mean``
+     - BK17 Table 2
+   * - ``rotd50`` ↔ ``gmroti50``
+     - BK17 Table 2
+   * - ``rotd100`` ↔ ``rotd50``
+     - BK17 Table 2
+   * - ``greater_of_two_horizontal`` ↔ ``geometric_mean``
+     - BK17 Table 2
+   * - ``greater_of_two_horizontal`` ↔ ``gmroti50``
+     - BK17 Table 2
+   * - ``greater_of_two_horizontal`` ↔ ``rotd50``
+     - BK17 Table 2
+
+Given a tabulated ratio ``r = conv_median`` (defined by the paper as
+source/target) with sigma terms ``conv_sigma`` and ``ratio_sigma``, each
+step is applied as
+
+- forward (tabulated direction)::
+
+    mean_target = ln(exp(mean_source) / r)
+    sigma_target = sqrt((sigma_source^2 - conv_sigma^2) / ratio_sigma^2)
+
+- reverse (opposite direction)::
+
+    mean_source = ln(exp(mean_target) * r)
+    sigma_source = sqrt(sigma_target^2 * ratio_sigma^2 + conv_sigma^2)
+
+For BK17 pairs ``conv_sigma = 0`` and ``ratio_sigma = 1``, so only the
+mean changes. For spectral acceleration, BB06 is piecewise linear in
+``log10(T)`` between 0.15 s and 0.80 s with flat extrapolation outside;
+BK17 uses the four-knot log-period line-segment model of its equation 2.
+
+The legacy flag ``horiz_comp_to_geom_mean = true`` is still accepted
+and is equivalent to ``horiz_comp_to = geometric_mean``.
+
+References:
+
+- Beyer, K., and J. J. Bommer (2006). Relationships between median
+  values and between aleatory variabilities for different definitions
+  of the horizontal component of motion, *BSSA* 96(4A), 1512–1522.
+- Boore, D. M., and T. Kishida (2017). Relations between some
+  horizontal-component ground-motion intensity measures used in
+  practice, *BSSA* 107(1), 334–343.

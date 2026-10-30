@@ -28,7 +28,7 @@ from openquake.calculators.country_impact_report_builder import (
 from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, get_configured_path,
-    points_to_gdf)
+    get_fatalities_loss_type, points_to_gdf)
 from openquake.hazardlib.shakemap.parsers import format_event_time
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries, get_rupture
@@ -44,10 +44,11 @@ DISCLAIMER_TXT = '''
     subject to changes as more information becomes available.'''
 
 
-def _get_impact_summary_data(dstore, iso3, no_uncertainty):
+def _get_impact_summary_data(dstore, iso3, no_uncertainty, occ_lt):
+    # occ_lt is the loss type of the fatalities for the selected time event
     aggrisk_tags = extract(dstore, 'aggrisk_tags')
     mapping = {
-        meta["label"]: loss_type
+        meta["label"]: occ_lt if loss_type == 'occupants' else loss_type
         for loss_type, meta in LOSS_METADATA.items()
     }
     rows = aggrisk_tags.loc[
@@ -206,6 +207,9 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
 
     avg_losses = extract(dstore, 'avg_losses?kind=stats')
     losses_df, loss_metric = _get_losses_df(avg_losses)
+    # the maps display the fatalities for the selected time event
+    losses_df = losses_df.rename(
+        columns={get_fatalities_loss_type(oqparam): 'occupants'})
 
     rupdic = oqparam.rupture_dict
     event_name = _get_event_name(rupdic)
@@ -278,10 +282,11 @@ def _generate_reports(dstore, adm_level, threshold_deg, calc_id):
 
     points_gdf = None
     failed_countries = []
+    occ_lt = get_fatalities_loss_type(oqparam)
     for iso3 in iso3_codes:
         try:
             summary_data = _get_impact_summary_data(
-                dstore, iso3, report_opts.no_uncertainty)
+                dstore, iso3, report_opts.no_uncertainty, occ_lt)
             if summary_data is not None:
                 if points_gdf is None:
                     points_gdf = points_to_gdf(

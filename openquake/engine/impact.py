@@ -138,7 +138,8 @@ main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.shakemap_version = 'Id of the chosen shakemap version'
 main_cmd.nodal_plane = 'USGS nodal plane to use: NP1 or NP2'
-main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
+main_cmd.time_event = (
+    'Time of the event used in the reports (day, night or transit)')
 main_cmd.maximum_distance = (
     'Maximum distance in km (by default it depends on the magnitude)')
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'

@@ -1,4 +1,15 @@
+  [Christopher Brooks]
+  * Extended the IMC conversion to support more horizontal component
+    definitions: the job parameter "horiz_comp_to_geom_mean" is replaced
+    by "horiz_comp_to", which accepts targets such as geometric mean,
+    RotD50 and RotD100 (the old boolean flag still works for backwards
+    compatibility). Conversions use the ratios tabulated by Beyer &
+    Bommer (2006) and Boore & Kishida (2017).
+ 
   [Michele Simionato]
+  * Compute the injured losses for each time event when time_event is not
+    specified (injured_day, injured_night, injured_transit, injured_avg),
+    like the occupants losses
   * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
     polygon: the distances of the sites within 40 km of a rupture can
     change by a few meters. Faster dip and strike of the floating ruptures
@@ -7,7 +18,7 @@
   * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
     now computed from the total losses of each GMF instead of summing the
     quantiles of the individual groups
-  * Fixed YuEtAl2013Ms and YuEtAl2013Mw in hazardlib: when called with
+  * Fixed YuEtAl2013Ms and its subclasses in hazardlib: when called with
     contexts having different magnitudes, the mean used the magnitude of
     the last site for all the sites; now each site uses its own magnitude.
     Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
