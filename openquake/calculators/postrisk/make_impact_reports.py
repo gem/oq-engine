@@ -21,7 +21,6 @@ import pathlib
 import tempfile
 import logging
 import traceback
-from datetime import datetime, timezone
 import pandas as pd
 from openquake.baselib import config, hdf5, sap
 from openquake.calculators.country_impact_report_builder import (
@@ -30,6 +29,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, get_configured_path,
     get_fatalities_loss_type, points_to_gdf)
+from openquake.hazardlib.shakemap.parsers import format_event_time
 from openquake.commonlib import logs, datastore
 from openquake.commonlib.readinput import get_close_countries, get_rupture
 
@@ -96,21 +96,6 @@ def make_report_for_country(
         iso3, adm_level, event, options, losses_df, summary_data,
         dstore, time_of_calc, oqparam, points_gdf)
     builder.build()
-
-
-def to_utc_string(ts: str) -> str:
-    """
-    Convert a timestamp with timezone offset (e.g. '+08:00')
-    to the format: 'YYYY-MM-DD HH:MM:SS UTC'
-    """
-    if not ts:
-        return "unknown"
-    dt = datetime.fromisoformat(ts)
-    if dt.tzinfo is None:
-        logging.warning("Timestamp has no timezone information")
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
-    dt_utc = dt.astimezone(timezone.utc)
-    return dt_utc.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
 
 
 def get_dynamic_threshold(mag):
@@ -228,9 +213,7 @@ def _build_report_contexts(dstore, oqparam, calc_id, threshold_deg):
 
     rupdic = oqparam.rupture_dict
     event_name = _get_event_name(rupdic)
-    # FIXME: do we prefer to show UTC or perhaps it is more intuitive
-    #        to show the local time?
-    event_date = to_utc_string(oqparam.local_timestamp)
+    event_date = format_event_time(oqparam.local_timestamp)
     shakemap_version = _get_shakemap_version(rupdic)
 
     job = logs.dbcmd('get_job', calc_id)

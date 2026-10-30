@@ -56,7 +56,8 @@ from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
+    format_event_time)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.export import (
@@ -2386,6 +2387,7 @@ def web_engine_get_outputs_impact(request, calc_id):
     job_start_time = job.start_time
     job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
     local_timestamp_str = None
+    event_time_str = None
     time_job_after_event = None
     time_job_after_event_str = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -2408,9 +2410,10 @@ def web_engine_get_outputs_impact(request, calc_id):
         time_job_after_event = (
             job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
         time_job_after_event_str = format_time_delta(time_job_after_event)
+        event_time_str = format_event_time(local_timestamp_str)
     return render(request, "engine/get_outputs_impact.html",
                   dict(calc_id=calc_id, description=description,
-                       local_timestamp=local_timestamp_str,
+                       local_timestamp=event_time_str,
                        job_start_time=job_start_time_str,
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
