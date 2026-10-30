@@ -17,23 +17,30 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 from openquake.baselib.gitwrapper import git
-from openquake.engine import engine
+from openquake.engine import workflow
 
 
 def main(workflow_toml, hard=False):
     """
     Check out the repositories listed in the checkout dictionary
     """
-    for workflow in engine.read_many(workflow_toml, params={}, validate=False):
-        for repo, tag in workflow.checkout.items():
+    for wf in workflow.read_many(workflow_toml, params={}, validate=False):
+        for repo, tag in wf.checkout.items():
             repo_dir = os.path.abspath(
-                os.path.join(workflow.workflow_dir, repo))
+                os.path.join(wf.workflow_dir, repo))
             if hard:
-                git(repo_dir, ['fetch'])
+                git(repo_dir, ['fetch', '--tags'])
                 git(repo_dir, ['clean', '-f'])
-                git(repo_dir, ['reset', '--hard', f'origin/{tag}'])
+                # a tag has no origin/<tag> counterpart, so reset to the tag
+                if tag in git(repo_dir, ['tag', '--list']).split():
+                    git(repo_dir, ['reset', '--hard', tag])
+                else:
+                    git(repo_dir, ['reset', '--hard', f'origin/{tag}'])
             git(repo_dir, ['checkout', tag])
-            git(repo_dir, ['pull'])
+            # the HEAD is detached when tag is a tag, so there is nothing
+            # to pull; show-current prints the branch name, if any
+            if git(repo_dir, ['branch', '--show-current']).strip():
+                git(repo_dir, ['pull'])
 
 main.workflow_toml = "TOML file associated to a workflow"
 main.hard = "If given, clean all the files and do a reset --hard"
