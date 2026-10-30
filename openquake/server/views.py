@@ -99,6 +99,10 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 
 ENGINE = "python -m openquake.engine.engine".split()
 
+# loss types not displayed in the impact tables: embodied carbon and the
+# averages over the times of the day (shown for day, night and transit)
+IMPACT_HIDDEN = ['embodied_carbon', 'occupants_avg', 'injured_avg']
+
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
@@ -2362,8 +2366,8 @@ def _get_impact_losses(ds):
         msg = (f'The risk can not be computed since the hazard is too low:'
                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
         return msg, None, None
-    # the fatalities are displayed for day, night and transit, not on average
-    losses = losses[[n for n in losses.dtype.names if n != 'occupants_avg']]
+    losses = losses[[n for n in losses.dtype.names
+                     if n not in IMPACT_HIDDEN]]
     # display only the descriptions, not the internal names of the fields
     losses_header = [
         AGGRISK_FIELD_DESCRIPTION.get(field, field.capitalize())
@@ -2550,10 +2554,9 @@ def extract_html_table(request, calc_id, name):
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
-        # NOTE: Intentionally excluding embodied_carbon and the average
-        # occupants (the fatalities are shown for day, night and transit)
+        # NOTE: Intentionally excluding some loss types, see IMPACT_HIDDEN
         table_contents = table_contents[~numpy.isin(
-            table_contents[:, 0], ['embodied_carbon', 'occupants_avg'])]
+            table_contents[:, 0], IMPACT_HIDDEN)]
 
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
@@ -2570,7 +2573,7 @@ def extract_html_table(request, calc_id, name):
         loss_types = '<ul>' + ''.join(
             '<li><strong>%s:</strong> %s%s</li>' % (
                 AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
-                '<span>.</span>' if key == 'injured' else '.')
+                '<span>.</span>' if key.startswith('injured') else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
             if key in displayed
         ) + '</ul>'
