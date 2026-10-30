@@ -23,6 +23,7 @@ import numpy as np
 
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as mod
 from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     GridAdjustedGMPE,
     grid_lookup,
@@ -235,3 +236,29 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
                              epsilons={"dL2L": 1.0, "nope": 0.5})
+
+    def test_cache_cold_vs_warm_equivalence(self):
+        # The shared compute-bundle cache must produce identical (mean, sig,
+        # tau, phi) to the no-cache path across the full 27-branch epsilon
+        # product.
+        # NOTE: Cache cleared before each eps so every call is cold. Warm = cache
+        # cleared once up front so the first eps builds the bundle and then the
+        # remaining 26 restore it
+        levels = [-1.732, 0.0, 1.732]
+        combos = [{"dL2L": a, "dS2S": b, "adj_per_km": c}
+                  for a in levels for b in levels for c in levels]
+
+        reference = []
+        for eps in combos:
+            mod._COMPUTE_CACHE.clear()
+            reference.append(self._get_mean_stds(IMTS, epsilons=eps))
+
+        mod._COMPUTE_CACHE.clear()
+        warm = [self._get_mean_stds(IMTS, epsilons=eps) for eps in combos]
+
+        for eps, ref, w in zip(combos, reference, warm):
+            for name, ref_arr, w_arr in zip(
+                    ("mean", "sig", "tau", "phi"), ref, w):
+                np.testing.assert_array_equal(
+                    ref_arr, w_arr,
+                    err_msg=f"{name} mismatch for epsilons={eps}")
