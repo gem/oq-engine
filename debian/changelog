@@ -10,7 +10,7 @@
   * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
     now computed from the total losses of each GMF instead of summing the
     quantiles of the individual groups
-  * Fixed YuEtAl2013Ms and YuEtAl2013Mw in hazardlib: when called with
+  * Fixed YuEtAl2013Ms and its subclasses in hazardlib: when called with
     contexts having different magnitudes, the mean used the magnitude of
     the last site for all the sites; now each site uses its own magnitude.
     Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
