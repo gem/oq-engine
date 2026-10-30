@@ -1501,7 +1501,6 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
@@ -1520,14 +1519,12 @@ class ContextMaker(object):
             return EPS
         src.nsites = len(sites)
         if src.bysrc_unc:
-            # NB: the sources modified by the uncertainties are not split
-            # here (see filter_weight) but in classical, after modifying
-            # them; generating all their contexts now would be expensive
-            # (the area sources go through the rupture-by-rupture path of
-            # gen_contexts) and useless, since the estimate is used only
-            # to split the work in tasks. Since each source is processed
-            # once per set of realizations with different uncertainties,
-            # the cost is proportional to the number of sets
+            # NB: the sources modified by the uncertainties are not
+            # split here but in classical, after modifying them;
+            # generating all their contexts now would be expensive and
+            # useless. Since each source is processed once per set of
+            # realizations with different uncertainties, the cost is
+            # proportional to the number of sets
             C = src.num_ruptures * src.nsites * len(src.get_ts_sets())
         elif src.code in b'pP':  # no subsampling
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
@@ -1535,10 +1532,7 @@ class ContextMaker(object):
             step = 20 if src.num_ruptures >= 400 else 4
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
-            # ratio between all the ruptures and the sampled ones; using
-            # step or step**2 overestimates, since a slice [::step] keeps
-            # ceil(n/step) elements and a simple fault one rupture wide is
-            # sampled only along the length (4x-16x more contexts in alaska)
+            # ratio between all the ruptures and the sampled ones
             if C:  # then src.num_sampled > 0
                 C *= src.num_ruptures / src.num_sampled
         src.dt = time.time() - t0
@@ -1546,16 +1540,16 @@ class ContextMaker(object):
             return EPS
         N = len(srcfilter.sitecol.complete)
         src.nctxs = C * srcfilter.multiplier
-        # The surviving contexts are not the whole story: the contexts of a
-        # pointlike source are generated for *all* the (rupture, site) pairs
-        # and then filtered by rrup < magdist, so a collapsed point source
-        # with thousands of ruptures and a couple of surviving contexts is
-        # much more expensive than its nctxs suggests. The number of pairs
-        # is the relevant quantity, discounted by PAIR_COST
+        # NB: a collapsed point source with thousands of ruptures and
+        # a couple of surviving contexts is much more expensive than
+        # its nctxs suggests. The number of pairs is the relevant
+        # quantity, discounted by PAIR_COST
         pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
+        # generating the contexts of pointlike sources is fast
+        fac = .333 if src.code in b'pPAM' else 1  # heuristic
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        return fac * (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """
