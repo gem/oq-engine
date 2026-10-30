@@ -182,7 +182,8 @@ def count_nogrid(srcs, sf, cmaker, monitor):
 
     :returns: a dictionary with the estimate under the key 'nogrid_ctxs'
     """
-    return {'nogrid_ctxs': estimate_nctxs(cmaker, srcs, sf.sitecol)}
+    nctxs = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
 
 
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
@@ -205,6 +206,10 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
         if pts:
             yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        # Track the same point sources as the no-gridding estimate.
+        for src in srcs:
+            if hasattr(src, 'location'):
+                src.count_nogrid = True
     else:
         srcs = sources
 
@@ -451,6 +456,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = {}
         nogrid = res.pop('nogrid_ctxs', 0)
         if nogrid:
+            self.datastore['nogrid_ctxs'] = nogrid
             logging.info('Estimated %d contexts without ps_grid_spacing '
                          '(single pass)', nogrid)
         atomic = set(src.grp_id for src in atomic_sources)

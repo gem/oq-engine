@@ -23,7 +23,6 @@ import operator
 import numpy
 import shapely
 from scipy.interpolate import interp1d
-from scipy.spatial import KDTree, distance
 
 from openquake.baselib import config
 from openquake.baselib.general import (
@@ -41,7 +40,6 @@ from openquake.hazardlib.calc.filters import (
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
-from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
@@ -541,6 +539,8 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0):
             ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
                                   pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
+        if getattr(src, 'count_nogrid', False):
+            cmaker.cfactor[2] += len(ctxt)
         # summing the rates is exact only for Poissonian occurrences
         poissonian = not isinstance(tom, NegativeBinomialTOM)
         if prec and poissonian and len(ctxt):
@@ -561,13 +561,11 @@ def estimate_nctxs(cmaker, srcs, sitecol):
     nodal planes times the number of hypocenters. The rupture distances
     are approximated with the distances from the source location, so that
     the number of pairs (source, site) within a distance is computed with
-    a single KDTree traversal for each group of sources with the same
-    magnitudes and rupture radii.
+    SiteCollection.count_close for each group of sources with the same
+    magnitudes and rupture radii, reusing the site collection's KDTree.
 
     :returns: the estimated number of contexts, an integer
     """
-    minmag = cmaker.maximum_distance.x[0]
-    maxmag = cmaker.maximum_distance.x[-1]
     groups = {}
     for src in srcs:
         mags = tuple(mag for mag, _rate in src.get_annual_occurrence_rates())
@@ -575,35 +573,24 @@ def estimate_nctxs(cmaker, srcs, sitecol):
         key = (src.count_nphc(), mags, tuple(radii))
         groups.setdefault(key, []).append(src)
     fewsites = len(sitecol.complete) <= cmaker.max_sites_disagg
-    sitetree = KDTree(sitecol.xyz)
     nctxs = 0
     for (nphc, mags, radii), group in groups.items():
+        mesh = Mesh.from_points_list([src.location for src in group])
         magdist = {mag: cmaker.maximum_distance(mag) for mag in mags}
-        dists = []  # pairs (magnitude distance, pointsource distance)
         for m, mag in enumerate(mags):
             mdist = magdist[mag]
-            if minmag <= mag <= maxmag and mdist > 0:
-                psdist = group[0].get_psdist(
-                    m, mag, cmaker.pointsource_distance, magdist, radii)
-                dists.append((mdist, min(psdist, mdist)))
-        if not dists:
-            continue
-        lon, lat, dep = numpy.array(
-            [(s.location.x, s.location.y, s.location.z) for s in group]).T
-        xyz = spherical_to_cartesian(lon, lat, dep)
-        if fewsites:  # the close and far sites are not separated
-            cdist = distance.cdist(xyz, sitecol.xyz)  # shape (P, N)
-            for mdist, psdist in dists:
-                close = (cdist <= psdist).any(axis=1)
-                nctxs += ((cdist < mdist).sum(axis=1) *
-                          numpy.where(close, nphc, 1)).sum()
-            continue
-        # cumulative number of pairs (source, site) within each distance
-        flat = numpy.array(dists).flatten()
-        rs = numpy.unique(flat)
-        cnt = KDTree(xyz).count_neighbors(sitetree, rs)
-        mcnt, pcnt = cnt[numpy.searchsorted(rs, flat)].reshape(-1, 2).T
-        nctxs += mcnt.sum() + (nphc - 1) * pcnt.sum()
+            if mdist <= 0:  # also excludes magnitudes outside the range
+                continue
+            psdist = group[0].get_psdist(
+                m, mag, cmaker.pointsource_distance, magdist, radii)
+            # Count pairs within the magnitude and pointsource distances.
+            mcnt = sitecol.count_close(mesh, mdist)
+            pcnt = (mcnt if psdist >= mdist else
+                    sitecol.count_close(mesh, psdist, inclusive=True))
+            if fewsites:  # the close and far sites are not separated
+                nctxs += (mcnt * numpy.where(pcnt > 0, nphc, 1)).sum()
+            else:
+                nctxs += mcnt.sum() + (nphc - 1) * pcnt.sum()
     return int(nctxs)
 
 
@@ -840,9 +827,9 @@ class ContextMaker(object):
         self.ctx_mon = monitor('building contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
-        # [0] number of contexts after collapsing, [1] number of contexts
-        # removed by collapsing
-        self.cfactor = numpy.zeros(2)
+        # [0] contexts after collapsing, [1] removed by collapse_precision,
+        # [2] contexts before collapse_precision for the gridding baseline
+        self.cfactor = numpy.zeros(3)
 
     def copy(self, **kw):
         """
