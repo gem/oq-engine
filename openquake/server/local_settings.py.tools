@@ -1,10 +1,13 @@
 import os
 
-# For 'devel' and 'user' installations, generate a new key with:
+# - For 'devel' and 'user' installations, if SECRET_KEY is not defined,
+# when Django settings are read, a new secret key is created and stored
+# into the user's home directory as a file called .oq_django_secret_key.
+# You can override that generating a new key with:
 # python3 -c 'import secrets ; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)") for i in range(50)))'
-# and assign it to the currently empty default value of os.getenv below.
-# For 'server' and 'devel_server' installations, follow the installation documentation.
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
+# and assigning it below:
+# SECRET_KEY = '<a_new_secret_key>'
+# - For 'server' and 'devel_server' installations, follow the installation documentation.
 
 APPLICATION_MODE = 'TOOLS_ONLY'
 
