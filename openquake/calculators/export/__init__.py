@@ -160,6 +160,37 @@ AGGRISK_FIELD_EXPLANATION = {
 }
 
 
+# meaning of the exposed value, depending on the loss type
+EXPOSED_VALUE_EXPLANATION = {
+    'residents': ('Population that lives in the area included in the impact'
+                  ' analysis'),
+    'area': ('Total floor area of buildings, including all storeys, in the'
+             ' area included in the impact analysis'),
+    'occupants': ('Population assumed to be inside the building stock in the'
+                  ' area included in the impact analysis when the event'
+                  ' occurs'),
+    'number': ('Number of buildings in the area included in the impact'
+               ' analysis'),
+    'economic': ('Replacement value of buildings and their contents in the'
+                 ' area included in the impact analysis'),
+}
+
+
+# meaning of the statistics reported for each impact metric
+REPORTED_VALUE_EXPLANATION = {
+    'lossmea': ('Arithmetic mean of the estimated impact values, accounting'
+                ' for the uncertainties propagated through the impact'
+                ' analysis'),
+    'q50': ('The 50th percentile of the estimated impact distribution. Half'
+            ' of the estimated impact values are below the median and half'
+            ' are above it'),
+    'q05': ('Value below which 5% of the estimated impact values fall. It'
+            ' represents the lower end of the range of plausible impacts'),
+    'q95': ('Value below which 95% of the estimated impact values fall. It'
+            ' represents the upper end of the range of plausible impacts'),
+}
+
+
 EXPOSURE_FIELD_DESCRIPTION = {
     'number': 'Buildings',
     'contents': 'Contents value (USD)',

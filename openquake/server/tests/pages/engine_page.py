@@ -85,8 +85,9 @@ class EnginePage:
 
     def to_report(self):
         """Open the report after it has been persisted by the job."""
+        # match the first page only, not the "(ISO3, page 2)" link
         report_link = self.page.get_by_role(
-            "link", name=re.compile(r"^Show impact report"))
+            "link", name=re.compile(r"^Show impact report \(\w+\)$"))
         for _ in range(12):
             try:
                 report_link.click(timeout=10_000)
