@@ -114,6 +114,10 @@ AGGRISK_FIELD_DESCRIPTION = {
     'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
+    'injured_day': 'Daytime injured people',
+    'injured_night': 'Night-time injured people',
+    'injured_transit': 'Transit-hours injured people',
+    'injured_avg': 'Average injured people',
     'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Exposed value',
@@ -125,23 +129,31 @@ AGGRISK_FIELD_DESCRIPTION = {
 }
 
 
+# local times of the day corresponding to the time events
+TIME_WINDOWS = {
+    'day': 'the day (local time from 9:00 to 17:00)',
+    'night': 'the night (local time from 21:00 to 5:00)',
+    'transit': ('the transit hours (local time from 5:00 to 9:00'
+                ' and from 17:00 to 21:00)')}
+AIS = 'according to the Abbreviated Injury Severity (www.aisinjuryscale.org)'
+
 AGGRISK_FIELD_EXPLANATION = {
     'affectedpop': ('Population living in buildings that sustained at least'
                     ' moderate damage'),
     'area': ('Total floor area (in m²) of buildings that sustained complete'
              ' damage'),
-    'injured': ('Seriously or critically injured people according to the'
-                ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
+    'injured': f'Seriously or critically injured people {AIS}',
+    # injured_day, injured_night, injured_transit
+    **{f'injured_{te}': ('Seriously or critically injured people if the'
+                         f' event occurs during {when}, {AIS}')
+       for te, when in TIME_WINDOWS.items()},
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
-    'occupants_day': ('Number of fatalities if the event occurs during the'
-                      ' day (local time from 9:00 to 17:00)'),
-    'occupants_night': ('Number of fatalities if the event occurs during'
-                        ' the night (local time from 21:00 to 5:00)'),
-    'occupants_transit': ('Number of fatalities if the event occurs during'
-                          ' the transit hours (local time from 5:00 to 9:00'
-                          ' and from 17:00 to 21:00)'),
+    # occupants_day, occupants_night, occupants_transit
+    **{f'occupants_{te}': ('Number of fatalities if the event occurs'
+                           f' during {when}')
+       for te, when in TIME_WINDOWS.items()},
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),
