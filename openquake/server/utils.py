@@ -212,6 +212,6 @@ def get_django_secret_key():
 
             with open(secret_file_path, 'w', opener=opener) as secret_file:
                 secret_file.write(SECRET_KEY)
-            logging.info(
+            logging.warning(
                 f'A new Django SECRET_KEY was written to {secret_file_path}')
     return SECRET_KEY
