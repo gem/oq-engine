@@ -106,6 +106,10 @@ AGGRISK_FIELD_DESCRIPTION = {
     'structural': 'Structural loss (USD)',
     'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
+    'occupants_day': 'Daytime fatalities',
+    'occupants_night': 'Night-time fatalities',
+    'occupants_transit': 'Transit-hours fatalities',
+    'occupants_avg': 'Average fatalities',
     'area': 'Floor area lost (m²)',
     'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
@@ -131,6 +135,13 @@ AGGRISK_FIELD_EXPLANATION = {
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
+    'occupants_day': ('Number of fatalities if the event occurs during the'
+                      ' day (local time from 9:00 to 17:00)'),
+    'occupants_night': ('Number of fatalities if the event occurs during'
+                        ' the night (local time from 21:00 to 5:00)'),
+    'occupants_transit': ('Number of fatalities if the event occurs during'
+                          ' the transit hours (local time from 5:00 to 9:00'
+                          ' and from 17:00 to 21:00)'),
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),

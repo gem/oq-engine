@@ -2297,7 +2297,9 @@ def format_oqparam(oqparam):
     if 'from_usgs' in approach:
         ret_dict[IMPACT_FORM_LABELS['usgs_id']] = rupdic['usgs_id']
         ret_dict[IMPACT_FORM_LABELS['shakemap_desc']] = rupdic['shakemap_desc']
-        ret_dict[IMPACT_FORM_LABELS['time_event']] = oqparam.time_event
+        # the time of the event selected by the user, used in the reports
+        ret_dict[IMPACT_FORM_LABELS['time_event']] = (
+            oqparam.report_time_event or oqparam.time_event)
 
     # e.g. from {'default': [[2.5, 150.0], [10.2, 150.0]]} to 150
     ret_dict[IMPACT_FORM_LABELS['maximum_distance']] = \
@@ -2349,6 +2351,26 @@ def format_oqparam(oqparam):
     return ret_dict
 
 
+def _get_impact_losses(ds):
+    # returns (losses, losses_header, weights_precision) for the table in
+    # the impact outputs page, or a message and None, None if the hazard
+    # is too low to compute the risk
+    try:
+        losses = views.view('aggrisk', ds)
+    except KeyError:
+        max_avg_gmf = ds['avg_gmf'][0].max()
+        msg = (f'The risk can not be computed since the hazard is too low:'
+               f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+        return msg, None, None
+    # the fatalities are displayed for day, night and transit, not on average
+    losses = losses[[n for n in losses.dtype.names if n != 'occupants_avg']]
+    # display only the descriptions, not the internal names of the fields
+    losses_header = [
+        AGGRISK_FIELD_DESCRIPTION.get(field, field.capitalize())
+        for field in losses.dtype.names]
+    return losses, losses_header, determine_precision(losses['weight'])
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2362,22 +2384,7 @@ def web_engine_get_outputs_impact(request, calc_id):
     time_job_after_event = None
     time_job_after_event_str = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            losses = views.view('aggrisk', ds)
-        except KeyError:
-            max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (
-                f'The risk can not be computed since the hazard is too low:'
-                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
-            losses_header = None
-            weights_precision = None
-        else:
-            losses_header = [
-                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
-                if field in AGGRISK_FIELD_DESCRIPTION
-                else field.capitalize()
-                for field in losses.dtype.names]
-            weights_precision = determine_precision(losses['weight'])
+        losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
         input_params = format_oqparam(oqparam)
         usgs_id = None
@@ -2543,9 +2550,10 @@ def extract_html_table(request, calc_id, name):
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
-        # NOTE: Intentionally excluding embodied_carbon from this summary
-        table_contents = table_contents[
-            table_contents[:, 0] != 'embodied_carbon']
+        # NOTE: Intentionally excluding embodied_carbon and the average
+        # occupants (the fatalities are shown for day, night and transit)
+        table_contents = table_contents[~numpy.isin(
+            table_contents[:, 0], ['embodied_carbon', 'occupants_avg'])]
 
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
@@ -2555,6 +2563,8 @@ def extract_html_table(request, calc_id, name):
             ([numpy.str_('economic')], summed))
         remaining = table_contents[~mask]
         table_contents = numpy.vstack([remaining, economic_loss_row])
+        # explain only the loss types displayed in the summary
+        displayed = set(table_contents[:, 0])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
         loss_types = '<ul>' + ''.join(
@@ -2562,6 +2572,7 @@ def extract_html_table(request, calc_id, name):
                 AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
                 '<span>.</span>' if key == 'injured' else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+            if key in displayed
         ) + '</ul>'
         additional_explanations = {
             'value': (

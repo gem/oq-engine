@@ -782,6 +782,14 @@ region_grid_spacing:
   Example: *region_grid_spacing = 10*.
   Default: None
 
+report_time_event:
+  Used in impact calculations with *make_impact_reports = true*: the time
+  of the event (day, night or transit) whose occupants losses (fatalities)
+  are displayed in the country reports, while the losses for all the times
+  are computed and stored. It is set by the impact form.
+  Example: *report_time_event = night*.
+  Default: None
+
 return_periods:
   Used in the computation of the loss curves.
   Example: *return_periods = 200 500 1000*.
@@ -1312,6 +1320,8 @@ class OqParam(valid.ParamSet):
         valid.positivefloat, numpy.nan)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    report_time_event = valid.Param(
+        valid.NoneOr(valid.Choice('day', 'night', 'transit')), None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
