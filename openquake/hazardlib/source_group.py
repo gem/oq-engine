@@ -567,6 +567,13 @@ class CompositeSourceModel:
             tilegetters = list(sitecol.split(maxhint))
         else:
             blocks = split_in_blocks(sg, hint / int(splits), weight)
+            if not sg.multifault:
+                # a block heavier than max_weight cannot be split further
+                # by sources (e.g. the magnitude bin of a simple fault), so
+                # its tasks are split in tiles of sites to balance the load
+                heavy = max((sum(src.weight for src in blk)
+                             for blk in blocks), default=0)
+                splits = max(splits, int(numpy.ceil(heavy / max_weight)))
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,

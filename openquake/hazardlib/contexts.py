@@ -96,6 +96,9 @@ EPS = 1E-3
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
+# max number of (rupture, site) pairs whose contexts are held in memory at
+# the same time when collapsing, see _collapse_by_mag
+COLLAPSE_PAIRS = 5_000_000
 
 
 bymag = operator.attrgetter('mag')
@@ -1239,16 +1242,17 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             yield from self.genctxs(rups, sites, src_id)
 
-    # the rows of different magnitudes never merge, since the magnitude
-    # is one of the rupture parameters, so the collapse is done one
-    # magnitude at a time, which keeps the memory bounded
     def _collapse_by_mag(self, rups_sites, src_id, prec):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
-            ctxs = list(self.genctxs(rups, sites, src_id))
-            if ctxs:  # otherwise no rupture is close to the sites
-                yield collapse_ctx(
-                    self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
-                    self.REQUIRES_DISTANCES, prec)
+            # the sites are split in tiles to avoid running out of memory for
+            # HimalayanTrust in CHN, which has overe 50,000 ruptures per mag
+            ntiles = numpy.ceil(len(rups) * len(sites) / COLLAPSE_PAIRS)
+            for tile in sites.split_in_tiles(int(ntiles)):
+                ctxs = list(self.genctxs(rups, tile, src_id))
+                if ctxs:  # otherwise no rupture is close to the sites
+                    yield collapse_ctx(
+                        self.recarray(ctxs), self.REQUIRES_RUPTURE_PARAMETERS,
+                        self.REQUIRES_DISTANCES, prec)
 
     def _build_dparam(self, src, sitecol):
         dparams = {'rjb', 'tuw'}
