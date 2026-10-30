@@ -27,7 +27,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.lt import ts_samples_dt
+from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.source_reader import splitMF
 
 

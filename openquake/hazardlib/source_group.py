@@ -571,8 +571,8 @@ class CompositeSourceModel:
                 # a block heavier than max_weight cannot be split further
                 # by sources (e.g. the magnitude bin of a simple fault), so
                 # its tasks are split in tiles of sites to balance the load
-                heavy = max((sum(src.weight for src in blk)
-                             for blk in blocks), default=0)
+                heavy = max((sum(map(weight, blk)) for blk in blocks),
+                            default=0)
                 splits = max(splits, int(numpy.ceil(heavy / max_weight)))
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,

@@ -255,6 +255,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             return (0,)
         return tuple(self.ts_samples['trt_smr'])
 
+    def get_ts_samples(self):
+        """
+        :returns: the ts_samples of the source as a structured array
+        """
+        ts_samples = self.ts_samples
+        if isinstance(ts_samples, list):
+            ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+        return ts_samples
+
     def get_ts_sets(self):
         """
         :returns: a tuple of tuples of trt_smr, the sets of realizations with
@@ -268,9 +277,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if self.ts_samples is None:  # in hazardlib
             return ((0,),)
-        ts_samples = self.ts_samples
-        if isinstance(ts_samples, list):
-            ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+        ts_samples = self.get_ts_samples()
         return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
                      for ts in numpy.unique(ts_samples['ts']))
 

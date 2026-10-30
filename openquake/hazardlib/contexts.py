@@ -67,6 +67,11 @@ EPS = 1E-3
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
+#: Minimum fraction of contexts sharing their rupture parameters with another
+#: context of the same site for the collapse to be worth it; it is checked
+#: in preclassical, see ContextMaker.estimate_weight
+MIN_DUP_FRACTION = 0.01
+DUP_SAMPLE = 200_000  # max number of contexts used for the check
 # max number of (rupture, site) pairs whose contexts are held in memory at
 # the same time when collapsing, see _collapse_by_mag
 COLLAPSE_PAIRS = 5_000_000
@@ -341,14 +346,15 @@ def _quintets(cmaker, src, sitecol):
 def collapse_ctx(ctx, rparams, dparams, prec):
     """
     Merge rows for the same site with matching rupture parameters and
-    binned distances. Round dip, strike and rake to one decimal place
-    for matching; compare other rupture parameters exactly. Sum occurrence
-    rates and average distances with those rates as weights.
-    Nonpoissonian contexts are unchanged.
+    binned distances. Round dip, strike, rake and width to one decimal
+    place for matching; compare other rupture parameters exactly,
+    considering NaN equal to NaN. Sum occurrence rates and average
+    distances with those rates as weights. Nonpoissonian contexts are
+    unchanged.
 
     :param ctx: context recarray with sids and occurrence_rate fields
-    :param rparams: rupture parameter names; dip, strike and rake are rounded
-                   to one decimal place, other parameters are kept exact
+    :param rparams: rupture parameter names; dip, strike, rake and width
+                   are rounded, other parameters are kept exact
     :param dparams: distance parameter names; rrup is always included
     :param prec: positive bin width on sign(d) * log(1 + abs(d))
     :returns: collapsed recarray, or ctx if no rows are merged
@@ -375,13 +381,7 @@ def collapse_ctx(ctx, rparams, dparams, prec):
         return ctx  # nothing to collapse or nonpoissonian ruptures
     names = set(ctx.dtype.names)
     dparams = sorted((set(dparams) | {'rrup'}) & names)
-    cols = [ctx.sids.astype(numpy.int64)]
-    # Round geometry angles to 0.1 degrees; keep other rupture values.
-    for par in sorted(set(rparams) & names):
-        values = ctx[par]
-        if par in {'dip', 'strike', 'rake'}:
-            values = numpy.round(values, 1)
-        cols.append(values)
+    cols = _rup_key_cols(ctx, rparams)  # sids and rounded rupture params
     for par in dparams:
         d = ctx[par]
         logd = numpy.sign(d) * numpy.log1p(numpy.abs(d))
@@ -403,6 +403,37 @@ def collapse_ctx(ctx, rparams, dparams, prec):
         out[par] = numpy.bincount(inv, rates * ctx[par]) / tot
     out.occurrence_rate = tot
     return out
+
+
+def _key_col(values, par):
+    # values of a rupture parameter used as grouping key in collapse_ctx: the
+    # angles are rounded to 0.1 degrees and the width to 0.1 km, since the
+    # widths of the ruptures of a fault differ by mesh noise (5.987 vs 6 km)
+    # and would block the merges; NaN compares unequal to itself, so the
+    # parameters which are not defined (all NaN, e.g. crjb) become a sentinel
+    if par in {'dip', 'strike', 'rake', 'width'}:
+        values = numpy.round(values, 1)
+    if values.dtype.kind == 'f' and numpy.isnan(values).any():
+        values = numpy.where(numpy.isnan(values), -999., values)
+    return values
+
+
+def _rup_key_cols(ctx, rparams):
+    # grouping key of collapse_ctx without the distances: the site IDs and
+    # the rupture parameters, rounded as in _key_col
+    names = set(ctx.dtype.names)
+    return [ctx['sids'].astype(numpy.int64)] + [
+        _key_col(ctx[par], par) for par in sorted(set(rparams) & names)]
+
+
+def _dup_fraction(ctx, rparams):
+    # fraction of the rows sharing the site and the rupture parameters with
+    # another row; the distances are ignored, so it bounds the rows which
+    # collapse_ctx can merge, since it uses the same key
+    _, inv, counts = numpy.unique(
+        numpy.column_stack(_rup_key_cols(ctx, rparams)), axis=0,
+        return_inverse=True, return_counts=True)
+    return (counts[inv.ravel()] > 1).mean()
 
 
 # helper used to populate contexts for planar ruptures
@@ -1213,9 +1244,9 @@ class ContextMaker(object):
     def _collapse_by_mag(self, rups_sites, src_id, prec):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             # the sites are split in tiles to avoid running out of memory for
-            # HimalayanTrust in CHN, which has overe 50,000 ruptures per mag
-            ntiles = numpy.ceil(len(rups) * len(sites) / COLLAPSE_PAIRS)
-            for tile in sites.split_in_tiles(int(ntiles)):
+            # HimalayanTrust in CHN, which has over 50,000 ruptures per mag
+            ntiles = int(numpy.ceil(len(rups) * len(sites) / COLLAPSE_PAIRS))
+            for tile in sites.split_in_tiles(ntiles):
                 ctxs = list(self.genctxs(rups, tile, src_id))
                 if ctxs:  # otherwise no rupture is close to the sites
                     yield collapse_ctx(
@@ -1286,7 +1317,8 @@ class ContextMaker(object):
             src_id = -1
         prec = self.collapse_precision
         # the non-parametric sources (code N) have no occurrence rates
-        if (prec and step == 1 and src_id != -1 and src.code != b'N'):
+        if (prec and step == 1 and src_id != -1 and src.code != b'N'
+                and getattr(src, 'collapse_ok', True)):
             return self._collapse_by_mag(rups_sites, src_id, prec)
         ctxs = self.gen_contexts(rups_sites, src_id)
         if len(rups_sites) == 1 and not self.minimum_distance:
@@ -1501,6 +1533,24 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
+    def _count_ctxs(self, src, ctxs):
+        # count the contexts; for the fault sources also check on a sample of
+        # them if the collapse is worth it, since it merges only the contexts
+        # sharing their rupture parameters, so it is disabled when they are
+        # rare
+        check = src.code in b'SCF'
+        C, sample, nsample = 0, [], 0
+        for ctx in ctxs:
+            C += len(ctx)
+            if check and nsample < DUP_SAMPLE:
+                sample.append(ctx)
+                nsample += len(ctx)
+        if sample:
+            dup = _dup_fraction(numpy.concatenate(sample),
+                                self.REQUIRES_RUPTURE_PARAMETERS)
+            src.collapse_ok = dup >= MIN_DUP_FRACTION
+        return C
+
     def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
@@ -1530,7 +1580,7 @@ class ContextMaker(object):
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
             step = 20 if src.num_ruptures >= 400 else 4
-            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
+            C = self._count_ctxs(src, self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones
             if C:  # then src.num_sampled > 0

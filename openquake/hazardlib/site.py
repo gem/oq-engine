@@ -769,7 +769,9 @@ class SiteCollection(object):
 
     def split_in_tiles(self, hint):
         """
-        Split a SiteCollection into a set of tiles with contiguous site IDs
+        Split a SiteCollection into at most `hint` tiles, assigning the site
+        IDs round-robin (sids % hint), so that the sites of a tile are not
+        contiguous in space; the empty tiles are dropped
         """
         if hint <= 1:
             return [self]

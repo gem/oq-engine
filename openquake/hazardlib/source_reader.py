@@ -32,9 +32,10 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source_group import (
     CompositeSourceModel, SourceGroup, get_unique)
 from openquake.hazardlib.source.multi_fault import save_and_split
+from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
-    restrict_ts_samples, ts_samples_dt)
+    restrict_ts_samples)
 from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 

@@ -443,7 +443,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # same uncertainties, are computed together; otherwise there
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
-        srcblocks = groupby(grp, lambda src: src.get_ts_sets()).values()
+        srcblocks = groupby(grp, operator.methodcaller('get_ts_sets')).values()
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]

@@ -30,7 +30,6 @@ from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
-from openquake.hazardlib.source.base import ts_samples_dt  # noqa
 
 NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel']
@@ -742,23 +741,13 @@ def apply_uncertainties(bset_values, src_group, check=True):
 # ####################### uncertainties and sampling ###################### #
 
 
-def _ts_samples_array(src):
-    """
-    :returns: the ts_samples of the source as a structured array
-    """
-    ts_samples = src.ts_samples
-    if isinstance(ts_samples, list):
-        ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
-    return ts_samples
-
-
 def restrict_ts_samples(src, trt_smrs):
     """
     :returns: a copy of the source with the ts_samples restricted to
         trt_smrs, i.e. belonging to a single set of uncertainties
     """
     new = copy.copy(src)
-    ts_samples = _ts_samples_array(src)
+    ts_samples = src.get_ts_samples()
     new.ts_samples = ts_samples[
         numpy.isin(ts_samples['trt_smr'], trt_smrs)]
     return new
