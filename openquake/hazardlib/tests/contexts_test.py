@@ -409,8 +409,7 @@ class CollapseCtxTestCase(unittest.TestCase):
     def test_exact_rupture_parameters(self):
         # Small differences must survive, including for signed parameters.
         for par, value in [('mag', 6.5), ('hypo_lon', -120.), ('hypo_lat', -30.),
-                           ('hypo_depth', -.1), ('ztor', 5.),
-                           ('width', 10.)]:
+                           ('hypo_depth', -.1), ('ztor', 5.)]:
             with self.subTest(par=par):
                 ctx = numpy.rec.fromarrays(
                     [[0] * 3, [value, value, value + .0001],
@@ -435,3 +434,15 @@ class CollapseCtxTestCase(unittest.TestCase):
                 numpy.testing.assert_array_equal(out[par],
                                                  [angles[0], angles[2]])
                 numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_width(self):
+        # The width is rounded to 0.1 km, since the widths of the ruptures
+        # of a fault differ by mesh noise; NaN parameters compare equal
+        widths = [10.01, 10.04, 10.06]
+        ctx = numpy.rec.fromarrays(
+            [[0] * 3, widths, [numpy.nan] * 3, [106.] * 3, [.01, .03, .02]],
+            names='sids,width,crjb,rrup,occurrence_rate')
+        out = collapse_ctx(ctx, {'width', 'crjb'}, {'rrup'}, .01)
+        self.assertEqual(len(out), 2)
+        numpy.testing.assert_array_equal(out.width, [widths[0], widths[2]])
+        numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
