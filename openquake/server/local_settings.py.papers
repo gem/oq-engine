@@ -1,5 +1,3 @@
-import os
-
 # - For 'devel' and 'user' installations, if SECRET_KEY is not defined,
 # when Django settings are read, a new secret key is created and stored
 # into the user's home directory as a file called .oq_django_secret_key.

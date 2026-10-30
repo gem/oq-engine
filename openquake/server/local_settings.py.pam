@@ -2,7 +2,6 @@
 #  - https://github.com/FirefighterBlu3/python-pam
 #  - https://github.com/cnobile2012/django-pam
 
-import os
 from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
 
 # - For 'devel' and 'user' installations, if SECRET_KEY is not defined,
