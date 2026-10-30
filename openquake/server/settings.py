@@ -24,6 +24,7 @@ import tempfile
 import logging
 
 from openquake.baselib import config, server_installation
+from openquake.baselib.general import engine_version
 from openquake.commonlib import datastore, auth
 
 # optionally overridden in local_settings.py
@@ -306,8 +307,14 @@ if not TEST:
 
 # In a devel_server installation we might want to set DEBUG = True
 if server_installation() and DEBUG:
-    logging.warning(
-        'DEBUG is True. Please check if this is intentional!')
+    if 'git' in engine_version():  # devel_server
+        logging.warning(
+            'DEBUG is True. Please check if this is intentional!')
+    else:
+        logging.warning(
+            'DEBUG = True is not allowed in a server installation:'
+            ' forcing DEBUG = False')
+        DEBUG = False
 
 # Local defaults must not affect the test suite. In particular, a configured
 # IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
