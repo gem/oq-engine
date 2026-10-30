@@ -777,12 +777,15 @@ class SiteCollection(object):
             return [self]
         elif hint > len(self):
             hint = len(self)
+        # a single stable sort by tile number instead of a pass per tile
+        tilenos = self.sids % hint
+        sids = self.sids[numpy.argsort(tilenos, kind='stable')]
+        counts = numpy.bincount(tilenos, minlength=hint)
         tiles = []
-        for tileno in range(hint):
-            ok = self.sids % hint == tileno
-            if ok.any():
+        for tsids in numpy.split(sids, numpy.cumsum(counts)[:-1]):
+            if len(tsids):
                 sc = SiteCollection.__new__(SiteCollection)
-                sc.array = self.complete.array[self.sids[ok]]
+                sc.array = self.complete.array[tsids]
                 sc.complete = self.complete
                 tiles.append(sc)
         return tiles
