@@ -18,7 +18,6 @@
 
 import copy
 import time
-import logging
 import warnings
 import operator
 import numpy
@@ -31,7 +30,8 @@ from openquake.baselib.general import (
     getsizeof)
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import IMC, StdDev, OK_COMPONENTS
+from openquake.hazardlib.const import IMC, StdDev
+from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
 from openquake.hazardlib.site import SiteCollection, site_param_dt
@@ -691,7 +691,8 @@ class ContextMaker(object):
             raise KeyError('Missing imtls in ContextMaker!')
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.disagg_by_src = param.get('disagg_by_src', False)
-        self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
+        self.horiz_comp_target = imc_conversion.target_from_name(
+            param.get('horiz_comp_to', ''))
         self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = float(
@@ -816,27 +817,33 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
         self.imts = tuple(imt_module.from_string(im) for im in self.imtls)
-        self.conv = {}  # gsim -> imt -> (conv_median, conv_sigma, rstd)
-        if not self.horiz_comp:
+        # per-gsim, per-imt horizontal-component conversion steps; each
+        # entry is a tuple of (kind, conv_median, conv_sigma, ratio_sigma)
+        # steps produced by imc_conversion.apply_conversion, converting the
+        # gsim's native component to self.horiz_comp_target
+        self.conv = {}
+        tgt = self.horiz_comp_target
+        if tgt is None:
             return  # do not convert
         for gsim in self.gsims:
             self.conv[gsim] = {}
-            imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-            if not imc:  # for GMPETables
+            src = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
+            if not src:  # for GMPETables
                 continue
-            elif not isinstance(imc, IMC):
+            if not isinstance(src, IMC):
                 raise ValueError(
                     f"{gsim.__class__.__name__}."
                     f"DEFINED_FOR_INTENSITY_MEASURE_COMPONENT "
                     f"is not an instance of const.IMC")
-            elif imc.name == 'GEOMETRIC_MEAN':
-                pass  # nothing to do
-            elif imc.name in OK_COMPONENTS:
-                dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
-                self.conv[gsim].update(dic)
-            else:
-                logging.info(f'Conversion from {imc.name} not applicable to'
-                             f' {gsim.__class__.__name__}')
+            if src is tgt:
+                continue  # already in the target component
+            if not imc_conversion.can_convert(src, tgt):
+                imc_conversion.log_unsupported(
+                    gsim.__class__.__name__, src, tgt)
+                continue
+            self.conv[gsim] = {
+                imt: imc_conversion.apply_conversion(src, tgt, imt)
+                for imt in self.imts}
 
     @property
     def gid(self):
@@ -892,22 +899,34 @@ class ContextMaker(object):
         assert len(new.gsims) == len(gid), (len(new.gsims), len(gid))
         return new
 
-    def horiz_comp_to_geom_mean(self, mean_stds, gsim):
+    def apply_horiz_comp_conv(self, mean_stds, gsim):
         """
-        This function converts ground-motion obtained for a given description
-        of horizontal component into ground-motion values for geometric_mean.
+        Convert ground-motion from the GSIM's native horizontal component
+        to "horiz_comp_target".
 
-        The conversion equations used are from:
-            - Beyer and Bommer (2006): for arithmetic mean, GMRot and random
-            - Boore and Kishida (2017): for RotD50
+        The ratio used for each component pair is (SA source listed;
+        PGA/PGV come from BB06 Table 2 or the BK17 electronic
+        supplement as applicable):
+
+        - GMRotI50 <-> GEOM:      BB06 Table 3 (SA); BK17 e-supp (PGA/PGV)
+        - RANDOM   <-> GEOM:      BB06 Tables 2, 3
+        - RotD50   <-> GEOM:      BK17 Table 2 col 2 + e-supp
+        - Larger   <-> GEOM:      BK17 Table 2 col 5 + e-supp
+        - RotD50   <-> GMRotI50:  BK17 Table 2 col 1 + e-supp
+        - Larger   <-> GMRotI50:  BK17 Table 2 col 4 + e-supp
+        - Larger   <-> RotD50:    BK17 Table 2 col 6 + e-supp
+        - RotD100  <-> RotD50:    BK17 Table 2 col 3 + e-supp
+
+        GSIMs whose native component has no direct ratio to the target
+        (e.g. RANDOM <-> RotD50, RotD100 <-> GEOM) are logged and left
+        unconverted.
         """
-        if not self.conv[gsim]:
+        conv = self.conv.get(gsim)
+        if not conv:
             return
         for m, imt in enumerate(self.imts):
             me, si, _ta, _ph = mean_stds[:, m]
-            conv_median, conv_sigma, rstd = self.conv[gsim][imt]
-            me[:] = numpy.log(numpy.exp(me) / conv_median)
-            si[:] = ((si**2 - conv_sigma**2) / rstd**2)**0.5
+            imc_conversion.apply_in_place((me, si), conv[imt])
 
     @property
     def scenario(self):
@@ -1526,7 +1545,7 @@ class ContextMaker(object):
         if gsim.adj:
             gsim.adj = numpy.concatenate(gsim.adj)
         if self.conv:  # apply horizontal component conversion
-            self.horiz_comp_to_geom_mean(out, gsim)
+            self.apply_horiz_comp_conv(out, gsim)
         return out
 
     # not used right now
