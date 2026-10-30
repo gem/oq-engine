@@ -25,7 +25,7 @@ import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
-from openquake.server.utils import get_django_secret_key
+from openquake.server.utils import get_or_create_django_secret_key
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -474,4 +474,4 @@ try:
     SECRET_KEY  # noqa
     logging.info('Using Django SECRET_KEY from local_settings.py')
 except NameError:
-    SECRET_KEY = get_django_secret_key()
+    SECRET_KEY = get_or_create_django_secret_key()

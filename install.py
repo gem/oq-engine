@@ -95,6 +95,7 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
+    INST_TYPE = 'server'
 
     #
     # For server and devel_server we do not (yet) support changing venv
@@ -126,6 +127,7 @@ class devel_server(server):
     """
     Parameters for a development on server installation (with root permissions)
     """
+    INST_TYPE = 'devel_server'
 
     @classmethod
     def manage_py(cls):
@@ -136,6 +138,7 @@ class user:
     """
     Parameters for a user installation
     """
+    INST_TYPE = 'user'
 
     NOVENV = False
 
@@ -173,6 +176,7 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
+    INST_TYPE = 'devel_user'
 
     @classmethod
     def manage_py(cls):
@@ -720,6 +724,14 @@ def install(inst, version, from_fork, noupgrade):
         # recreate the openquake venv
         ensure(pyvenv=inst.VENV)
         print(f"Created {inst.VENV}")
+
+    # store in the venv dir a file specifying the type of installation (server,
+    # user, devel_server, devel_user)
+    if inst.VENV:
+        inst_type_file_path = os.path.join(inst.VENV, 'OQ_ENGINE_INST_TYPE')
+        with open(inst_type_file_path, 'w') as inst_type_file:
+            inst_type_file.write(inst.INST_TYPE)
+
     pycmd = python_exe(inst)
 
     upgrade_pip(pycmd, noupgrade)

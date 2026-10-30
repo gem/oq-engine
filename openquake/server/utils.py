@@ -27,6 +27,7 @@ from django.conf import settings
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
+from openquake.baselib import is_server_installation
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
 
@@ -184,8 +185,12 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30,
     return success
 
 
-def get_django_secret_key():
+def get_or_create_django_secret_key():
     SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
+    if is_server_installation() and not SECRET_KEY:
+        raise ImproperlyConfigured(
+            'In a server installation DJANGO_SECRET_KEY environment variable'
+            ' must be set sourcing /etc/openquake/django_secret.env')
     if SECRET_KEY:
         logging.info(
             'Using Django SECRET_KEY from DJANGO_SECRET_KEY env variable')
