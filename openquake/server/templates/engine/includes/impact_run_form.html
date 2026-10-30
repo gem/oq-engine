@@ -12,6 +12,7 @@
               <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
                 <label class="after_get_rupture_btn" for="local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
                 <input class="impact-input after_get_rupture_btn" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
+                <span id="local_weekday"></span>
               </div>
               <div class="impact_form_row after_get_rupture_btn" {% if user_level < 2 %}hidden{% endif %}>
                 <label class="after_get_rupture_btn" for="time_event">{{ impact_form_labels.time_event }}</label>
