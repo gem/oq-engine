@@ -18,16 +18,17 @@
 
 import os
 import unittest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site
+from openquake.hazardlib import site, contexts
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    ContextMaker, get_distances, collapse_ctx)
+    ContextMaker, get_distances, collapse_ctx, concat)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -204,6 +205,23 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 rupture
         [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
+
+    def test_collapse_tiles(self):
+        # the multifault distances are cached on all the sites, so they
+        # must be looked up by position when _collapse_by_mag uses tiles
+        sitec = SiteCollection([
+            Site(Point(x, .1), vs30=760, z1pt0=30, z2pt5=.5,
+                 vs30measured=True) for x in numpy.linspace(-.5, .5, 50)])
+        self.src.id = 1
+        out = []
+        for pairs in (5_000_000, 50):  # one tile and many tiles
+            with mock.patch.object(contexts, 'COLLAPSE_PAIRS', pairs):
+                cm = ContextMaker('*', [AbrahamsonEtAl2014()], dict(
+                    imtls={'PGA': [.1]}, collapse_precision=.03))
+                ctx = concat(list(cm.get_ctxs(self.src, sitec)))
+            out.append(ctx[numpy.lexsort((ctx.rup_id, ctx.sids))])
+        for par in ['sids', 'rup_id', 'rrup', 'rjb', 'rx', 'ry0']:
+            numpy.testing.assert_array_equal(out[0][par], out[1][par])
 
     def test_rjb_distance(self):
         rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)

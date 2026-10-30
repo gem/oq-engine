@@ -67,11 +67,6 @@ EPS = 1E-3
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
-#: Minimum fraction of contexts sharing their rupture parameters with another
-#: context of the same site for the collapse to be worth it; it is checked
-#: in preclassical, see ContextMaker.estimate_weight
-MIN_DUP_FRACTION = 0.01
-DUP_SAMPLE = 200_000  # max number of contexts used for the check
 # max number of (rupture, site) pairs whose contexts are held in memory at
 # the same time when collapsing, see _collapse_by_mag
 COLLAPSE_PAIRS = 5_000_000
@@ -391,11 +386,9 @@ def collapse_ctx(ctx, rparams, dparams, prec):
     #                                       [1., 6.5, 467.]]:
     # Fields: sids, mag (unchanged), rrup (distance bin).
     # Equal rows are merged.
-    _, idx, inv = numpy.unique(numpy.column_stack(cols), axis=0,
-                               return_index=True, return_inverse=True)
+    idx, inv = _groups(cols)
     if len(idx) == len(ctx):
         return ctx
-    inv = inv.ravel()
     rates = ctx.occurrence_rate
     tot = numpy.bincount(inv, rates)
     out = ctx[idx]  # a copy
@@ -426,14 +419,20 @@ def _rup_key_cols(ctx, rparams):
         _key_col(ctx[par], par) for par in sorted(set(rparams) & names)]
 
 
-def _dup_fraction(ctx, rparams):
-    # fraction of the rows sharing the site and the rupture parameters with
-    # another row; the distances are ignored, so it bounds the rows which
-    # collapse_ctx can merge, since it uses the same key
-    _, inv, counts = numpy.unique(
-        numpy.column_stack(_rup_key_cols(ctx, rparams)), axis=0,
-        return_inverse=True, return_counts=True)
-    return (counts[inv.ravel()] > 1).mean()
+def _groups(cols):
+    # group the equal rows of the key columns, as numpy.unique(column_stack(
+    # cols), axis=0, return_index=True, return_inverse=True) does, but about
+    # twice as fast: a stable lexsort and a diff; returns the index of the
+    # first row of each group and the group of each row
+    order = numpy.lexsort(cols[::-1])
+    new = numpy.zeros(len(order), bool)
+    new[:1] = True
+    for col in cols:
+        c = col[order]
+        new[1:] |= c[1:] != c[:-1]
+    inv = numpy.empty(len(order), numpy.int64)
+    inv[order] = numpy.cumsum(new) - 1
+    return order[new], inv
 
 
 # helper used to populate contexts for planar ruptures
@@ -678,6 +677,7 @@ class ContextMaker(object):
 
     def _init1(self, param):
         self.dparam = {}  # multifault cache
+        self.dparam_sids = None  # the sites of the multifault cache
         if 'poes' in param:
             self.poes = param['poes']
         if 'imtls' in param:
@@ -1124,6 +1124,11 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
+        # positions of the sites in the multifault cache, which is built on
+        # all the sites, while the sites can be a tile (see _collapse_by_mag)
+        pos = None
+        if self.dparam and len(sites) < len(self.dparam_sids):
+            pos = numpy.searchsorted(self.dparam_sids, sites.sids)
         for rup in same_mag_rups:
             # NB: the monitor is entered once per rupture, since the
             # building of the contexts is the critical section; the
@@ -1131,20 +1136,22 @@ class ContextMaker(object):
             # spent by the caller (the PoE update) would be counted too.
             # Only the contexts of a single rupture are held in memory
             with self.ctx_mon:
-                ctxs = list(self._genctx(rup, sites, src_id, magdist))
+                ctxs = list(self._genctx(rup, sites, src_id, magdist, pos))
             yield from ctxs
 
-    def _genctx(self, rup, sites, src_id, magdist):
+    def _genctx(self, rup, sites, src_id, magdist, pos=None):
         """
         :param rup: a rupture
         :param sites: a (filtered) site collection
         :param src_id: source index
         :param magdist: integration time, i.e. the maximum distance
+        :param pos: positions of the sites in the multifault cache or None
         :yields: a context array for the given rupture
         """
         dparam = self.dparam
         if dparam:
-            rrups = _get(rup.surface.surfaces, 'rrup', dparam)
+            idx = slice(None) if pos is None else pos
+            rrups = _get(rup.surface.surfaces, 'rrup', dparam, idx)
             rrup = numpy.min(rrups, axis=0)
         else:
             rrup = get_distances(rup, sites, 'rrup')
@@ -1163,6 +1170,7 @@ class ContextMaker(object):
         '''
         rparams = self.get_rparams(rup)
         ctx = self._make_ctx(rparams, r_sites, rrup, mask)
+        dmask = mask if pos is None else pos[mask]  # for the cache
 
         params = self.REQUIRES_DISTANCES - {'rrup'}
         if self.fewsites or 'clon' in params or 'clat' in params:
@@ -1170,11 +1178,11 @@ class ContextMaker(object):
 
         # compute tu only once
         if dparam and ('rx' in params or 'ry0' in params):
-            tu = _get_tu(rup, dparam, mask)
+            tu = _get_tu(rup, dparam, dmask)
         else:
             tu = None
         for param in params - {'clon', 'clat'}:
-            set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
+            set_distances(ctx, rup, r_sites, param, dparam, dmask, tu)
 
         # PFD multi-fault reference-line metrics: fill only the methods
         # the configured PFD models declare (cmaker.pfd_methods); single
@@ -1241,11 +1249,17 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             yield from self.genctxs(rups, sites, src_id)
 
-    def _collapse_by_mag(self, rups_sites, src_id, prec):
+    def _collapse_by_mag(self, src, rups_sites, src_id, prec):
+        # fraction of the (rupture, site) pairs giving a context, estimated
+        # in preclassical (see estimate_weight), otherwise 1
+        frac = getattr(src, 'ctx_frac', 1.)
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             # the sites are split in tiles to avoid running out of memory for
-            # HimalayanTrust in CHN, which has over 50,000 ruptures per mag
-            ntiles = int(numpy.ceil(len(rups) * len(sites) / COLLAPSE_PAIRS))
+            # HimalayanTrust in CHN, which has over 50,000 ruptures per mag;
+            # since the work per rupture is repeated for each tile, the tiles
+            # are sized on the expected contexts, not on all the pairs
+            nctxs = frac * len(rups) * len(sites)
+            ntiles = int(numpy.ceil(nctxs / COLLAPSE_PAIRS))
             for tile in sites.split_in_tiles(ntiles):
                 ctxs = list(self.genctxs(rups, tile, src_id))
                 if ctxs:  # otherwise no rupture is close to the sites
@@ -1254,6 +1268,7 @@ class ContextMaker(object):
                         self.REQUIRES_DISTANCES, prec)
 
     def _build_dparam(self, src, sitecol):
+        self.dparam_sids = sitecol.sids
         dparams = {'rjb', 'tuw'}
         if self.fewsites:
             dparams |= {'clon_clat'}
@@ -1317,9 +1332,8 @@ class ContextMaker(object):
             src_id = -1
         prec = self.collapse_precision
         # the non-parametric sources (code N) have no occurrence rates
-        if (prec and step == 1 and src_id != -1 and src.code != b'N'
-                and getattr(src, 'collapse_ok', True)):
-            return self._collapse_by_mag(rups_sites, src_id, prec)
+        if (prec and step == 1 and src_id != -1 and src.code != b'N'):
+            return self._collapse_by_mag(src, rups_sites, src_id, prec)
         ctxs = self.gen_contexts(rups_sites, src_id)
         if len(rups_sites) == 1 and not self.minimum_distance:
             # fast lane for event based with no minimum_distance
@@ -1533,24 +1547,6 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    def _count_ctxs(self, src, ctxs):
-        # count the contexts; for the fault sources also check on a sample of
-        # them if the collapse is worth it, since it merges only the contexts
-        # sharing their rupture parameters, so it is disabled when they are
-        # rare
-        check = src.code in b'SCF'
-        C, sample, nsample = 0, [], 0
-        for ctx in ctxs:
-            C += len(ctx)
-            if check and nsample < DUP_SAMPLE:
-                sample.append(ctx)
-                nsample += len(ctx)
-        if sample:
-            dup = _dup_fraction(numpy.concatenate(sample),
-                                self.REQUIRES_RUPTURE_PARAMETERS)
-            src.collapse_ok = dup >= MIN_DUP_FRACTION
-        return C
-
     def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
@@ -1580,7 +1576,7 @@ class ContextMaker(object):
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
             step = 20 if src.num_ruptures >= 400 else 4
-            C = self._count_ctxs(src, self.get_ctxs(src, sites, step=step))
+            C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones
             if C:  # then src.num_sampled > 0
@@ -1590,6 +1586,8 @@ class ContextMaker(object):
             return EPS
         N = len(srcfilter.sitecol.complete)
         src.nctxs = C * srcfilter.multiplier
+        # used to size the tiles in _collapse_by_mag
+        src.ctx_frac = min(C / (src.num_ruptures * src.nsites), 1.)
         # NB: a collapsed point source with thousands of ruptures and
         # a couple of surviving contexts is much more expensive than
         # its nctxs suggests. The number of pairs is the relevant
