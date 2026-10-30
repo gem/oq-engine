@@ -67,9 +67,10 @@ EPS = 1E-3
 #: from the @slowtask in oq-risk-tests
 PAIR_COST = 20.
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
-# max number of (rupture, site) pairs whose contexts are held in memory at
-# the same time when collapsing, see _collapse_by_mag
-COLLAPSE_PAIRS = 5_000_000
+# max number of (expected) contexts held in memory at the same time when
+# collapsing, see _collapse_by_mag; 5 millions gave workers of over 11 GB
+# in the CHN model
+COLLAPSE_PAIRS = 2_000_000
 bymag = operator.attrgetter('mag')
 
 # These coordinates were provided by M Gerstenberger (personal
