@@ -125,7 +125,7 @@ if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 
-def server_installation():
+def is_server_installation():
     """
     :returns: True if we are in a server installation
     """
@@ -136,7 +136,7 @@ def use_server():
     """
     :returns: True for regular users in a server installation
     """
-    return server_installation() and getpass.getuser() != 'openquake'
+    return is_server_installation() and getpass.getuser() != 'openquake'
 
 
 # the version is managed by the universal installer
