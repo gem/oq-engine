@@ -143,16 +143,18 @@ AGGRISK_FIELD_EXPLANATION = {
     'area': ('Total floor area (in m²) of buildings that sustained complete'
              ' damage'),
     'injured': f'Seriously or critically injured people {AIS}',
-    # injured_day, injured_night, injured_transit
-    **{f'injured_{te}': ('Seriously or critically injured people if the'
-                         f' event occurs during {when}, {AIS}')
+    # injured_day, injured_night, injured_transit; the impact summary
+    # displays only the time of the day considered in the analysis
+    **{f'injured_{te}': ('Seriously or critically injured people for the'
+                         ' time of the day considered in the analysis,'
+                         f' i.e. {when}, {AIS}')
        for te, when in TIME_WINDOWS.items()},
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
     # occupants_day, occupants_night, occupants_transit
-    **{f'occupants_{te}': ('Number of fatalities if the event occurs'
-                           f' during {when}')
+    **{f'occupants_{te}': ('Number of fatalities for the time of the day'
+                           f' considered in the analysis, i.e. {when}')
        for te, when in TIME_WINDOWS.items()},
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),

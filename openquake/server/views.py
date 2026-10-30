@@ -63,6 +63,7 @@ from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
+from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -2465,6 +2466,29 @@ def can_extract(request, resource):
     return False
 
 
+def _impact_summary_hidden(oqparam):
+    # loss types hidden in the impact summary table: the IMPACT_HIDDEN ones
+    # and, if a time of the event was selected, the fatalities and injured
+    # for the other times of the day
+    te = oqparam.report_time_event
+    if te is None:
+        return IMPACT_HIDDEN
+    return IMPACT_HIDDEN + [f'{lt}_{other}' for lt in TIME_LOSSES
+                            for other in TIME_EVENTS if other != te]
+
+
+def _impact_summary_labels(oqparam):
+    # display names of the loss types in the impact summary table; if a time
+    # of the event was selected, the fatalities and injured are shown only
+    # for that time, so their names do not mention it (the explanations do)
+    labels = dict(AGGRISK_FIELD_DESCRIPTION, injured='Injured people')
+    te = oqparam.report_time_event
+    if te is not None:
+        labels[f'occupants_{te}'] = labels['occupants']
+        labels[f'injured_{te}'] = labels['injured']
+    return labels
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2482,6 +2506,7 @@ def extract_html_table(request, calc_id, name):
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             table = _extract(ds, name)
+            oqparam = ds['oqparam']
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -2554,9 +2579,10 @@ def extract_html_table(request, calc_id, name):
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
-        # NOTE: Intentionally excluding some loss types, see IMPACT_HIDDEN
+        # NOTE: Intentionally excluding some loss types, see IMPACT_HIDDEN;
+        # fatalities and injured are shown only for the selected time
         table_contents = table_contents[~numpy.isin(
-            table_contents[:, 0], IMPACT_HIDDEN)]
+            table_contents[:, 0], _impact_summary_hidden(oqparam))]
 
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
@@ -2568,11 +2594,12 @@ def extract_html_table(request, calc_id, name):
         table_contents = numpy.vstack([remaining, economic_loss_row])
         # explain only the loss types displayed in the summary
         displayed = set(table_contents[:, 0])
-        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+        labels = _impact_summary_labels(oqparam)
+        for key, value in labels.items():
             table_contents[table_contents == key] = value
         loss_types = '<ul>' + ''.join(
             '<li><strong>%s:</strong> %s%s</li>' % (
-                AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
+                labels.get(key, key), explanation,
                 '<span>.</span>' if key.startswith('injured') else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
             if key in displayed
@@ -2588,10 +2615,10 @@ def extract_html_table(request, calc_id, name):
                 '<li><strong>Floor area lost (m²):</strong> Total floor area '
                 'of buildings, including all storeys, in the area included in '
                 'the impact analysis.</li>'
-                '<li><strong>Number of injured people and fatalities:'
-                '</strong> Population assumed to be inside the building stock '
-                'in the area included in the impact analysis when the event '
-                'occurs.</li>'
+                '<li><strong>Injured people and fatalities:</strong> '
+                'Population assumed to be inside the building stock in the '
+                'area included in the impact analysis, for the time of the '
+                'day considered in the analysis.</li>'
                 '<li><strong>Buildings destroyed:</strong> Number of buildings '
                 'in the area included in the impact analysis.</li>'
                 '<li><strong>Economic loss (USD):</strong> Replacement value '
