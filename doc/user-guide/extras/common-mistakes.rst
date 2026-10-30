@@ -61,6 +61,11 @@ keep ruptures up to 200 km for magnitudes between 6 and 7 (with *maximum_distanc
 from magnitude 6 to magnitude 7), keep ruptures up to 300 km for magnitudes between 7 and 8 (with *maximum_distance* 
 increasing linearly from 200 to 300 km from magnitude 7 to magnitude 8) and discard ruptures for magnitudes over 8.
 
+The largest magnitude accepted in the list is 11 (the value of ``MAXMAG`` in ``openquake/hazardlib/calc/filters.py``).
+If you do not want to discard ruptures with magnitudes about 8, you can use 11 as the last magnitude in the example, for instance::
+
+	maximum_distance = [(5, 0), (6, 100), (7, 200), (11, 300)]
+
 You can have both trt-dependent and mag-dependent maximum distance::
 
 	maximum_distance = {

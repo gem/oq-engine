@@ -28,7 +28,7 @@ from openquake.calculators.country_impact_report_utils import (
     EventContext, ReportOptions, LOSS_METADATA, _read_countries_info,
     _read_world_cities, build_classifiers, load_admin_boundaries,
     points_to_gdf, aggregate_losses, save_most_affected_regions,
-    get_configured_path)
+    get_configured_path, get_report_time_event, get_fatalities_loss_type)
 from openquake.calculators.export import (
     AGGRISK_FIELD_EXPLANATION, AGGRISK_FIELD_DESCRIPTION,
     EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION)
@@ -115,12 +115,15 @@ class CountryImpactReportBuilder:
         self.dstore = dstore
         self.time_of_calc = time_of_calc
         self.maximum_distance = upper_maxdist(oqparam.maximum_distance)
+        # loss type of the fatalities for the selected time of the event
+        self.fatalities_lt = get_fatalities_loss_type(oqparam)
 
         # Unpacking EventContext
         self.event_name = event.name
         self.event_date = event.date
         self.shakemap_version = event.shakemap_version
         self.hypocenter = event.hypocenter
+        self.rupture = event.rupture
 
         # Unpacking ReportOptions
         self.disclaimer_txt = options.disclaimer_txt
@@ -325,7 +328,8 @@ class CountryImpactReportBuilder:
         meta.append(f'Number of ground motion fields:'
                     f' {oqparam.number_of_ground_motion_fields}')
         meta.append(f'Truncation level: {oqparam.truncation_level}')
-        meta.append(f'Considered time of the event: {oqparam.time_event}')
+        meta.append('Considered time of the event: '
+                    f'{get_report_time_event(oqparam)}')
         return notes_data
 
     def _get_cities_in_viewport(self, num_cities=15):
@@ -412,6 +416,7 @@ class CountryImpactReportBuilder:
                 y_limits=self.y_limits,
                 basemap_path=self.basemap_path,
                 epicenter=self.hypocenter,
+                rupture=self.rupture,
                 scale_bar=True
             )
             fig, ax = plot_variable(
@@ -430,6 +435,7 @@ class CountryImpactReportBuilder:
             y_limits=self.y_limits,
             basemap_path=self.basemap_path,
             epicenter=self.hypocenter,
+            rupture=self.rupture,
             scale_bar=True
         )
         fig, _ax = plot_region_names(self.admin_boundaries, elements=elements)
@@ -446,6 +452,7 @@ class CountryImpactReportBuilder:
             y_limits=self.y_limits,
             basemap_path=self.basemap_path,
             epicenter=self.hypocenter,
+            rupture=self.rupture,
             scale_bar=True
         )
         fig, _ax = plot_assets_map(
@@ -637,9 +644,11 @@ class CountryImpactReportBuilder:
             self.Spacer(1, 6),
         ]
 
+        # the maximum distance is computed from the rupture, if available
+        source = 'rupture' if self.rupture is not None else 'epicentre'
         exposed_value_txt = (
             f'The exposed value refers to the assets and population located'
-            f' within a {self.maximum_distance} km radius of the epicentre.')
+            f' within a {self.maximum_distance} km radius of the {source}.')
         left_bundle.append(
             self.Paragraph(exposed_value_txt, body_left_style))
         if self.no_uncertainty:
@@ -779,10 +788,19 @@ class CountryImpactReportBuilder:
         ]))
         return tbl
 
+    def _metric_explanation(self, lt):
+        # The fatalities are displayed for the selected time of the event:
+        # use its specific explanation, if any (there is none for the
+        # average, i.e. occupants_avg)
+        if lt == 'occupants':
+            return AGGRISK_FIELD_EXPLANATION.get(
+                self.fatalities_lt, AGGRISK_FIELD_EXPLANATION['occupants'])
+        return AGGRISK_FIELD_EXPLANATION[lt]
+
     def _definition_sections(self):
         # (title, intro, [(term, explanation), ...]) describing only the
         # items displayed in the first page of the report
-        metrics = [(meta["label"], AGGRISK_FIELD_EXPLANATION[lt])
+        metrics = [(meta["label"], self._metric_explanation(lt))
                    for lt, meta in LOSS_METADATA.items()]
         # NOTE: the summary table uses the residents as exposed value
         # also for the fatalities (see _build_summary_table)

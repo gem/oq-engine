@@ -169,7 +169,8 @@ class CostCalculator(object):
                 lt = lt[:-4]  # rstrip _ins
             if lt == 'number':
                 unit = 'units'
-            elif lt in ('affectedpop', 'injured', 'occupants', 'residents'):
+            elif lt.startswith(('occupants', 'injured')) or lt in (
+                    'affectedpop', 'residents'):
                 unit = 'people'
             elif lt == 'embodied_carbon':
                 unit = 'CO2eqv'
@@ -809,7 +810,7 @@ class AssetCollection(object):
         # NB: the loss types do not contain spaces, so we can store them
         # together as a single space-separated string
         op = decode(self.occupancy_periods)
-        attrs = {'time_event': self.time_event,
+        attrs = {'time_event': self.time_event or '',
                  'occupancy_periods': op,
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
@@ -820,7 +821,7 @@ class AssetCollection(object):
 
     def __fromh5__(self, dic, attrs):
         self.occupancy_periods = attrs['occupancy_periods']
-        self.time_event = attrs['time_event']
+        self.time_event = attrs['time_event'] or None
         self.tot_sites = attrs['tot_sites']
         self.fields = attrs['fields'].split()
         self.occfields = attrs['occfields'].split()

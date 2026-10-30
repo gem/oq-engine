@@ -96,7 +96,10 @@ class ImpactParam:
             notes=self.notes,
             calculation_mode=self.calculation_mode,
             rupture_dict=str(rupdic),
-            time_event=self.time_event,
+            # time_event is not set, so the occupants losses are computed
+            # for day, night and transit; the selected time is used only
+            # in the country reports
+            report_time_event=self.time_event,
             maximum_distance=str(self.maximum_distance),
             region_grid_spacing=str(self.region_grid_spacing),
             mosaic_model=self.mosaic_model,
@@ -214,6 +217,53 @@ IMPACT_FORM_PLACEHOLDERS = {
     'notes': '',
 }
 
+# maximum value of maximum_distance (in km) allowed to level 1 users
+MAX_DISTANCE_LEVEL1 = 500
+
+# upper magnitude bounds and corresponding default maximum distances (km);
+# for magnitudes above the last bound the last distance is used
+MAG_BOUNDS = numpy.array([5.5, 6., 6.5, 7., 7.5])
+MAG_DISTANCES = numpy.array([50, 100, 150, 200, 250, 300])
+
+
+def get_default_maximum_distance(mag):
+    """
+    :param mag: magnitude of the rupture
+    :returns: the default maximum distance in km for the given magnitude
+
+    >>> [get_default_maximum_distance(mag) for mag in [5.5, 5.6, 6., 6.5]]
+    [50, 100, 100, 150]
+    >>> [get_default_maximum_distance(mag) for mag in [7., 7.5, 7.6, 9.]]
+    [200, 250, 300, 300]
+    """
+    return int(MAG_DISTANCES[numpy.searchsorted(MAG_BOUNDS, mag)])
+
+
+# upper magnitude bounds and corresponding default truncation levels;
+# for magnitudes above the last bound the last level is used
+TRUNC_MAG_BOUNDS = numpy.array([5.5, 6.5, 7.5])
+TRUNC_LEVELS = numpy.array([0, 1, 2, 3])
+
+
+def get_default_truncation_level(mag):
+    """
+    :param mag: magnitude of the rupture
+    :returns: the default truncation level for the given magnitude
+
+    >>> [get_default_truncation_level(mag) for mag in [5.5, 5.6, 6.5, 6.6]]
+    [0, 1, 1, 2]
+    >>> [get_default_truncation_level(mag) for mag in [7.5, 7.6, 9.]]
+    [2, 3, 3]
+    """
+    return int(TRUNC_LEVELS[numpy.searchsorted(TRUNC_MAG_BOUNDS, mag)])
+
+
+# form fields whose default depends on the magnitude of the rupture
+MAG_DEPENDENT_DEFAULTS = {
+    'maximum_distance': get_default_maximum_distance,
+    'truncation_level': get_default_truncation_level}
+
+
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'rupture_from_usgs': '',
@@ -228,8 +278,8 @@ IMPACT_FORM_DEFAULTS = {
     'time_event': 'day',
     'dip': '90',
     'strike': '0',
-    'maximum_distance': '300',
-    'truncation_level': '3',
+    'maximum_distance': '',  # depends on the magnitude
+    'truncation_level': '',  # depends on the magnitude
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
     'region_grid_spacing': '10' if TEST_MODE else '1',
@@ -310,7 +360,8 @@ def _validate(POST):
             value = validation_func(POST.get(field))
         except Exception as exc:
             blankable = ['dip', 'strike', 'maximum_distance_stations',
-                         'local_timestamp', 'notes']
+                         'local_timestamp', 'notes', 'maximum_distance',
+                         'truncation_level']
             if field in blankable and POST.get(field) == '':
                 if field in inputdic:
                     inputdic[field] = None
@@ -398,6 +449,14 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     inputdic, params, err = _validate(POST)
     if err:
         return None, inputdic, params, err
+    maxdist = params.get('maximum_distance')
+    if (user.level < 2 and maxdist is not None
+            and maxdist > MAX_DISTANCE_LEVEL1):
+        err = {"status": "failed",
+               "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
+                             f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
+               "invalid_inputs": ['maximum_distance']}
+        return None, inputdic, params, err
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
     #       in level 2 interface it depends from the selected approach
@@ -444,6 +503,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['description'] = inputdic['description']
     if 'notes' in inputdic:
         params['notes'] = inputdic['notes']
+    for field, get_default in MAG_DEPENDENT_DEFAULTS.items():
+        if params.get(field, 0) is None:
+            params[field] = get_default(rupdic['mag'])
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
@@ -458,4 +520,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                 err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
     else:  # called by impact_get_rupture_data
+        # used by the UI to prefill the fields depending on the magnitude
+        for field, get_default in MAG_DEPENDENT_DEFAULTS.items():
+            rupdic[field] = get_default(rupdic['mag'])
         return rup, rupdic, params, err

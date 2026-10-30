@@ -23,12 +23,17 @@ import json
 import string
 import random
 import tempfile
-from unittest import skipIf
+from unittest import mock, skipIf
 import django
 from datetime import datetime, timedelta
+from openquake.baselib import config
+from openquake.commands import db as cmd_db
+from openquake.commands import engine as cmd_engine
+from openquake.commands import workers as cmd_workers
 from openquake.commonlib import logs
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
+from openquake.engine import engine as engine_mod
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import (
     get_or_create_user, random_string, start_webui, stop_webui)
@@ -50,6 +55,15 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         super().setUpClass()
         (cls.webserver, cls.webserver_thread,
          cls.c) = start_webui()
+        # emulate a multi-user installation in this process: the database
+        # is reached through the WebUI server, as in db_api_test.py
+        cls.old_server = config.webapi.server
+        config.webapi.server = cls.c.base_url
+        cls.patches = [
+            mock.patch.object(mod, 'use_server', new=lambda: True)
+            for mod in (logs, engine_mod, cmd_db, cmd_engine, cmd_workers)]
+        for patch in cls.patches:
+            patch.start()
 
     def setUp(self):
         self.user0, self.password0 = get_or_create_user(0)
@@ -58,6 +72,9 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
+        for patch in cls.patches:
+            patch.stop()
+        config.webapi.server = cls.old_server
         stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 

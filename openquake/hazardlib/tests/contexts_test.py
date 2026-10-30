@@ -18,15 +18,17 @@
 
 import os
 import unittest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site
+from openquake.hazardlib import site, contexts
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    ContextMaker, get_distances, collapse_ctx, concat)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -203,6 +205,23 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 rupture
         [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
+
+    def test_collapse_tiles(self):
+        # the multifault distances are cached on all the sites, so they
+        # must be looked up by position when _collapse_by_mag uses tiles
+        sitec = SiteCollection([
+            Site(Point(x, .1), vs30=760, z1pt0=30, z2pt5=.5,
+                 vs30measured=True) for x in numpy.linspace(-.5, .5, 50)])
+        self.src.id = 1
+        out = []
+        for pairs in (5_000_000, 50):  # one tile and many tiles
+            with mock.patch.object(contexts, 'COLLAPSE_PAIRS', pairs):
+                cm = ContextMaker('*', [AbrahamsonEtAl2014()], dict(
+                    imtls={'PGA': [.1]}, collapse_precision=.03))
+                ctx = concat(list(cm.get_ctxs(self.src, sitec)))
+            out.append(ctx[numpy.lexsort((ctx.rup_id, ctx.sids))])
+        for par in ['sids', 'rup_id', 'rrup', 'rjb', 'rx', 'ry0']:
+            numpy.testing.assert_array_equal(out[0][par], out[1][par])
 
     def test_rjb_distance(self):
         rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
@@ -382,3 +401,66 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class CollapseCtxTestCase(unittest.TestCase):
+    def test(self):
+        # the first two rows have the same site, rupture parameters and
+        # distances within 1%, so they are merged; the others differ by
+        # distance, site or rake
+        ctx = numpy.rec.fromarrays(
+            [[0, 0, 0, 1, 0], [6.5] * 5, [90., 90., 90., 90., 0.],
+             [106., 106.2, 150., 106., 106.], [107., 107.2, 152., 107., 107.],
+             [.01, .03, .01, .01, .01]],
+            names='sids,mag,rake,rjb,rrup,occurrence_rate')
+        out = collapse_ctx(ctx, {'mag', 'rake'}, {'rjb'}, .01)
+        self.assertEqual(len(out), 4)
+        [row] = out[(out.sids == 0) & (out.rake == 90.) & (out.rjb < 120)]
+        numpy.testing.assert_allclose(row.occurrence_rate, .04)
+        numpy.testing.assert_allclose(row.rjb, (106 * .01 + 106.2 * .03) / .04)
+        numpy.testing.assert_allclose(row.rrup, (107 * .01 + 107.2 * .03) / .04)
+
+        # nonpoissonian ruptures are not collapsed
+        ctx.occurrence_rate[:] = numpy.nan
+        self.assertEqual(len(collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
+
+    def test_exact_rupture_parameters(self):
+        # Small differences must survive, including for signed parameters.
+        for par, value in [('mag', 6.5), ('hypo_lon', -120.), ('hypo_lat', -30.),
+                           ('hypo_depth', -.1), ('ztor', 5.)]:
+            with self.subTest(par=par):
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, [value, value, value + .0001],
+                     [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(
+                    out[par], [value, value + .0001])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_angles(self):
+        # Group by rounded angles while retaining original context values.
+        for par, value in [('dip', 30.), ('strike', 120.), ('rake', -90.)]:
+            with self.subTest(par=par):
+                angles = [value + .01, value + .04, value + .06]
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, angles, [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(out[par],
+                                                 [angles[0], angles[2]])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_width(self):
+        # The width is rounded to 0.1 km, since the widths of the ruptures
+        # of a fault differ by mesh noise; NaN parameters compare equal
+        widths = [10.01, 10.04, 10.06]
+        ctx = numpy.rec.fromarrays(
+            [[0] * 3, widths, [numpy.nan] * 3, [106.] * 3, [.01, .03, .02]],
+            names='sids,width,crjb,rrup,occurrence_rate')
+        out = collapse_ctx(ctx, {'width', 'crjb'}, {'rrup'}, .01)
+        self.assertEqual(len(out), 2)
+        numpy.testing.assert_array_equal(out.width, [widths[0], widths[2]])
+        numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])

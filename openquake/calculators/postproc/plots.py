@@ -481,22 +481,24 @@ def get_assetcol(calc_id):
         return assetcol
 
 
-def _resolve_limits(ax, x_limits, y_limits, epicenter=None, buffer_ratio=0.05):
+def _resolve_limits(ax, x_limits, y_limits, points=None, buffer_ratio=0.05):
     """
-    Resolve axis limits ensuring epicenter visibility with a margin.
+    Resolve axis limits ensuring the visibility of the given points
+    (i.e. the epicenter or the rupture boundaries) with a margin.
+    :param points: a pair (lons, lats) of arrays or None
     :param buffer_ratio: fraction of axis span to use as padding
     """
     # Start from user limits or current limits
     xmin, xmax = x_limits if x_limits else ax.get_xlim()
     ymin, ymax = y_limits if y_limits else ax.get_ylim()
 
-    if epicenter is not None:
-        lon, lat = epicenter
+    if points is not None:
+        lons, lats = points
 
-        xmin = min(xmin, lon)
-        xmax = max(xmax, lon)
-        ymin = min(ymin, lat)
-        ymax = max(ymax, lat)
+        xmin = min(xmin, numpy.min(lons))
+        xmax = max(xmax, numpy.max(lons))
+        ymin = min(ymin, numpy.min(lats))
+        ymax = max(ymax, numpy.max(lats))
 
         # Calculate current directional spans
         xspan = max(xmax - xmin, 1e-6)
@@ -659,6 +661,7 @@ class MapDataElements:
     y_limits: tuple[float, float] | None = None
     basemap_path: str | Path | Any | None = None
     epicenter: tuple[float, float] | None = None
+    rupture: Any = None  # if given, it is plotted with the epicenter
     scale_bar: bool = False
 
 
@@ -690,6 +693,34 @@ def _overlay_scale_bar(ax):
         rotation='horizontal-only'))
 
 
+def _overlay_event(ax, elements):
+    # Plot the rupture surface (if available) and the epicenter.
+    # Return the legend handles and the (lons, lats) to keep in view.
+    handles, lons, lats = [], [], []
+    if elements.rupture is not None:
+        surface = elements.rupture.surface
+        for surf in getattr(surface, 'surfaces', [surface]):
+            slons, slats = surf.get_surface_boundaries()
+            [handle] = ax.fill(
+                slons, slats, facecolor='yellow', alpha=0.5,
+                edgecolor='black', linewidth=1.2, zorder=10,
+                label='Rupture')
+            lons.append(slons)
+            lats.append(slats)
+        handles.append(handle)
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
+        handles.append(ax.scatter(
+            lon, lat, marker='*', s=150, color='yellow',
+            edgecolor='black', linewidth=1, zorder=11, label='Epicenter'
+        ))
+        lons.append([lon])
+        lats.append([lat])
+    if not handles:
+        return handles, None
+    return handles, (numpy.concatenate(lons), numpy.concatenate(lats))
+
+
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
                   elements: MapDataElements = None,
                   style: MapStyleConfig = None):
@@ -719,19 +750,12 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             subset.plot(ax=ax, color=color, edgecolor="none",
                         alpha=style.region_alpha)
 
-    epicenter_handle = None
-    if elements.epicenter is not None:
-        lon, lat = elements.epicenter
-        epicenter_handle = ax.scatter(
-            lon, lat, marker='*', s=150, color='yellow',
-            edgecolor='black', linewidth=1, zorder=10, label='Epicenter'
-        )
+    event_handles, event_points = _overlay_event(ax, elements)
 
     # Create legend handles
     handles = [mpatches.Patch(color=col, label=lab)
                for col, lab in zip(colors, labels)]
-    if epicenter_handle is not None:
-        handles.append(epicenter_handle)
+    handles.extend(event_handles)
 
     ax.legend(handles=handles, title=elements.legend_title, framealpha=0.7,
               title_fontsize=style.font_size,
@@ -739,8 +763,7 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
-    _resolve_limits(ax, elements.x_limits, elements.y_limits,
-                    elements.epicenter)
+    _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
     _overlay_cities(ax, elements.cities, style.city_font_size)
     if elements.scale_bar:
         _overlay_scale_bar(ax)
@@ -787,19 +810,19 @@ def _plot_basemap_with_borders(admin_boundaries, elements, style):
 
 
 def _add_map_decorations(fig, ax, elements, style):
-    # Add epicenter and legend, set the viewport, then add the scale bar,
-    # title and axis labels, consistently with plot_variable
-    if elements.epicenter is not None:
-        lon, lat = elements.epicenter
-        ax.scatter(lon, lat, marker='*', s=150, color='yellow',
-                   edgecolor='black', linewidth=1, zorder=10,
-                   label='Epicenter')
-    if ax.get_legend_handles_labels()[0]:
-        ax.legend(framealpha=0.7, title=elements.legend_title,
+    # Add rupture/epicenter and legend, set the viewport, then add the scale
+    # bar, title and axis labels, consistently with plot_variable
+    # NOTE: the legend handles of the event are taken from _overlay_event,
+    # which returns a single handle for a rupture with multiple surfaces
+    handles = ax.get_legend_handles_labels()[0]
+    event_handles, event_points = _overlay_event(ax, elements)
+    handles.extend(event_handles)
+    if handles:
+        ax.legend(handles=handles, framealpha=0.7,
+                  title=elements.legend_title,
                   title_fontsize=style.font_size,
                   fontsize=style.legend_font_size, loc='best')
-    _resolve_limits(ax, elements.x_limits, elements.y_limits,
-                    elements.epicenter)
+    _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
     if elements.scale_bar:
         _overlay_scale_bar(ax)
     if elements.plot_title:

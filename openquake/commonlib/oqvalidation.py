@@ -46,7 +46,7 @@ from openquake.hazardlib.correlation_models.base import (
     SpatialCrossIMTCorrelationModel, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
-from openquake.hazardlib import valid, InvalidFile, site
+from openquake.hazardlib import valid, InvalidFile, site, imc_conversion
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
@@ -164,8 +164,16 @@ calculation_mode:
 collapse_gsim_logic_tree:
   INTERNAL
 
-collapse_level:
-  INTERNAL
+collapse_precision:
+  Used in classical calculations to collapse the contexts of the Poissonian
+  sources (all but the nonparametric ones): the contexts of the same site
+  with the same rupture parameters (dip, strike and rake rounded to one
+  decimal place) and with distances equal within the given
+  relative precision (on log(1 + d)) are merged by summing their
+  occurrence rates. The far away sites benefit the most, since many
+  ruptures are at similar distances from them.
+  Example: *collapse_precision = 0.02*.
+  Default: 0, meaning no collapsing
 
 collect_rlzs:
   Collect all realizations into a single effective realization. If not given
@@ -411,9 +419,25 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to:
+  Convert GMM predictions to the specified horizontal component.
+  Supported values are "geometric_mean", "gmroti50", "rotd50", "rotd100",
+  "greater_of_two_horizontal" and "random_horizontal". The ratios come from
+  Beyer & Bommer (2006) tables 2-3 and Boore & Kishida (2017) table 2 plus
+  the BK17 electronic supplement (PGA/PGV ratios for BK17-sourced pairs
+  live in the e-supplement, not in the paper body) and are implemented in
+  "openquake/hazardlib/imc_conversion". Only pairs with a directly-tabulated
+  ratio in those sources are supported. GSIMs whose native component is
+  already the target are left unchanged; GSIMs whose native component has
+  no direct ratio to the target (either because the component is not
+  covered at all, or because the sources do not publish that particular
+  pair) are logged to inform the user.
+  Example: *horiz_comp_to = rotd50*
+  Default: '' (no conversion applied)
+
 horiz_comp_to_geom_mean:
-  Apply the correction to the geometric mean when possible,
-  depending on the GMPE and the Intensity Measure Component
+  Deprecated alias for "horiz_comp_to=geometric_mean". If true behaves exactly
+  as if "horiz_comp_to=geometric_mean" had been set.
   Example: *horiz_comp_to_geom_mean = true*.
   Default: False
 
@@ -701,7 +725,9 @@ prefer_global_site_params:
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
-  *pointsource_distance* to be set too.
+  *pointsource_distance* to be set too. If set to *auto*, the engine
+  determines ps_grid_spacing (and pointsource_distance, if not set)
+  by comparing the hazard on a sample of sites with the exact one.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
@@ -754,6 +780,14 @@ region_grid_spacing:
   In impact mode it is mandatory and it defines the spacing in km of the
   regular grid of sites around the rupture (circulant embedding).
   Example: *region_grid_spacing = 10*.
+  Default: None
+
+report_time_event:
+  Used in impact calculations with *make_impact_reports = true*: the time
+  of the event (day, night or transit) whose occupants losses (fatalities)
+  are displayed in the country reports, while the losses for all the times
+  are computed and stored. It is set by the impact form.
+  Example: *report_time_event = night*.
   Default: None
 
 return_periods:
@@ -943,9 +977,11 @@ tectonic_region_type:
 
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "avg", "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit". If not specified,
+  the occupants and injured losses for day, night, transit and avg are
+  all computed and stored.
   Example: *time_event = day*.
-  Default: "avg"
+  Default: None
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1161,7 +1197,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(int, -1)
+    collapse_precision = valid.Param(valid.positivefloat, 0)
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -1209,6 +1245,7 @@ class OqParam(valid.ParamSet):
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to = valid.Param(str, '')
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
@@ -1265,7 +1302,7 @@ class OqParam(valid.ParamSet):
     postrisk_func = valid.Param(valid.mod_func, '')
     postrisk_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
-    ps_grid_spacing = valid.Param(valid.positivefloat, 0)
+    ps_grid_spacing = valid.Param(valid.positivefloat_or_auto, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -1283,6 +1320,8 @@ class OqParam(valid.ParamSet):
         valid.positivefloat, numpy.nan)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    report_time_event = valid.Param(
+        valid.NoneOr(valid.Choice('day', 'night', 'transit')), None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
@@ -1327,7 +1366,7 @@ class OqParam(valid.ParamSet):
     strict = valid.Param(valid.boolean, True)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
-        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
+        valid.NoneOr(valid.Choice('avg', 'day', 'night', 'transit')), None)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncated_mvn = valid.Param(valid.boolean, False)
     # the default for the truncation_level is 99. (no truncation)
@@ -1484,6 +1523,19 @@ class OqParam(valid.ParamSet):
         self.fix_legacy_names(names_vals)
         given = set(names_vals)
         super().__init__(**names_vals)
+        if self.horiz_comp_to_geom_mean:
+            if self.horiz_comp_to not in ('', 'geometric_mean'):
+                self.raise_invalid(
+                    f'horiz_comp_to_geom_mean=true conflicts with '
+                    f'horiz_comp_to={self.horiz_comp_to!r} - you can '
+                    f'only pick one'
+                )
+            self.horiz_comp_to = 'geometric_mean'
+        if self.horiz_comp_to and (
+                self.horiz_comp_to not in imc_conversion.TARGET_NAMES):
+            self.raise_invalid(
+                f'horiz_comp_to={self.horiz_comp_to!r}, '
+                f'pick one of {sorted(imc_conversion.TARGET_NAMES)}')
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
@@ -1507,8 +1559,12 @@ class OqParam(valid.ParamSet):
         self._set_hazard_imtls(names_vals)
         if 'minimum_intensity' in names_vals:
             self._normalize_minimum_intensity()
-        if self.ps_grid_spacing and 'pointsource_distance' not in names_vals:
-            self.pointsource_distance = dict(default=50)
+        self.psd_given = 'pointsource_distance' in names_vals
+        self.auto_grid = self.ps_grid_spacing == 'auto'
+        if self.auto_grid:  # set in preclassical, see autogrid.calibrate
+            self.ps_grid_spacing = 0.
+        elif self.ps_grid_spacing and not self.psd_given:
+            self.pointsource_distance = dict(default=25)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
@@ -1799,10 +1855,17 @@ class OqParam(valid.ParamSet):
                 pass
         # all_cost_types includes occupants and exclude perils
         self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
-        # fix minimum_asset_loss
-        self.minimum_asset_loss = {
-            ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
-            for ln in self.loss_types}
+        # fix minimum_asset_loss, the occupants_<time_event> losses
+        # use the minimum_asset_loss of occupants, the injured_<time_event>
+        # losses the one of injured; the default key is kept in mal,
+        # since the dict may be already fixed (no default)
+        mal = {'default': 0, **self.minimum_asset_loss}
+        self.minimum_asset_loss = {}
+        for ln in self.loss_types:
+            base = next((b for b in scientific.TIME_LOSSES
+                         if ln.startswith(b + '_')), ln)
+            self.minimum_asset_loss[ln] = mal.get(
+                ln, mal.get(base, mal['default']))
 
     def validate(self):
         """
@@ -2148,8 +2211,37 @@ class OqParam(valid.ParamSet):
             return []
         names = []
         for lt in self.all_cost_types:
-            names.append(lt)
+            if lt in scientific.TIME_LOSSES and self.occupants_by_time:
+                names.extend(f'{lt}_{te}' for te in self.time_events)
+                names.append(f'{lt}_avg')
+            else:
+                names.append(lt)
         return names
+
+    @property
+    def occupants_by_time(self):
+        """
+        :returns: True if the occupants losses are computed for each time
+            event of the exposure because time_event is not specified
+        """
+        return (self.time_event is None and
+                self.calculation_mode in scientific.OCC_TIME_MODES)
+
+    @property
+    def time_events(self):
+        """
+        :returns: the time events (day, night, transit) of the exposure,
+            all of them until the exposure is read
+        """
+        return getattr(self, 'exposure_time_events', scientific.TIME_EVENTS)
+
+    def set_time_events(self, occupancy_periods):
+        """
+        Set the time events present in the exposure, as a string
+        """
+        periods = occupancy_periods.split()
+        self.exposure_time_events = [te for te in scientific.TIME_EVENTS
+                                     if te in periods]
 
     @property
     def ext_loss_types(self):

@@ -98,6 +98,22 @@ def sqrt(array):
     return numpy.sqrt(array)
 
 
+def _weighted_angle_terms(cosine, area, sign=1):
+    # Derive the sine magnitude from cosine; azimuth supplies its sign.
+    # The area-weighted vector components can then be summed for the mean.
+    return area * cosine, area * sqrt(1 - cosine * cosine) * sign
+
+
+def _azimuth_terms(along, west, north, area):
+    # A negative west projection means the edge points west, so its azimuth
+    # is negative. Treat zero as positive for edges pointing north or south.
+    sign = numpy.sign(numpy.sign(numpy.sum(along * west, axis=-1)) + 0.1)
+    # The north projection gives the azimuth cosine. Like inclination, the
+    # weighted mean is computed from the sum of circular vector components.
+    cosine = numpy.sum(along * north, axis=-1)
+    return _weighted_angle_terms(cosine, area, sign)
+
+
 def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
                      br_normal, br_area):
     # inclination calculation
@@ -112,11 +128,9 @@ def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
     # of the vector corresponds to triangle's weight (we use triangle
     # area) and angle is equal to inclination angle. then we calculate
     # the angle of vector sum of all those vectors and that angle
-    # is the weighted average.
-    xx = numpy.sum(tl_area * incl_cos)
-    # express sine via cosine using Pythagorean trigonometric identity,
-    # this is a bit faster than sin(arccos(incl_cos))
-    yy = numpy.sum(tl_area * sqrt(1 - incl_cos * incl_cos))
+    # is the weighted average; here we return the 2d vectors of each
+    # cell, so that the sum can be performed on any set of cells
+    xi, yi = _weighted_angle_terms(incl_cos, tl_area)
 
     # bottom-right triangles
     en = earth_surface_tangent_normal[1:, 1:]
@@ -126,11 +140,9 @@ def calc_inclination(earth_surface_tangent_normal, tl_normal, tl_area,
     incl_cos = numpy.sum(en * br_normal, axis=-1).clip(-1.0, 1.0)
     # weighted angle vectors are calculated independently for top-left
     # and bottom-right triangles of each cell in a mesh. here we
-    # combine both and finally get the weighted mean angle
-    xx += numpy.sum(br_area * incl_cos)
-    yy += numpy.sum(br_area * sqrt(1 - incl_cos * incl_cos))
-    inclination = numpy.degrees(numpy.arctan2(yy, xx))
-    return inclination
+    # combine both, see mean_inclination_azimuth for the weighted mean
+    xbr, ybr = _weighted_angle_terms(incl_cos, br_area)
+    return xi + xbr, yi + ybr
 
 
 def calc_azimuth(points, along_azimuth, tl_area, br_area):
@@ -152,41 +164,89 @@ def calc_azimuth(points, along_azimuth, tl_area, br_area):
     # them on other normals and thus calculate an angle in between
     along_azimuth = geo_utils.normalized(along_azimuth)
 
-    # process top-left triangles
-    # here we identify the sign of direction of the triangles' azimuthal
-    # edges: is edge pointing west or east? for finding that we project
-    # those edges to vectors directing to west by calculating scalar
-    # product and get the sign of resulting value: if it is negative
-    # than the resulting azimuth should be negative as top edge is pointing
-    # west.
-    sign = numpy.sign(numpy.sign(
-        numpy.sum(along_azimuth[:-1] * norms_west[:-1, :-1], axis=-1))
-        # we run numpy.sign(numpy.sign(...) + 0.1) to make resulting values
-        # be only either -1 or 1 with zero values (when edge is pointing
-        # strictly north or south) expressed as 1 (which means "don't
-        # change the sign")
-        + 0.1)
+    # Calculate terms for the top-left triangles.
+    xa, ya = _azimuth_terms(along_azimuth[:-1], norms_west[:-1, :-1],
+                            norms_north[:-1, :-1], tl_area)
+    # For azimuth's [0, 360) range, west sets the sine's sign.
+    # Calculate the bottom-right triangles and combine both cell halves.
+    xbr, ybr = _azimuth_terms(along_azimuth[1:], norms_west[1:, 1:],
+                              norms_north[1:, 1:], br_area)
+    return xa + xbr, ya + ybr
 
-    # the length of projection of azimuthal edge on norms_north is cosine
-    # of edge's azimuth
-    az_cos = numpy.sum(along_azimuth[:-1] * norms_north[:-1, :-1], axis=-1)
-    # use the same approach for finding the weighted mean
-    # as for inclination (see above)
-    xx = numpy.sum(tl_area * az_cos)
-    # the only difference is that azimuth is defined in a range
-    # [0, 360), so we need to have two reference planes and change
-    # sign of projection on one normal to sign of projection to another one
-    yy = numpy.sum(tl_area * sqrt(1 - az_cos * az_cos) * sign)
-    # bottom-right triangles
-    sign = numpy.sign(numpy.sign(
-        numpy.sum(along_azimuth[1:] * norms_west[1:, 1:], axis=-1))
-        + 0.1)
-    az_cos = numpy.sum(along_azimuth[1:] * norms_north[1:, 1:], axis=-1)
-    xx += numpy.sum(br_area * az_cos)
-    yy += numpy.sum(br_area * sqrt(1 - az_cos * az_cos) * sign)
 
-    azimuth = numpy.degrees(numpy.arctan2(yy, xx))
-    return azimuth
+def mean_inclination_azimuth(xi, yi, xa, ya, on_surface):
+    """
+    :param xi, yi: summed area-weighted cosine and sine of the inclination
+    :param xa, ya: summed area-weighted cosine and sine of the azimuth
+    :param on_surface: True if the mesh is on the earth surface
+    :returns: the mean inclination in [0, 90] and azimuth in [0, 360)
+    """
+    # on the earth surface the inclination is zero
+    inclination = 0 if on_surface else numpy.degrees(numpy.arctan2(yi, xi))
+    azimuth = numpy.degrees(numpy.arctan2(ya, xa))
+    if inclination > 90:
+        # average inclination is over 90 degree, that means that we need
+        # to reverse azimuthal direction in order for inclination to be
+        # in range [0, 90]
+        inclination = 180 - inclination
+        azimuth += 180
+    return inclination, azimuth % 360
+
+
+# Joyner-Boore distances of the points (xx, yy) from a 2D mesh of projected
+# points `grid` of shape (R, C, 2); the distance is zero for the points
+# inside a cell of the mesh (split in two triangles) and otherwise it is
+# the distance from the closest edge of the cells, reduced by the tolerance,
+# consistently with the buffered polygon of _get_proj_enclosing_polygon
+def _rect_jb_distances(grid, xx, yy, tol):
+    pts = numpy.stack([xx, yy], axis=-1)[:, None]  # shape (N, 1, 2)
+    p00, p01 = grid[:-1, :-1].reshape(-1, 2), grid[:-1, 1:].reshape(-1, 2)
+    p11, p10 = grid[1:, 1:].reshape(-1, 2), grid[1:, :-1].reshape(-1, 2)
+    triangles = [(p00, p01, p11), (p00, p11, p10)]
+    areas = numpy.array([_cross(v1 - v0, v2 - v0) for v0, v1, v2 in triangles])
+    if (areas > 1E-12).all() or (areas < -1E-12).all():
+        # all the cells have the same orientation, so the projected mesh
+        # is not folded and the closest point of the projection to an
+        # outside point is on the perimeter of the mesh
+        a = numpy.concatenate([grid[0, :-1], grid[-1, :-1],
+                               grid[:-1, 0], grid[:-1, -1]])
+        b = numpy.concatenate([grid[0, 1:], grid[-1, 1:],
+                               grid[1:, 0], grid[1:, -1]])
+    else:  # degenerate or folded mesh, consider all the edges
+        a = numpy.concatenate([grid[:, :-1].reshape(-1, 2),
+                               grid[:-1, :].reshape(-1, 2)])
+        b = numpy.concatenate([grid[:, 1:].reshape(-1, 2),
+                               grid[1:, :].reshape(-1, 2)])
+    ab = b - a
+    ab2 = (ab * ab).sum(axis=-1)
+    ap = pts - a  # shape (N, E, 2)
+    t = numpy.clip((ap * ab).sum(axis=-1) / numpy.where(ab2, ab2, 1), 0, 1)
+    dist = numpy.linalg.norm(ap - t[..., None] * ab, axis=-1).min(axis=1)
+
+    # only the points in the bounding box of the mesh can be inside a cell
+    lo, hi = grid.reshape(-1, 2).min(axis=0), grid.reshape(-1, 2).max(axis=0)
+    inbox = ((pts[:, 0] >= lo) & (pts[:, 0] <= hi)).all(axis=1)
+    if not inbox.any():
+        return numpy.maximum(dist - tol, 0)
+    pts = pts[inbox]
+    inside = numpy.zeros(len(pts), bool)
+    for (v0, v1, v2), area in zip(triangles, areas):
+        # discard the degenerate triangles, to avoid false positives
+        # with the points aligned with them
+        ok = numpy.abs(area) > 1E-12
+        v0, v1, v2 = v0[ok], v1[ok], v2[ok]
+        c0 = _cross(v1 - v0, pts - v0)
+        c1 = _cross(v2 - v1, pts - v1)
+        c2 = _cross(v0 - v2, pts - v2)
+        inside |= (((c0 >= 0) & (c1 >= 0) & (c2 >= 0)) |
+                   ((c0 <= 0) & (c1 <= 0) & (c2 <= 0))).any(axis=1)
+    dist[numpy.where(inbox)[0][inside]] = 0
+    return numpy.maximum(dist - tol, 0)
+
+
+# z-component of the cross product of 2D vectors
+def _cross(u, v):
+    return u[..., 0] * v[..., 1] - u[..., 1] * v[..., 0]
 
 
 class Mesh(object):
@@ -521,6 +581,14 @@ class Mesh(object):
             points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
             shaper = Alpha_Shaper(points)
             _alpha_opt, polygon = shaper.optimize()
+        elif self.lons.ndim == 2 and min(self.lons.shape) > 1:
+            # fast path for 2D meshes, avoiding the shapely polygon
+            proj = geo_utils.OrthographicProjection.from_(self.lons, self.lats)
+            grid = numpy.stack(proj(self.lons, self.lats), axis=-1)
+            mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+            distances[idxs] = _rect_jb_distances(
+                grid, mesh_xx, mesh_yy, self.DIST_TOLERANCE)
+            return distances
         else:
             proj, polygon = self._get_proj_enclosing_polygon()
 
@@ -738,6 +806,19 @@ class RectangularMesh(Mesh):
         are calculated. Azimuth is always defined in a way that inclination
         angle doesn't exceed 90 degree.
         """
+        terms = self.get_inclination_azimuth_terms()
+        xi, yi, xa, ya = (term.sum() for term in terms)
+        return mean_inclination_azimuth(
+            xi, yi, xa, ya, (self.depths == 0).all())
+
+    def get_inclination_azimuth_terms(self):
+        """
+        :returns:
+            four arrays of shape (R-1, C-1) with the area-weighted cosine
+            and sine of the inclination and azimuth of each cell; their
+            sums over a set of cells give the mean inclination and
+            azimuth of the cells, see :func:`mean_inclination_azimuth`
+        """
         assert 1 not in self.lons.shape, (
             "inclination and azimuth are only defined for mesh of more than "
             "one row and more than one column of points")
@@ -762,25 +843,10 @@ class RectangularMesh(Mesh):
         br_area = geo_utils.triangle_area(e1, e2, diag)
         br_normal = geo_utils.normalized(numpy.cross(e1, e2))
 
-        if (self.depths == 0).all():
-            # mesh is on earth surface, inclination is zero
-            inclination = 0
-        else:
-            inclination = calc_inclination(
-                earth_surface_tangent_normal, tl_normal, tl_area,
-                br_normal, br_area)
-
-        azimuth = calc_azimuth(points, along_azimuth, tl_area, br_area)
-        if azimuth < 0:
-            azimuth += 360
-        if inclination > 90:
-            # average inclination is over 90 degree, that means that we need
-            # to reverse azimuthal direction in order for inclination to be
-            # in range [0, 90]
-            inclination = 180 - inclination
-            azimuth = (azimuth + 180) % 360
-
-        return inclination, azimuth
+        xi, yi = calc_inclination(earth_surface_tangent_normal, tl_normal,
+                                  tl_area, br_normal, br_area)
+        xa, ya = calc_azimuth(points, along_azimuth, tl_area, br_area)
+        return xi, yi, xa, ya
 
     def get_cell_dimensions(self):
         """
