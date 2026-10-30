@@ -44,10 +44,10 @@ def _ctx_fingerprint(ctx, hdf5_path, backbone_id, imts):
     on: the hdf5 path, the backbone identity, the imts list, and the ctx
     hypo/site lat-lon bytes.
 
-    NOTE: Two GridAdjustedGMPE instances only share a cache entry when all
-    four inputs match, so different TRTs (different hdf5 and backbone),
-    different IMT sets, and different rupture or site content each get their
-    own entry.
+    NOTE: The cache is content-keyed on (hdf5, backbone, imts, ctx bytes),
+    not to a single get_4MN call. Instances of GridAdjustedGMPE used in dif
+    TRTs compute different keys (different hdf5 and backbone) and therefore
+    never collide, even though they share the same cache.
     """
     parts = [hdf5_path.encode(),
              backbone_id.encode(),
