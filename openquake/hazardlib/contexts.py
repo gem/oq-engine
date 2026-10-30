@@ -586,7 +586,7 @@ def estimate_nctxs(cmaker, srcs, sitecol):
             # Count pairs within the magnitude and pointsource distances.
             mcnt = sitecol.count_close(mesh, mdist)
             pcnt = (mcnt if psdist >= mdist else
-                    sitecol.count_close(mesh, psdist, inclusive=True))
+                    sitecol.count_close(mesh, psdist))
             if fewsites:  # the close and far sites are not separated
                 nctxs += (mcnt * numpy.where(pcnt > 0, nphc, 1)).sum()
             else:

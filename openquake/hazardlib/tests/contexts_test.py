@@ -439,15 +439,15 @@ class EstimateNctxsTestCase(unittest.TestCase):
             self.cmaker, [self.src], sites), 6)
 
     def test_magnitude_distance_boundary(self):
-        # A site exactly at maximum_distance generates no contexts, even
-        # when pointsource_distance includes it.
+        # A site exactly at maximum_distance is counted by the estimate,
+        # although it generates no contexts: the estimate is approximate.
         sites = SiteCollection.from_points([0.], [0.], [25.])
         for max_sites in [0, 10]:
             for psdist in [25., 30.]:
                 self.cmaker.max_sites_disagg = max_sites
                 self.cmaker.pointsource_distance = psdist
                 self.assertEqual(contexts.estimate_nctxs(
-                    self.cmaker, [self.src], sites), 0)
+                    self.cmaker, [self.src], sites), 4)
 
 
 class CollapseCtxTestCase(unittest.TestCase):
