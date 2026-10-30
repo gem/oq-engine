@@ -866,6 +866,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore, self.csm, self.sitecol,
                 self.cmdict['Default'])
 
+        # [0] contexts after collapsing, [1] contexts removed by collapsing
         self.cfactor = numpy.zeros(2)
         self.dparam_mb = 0
         self.source_mb = 0
@@ -950,7 +951,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
-            logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
+            cf = self.cfactor.astype(int)
+            # reduction factor = total contexts / contexts after collapsing
+            logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
+                cf[0], (cf[0] + cf[1]) / max(cf[0], 1)))
         self.store_info()
         if self.dparam_mb > 1:
             logging.info('maximum size of the dparam cache=%.1f MB',

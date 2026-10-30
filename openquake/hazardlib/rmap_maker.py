@@ -456,7 +456,7 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
         # R[v, s] is the rate ratio of the source s in the variant v
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
-        cm.cfactor += [len(ctxt), 1]  # as in gen_poes
+        cm.cfactor[0] += len(ctxt)  # as in gen_poes
         if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
             _update_linear(cm, pnemaps, R, ctxt, si, itime)
             continue
