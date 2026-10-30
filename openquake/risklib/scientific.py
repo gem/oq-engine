@@ -49,6 +49,8 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
 TIME_EVENTS = ['day', 'night', 'transit']
 # the calculation modes where the occupants losses depend on time_event
 OCC_TIME_MODES = ('scenario_risk', 'event_based_risk', 'ebrisk')
+# the loss types computed for each time event, using the occupants_<te>
+TIME_LOSSES = ('occupants', 'injured')
 
 PERILTYPE = numpy.array(
     ['groundshaking', 'liquefaction', 'landslide', 'tsunami'])
@@ -78,6 +80,7 @@ structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
 affectedpop injured embodied_carbon occupants_avg
+injured_day injured_night injured_transit injured_avg
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1869,6 +1872,8 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
     te = time_event or 'avg'
+    if xltype.startswith('injured_'):  # injured_day -> occupants_day
+        xltype = 'occupants_' + xltype[len('injured_'):]
     if xltype == 'affectedpop':
         return aval['residents']
     elif xltype == 'injured':  # like fatalities

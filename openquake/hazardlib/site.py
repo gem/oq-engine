@@ -769,18 +769,23 @@ class SiteCollection(object):
 
     def split_in_tiles(self, hint):
         """
-        Split a SiteCollection into a set of tiles with contiguous site IDs
+        Split a SiteCollection into at most `hint` tiles, assigning the site
+        IDs round-robin (sids % hint), so that the sites of a tile are not
+        contiguous in space; the empty tiles are dropped
         """
         if hint <= 1:
             return [self]
         elif hint > len(self):
             hint = len(self)
+        # a single stable sort by tile number instead of a pass per tile
+        tilenos = self.sids % hint
+        sids = self.sids[numpy.argsort(tilenos, kind='stable')]
+        counts = numpy.bincount(tilenos, minlength=hint)
         tiles = []
-        for tileno in range(hint):
-            ok = self.sids % hint == tileno
-            if ok.any():
+        for tsids in numpy.split(sids, numpy.cumsum(counts)[:-1]):
+            if len(tsids):
                 sc = SiteCollection.__new__(SiteCollection)
-                sc.array = self.complete.array[self.sids[ok]]
+                sc.array = self.complete.array[tsids]
                 sc.complete = self.complete
                 tiles.append(sc)
         return tiles
