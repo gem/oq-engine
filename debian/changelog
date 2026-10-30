@@ -1,8 +1,16 @@
   [Michele Simionato]
+  * Compute the injured losses for each time event when time_event is not
+    specified (injured_day, injured_night, injured_transit, injured_avg),
+    like the occupants losses
+  * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
+    polygon: the distances of the sites within 40 km of a rupture can
+    change by a few meters. Faster dip and strike of the floating ruptures
+    of simple faults. In a calculation for Alaska "building contexts" got
+    4x faster but usually the speedup is minor
   * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
     now computed from the total losses of each GMF instead of summing the
     quantiles of the individual groups
-  * Fixed YuEtAl2013Ms and YuEtAl2013Mw in hazardlib: when called with
+  * Fixed YuEtAl2013Ms and its subclasses in hazardlib: when called with
     contexts having different magnitudes, the mean used the magnitude of
     the last site for all the sites; now each site uses its own magnitude.
     Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
@@ -57,6 +65,12 @@
     ones of big CollapsedPointSources): in the Tonga model with
     ps_grid_spacing=50 "computing mean_std" went down from 43,645 s to
     8,756 s and the total CPU time was halved
+  * Scenario risk: if time_event is not specified, the occupants losses
+    are computed and stored for day, night and transit, limited to
+    the periods present in the exposure, together with occupants_avg
+    from the exposure; the default time_event is now unset instead of
+    "avg". Some outputs now use "occupants_avg" instead of "occupants"
+    for the average occupancy losses
   * Bug fix: "oq extract agg_losses" failed with a TypeError when the
     calculation was aggregated by id, and the site_id tags of the
     aggregated losses were shifted by one site
@@ -180,11 +194,6 @@
     sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
     with circulant-embedding-based correlated GMF simulations.
 
-  [Claudio Schill]
-  * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
-    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
-    5 <= M < 6 bin values, instead of the M > 7 bin.
-
   [Michele Simionato]
   * Fixed a bug affecting previous versions of the engine: the uncertainties
     on the magnitude and on the b-value were ignored for multiPointSources
@@ -297,7 +306,8 @@
     linearly, since they are dispersions. Combined with the fix above, the
     MCE spectra of the AELO models increase (by 34% for the PGA in the
     PAC model, by 0.8% in the KOR model), since the previous values were
-    based on sigmas which were too large and thus underestimated the
+    based on sigmas which were too small (the linear average is never
+    larger than the quadrature one) and thus underestimated the
     deterministic MCE
   * The reduction of a source model logic tree to a single source (i.e. the
     `source_id` parameter and the `reduce_smlt` command) is now performed on
