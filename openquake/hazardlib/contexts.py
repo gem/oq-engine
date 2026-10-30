@@ -45,50 +45,21 @@ from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
 U8 = numpy.uint8
-
-
 I32 = numpy.int32
-
-
 U32 = numpy.uint32
-
-
 F16 = numpy.float16
-
-
 F32 = numpy.float32
-
-
 F64 = numpy.float64
-
-
 TWO20 = 2**20
-
-
 TWO16 = 2**16
-
-
 TWO24 = 2**24
-
-
 TWO32 = 2**32
-
-
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-
-
 KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
 azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
-
-
 MEA = 0
-
-
 STD = 1
-
-
 EPS = 1E-3
-
 
 #: How many (rupture, site) pairs are as expensive as a single surviving
 #: context, i.e. how much a discarded pair costs with respect to a context
@@ -99,10 +70,7 @@ MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 # max number of (rupture, site) pairs whose contexts are held in memory at
 # the same time when collapsing, see _collapse_by_mag
 COLLAPSE_PAIRS = 5_000_000
-
-
 bymag = operator.attrgetter('mag')
-
 
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1541,6 +1509,9 @@ class ContextMaker(object):
         :returns: an estimate of the CPU cost of processing the source
         """
         t0 = time.time()
+        # NB: nsites is set in preclassical by a different criterion for
+        # the point sources (distance to the location), so it must not be
+        # removed: get_close_sites may return sites for a discarded source
         if src.nsites == 0:  # was discarded by the prefiltering
             return EPS
         sites = srcfilter.get_close_sites(src)
