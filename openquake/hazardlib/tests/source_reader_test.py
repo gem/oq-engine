@@ -27,7 +27,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.lt import ts_samples_dt, get_ts_sets
+from openquake.hazardlib.lt import ts_samples_dt
 from openquake.hazardlib.source_reader import splitMF
 
 
@@ -57,7 +57,7 @@ class SplitMFTestCase(unittest.TestCase):
         for seg in sources:
             self.assertEqual(seg.bysrc_unc, True)
             self.assertEqual(
-                [tuple(t) for t in get_ts_sets(seg)],
+                [tuple(t) for t in seg.get_ts_sets()],
                 [(0, 1), (2,)])
             self.assertEqual(list(seg.ts_samples['trt_smr']), [0, 1, 2])
 

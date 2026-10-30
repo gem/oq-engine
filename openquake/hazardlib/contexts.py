@@ -1527,10 +1527,8 @@ class ContextMaker(object):
             # gen_contexts) and useless, since the estimate is used only
             # to split the work in tasks. Since each source is processed
             # once per set of realizations with different uncertainties,
-            # the cost is proportional to the number of sets; NB: the
-            # import is local to avoid a circular dependency
-            from openquake.hazardlib.lt import get_ts_sets
-            C = src.num_ruptures * src.nsites * len(get_ts_sets(src))
+            # the cost is proportional to the number of sets
+            C = src.num_ruptures * src.nsites * len(src.get_ts_sets())
         elif src.code in b'pP':  # no subsampling
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:

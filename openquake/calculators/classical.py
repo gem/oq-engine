@@ -36,7 +36,7 @@ from openquake.hazardlib.source_reader import (
     get_bset_values, modified_groups)
 from openquake.hazardlib.rmap_maker import read_core_trt_smrs
 from openquake.hazardlib.lt import (
-    get_ts_sets, get_bset_value, GEOMETRY_PRESERVING)
+    get_bset_value, GEOMETRY_PRESERVING)
 from openquake.hazardlib.rmap_maker import (
     get_cmakers, read_full_lt_by_label, make_results, mag_support)
 from openquake.hazardlib.calc.filters import FilteredAway
@@ -252,7 +252,7 @@ def group_gids(src_groups, gid_dic):
     for grp in src_groups:
         gids = set()
         for src in grp:
-            for trt_smrs in get_ts_sets(src):
+            for trt_smrs in src.get_ts_sets():
                 gids.update(gid_dic[trt_smrs][0])
         out[grp.grp_id] = U32(sorted(gids))
     return out
@@ -443,7 +443,7 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         # same uncertainties, are computed together; otherwise there
         # would be a RateMap per source and with many sites that would be
         # extremely slow (share_small)
-        srcblocks = groupby(grp, get_ts_sets).values()
+        srcblocks = groupby(grp, lambda src: src.get_ts_sets()).values()
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]

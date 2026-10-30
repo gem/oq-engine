@@ -30,13 +30,10 @@ from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
+from openquake.hazardlib.source.base import ts_samples_dt  # noqa
 
 NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel']
-
-U32 = numpy.uint32
-# ts is the set of realizations with the same uncertainties (see get_ts_sets)
-ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 
 
 class LogicTreeError(Exception):
@@ -753,22 +750,6 @@ def _ts_samples_array(src):
     if isinstance(ts_samples, list):
         ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
     return ts_samples
-
-
-def get_ts_sets(src):
-    """
-    :returns: a tuple of tuples of trt_smr, the sets of realizations with
-        the same uncertainties applied to the source; there is a single set
-        if the uncertainties are the same in all the realizations
-
-    NB: the sets are stored in the field ts of the ts_samples by
-        build_groups, i.e. for the sources modified by the uncertainties;
-        the sources without uncertainties have ts=0 everywhere and a
-        single set.
-    """
-    ts_samples = _ts_samples_array(src)
-    return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
-                 for ts in numpy.unique(ts_samples['ts']))
 
 
 def restrict_ts_samples(src, trt_smrs):

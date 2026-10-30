@@ -35,6 +35,8 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 U32 = numpy.uint32
+# ts is the set of realizations with the same uncertainties (see get_ts_sets)
+ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
@@ -252,6 +254,25 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if self.ts_samples is None:  # in hazardlib
             return (0,)
         return tuple(self.ts_samples['trt_smr'])
+
+    def get_ts_sets(self):
+        """
+        :returns: a tuple of tuples of trt_smr, the sets of realizations with
+            the same uncertainties applied to the source; there is a single
+            set if the uncertainties are the same in all the realizations
+
+        NB: the sets are stored in the field ts of the ts_samples by
+            build_groups, i.e. for the sources modified by the uncertainties;
+            the sources without uncertainties have ts=0 everywhere and a
+            single set.
+        """
+        if self.ts_samples is None:  # in hazardlib
+            return ((0,),)
+        ts_samples = self.ts_samples
+        if isinstance(ts_samples, list):
+            ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+        return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
+                     for ts in numpy.unique(ts_samples['ts']))
 
     def serial(self, ses_seed):
         """

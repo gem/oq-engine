@@ -34,7 +34,7 @@ from openquake.hazardlib.source_group import (
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
-    restrict_ts_samples, ts_samples_dt, get_ts_sets)
+    restrict_ts_samples, ts_samples_dt)
 from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -399,7 +399,7 @@ def get_bset_values(full_lt, sources):
         sent to the workers
     """
     ordinals = {trt_smrs[0] % TWO24 for src in sources
-                for trt_smrs in get_ts_sets(src)}
+                for trt_smrs in src.get_ts_sets()}
     return {ordinal: full_lt.get_bset_values(ordinal)
             for ordinal in sorted(ordinals)}
 
@@ -442,10 +442,10 @@ def _subsets_by_unc(sources):
         # and cmakers_groups_gkeys; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
-                for trt_smrs in get_ts_sets(sources[0])}
+                for trt_smrs in sources[0].get_ts_sets()}
     subsets = {}
     for src in sources:
-        for trt_smrs in get_ts_sets(src):
+        for trt_smrs in src.get_ts_sets():
             subsets.setdefault(trt_smrs, []).append(src)
     return subsets
 
@@ -659,7 +659,7 @@ def get_core_trt_smrs(groups):
     containing its trt_smrs.
     """
     all_trt_smrs = [trt_smrs for sg in groups for src in sg
-                    for trt_smrs in get_ts_sets(src)]
+                    for trt_smrs in src.get_ts_sets()]
     unique, _inverse = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
