@@ -979,9 +979,9 @@ class ClassicalCalculator(base.HazardCalculator):
         before = after + removed
         total = before
         # NB: the estimates are zero when not computed, see CTX_EST
-        nogrid, psd, exact = 0, 0, 0
+        nogrid, psdist, exact = 0, 0, 0
         if 'est_ctxs' in self.datastore:
-            nogrid, psd, exact = self.datastore['est_ctxs'][()][0]
+            nogrid, psdist, exact = self.datastore['est_ctxs'][0]
         estimated = nogrid > 0
         if estimated:
             # Replace only the gridded sources' original context count;
@@ -989,11 +989,12 @@ class ClassicalCalculator(base.HazardCalculator):
             total += max(float(nogrid) - gridded, 0.)
         msg = 'cfactor = {:_d}, {}reduction factor {:.2f}'.format(
             int(after), 'estimated ' if estimated else '', total / after)
-        if psd > 0:
+        if psdist > 0:
             # pointsource_distance approximation without gridding, see
-            # preclassical.count_psd: contexts with PSD_EXACT over the others
+            # preclassical.count_psdist: contexts with PSD_EXACT over
+            # the others
             msg += ', pointsource_distance reduction factor {:.2f}'.format(
-                exact / psd)
+                exact / psdist)
         logging.info(msg)
         if self.oqparam.collapse_precision and removed < .1 * before:
             logging.warning(

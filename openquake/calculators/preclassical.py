@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import copy
 import logging
 import operator
 import psutil
@@ -48,7 +49,7 @@ TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # context estimates stored in the datastore as dataset 'est_ctxs'
-CTX_EST = numpy.dtype([('nogrid', numpy.int64), ('psd', numpy.int64),
+CTX_EST = numpy.dtype([('nogrid', numpy.int64), ('psdist', numpy.int64),
                        ('exact', numpy.int64)])
 
 
@@ -182,7 +183,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         # on the split sources, the ones used in classical
         pts = [src for src in splits if hasattr(src, 'location')]
         if pts:
-            dic.update(count_psd(pts, sf, cmaker, monitor))
+            dic.update(count_psdist(pts, sf, cmaker, monitor))
     return dic
 
 
@@ -197,7 +198,7 @@ def count_nogrid(srcs, sf, cmaker, monitor):
     return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
 
 
-def count_psd(srcs, sf, cmaker, monitor):
+def count_psdist(srcs, sf, cmaker, monitor):
     """
     Estimate the contexts that the point sources would generate with the
     pointsource_distance of the user and with PSD_EXACT, see
@@ -205,9 +206,12 @@ def count_psd(srcs, sf, cmaker, monitor):
 
     :returns: a dictionary with the two estimates
     """
-    psd = estimate_nctxs(cmaker, srcs, sf.sitecol)
-    exact = estimate_nctxs(cmaker, srcs, sf.sitecol, PSD_EXACT)
-    return {'psd_ctxs': int(psd * sf.multiplier),
+    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    # a shallow copy, so that the original cmaker is not modified
+    exact_cmaker = copy.copy(cmaker)
+    exact_cmaker.pointsource_distance = PSD_EXACT
+    exact = estimate_nctxs(exact_cmaker, srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
             'exact_ctxs': int(exact * sf.multiplier)}
 
 
@@ -480,11 +484,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             res = {}
         nogrid = res.pop('nogrid_ctxs', 0)
-        psd_ctxs = res.pop('psd_ctxs', 0)
+        psdist_ctxs = res.pop('psdist_ctxs', 0)
         exact_ctxs = res.pop('exact_ctxs', 0)
-        if nogrid or psd_ctxs:  # used in classical.log_cfactor
+        if nogrid or psdist_ctxs:  # used in classical.log_cfactor
             self.datastore['est_ctxs'] = numpy.array(
-                [(nogrid, psd_ctxs, exact_ctxs)], CTX_EST)
+                [(nogrid, psdist_ctxs, exact_ctxs)], CTX_EST)
         if nogrid:
             logging.info('Estimated %d contexts without ps_grid_spacing '
                          '(single pass)', nogrid)
