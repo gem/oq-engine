@@ -1,3 +1,12 @@
+# - For 'devel' and 'user' installations, if SECRET_KEY is not defined,
+# when Django settings are read, a new secret key is created and stored
+# into the user's home directory as a file called .oq_django_secret_key.
+# You can override that generating a new key with:
+# python3 -c 'import secrets ; print("".join(secrets.choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)") for i in range(50)))'
+# and assigning it below:
+# SECRET_KEY = '<a_new_secret_key>'
+# - For 'server' and 'devel_server' installations, follow the installation documentation.
+
 # In production for security reasons a RESTRICTED access
 # is required
 # APPLICATION_MODE = 'RESTRICTED'

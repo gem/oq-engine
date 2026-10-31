@@ -36,13 +36,20 @@ import re
 import sys
 import json
 import glob
+import stat
 import shutil
+import secrets
 import getpass
 import tempfile
 import argparse
 import platform
 import subprocess
 from urllib.request import urlopen, Request
+try:
+    # used for "server" modes only, not available on windows
+    import pwd
+except ModuleNotFoundError:
+    pass
 
 VENV_ERROR = ("venv is missing! Please see the documentation of your "
               "Operating System to install it")
@@ -88,6 +95,7 @@ class server:
     """
     Parameters for a server installation (with root permissions)
     """
+    INST_TYPE = 'server'
 
     #
     # For server and devel_server we do not (yet) support changing venv
@@ -119,6 +127,7 @@ class devel_server(server):
     """
     Parameters for a development on server installation (with root permissions)
     """
+    INST_TYPE = 'devel_server'
 
     @classmethod
     def manage_py(cls):
@@ -129,6 +138,7 @@ class user:
     """
     Parameters for a user installation
     """
+    INST_TYPE = 'user'
 
     NOVENV = False
 
@@ -166,6 +176,7 @@ class devel(user):
     """
     Parameters for a devel installation (same as user)
     """
+    INST_TYPE = 'devel_user'
 
     @classmethod
     def manage_py(cls):
@@ -181,12 +192,13 @@ SERVICE = """\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After= {afterservice}
+After={afterservice}
 
 [Service]
 User=openquake
 Group=openquake
 Environment=
+EnvironmentFile={django_secret_file}
 WorkingDirectory={OQDATA}
 ExecStart=/opt/openquake/venv/bin/oq {command}
 Type=exec
@@ -473,7 +485,6 @@ def create_openquake_user(inst):
     """
     if inst not in (server, devel_server):
         return
-    import pwd
 
     try:
         pwd.getpwnam("openquake")
@@ -651,16 +662,39 @@ def create_services(inst):
     for service in ["webui"]:
         service_name = f"openquake-{service}.service"
         service_path = "/etc/systemd/system/" + service_name
+        secret_dir = "/etc/openquake"
+        secret_name = "django_secret.env"
+        secret_file = os.path.join(secret_dir, secret_name)
         afterservice = "network.target"
         command = service + " -s start"
         if not os.path.exists(service_path):
             with open(service_path, "w") as f:
                 srv = SERVICE.format(
                     service=service,
-                    OQDATA=inst.OQDATA,
                     afterservice=afterservice,
-                    command=command)
+                    django_secret_file=secret_file,
+                    OQDATA=inst.OQDATA,
+                    command=command,
+                )
                 f.write(srv)
+        openquake_user = pwd.getpwnam("openquake")
+        if not os.path.isdir(secret_dir):
+            os.mkdir(secret_dir)
+        os.chmod(secret_dir, stat.S_IRWXU)
+        os.chown(secret_dir,
+                 openquake_user.pw_uid,
+                 openquake_user.pw_gid)
+        if not os.path.exists(secret_file):
+            with open(secret_file, "w") as f:
+                key = "".join(
+                    secrets.choice(
+                        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
+                    for i in range(50))
+                f.write(f"DJANGO_SECRET_KEY='{key}'\n")
+        os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+        os.chown(secret_file,
+                 openquake_user.pw_uid,
+                 openquake_user.pw_gid)
         subprocess.check_call(["systemctl", "enable", "--now", service_name])
         subprocess.check_call(["systemctl", "start", service_name])
 
@@ -690,6 +724,14 @@ def install(inst, version, from_fork, noupgrade):
         # recreate the openquake venv
         ensure(pyvenv=inst.VENV)
         print(f"Created {inst.VENV}")
+
+    # store in the venv dir a file specifying the type of installation (server,
+    # user, devel_server, devel_user)
+    if inst.VENV:
+        inst_type_file_path = os.path.join(inst.VENV, 'OQ_ENGINE_INST_TYPE')
+        with open(inst_type_file_path, 'w') as inst_type_file:
+            inst_type_file.write(inst.INST_TYPE)
+
     pycmd = python_exe(inst)
 
     upgrade_pip(pycmd, noupgrade)
