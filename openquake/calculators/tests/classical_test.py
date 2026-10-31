@@ -1463,7 +1463,15 @@ class ContextReductionTestCase(unittest.TestCase):
         self.calc.cfactor = numpy.array([100., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
-        self.assertIn('cfactor = 100, reduction factor 3.30 (psdist)',
+        self.assertIn('cfactor = 100, reduction factor 3.30 (psdist 3.30 x '
+                      'collapse 1.00)',
+                      logs.output[0])
+        # 20 contexts removed by collapse_precision: 3.30 * 120 / 100
+        self.calc.cfactor = numpy.array([100., 20., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.96 (psdist 3.30 x '
+                      'collapse 1.20)',
                       logs.output[0])
 
     def test_warning_threshold(self):

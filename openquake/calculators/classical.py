@@ -977,26 +977,30 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         after, removed, gridded = self.cfactor
         before = after + removed
-        total = before
+        collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST
         nogrid, psdist, exact = 0, 0, 0
         if 'est_ctxs' in self.datastore:
             nogrid, psdist, exact = self.datastore['est_ctxs'][0]
         estimated = nogrid > 0
-        if estimated:
-            # Replace only the gridded sources' original context count;
-            # other sources and their precision reduction remain included.
-            total += max(float(nogrid) - gridded, 0.)
         if psdist > 0 and not estimated:
             # pointsource_distance approximation without gridding, see
             # preclassical.count_psdist: contexts with PSD_EXACT over
             # the others
+            psd = exact / psdist
             logging.info('cfactor = {:_d}, reduction factor {:.2f} '
-                         '(psdist)'.format(int(after), exact / psdist))
+                         '(psdist {:.2f} x collapse {:.2f})'.format(
+                             int(after), psd * collapse, psd, collapse))
+        elif estimated:
+            # Replace only the gridded sources' original context count;
+            # other sources and their precision reduction remain included.
+            grid = (before + max(float(nogrid) - gridded, 0.)) / before
+            logging.info('cfactor = {:_d}, estimated reduction factor {:.2f} '
+                         '(gridding {:.2f} x collapse {:.2f})'.format(
+                             int(after), grid * collapse, grid, collapse))
         else:
-            msg = 'cfactor = {:_d}, {}reduction factor {:.2f}'.format(
-                int(after), 'estimated ' if estimated else '', total / after)
-            logging.info(msg)
+            logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
+                int(after), collapse))
         if self.oqparam.collapse_precision and removed < .1 * before:
             logging.warning(
                 'collapse_precision removed only %.1f%% of contexts; '
