@@ -32,8 +32,9 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 # Shared cache so an epsilon LT runs the backbone and grid lookups once per
 # ctx instead of once per branch. Size 64 covers both the classical PSHA path
-# (one fingerprint per chunk, 27 branches hit it) and the split_by_mag=True
-# path (one fingerprint per mag bin, 27 branches iterate K mag bins per gsim)
+# (one fingerprint per chunk, N sibling branches hit it) and the
+# split_by_mag=True path (one fingerprint per mag bin, N branches iterate
+# K mag bins per gsim)
 _COMPUTE_CACHE = collections.OrderedDict()
 _CACHE_MAX = 64
 
