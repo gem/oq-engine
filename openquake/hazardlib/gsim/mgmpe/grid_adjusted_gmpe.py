@@ -38,11 +38,11 @@ _COMPUTE_CACHE = collections.OrderedDict()
 _CACHE_MAX = 64
 
 
-def _ctx_fingerprint(ctx, hdf5_path, backbone_id, imts):
+def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
     """
     Content-based cache key covering every input the compute bundle depends
-    on: the hdf5 path, the backbone identity, the imts list, and the ctx
-    fields the backbone output and grid lookups actually depend on.
+    on: the hdf5 path, the backbone identity, the TRT, the imts list, and
+    the ctx fields the backbone output and grid lookups actually depend on.
 
     NOTE: The grid lookups are 2D spatial only (lat/lon), but the cached
     bundle also holds the backbone's mean output. Backbone-relevant ctx
@@ -51,13 +51,14 @@ def _ctx_fingerprint(ctx, hdf5_path, backbone_id, imts):
     collide. Site parameters (vs30, z1pt0, z2pt5) are not hashed because
     for a fixed (site_lat, site_lon) within one calc they are constant.
 
-    NOTE: The cache is content-keyed on (hdf5, backbone, imts, ctx bytes),
-    not limited to a single get_4MN call. Instances of GridAdjustedGMPE used
-    in different TRTs compute different keys (different hdf5 and backbone)
-    and therefore never collide, even though they share the same cache.
+    NOTE: The cache is content-keyed on (hdf5, backbone, trt, imts, ctx
+    bytes), not limited to a single get_4MN call. TRT is included so
+    instances of GridAdjustedGMPE used in different TRTs never collide,
+    independent of whether the hdf5 or backbone also differ.
     """
     parts = [hdf5_path.encode(),
              backbone_id.encode(),
+             trt.encode(),
              repr(tuple(str(i) for i in imts)).encode()]
     for name in ("hypo_lat", "hypo_lon", "lat", "lon",
                  "hypo_depth", "mag",
@@ -576,10 +577,12 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
-        # Stored for the cache key; sibling branches share the same hdf5 and
-        # backbone, so cache keys match once ctx and imts are also the same
+        # Stored for the cache key; sibling branches share the same hdf5,
+        # backbone and TRT, so cache keys match once ctx and imts are also
+        # the same
         self._cache_hdf5 = grid_hdf5_file
         self._cache_backbone = repr(self.gmpe)
+        self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
@@ -629,7 +632,7 @@ class GridAdjustedGMPE(GMPE):
         # Build the bundle on the first call for this ctx, reuse it on later
         # calls that share the same key
         key = _ctx_fingerprint(ctx, self._cache_hdf5, self._cache_backbone,
-                               imts)
+                               self._cache_trt, imts)
         bundle = _COMPUTE_CACHE.get(key)
         if bundle is None:
             bundle = _build_bundle(self.gmpe, self.grid_data, ctx, imts,
