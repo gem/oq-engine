@@ -995,9 +995,14 @@ class ClassicalCalculator(base.HazardCalculator):
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
             grid = (before + max(float(nogrid) - gridded, 0.)) / before
-            logging.info('cfactor = {:_d}, estimated reduction factor {:.2f} '
-                         '(gridding {:.2f} x collapse {:.2f})'.format(
-                             int(after), grid * collapse, grid, collapse))
+            if self.oqparam.collapse_precision:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding {:.2f} x collapse {:.2f})'
+                             .format(int(after), grid * collapse, grid,
+                                     collapse))
+            else:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding)'.format(int(after), grid))
         else:
             logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
                 int(after), collapse))

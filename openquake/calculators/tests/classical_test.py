@@ -1474,6 +1474,15 @@ class ContextReductionTestCase(unittest.TestCase):
                       'collapse 1.20)',
                       logs.output[0])
 
+    def test_gridding_without_collapse(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0)
+        self.calc.cfactor = numpy.array([100., 0., 50.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, estimated reduction factor 4.50 '
+                      '(gridding)', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
     def test_warning_threshold(self):
         self.calc.datastore = {}
         for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
