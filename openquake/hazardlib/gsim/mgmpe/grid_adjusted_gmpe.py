@@ -636,20 +636,22 @@ class GridAdjustedGMPE(GMPE):
                                self._cache_trt, imts)
         bundle = _COMPUTE_CACHE.get(key)
         if bundle is None:
+            # _build_bundle writes mean/sig/tau/phi in place; the snapshot
+            # it stores is for future cache hits
             bundle = _build_bundle(self.gmpe, self.grid_data, ctx, imts,
                                    mean, sig, tau, phi)
             _COMPUTE_CACHE[key] = bundle
             if len(_COMPUTE_CACHE) > _CACHE_MAX:
                 _COMPUTE_CACHE.popitem(last=False)
+            resolved = bundle[4]
         else:
             _COMPUTE_CACHE.move_to_end(key)
-
-        # Copy the cached central-adjusted arrays into the output
-        bb_mean, bb_sig, bb_tau, bb_phi, resolved = bundle
-        mean[:] = bb_mean
-        sig[:] = bb_sig
-        tau[:] = bb_tau
-        phi[:] = bb_phi
+            # Replay the snapshot into the output buffers
+            bb_mean, bb_sig, bb_tau, bb_phi, resolved = bundle
+            mean[:] = bb_mean
+            sig[:] = bb_sig
+            tau[:] = bb_tau
+            phi[:] = bb_phi
 
         # Add this branch's eps * mean_se shift. Terms with no mean_adj for
         # this IMT contributed nothing to the central mean and so are skipped
