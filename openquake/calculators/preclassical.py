@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import copy
 import logging
 import operator
 import psutil
@@ -190,11 +189,12 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
 def count_nogrid(srcs, sf, cmaker, monitor):
     """
     Estimate the contexts that the point sources would generate without
-    gridding, see contexts.estimate_nctxs
+    gridding and with PSD_EXACT, see contexts.estimate_nctxs
 
     :returns: a dictionary with the estimate under the key 'nogrid_ctxs'
     """
-    nctxs = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    nctxs = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
     return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
 
 
@@ -207,10 +207,8 @@ def count_psdist(srcs, sf, cmaker, monitor):
     :returns: a dictionary with the two estimates
     """
     psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
-    # a shallow copy, so that the original cmaker is not modified
-    exact_cmaker = copy.copy(cmaker)
-    exact_cmaker.pointsource_distance = PSD_EXACT
-    exact = estimate_nctxs(exact_cmaker, srcs, sf.sitecol)
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
     return {'psdist_ctxs': int(psdist * sf.multiplier),
             'exact_ctxs': int(exact * sf.multiplier)}
 

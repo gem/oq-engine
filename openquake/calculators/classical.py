@@ -987,15 +987,16 @@ class ClassicalCalculator(base.HazardCalculator):
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
             total += max(float(nogrid) - gridded, 0.)
-        msg = 'cfactor = {:_d}, {}reduction factor {:.2f}'.format(
-            int(after), 'estimated ' if estimated else '', total / after)
-        if psdist > 0:
+        if psdist > 0 and not estimated:
             # pointsource_distance approximation without gridding, see
             # preclassical.count_psdist: contexts with PSD_EXACT over
             # the others
-            msg += ', pointsource_distance reduction factor {:.2f}'.format(
-                exact / psdist)
-        logging.info(msg)
+            logging.info('cfactor = {:_d}, reduction factor {:.2f} '
+                         '(psdist)'.format(int(after), exact / psdist))
+        else:
+            msg = 'cfactor = {:_d}, {}reduction factor {:.2f}'.format(
+                int(after), 'estimated ' if estimated else '', total / after)
+            logging.info(msg)
         if self.oqparam.collapse_precision and removed < .1 * before:
             logging.warning(
                 'collapse_precision removed only %.1f%% of contexts; '

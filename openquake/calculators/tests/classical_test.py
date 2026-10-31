@@ -1457,6 +1457,15 @@ class ContextReductionTestCase(unittest.TestCase):
         self.assertIn('estimated reduction factor 3.46', logs.output[0])
         self.assertEqual(len(logs.output), 1)
 
+    def test_pointsource_distance(self):
+        self.calc.datastore = {
+            'est_ctxs': numpy.array([(0, 100, 330)], CTX_EST)}
+        self.calc.cfactor = numpy.array([100., 0., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.30 (psdist)',
+                      logs.output[0])
+
     def test_warning_threshold(self):
         self.calc.datastore = {}
         for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
