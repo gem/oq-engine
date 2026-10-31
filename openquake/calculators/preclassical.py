@@ -487,9 +487,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         if nogrid or psdist_ctxs:  # used in classical.log_cfactor
             self.datastore['est_ctxs'] = numpy.array(
                 [(nogrid, psdist_ctxs, exact_ctxs)], CTX_EST)
-        if nogrid:
-            logging.info('Estimated %d contexts without ps_grid_spacing '
-                         '(single pass)', nogrid)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
