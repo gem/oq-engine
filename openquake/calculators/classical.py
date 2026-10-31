@@ -952,6 +952,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
+            self.store_grid()
             self.log_cfactor()
         self.store_info()
         if self.dparam_mb > 1:
@@ -969,6 +970,16 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['mean_rates_by_src/array'][()])
         return True
 
+    def store_grid(self):
+        """
+        Store in the 'grid' field of est_ctxs the contexts of the gridded
+        point sources, before collapse_precision, see contexts.py
+        """
+        if 'est_ctxs' in self.datastore:
+            est = self.datastore['est_ctxs'][()]
+            est['grid'] = int(self.cfactor[2])
+            self.datastore['est_ctxs'] = est
+
     def log_cfactor(self):
         """
         Log the overall context reduction, including point-source gridding
@@ -979,10 +990,11 @@ class ClassicalCalculator(base.HazardCalculator):
         before = after + removed
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST
-        nogrid, psdist, exact = 0, 0, 0
+        psdist, exact, grid = 0, 0, 0
         if 'est_ctxs' in self.datastore:
-            nogrid, psdist, exact = self.datastore['est_ctxs'][0]
-        estimated = nogrid > 0
+            est = self.datastore['est_ctxs'][0]
+            psdist, exact, grid = est['psd100'], est['exact'], est['grid']
+        estimated = grid > 0  # the gridded sources have been estimated
         if psdist > 0 and not estimated:
             # pointsource_distance approximation without gridding, see
             # preclassical.count_psdist: contexts with PSD_EXACT over
@@ -994,15 +1006,15 @@ class ClassicalCalculator(base.HazardCalculator):
         elif estimated:
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
-            grid = (before + max(float(nogrid) - gridded, 0.)) / before
+            factor = (before + max(float(exact) - gridded, 0.)) / before
             if self.oqparam.collapse_precision:
                 logging.info('cfactor = {:_d}, estimated reduction factor '
                              '{:.2f} (gridding {:.2f} x collapse {:.2f})'
-                             .format(int(after), grid * collapse, grid,
+                             .format(int(after), factor * collapse, factor,
                                      collapse))
             else:
                 logging.info('cfactor = {:_d}, estimated reduction factor '
-                             '{:.2f} (gridding)'.format(int(after), grid))
+                             '{:.2f} (gridding)'.format(int(after), factor))
         else:
             logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
                 int(after), collapse))

@@ -48,8 +48,8 @@ TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # context estimates stored in the datastore as dataset 'est_ctxs'
-CTX_EST = numpy.dtype([('nogrid', numpy.int64), ('psdist', numpy.int64),
-                       ('exact', numpy.int64)])
+CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
+                       ('grid', numpy.int64)])
 
 
 def source_data(sources):
@@ -189,13 +189,17 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
 def count_nogrid(srcs, sf, cmaker, monitor):
     """
     Estimate the contexts that the point sources would generate without
-    gridding and with PSD_EXACT, see contexts.estimate_nctxs
+    gridding, with the pointsource_distance of the user and with PSD_EXACT,
+    see contexts.estimate_nctxs
 
-    :returns: a dictionary with the estimate under the key 'nogrid_ctxs'
+    :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
+              and 'exact_ctxs'
     """
-    nctxs = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
                            srcs, sf.sitecol)
-    return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
+    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
 
 
 def count_psdist(srcs, sf, cmaker, monitor):
@@ -481,12 +485,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = smap.reduce()
         else:
             res = {}
-        nogrid = res.pop('nogrid_ctxs', 0)
         psdist_ctxs = res.pop('psdist_ctxs', 0)
         exact_ctxs = res.pop('exact_ctxs', 0)
-        if nogrid or psdist_ctxs:  # used in classical.log_cfactor
+        if exact_ctxs:  # used in classical.log_cfactor
             self.datastore['est_ctxs'] = numpy.array(
-                [(nogrid, psdist_ctxs, exact_ctxs)], CTX_EST)
+                [(exact_ctxs, psdist_ctxs, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
