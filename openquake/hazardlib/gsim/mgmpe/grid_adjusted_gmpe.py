@@ -18,6 +18,8 @@
 Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.GridAdjustedGMPE`
 """
+import collections
+import hashlib
 import json
 import h5py
 import h3
@@ -26,6 +28,48 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
+
+
+# Shared cache: N sibling epsilon LT branches on the same ctx hit one
+# cached backbone + grid lookup. Size 96 safely holds a classical task's
+# working set under split_by_mag=True (one fingerprint per mag bin, K bins
+# per source group, with K set by the MFD Mw range / width_of_mfd_bin). Other
+# paths (e.g. event-based where split_by_mag=False) produce 1 fingerprint per
+# compute call.
+_COMPUTE_CACHE = collections.OrderedDict()
+_CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
+                # 66 bins so 96 is safely over this if split_by_mag=True
+
+
+def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
+    """
+    Content-based cache key covering every input the compute bundle depends
+    on: the hdf5 path, the backbone identity, the TRT, the imts list, and
+    the ctx fields the backbone output and grid lookups actually depend on.
+
+    NOTE: The grid lookups are 2D spatial only (lat/lon), but the cached
+    bundle also holds the backbone's mean output. Backbone-relevant ctx
+    fields (mag, hypo_depth, distances, rupture geometry) are included
+    so two ctxs sharing lat/lon but differing on those fields cannot
+    collide. Site parameters (vs30, z1pt0, z2pt5) are not hashed because
+    for a fixed (site_lat, site_lon) within one calc they are constant.
+
+    NOTE: The cache is content-keyed on (hdf5, backbone, trt, imts, ctx
+    bytes), not limited to a single get_4MN call. TRT is included so
+    instances of GridAdjustedGMPE used in different TRTs never collide,
+    independent of whether the hdf5 or backbone also differ.
+    """
+    parts = [hdf5_path.encode(),
+             backbone_id.encode(),
+             trt.encode(),
+             repr(tuple(str(i) for i in imts)).encode()]
+    for name in ("hypo_lat", "hypo_lon", "lat", "lon",
+                 "hypo_depth", "mag",
+                 "rrup", "rjb", "rhypo", "rx", "ry0",
+                 "rake", "dip", "width", "ztor", "strike"):
+        if name in ctx.dtype.names:
+            parts.append(ctx[name].tobytes())
+    return hashlib.blake2b(b"|".join(parts), digest_size=16).digest()
 
 
 def load_sigma_for_term(
@@ -382,65 +426,40 @@ def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
         return None
     lats, lons = ((ctx.hypo_lat, ctx.hypo_lon) if cfg["location"] == "hypo"
                   else (ctx.lat, ctx.lon))
+    
     return grid_lookup(entry[key], lats, lons, grid_data["h3_res"])
 
 
-def _apply_grid_corrections(
-    grid_data, ctx, imt, mean, sig, tau, phi, epsilons):
+def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
     """
-    Look up and apply corrections defined in the hdf5. The fitted
-    central mean adjustment for each term is always added; a non-zero
-    epsilon adds a further epsilon * mean_se shift from the per-cell
-    SE stored alongside the mean.
-
-    :param grid_data:
-        Dict returned by load_residual_grids
-    :param ctx:
-        A ctx object recarray
-    :param imt:
-        An IMT class instance
-    :param mean:
-        Mean predictions (standard 1d numpy array from compute)
-    :param sig:
-        Sigma (standard 1d numpy array from compute)
-    :param tau:
-        Tau (standard 1d numpy array from compute)
-    :param phi:
-        Phi (standard 1d numpy array from compute)
-    :param epsilons:
-        Per-term epsilon multiplying the per-cell SE on the mean. Terms
-        not in the dict default to epsilon = 0 (central only).
+    Compute backbone + central mean + sigma adjustments once, snapshot for
+    reuse across sibling LT branches
     """
-    # Apply each correction - example (term, cfg):
-    #   term = 'dL2L'
-    #   cfg  = {'location': 'hypo', 'sig_adjustment': 'sub',
-    #           'sig_comp_modified': 'tau'}
-    for term, cfg in grid_data["res_terms"].items():
+    # Backbone output is the same across all branches of the same ctx
+    gmpe.compute(ctx, imts, mean, sig, tau, phi)
+    resolved = {}
+    for m, imt in enumerate(imts):
+        per = {}
+        for term, cfg in grid_data["res_terms"].items():
+            # Resolve both central and SE here so each branch only has to add
+            # its own eps * SE shift later
+            mean_adj = _resolve_adj(grid_data, cfg, term, str(imt),
+                                    ctx, "mean")
+            se_adj = _resolve_adj(grid_data, cfg, term, str(imt),
+                                  ctx, "mean_se")
+            per[term] = (mean_adj, se_adj)
+            if mean_adj is None:
+                continue
+            # Central mean and sigma adjustments do not depend on epsilon,
+            # so they are added here and shared across all branches
+            mean[m] += mean_adj
+            sig_action = cfg.get("sig_adjustment", "none")
+            if sig_action != "none":
+                adjust_sigma(grid_data, str(imt), term, cfg, ctx,
+                             sig_action, sig[m], tau[m], phi[m])
+        resolved[m] = per
 
-        # Fitted central mean adjustment (None if term has no data for IMT)
-        mean_adj = _resolve_adj(grid_data, cfg, term, imt, ctx, "mean")
-        if mean_adj is None:
-            continue
-
-        # Optional epsilon * SE shift around the central estimate
-        epsilon = epsilons.get(term, 0.0)
-        if epsilon != 0.0:
-            se_adj = _resolve_adj(grid_data, cfg, term, imt, ctx, "mean_se")
-            if se_adj is None:
-                raise ValueError(
-                    f"Non-zero epsilon requested for term '{term}' but "
-                    f"per-cell '{term}_mean_se' dataset is missing for "
-                    f"IMT '{imt}'.")
-            mean_adj = mean_adj + epsilon * se_adj
-
-        # Apply adjustment to mean prediction
-        mean += mean_adj
-
-        # Apply sigma adjustment to required component if configured
-        sig_action = cfg.get("sig_adjustment", "none")
-        if sig_action != "none":
-            adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action,
-                         sig, tau, phi)
+    return (mean.copy(), sig.copy(), tau.copy(), phi.copy(), resolved)
 
 
 class GridAdjustedGMPE(GMPE):
@@ -561,6 +580,13 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
+        # Stored for the cache key; sibling branches share the same hdf5,
+        # backbone and TRT, so cache keys match once ctx and imts are also
+        # the same
+        self._cache_hdf5 = grid_hdf5_file
+        self._cache_backbone = repr(self.gmpe)
+        self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
+
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
         unknown = set(self.epsilons) - set(self.grid_data["res_terms"])
@@ -606,11 +632,42 @@ class GridAdjustedGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Compute original mean
-        self.gmpe.compute(ctx, imts, mean, sig, tau, phi)
+        # Build the bundle on the first call for this ctx, reuse it on later
+        # calls that share the same key
+        key = _ctx_fingerprint(ctx, self._cache_hdf5, self._cache_backbone,
+                               self._cache_trt, imts)
+        bundle = _COMPUTE_CACHE.get(key)
+        if bundle is None:
+            # _build_bundle writes mean/sig/tau/phi in place; the snapshot
+            # it stores is for future cache hits
+            bundle = _build_bundle(self.gmpe, self.grid_data, ctx, imts,
+                                   mean, sig, tau, phi)
+            _COMPUTE_CACHE[key] = bundle
+            if len(_COMPUTE_CACHE) > _CACHE_MAX:
+                _COMPUTE_CACHE.popitem(last=False)
+            resolved = bundle[4]
+        else:
+            _COMPUTE_CACHE.move_to_end(key)
+            # Replay the snapshot into the output buffers
+            bb_mean, bb_sig, bb_tau, bb_phi, resolved = bundle
+            mean[:] = bb_mean
+            sig[:] = bb_sig
+            tau[:] = bb_tau
+            phi[:] = bb_phi
 
-        # Apply grid-based corrections
-        for m, imt in enumerate(imts):
-            _apply_grid_corrections(self.grid_data, ctx, str(imt),
-                                    mean[m], sig[m], tau[m], phi[m],
-                                    self.epsilons)
+        # Add this branch's eps * mean_se shift. Terms with no mean_adj for
+        # this IMT contributed nothing to the central mean and so are skipped
+        # here as well
+        for m, per_term in resolved.items():
+            for term, (mean_adj, se_adj) in per_term.items():
+                if mean_adj is None:
+                    continue
+                eps = self.epsilons.get(term, 0.0)
+                if eps == 0.0:
+                    continue
+                if se_adj is None:
+                    raise ValueError(
+                        f"Non-zero epsilon requested for term '{term}' but "
+                        f"per-cell '{term}_mean_se' dataset is missing for "
+                        f"IMT '{imts[m]}'.")
+                mean[m] += eps * se_adj

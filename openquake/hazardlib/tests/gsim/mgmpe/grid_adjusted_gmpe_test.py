@@ -23,6 +23,7 @@ import numpy as np
 
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as mod
 from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     GridAdjustedGMPE,
     grid_lookup,
@@ -235,3 +236,77 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
                              epsilons={"dL2L": 1.0, "nope": 0.5})
+
+    ### CACHING MEDIANS PER CTX TESTS ###
+    def test_cache_cold_vs_warm_equivalence(self):
+        # The shared compute-bundle cache must produce identical (mean, sig,
+        # tau, phi) to the no-cache path across the full 27-branch epsilon
+        # product.
+        # NOTE: Cache cleared before each eps so every call is cold. Warm = cache
+        # cleared once up front so the first eps builds the bundle and then the
+        # remaining 26 restore it
+        levels = [-1.732, 0.0, 1.732]
+        combos = [{"dL2L": a, "dS2S": b, "adj_per_km": c}
+                  for a in levels for b in levels for c in levels]
+
+        reference = []
+        for eps in combos:
+            mod._COMPUTE_CACHE.clear()
+            reference.append(self._get_mean_stds(IMTS, epsilons=eps))
+
+        mod._COMPUTE_CACHE.clear()
+        warm = [self._get_mean_stds(IMTS, epsilons=eps) for eps in combos]
+
+        for eps, ref, w in zip(combos, reference, warm):
+            for name, ref_arr, w_arr in zip(
+                    ("mean", "sig", "tau", "phi"), ref, w):
+                np.testing.assert_array_equal(
+                    ref_arr, w_arr,
+                    err_msg=f"{name} mismatch for epsilons={eps}")
+
+    def test_fingerprint_distinguishes_backbone_fields(self):
+        # Two ctxs with identical site + hypo lat/lon must still produce
+        # distinct fingerprints when any backbone GMM relevant field in the
+        # ctx dtype differs, otherwise the cache returns the wrong median
+        # keyed on 2D only. Fields exercised here are those the underlying
+        # AkkarEtAlRjb2014 requires (mag, rake, rjb) for rup and rup geom
+        # (Vs30 and other site params not fingerprinted despite being used
+        # by the GMM itself given site conditions cannot change in one calc)
+        base = valid.gsim(BASE_GSIM)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        cmaker = simple_cmaker([base, adj], IMTS)
+
+        def _ctx(mag=6.0, rake=0.0, rjb_0=10.0):
+            ctx = cmaker.new_ctx(len(LATS))
+            ctx.mag = mag
+            ctx.rake = rake
+            ctx.vs30 = 760.0
+            ctx.rjb = np.array([rjb_0, 20.0, 30.0, 50.0])
+            ctx.lat = LATS
+            ctx.lon = LONS
+            ctx.hypo_lat = 0.0
+            ctx.hypo_lon = 0.0
+            return ctx
+
+        bb_id = repr(adj.gmpe)
+        trt = str(adj.DEFINED_FOR_TECTONIC_REGION_TYPE)
+        ref_fp = mod._ctx_fingerprint(
+            _ctx(), GRID_HDF5, bb_id, trt, IMTS)
+
+        # Identical ctx -> same fingerprint
+        self.assertEqual(
+            ref_fp,
+            mod._ctx_fingerprint(_ctx(), GRID_HDF5, bb_id, trt, IMTS))
+
+        varied = {
+            "mag": _ctx(mag=7.0),
+            "rjb": _ctx(rjb_0=11.0),
+            "rake": _ctx(rake=-90.0),
+        }
+        for field, ctx_v in varied.items():
+            fp = mod._ctx_fingerprint(
+                ctx_v, GRID_HDF5, bb_id, trt, IMTS)
+            self.assertNotEqual(
+                ref_fp, fp,
+                f"fingerprint must differ when '{field}' changes "
+                f"(lat/lon unchanged)")
