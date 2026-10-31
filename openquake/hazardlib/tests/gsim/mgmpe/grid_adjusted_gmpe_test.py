@@ -237,6 +237,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
                              epsilons={"dL2L": 1.0, "nope": 0.5})
 
+    ### CACHING MEDIANS PER CTX TESTS ###
     def test_cache_cold_vs_warm_equivalence(self):
         # The shared compute-bundle cache must produce identical (mean, sig,
         # tau, phi) to the no-cache path across the full 27-branch epsilon
@@ -262,3 +263,66 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 np.testing.assert_array_equal(
                     ref_arr, w_arr,
                     err_msg=f"{name} mismatch for epsilons={eps}")
+
+    def test_fingerprint_distinguishes_backbone_fields(self):
+        # Two ctxs with identical site + hypo lat/lon must still produce
+        # distinct fingerprints when any backbone-relevant field differs
+        # (mag, hypo_depth, distance, rupture geometry), otherwise the
+        # cache potentially returns the wrong median based only on 2D
+        # locations
+        base = valid.gsim(BASE_GSIM)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        cmaker = simple_cmaker([base, adj], IMTS)
+
+        def _ctx(mag=6.0, hypo_depth=10.0, rake=0.0, rrup_0=10.0,
+                 dip=90.0, width=10.0, ztor=0.0):
+            ctx = cmaker.new_ctx(len(LATS))
+            ctx.mag = mag
+            ctx.rake = rake
+            ctx.hypo_depth = hypo_depth
+            ctx.vs30 = 760.0
+            ctx.rrup = np.array([rrup_0, 20.0, 30.0, 50.0])
+            ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
+            ctx.lat = LATS
+            ctx.lon = LONS
+            ctx.hypo_lat = 0.0
+            ctx.hypo_lon = 0.0
+            # Rupture-geometry fields are only hashed if present in the
+            # ctx dtype; set when available so a drop from the fingerprint
+            # field loop would be caught
+            for field, val in (("dip", dip), ("width", width),
+                               ("ztor", ztor)):
+                if field in ctx.dtype.names:
+                    setattr(ctx, field, val)
+            return ctx
+
+        bb_id = repr(adj.gmpe)
+        ref_fp = mod._ctx_fingerprint(_ctx(), GRID_HDF5, bb_id, IMTS)
+
+        # Identical ctx -> same fingerprint
+        self.assertEqual(
+            ref_fp,
+            mod._ctx_fingerprint(_ctx(), GRID_HDF5, bb_id, IMTS))
+
+        # Each backbone-relevant field alone must change the fingerprint
+        # Geometry fields are only exercised when the ctx dtype carries
+        # them
+        candidates = {
+            "mag": _ctx(mag=7.0),
+            "hypo_depth": _ctx(hypo_depth=60.0),
+            "rrup": _ctx(rrup_0=11.0),
+            "rake": _ctx(rake=-90.0),
+            "dip": _ctx(dip=45.0),
+            "width": _ctx(width=20.0),
+            "ztor": _ctx(ztor=5.0),
+        }
+        ref_names = _ctx().dtype.names
+        varied = {k: v for k, v in candidates.items()
+                  if k in ref_names or k in ("mag", "hypo_depth", "rrup",
+                                             "rake")}
+        for field, ctx_v in varied.items():
+            fp = mod._ctx_fingerprint(ctx_v, GRID_HDF5, bb_id, IMTS)
+            self.assertNotEqual(
+                ref_fp, fp,
+                f"fingerprint must differ when '{field}' changes "
+                f"(lat/lon unchanged)")

@@ -42,11 +42,14 @@ def _ctx_fingerprint(ctx, hdf5_path, backbone_id, imts):
     """
     Content-based cache key covering every input the compute bundle depends
     on: the hdf5 path, the backbone identity, the imts list, and the ctx
-    hypo/site lat-lon bytes.
+    fields the backbone output and grid lookups actually depend on.
 
-    NOTE: Using just hypo/site coords for ctx representation is sufficient
-    because the lookups are 2D spatial only (depth of ruptures will not
-    affect raytraced path for example).
+    NOTE: The grid lookups are 2D spatial only (lat/lon), but the cached
+    bundle also holds the backbone's mean output. Backbone-relevant ctx
+    fields (mag, hypo_depth, distances, rupture geometry) are included
+    so two ctxs sharing lat/lon but differing on those fields cannot
+    collide. Site parameters (vs30, z1pt0, z2pt5) are not hashed because
+    for a fixed (site_lat, site_lon) within one calc they are constant.
 
     NOTE: The cache is content-keyed on (hdf5, backbone, imts, ctx bytes),
     not limited to a single get_4MN call. Instances of GridAdjustedGMPE used
@@ -56,7 +59,10 @@ def _ctx_fingerprint(ctx, hdf5_path, backbone_id, imts):
     parts = [hdf5_path.encode(),
              backbone_id.encode(),
              repr(tuple(str(i) for i in imts)).encode()]
-    for name in ("hypo_lat", "hypo_lon", "lat", "lon"):
+    for name in ("hypo_lat", "hypo_lon", "lat", "lon",
+                 "hypo_depth", "mag",
+                 "rrup", "rjb", "rhypo", "rx", "ry0",
+                 "rake", "dip", "width", "ztor", "strike"):
         if name in ctx.dtype.names:
             parts.append(ctx[name].tobytes())
     return hashlib.blake2b(b"|".join(parts), digest_size=16).digest()
