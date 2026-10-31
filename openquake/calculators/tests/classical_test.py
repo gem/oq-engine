@@ -700,6 +700,8 @@ class ClassicalTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
+        self.assertIn('nogrid_ctxs', self.calc.datastore)
+        self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -1428,6 +1430,41 @@ class FakeDatastoreCalculator:
         self.datastore.read_df.side_effect = (
             lambda key, index=None: h5.read_df(key, index))
         self.datastore.__getitem__.side_effect = lambda key: h5[key]
+
+
+class ContextReductionTestCase(unittest.TestCase):
+    def setUp(self):
+        self.calc = object.__new__(ClassicalCalculator)
+        self.calc.oqparam = mock.Mock(collapse_precision=.03)
+        self.calc.datastore = {'nogrid_ctxs': numpy.array(400.)}
+
+    def test_gridding_and_precision(self):
+        self.calc.cfactor = numpy.array([96., 4., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 4.17', logs.output[0])
+        self.assertIn('removed only 4.0%', logs.output[1])
+        self.assertIn('collapse_precision should be turned off',
+                      logs.output[1])
+
+    def test_mixed_sources(self):
+        # Include 50 ungridded contexts as well as the 100 gridded ones.
+        self.calc.cfactor = numpy.array([130., 20., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 3.46', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_warning_threshold(self):
+        self.calc.datastore = {}
+        for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
+                                         (0., 0, False)]:
+            self.calc.oqparam.collapse_precision = precision
+            self.calc.cfactor = numpy.array([100 - removed, removed, 0.])
+            with self.assertLogs(level='INFO') as logs:
+                self.calc.log_cfactor()
+            self.assertEqual(len(logs.output), 2 if warn else 1)
+            self.assertNotIn('estimated', logs.output[0])
 
 
 class SlowTasksTestCase(unittest.TestCase):

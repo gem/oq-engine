@@ -39,7 +39,7 @@ from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
-from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.scalerel import WC1994, PointMSR
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     get_distances_planar, build_planar)
@@ -401,6 +401,53 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class EstimateNctxsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.src = PointSource(
+            'ps', 'pointsource', '*',
+            ArbitraryMFD([4., 5., 6., 7.], [.1] * 4), 1., PointMSR(), 1.,
+            tom, 0., 20., Point(0., 0.),
+            PMF([(1., NodalPlane(0., 90., 0.))]),
+            PMF([(.5, 5.), (.5, 10.)]))
+        self.cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 25.), (6., 25.)]},
+            pointsource_distance={'default': 10.})
+        self.sites = SiteCollection([Site(Point(0., 0., dep))
+                                     for dep in [0., 10., 20., 30.]])
+
+    def test_close_and_far(self):
+        # Two magnitudes survive. Each has two close sites (including the
+        # pointsource-distance boundary), one far site and one outside.
+        for max_sites, expected in [(0, 10), (10, 12)]:
+            self.cmaker.max_sites_disagg = max_sites
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src], self.sites), expected)
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src] * 2, self.sites), expected * 2)
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [], self.sites), 0)
+
+    def test_filtered_sites(self):
+        # The complete collection determines fewsites, even when the
+        # filtered collection is below the threshold.
+        self.cmaker.max_sites_disagg = 2
+        sites = self.sites.filtered([1, 2])
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [self.src], sites), 6)
+
+    def test_magnitude_distance_boundary(self):
+        # A site exactly at maximum_distance is counted by the estimate,
+        # although it generates no contexts: the estimate is approximate.
+        sites = SiteCollection.from_points([0.], [0.], [25.])
+        for max_sites in [0, 10]:
+            for psdist in [25., 30.]:
+                self.cmaker.max_sites_disagg = max_sites
+                self.cmaker.pointsource_distance = psdist
+                self.assertEqual(contexts.estimate_nctxs(
+                    self.cmaker, [self.src], sites), 4)
 
 
 class CollapseCtxTestCase(unittest.TestCase):

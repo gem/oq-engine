@@ -114,6 +114,10 @@ AGGRISK_FIELD_DESCRIPTION = {
     'number': 'Buildings destroyed',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
+    'injured_day': 'Daytime injured people',
+    'injured_night': 'Night-time injured people',
+    'injured_transit': 'Transit-hours injured people',
+    'injured_avg': 'Average injured people',
     'affectedpop': 'Affected population',
     'embodied_carbon': 'Embodied carbon loss (tCO₂e)',
     'value': 'Exposed value',
@@ -125,26 +129,65 @@ AGGRISK_FIELD_DESCRIPTION = {
 }
 
 
+# local times of the day corresponding to the time events
+TIME_WINDOWS = {
+    'day': 'the day (local time from 9:00 to 17:00)',
+    'night': 'the night (local time from 21:00 to 5:00)',
+    'transit': ('the transit hours (local time from 5:00 to 9:00'
+                ' and from 17:00 to 21:00)')}
+AIS = 'according to the Abbreviated Injury Severity (www.aisinjuryscale.org)'
+
 AGGRISK_FIELD_EXPLANATION = {
     'affectedpop': ('Population living in buildings that sustained at least'
                     ' moderate damage'),
     'area': ('Total floor area (in m²) of buildings that sustained complete'
              ' damage'),
-    'injured': ('Seriously or critically injured people according to the'
-                ' Abbreviated Injury Severity (www.aisinjuryscale.org)'),
+    'injured': f'Seriously or critically injured people {AIS}',
+    # injured_day, injured_night, injured_transit
+    **{f'injured_{te}': ('Seriously or critically injured people if the'
+                         f' event occurs during {when}, {AIS}')
+       for te, when in TIME_WINDOWS.items()},
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
-    'occupants_day': ('Number of fatalities if the event occurs during the'
-                      ' day (local time from 9:00 to 17:00)'),
-    'occupants_night': ('Number of fatalities if the event occurs during'
-                        ' the night (local time from 21:00 to 5:00)'),
-    'occupants_transit': ('Number of fatalities if the event occurs during'
-                          ' the transit hours (local time from 5:00 to 9:00'
-                          ' and from 17:00 to 21:00)'),
+    # occupants_day, occupants_night, occupants_transit
+    **{f'occupants_{te}': ('Number of fatalities if the event occurs'
+                           f' during {when}')
+       for te, when in TIME_WINDOWS.items()},
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),
+}
+
+
+# meaning of the exposed value, depending on the loss type
+EXPOSED_VALUE_EXPLANATION = {
+    'residents': ('Population that lives in the area included in the impact'
+                  ' analysis'),
+    'area': ('Total floor area of buildings, including all storeys, in the'
+             ' area included in the impact analysis'),
+    'occupants': ('Population assumed to be inside the building stock in the'
+                  ' area included in the impact analysis when the event'
+                  ' occurs'),
+    'number': ('Number of buildings in the area included in the impact'
+               ' analysis'),
+    'economic': ('Replacement value of buildings and their contents in the'
+                 ' area included in the impact analysis'),
+}
+
+
+# meaning of the statistics reported for each impact metric
+REPORTED_VALUE_EXPLANATION = {
+    'lossmea': ('Arithmetic mean of the estimated impact values, accounting'
+                ' for the uncertainties propagated through the impact'
+                ' analysis'),
+    'q50': ('The 50th percentile of the estimated impact distribution. Half'
+            ' of the estimated impact values are below the median and half'
+            ' are above it'),
+    'q05': ('Value below which 5% of the estimated impact values fall. It'
+            ' represents the lower end of the range of plausible impacts'),
+    'q95': ('Value below which 95% of the estimated impact values fall. It'
+            ' represents the upper end of the range of plausible impacts'),
 }
 
 

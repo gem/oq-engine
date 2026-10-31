@@ -25,6 +25,7 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
@@ -174,6 +175,17 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
+def count_nogrid(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate without
+    gridding, see contexts.estimate_nctxs
+
+    :returns: a dictionary with the estimate under the key 'nogrid_ctxs'
+    """
+    nctxs = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
+
+
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
@@ -189,7 +201,15 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
+        # estimate the contexts before gridding, to log the reduction
+        pts = [src for src in srcs if hasattr(src, 'location')]
+        if pts:
+            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        # Track the same point sources as the no-gridding estimate.
+        for src in srcs:
+            if hasattr(src, 'location'):
+                src.count_nogrid = True
     else:
         srcs = sources
 
@@ -434,6 +454,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = smap.reduce()
         else:
             res = {}
+        nogrid = res.pop('nogrid_ctxs', 0)
+        if nogrid:
+            self.datastore['nogrid_ctxs'] = nogrid
+            logging.info('Estimated %d contexts without ps_grid_spacing '
+                         '(single pass)', nogrid)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(

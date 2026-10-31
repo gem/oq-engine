@@ -363,7 +363,7 @@ class MapGetter(object):
         if self.array is not None:
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
-        self.array = numpy.zeros((self.N, self.L, self.Gt))  # move to 32 bit
+        self.array = numpy.zeros((self.N, self.L, self.Gt), F32)
         lookup = numpy.full(max(sid2idx) + 1, -1, int)
         for sid, idx in sid2idx.items():
             lookup[sid] = idx

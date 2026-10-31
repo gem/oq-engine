@@ -866,7 +866,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore, self.csm, self.sitecol,
                 self.cmdict['Default'])
 
-        self.cfactor = numpy.zeros(2)
+        # [0] contexts after collapsing, [1] removed by collapse_precision,
+        # [2] contexts before collapse_precision for the gridding baseline
+        self.cfactor = numpy.zeros(3)
         self.dparam_mb = 0
         self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -950,7 +952,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
-            logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
+            self.log_cfactor()
         self.store_info()
         if self.dparam_mb > 1:
             logging.info('maximum size of the dparam cache=%.1f MB',
@@ -966,6 +968,28 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_mean_rates(
                 self.datastore['mean_rates_by_src/array'][()])
         return True
+
+    def log_cfactor(self):
+        """
+        Log the overall context reduction, including point-source gridding.
+        Warn when collapse_precision removes fewer than 10% of contexts.
+        """
+        after, removed, gridded = self.cfactor
+        before = after + removed
+        total = before
+        estimated = 'nogrid_ctxs' in self.datastore
+        if estimated:
+            # Replace only the gridded sources' original context count;
+            # other sources and their precision reduction remain included.
+            nogrid = self.datastore['nogrid_ctxs'][()]
+            total += max(float(nogrid) - gridded, 0.)
+        logging.info('cfactor = {:_d}, {}reduction factor {:.2f}'.format(
+            int(after), 'estimated ' if estimated else '', total / after))
+        if self.oqparam.collapse_precision and removed < .1 * before:
+            logging.warning(
+                'collapse_precision removed only %.1f%% of contexts; '
+                'collapse_precision should be turned off',
+                100 * removed / before)
 
     def _pre_execute(self):
         oq = self.oqparam
