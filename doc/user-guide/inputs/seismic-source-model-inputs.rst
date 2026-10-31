@@ -993,50 +993,129 @@ NB: the fact that the Canada model with 7 cities can be made 26 times faster doe
 when you consider the full 130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50`` gives a speedup of 7 
 times, which is still very significant.
 
+Measuring the reduction of the contexts
+---------------------------------------
+
+The ``classical`` calculator logs, at the end of the classical phase, the number of contexts it computes (``cfactor``)
+and the reduction factor with respect to the exact calculation, i.e. with ``ps_grid_spacing=0`` and a
+``pointsource_distance`` of 1000 km. The reduction factor is the product of two parts, which are both logged:
+
+- the reduction due to the point-source gridding (``gridding``) or to the ``pointsource_distance`` approximation
+  (``psdist``), and
+- the reduction due to ``collapse_precision`` (``collapse``).
+
+For instance, a line like::
+
+	cfactor = 56_527_540, estimated reduction factor 17.52 (gridding 17.52 x collapse 1.00)
+
+means that the gridded calculation computes about 17.5 times fewer contexts than the exact one. The factors
+marked as ``estimated`` are computed from a fast estimate of the number of contexts, which is accurate to a few percent
+(the estimated and the actual number of contexts of the exact calculation differ by 1.6% in the example below).
+The runtime is not directly proportional to the number of contexts, so it is useful to measure it as well: the
+classical time is the one reported in the logs by the line ``Received ... from classical``.
+
+The following table shows the results of a calculation with 1 source group, over the sites of the SAM model, with
+an engine of version 3.27 and the ``job_vs30.ini`` file in the ``performance.zip`` archive, which can be downloaded from
+https://downloads.openquake.org/jobs/performance.zip. The calculations were run with the distribution enabled on
+16 cores:
+
+.. list-table::
+   :header-rows: 1
+
+   * - pointsource_distance
+     - ps_grid_spacing
+     - collapse_precision
+     - classical time (s)
+     - cfactor (contexts)
+     - reduction factor
+   * - 1000
+     - 0
+     - none
+     - 1011
+     - 1,006,014,489
+     - 1.00
+   * - 100
+     - 0
+     - none
+     - 326
+     - 300,941,271
+     - 3.34 (psdist)
+   * - 25
+     - 25
+     - none
+     - 58
+     - 56,527,540
+     - 17.52 (gridding, estimated)
+   * - 25
+     - 25
+     - 0.03
+     - 64
+     - 55,207,568
+     - 17.94 (gridding, estimated)
+
+Note that the efficiency of the collapse of the ruptures and of the ``pointsource_distance`` approximation depends very
+much on the version of the engine: the numbers above are valid for the engine version 3.27 and they will change in
+other versions, as well as they will depend on the hardware. They are meant to show how to read the logs, not
+as a benchmark.
+
 ************************************************************************
 How to determine the “right” value for the ``ps_grid_spacing`` parameter
 ************************************************************************
 
-The trick is to run a sensitivity analysis on a reduced calculation. Set in the job.ini something like this::
+The recommended way is to set ``ps_grid_spacing = auto`` and to run the calculation with
+``calculation_mode = preclassical``, for instance::
 
-	sensitivity_analysis = {'ps_grid_spacing': [0, 20, 40, 60]}
+	$ oq run job.ini -p ps_grid_spacing=auto calculation_mode=preclassical
 
-and then run::
+With this setting the engine determines both ``ps_grid_spacing`` and ``pointsource_distance`` (unless the
+``pointsource_distance`` is set in the job.ini) by comparing the hazard of the point sources on a sample of sites
+with the hazard of the exact calculation, and then stops. The chosen values are logged, and they are stored in the
+datastore, so that a subsequent calculation started with ``--hc`` uses them.
 
-	$ OQ_SAMPLE_SITES=.01 oq engine --run job.ini
+The calibration works as follows:
 
-This will run sequentially 4 calculations with different values of the ``ps_grid_spacing``. The first calculation, the 
-one with ``ps_grid_spacing=0``, is the exact calculation, with the approximation disabled, to be used as reference.
+- the sample has at most 300 sites (fewer if the ``maximum_distance`` is larger than 300 km), it uses a single GMPE
+  per tectonic region type, the two intensity measure types closest to 0.2 s and 1 s and one intensity level every two;
+- the reference is the calculation without gridding and with a ``pointsource_distance`` of 100 km (1000 km would be
+  exact, but too expensive for large maximum distances);
+- the candidates are the grid spacings 50, 25 and 15 km, each one with the ``pointsource_distance`` values 15, 25 and
+  50 km (if the ``pointsource_distance`` is set in the job.ini, only that value is tried);
+- a candidate is acceptable if the 99th percentile of the relative error on the hazard maps, for the sites where the
+  hazard is above 0.01 g, is at most 5%;
+- the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the full
+  calculation; if no candidate is acceptable, the most precise one is chosen.
 
-Notice that setting the environment variable ``OQ_SAMPLE_SITES=.01`` will reduced by 100x the number of sites: this is 
-essential in order to make the calculation times acceptable in large calculations.
+For the ``job_vs30.ini`` file of the ``performance.zip`` archive (engine version 3.27) the calibration log is the
+following, and the calibration takes a few seconds on 16 cores::
 
-After running the 4 calculations you can compare the times by using ``oq show performance`` and the precision by using 
-``oq compare``. From that you can determine which value of the ``ps_grid_spacing`` gives a good speedup with a decent 
-precision. Calculations with plenty of nodal planes and hypocenters will benefit from lower values of ``ps_grid_spacing`` 
-while calculations with a single nodal plane and hypocenter for each source will benefit from higher values of 
-``ps_grid_spacing``.
+	 psgs   psd      time      weight  mean_err%  p99_err%
+	   50    15       5.1      294562       1.35      7.15
+	   15    15      10.7      478083       0.17      1.91
+	   25    15       6.8      317373       0.45      3.39
+	   50    25       5.3      338005       1.19      7.15
+	   50    50       6.2      490575       0.89      7.19
+	Using ps_grid_spacing=25.0, pointsource_distance=15.0
 
-If you are interested only in speed and not in precision, you can set ``calculation_mode=preclassical``, run the 
-sensitivity analysis in parallel very quickly and then use the ``ps_grid_spacing`` value corresponding to the minimum 
-weight of the source model, which can be read from the logs. Here is how to extract the weight information, in the example of Alaska, with job IDs in the range 31692-31695::
+Here the 15 km grid with a ``pointsource_distance`` of 15 km and the 25 km grid with a ``pointsource_distance`` of
+15 km are both acceptable, and the second one has the smallest weight, so it is chosen. The 50 km grid is not
+acceptable for any ``pointsource_distance``.
 
-	$ oq db get_weight 31692
-	<Row(description=Alaska{'ps_grid_spacing': 0}, message=tot_weight=1_929_504, max_weight=120_594, num_sources=150_254)>
-	$ oq db get_weight 31693
-	<Row(description=Alaska{'ps_grid_spacing': 20}, message=tot_weight=143_748, max_weight=8_984, num_sources=22_727)>
-	$ oq db get_weight 31694
-	<Row(description=Alaska{'ps_grid_spacing': 40}, message=tot_weight=142_564, max_weight=8_910, num_sources=6_245)>
-	$ oq db get_weight 31695
-	<Row(description=Alaska{'ps_grid_spacing': 60}, message=tot_weight=211_542, max_weight=13_221, num_sources=3_103)>
+Once the values are known, run the full calculation with them, for instance ``oq run job.ini -p ps_grid_spacing=25,
+pointsource_distance=15``. The precision can be checked with ``oq compare hcurves`` and ``oq compare uhs``, and the
+performance with ``oq show performance``.
 
-The lowest weight is 142_564, corresponding to a ``ps_grid_spacing`` of 40km; since the weight is 13.5 times smaller 
-than the weight for the full calculation (1_929_504), this is the maximum speedup that we can expect from using the 
-approximation.
+If you want to explore other values, you can run a sensitivity analysis. The command ``oq sensitivity_analysis``
+prints a bash script which creates one calculation for each combination of the parameters, given in TOML syntax::
 
-Note 1: the weighting algorithm changes at every release, so only relative weights at a fixed release are meaningful 
-and it does not make sense to compare weights across engine releases.
+	$ oq sensitivity_analysis job.ini 'ps_grid_spacing = [0, 25, 50]' > sa.sh
+	$ bash sa.sh
 
-Note 2: the precision and performance of the ``ps_grid_spacing`` approximation change at every release: you should not 
-expect to get the same numbers and performance across releases even if the model is the same and the parameters are the 
-same.
+The script runs the calculations one after the other, and at the end it collects them with ``oq collect_jobs``. The
+calculation with ``ps_grid_spacing=0`` is the reference, but notice that it still uses the ``pointsource_distance``
+approximation, with the default of 100 km, so it is not the exact calculation unless the ``pointsource_distance`` is set
+to 1000 km as well. To speed up the sensitivity analysis on large models, set the environment variable
+``OQ_SAMPLE_SITES=.01``, which uses 100 times less sites (``oq show performance`` shows the timings of the calculations).
+
+Note 1: the calibration, the weights and the precision of the ``ps_grid_spacing`` approximation change at every
+release, so only the results at a fixed release are meaningful and you should not expect the same numbers and
+performance across releases even if the model and the parameters are the same.
