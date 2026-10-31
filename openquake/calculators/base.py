@@ -619,9 +619,7 @@ class HazardCalculator(BaseCalculator):
                 and ('classical' in oq.calculation_mode or
                      'disaggregation' in oq.calculation_mode)):
             logging.info(
-                'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/general.html#'
-                'pointsource-distance')
+                'You are not using the pointsource_distance approximation')
         elif 'classical' in oq.calculation_mode:
             if oq.ps_grid_spacing:
                 logging.info('Using pointsource_distance=%s and '

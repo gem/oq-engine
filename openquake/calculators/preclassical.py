@@ -46,6 +46,10 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
+# context estimates stored in the datastore as dataset 'est_ctxs'
+CTX_EST = numpy.dtype([('nogrid', numpy.int64), ('psd', numpy.int64),
+                       ('exact', numpy.int64)])
 
 
 def source_data(sources):
@@ -172,7 +176,14 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         return {}
 
     cmaker.set_weight(splits, sf)
-    return {splits[0].grp_id: splits}
+    dic = {splits[0].grp_id: splits}
+    if not cmaker.ps_grid_spacing and cmaker.pointsource_distance < PSD_EXACT:
+        # estimate the reduction due to the pointsource_distance approximation
+        # on the split sources, the ones used in classical
+        pts = [src for src in splits if hasattr(src, 'location')]
+        if pts:
+            dic.update(count_psd(pts, sf, cmaker, monitor))
+    return dic
 
 
 def count_nogrid(srcs, sf, cmaker, monitor):
@@ -184,6 +195,20 @@ def count_nogrid(srcs, sf, cmaker, monitor):
     """
     nctxs = estimate_nctxs(cmaker, srcs, sf.sitecol)
     return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
+
+
+def count_psd(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate with the
+    pointsource_distance of the user and with PSD_EXACT, see
+    contexts.estimate_nctxs
+
+    :returns: a dictionary with the two estimates
+    """
+    psd = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    exact = estimate_nctxs(cmaker, srcs, sf.sitecol, PSD_EXACT)
+    return {'psd_ctxs': int(psd * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
 
 
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
@@ -455,8 +480,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             res = {}
         nogrid = res.pop('nogrid_ctxs', 0)
+        psd_ctxs = res.pop('psd_ctxs', 0)
+        exact_ctxs = res.pop('exact_ctxs', 0)
+        if nogrid or psd_ctxs:  # used in classical.log_cfactor
+            self.datastore['est_ctxs'] = numpy.array(
+                [(nogrid, psd_ctxs, exact_ctxs)], CTX_EST)
         if nogrid:
-            self.datastore['nogrid_ctxs'] = nogrid
             logging.info('Estimated %d contexts without ps_grid_spacing '
                          '(single pass)', nogrid)
         atomic = set(src.grp_id for src in atomic_sources)

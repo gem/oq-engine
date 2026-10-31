@@ -971,20 +971,30 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def log_cfactor(self):
         """
-        Log the overall context reduction, including point-source gridding.
+        Log the overall context reduction, including point-source gridding
+        and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
         """
         after, removed, gridded = self.cfactor
         before = after + removed
         total = before
-        estimated = 'nogrid_ctxs' in self.datastore
+        # NB: the estimates are zero when not computed, see CTX_EST
+        nogrid, psd, exact = 0, 0, 0
+        if 'est_ctxs' in self.datastore:
+            nogrid, psd, exact = self.datastore['est_ctxs'][()][0]
+        estimated = nogrid > 0
         if estimated:
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
-            nogrid = self.datastore['nogrid_ctxs'][()]
             total += max(float(nogrid) - gridded, 0.)
-        logging.info('cfactor = {:_d}, {}reduction factor {:.2f}'.format(
-            int(after), 'estimated ' if estimated else '', total / after))
+        msg = 'cfactor = {:_d}, {}reduction factor {:.2f}'.format(
+            int(after), 'estimated ' if estimated else '', total / after)
+        if psd > 0:
+            # pointsource_distance approximation without gridding, see
+            # preclassical.count_psd: contexts with PSD_EXACT over the others
+            msg += ', pointsource_distance reduction factor {:.2f}'.format(
+                exact / psd)
+        logging.info(msg)
         if self.oqparam.collapse_precision and removed < .1 * before:
             logging.warning(
                 'collapse_precision removed only %.1f%% of contexts; '

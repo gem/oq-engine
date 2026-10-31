@@ -30,6 +30,7 @@ from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -700,7 +701,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
-        self.assertIn('nogrid_ctxs', self.calc.datastore)
+        self.assertIn('est_ctxs', self.calc.datastore)
         self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
@@ -1436,7 +1437,8 @@ class ContextReductionTestCase(unittest.TestCase):
     def setUp(self):
         self.calc = object.__new__(ClassicalCalculator)
         self.calc.oqparam = mock.Mock(collapse_precision=.03)
-        self.calc.datastore = {'nogrid_ctxs': numpy.array(400.)}
+        self.calc.datastore = {
+            'est_ctxs': numpy.array([(400, 0, 0)], CTX_EST)}
 
     def test_gridding_and_precision(self):
         self.calc.cfactor = numpy.array([96., 4., 100.])
