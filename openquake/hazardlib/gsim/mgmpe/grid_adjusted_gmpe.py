@@ -30,13 +30,15 @@ from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-# Shared cache so an epsilon LT runs the backbone and grid lookups once per
-# ctx instead of once per branch. Size 64 covers both the classical PSHA path
-# (one fingerprint per chunk, N sibling branches hit it) and the
-# split_by_mag=True path (one fingerprint per mag bin, N branches iterate
-# K mag bins per gsim)
+# Shared cache: N sibling epsilon LT branches on the same ctx hit one
+# cached backbone + grid lookup. Size 96 safely holds a classical task's
+# working set under split_by_mag=True (one fingerprint per mag bin, K bins
+# per source group, with K set by the MFD Mw range / width_of_mfd_bin). Other
+# paths (e.g. event-based where split_by_mag=False) produce 1 fingerprint per
+# compute call.
 _COMPUTE_CACHE = collections.OrderedDict()
-_CACHE_MAX = 64
+_CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
+                # 66 bins so 96 is safely over this if split_by_mag=True
 
 
 def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
