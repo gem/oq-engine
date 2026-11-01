@@ -18,16 +18,18 @@
 
 import logging
 import numpy
+from scipy.linalg import solve_triangular
 from scipy.stats import truncnorm
 from scipy import interpolate
 
 from openquake.baselib import config
 from openquake.baselib.general import CallableDict, humansize
-from openquake.hazardlib import geo, imt
+from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
-from openquake.hazardlib.shakemap.realization import psd_factor
+from openquake.hazardlib.shakemap.realization import (
+    psd_factor, posterior_within_residuals)
 from openquake.hazardlib.calc.gmf import (
     _site_positions, _correlation_budget, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
@@ -342,6 +344,35 @@ def _spatial_factor(dist, corr_range):
         return psd_factor(corr)
 
 
+def _dense_loth_baker_residuals(points, imts, Z):
+    # Some interpolated coregionalization matrices are indefinite even
+    # when the complete covariance is valid. Use the common factorization
+    # instead of independently clipping them and inflating the variances.
+    size = len(points) * len(imts)
+    if 40 * size ** 2 > _correlation_budget():
+        raise ValueError('Dense LothBaker2013 sampling exceeds '
+                         'correlated_gmf_gb; request fewer sites or IMTs')
+    sites = site.SiteCollection.from_points(points[:, 0], points[:, 1])
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    try:
+        factor = model.factor(sites, imts, ensure_psd=False)
+    except numpy.linalg.LinAlgError:
+        factor = model.factor(sites, imts)
+        residuals = factor.apply(Z).reshape(len(imts), len(points), -1)
+        # A joint covariance repair can perturb marginal spatial blocks.
+        # Restore each block by a linear map, retaining joint PSD by
+        # construction and using the same common factorization interface.
+        for i, im in enumerate(imts):
+            rows = factor.lower_triangle[
+                i * len(points):(i + 1) * len(points)]
+            lower = numpy.linalg.cholesky(rows @ rows.T)
+            marginal = model.factor(sites, [im], ensure_psd=False)
+            residuals[i] = marginal.apply(solve_triangular(
+                lower, residuals[i], lower=True))
+        return residuals
+    return factor.apply(Z).reshape(len(imts), len(points), -1)
+
+
 def _loth_baker_residuals(lons, lats, imts, Z, seed, truncation_level):
     # Unit-variance Loth and Baker (2013) residuals of shape (M, N, E),
     # sampled with the linear model of coregionalization of the model,
@@ -365,8 +396,13 @@ def _loth_baker_residuals(lons, lats, imts, Z, seed, truncation_level):
             'than the correlated_gmf_gb of openquake.cfg; set a proper '
             '`region_grid_spacing` so that your exposure involves less '
             'sites')
-    model = loth_baker_2013.LothBaker2013()
+    model = loth_baker_2013.ShakeMapLothBaker2013()
     B1, B2, B3 = model.coregionalization(imts)
+    if any(numpy.linalg.eigvalsh(b).min() < -1E-10
+           for b in (B1, B2, B3)):
+        samples = Z.reshape(M, -1, E)[:, first].reshape(M * U, E)
+        return _dense_loth_baker_residuals(
+            points, imts, samples)[:, inverse]
     # the nugget uses the samples Z of the distinct points, while the
     # two spatial structures use new samples, truncated in the same way
     res = numpy.einsum('ij,jue->iue', psd_factor(B3),
@@ -392,11 +428,9 @@ def _conditional_phi(std, tau2):
 
 
 def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
-    # Log-space residuals from the conditional within-event sigma of each
-    # point and the between-event factor CL, with the Loth and Baker (2013)
-    # correlation between the points; the station conditioning of the
-    # correlation is not applied (see openquake.hazardlib.shakemap.
-    # realization for the approximation)
+    # Sample the between-event factors independently across output IMTs.
+    # Their joint posterior is not provided by ShakeMap. Within-event
+    # fields share a joint prior and each gets its own conditioning map.
     phi = numpy.concatenate([_conditional_phi(
         shakemap['std'][str(im)],
         (shakemap['CL'][str(im)].astype(numpy.float64) ** 2).sum(axis=1))
@@ -415,18 +449,49 @@ def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
         between.append(CL @ zb)
     within = _loth_baker_residuals(
         shakemap['lon'], shakemap['lat'], imts, Z, seed, truncation_level)
-    return (phi[:, None] * within.reshape(phi.shape[0], -1) +
+    within = _condition_within(shakemap, imts, within, phi)
+    return (within.reshape(phi.shape[0], -1) +
             numpy.concatenate(between))
 
 
+def _condition_within(shakemap, imts, within, conditional_phi):
+    # Each linear transformation preserves the posterior covariance of
+    # one IMT; cross-IMT dependence is an explicitly defined approximation.
+    phi = conditional_phi.reshape(len(imts), -1)
+    result = phi[:, :, None] * within
+    if ('K' not in shakemap.dtype.names or
+            not any(numpy.any(shakemap['K'][str(im)]) for im in imts)):
+        return result  # older NPY/HDF products retain a warned approximation
+    points, first, inverse = numpy.unique(numpy.column_stack([
+        shakemap['lon'], shakemap['lat']]), axis=0,
+        return_index=True, return_inverse=True)
+    if 80 * len(points) ** 2 > _correlation_budget():
+        raise ValueError('ShakeMap posterior covariance exceeds '
+                         'correlated_gmf_gb; request fewer sites')
+    dist = None
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    for i, im in enumerate(imts):
+        K = shakemap['K'][str(im)][first]
+        if not numpy.any(K):
+            continue
+        if dist is None:
+            dist = geo.geodetic.distance_matrix(points[:, 0], points[:, 1])
+        correlation = model.correlation_block(dist, [im])
+        posterior = posterior_within_residuals(
+            within[i, first], correlation, shakemap['phi'][str(im)][first],
+            K, phi[i, first])
+        result[i] = posterior[inverse]
+    return result
+
+
 def _warn_xml_approximation(shakemap, correlated, spatial_model):
-    # the legacy XML inputs have only the marginal total uncertainty
+    # Legacy inputs have only the marginal total uncertainty.
     if (correlated and spatial_model is not None and
             'CL' not in shakemap.dtype.names):
         logging.warning(
             'The correlated realizations are built from the marginal '
-            'uncertainties of the XML ShakeMap: this is an approximation '
-            'of the posterior sampling, use a shake_result.hdf product')
+            'ShakeMap uncertainties: this is an approximation of the '
+            'posterior sampling, use a complete shake_result.hdf product')
 
 
 def _is_loth_baker_product(shakemap, imts, spatial_model):
@@ -450,11 +515,15 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
         logging.warning(
             'The ShakeMap is sampled with LothBaker2013, the requested '
             '%s is not used', spatial_model.__class__.__name__)
-    logging.warning(
-        'The correlated GMFs approximate the posterior of the ShakeMap: '
-        'the station conditioning is not applied to the correlation '
-        'between the points and the between-event terms are independent '
-        'across IMTs')
+    if 'K' not in shakemap.dtype.names:
+        logging.warning(
+            'Incomplete ShakeMap station bookkeeping: the within-event '
+            'correlation uses a marginal approximation without conditioning')
+    if len(imts) > 1:
+        logging.warning(
+            'Cross-IMT posterior dependence is approximate: each IMT uses '
+            'its own conditioning transform of a shared LothBaker2013 '
+            'prior; between-event terms are independent across IMTs')
     residuals = _realization_residuals(
         shakemap, imts, Z, seed, truncation_level)
     return mu * numpy.exp(residuals) / scale
@@ -493,11 +562,13 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     N = len(shakemap)
     total_std = numpy.array([
         shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
-    components = {'phi', 'tau'} <= set(shakemap.dtype.names)
+    components = (spatial_model is not None and
+                  {'phi', 'tau'} <= set(shakemap.dtype.names))
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
-    if truncation_level <= 1E-9:
-        return result  # Z is zero: the ShakeMap median
+    if (truncation_level <= 1E-9 or
+            spatial_model is None and cross_imt_model is None):
+        return result  # median-only or independent total-residual sampling
     _warn_xml_approximation(shakemap, correlated, spatial_model)
     if _is_loth_baker_product(shakemap, imts, spatial_model):
         return _loth_baker_gmfs(
@@ -505,7 +576,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
             spatial_model, correlation_seed, truncation_level)
     if not correlated:
         return result
-    tau_present = 'tau' in shakemap.dtype.names and tau_Z is not None
+    tau_present = components and tau_Z is not None
     active = [i for i in correlated
               if numpy.any(shakemap['std'][str(imts[i])])]
     if len(active) != len(correlated):

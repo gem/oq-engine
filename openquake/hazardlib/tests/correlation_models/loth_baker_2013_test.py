@@ -153,6 +153,28 @@ def test_rejects_wrong_residual_component():
             component=ResidualComponent.TOTAL)
 
 
+def test_shakemap_coefficients_match_esi_shakelib():
+    # Golden coefficients from esi-shakelib 1.2.6, not the authors' 2022
+    # interpolation used by the general engine model.
+    from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+        loth_baker_2013 import ShakeMapLothBaker2013
+    model = ShakeMapLothBaker2013()
+    matrices = model.raw_coregionalization([SA(p) for p in (.01, .3, .6)])
+    expected = (
+        [[.29, .23, .22], [.23, .2833333333333333, .2066666666666667],
+         [.22, .2066666666666667, .314]],
+        [[.47, .4033333333333333, .334],
+         [.4033333333333333, .44, .3633333333333333],
+         [.334, .3633333333333333, .432]],
+        [[.24, .17, .068], [.17, .2733333333333333, .0973333333333333],
+         [.068, .0973333333333333, .248]])
+    numpy.testing.assert_allclose(matrices, expected, atol=1E-14)
+    raw = model.raw_coregionalization([SA(1)])
+    assert sum(b[0, 0] for b in raw) == 1.01
+    numpy.testing.assert_allclose(model.correlation_block(
+        numpy.zeros((1, 1)), [SA(1)]), 1.)
+
+
 @pytest.mark.parametrize(('distances', 'message'), [
     (numpy.zeros(2), 'two-dimensional'),
     (numpy.array([[numpy.nan]]), 'finite'),

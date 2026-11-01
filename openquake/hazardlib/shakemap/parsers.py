@@ -53,7 +53,8 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import nrml, sourceconverter, valid
-from openquake.hazardlib.shakemap.realization import psd_factor
+from openquake.hazardlib.shakemap.realization import (
+    psd_factor, station_conditioning)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures)
 
@@ -1704,6 +1705,56 @@ def _hdf_grid(h5, conf):
             float(prediction['yres']))
 
 
+def _hdf_conditioning(h5, conf, groups, array):
+    # Store the station correction per point, so association and NPY caches
+    # preserve the posterior without copying global station data per site.
+    fields = ('sta_lons_rad', 'sta_lats_rad', 'sta_per_ix', 'sta_phi',
+              'add_uncertainty')
+    imts = array['val'].dtype.names
+    if not all(all(f in groups[im] for f in fields) for im in imts):
+        logging.warning('Incomplete ShakeMap station bookkeeping: using '
+                        'a marginal approximation without conditioning')
+        return array
+    ccf = conf.get('modeling', {}).get('ccf')
+    module = conf.get('ccf_modules', {}).get(ccf, [ccf])[0]
+    if module not in ('LB13', 'LothBaker2013'):
+        raise ValueError(f'Unsupported ShakeMap conditioning model: {ccf}')
+    widths = {im: groups[im]['sta_phi'].size for im in imts}
+    required = 8 * (2 * len(array) * sum(widths.values()) +
+                    6 * max(widths.values()) ** 2)
+    budget = float(config.memory.correlated_gmf_gb) * 1024 ** 3
+    if required > budget:
+        raise ValueError('ShakeMap station conditioning exceeds '
+                         'correlated_gmf_gb')
+    dt = [(im, numpy.float64, (max(1, widths[im]),)) for im in imts]
+    result = numpy.zeros(len(array), array.dtype.descr + [('K', dt)])
+    for field in array.dtype.names:
+        result[field] = array[field]
+    for im in imts:
+        if not widths[im]:
+            continue
+        stations = {f: groups[im][f][()] for f in fields}
+        stations['periods'] = h5['arrays/imt_periods'][()]
+        # PGV and MMI use the same SA(1.0) proxy as ShakeMap.
+        period = (.01 if im == 'PGA' else
+                  float(im[3:-1]) if im.startswith('SA(') else 1.)
+        result['K'][im] = station_conditioning(
+            array['lon'], array['lat'], period,
+            array['phi'][im].astype(numpy.float64), stations)
+    return result
+
+
+def _hdf_between_factor(group):
+    # With no stations ShakeMap stores empty C and Sigma_HH_YD arrays.
+    # The remaining prior between-event residual is spatially common.
+    sigma = group['Sigma_HH_YD'][()]
+    C = group['C'][()]
+    if not sigma.size and not C.size:
+        return group['tau'][()].reshape(-1, 1)
+    C = C.reshape(-1, C.shape[-1])
+    return C @ psd_factor(sigma)
+
+
 def get_array_shake_result_hdf(fname):
     # Convert the HDF5 grid to the common ShakeMap array representation.
     url = path2url(fname)
@@ -1722,9 +1773,10 @@ def get_array_shake_result_hdf(fname):
         # missing values would be taken as zero uncertainties
         components = [field for field in ('phi', 'tau') if all(
             field in imt_groups[imt] for imt in imts)]
-        dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-                  ('val', dt), ('std', dt)]
-        dtlist.extend((field, dt) for field in components)
+        dtlist = [('lon', numpy.float64), ('lat', numpy.float64),
+                  ('vs30', F32), ('val', dt), ('std', dt)]
+        dtlist.extend((field, [(im, numpy.float64) for im in imts])
+                      for field in components)
         # the between-event factor C @ chol(Sigma_HH_YD) is stored only if
         # all the IMTs have both arrays (shakemap-modules >= 1.1.4),
         # together with phi, padded to the largest number of between-event
@@ -1733,14 +1785,14 @@ def get_array_shake_result_hdf(fname):
             'C' in imt_groups[imt] and 'Sigma_HH_YD' in imt_groups[imt]
             for imt in imts)
         if has_cl:
-            width = max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
-                        for imt in imts)
+            width = max(1, max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
+                               for imt in imts))
             dtlist.append(('CL', [(imt, F32, (width,)) for imt in imts]))
         array = numpy.zeros(ny * nx, dtlist)
         lons = lon_max - (nx - 1 - numpy.arange(nx)) * xres
         lats = lat_max - numpy.arange(ny) * yres
-        array['lon'] = numpy.tile(lons.astype(F32), ny)
-        array['lat'] = numpy.repeat(lats.astype(F32), nx)
+        array['lon'] = numpy.tile(lons, ny)
+        array['lat'] = numpy.repeat(lats, nx)
         array['vs30'] = h5['arrays/vs30'][()].reshape(-1)
         for imt in imts:
             group = imt_groups[imt]
@@ -1752,9 +1804,10 @@ def get_array_shake_result_hdf(fname):
                 array[field][imt] = group[field][()].reshape(-1)
             if has_cl:
                 # the between-event samples are C @ chol(Sigma) @ z
-                C = group['C'][()].reshape(-1, group['C'].shape[-1])
-                cl = C @ psd_factor(group['Sigma_HH_YD'][()])
+                cl = _hdf_between_factor(group)
                 array['CL'][imt][:, :cl.shape[1]] = cl
+        if has_cl:
+            array = _hdf_conditioning(h5, conf, imt_groups, array)
     return array
 
 

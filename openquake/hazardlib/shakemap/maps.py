@@ -115,16 +115,18 @@ def filter_unused_imts(shakemap, required_imts,
         raise ValueError('The downloaded ShakeMap is missing SA(0.6)!')
 
     dt = [(imt, F32) for imt in sorted(required_imts)]
-    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-              ('val', dt), ('std', dt)]
-    extra_fields = [field for field in ('phi', 'tau', 'CL')
+    # Shapefiles supply vs30 only; their centroid coordinates are assigned
+    # later. HDF coordinates retain double precision for station matching.
+    dtlist = [(name, shakemap.dtype[name] if name in site_fields else F32)
+              for name in ('lon', 'lat', 'vs30')]
+    dtlist.extend([('val', dt), ('std', dt)])
+    extra_fields = [field for field in ('phi', 'tau', 'CL', 'K')
                     if field in shakemap.dtype.names]
-    if 'CL' in extra_fields:
-        # CL holds the between-event coefficients of each IMT
-        width = shakemap.dtype['CL'][0].shape
-        dtcl = [(imt, F32, width) for imt in sorted(required_imts)]
-    dtlist.extend((field, dtcl if field == 'CL' else dt)
-                  for field in extra_fields)
+    # Retain each IMT's factor width and precision, including station K.
+    for field in extra_fields:
+        dtype = shakemap.dtype[field]
+        dtlist.append((field, [(im, dtype[im])
+                               for im in sorted(required_imts)]))
     data = numpy.zeros(len(shakemap), dtlist)
     for name in site_fields:
         data[name] = shakemap[name]

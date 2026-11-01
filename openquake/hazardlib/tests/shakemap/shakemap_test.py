@@ -6,11 +6,11 @@ from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.cross_imt.baker_cornell_2006 import (
     BakerCornell2006)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
-    loth_baker_2013 import LothBaker2013
+    loth_baker_2013 import LothBaker2013, ShakeMapLothBaker2013
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.shakemap.maps import \
-    get_sitecol_shakemap
+    get_sitecol_shakemap, filter_unused_imts
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
@@ -48,6 +48,15 @@ def mean_std(shakemap, vs30):
 
 
 class ShakemapTestCase(unittest.TestCase):
+
+    def test_filter_shapefile_retains_coordinate_fields(self):
+        shakemap = numpy.zeros(2, [('vs30', float), ('val', imt_dt),
+                                  ('std', imt_dt)])
+        shakemap['vs30'] = [400, 500]
+        filtered = filter_unused_imts(
+            shakemap, ['PGA'], site_fields=['vs30'])
+        self.assertTrue({'lon', 'lat', 'vs30'} <= set(filtered.dtype.names))
+        numpy.testing.assert_array_equal(filtered['vs30'], [400, 500])
 
     def test_gmfs(self):
         # test uncertainty in zip
@@ -245,7 +254,7 @@ class ShakemapTestCase(unittest.TestCase):
         Z = rng.standard_normal((N * len(ims), E))
         res = _realization_residuals(shakemap, ims, Z, 0, 99)
         dist = geo.geodetic.distance_matrix(lons, lats)
-        expected = LothBaker2013().correlation_block(dist, proxies)
+        expected = ShakeMapLothBaker2013().correlation_block(dist, proxies)
         numpy.testing.assert_allclose(
             numpy.corrcoef(res), expected, atol=0.01)
 

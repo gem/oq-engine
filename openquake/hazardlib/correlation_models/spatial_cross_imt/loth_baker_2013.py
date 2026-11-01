@@ -36,7 +36,7 @@ https://github.com/bakerjw/GMMs/blob/master/correlations/lb_2013_spatial_corr.m
 """
 
 import numpy
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, RegularGridInterpolator
 
 from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
@@ -236,3 +236,50 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                 matrices[:, i, j] = _interpolate_coefficients(
                     period1, period2)
         return tuple(matrices)
+
+
+class ShakeMapLothBaker2013(LothBaker2013):
+    """ShakeMap's rounded tables and bilinear period interpolation.
+
+    esi-shakelib 1.2.6 uses the 2021 erratum tables, including rounded B3
+    entries and a separately interpolated diagonal. Its raw zero-distance
+    diagonal can differ from one. ShakeMap nevertheless uses phi squared
+    as the prior output variance: retain raw coefficients for station
+    conditioning and use unit output variances when sampling fields.
+    """
+
+    def raw_coregionalization(self, imts):
+        """Return the coefficients used in ShakeMap's station covariance."""
+        self.validate_imts(imts)
+        periods = numpy.array([_correlation_period(im) for im in imts])
+        p1, p2 = numpy.meshgrid(periods, periods, indexing='ij')
+        pairs = numpy.column_stack([p1.ravel(), p2.ravel()])
+        nugget = numpy.round(_B3, 2)
+        nugget[3, 3], nugget[4, 4] = .26, .20
+        matrices = []
+        for table in (_B1, _B2, nugget):
+            interpolator = RegularGridInterpolator((_PERIODS, _PERIODS), table)
+            matrix = interpolator(pairs).reshape(len(imts), len(imts))
+            diagonal = numpy.interp(periods, _PERIODS, numpy.diag(table))
+            same = periods[:, None] == periods
+            matrix[same] = numpy.broadcast_to(
+                diagonal[:, None], matrix.shape)[same]
+            matrices.append(matrix)
+        return tuple(matrices)
+
+    def coregionalization(self, imts):
+        """Return coefficients with authoritative unit output variances."""
+        b1, b2, b3 = self.raw_coregionalization(imts)
+        periods = numpy.array([_correlation_period(im) for im in imts])
+        same = periods[:, None] == periods
+        b3[same] = (1 - b1 - b2)[same]
+        return b1, b2, b3
+
+    def _correlation_block(self, distances, imts1, imts2, context=None):
+        # Keep the common factorization interface for the HDF sampler.
+        b1, b2, b3 = self.coregionalization([*imts1, *imts2])
+        n = len(imts1)
+        spatial = (numpy.exp(-3 * distances / SHORT_RANGE),
+                   numpy.exp(-3 * distances / LONG_RANGE), distances == 0)
+        return sum(numpy.kron(b[:n, n:], r)
+                   for b, r in zip((b1, b2, b3), spatial))

@@ -1876,9 +1876,11 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
     if 'CL' in shakemap.dtype.names:
         # the stored posterior components are sampled with Loth and
         # Baker (2013), whatever correlation model was requested
-        model = ('LothBaker2013 (shake_result.hdf components, approximate: '
-                 'no station conditioning, between-event terms independent '
-                 'across IMTs)')
+        conditioning = ('station-conditioned' if 'K' in shakemap.dtype.names
+                        else 'marginal approximation, no station conditioning')
+        model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
+                 'approximate cross-IMT dependence, between-event terms '
+                 'independent across IMTs)')
     else:
         model = (f'{name}, {strategy} (XML ShakeMap: approximation from '
                  'the marginal uncertainties)')
