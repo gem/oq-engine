@@ -16,6 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import glob
+import shutil
+import tempfile
+import numpy
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_lisa, case_master)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -97,6 +102,33 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         assert len(fnames) == 4  # there are 4 realizations
         self.assertEqualFiles('expected/avg_losses-000.csv', fnames[0])
+        avg = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        orig = dict(zip(self.calc.datastore['assetcol/array']['id'], avg))
+
+        # same calculation with a7 moved onto the site of a6 and one slice
+        # per site (assets_per_site_limit=1): the single risk input then
+        # contains two taxonomies and the results must not change
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        case_dir = os.path.join(tmp, 'case_5')
+        shutil.copytree(os.path.dirname(case_5.__file__), case_dir,
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        [expo] = glob.glob(os.path.join(case_dir, '*xposure_model.xml'))
+        with open(expo, encoding='utf-8') as f:
+            xml = f.read()
+        a7 = '<location lon="-78.168117" lat="15.59329"/>'
+        a6 = '<location lon="-78.168002" lat="15.593287"/>'
+        assert xml.count(a7) == 1, a7
+        with open(expo, 'w', encoding='utf-8') as f:
+            f.write(xml.replace(a7, a6))
+        self.run_calc(os.path.join(case_dir, '__init__.py'),
+                      'job_h.ini,job_r.ini', assets_per_site_limit='1')
+        [ri] = self.calc.riskinputs
+        assert sorted(ri.asset_df.taxonomy.unique()) == [1, 2]
+        ids = self.calc.datastore['assetcol/array']['id']
+        avg = self.calc.datastore['avg_losses-stats/structural'][:, 0]
+        for aid, val in zip(ids, avg):
+            numpy.testing.assert_allclose(val, orig[aid], rtol=1E-5)
 
     def test_case_lisa(self):
         # testing average(outs) with len(outs) > 1
