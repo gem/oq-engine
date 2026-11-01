@@ -46,9 +46,6 @@ def classical_risk(riskinputs, oqparam, monitor):
         R = ri.hazard_getter.R
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        # map the asset ordinals to the positions in the risk input, which
-        # are not the group-local indices when there are several taxonomies
-        aidx = {aid: a for a, aid in enumerate(ri.asset_df.ordinal)}
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
@@ -58,11 +55,10 @@ def classical_risk(riskinputs, oqparam, monitor):
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
                     for i, asset in enumerate(asset_df.to_records()):
+                        loss_curves[rlz, li, i] = lc = out[loss_type][i]
                         aid = asset['ordinal']
-                        a = aidx[aid]
-                        loss_curves[rlz, li, a] = lc = out[loss_type][i]
                         avg = scientific.average_loss(lc)
-                        avg_losses[rlz, li, a] = avg
+                        avg_losses[rlz, li, i] = avg
                         lcurve = (lc['loss'], lc['poe'], avg)
                         result['loss_curves'].append((li, rlz, aid, lcurve))
 
