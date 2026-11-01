@@ -1,8 +1,4 @@
   [Michele Simionato]
-  * Fixed the classical_risk calculator for risk inputs containing assets
-    of different taxonomies at the same site: the loss curves and average
-    losses of each asset were written at the wrong positions, and the
-    statistics could crash with "'int' object is not subscriptable"
   * Fixed the postclassical and fast_mean calculations for hazard chunks
     without any site: the MapGetter no longer crashes on an empty chunk
   * Fixed get_ebruptures: the tectonic region type of each rupture is now
