@@ -82,7 +82,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)
 
-    # test with 1 hazard site and 2 assets on the same risk site
+    # test with 1 hazard site and 2 risk sites using assoc_assets_sites
     def test_case_5(self):
         # test with different curve resolution for different taxonomies
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
@@ -97,10 +97,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         assert len(fnames) == 4  # there are 4 realizations
         self.assertEqualFiles('expected/avg_losses-000.csv', fnames[0])
-
-        # a6 and a7 share the same site, so they are in the same risk input
-        [ri] = self.calc.riskinputs
-        assert sorted(ri.asset_df.taxonomy.unique()) == [1, 2]
 
     def test_case_lisa(self):
         # testing average(outs) with len(outs) > 1
