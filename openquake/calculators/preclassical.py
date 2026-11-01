@@ -25,6 +25,7 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
@@ -35,7 +36,7 @@ from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
-from openquake.calculators import base
+from openquake.calculators import base, autogrid
 
 MAX_NUM_RUPTURES = 52_000  # to support HimalayanThrust in CHN
 U16 = numpy.uint16
@@ -174,6 +175,17 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     return {splits[0].grp_id: splits}
 
 
+def count_nogrid(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate without
+    gridding, see contexts.estimate_nctxs
+
+    :returns: a dictionary with the estimate under the key 'nogrid_ctxs'
+    """
+    nctxs = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    return {'nogrid_ctxs': int(nctxs * sf.multiplier)}
+
+
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
     """
     Split the sources if split_sources is true. If
@@ -189,7 +201,15 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
+        # estimate the contexts before gridding, to log the reduction
+        pts = [src for src in srcs if hasattr(src, 'location')]
+        if pts:
+            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        # Track the same point sources as the no-gridding estimate.
+        for src in srcs:
+            if hasattr(src, 'location'):
+                src.count_nogrid = True
     else:
         srcs = sources
 
@@ -328,6 +348,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
+        elif oq.auto_grid:
+            self.calibrate_grid(sites)
 
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
@@ -383,6 +405,32 @@ class PreClassicalCalculator(base.HazardCalculator):
         allsources = csm.get_sources()
         self.store_source_info(source_data(allsources))
 
+    def calibrate_grid(self, sites):
+        """
+        Determine ps_grid_spacing and pointsource_distance on a sample
+        of sites, since the user set ps_grid_spacing=auto
+        """
+        oq = self.oqparam
+        cmakers = self.cmakers.to_array()
+        with self.monitor('calibrating ps_grid_spacing'):
+            best = autogrid.calibrate(
+                self.csm, cmakers, sites, oq, self.datastore.hdf5)
+        if best is None:  # no point sources
+            return
+        psgs, psd = best
+        logging.warning('Using ps_grid_spacing=%s, pointsource_distance=%s',
+                        psgs, psd)
+        oq.ps_grid_spacing = psgs
+        for cmaker in cmakers:
+            cmaker.ps_grid_spacing = psgs
+        if not oq.psd_given:  # keep the pointsource_distance of the user
+            oq.pointsource_distance = {'default': psd}
+            for cmaker in cmakers:
+                cmaker.pointsource_distance = psd
+        # store the calibrated parameters, used when starting from --hc
+        del self.datastore['oqparam']
+        self.datastore['oqparam'] = oq
+
     def _process(self, atomic_sources, normal_sources, sf, secparams):
         # run preclassical in parallel for non-atomic sources
         if normal_sources:
@@ -406,6 +454,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = smap.reduce()
         else:
             res = {}
+        nogrid = res.pop('nogrid_ctxs', 0)
+        if nogrid:
+            self.datastore['nogrid_ctxs'] = nogrid
+            logging.info('Estimated %d contexts without ps_grid_spacing '
+                         '(single pass)', nogrid)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(
@@ -439,7 +492,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        self.populate_csm()
+        # the garbage collector is disabled while receiving, gridding and
+        # weighting the sources, since there can be millions of them: in
+        # Melbourne it was wasting ~50 seconds in the reduce
+        with general.gc_disabled():
+            self.populate_csm()
         return self.csm
 
     def post_execute(self, csm):
@@ -466,8 +523,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        self.max_weight = store_csm(
-            self.datastore, self.csm, self.sitecol, self.cmakers)
+        with general.gc_disabled():
+            self.max_weight = store_csm(
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

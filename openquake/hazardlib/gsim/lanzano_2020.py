@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.gsim.lanzano_2020` implements
-:class:`~openquake.hazardlib.gsim.lanzano_2020.LanzanoEtAl2020`
+Module exports :class:`LanzanoEtAl2020_ref`
+               :class:`LanzanoEtAl2020_EC8`
+               :class:`LanzanoEtAl2020_Cluster`
 """
 
 import numpy as np

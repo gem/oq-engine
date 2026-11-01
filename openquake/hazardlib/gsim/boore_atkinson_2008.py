@@ -16,6 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports :class:`BooreAtkinson2008`
+               :class:`Atkinson2010Hawaii`
+               :class:`BooreAtkinson2008BCHydro`
+"""
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -49,7 +54,7 @@ def hawaii_adjust(mean, ctx, imt):
 
     # Limiting calculation distance to 1km
     # (as suggested by C. Bruce Worden)
-    rjb = [d if d > 1 else 1 for d in ctx.rjb]
+    rjb = np.where(ctx.rjb > 1, ctx.rjb, 1)
 
     # Equation 2 and 5 of Atkinson (2010)
     mean += (x0 + x1 * np.log10(rjb)) / np.log10(np.e)

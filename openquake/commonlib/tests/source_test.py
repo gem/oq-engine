@@ -743,8 +743,9 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
 
         rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        # counting the sources in each TRT model (split_sources is False)
-        self.assertEqual([1, 2], list(map(len, csm.src_groups)))
+        # counting the sources in each TRT model (split_sources is False),
+        # the groups being sorted by TRT index: Active Shallow Crust first
+        self.assertEqual([2, 1], list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.logictree import case_17

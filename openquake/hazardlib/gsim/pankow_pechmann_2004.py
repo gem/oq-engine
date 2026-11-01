@@ -78,7 +78,7 @@ class PankowPechmann2004(GMPE):
             # In the original formulation of the GMPE, distinction is only made
             # between rock and soil ctx, which I assumed separated by the Vs30
             # value of 910m/s (see equation 5 of the paper)
-            gamma = np.array([0 if v > 910. else 1 for v in ctx.vs30])
+            gamma = np.where(ctx.vs30 > 910., 0, 1)
 
             mean[m] = (C['b1'] +
                        C['b2'] * M +

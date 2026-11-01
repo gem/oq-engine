@@ -16,6 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports :class:`BCHydroESHM20SInter`
+               :class:`BCHydroESHM20SInterLow`
+               :class:`BCHydroESHM20SInterHigh`
+               :class:`BCHydroESHM20SSlab`
+               :class:`BCHydroESHM20SSlabLow`
+               :class:`BCHydroESHM20SSlabHigh`
+"""
 import numpy as np
 from scipy.special import erf
 

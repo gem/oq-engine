@@ -328,18 +328,21 @@ validators = {
 }
 
 
-def read_source_models(fnames, converter):
+def read_source_models(fnames, converter, stride=None):
     """
     :param fnames:
         list of source model files
     :param converter:
         a :class:`openquake.hazardlib.sourceconverter.SourceConverter` instance
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     :yields:
         SourceModel instances
     """
     for fname in fnames:
         if fname.endswith(('.xml', '.nrml')):
-            sm = to_python(fname, converter)
+            [node] = read(fname, stride=stride)
+            sm = node_to_obj(node, fname, converter)
         else:
             raise ValueError('Unrecognized extension in %s' % fname)
         sm.fname = fname
@@ -359,15 +362,19 @@ def read_source_models(fnames, converter):
         yield sm
 
 
-def read(source, stop=None):
+def read(source, stop=None, stride=None):
     """
     Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
 
     :param source:
         a file name or file object open for reading
+    :param stop:
+        the tag where to stop the parsing (if any)
+    :param stride:
+        if given, a pair (k, n) to keep only the k-th source over n
     """
-    vparser = ValidatingXmlParser(validators, stop)
+    vparser = ValidatingXmlParser(validators, stop, stride)
     nrml = vparser.parse_file(source)
     if striptag(nrml.tag) != 'nrml':
         raise ValueError('%s: expected a node of kind nrml, got %s' %

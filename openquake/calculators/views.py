@@ -342,7 +342,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     df['heavy_factor'] = df.weight / df.calc_time
-    del df['grp_id']
+    del df['grp_id'], df['mul']
     return df
 
 

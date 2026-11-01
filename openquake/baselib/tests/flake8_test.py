@@ -40,6 +40,14 @@ REPO = os.path.dirname(
 MAX_FUN_LEN = 79
 LF = ord('\n')
 CR = ord('\r')
+SKIP_DIRS = ['.pixi']  # third-party code installed inside the repo
+
+
+# like os.walk, but skipping the directories in SKIP_DIRS
+def _walk(root):
+    for cwd, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        yield cwd, dirs, files
 
 
 def _long_funcs(module, maxlen):
@@ -115,6 +123,9 @@ def check_newlines(bytes):
     return 0
 
 
+# F82 selects the pyflakes errors that are always serious:
+# F821 undefined name, F822 undefined name in __all__,
+# F823 local variable referenced before assignment
 def test_serious_violations():
     try:
         from flake8.main import application
@@ -125,7 +136,8 @@ def test_serious_violations():
     buf = io.BytesIO()
     with redirect_stdout(buf) as out:
         out.buffer = buf
-        app.run([REPO, '--select', 'F82'])
+        app.run([REPO, '--select', 'F82',
+                 '--extend-exclude', ','.join(SKIP_DIRS)])
     assert out.getvalue().decode('utf8') == ''
 
 
@@ -133,7 +145,7 @@ def test_serious_violations():
 # characters to creep inside the codebase
 def test_annoying_character():
     object_replacement_character = b'\xef\xbf\xbc'
-    for cwd, dirs, files in os.walk(REPO):
+    for cwd, dirs, files in _walk(REPO):
         for f in files:
             fname = os.path.abspath(os.path.join(cwd, f))
             if os.path.exists(fname) and fname.endswith(
@@ -160,7 +172,7 @@ def fix_encoding(fname, encoding):
 
 # check encoding and newlines
 def test_csv():
-    for cwd, dirs, files in os.walk(REPO):
+    for cwd, dirs, files in _walk(REPO):
         for f in files:
             if f.endswith('.csv'):
                 fname = os.path.abspath(os.path.join(cwd, f))
@@ -172,7 +184,7 @@ def test_csv():
                         if os.environ.get('OQ_OVERWRITE'):
                             fix_encoding(fname, 'latin1')
                         else:
-                            raise UnicodeDecodeError('%s: %s' % (fname, exc))
+                            raise ValueError('%s: %s' % (fname, exc))
                 # read in binary, check newlines
                 error = check_newlines(open(fname, 'rb').read())
                 if error and os.environ.get('OQ_OVERWRITE'):

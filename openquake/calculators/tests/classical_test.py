@@ -24,7 +24,8 @@ from unittest import mock
 
 from openquake.baselib import parallel, general, config, hdf5, performance
 from openquake.baselib.general import decode, gettemp
-from openquake.hazardlib import InvalidFile, nrml, calc, rmap_maker
+from openquake.hazardlib import (
+    InvalidFile, nrml, calc, rmap_maker, source_reader)
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -44,7 +45,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95, case_96, case_97)
+    case_95, case_96, case_97, case_98)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -373,7 +374,7 @@ class ClassicalTestCase(CalculatorTestCase):
         ], case_22.__file__, delta=1E-6)
 
         data = self.calc.datastore['source_groups']
-        self.assertEqual(data['tiles'], [1])
+        self.assertEqual(data['tiles'], [10])
         self.assertEqual(data['blocks'], [2])
 
     def test_case_23(self):  # filtering away on TRT
@@ -687,15 +688,20 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
     def test_case_43(self):
-        # this is a test for pointsource_distance and ps_grid_spacing
+        # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        self.assertEqual(oq.pointsource_distance['default'], 15.)
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
+        self.assertIn('nogrid_ctxs', self.calc.datastore)
+        self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -719,6 +725,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # Test use of setLowerSeismDepthAbsolute on area, mps and point sources
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'],
                               case_45.__file__)
+
+    def test_strided_reading(self):
+        # reading the source models with strides (see source_reader.BIG_FILE)
+        # gives the same results, also with mutex groups and uncertainties
+        with mock.patch.object(source_reader, 'BIG_FILE', 0):
+            self.test_case_27()
+            self.test_case_45()
         
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
@@ -1375,6 +1388,34 @@ class ClassicalTestCase(CalculatorTestCase):
         mean = self.calc.datastore['hcurves-stats'][0, 0]
         aac(hcurves[0], mean, rtol=6E-5)
 
+    def test_case_98(self):
+        # Convert BSSA14 GMM to other horz comps (natively its RotD50)
+
+        # target == native: no conversion applied, output stays in RotD50
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd50-PGA.csv',
+             'hazard_curve-convert-to-rotd50-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd50')
+
+        # RotD50 -> GEOM using the BK17 Table 2 RotD50/GMAR ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-geometric_mean-PGA.csv',
+             'hazard_curve-convert-to-geometric_mean-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='geometric_mean')
+
+        # RotD50 -> Larger via the BK17 Larger/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-greater_of_two_horizontal-PGA.csv',
+             'hazard_curve-convert-to-greater_of_two_horizontal-SA(1.0).csv'],
+            case_98.__file__,
+            horiz_comp_to='greater_of_two_horizontal')
+
+        # RotD50 -> RotD100 via the direct BK17 RotD100/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd100-PGA.csv',
+             'hazard_curve-convert-to-rotd100-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd100')
+
 
 class FakeDatastoreCalculator:
     """
@@ -1382,6 +1423,7 @@ class FakeDatastoreCalculator:
     ClassicalCalculator.post_execute
     """
     SLOW_TASK_ERROR = True
+    MIN_EFFICIENCY = ClassicalCalculator.MIN_EFFICIENCY
 
     def __init__(self, h5):
         self.datastore = mock.MagicMock(calc_id=1)
@@ -1390,46 +1432,80 @@ class FakeDatastoreCalculator:
         self.datastore.__getitem__.side_effect = lambda key: h5[key]
 
 
+class ContextReductionTestCase(unittest.TestCase):
+    def setUp(self):
+        self.calc = object.__new__(ClassicalCalculator)
+        self.calc.oqparam = mock.Mock(collapse_precision=.03)
+        self.calc.datastore = {'nogrid_ctxs': numpy.array(400.)}
+
+    def test_gridding_and_precision(self):
+        self.calc.cfactor = numpy.array([96., 4., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 4.17', logs.output[0])
+        self.assertIn('removed only 4.0%', logs.output[1])
+        self.assertIn('collapse_precision should be turned off',
+                      logs.output[1])
+
+    def test_mixed_sources(self):
+        # Include 50 ungridded contexts as well as the 100 gridded ones.
+        self.calc.cfactor = numpy.array([130., 20., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 3.46', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_warning_threshold(self):
+        self.calc.datastore = {}
+        for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
+                                         (0., 0, False)]:
+            self.calc.oqparam.collapse_precision = precision
+            self.calc.cfactor = numpy.array([100 - removed, removed, 0.])
+            with self.assertLogs(level='INFO') as logs:
+                self.calc.log_cfactor()
+            self.assertEqual(len(logs.output), 2 if warn else 1)
+            self.assertNotIn('estimated', logs.output[0])
+
+
 class SlowTasksTestCase(unittest.TestCase):
     """
     Check the detection of slow tasks in ClassicalCalculator.post_execute.
     The Starmap can generate subtasks with a different name (classical ->
-    baseclassical) when the tasks are too slow, and the rows must be
-    combined and not compared, since they are components of the busy time
-    of the same workers. NB: this cannot be tested by running a
-    calculation, since starmap_info is written only if there is more than
-    one core, and with OQ_DISTRIBUTE=no there is a single core.
+    baseclassical) when the tasks are too slow, and each row of the
+    starmap_info holds the efficiency (total_time / num_cores / max_time)
+    and the max_time of the busy times of the workers. NB: this cannot be
+    tested by running a calculation, since starmap_info is written only if
+    there is more than one core, and with OQ_DISTRIBUTE=no there is a
+    single core.
     """
-    # each case is a list of (taskname, mean, std, min, max) rows in the
+    # each case is a list of (taskname, efficiency, maxtime) rows in the
     # starmap_info, followed by the expected outcome
     CASES = [
         # no info at all
         ([], False),
         # a single row, as in a classical calculation without splitting
-        ([('classical', 10., 1., 9., 11.)], False),
-        ([('classical', 10., 4., 4., 16.)], True),
+        ([('classical', .9, 20.)], False),
+        ([('classical', .4, 20.)], True),
+        # the threshold is inclusive: an efficiency equal to MIN_EFFICIENCY
+        # is acceptable
+        ([('classical', .7, 20.)], False),
+        ([('classical', .69, 20.)], True),
+        # a split Starmap has a single classical row, since the busy times
+        # of the baseclassical subtasks are summed to the classical ones
+        ([('classical', .5, 20.)], True),
         # tasks so fast that the busy times are dominated by the startup
-        # of the workers: the ratio 1.5 is meaningless (see eshm20)
-        ([('classical', .15, .225, .1, .4)], False),
-        # a split Starmap: the classical tasks only decide to split, so
-        # they are fast and must be discarded, while the baseclassical
-        # ones do the actual work
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 3., 9., 15.)], False),
-        ([('classical', .05, .001, .05, .05),
-          ('baseclassical', 12., 9., 3., 21.)], True),
-        # a fast but noisy row must not trigger the alarm, since the rows
-        # are combined: sqrt(3**2 + .6**2) / 31.5 = 0.097
-        ([('classical', 30., 3., 27., 33.),
-          ('baseclassical', 1.5, .6, .9, 2.1)], False),
-        # combining two equally noisy rows divides the relative spread
-        # by sqrt(2), so a spread of .4 per row is not enough
-        ([('classical', 10., 4., 4., 16.),
-          ('baseclassical', 10., 4., 4., 16.)], False),
-        ([('classical', 10., 5., 5., 15.),
-          ('baseclassical', 10., 5., 5., 15.)], True),
+        # of the workers: the efficiency is meaningless (see eshm20)
+        ([('classical', .24, .7)], False),
+        # the time threshold is inclusive
+        ([('classical', .5, 4.)], True),
+        # below the time threshold the check is skipped (see eshm20)
+        ([('classical', .5, 3.9)], False),
+        # alaska has a busy time of about 4.8 seconds and must be checked
+        ([('classical', .5, 4.8)], True),
+        # a stray baseclassical row is not considered
+        ([('baseclassical', .5, 20.)], False),
         # a calculation with no classical Starmap has no slow tasks
-        ([('postclassical', 12., 9., 3., 21.)], False),
+        ([('postclassical', .3, 20.)], False),
     ]
 
     def check(self, rows):

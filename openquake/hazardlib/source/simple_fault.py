@@ -28,6 +28,7 @@ from openquake.hazardlib.codes import SIMPLE_FAULT
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.mesh import mean_inclination_azimuth
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -54,6 +55,21 @@ def whole_fault_shape(trace_key, upper, lower, dip, mesh_spacing):
     surface = SimpleFaultSurface.from_fault_data(
         trace, upper, lower, dip, mesh_spacing)
     return surface.mesh.shape
+
+
+# for each row of cells of the whole fault mesh returns the cumulative sums
+# along the columns of the inclination and azimuth terms of the cells,
+# prepended by zeros, and a flag telling if the row is on the earth
+# surface; they are used to compute the dip and strike of each floating
+# rupture in constant time, without recomputing them from its mesh
+def _cum_terms(mesh):
+    terms = mesh.get_inclination_azimuth_terms()  # 4 arrays (R-1, C-1)
+    zeros = numpy.zeros((len(terms[0]), 1))
+    cums = [numpy.concatenate([zeros, term.cumsum(axis=1)], axis=1)
+            for term in terms]
+    on_surface = ((mesh.depths[:-1] == 0).all(axis=1) &
+                  (mesh.depths[1:] == 0).all(axis=1))
+    return cums, on_surface
 
 
 class SimpleFaultSource(ParametricSeismicSource):
@@ -326,6 +342,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
         fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        if not only_rates:
+            cums, on_surface = _cum_terms(whole_fault_mesh)
 
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
@@ -359,7 +377,15 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
                     surface = SimpleFaultSurface(mesh)
-                    
+                    # the dip and strike of the top row of cells, i.e. the
+                    # same values computed by surface.get_dip(), but faster
+                    last_col = first_col + rup_cols - 1
+                    xi, yi, xa, ya = (
+                        cum[first_row, last_col] - cum[first_row, first_col]
+                        for cum in cums)
+                    surface.dip, surface.strike = mean_inclination_azimuth(
+                        xi, yi, xa, ya, on_surface[first_row])
+
                     if self.hypo_depth_list:
                         yield from self._iter_ruptures_hypo_depth(
                             surface, occurrence_rate, mag, first_row, rup_rows)

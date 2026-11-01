@@ -77,12 +77,12 @@ class HistogramMDETestCase(unittest.TestCase):
         # different than 0
         smm = 0.0
         cnt = 0.
-        for ohi in h.pmfs:
+        for ohi, zero in zip(h.pmfs, h.zero_mass):
             if ohi is not None:
-                smm += np.sum(ohi)
+                smm += np.sum(ohi) + zero
                 cnt += 1.
 
-        # The sum of the histograms (which are normalised) must be equal to
+        # The positive-bin plus zero masses (which are normalised) must equal
         # the number of M-D-e combinations with values different than 0
         aae(smm, cnt, decimal=5)
 

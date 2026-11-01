@@ -114,7 +114,7 @@ def read(*paths, **validators):
 # NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec)
+            strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
@@ -125,13 +125,18 @@ if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
 
-def multi_user():
-    return config.server.host != '127.0.0.1'
+def server_installation():
+    """
+    :returns: True if we are in a server installation
+    """
+    return sys.prefix == "/opt/openquake/venv"
 
 
 def use_server():
-    """:returns: True for regular users in a server installation"""
-    return multi_user() and getpass.getuser() != 'openquake'
+    """
+    :returns: True for regular users in a server installation
+    """
+    return server_installation() and getpass.getuser() != 'openquake'
 
 
 # the version is managed by the universal installer

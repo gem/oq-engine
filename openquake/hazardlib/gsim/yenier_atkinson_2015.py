@@ -34,11 +34,11 @@ def get_sof_adjustment(rake, imt):
     proposed by Bommer et al. (2003).
 
     :param rake:
-        Rake value
+        Rake value or array of rake values
     :param imt:
         The intensity measure type
     :return:
-        The adjustment factor
+        The adjustment factor, an array of the same shape as rake
     """
     im2 = imt.string[:2]
     if imt.string == 'PGA' or (im2 == 'SA' and imt.period <= 0.4):
@@ -53,18 +53,21 @@ def get_sof_adjustment(rake, imt):
     f_n_ss = 0.95
     p_r = 0.68
     p_n = 0.02
+    rake = np.asarray(rake, float)
     # Normal - F_N:EQ
-    if -135 < rake <= -45:
-        famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
+    normal = (-135 < rake) & (rake <= -45)
     # Reverse - F_R:EQ
-    elif 45 < rake <= 135:
-        famp = f_r_ss**(1-p_r) * f_n_ss**(-p_n)
+    reverse = (45 < rake) & (rake <= 135)
     # Strike-Slip - F_SS:EQ
-    elif (-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150):
-        famp = f_r_ss**(-p_r) * f_n_ss**(-p_n)
-    else:
+    strike = (((-30 < rake) & (rake <= 30)) | ((150 < rake) & (rake <= 180))
+              | ((-180 < rake) & (rake <= -150)))
+    if not (normal | reverse | strike).all():
         raise ValueError('Unrecognised rake value')
-    return famp
+    # np.select picks the first matching choice, as the former if/elif did
+    return np.select(
+        [normal, reverse],
+        [f_r_ss**(-p_r) * f_n_ss**(1-p_n), f_r_ss**(1-p_r) * f_n_ss**(-p_n)],
+        default=f_r_ss**(-p_r) * f_n_ss**(-p_n))
 
 
 def _get_c_e(region, imt):
@@ -213,7 +216,7 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4, ctx, imt):
     mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
         # ACME2019 considers the SoF correction
-        famp = [get_sof_adjustment(rake, imt) for rake in ctx.rake]
+        famp = get_sof_adjustment(ctx.rake, imt)
         mean += np.log(famp)
     return mean
 

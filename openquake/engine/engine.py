@@ -155,22 +155,21 @@ def poll_queue(job_id, poll_time):
         host = socket.gethostname()
     except Exception:  # gaierror
         host = None
-    offset = config.distribution.serialize_jobs - 1
-    if offset >= 0:
-        first_time = True
-        while True:
-            running = logs.dbcmd('get_running_jobs', host)
-            previous = [job.id for job in running if job.id < job_id - offset]
-            if previous:
-                if first_time:
-                    logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': os.getpid()})
-                    first_time = False
-                    # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs %s' % ' '.join(map(str, previous)))
-                time.sleep(poll_time)
-            else:
-                break
+    # jobs are serialized: a job waits for all the previous jobs
+    first_time = True
+    while True:
+        running = logs.dbcmd('get_running_jobs', host)
+        previous = [job.id for job in running if job.id < job_id]
+        if previous:
+            if first_time:
+                logs.dbcmd('update_job', job_id,
+                           {'status': 'submitted', 'pid': os.getpid()})
+                first_time = False
+                # the logging is not yet initialized, so use a print
+                print('Waiting for jobs %s' % ' '.join(map(str, previous)))
+            time.sleep(poll_time)
+        else:
+            break
 
 
 def run_calc(log, mulfactor=2):

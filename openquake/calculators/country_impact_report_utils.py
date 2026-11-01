@@ -65,11 +65,14 @@ class EventContext:
     :param date: event date and time as a formatted string
     :param hypocenter: event longitude and latitude
     :param shakemap_version: optional version identifier of the ShakeMap
+    :param rupture: optional rupture, displayed in the maps instead of
+                    the epicenter
     """
     name: str
     date: str
     hypocenter: tuple[float, float]
     shakemap_version: str = None
+    rupture: object = None
 
 
 @dataclass
@@ -110,6 +113,27 @@ LOSS_METADATA = {
             '#ffffff', '#bdbdbd', '#737373', '#424242', '#000000'],
     },
 }
+
+
+def get_report_time_event(oqparam):
+    """
+    :param oqparam: an OqParam instance
+    :returns: the time of the event (day, night, transit or avg) considered
+        in the reports, i.e. the one selected by the user
+    """
+    return oqparam.report_time_event or oqparam.time_event or 'avg'
+
+
+def get_fatalities_loss_type(oqparam):
+    """
+    :param oqparam: an OqParam instance
+    :returns: the loss type of the fatalities displayed in the reports,
+        i.e. occupants_<time event> when the occupants losses are computed
+        for all the time events, otherwise occupants
+    """
+    if oqparam.occupants_by_time:
+        return 'occupants_' + get_report_time_event(oqparam)
+    return 'occupants'
 
 
 # maxsize=1 is sufficient when only one admin-level boundary file is loaded

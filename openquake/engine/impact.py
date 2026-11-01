@@ -60,8 +60,8 @@ def main_web(allparams, jobctxs,
 def main_cmd(usgs_id, rupture_file=None,
              callback=trivial_callback, *,
              shakemap_version=None, nodal_plane=None, time_event='day',
-             maximum_distance='300', mosaic_model=None, trt=None,
-             truncation_level='3',
+             maximum_distance='', mosaic_model=None, trt=None,
+             truncation_level='',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None,
@@ -147,11 +147,14 @@ main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.shakemap_version = 'Id of the chosen shakemap version'
 main_cmd.nodal_plane = 'USGS nodal plane to use: NP1 or NP2'
-main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
-main_cmd.maximum_distance = 'Maximum distance in km'
+main_cmd.time_event = (
+    'Time of the event used in the reports (day, night or transit)')
+main_cmd.maximum_distance = (
+    'Maximum distance in km (by default it depends on the magnitude)')
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
 main_cmd.trt = 'Tectonic region type'
-main_cmd.truncation_level = 'Truncation level'
+main_cmd.truncation_level = (
+    'Truncation level (by default it depends on the magnitude)')
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
@@ -164,7 +167,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
-main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.make_impact_reports = 'Make two-page report for each involved country'
 main_cmd.spatial_correlation = (
     'none, cholesky_decomposition, circulant_embedding or loth_baker; '
     'by default loth_baker if the ShakeMap is used, otherwise none')

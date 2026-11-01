@@ -16,7 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Campbell & Bozorgnia (2019) ground-motion model.
+Module exports :class:`CampbellBozorgnia2019`
+               :class:`CampbellBozorgnia2019HighQ`
+               :class:`CampbellBozorgnia2019LowQ`
+               :class:`CampbellBozorgnia2019JapanSite`
+               :class:`CampbellBozorgnia2019HighQJapanSite`
+               :class:`CampbellBozorgnia2019LowQJapanSite`
 """
 import numpy as np
 

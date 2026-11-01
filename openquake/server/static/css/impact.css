@@ -26,6 +26,10 @@
     box-sizing: border-box;
 }
 
+#local_weekday {
+    margin-left: 8px;
+}
+
 .impact-select {
     width: 206px;
 }

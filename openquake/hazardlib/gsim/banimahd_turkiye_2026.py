@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
+Module exports :class:`Banimahd2026Turkiye`
+
 Banimahd et al. (2026) Turkiye ANN-based Ground-Motion Model
 =============================================================
 

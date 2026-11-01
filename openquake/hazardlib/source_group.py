@@ -382,6 +382,8 @@ class CompositeSourceModel:
         :param maximum_distance: dictionary trt -> magdist interpolator
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
+        # NB: the magnitudes are converted into strings at the end, since
+        # converting them source by source was taking 20 seconds in AUS
         mags = AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
@@ -389,31 +391,34 @@ class CompositeSourceModel:
                     # fast lane for MultiPointSources, assuming thet have
                     # all the same mfd
                     mfd = next(iter(src.mfd))
-                    magstrs = {magstr(item[0]) for item in
-                               mfd.get_annual_occurrence_rates()}
+                    mags[sg.trt].update(
+                        item[0] for item in mfd.get_annual_occurrence_rates())
                 else:
-                    magstrs = src.get_magstrs()
-                mags[sg.trt].update(magstrs)
+                    mags[sg.trt].update(src.get_raw_mags())
         out = {}
         for trt in mags:
             minmag = maximum_distance(trt).x[0]
-            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
+            magstrs = {magstr(mag) for mag in mags[trt]}
+            out[trt] = sorted(m for m in magstrs if float(m) >= minmag)
         return out
 
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)
         """
-        data = []
+        # NB: the sums are accumulated without building a list of pairs,
+        # since appending hundreds of thousands of tuples would trigger
+        # the garbage collector on the millions of objects of the model
+        n = nhypos = nplanes = 0
         for sg in self.src_groups:
             for src in sg:
                 if hasattr(src, 'hypocenter_distribution'):
-                    data.append(
-                        (len(src.hypocenter_distribution.data),
-                         len(src.nodal_plane_distribution.data)))
-        if not data:
+                    nhypos += len(src.hypocenter_distribution.data)
+                    nplanes += len(src.nodal_plane_distribution.data)
+                    n += 1
+        if not n:
             return numpy.array([1, 1])
-        return numpy.array(data).mean(axis=0)
+        return numpy.array([nhypos, nplanes]) / n
 
     def update_source_info(self, source_data, preclassical):
         """
@@ -562,6 +567,13 @@ class CompositeSourceModel:
             tilegetters = list(sitecol.split(maxhint))
         else:
             blocks = split_in_blocks(sg, hint / int(splits), weight)
+            if not sg.multifault:
+                # a block heavier than max_weight cannot be split further
+                # by sources (e.g. the magnitude bin of a simple fault), so
+                # its tasks are split in tiles of sites to balance the load
+                heavy = max((sum(map(weight, blk)) for blk in blocks),
+                            default=0)
+                splits = max(splits, int(numpy.ceil(heavy / max_weight)))
             tilegetters = list(sitecol.split(splits, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
@@ -631,7 +643,9 @@ def _strip_colons(sources):
 
 def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     """
-    Generates task arguments from atomic and non-atomic groups
+    Generates task arguments from atomic and non-atomic groups, as tuples
+    (cmaker, tilegetters, grp_keys, atomic, weights), where weights are
+    the weights of the grp_keys
     """
     out = []
     atomic = []
@@ -644,9 +658,11 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         else:
             if n > 1:
                 grp_keys = [f'{grp_id}-{b}' for b in range(len(blocks))]
+                weights = [sum(src.weight for src in blk) for blk in blocks]
             else:
                 grp_keys = [str(grp_id)]
-            out.append((cmaker, tilegetters, grp_keys, False))
+                weights = [extra['weight']]
+            out.append((cmaker, tilegetters, grp_keys, False, weights))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     weights_ = AccumDict(accum={})
@@ -687,7 +703,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         if csm.oq.disagg_by_src:
             # disagg_by_src requires all the groups in a single task,
             # otherwise the rates are attributed to the wrong source
-            out.append((cmaker_[gid], tgetters, keys, True))
+            out.append((cmaker_[gid], tgetters, keys, True,
+                        [getweight(k) for k in keys]))
             logging.info('Not splitting %d atomic groups, since '
                          'disagg_by_src is set', len(keys))
             continue
@@ -695,7 +712,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
         nblocks = 0
         for ws in block_splitter(keys, max_weight, getweight, nokey):
             nblocks += 1
-            out.append((cmaker_[gid], tgetters, list(ws), True))
+            out.append((cmaker_[gid], tgetters, list(ws), True,
+                        [getweight(k) for k in ws]))
         logging.info('Split %d atomic groups with total weight %.1f '
                      'in %d blocks', len(keys),
                      sum(getweight(k) for k in keys), nblocks)

@@ -32,9 +32,10 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source_group import (
     CompositeSourceModel, SourceGroup, get_unique)
 from openquake.hazardlib.source.multi_fault import save_and_split
+from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, get_bset_value,
-    restrict_ts_samples, ts_samples_dt, get_ts_sets)
+    restrict_ts_samples)
 from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -48,6 +49,12 @@ U32 = numpy.uint32
 F32 = numpy.float32
 bybranch = operator.attrgetter('branch')
 checksum = operator.attrgetter('checksum')
+
+# in classical calculations the source model files bigger than BIG_FILE
+# are read by STRIDE tasks, each one keeping one source over STRIDE: the
+# order of the sources changes, which is irrelevant for classical
+BIG_FILE = 2**20
+STRIDE = 5
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
@@ -168,18 +175,20 @@ def _sample_atomic_groups(src_groups, sample, applied):
             if not sg.atomic or id(sg) in selected_ids]
 
 
-def read_source_model(fname, branch, converter, applied, sample, monitor):
+def read_source_model(fname, branch, converter, applied, sample, stride,
+                      monitor):
     """
     :param fname: path to a source model XML file
     :param branch: source model logic tree branch ID
     :param converter: SourceConverter
     :param applied: list of source IDs within applyToSources
     :param sample: a string with the sampling factor (if any)
+    :param stride: None or a pair (k, n) to keep only the k-th source over n
     :param monitor: a Monitor instance
-    :returns: a SourceModel instance
+    :returns: a dictionary (fname, k) -> SourceModel
     """
     t0 = time.time()
-    [sm] = nrml.read_source_models([fname], converter)
+    [sm] = nrml.read_source_models([fname], converter, stride)
     sm.branch = branch
     if sample:
         sm.src_groups = _sample_atomic_groups(sm.src_groups, sample, applied)
@@ -197,8 +206,29 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                 sg.sources = (kept + rand) or [srcs[0]]
             else:
                 sg.sources = []
+    # compute the content hashes here, in parallel, since they are needed
+    # by add_bangs and check_same_sources (40 seconds in AUS)
+    for sg in sm.src_groups:
+        for src in sg:
+            src.checksum = content_hash(src)
     sm.rtime = time.time() - t0  # save the read time
-    return {fname: sm}
+    return {(fname, stride[0] if stride else 0): sm}
+
+
+# merge the source models of the same file read with different strides,
+# i.e. convert a dictionary (fname, k) -> sm into a dictionary fname -> sm;
+# the groups are simply concatenated, since they are rebuilt anyway by
+# build_groups; sorting by k makes the order independent from the order
+# in which the tasks finish
+def _merge_strides(dic):
+    out = {}
+    for (fname, _k), sm in sorted(dic.items()):
+        if fname not in out:
+            out[fname] = sm
+        else:
+            out[fname].src_groups.extend(sm.src_groups)
+            out[fname].rtime += sm.rtime
+    return out
 
 
 # NB:this is called after reduce_sources, so ";" is not added
@@ -305,15 +335,28 @@ def get_csm(oq, full_lt, dstore=None):
     applied = set()
     for srcs in full_lt.source_model_lt.info.applytosources.values():
         applied.update(srcs)
+    # striding is disabled for event based, where the order of the sources
+    # matters, and for correlated branchsets, since check_correlated needs
+    # the full groups
+    correlated = any(bset.correlated
+                     for bset in full_lt.source_model_lt.branchsets)
+    strided = (oq.calculation_mode in CLASSICAL_MODES and not ss and
+               not correlated)
     for fname, rows in dic.items():
         path = os.path.abspath(
             os.path.join(full_lt.source_model_lt.basepath, fname))
         smpaths.append(path)
-        allargs.append((path, rows[0]['branch'], converter, applied, ss))
+        big = strided and os.path.getsize(path) > BIG_FILE
+        for stride in ([(k, STRIDE) for k in range(STRIDE)] if big
+                       else [None]):
+            allargs.append((path, rows[0]['branch'], converter, applied, ss,
+                            stride))
     for path in allpaths - set(smpaths):  # geometry models
-        allargs.append((path, '', converter, applied, ss))
-    smdict = parallel.Starmap(read_source_model, allargs,
-                              h5=dstore if dstore else None).reduce()
+        allargs.append((path, '', converter, applied, ss, None))
+    # read the biggest files first, so that they do not end up last
+    allargs.sort(key=lambda args: os.path.getsize(args[0]), reverse=True)
+    smdict = _merge_strides(parallel.Starmap(
+        read_source_model, allargs, h5=dstore if dstore else None).reduce())
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
     if dstore:
@@ -336,7 +379,7 @@ def get_csm(oq, full_lt, dstore=None):
                     break
     if (oq.strict and oq.mosaic_model and pointlike_sources and
         'classical' in oq.calculation_mode and oq.ps_grid_spacing == 0
-        and not oq.sites and not oq.disagg_by_src):
+        and not oq.auto_grid and not oq.sites and not oq.disagg_by_src):
         raise InvalidFile(f'{oq.inputs["job_ini"]}: '
                           'missing ps_grid_spacing')
 
@@ -357,7 +400,7 @@ def get_bset_values(full_lt, sources):
         sent to the workers
     """
     ordinals = {trt_smrs[0] % TWO24 for src in sources
-                for trt_smrs in get_ts_sets(src)}
+                for trt_smrs in src.get_ts_sets()}
     return {ordinal: full_lt.get_bset_values(ordinal)
             for ordinal in sorted(ordinals)}
 
@@ -400,10 +443,10 @@ def _subsets_by_unc(sources):
         # and cmakers_groups_gkeys; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
-                for trt_smrs in get_ts_sets(sources[0])}
+                for trt_smrs in sources[0].get_ts_sets()}
     subsets = {}
     for src in sources:
-        for trt_smrs in get_ts_sets(src):
+        for trt_smrs in src.get_ts_sets():
             subsets.setdefault(trt_smrs, []).append(src)
     return subsets
 
@@ -535,10 +578,12 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
     if atomic:
         logging.info('Found %d atomic groups', len(atomic))
     # NB: the sources are grouped by trt_smrs and TOM, so that there is
-    # one cmaker for each set of realizations, see get_cmakers
+    # one cmaker for each set of realizations, see get_cmakers; the groups
+    # are sorted by TRT index, trt_smrs and TOM, so that their order does
+    # not depend on the order of the sources in the files
     red_sources = 0
-    for trt, sources in acc.items():
-        grps, red = _group_sources(trt, sources)
+    for trt in sorted(acc, key=lambda trt: (full_lt.trti.get(trt, 0), trt)):
+        grps, red = _group_sources(trt, acc[trt])
         out.extend(grps)
         red_sources += red
     if red_sources:
@@ -615,7 +660,7 @@ def get_core_trt_smrs(groups):
     containing its trt_smrs.
     """
     all_trt_smrs = [trt_smrs for sg in groups for src in sg
-                    for trt_smrs in get_ts_sets(src)]
+                    for trt_smrs in src.get_ts_sets()]
     unique, _inverse = get_unique_inverse(all_trt_smrs)
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
@@ -759,7 +804,6 @@ def add_bangs(smdict):
             if any(getattr(src, 'mutex_weight', 0) for src in srcs):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
-            add_checksums(srcs)
             gb = general.AccumDict(accum=[])
             for src in srcs:
                 gb[checksum(src)].append(src)
@@ -784,7 +828,7 @@ def check_same_sources(smdict, fname):
     :param fname: the source model logic tree file, used in the warning
     """
     # NB: the atomic groups are skipped, since their sources cannot be
-    # duplicated anyway (see add_bangs); the sources are hashed only if
+    # duplicated anyway (see add_bangs); the sources are compared only if
     # their code and TRT appear in more than one source model file, to
     # save time
     bykey = general.AccumDict(accum=[])  # (code, trt) -> [(smfile, src)]
@@ -801,7 +845,7 @@ def check_same_sources(smdict, fname):
             continue
         byhash = general.AccumDict(accum=[])
         for smfile, src in pairs:
-            byhash[content_hash(src)].append((smfile, src))
+            byhash[checksum(src)].append((smfile, src))
         for same in byhash.values():
             smfiles = {smfile for smfile, _ in same}
             # NB: the original IDs, without the bangs added by add_bangs
@@ -969,7 +1013,8 @@ def split_by_tom(sources):
     def key(src):
         tom = getattr(src, 'temporal_occurrence_model', None)
         return (tom.__class__.__name__, src.code == b'F')
-    return general.groupby(sources, key).values()
+    return [srcs for _, srcs in sorted(
+        general.groupby(sources, key).items())]
 
 
 def _group_sources(trt, sources):
@@ -986,7 +1031,7 @@ def _group_sources(trt, sources):
             red += 1
         lst.extend(srcs)
     src_groups = []
-    for sources in general.groupby(lst, trt_smrs).values():
+    for _, sources in sorted(general.groupby(lst, trt_smrs).items()):
         for grp in split_by_tom(sources):
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     return src_groups, red

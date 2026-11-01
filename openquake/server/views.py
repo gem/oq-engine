@@ -54,16 +54,19 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES,
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1,
     IMPACT_SPATIAL_CORRELATION_OPTIONS)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
+    format_event_time)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
+    EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
+from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -99,6 +102,18 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Headers': '*'}
 
 ENGINE = "python -m openquake.engine.engine".split()
+
+# impact metrics sharing the same meaning of the exposed value
+EXPOSED_VALUE_LABELS = [
+    ('Affected population and Rendered homeless', 'residents'),
+    ('Floor area lost (m²)', 'area'),
+    ('Number of injured people and fatalities', 'occupants'),
+    ('Buildings destroyed', 'number'),
+    ('Economic loss (USD)', 'economic')]
+
+# loss types not displayed in the impact tables: embodied carbon and the
+# averages over the times of the day (shown for day, night and transit)
+IMPACT_HIDDEN = ['embodied_carbon', 'occupants_avg', 'injured_avg']
 
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
@@ -1285,11 +1300,17 @@ def impact_run_with_shakemap(request):
         internal_api.impact_run, internal_api.make_form(post, request.FILES))
 
 
-def extract_report_from_datastore(dstore, iso3, file_format):
+def extract_report_from_datastore(dstore, iso3, file_format, page=1):
     impact_group = dstore['impact']
     if iso3 not in impact_group:
         raise ValueError(f"ISO3 '{iso3}' not found")
-    data = impact_group[iso3][f'report_{file_format}'][()]
+    # the PNG of the first page is stored as report_png, the following
+    # ones as report_png_2, report_png_3, ...
+    name = f'report_{file_format}' + ('' if page == 1 else f'_{page}')
+    if name not in impact_group[iso3]:
+        raise ValueError(
+            f"Page {page} of the {file_format} report not found for '{iso3}'")
+    data = impact_group[iso3][name][()]
     return bytes(data)
 
 
@@ -1361,6 +1382,10 @@ def build_impact_resources(request, calc_id, dstore):
         for file_format in ('pdf', 'png'):
             query = urlencode(dict(iso3=iso3, format=file_format))
             urls[file_format] = f'{report_url}?{query}'
+        # reports produced by older engine versions have a single page
+        if f'impact/{iso3}/report_png_2' in dstore:
+            query = urlencode(dict(iso3=iso3, format='png', page=2))
+            urls['png_page2'] = f'{report_url}?{query}'
         outputs['country_reports'][iso3] = urls
     return outputs
 
@@ -1396,9 +1421,17 @@ def impact_report(request, calc_id):
         return HttpResponse(
             f'Invalid format parameter "{file_format}".'
             f' Choose "pdf" or "png".', status=400)
+    # the PDF contains all pages, while there is a PNG for each page
+    page = request.GET.get("page", "1") if file_format == "png" else "1"
+    if not page.isdigit() or int(page) < 1:
+        return HttpResponse(
+            f'Invalid page parameter "{page}".'
+            f' It must be a positive integer.', status=400)
+    page = int(page)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
+            report_bytes = extract_report_from_datastore(
+                ds, iso3, file_format, page)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -1407,9 +1440,10 @@ def impact_report(request, calc_id):
             status=400
         )
     if file_format == "png":
+        suffix = '' if page == 1 else f'_page{page}'
         response = HttpResponse(report_bytes, content_type="image/png")
         response["Content-Disposition"] = (
-            f"inline; filename=impact_report_{iso3}.png")
+            f"inline; filename=impact_report_{iso3}{suffix}.png")
     else:
         response = HttpResponse(report_bytes, content_type="application/pdf")
         response["Content-Disposition"] = (
@@ -2023,6 +2057,7 @@ def web_engine(request, **kwargs):
         params['impact_approaches'] = IMPACT_APPROACHES
         params['impact_spatial_correlation_options'] = (
             IMPACT_SPATIAL_CORRELATION_OPTIONS)
+        params['impact_max_distance_level1'] = MAX_DISTANCE_LEVEL1
 
         # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
@@ -2299,7 +2334,9 @@ def format_oqparam(oqparam, strategy_used=None, model_used=None):
     if 'from_usgs' in approach:
         ret_dict[IMPACT_FORM_LABELS['usgs_id']] = rupdic['usgs_id']
         ret_dict[IMPACT_FORM_LABELS['shakemap_desc']] = rupdic['shakemap_desc']
-        ret_dict[IMPACT_FORM_LABELS['time_event']] = oqparam.time_event
+        # the time of the event selected by the user, used in the reports
+        ret_dict[IMPACT_FORM_LABELS['time_event']] = (
+            oqparam.report_time_event or oqparam.time_event)
 
     # e.g. from {'default': [[2.5, 150.0], [10.2, 150.0]]} to 150
     ret_dict[IMPACT_FORM_LABELS['maximum_distance']] = \
@@ -2369,6 +2406,26 @@ def format_oqparam(oqparam, strategy_used=None, model_used=None):
     return ret_dict
 
 
+def _get_impact_losses(ds):
+    # returns (losses, losses_header, weights_precision) for the table in
+    # the impact outputs page, or a message and None, None if the hazard
+    # is too low to compute the risk
+    try:
+        losses = views.view('aggrisk', ds)
+    except KeyError:
+        max_avg_gmf = ds['avg_gmf'][0].max()
+        msg = (f'The risk can not be computed since the hazard is too low:'
+               f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+        return msg, None, None
+    losses = losses[[n for n in losses.dtype.names
+                     if n not in IMPACT_HIDDEN]]
+    # display only the descriptions, not the internal names of the fields
+    losses_header = [
+        AGGRISK_FIELD_DESCRIPTION.get(field, field.capitalize())
+        for field in losses.dtype.names]
+    return losses, losses_header, determine_precision(losses['weight'])
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2379,25 +2436,11 @@ def web_engine_get_outputs_impact(request, calc_id):
     job_start_time = job.start_time
     job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
     local_timestamp_str = None
+    event_time_str = None
     time_job_after_event = None
     time_job_after_event_str = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            losses = views.view('aggrisk', ds)
-        except KeyError:
-            max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (
-                f'The risk can not be computed since the hazard is too low:'
-                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
-            losses_header = None
-            weights_precision = None
-        else:
-            losses_header = [
-                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
-                if field in AGGRISK_FIELD_DESCRIPTION
-                else field.capitalize()
-                for field in losses.dtype.names]
-            weights_precision = determine_precision(losses['weight'])
+        losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
         strategy_used = None  # stored by the ShakeMap jobs
         if 'correlation_strategy_used' in ds:
@@ -2422,9 +2465,10 @@ def web_engine_get_outputs_impact(request, calc_id):
         time_job_after_event = (
             job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
         time_job_after_event_str = format_time_delta(time_job_after_event)
+        event_time_str = format_event_time(local_timestamp_str)
     return render(request, "engine/get_outputs_impact.html",
                   dict(calc_id=calc_id, description=description,
-                       local_timestamp=local_timestamp_str,
+                       local_timestamp=event_time_str,
                        job_start_time=job_start_time_str,
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
@@ -2480,6 +2524,29 @@ def can_extract(request, resource):
     return False
 
 
+def _impact_summary_hidden(oqparam):
+    # loss types hidden in the impact summary table: the IMPACT_HIDDEN ones
+    # and, if a time of the event was selected, the fatalities and injured
+    # for the other times of the day
+    te = oqparam.report_time_event
+    if te is None:
+        return IMPACT_HIDDEN
+    return IMPACT_HIDDEN + [f'{lt}_{other}' for lt in TIME_LOSSES
+                            for other in TIME_EVENTS if other != te]
+
+
+def _impact_summary_labels(oqparam):
+    # display names of the loss types in the impact summary table; if a time
+    # of the event was selected, the fatalities and injured are shown only
+    # for that time, so their names do not mention it (the explanations do)
+    labels = dict(AGGRISK_FIELD_DESCRIPTION, injured='Injured people')
+    te = oqparam.report_time_event
+    if te is not None:
+        labels[f'occupants_{te}'] = labels['occupants']
+        labels[f'injured_{te}'] = labels['injured']
+    return labels
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2497,6 +2564,7 @@ def extract_html_table(request, calc_id, name):
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             table = _extract(ds, name)
+            oqparam = ds['oqparam']
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -2569,9 +2637,10 @@ def extract_html_table(request, calc_id, name):
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
-        # NOTE: Intentionally excluding embodied_carbon from this summary
-        table_contents = table_contents[
-            table_contents[:, 0] != 'embodied_carbon']
+        # NOTE: Intentionally excluding some loss types, see IMPACT_HIDDEN;
+        # fatalities and injured are shown only for the selected time
+        table_contents = table_contents[~numpy.isin(
+            table_contents[:, 0], _impact_summary_hidden(oqparam))]
 
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
@@ -2581,52 +2650,33 @@ def extract_html_table(request, calc_id, name):
             ([numpy.str_('economic')], summed))
         remaining = table_contents[~mask]
         table_contents = numpy.vstack([remaining, economic_loss_row])
-        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+        # explain only the loss types displayed in the summary
+        displayed = set(table_contents[:, 0])
+        labels = _impact_summary_labels(oqparam)
+        for key, value in labels.items():
             table_contents[table_contents == key] = value
         loss_types = '<ul>' + ''.join(
             '<li><strong>%s:</strong> %s%s</li>' % (
-                AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
-                '<span>.</span>' if key == 'injured' else '.')
+                labels.get(key, key), explanation,
+                '<span>.</span>' if key.startswith('injured') else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+            if key in displayed
+        ) + '</ul>'
+        exposed_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                label, EXPOSED_VALUE_EXPLANATION[key])
+            for label, key in EXPOSED_VALUE_LABELS) + '</ul>'
+        reported_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                AGGRISK_FIELD_DESCRIPTION[key], explanation)
+            for key, explanation in REPORTED_VALUE_EXPLANATION.items()
         ) + '</ul>'
         additional_explanations = {
             'value': (
                 'The exposed value depends on the impact metric. Below we '
                 'describe the meaning of the exposed value per impact metric:'
-                '<ul>'
-                '<li><strong>Affected population and Rendered homeless:'
-                '</strong> Population that lives in the area included in the '
-                'impact analysis.</li>'
-                '<li><strong>Floor area lost (m²):</strong> Total floor area '
-                'of buildings, including all storeys, in the area included in '
-                'the impact analysis.</li>'
-                '<li><strong>Number of injured people and fatalities:'
-                '</strong> Population assumed to be inside the building stock '
-                'in the area included in the impact analysis when the event '
-                'occurs.</li>'
-                '<li><strong>Buildings destroyed:</strong> Number of buildings '
-                'in the area included in the impact analysis.</li>'
-                '<li><strong>Economic loss (USD):</strong> Replacement value '
-                'of buildings and their contents in the area included in the '
-                'impact analysis.'
-                '</li></ul>'
-            ),
-            'Reported values': (
-                '<ul>'
-                '<li><strong>Mean:</strong> Arithmetic mean of the estimated '
-                'impact values, accounting for the uncertainties propagated '
-                'through the impact analysis.</li>'
-                '<li><strong>Median:</strong> The 50th percentile of the '
-                'estimated impact distribution. Half of the estimated impact '
-                'values are below the median and half are above it.</li>'
-                '<li><strong>5th percentile:</strong> Value below which 5% '
-                'of the estimated impact values fall. It represents the lower '
-                'end of the range of plausible impacts.</li>'
-                '<li><strong>95th percentile:</strong> Value below which 95% '
-                'of the estimated impact values fall. It represents the upper '
-                'end of the range of plausible impacts.</li>'
-                '</ul>'
-            ),
+                + exposed_values),
+            'Reported values': reported_values,
         }
         explanations = {
             'Loss types': loss_types,

@@ -44,7 +44,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, conditioned_ce, use_circulant_conditioning,
+    conditioned, conditioned_ce, grid_crs, use_circulant_conditioning,
     use_joint_conditioning, use_joint_gaussian_sampling)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
@@ -180,7 +180,7 @@ def count_ruptures(srcs, monitor):
 
 
 def get_computer(cmaker, ebr, sites, sec_perils=(),
-                 station_data=(), station_sids=()):
+                 station_data=(), station_sids=(), crs=None):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -200,7 +200,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
                 oq.get_between_event_correlation_model(),
                 oq.within_event_correlation_params,
                 oq.number_of_ground_motion_fields,
-                oq._amplifier, sec_perils)
+                oq._amplifier, sec_perils, crs=crs)
         else:
             logging.warning('There are no stations!')
 
@@ -547,7 +547,8 @@ def _store_conditioned(calc, gmf_df):
         hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
-def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
+def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites,
+                    crs=None):
     """Run a conditioned scenario calculation and store the GMFs."""
     dstore = calc.datastore
     considered = station_sites if station_sites else []
@@ -565,7 +566,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     if station_sites:
         computer = get_computer(
             cmaker, ebr, sites, calc.sec_perils,
-            station_data, station_sites.sids)
+            station_data, station_sites.sids, crs)
         computer.init_eid_rlz_sig_eps()
         G = len(cmaker.gsims)
         N = len(computer.ctx)
@@ -700,8 +701,10 @@ def run(func, oq, rup0, calc):
         station_data, station_sites = filter_stations(
             station_df, calc.sitecol.complete, rup, maxdist)
         if station_sites:
+            # the projection of the grid is computed from all the stations
+            crs = grid_crs(calc.sitecol.complete, station_df.index)
             run_conditioned(oq, proxy, full_lt, calc,
-                            station_data, station_sites)
+                            station_data, station_sites, crs)
             return
 
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}

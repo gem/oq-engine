@@ -91,3 +91,4 @@
 |case\_95|Tests that the TRT of a padding source far away does not affect the collapsing of the point sources
 |case\_96|Test a source with an uncertainty and magnitudes partially outside the integration distance
 |case\_97|Logic tree with IMT-dependent weights not aligned with the IMTs of the calculation (fastmean vs standard)
+|case\_98|Tests the horiz\_comp\_to job.ini parameter

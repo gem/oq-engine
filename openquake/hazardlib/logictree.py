@@ -34,11 +34,12 @@ import pickle
 import base64
 import logging
 import functools
+from xml.sax.saxutils import unescape
 import itertools
 import collections
 import operator
 import numpy
-from openquake.baselib import hdf5, node
+from openquake.baselib import hdf5
 from openquake.baselib.general import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
@@ -171,6 +172,8 @@ def check_branchset_weights(node, filename, bsid, weights):
 
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
+SRC_REGEX = re.compile(r'<(?:\w+:)?\w+Source\s([^>]*)>')  # source start tag
+ATTR_REGEX = re.compile(r'([\w:]+)\s*=\s*"([^"]*)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
 
 
@@ -184,7 +187,6 @@ def check_unique_uncertainties(source_specific_lts):
             raise nrml.DuplicatedID(utypes)
 
 
-# this is very fast
 def get_trt_by_src(source_model_file):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
@@ -198,10 +200,14 @@ def get_trt_by_src(source_model_file):
             for src_id in ID_REGEX.findall(text):
                 # disagg/case_12
                 trt_by_src[src_id.split(':')[0]] = trt  # colon convention
-    else:  # parse the XML with ElementTree
-        for src in node.fromstring(xml)[0]:
-            src_id = src.attrib['id'].split(':')[0]  # colon convention
-            trt_by_src[src_id] = src.attrib['tectonicRegion']
+    else:
+        # NRML 0.4: the tectonicRegion is an attribute of the source; the
+        # start tags of the sources are parsed with regexes, since parsing
+        # the full XML with ElementTree is 6x slower (36s instead of 5s in AUS)
+        for attrs in SRC_REGEX.findall(xml.replace("'", '"')):
+            attrib = dict(ATTR_REGEX.findall(attrs))
+            src_id = unescape(attrib['id']).split(':')[0]  # colon convention
+            trt_by_src[src_id] = unescape(attrib['tectonicRegion'])
     return trt_by_src
 
 
