@@ -453,7 +453,7 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    trts = list(dstore['full_lt'].attrs['trts'])
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
     for proxy in get_proxies(dstore.filename):
         # the TRT index is in the high bits of trt_smr
         trt = trts[proxy['trt_smr'] // TWO24]

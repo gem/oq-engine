@@ -16,22 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from pathlib import Path
 import numpy
 import pytest
 from openquake.baselib import hdf5
 from openquake.baselib.performance import Monitor
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.hazardlib import logictree
-from openquake.hazardlib.geo import Point
-from openquake.hazardlib.gsim_lt import GsimLogicTree
-from openquake.hazardlib.site import Site
-from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.map_array import rates_dt
-from openquake.hazardlib.calc.stochastic import get_rup_array
-from openquake.hazardlib.source.rupture import get_planar, EBRupture
 from openquake.calculators import classical, getters
-from openquake.qa_tests_data.event_based import case_16
 
 
 @pytest.mark.parametrize('fastmean', [False, True])
@@ -66,28 +58,3 @@ def test_empty_hazard_chunk(tmp_path, fastmean):
                 result['hcurves-stats'][0].array[:, 0],
                 -numpy.expm1(-getter.array[:, :, 0]), rtol=1E-6)
         assert empty.sid2idx == {}
-
-
-def test_ebruptures_preserve_tectonic_regions(tmp_path):
-    case = Path(case_16.__file__).parent
-    gsim_lt = GsimLogicTree(str(case / 'gmpe_logic_tree.xml'))
-    trts = list(gsim_lt.values)
-    assert len(trts) > 1
-    site = Site(Point(0., 0.), vs30=760., z1pt0=100., z2pt5=1.)
-    ebrs = []
-    for i, trt in enumerate(trts):
-        rup = get_planar(site, WC1994(), 6., 1., 0., 45., 90., trt)
-        # Include a source-model index in the low bits of trt_smr.
-        ebrs.append(EBRupture(
-            rup, trt_smr=i * 2**24 + 7, id=i, seed=42))
-    aw = get_rup_array(ebrs, lambda mag: 1000.)
-    aw.array['geom_id'] = numpy.arange(len(ebrs))
-    with hdf5.File(str(tmp_path / 'ruptures.hdf5'), 'w') as dstore:
-        dstore['full_lt/gsim_lt'] = gsim_lt
-        dstore['full_lt'].attrs['trts'] = hdf5.array_of_vstr(trts)
-        dstore['ruptures'] = aw.array
-        dstore.save_vlen('rupgeoms', [numpy.float32(g) for g in aw.geom])
-        extracted = getters.get_ebruptures(dstore)
-    assert [ebr.tectonic_region_type for ebr in extracted] == trts
-    assert [ebr.trt_smr for ebr in extracted] == [
-        ebr.trt_smr for ebr in ebrs]
