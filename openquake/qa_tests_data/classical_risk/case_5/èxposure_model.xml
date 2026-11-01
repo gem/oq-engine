@@ -17,7 +17,7 @@
         </costs>
       </asset>
       <asset id="a7" taxonomy="MS-SLSB-1">
-        <location lon="-78.168117" lat="15.59329"/>
+        <location lon="-78.168002" lat="15.593287"/>
         <costs>
           <cost type="structural" value="32911.55171" deductible="0.1" insuranceLimit="0.9" />
         </costs>
