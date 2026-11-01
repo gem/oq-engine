@@ -23,6 +23,7 @@ import numpy as np
 
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as mod
 from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     GridAdjustedGMPE,
     grid_lookup,
@@ -105,11 +106,11 @@ EXPECTED_PATH_SE_ADJ = [
 
 class GridAdjustedGMPETest(unittest.TestCase):
 
-    def _get_mean_stds(self, imts, epsilons=None):
+    def _get_mean_stds(self, imts, epsilons=None, att_cap=None):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
-                               epsilons=epsilons)
+                               epsilons=epsilons, att_cap=att_cap)
         cmaker = simple_cmaker([base, adj], imts)
         ctx = cmaker.new_ctx(len(LATS))
         ctx.mag = 6.0
@@ -199,6 +200,45 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 aae(mea[GRID, m] - mea_cen[GRID, m], expected_shift,
                     decimal=DP)
 
+    def test_att_cap_clips_per_branch_total(self):
+        # Per-branch cap bounds (central + eps*SE) on path. Covers both
+        # the eps=0 central-only case and the eps!=0 branch case
+        cap = 0.5
+        for eps in (0.0, 1.732):
+            eps_dict = {"dL2L": 0.0, "dS2S": 0.0, "adj_per_km": eps}
+            mea, *_ = self._get_mean_stds(
+                IMTS, epsilons=eps_dict, att_cap=cap)
+            base_mea, *_ = self._get_mean_stds(IMTS)
+            for m in range(len(IMTS)):
+                capped_total = np.clip(
+                    EXPECTED_PATH_ADJ[m] + eps * EXPECTED_PATH_SE_ADJ[m],
+                    -cap, cap)
+                expected_diff = (DL2L_MEAN_PER_CELL[m][0]
+                                 + DS2S_MEAN_PER_CELL[m] + capped_total)
+                aae(mea[GRID, m] - base_mea[BASE, m], expected_diff,
+                    decimal=DP)
+
+    def test_att_cap_is_a_noop_when_non_binding(self):
+        # None, or any cap above the largest uncapped total, must leave
+        # the mean identical to the uncapped run
+        eps_dict = {"dL2L": 0.0, "dS2S": 0.0, "adj_per_km": 1.732}
+        mea_ref, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
+        for cap in (None, 10.0):
+            mea, *_ = self._get_mean_stds(
+                IMTS, epsilons=eps_dict, att_cap=cap)
+            # cap != None takes a different arithmetic path (adds
+            # capped_total - mean_adj) so rounding differs at ~1e-16
+            np.testing.assert_array_almost_equal(mea, mea_ref, decimal=14)
+
+    def test_att_cap_shares_bundle_across_cap_values(self):
+        # Bundle is cap-agnostic: two instances with different caps on
+        # the same ctx share one cache entry but produce distinct means
+        mod._COMPUTE_CACHE.clear()
+        mea_tight, *_ = self._get_mean_stds(IMTS, att_cap=0.5)
+        mea_loose, *_ = self._get_mean_stds(IMTS, att_cap=10.0)
+        self.assertEqual(len(mod._COMPUTE_CACHE), 1)
+        self.assertFalse(np.array_equal(mea_tight, mea_loose))
+
     def test_epsilons_missing_se_raises(self):
         # Non-zero epsilon for a term whose mean_se dataset is absent
         # must raise rather than silently falling back to the central
@@ -235,3 +275,77 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
                              epsilons={"dL2L": 1.0, "nope": 0.5})
+
+    ### CACHING MEDIANS PER CTX TESTS ###
+    def test_cache_cold_vs_warm_equivalence(self):
+        # The shared compute-bundle cache must produce identical (mean, sig,
+        # tau, phi) to the no-cache path across the full 27-branch epsilon
+        # product.
+        # NOTE: Cache cleared before each eps so every call is cold. Warm = cache
+        # cleared once up front so the first eps builds the bundle and then the
+        # remaining 26 restore it
+        levels = [-1.732, 0.0, 1.732]
+        combos = [{"dL2L": a, "dS2S": b, "adj_per_km": c}
+                  for a in levels for b in levels for c in levels]
+
+        reference = []
+        for eps in combos:
+            mod._COMPUTE_CACHE.clear()
+            reference.append(self._get_mean_stds(IMTS, epsilons=eps))
+
+        mod._COMPUTE_CACHE.clear()
+        warm = [self._get_mean_stds(IMTS, epsilons=eps) for eps in combos]
+
+        for eps, ref, w in zip(combos, reference, warm):
+            for name, ref_arr, w_arr in zip(
+                    ("mean", "sig", "tau", "phi"), ref, w):
+                np.testing.assert_array_equal(
+                    ref_arr, w_arr,
+                    err_msg=f"{name} mismatch for epsilons={eps}")
+
+    def test_fingerprint_distinguishes_backbone_fields(self):
+        # Two ctxs with identical site + hypo lat/lon must still produce
+        # distinct fingerprints when any backbone GMM relevant field in the
+        # ctx dtype differs, otherwise the cache returns the wrong median
+        # keyed on 2D only. Fields exercised here are those the underlying
+        # AkkarEtAlRjb2014 requires (mag, rake, rjb) for rup and rup geom
+        # (Vs30 and other site params not fingerprinted despite being used
+        # by the GMM itself given site conditions cannot change in one calc)
+        base = valid.gsim(BASE_GSIM)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
+        cmaker = simple_cmaker([base, adj], IMTS)
+
+        def _ctx(mag=6.0, rake=0.0, rjb_0=10.0):
+            ctx = cmaker.new_ctx(len(LATS))
+            ctx.mag = mag
+            ctx.rake = rake
+            ctx.vs30 = 760.0
+            ctx.rjb = np.array([rjb_0, 20.0, 30.0, 50.0])
+            ctx.lat = LATS
+            ctx.lon = LONS
+            ctx.hypo_lat = 0.0
+            ctx.hypo_lon = 0.0
+            return ctx
+
+        bb_id = repr(adj.gmpe)
+        trt = str(adj.DEFINED_FOR_TECTONIC_REGION_TYPE)
+        ref_fp = mod._ctx_fingerprint(
+            _ctx(), GRID_HDF5, bb_id, trt, IMTS)
+
+        # Identical ctx -> same fingerprint
+        self.assertEqual(
+            ref_fp,
+            mod._ctx_fingerprint(_ctx(), GRID_HDF5, bb_id, trt, IMTS))
+
+        varied = {
+            "mag": _ctx(mag=7.0),
+            "rjb": _ctx(rjb_0=11.0),
+            "rake": _ctx(rake=-90.0),
+        }
+        for field, ctx_v in varied.items():
+            fp = mod._ctx_fingerprint(
+                ctx_v, GRID_HDF5, bb_id, trt, IMTS)
+            self.assertNotEqual(
+                ref_fp, fp,
+                f"fingerprint must differ when '{field}' changes "
+                f"(lat/lon unchanged)")
