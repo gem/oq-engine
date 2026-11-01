@@ -27,6 +27,7 @@ from openquake.calculators.base import run_calc, expose_outputs
 from openquake.calculators.views import text_table
 from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
+from openquake.engine import impact
 
 cd = pathlib.Path(__file__).parent
 aac = numpy.testing.assert_allclose
@@ -170,7 +171,6 @@ def test_shakemap():
 def test_cli_default_spatial_correlation(kw, level, expected):
     # oq impact correlates by default the jobs using the ShakeMap,
     # as the web form does
-    from openquake.engine import impact
     err = {'status': 'failed', 'error_msg': 'stop'}
     with patch.object(impact, 'impact_validate',
                       return_value=(None, {}, {}, err)) as validate:

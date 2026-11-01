@@ -381,17 +381,31 @@ def _loth_baker_residuals(lons, lats, imts, Z, seed, truncation_level):
     return res[:, inverse.reshape(-1)]
 
 
+def _conditional_phi(std, tau2):
+    # Conditional within-event sigma sqrt(std^2 - tau^2) of a
+    # shake_result.hdf product: std and tau are conditional on the
+    # stations, while the stored phi is the prior within-event sigma; the
+    # clip protects from the rounding of the float32 values when the
+    # within-event uncertainty is negligible
+    var = numpy.asarray(std, numpy.float64) ** 2 - tau2
+    return numpy.sqrt(numpy.clip(var, 0, None))
+
+
 def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
-    # Log-space residuals from the posterior phi of each point and the
-    # between-event factor CL, with the Loth and Baker (2013) correlation
-    # between the points; the station conditioning is not applied (see
-    # openquake.hazardlib.shakemap.realization for the approximation)
-    phi = numpy.concatenate([shakemap['phi'][str(im)] for im in imts])
+    # Log-space residuals from the conditional within-event sigma of each
+    # point and the between-event factor CL, with the Loth and Baker (2013)
+    # correlation between the points; the station conditioning of the
+    # correlation is not applied (see openquake.hazardlib.shakemap.
+    # realization for the approximation)
+    phi = numpy.concatenate([_conditional_phi(
+        shakemap['std'][str(im)],
+        (shakemap['CL'][str(im)].astype(numpy.float64) ** 2).sum(axis=1))
+        for im in imts])
     # one draw per event of the between-event terms of each IMT,
     # truncated as the within-event samples Z; hence, like in the rest of
-    # the engine, the variance phi^2 + |CL|^2 is reached only for a large
-    # truncation level and is reduced by the variance of the truncated
-    # normal otherwise (see to_gmfs)
+    # the engine, the variance phi^2 + |CL|^2 = std^2 is reached only for a
+    # large truncation level and is reduced by the variance of the
+    # truncated normal otherwise (see to_gmfs)
     rng = numpy.random.default_rng(seed + 3)
     between = []
     for im in imts:
@@ -438,8 +452,9 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
             '%s is not used', spatial_model.__class__.__name__)
     logging.warning(
         'The correlated GMFs approximate the posterior of the ShakeMap: '
-        'the station conditioning is not applied and the between-event '
-        'terms are independent across IMTs')
+        'the station conditioning is not applied to the correlation '
+        'between the points and the between-event terms are independent '
+        'across IMTs')
     residuals = _realization_residuals(
         shakemap, imts, Z, seed, truncation_level)
     return mu * numpy.exp(residuals) / scale
@@ -479,7 +494,6 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     total_std = numpy.array([
         shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
     components = {'phi', 'tau'} <= set(shakemap.dtype.names)
-    std_field = 'phi' if components else 'std'
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
     if truncation_level <= 1E-9:
@@ -492,9 +506,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     if not correlated:
         return result
     tau_present = 'tau' in shakemap.dtype.names and tau_Z is not None
-    active = [i for i in correlated if (
-        numpy.any(shakemap[std_field][str(imts[i])]) or
-        (tau_present and numpy.any(shakemap['tau'][str(imts[i])])))]
+    active = [i for i in correlated
+              if numpy.any(shakemap['std'][str(imts[i])])]
     if len(active) != len(correlated):
         skipped = [str(imts[i]) for i in correlated if i not in active]
         if skipped:
@@ -526,8 +539,14 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         corr_Z, corr_imts, sites, spatial_model, cross_imt_model,
         correlation_strategy, context, cholesky_limit,
         truncation_level, correlation_seed)
-    corr_stds = numpy.array([
-        shakemap[std_field][str(im)] for im in corr_imts]).reshape(-1, 1)
+    if components:  # the stored phi is the prior one
+        corr_stds = numpy.array([_conditional_phi(
+            shakemap['std'][str(im)],
+            shakemap['tau'][str(im)].astype(numpy.float64) ** 2)
+            for im in corr_imts]).reshape(-1, 1)
+    else:
+        corr_stds = numpy.array([
+            shakemap['std'][str(im)] for im in corr_imts]).reshape(-1, 1)
     residuals *= corr_stds
     if tau_present:
         tau = numpy.array([

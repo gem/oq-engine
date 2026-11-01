@@ -1,8 +1,10 @@
 # Helpers for the posterior realizations of a ShakeMap. The GMFs of the
-# shake_result.hdf products are sampled in gmfs._realization_residuals,
-# without the station conditioning, because the products do not store the
-# prior within-event sigma of the points; conditional_within_residuals
-# implements the exact conditioning, to be used when they will.
+# shake_result.hdf products are sampled in gmfs._realization_residuals
+# with the conditional sigma of each point, sqrt(std^2 - tau^2), but with
+# the prior correlation between the points, i.e. without the station
+# conditioning of the correlation; conditional_within_residuals implements
+# the exact conditioning, starting from the prior phi stored in the
+# products, which requires the station data too.
 import numpy
 
 

@@ -93,6 +93,33 @@ class ShakemapTestCase(unittest.TestCase):
             self.assertEqual(gmfs.shape, (9, 8, 2))
             self.assertTrue(numpy.isfinite(gmfs).all())
 
+    def test_conditional_phi(self):
+        # the stored phi is the prior within-event sigma: the variance of
+        # the log GMFs must be the conditional std^2 = phi_c^2 + tau^2
+        lons = numpy.array([0., 0.1, 0.2])
+        lats = numpy.zeros(3)
+        component_dt = numpy.dtype([
+            ('lon', float), ('lat', float), ('val', imt_dt),
+            ('std', imt_dt), ('phi', imt_dt), ('tau', imt_dt),
+            ('vs30', float)])
+        shakemap = numpy.zeros(3, component_dt)
+        shakemap['lon'] = lons
+        shakemap['lat'] = lats
+        shakemap['val'] = (0.5, 0.6, 0.7, 0.8)
+        shakemap['std'] = (0.5, 0.5, 0.5, 0.5)
+        shakemap['phi'] = (0.9, 0.9, 0.9, 0.9)
+        shakemap['tau'] = (0.3, 0.3, 0.3, 0.3)
+        method = {
+            'kind': 'Silva&Horspool', 'spatial_model': spatial_model,
+            'cross_imt_model': None, 'cholesky_limit': 10000,
+            'correlation_strategy': 'cholesky_decomposition',
+            'sites': site.SiteCollection.from_points(lons, lats)}
+        _, gmfs = to_gmfs(
+            shakemap, method, vs30=None, truncation_level=99,
+            num_gmfs=40_000, seed=42, imts=['PGA', 'SA(0.3)'])
+        variance = numpy.var(numpy.log(gmfs), axis=1)
+        numpy.testing.assert_allclose(variance, .25, rtol=0.03)
+
     def test_zero_shakemap_uncertainty_skips_correlation(self):
         lons = numpy.tile([0., 0.1], 2)
         lats = numpy.repeat([0., 0.1], 2)
@@ -166,8 +193,8 @@ class ShakemapTestCase(unittest.TestCase):
             gmfs[:, 0], numpy.tile([0.1, 0.2, 0.3, 0.4], (2, 1)).T)
 
     def test_realization_residuals_variance(self):
-        # the residual variance of each point must be phi^2 + |CL|^2,
-        # i.e. the total variance stored by ShakeMap
+        # the residual variance of each point must be the total variance
+        # std^2 stored by ShakeMap, whatever the prior phi
         pair = [imt.from_string('PGA'), imt.from_string('SA(0.3)')]
         rng = numpy.random.default_rng(4)
         N, E = 6, 100_000
@@ -175,26 +202,28 @@ class ShakemapTestCase(unittest.TestCase):
         lats = rng.uniform(0, 0.5, N)
         dt = numpy.dtype([
             ('lon', float), ('lat', float),
+            ('std', [(str(im), float) for im in pair]),
             ('phi', [(str(im), float) for im in pair]),
             ('CL', [(str(im), float, (3,)) for im in pair])])
         shakemap = numpy.zeros(N, dt)
         shakemap['lon'] = lons
         shakemap['lat'] = lats
         for im in pair:
-            shakemap['phi'][str(im)] = rng.uniform(0.2, 0.5, N)
+            shakemap['std'][str(im)] = rng.uniform(0.2, 0.5, N)
+            # the prior phi is larger than the conditional one
+            shakemap['phi'][str(im)] = .6
             shakemap['CL'][str(im)][:, :1] = rng.uniform(-0.1, 0.1, (N, 1))
         Z = rng.standard_normal((N * len(pair), E))
         # a large truncation level gives untruncated between-event terms
         res = _realization_residuals(shakemap, pair, Z, 0, 99)
         variance = numpy.var(res, axis=1)
         expected = numpy.concatenate([
-            shakemap['phi'][str(im)] ** 2 +
-            (shakemap['CL'][str(im)] ** 2).sum(axis=1) for im in pair])
+            shakemap['std'][str(im)] ** 2 for im in pair])
         numpy.testing.assert_allclose(variance, expected, rtol=0.03)
 
     def test_realization_residuals_correlation(self):
         # without between-event terms the residuals have the Loth and
-        # Baker (2013) correlation between points and IMTs, whatever phi;
+        # Baker (2013) correlation between points and IMTs, whatever std;
         # PGV is correlated through its SA(1.0) proxy
         ims = [imt.from_string(im) for im in ('PGA', 'SA(0.3)', 'PGV')]
         proxies = [imt.from_string(im)
@@ -206,13 +235,13 @@ class ShakemapTestCase(unittest.TestCase):
         rng = numpy.random.default_rng(42)
         dt = numpy.dtype([
             ('lon', float), ('lat', float),
-            ('phi', [(str(im), float) for im in ims]),
+            ('std', [(str(im), float) for im in ims]),
             ('CL', [(str(im), float, (1,)) for im in ims])])
         shakemap = numpy.zeros(N, dt)
         shakemap['lon'] = lons
         shakemap['lat'] = lats
         for im in ims:
-            shakemap['phi'][str(im)] = rng.uniform(0.2, 0.8, N)
+            shakemap['std'][str(im)] = rng.uniform(0.2, 0.8, N)
         Z = rng.standard_normal((N * len(ims), E))
         res = _realization_residuals(shakemap, ims, Z, 0, 99)
         dist = geo.geodetic.distance_matrix(lons, lats)
@@ -232,13 +261,13 @@ class ShakemapTestCase(unittest.TestCase):
         N, E = len(lons), 3
         dt = numpy.dtype([
             ('lon', float), ('lat', float),
-            ('phi', [(str(im), float) for im in ims]),
+            ('std', [(str(im), float) for im in ims]),
             ('CL', [(str(im), float, (1,)) for im in ims])])
         shakemap = numpy.zeros(N, dt)
         shakemap['lon'] = lons
         shakemap['lat'] = lats
         for im in ims:
-            shakemap['phi'][str(im)] = .5
+            shakemap['std'][str(im)] = .5
         Z = numpy.random.default_rng(42).standard_normal((N * 5, E))
         res = _realization_residuals(shakemap, ims, Z, 0, 3).reshape(5, N, E)
         self.assertTrue(numpy.isfinite(res).all())
@@ -247,7 +276,7 @@ class ShakemapTestCase(unittest.TestCase):
 
     def test_realization_residuals_memory_budget(self):
         shakemap = numpy.zeros(4, [
-            ('lon', float), ('lat', float), ('phi', [('PGA', float)]),
+            ('lon', float), ('lat', float), ('std', [('PGA', float)]),
             ('CL', [('PGA', float, (1,))])])
         shakemap['lon'] = [0, .1, .2, .3]
         with mock.patch('openquake.hazardlib.shakemap.gmfs.'
