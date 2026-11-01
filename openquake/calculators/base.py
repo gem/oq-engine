@@ -45,6 +45,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -1260,6 +1261,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol.check_nan(
                 [p for p in site.CORE_SITE_PARAMS
                  if p in oq.req_site_params])
+            # check the site parameters are in the range of the GSIMs
+            gsims = readinput.get_gsim_lt(oq).values.values()
+            check_sites(sum(gsims, []), self.sitecol)
 
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
