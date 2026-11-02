@@ -583,9 +583,9 @@ class GridAdjustedGMPE(GMPE):
         term (central + eps * SE) only, clipped to [-att_cap, +att_cap].
         Hypo/site terms (dL2L, dS2S) are unaffected. Default None = no cap.
         A value of ln(2) ~ 0.693 bounds the multiplicative path factor at
-        [0.5, 2.0] on every LT realisation. Useful for long rays crossing
-        many weakly-constrained cells, where the per-km shifts can stack
-        into physically unrealistic path adjustments.
+        [0.5, 2.0] on every LT realisation. Useful for constraining long
+        rays crossing many weakly-constrained cells, where the per-km
+        shifts can stack into physically unrealistic path adjustments.
     """
     # Req Params - set from underlying GMM via set_parameters()
     REQUIRES_SITES_PARAMETERS = set()
