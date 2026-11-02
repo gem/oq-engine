@@ -343,7 +343,6 @@ def postinstall_standalone(inst):
         secret_file = os.path.join(secret_dir, secret_name)
         with open(secret_file, "r") as f:
             os.environ["DJANGO_SECRET_KEY"] = f.read().strip()
-        print(os.environ('DJANGO_SECRET_KEY'))
     # Run python manage.py migrate before running app postinstall
     _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
     errors = []
