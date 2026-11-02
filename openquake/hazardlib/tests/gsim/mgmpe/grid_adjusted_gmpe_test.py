@@ -299,19 +299,8 @@ class GridAdjustedGMPETest(unittest.TestCase):
                                    grid_hdf5_file=stripped,
                                    epsilons={"dL2L": 1.0})
             cmaker = simple_cmaker([base, adj], ["PGA"])
-            ctx = cmaker.new_ctx(len(LATS))
-            ctx.mag = 6.0
-            ctx.rake = 0.0
-            ctx.hypo_depth = 10.0
-            ctx.vs30 = 760.0
-            ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
-            ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
-            ctx.lat = LATS
-            ctx.lon = LONS
-            ctx.hypo_lat = 0.0
-            ctx.hypo_lon = 0.0
             with self.assertRaises(ValueError):
-                cmaker.get_mean_stds([ctx])
+                cmaker.get_mean_stds([self._make_ctx(cmaker)])
 
     def test_epsilons_unknown_term_raises(self):
         # Unknown term names must raise rather than silently default
@@ -394,33 +383,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
         cmaker = simple_cmaker([base, adj], IMTS)
 
-        def _ctx(mag=6.0, rake=0.0, rjb_0=10.0, vs30=760.0):
-            ctx = cmaker.new_ctx(len(LATS))
-            ctx.mag = mag
-            ctx.rake = rake
-            ctx.vs30 = vs30
-            ctx.rjb = np.array([rjb_0, 20.0, 30.0, 50.0])
-            ctx.lat = LATS
-            ctx.lon = LONS
-            ctx.hypo_lat = 0.0
-            ctx.hypo_lon = 0.0
-            return ctx
-
         bb_id = adj._cache_backbone
         trt = str(adj.DEFINED_FOR_TECTONIC_REGION_TYPE)
         ref_fp = mod._ctx_fingerprint(
-            _ctx(), GRID_HDF5, bb_id, trt, IMTS)
+            self._make_ctx(cmaker), GRID_HDF5, bb_id, trt, IMTS)
 
         # Identical ctx -> same fingerprint
         self.assertEqual(
             ref_fp,
-            mod._ctx_fingerprint(_ctx(), GRID_HDF5, bb_id, trt, IMTS))
+            mod._ctx_fingerprint(
+                self._make_ctx(cmaker), GRID_HDF5, bb_id, trt, IMTS))
 
         varied = {
-            "mag": _ctx(mag=7.0),
-            "rjb": _ctx(rjb_0=11.0),
-            "rake": _ctx(rake=-90.0),
-            "vs30": _ctx(vs30=360.0),
+            "mag": self._make_ctx(cmaker, mag=7.0),
+            "rjb": self._make_ctx(
+                cmaker, rjb=np.array([11.0, 20.0, 30.0, 50.0])),
+            "rake": self._make_ctx(cmaker, rake=-90.0),
+            "vs30": self._make_ctx(cmaker, vs30=360.0),
         }
         for field, ctx_v in varied.items():
             fp = mod._ctx_fingerprint(
@@ -470,18 +449,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         loose = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                  grid_hdf5_file=GRID_HDF5, att_cap=10.0)
         cmaker = simple_cmaker([base, tight, loose], IMTS)
-        ctx = cmaker.new_ctx(len(LATS))
-        ctx.mag = 6.0
-        ctx.rake = 0.0
-        ctx.hypo_depth = 10.0
-        ctx.vs30 = 760.0
-        ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.lat = LATS
-        ctx.lon = LONS
-        ctx.hypo_lat = 0.0
-        ctx.hypo_lon = 0.0
-        out = cmaker.get_mean_stds([ctx])
+        out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         # One cache entry on the shared cmaker (ctx is identical)
         self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
         # tight is at index 1, loose at index 2 (base at 0)
