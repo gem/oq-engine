@@ -473,7 +473,7 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
             sig_action = cfg.get("sig_adjustment", "none")
             if sig_action != "none":
                 # Resolve sigma values - per-cell grid or scalar. Per-cell
-                # values share the mean lookup; otherwise use the scalar.
+                # values share the mean lookup; otherwise use the scalar
                 scalars = grid_data["sig_scalars"].get(str(imt), {})
                 sig_vals = adjs.get("sig", scalars.get(term))
                 adjust_sigma(sig_vals, cfg, sig_action, sig[m], tau[m], phi[m])
