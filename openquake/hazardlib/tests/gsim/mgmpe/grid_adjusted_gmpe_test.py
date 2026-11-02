@@ -377,7 +377,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
                     err_msg=f"{name} mismatch for epsilons={eps}")
 
     def test_cache_preserves_backbone_adjustment_order(self):
-        # Caching must preserve the effect of backbone adjustment order.
+        # Caching must preserve the effect of backbone adjustment order
         steps = [("add_between_within_stds", {"with_betw_ratio": 1.0}),
                  ("set_between_epsilon", {"epsilon_tau": 1.0})]
         gsims = [GridAdjustedGMPE(
