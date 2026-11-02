@@ -1585,6 +1585,8 @@ class ContextMaker(object):
         out = numpy.zeros((4, M, N))
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
+        if getattr(gsim, "requires_cmaker", False):
+            gsim._cmaker = self
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))

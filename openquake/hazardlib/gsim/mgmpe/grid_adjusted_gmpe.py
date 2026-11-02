@@ -35,7 +35,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 # working set under split_by_mag=True (one fingerprint per mag bin, K bins
 # per source group, with K set by the MFD Mw range / width_of_mfd_bin). Other
 # paths (e.g. event-based where split_by_mag=False) produce 1 fingerprint per
-# compute call.
+# compute call. Used if gsim._cmaker is unset; otherwise the per-cmaker cache
 _COMPUTE_CACHE = collections.OrderedDict()
 _CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
                 # 66 bins so 96 is safely over this if split_by_mag=True with
@@ -44,32 +44,17 @@ _CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
 
 def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
     """
-    Content-based cache key covering every input the compute bundle depends
-    on: the hdf5 path, the backbone identity, the TRT, the imts list, and
-    the ctx fields the backbone output and grid lookups actually depend on.
-
-    NOTE: The grid lookups are 2D spatial only (lat/lon), but the cached
-    bundle also holds the backbone's mean output. Backbone-relevant ctx
-    fields (mag, hypo_depth, distances, rupture geometry) are included
-    so two ctxs sharing lat/lon but differing on those fields cannot
-    collide. Site parameters (vs30, z1pt0, z2pt5) are not hashed because
-    for a fixed (site_lat, site_lon) within one calc they are constant.
-
-    NOTE: The cache is content-keyed on (hdf5, backbone, trt, imts, ctx
-    bytes), not limited to a single get_4MN call. TRT is included so
-    instances of GridAdjustedGMPE used in different TRTs never collide,
-    independent of whether the hdf5 or backbone also differ.
+    Content-based cache key covering every input the compute bundle
+    depends on: the hdf5 path, the backbone identity, the TRT, the imts
+    list, and the full ctx record bytes.
     """
-    parts = [hdf5_path.encode(),
-             backbone_id.encode(),
-             trt.encode(),
-             repr(tuple(str(i) for i in imts)).encode()]
-    for name in ("hypo_lat", "hypo_lon", "lat", "lon",
-                 "hypo_depth", "mag",
-                 "rrup", "rjb", "rhypo", "rx", "ry0",
-                 "rake", "dip", "width", "ztor", "strike"):
-        if name in ctx.dtype.names:
-            parts.append(ctx[name].tobytes())
+    parts = [
+        hdf5_path.encode(),
+        backbone_id.encode(),
+        trt.encode(),
+        repr(tuple(str(i) for i in imts)).encode(),
+        ctx.tobytes(),
+    ]
     return hashlib.blake2b(b"|".join(parts), digest_size=16).digest()
 
 
@@ -583,6 +568,10 @@ class GridAdjustedGMPE(GMPE):
 
     experimental = True # It's not extensively tested yet
 
+    # Tells ContextMaker.get_4MN to attach itself as gsim._cmaker so compute()
+    # can store its per-calc cache on the cmaker
+    requires_cmaker = True
+
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
                  att_cap=None, **kwargs):
 
@@ -602,11 +591,9 @@ class GridAdjustedGMPE(GMPE):
         self.att_cap = att_cap
         self.grid_data["att_cap"] = att_cap
 
-        # Stored for the cache key; sibling branches share the same hdf5,
-        # backbone and TRT, so cache keys match once ctx and imts are also
-        # the same
+        # str(gmpe) returns the OQ-canonical TOML block including kwargs
         self._cache_hdf5 = grid_hdf5_file
-        self._cache_backbone = repr(self.gmpe)
+        self._cache_backbone = str(self.gmpe)
         self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
@@ -654,22 +641,32 @@ class GridAdjustedGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Per-cmaker cache if attached, else the shared _COMPUTE_CACHE
+        cmaker = getattr(self, "_cmaker", None)
+        if cmaker is not None:
+            cache = getattr(cmaker, "_grid_adjusted_cache", None)
+            if cache is None:
+                cache = collections.OrderedDict()
+                cmaker._grid_adjusted_cache = cache
+        else:
+            cache = _COMPUTE_CACHE
+
         # Build the bundle on the first call for this ctx, reuse it on later
         # calls that share the same key
         key = _ctx_fingerprint(ctx, self._cache_hdf5, self._cache_backbone,
                                self._cache_trt, imts)
-        bundle = _COMPUTE_CACHE.get(key)
+        bundle = cache.get(key)
         if bundle is None:
             # _build_bundle writes mean/sig/tau/phi in place; the snapshot
             # it stores is for future cache hits
             bundle = _build_bundle(self.gmpe, self.grid_data, ctx, imts,
                                    mean, sig, tau, phi)
-            _COMPUTE_CACHE[key] = bundle
-            if len(_COMPUTE_CACHE) > _CACHE_MAX:
-                _COMPUTE_CACHE.popitem(last=False)
+            cache[key] = bundle
+            if len(cache) > _CACHE_MAX:
+                cache.popitem(last=False)
             resolved = bundle[4]
         else:
-            _COMPUTE_CACHE.move_to_end(key)
+            cache.move_to_end(key)
             # Replay the snapshot into the output buffers
             bb_mean, bb_sig, bb_tau, bb_phi, resolved = bundle
             mean[:] = bb_mean
