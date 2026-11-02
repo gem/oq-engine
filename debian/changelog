@@ -1,4 +1,9 @@
-  [Michele Simionato]
+ [Christopher Brooks]
+ * Introduce a caching of repeated ctxs in GridAdjustedGMPE to avoid repeatedly
+   retrieving same mean adjustment for same rupture-site combinations with only
+   the per-branch scaling by epsilons differing.
+ 
+ [Michele Simionato]
   * ps_grid_spacing can now be used with disagg_by_src when the calculation has
     few sites, since the rates are computed one source at the time
   * Added the nctxs dataset to classical calculations, with the number of
