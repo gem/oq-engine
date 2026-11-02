@@ -406,11 +406,24 @@ def calc_abort(calc_id):
     if job.pid:
         try:
             os.kill(job.pid, signal.SIGINT)
-        except Exception as exc:
+        except OSError as exc:
             logging.error(exc)
-        else:
-            logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
-            logs.dbcmd('set_status', job.id, 'aborted')
+            # An exiting process may have persisted its final status since
+            # the first lookup. Preserve that result and report it normally.
+            current = logs.dbcmd('get_job', job.id)
+            if current is not None and current.status not in (
+                    'submitted', 'executing'):
+                return {'error': 'Job %s is not running' % job.id}
+            return {'error': 'Unable to abort job %s: %s' % (job.id, exc)}
+        # Completion and this conditional UPDATE compete atomically: never
+        # turn an already completed or failed calculation into an aborted one.
+        if not logs.dbcmd('set_aborted', job.id):
+            current = logs.dbcmd('get_job', job.id)
+            # A delivered SIGINT can make the worker persist failed/aborted
+            # before our UPDATE. The abort request was still accepted.
+            if current is None or current.status not in ('failed', 'aborted'):
+                return {'error': 'Job %s is not running' % job.id}
+        logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
         return {'success': 'Killing job %d' % job.id}
     return {'error': 'PID for job %s not found' % job.id}
 
