@@ -63,6 +63,8 @@ def check(dstore, calcs):
         rups = ds['ruptures'][:]
         nrup = len(rups)
         assert nrup == nrup_EUR + nrup_MIE  # no double counting
+        # the rupture IDs must be unique across the models
+        assert len(numpy.unique(rups['id'])) == nrup
 
 
 def setup_module():
@@ -195,7 +197,9 @@ def test_site_model():  # 5 sites
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
     assert len(rdf) == 15870
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16590
+    # 3 events of other models had the rupture IDs of ruptures in the
+    # model, which made them relevant; the IDs are unique now
+    assert len(edf) == 16587
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == len(rdf)
 

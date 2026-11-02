@@ -42,6 +42,7 @@ from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -1614,9 +1615,15 @@ def import_ruptures_hdf5(h5, fnames):
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
             oq = f['oqparam']
+            if oq.mosaic_model:
+                # the model index goes in the high bits, so that the rupture
+                # IDs of different models cannot collide
+                shift = numpy.int64(mosaic_index(oq.mosaic_model)) << 55
+            else:
+                shift = offset
             events = f['events'][:]
             events['id'] += E
-            events['rup_id'] += offset
+            events['rup_id'] += shift
             if fileno == 0:  # first time
                 h5.create_dataset(
                     'events', (0,), events.dtype, maxshape=(None,), chunks=True,
@@ -1625,7 +1632,10 @@ def import_ruptures_hdf5(h5, fnames):
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
-            rup['id'] += offset
+            if oq.mosaic_model:
+                # the IDs of a model must fit in the 55 low bits
+                assert rup['id'].max() < 2**55, rup['id'].max()
+            rup['id'] += shift
             rup['geom_id'] += offset
             rup['e0'] += E
             E += len(events)
