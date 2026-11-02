@@ -1633,8 +1633,11 @@ def import_ruptures_hdf5(h5, fnames):
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
             if oq.mosaic_model:
-                # the IDs of a model must fit in the 55 low bits
+                # the IDs of a model must fit in the 55 low bits, i.e.
+                # the source index in the 25 bits above the 30 bits of
+                # the counter within the source
                 assert rup['id'].max() < 2**55, rup['id'].max()
+                assert rup['source_id'].max() < 2**25, rup['source_id'].max()
             rup['id'] += shift
             rup['geom_id'] += offset
             rup['e0'] += E
