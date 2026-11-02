@@ -21,7 +21,7 @@ import logging
 import operator
 import psutil
 import numpy
-from openquake.baselib import general, parallel, hdf5
+from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers
@@ -48,9 +48,11 @@ TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # context estimates stored in the datastore as dataset 'nctxs'
-# NB: 'gridded' is the number of contexts of the gridded point sources
-# before collapse_precision, 'collapsed' the number of contexts after
-# collapse_precision
+# NB: 'psd100' is the number of contexts without gridding with the
+# pointsource_distance of config.performance (or with the one of the user,
+# when not gridding, see count_psdist), 'gridded' is the number of contexts
+# of the gridded point sources before collapse_precision, 'collapsed' the
+# number of contexts after collapse_precision
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64)])
 
@@ -206,15 +208,17 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
 def count_nogrid(srcs, sf, cmaker, monitor):
     """
     Estimate the contexts that the point sources would generate without
-    gridding, with the pointsource_distance of the user and with PSD_EXACT,
-    see contexts.estimate_nctxs
+    gridding, with config.performance.pointsource_distance and with
+    PSD_EXACT, see contexts.estimate_nctxs
 
     :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
               and 'exact_ctxs'
     """
     exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
                            srcs, sf.sitecol)
-    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    psd = float(config.performance.pointsource_distance)
+    psdist = estimate_nctxs(cmaker.copy(pointsource_distance=psd),
+                            srcs, sf.sitecol)
     return {'psdist_ctxs': int(psdist * sf.multiplier),
             'exact_ctxs': int(exact * sf.multiplier)}
 
