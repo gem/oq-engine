@@ -48,6 +48,19 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Configure Django secret key
+        shell: sudo bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          install -d -m 700 /etc/openquake
+          umask 077
+          printf 'DJANGO_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" \
+            > /etc/openquake/django_secret.env
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 60
       - name: Install OQ Server with ${{ matrix.python-version }}
         run: |
           if [ -z ${{ inputs.git-ref }} ];
@@ -56,16 +69,12 @@ jobs:
           else
              BRANCH=${{ inputs.git-ref }}
           fi
-          sudo -H "$(which python3)" install.py --version $BRANCH server
+          sudo -H bash -c '
+            source /etc/openquake/django_secret.env ;
+            "$(which python3)" install.py --version "$BRANCH" server'
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Actualize 'default' templates for email notifications
         run: |
           SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
@@ -80,6 +89,9 @@ jobs:
         run: |
           whoami  # Outputs: root
           source /opt/openquake/venv/bin/activate
+          set -a
+          source /etc/openquake/django_secret.env
+          set +a
           mkdir -p /var/log/oq-engine/
           chown -R openquake /var/log/oq-engine/
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
@@ -161,7 +173,11 @@ jobs:
           echo "Restart WebUI without authentication"
           systemctl stop openquake-webui
           sleep 5
-          runuser -l openquake -c 'OQ_APPLICATION_MODE=PUBLIC /opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+          runuser -l openquake -c '
+            set -a
+            source /etc/openquake/django_secret.env
+            OQ_APPLICATION_MODE=PUBLIC /opt/openquake/venv/bin/oq \
+              webui start 127.0.0.1:8800 -s &'
           echo "Waiting WEBUI up on port 8800...."
           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/engine/)" != "200" ]]; do
            echo "Still waiting WEBUI on port 8800...."
