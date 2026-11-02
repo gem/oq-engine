@@ -17,6 +17,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from pathlib import Path
 import h5py
 import numpy as np
 
@@ -106,6 +107,7 @@ EXPECTED_PATH_SE_ADJ = [
 
 class GridAdjustedGMPETest(unittest.TestCase):
 
+    ### HELPERS ###
     def _make_ctx(self, cmaker, **overrides):
         # Build the shared test context, allowing scenario-specific values.
         defaults = dict(mag=6.0, rake=0.0, hypo_depth=10.0, vs30=760.0,
@@ -126,6 +128,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
         cmaker = simple_cmaker([base, adj], imts)
         return cmaker.get_mean_stds([self._make_ctx(cmaker)])
 
+    ### BASIC TESTS
     def test_grid_lookup(self):
         # Check correct values returned when searching loaded grid for
         # both a hypo-based term (dL2L) and a site-based term (dS2S)
@@ -274,32 +277,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
             # capped_total - mean_adj) so rounding differs at ~1e-16
             np.testing.assert_array_almost_equal(mea, mea_ref, decimal=14)
 
-    def test_att_cap_shares_bundle_across_cap_values(self):
-        # Different caps on the same ctx share one cache entry but still
-        # produce distinct means (clip is applied outside the cached bundle)
-        base = valid.gsim(BASE_GSIM)
-        tight = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                 grid_hdf5_file=GRID_HDF5, att_cap=0.5)
-        loose = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                 grid_hdf5_file=GRID_HDF5, att_cap=10.0)
-        cmaker = simple_cmaker([base, tight, loose], IMTS)
-        ctx = cmaker.new_ctx(len(LATS))
-        ctx.mag = 6.0
-        ctx.rake = 0.0
-        ctx.hypo_depth = 10.0
-        ctx.vs30 = 760.0
-        ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.lat = LATS
-        ctx.lon = LONS
-        ctx.hypo_lat = 0.0
-        ctx.hypo_lon = 0.0
-        out = cmaker.get_mean_stds([ctx])
-        # One cache entry on the shared cmaker (ctx is identical)
-        self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
-        # tight is at index 1, loose at index 2 (base at 0)
-        self.assertFalse(np.array_equal(out[0, 1], out[0, 2]))
-
     def test_epsilons_missing_se_raises(self):
         # Non-zero epsilon for a term whose mean_se dataset is absent
         # must raise rather than silently falling back to the central
@@ -341,6 +318,15 @@ class GridAdjustedGMPETest(unittest.TestCase):
         with self.assertRaises(ValueError):
             GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
                              epsilons={"dL2L": 1.0, "nope": 0.5})
+
+    def test_pathlib_grid_file(self):
+        # A pathlib filename must give the same results as a string
+        # filename (sanity check for usage outside of engine calcs)
+        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                               grid_hdf5_file=Path(GRID_HDF5))
+        cmaker = simple_cmaker([valid.gsim(BASE_GSIM), adj], IMTS)
+        out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
+        aae(out, self._get_mean_stds(IMTS))
 
     ### CACHING MEDIANS PER CTX TESTS ###
     def test_direct_cache_after_grid_replacement(self):
@@ -474,3 +460,29 @@ class GridAdjustedGMPETest(unittest.TestCase):
         self.assertEqual(len(cm1._grid_adjusted_cache), 1)
         self.assertEqual(len(cm2._grid_adjusted_cache), 1)
         self.assertIsNot(cm1._grid_adjusted_cache, cm2._grid_adjusted_cache)
+
+    def test_att_cap_shares_bundle_across_cap_values(self):
+        # Different caps on the same ctx share one cache entry but still
+        # produce distinct means (clip is applied outside the cached bundle)
+        base = valid.gsim(BASE_GSIM)
+        tight = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                 grid_hdf5_file=GRID_HDF5, att_cap=0.5)
+        loose = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                 grid_hdf5_file=GRID_HDF5, att_cap=10.0)
+        cmaker = simple_cmaker([base, tight, loose], IMTS)
+        ctx = cmaker.new_ctx(len(LATS))
+        ctx.mag = 6.0
+        ctx.rake = 0.0
+        ctx.hypo_depth = 10.0
+        ctx.vs30 = 760.0
+        ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
+        ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
+        ctx.lat = LATS
+        ctx.lon = LONS
+        ctx.hypo_lat = 0.0
+        ctx.hypo_lon = 0.0
+        out = cmaker.get_mean_stds([ctx])
+        # One cache entry on the shared cmaker (ctx is identical)
+        self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
+        # tight is at index 1, loose at index 2 (base at 0)
+        self.assertFalse(np.array_equal(out[0, 1], out[0, 2]))

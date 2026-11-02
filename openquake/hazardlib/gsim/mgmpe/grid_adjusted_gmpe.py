@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 import collections
 import hashlib
 import json
+import os
 import h5py
 import h3
 import numpy as np
@@ -48,7 +49,7 @@ def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
     list, and the full ctx record bytes.
     """
     parts = [
-        hdf5_path.encode(),
+        os.fsencode(hdf5_path),
         backbone_id.encode(),
         trt.encode(),
         repr(tuple(str(i) for i in imts)).encode(),
