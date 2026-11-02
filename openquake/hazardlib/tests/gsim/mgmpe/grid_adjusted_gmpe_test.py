@@ -376,6 +376,25 @@ class GridAdjustedGMPETest(unittest.TestCase):
                     reference[i][name_i, 1], warm[name_i, 1 + i],
                     err_msg=f"{name} mismatch for epsilons={eps}")
 
+    def test_cache_preserves_backbone_adjustment_order(self):
+        # Caching must preserve the effect of backbone adjustment order.
+        steps = [("add_between_within_stds", {"with_betw_ratio": 1.0}),
+                 ("set_between_epsilon", {"epsilon_tau": 1.0})]
+        gsims = [GridAdjustedGMPE(
+            gmpe_name="ModifiableGMPE", grid_hdf5_file=GRID_HDF5,
+            gmpe={BASE_GSIM: {}}, **dict(order))
+            for order in (steps, steps[::-1])]
+        cold = []
+        for gsim in gsims:
+            cmaker = simple_cmaker([gsim], ["PGA"])
+            out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
+            cold.append(out[:, 0])
+        self.assertFalse(np.array_equal(cold[0][0], cold[1][0]))
+        cmaker = simple_cmaker(gsims, ["PGA"])
+        warm = cmaker.get_mean_stds([self._make_ctx(cmaker)])
+        for i, expected in enumerate(cold):
+            np.testing.assert_array_equal(warm[:, i], expected)
+
     def test_fingerprint_distinguishes_ctx_fields(self):
         # Any ctx field change (incl. site params like vs30) must shift
         # the fingerprint, so cross-calc reuse at same (lat, lon) misses

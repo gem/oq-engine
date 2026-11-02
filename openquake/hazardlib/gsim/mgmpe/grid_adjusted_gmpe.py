@@ -627,7 +627,7 @@ class GridAdjustedGMPE(GMPE):
         self._cache_hdf5 = grid_hdf5_file
         self._cache_backbone = (
             type(self.gmpe).__name__ + "|"
-            + repr(sorted(self.gmpe.kwargs.items())))
+            + repr(tuple(self.gmpe.kwargs.items())))
         self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
         # Isolate direct compute calls from other instances' loaded grids.
         self._compute_cache = collections.OrderedDict()
