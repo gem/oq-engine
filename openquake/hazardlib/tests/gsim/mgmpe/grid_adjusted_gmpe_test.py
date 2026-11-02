@@ -471,5 +471,5 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         # One cache entry on the shared cmaker (ctx is identical)
         self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
-        # tight is at index 1, loose at index 2 (base at 0)
+        # Different caps must produce different mean predictions
         self.assertFalse(np.array_equal(out[0, 1], out[0, 2]))
