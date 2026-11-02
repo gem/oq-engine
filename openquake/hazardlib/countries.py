@@ -2,10 +2,25 @@ import re
 from openquake.baselib import general
 
 # these are in one-to-one correspondence with the file mosaic.gpkg
-MODELS = sorted('''
-ALS ARB AUS CND CCA CEA CHN EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
-NZL OAT OIN OPA PAC PHL PNG SAM SEA SSA TEM TUR USA WAF ZAF PAN PAR'''.split())
+# NB: MOSAIC_ORDER is append-only, since the index of a model is encoded
+# in the rupture IDs of the global SES (see mosaic_index)
+MOSAIC_ORDER = '''
+ALS ARB AUS CCA CEA CHN CND EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
+NZL OAT OIN OPA PAC PAN PAR PHL PNG SAM SEA SSA TEM TUR USA WAF ZAF'''.split()
+MODELS = sorted(MOSAIC_ORDER)
 ALIASES = dict(TWN='TEM')  # manage change of name
+MAX_MOSAIC_MODELS = 256  # the index of a model must fit in 8 bits
+
+
+def mosaic_index(model):
+    """
+    :param model: the code of a mosaic model, possibly an alias
+    :returns: the index of the model in MOSAIC_ORDER, in range(256)
+    """
+    code = ALIASES.get(model, model)
+    idx = MOSAIC_ORDER.index(code)
+    assert idx < MAX_MOSAIC_MODELS, idx
+    return idx
 
 REGIONS = """\
 Africa
