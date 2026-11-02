@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the rupture IDs of the global SES: they are now unique
+    across the models. Existing SES files must be regenerated
   * Fixed the classical_risk calculator for risk inputs containing assets
     of different taxonomies at the same site: the loss curves and average
     losses of each asset were written at the wrong positions, and the
