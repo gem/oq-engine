@@ -1585,8 +1585,14 @@ class ContextMaker(object):
         out = numpy.zeros((4, M, N))
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
-        if getattr(gsim, "requires_cmaker", False):
-            gsim._cmaker = self # Non-erg GMM using ctx fingerprinting caching
+        # Each GSIM may hold a nested GSIM at .gmpe (e.g. ModifiableGMPE,
+        # GridAdjustedGMPE). Check gsim and all nested GSIMs, attaching
+        # cmaker to those that need it
+        inner = gsim
+        while inner is not None:
+            if getattr(inner, "requires_cmaker", False):
+                inner._cmaker = self
+            inner = getattr(inner, "gmpe", None)
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))

@@ -29,6 +29,7 @@ from openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe import (
     load_residual_grids,
     raytrace_path_adj,
 )
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 
 aae = np.testing.assert_array_almost_equal
 
@@ -358,7 +359,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             ctx.hypo_lon = 0.0
             return ctx
 
-        bb_id = str(adj.gmpe)
+        bb_id = adj._cache_backbone
         trt = str(adj.DEFINED_FOR_TECTONIC_REGION_TYPE)
         ref_fp = mod._ctx_fingerprint(
             _ctx(), GRID_HDF5, bb_id, trt, IMTS)
@@ -381,6 +382,18 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 ref_fp, fp,
                 f"fingerprint must differ when '{field}' changes "
                 f"(lat/lon unchanged)")
+
+    def test_cmaker_attaches_through_wrapper(self):
+        # When GridAdjustedGMPE is wrapped (e.g. by ModifiableGMPE), the
+        # inner GridAdjustedGMPE must still get its cache attached to the
+        # cmaker rather than falling back to the module-level cache
+        wrapper = ModifiableGMPE(gmpe={"GridAdjustedGMPE": {
+            "gmpe_name": BASE_GSIM, "grid_hdf5_file": GRID_HDF5}})
+        base = valid.gsim(BASE_GSIM)
+        cmaker = simple_cmaker([base, wrapper], IMTS)
+        cmaker.get_mean_stds([self._make_ctx(cmaker)])
+        self.assertIs(wrapper.gmpe._cmaker, cmaker)
+        self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
 
     def test_cmaker_scoped_cache_is_isolated(self):
         # Two cmakers must not share cached bundles even with identical

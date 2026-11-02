@@ -622,9 +622,11 @@ class GridAdjustedGMPE(GMPE):
         self.att_cap = att_cap
         self.grid_data["att_cap"] = att_cap
 
-        # str(gmpe) returns the OQ-canonical TOML block including kwargs
+        # Fingerprint the GMM
         self._cache_hdf5 = grid_hdf5_file
-        self._cache_backbone = str(self.gmpe)
+        self._cache_backbone = (
+            type(self.gmpe).__name__ + "|"
+            + repr(sorted(self.gmpe.kwargs.items())))
         self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
