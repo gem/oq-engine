@@ -261,9 +261,20 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
     :returns:
         adjustment_vals array of shape (len(hypo_lons),)
     """
+    return _raytrace_path_adjs(
+        {"mean": grid}, hypo_lons, hypo_lats, site_lons, site_lats,
+        h3_res)["mean"]
+
+
+def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
+                        h3_res):
+    """
+    Resolve all fields on the same path grid with one raytrace per path.
+    """
     # Set some stores
     n_paths = len(hypo_lons)
-    ra_per_path = np.zeros(n_paths)
+    ra_per_path = {key: np.zeros(n_paths) for key in grids}
+    reference_grid = grids["mean"]
     res_fine_to_coarse = list(reversed(h3_res))
 
     for idx_path in range(n_paths): # Iterate over the paths
@@ -272,8 +283,7 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
         lons, lats, _ = npoints_between(
             site_lons[idx_path], site_lats[idx_path], 0.,
             hypo_lons[idx_path], hypo_lats[idx_path], 0.,
-            100, # npoints
-        )
+            100)  # npoints
 
         # Distance between consecutive discretised points along the path
         line_spacing = distance(lons[0], lats[0], 0.,
@@ -283,30 +293,32 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
         # grid cell and the associated distance-based adjustment terms.
         # Each sample point resolves to one stored cell via finest-to-
         # coarsest h3 fallback; points with no stored cell contribute zero
-        adj_sum = 0.0
+        adj_sum = dict.fromkeys(grids, 0.0)
         for lat, lon in zip(lats, lons):
             for res in res_fine_to_coarse:
                 cell = h3.latlng_to_cell(lat, lon, res)
-                val = grid.get(cell)
-                if val is not None:
-                    adj_sum += val
+                if cell in reference_grid:
+                    for key, grid in grids.items():
+                        adj_sum[key] += grid[cell]
                     break
 
         # Store the total cumulative adjustment for the term
-        ra_per_path[idx_path] = adj_sum * line_spacing
+        for key in grids:
+            ra_per_path[key][idx_path] = adj_sum[key] * line_spacing
 
     return ra_per_path
 
 
-def grid_lookup(grid_dict, lats, lons, h3_res):
+def grid_lookup(grids, lats, lons, h3_res):
     """
     For each (lat, lon) pair resolve the h3 cell starting at the finest
     h3 resolution and falling back to coarser resolutions, returning the
-    mean adjustment for the given residual term. Locations that fall
-    outside all grid cells receive a correction of zero.
+    mean, SE and optional sigma adjustments for the given residual term.
+    Locations outside all grid cells receive a correction of zero.
 
-    :param grid_dict:
-        {cell_id: mean_adjustment_value} for a single correction term and IMT
+    :param grids:
+        {key: {cell_id: value}} for one term/IMT, with a required "mean"
+        key and optional "mean_se" and "sig" keys sharing its cell IDs.
     :param lats:
         Array of latitudes (either hypo or site lats, depending on term)
     :param lons:
@@ -314,11 +326,13 @@ def grid_lookup(grid_dict, lats, lons, h3_res):
     :param h3_res:
         Sorted list of h3 resolution levels (coarse to fine)
     :returns:
-        mean_vals array of shape (len(lats),)
+        {key: adjustment_vals}, each array of shape (len(lats),)
     """
+    # Mean, SE and optional per-cell sigma share the same stored cell IDs.
     # Set arrays
     n = len(lats)
-    mean_vals = np.zeros(n)
+    values = {key: np.zeros(n) for key in grids}
+    reference_grid = grids["mean"]
     found = np.zeros(n, dtype=bool)
 
     # Go over the h3 resolutions from finest to coarsest,
@@ -329,35 +343,22 @@ def grid_lookup(grid_dict, lats, lons, h3_res):
         for i in np.where(~found)[0]:
             # Make a h3 cell for given hypo or site
             cell = h3.latlng_to_cell(lats[i], lons[i], res)
-            if cell in grid_dict:
-                # Assign mean adjustment of given term to the cell
-                mean_vals[i] = grid_dict[cell]
+            if cell in reference_grid:
+                # Assign each adjustment of the given term to the cell
+                for key, grid in grids.items():
+                    values[key][i] = grid[cell]
                 found[i] = True
 
-    return mean_vals
+    return values
 
 
-def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
+def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
     """
-    Resolve the sigma adjustment value for this term/IMT, then apply
-    it to the specified component.
+    Apply the resolved per-cell or scalar sigma adjustment to its component.
 
     NOTE: Only one of grids[imt][term]["sig"]/sig_scalars can be populated
     per term/IMT - this is enforced when loading the grid cells.
     """
-    # Resolve sigma values - per-cell grid or scalar
-    sig_grid = grid_data["grids"].get(imt, {}).get(term, {}).get("sig")
-    if sig_grid is not None:
-        if cfg["location"] == "hypo":
-            s_lats, s_lons = ctx.hypo_lat, ctx.hypo_lon
-        else:
-            s_lats, s_lons = ctx.lat, ctx.lon
-        # Per-cell so look up the sigma adjustment value
-        sig_vals = grid_lookup(sig_grid, s_lats, s_lons, grid_data["h3_res"])
-    else:
-        # Just a scalar adjustment
-        sig_vals = grid_data["sig_scalars"].get(imt, {}).get(term)
-
     # Get the component to modify
     sig_comp = cfg["sig_comp_modified"]
 
@@ -391,31 +392,30 @@ def adjust_sigma(grid_data, imt, term, cfg, ctx, sig_action, sig, tau, phi):
             sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
 
 
-def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
-    """
-    Return per-ctx adjustment values for one term/IMT. The key input
-    is "mean" or "mean_se". Returns None if no data for that key.
-    """
+# Resolve central mean, optional SE and per-cell sigma in one spatial search.
+def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     # Path-based terms are stored in the raytrace grids. Mean / SE
     # are both returned uncapped here; the att_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
     if cfg["location"] == "path":
-        store = "raytrace_grids" if key == "mean" else "raytrace_se_grids"
-        grid = grid_data[store].get(term, {}).get(imt)
+        grid = grid_data["raytrace_grids"].get(term, {}).get(imt)
         if grid is None:
-            return None
-        return raytrace_path_adj(
-            grid, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+            return {}
+        grids = {"mean": grid}
+        se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
+        if se_grid is not None:
+            grids["mean_se"] = se_grid
+        return _raytrace_path_adjs(
+            grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
             grid_data["h3_res"])
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
-    if key not in entry:
-        return None
+    if not entry:
+        return {}
     lats, lons = ((ctx.hypo_lat, ctx.hypo_lon) if cfg["location"] == "hypo"
                   else (ctx.lat, ctx.lon))
-    
-    return grid_lookup(entry[key], lats, lons, grid_data["h3_res"])
+    return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
 def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
@@ -437,7 +437,7 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
     :param imts:
         Sequence of IMT instances, in output array row order.
     :param mean:
-        NumPy mean output array of shape (len(imts), len(ctx)).
+        Mean output array of shape (len(imts), len(ctx)).
     :param sig:
         Total standard deviation output array, same shape as mean.
     :param tau:
@@ -459,12 +459,10 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
         #   cfg  = {'location': 'hypo', 'sig_adjustment': 'sub',
         #           'sig_comp_modified': 'tau'}
         for term, cfg in grid_data["res_terms"].items():
-            # Resolve both central and SE here so each branch only has to add
-            # its own eps * SE shift later
-            mean_adj = _resolve_adj(grid_data, cfg, term, str(imt),
-                                    ctx, "mean")
-            se_adj = _resolve_adj(grid_data, cfg, term, str(imt),
-                                  ctx, "mean_se")
+            # Resolve central, SE and per-cell sigma together so each branch
+            # only has to add its own eps * SE shift later
+            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
+            mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             per[term] = (mean_adj, se_adj)
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
@@ -474,8 +472,11 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
             mean[m] += mean_adj
             sig_action = cfg.get("sig_adjustment", "none")
             if sig_action != "none":
-                adjust_sigma(grid_data, str(imt), term, cfg, ctx,
-                             sig_action, sig[m], tau[m], phi[m])
+                # Resolve sigma values - per-cell grid or scalar. Per-cell
+                # values share the mean lookup; otherwise use the scalar.
+                scalars = grid_data["sig_scalars"].get(str(imt), {})
+                sig_vals = adjs.get("sig", scalars.get(term))
+                adjust_sigma(sig_vals, cfg, sig_action, sig[m], tau[m], phi[m])
         resolved[m] = per
 
     return (mean.copy(), sig.copy(), tau.copy(), phi.copy(), resolved)
@@ -489,12 +490,12 @@ class GridAdjustedGMPE(GMPE):
     The hdf5 file contains a root-level attribute that configures the
     adjustment behaviour:
 
-    * res_terms: A JSON-encoded dict mapping each top-level group name (each key
-      is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
+    * res_terms: A JSON-encoded dict mapping each top-level group name (each
+      key is a corrective term e.g. dL2L) to a sub-dict with one mandatory key:
 
       * location: How to resolve the correction spatially, with each look-up
-                  resolving the location to a h3 cell, searching from coarsest
-                  to finest resolution. If a location falls outside all
+                  resolving the location to a h3 cell, searching from finest
+                  to coarsest resolution. If a location falls outside all
                   grid cells then a correction of zero is applied:
 
         * hypo = Use the rupture hypocentre (ctx.hypo_lat, ctx.hypo_lon)
@@ -508,8 +509,8 @@ class GridAdjustedGMPE(GMPE):
         corresponding GMM sigma component. When not "none", one of the
         following must be present in each IMT group for that term:
 
-        * A scalar adjustment (group attribute "{term}_sig") - one value applied
-          uniformly across all hypocentres or sites.
+        * A scalar adjustment (group attribute "{term}_sig") - one value
+          applied uniformly across all hypocentres or sites.
 
         * A dataset named "{term}_sig" - one value per h3 cell, looked up
           spatially in the same way as the mean adjustment (hypo or site
@@ -540,8 +541,8 @@ class GridAdjustedGMPE(GMPE):
 
     An optional per-cell dataset "{term}_mean_se" may also be present in
     each IMT group for a term. This is the SE on the fitted central
-    mean adjustment and is only read when a non-zero epsilon is supplied
-    for that term via the "epsilons" kwarg.
+    mean adjustment, resolved alongside the central mean and only applied
+    when a non-zero epsilon is supplied for that term via "epsilons".
 
     NOTE: The corrective terms (each key in the res_terms dict) are not
     fixed - the user can specify as they wish (e.g. only include dS2S).
@@ -558,7 +559,7 @@ class GridAdjustedGMPE(GMPE):
 
     A "real" example of this hdf5 structure can be found in the unit tests
     associated with this mgmpe module:
-    oq-engine/openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
+    openquake/hazardlib/tests/gsim/mgmpe/data/test_grid_adjustments.hdf5
 
     A use case (from XML) can be found in the classical QA tests (there is
     also a readme visualising the h3 grids stored in the hdf5):
@@ -613,8 +614,8 @@ class GridAdjustedGMPE(GMPE):
         # Load grid-based corrections from the hdf5
         self.grid_data = load_residual_grids(grid_hdf5_file)
 
-        # Per-ray path cap (in natural-log units) stashed into grid_data so
-        # _resolve_adj can read it without a signature change. None = no cap
+        # Per-ray path cap (in natural-log units), also exposed in grid_data.
+        # None = no cap; compute() clips the per-branch total after lookup.
         if att_cap is not None and att_cap <= 0:
             raise ValueError(
                 f"att_cap must be positive (natural-log units) or None, "
@@ -662,7 +663,8 @@ class GridAdjustedGMPE(GMPE):
                for cfg in self.grid_data["res_terms"].values()):
             required = {const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
             # Raise error if not a random-effects GSIM
-            if not required.issubset(self.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
+            if not required.issubset(
+                    self.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
                 raise ValueError(
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "

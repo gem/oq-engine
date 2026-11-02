@@ -130,18 +130,19 @@ class GridAdjustedGMPETest(unittest.TestCase):
         # both a hypo-based term (dL2L) and a site-based term (dS2S)
         gd = load_residual_grids(GRID_HDF5)
         mu_dl2l = grid_lookup(
-            gd["grids"]["PGA"]["dL2L"]["mean"],
+            gd["grids"]["PGA"]["dL2L"],
             LATS, LONS, gd["h3_res"])
-        aae(mu_dl2l, DL2L_MEAN_PER_CELL[0], decimal=DP)
+        aae(mu_dl2l["mean"], DL2L_MEAN_PER_CELL[0], decimal=DP)
         mu_ds2s = grid_lookup(
-            gd["grids"]["PGA"]["dS2S"]["mean"],
+            gd["grids"]["PGA"]["dS2S"],
             LATS, LONS, gd["h3_res"])
-        aae(mu_ds2s, DS2S_MEAN_PER_CELL[0], decimal=DP)
+        aae(mu_ds2s["mean"], DS2S_MEAN_PER_CELL[0], decimal=DP)
         # Check that zero is returned for out-of-bounds coords
         mu = grid_lookup(
-            gd["grids"]["PGA"]["dL2L"]["mean"],
+            gd["grids"]["PGA"]["dL2L"],
             np.array([-80.0]), np.array([170.0]), gd["h3_res"])
-        aae(mu, 0.0)
+        for vals in mu.values():
+            aae(vals, 0.0)
 
     def test_raytrace_path_adj(self):
         # Check raytracing for all IMTs
@@ -170,6 +171,48 @@ class GridAdjustedGMPETest(unittest.TestCase):
                         - ATT_SIG[m] ** 2), decimal=DP)
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
+
+    def test_resolved_adjustments(self):
+        # Check the combined mean, SE and per-cell sigma against expected
+        # fixture values for every term/IMT, including integrated path SE.
+        gd = load_residual_grids(GRID_HDF5)
+        ctx = np.rec.fromarrays(
+            [np.zeros(len(LATS)), np.zeros(len(LONS)), LATS, LONS],
+            names="hypo_lat,hypo_lon,lat,lon")
+        for m, imt in enumerate(IMTS):
+            expected = {
+                "dL2L": {
+                    "mean": np.full(len(LATS), DL2L_MEAN_PER_CELL[m][0]),
+                    "mean_se": np.full(len(LATS), DL2L_SE_PER_CELL[m][0])},
+                "dS2S": {"mean": DS2S_MEAN_PER_CELL[m],
+                         "mean_se": DS2S_SE_PER_CELL[m],
+                         "sig": DS2S_SIG_PER_CELL[m]},
+                "adj_per_km": {"mean": EXPECTED_PATH_ADJ[m],
+                               "mean_se": EXPECTED_PATH_SE_ADJ[m]}}
+            for term, values in expected.items():
+                adjs = mod._resolve_adjs(
+                    gd, gd["res_terms"][term], term, imt, ctx)
+                self.assertEqual(adjs.keys(), values.keys())
+                for key, value in values.items():
+                    aae(adjs[key], value, decimal=DP)
+
+    def test_shared_lookup_fallback_and_zero_mean(self):
+        # A zero mean in a fine cell still selects its SE/sigma; a nearby
+        # point falls back to the parent, and an uncovered point gets zero.
+        fine = mod.h3.latlng_to_cell(10.0, 20.0, 4)
+        parent = mod.h3.cell_to_parent(fine, 2)
+        sibling = next(cell for cell in mod.h3.cell_to_children(parent, 4)
+                       if cell != fine)
+        lats, lons = np.array([
+            mod.h3.cell_to_latlng(fine), mod.h3.cell_to_latlng(sibling),
+            (-80.0, 170.0)]).T
+        grids = {"mean": {fine: 0.0, parent: 1.0},
+                 "mean_se": {fine: 0.1, parent: 0.2},
+                 "sig": {fine: 0.3, parent: 0.4}}
+        adjs = grid_lookup(grids, lats, lons, [2, 3, 4])
+        aae(adjs["mean"], [0.0, 1.0, 0.0])
+        aae(adjs["mean_se"], [0.1, 0.2, 0.0])
+        aae(adjs["sig"], [0.3, 0.4, 0.0])
 
     def test_no_adjustment_for_missing_imt(self):
         # Check that no adjustment is applied to IMT without adjustments
@@ -269,6 +312,11 @@ class GridAdjustedGMPETest(unittest.TestCase):
                         if key in hf[term][imt_str]:
                             del hf[term][imt_str][key]
             base = valid.gsim(BASE_GSIM)
+            central = GridAdjustedGMPE(
+                gmpe_name=BASE_GSIM, grid_hdf5_file=stripped)
+            central_cm = simple_cmaker([base, central], IMTS)
+            out = central_cm.get_mean_stds([self._make_ctx(central_cm)])
+            aae(out, self._get_mean_stds(IMTS))
             adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                    grid_hdf5_file=stripped,
                                    epsilons={"dL2L": 1.0})
