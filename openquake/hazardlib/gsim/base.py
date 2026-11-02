@@ -297,8 +297,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
-    conditional = False
-    from_mgmpe = False
+    conditional = False # Conditional GMM that must be instantiated from ModifiableGMPE
+    from_mgmpe = False  # Instantiated using ModifiableGMPE
     requires_cmaker = False # Used in GridAdjustedGMPE to avoid computing same mean
                             # prediction over branches with only differing epsilons
 
