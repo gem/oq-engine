@@ -952,6 +952,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
+            self.store_grid()
             self.log_cfactor()
         self.store_info()
         if self.dparam_mb > 1:
@@ -969,22 +970,66 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['mean_rates_by_src/array'][()])
         return True
 
+    def store_grid(self):
+        """
+        Store in the nctxs dataset the contexts after collapse_precision
+        in the 'collapsed' field and the contexts of the gridded point sources
+        before collapse_precision in the 'gridded' field, see contexts.py.
+        If collapse_precision or ps_grid_spacing is set and there is no
+        estimate in the 'exact' field, the 'exact' field is set to the
+        contexts before collapse_precision, counted for all source types.
+        """
+        after, removed, gridded = self.cfactor
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][()]
+        else:
+            est = numpy.zeros(1, preclassical.CTX_EST)
+        est['gridded'] = int(gridded)
+        est['collapsed'] = int(after)
+        oq = self.oqparam
+        if ((oq.collapse_precision or oq.ps_grid_spacing)
+                and est['exact'][0] == 0):
+            est['exact'] = int(after + removed)
+        self.datastore['nctxs'] = est
+
     def log_cfactor(self):
         """
-        Log the overall context reduction, including point-source gridding.
+        Log the overall context reduction, including point-source gridding
+        and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
         """
         after, removed, gridded = self.cfactor
         before = after + removed
-        total = before
-        estimated = 'nogrid_ctxs' in self.datastore
-        if estimated:
+        collapse = before / after  # reduction by collapse_precision
+        # NB: the estimates are zero when not computed, see CTX_EST
+        psdist, exact, grid = 0, 0, 0
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][0]
+            psdist, exact, grid = est['psd100'], est['exact'], est['gridded']
+        estimated = grid > 0  # the gridded sources have been estimated
+        if psdist > 0 and not estimated:
+            # pointsource_distance approximation without gridding, see
+            # preclassical.count_psdist: contexts with PSD_EXACT over
+            # the others
+            psd = exact / psdist
+            logging.info('cfactor = {:_d}, reduction factor {:.2f} '
+                         '(psdist {:.2f} x collapse {:.2f})'.format(
+                             int(after), psd * collapse, psd, collapse))
+        elif estimated:
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
-            nogrid = self.datastore['nogrid_ctxs'][()]
-            total += max(float(nogrid) - gridded, 0.)
-        logging.info('cfactor = {:_d}, {}reduction factor {:.2f}'.format(
-            int(after), 'estimated ' if estimated else '', total / after))
+            factor = (before + max(float(exact) - gridded, 0.)) / before
+            if self.oqparam.collapse_precision:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding {:.2f} x collapse {:.2f})'
+                             .format(int(after), factor * collapse, factor,
+                                     collapse))
+            else:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding)'.format(int(after), factor))
+        else:
+            logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
+                int(after), collapse))
         if self.oqparam.collapse_precision and removed < .1 * before:
             logging.warning(
                 'collapse_precision removed only %.1f%% of contexts; '
