@@ -1045,6 +1045,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
+        if oq.disagg_by_src and oq.ps_grid_spacing and not self.few_sites:
+            # with few sites the rates are computed one source at a time,
+            # so the gridded point sources are not mixed with other sources
+            raise ValueError('disagg_by_src with ps_grid_spacing requires '
+                             'less than max_sites_disagg sites')
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
