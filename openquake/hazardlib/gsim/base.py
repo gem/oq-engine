@@ -299,6 +299,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     adapted = False
     conditional = False
     from_mgmpe = False
+    requires_cmaker = False # Used in GridAdjustedGMPE to avoid computing same mean
+                            # prediction over branches with only differing epsilons
 
     @classmethod
     def __init_subclass__(cls):
