@@ -50,12 +50,14 @@ def test_format_oqparam_displays_selected_nodal_plane():
             'shakemap_desc': 'v10', 'nodal_plane': 'NP2', 'lon': 1,
             'lat': 2, 'dep': 3, 'mag': 4, 'msr': 'WC1994',
             'aspect_ratio': 2, 'rake': 90, 'dip': 45, 'strike': 10},
-        time_event='day', maximum_distance={'default': [[0, 300]]},
+        time_event=None, report_time_event='night',
+        maximum_distance={'default': [[0, 300]]},
         truncation_level=3, number_of_ground_motion_fields=10,
         asset_hazard_distance={'default': 15}, ses_seed=42,
         mosaic_model='MODEL', tectonic_region_type='TRT', inputs={})
     inputs = format_oqparam(oqparam)
     assert inputs['Nodal plane'] == 'NP2'
+    assert inputs['Time of the event'] == 'night'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
         'Magnitude scaling relationship')
 
@@ -314,6 +316,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
             for urls in country_reports.values():
                 self.assertIn('format=pdf', urls['pdf'])
                 self.assertIn('format=png', urls['png'])
+                self.assertIn('page=2', urls['png_page2'])
             self.assertEqual(
                 set(impact_resources),
                 {'avg_gmf_plots', 'assets', 'aggrisk', 'aggrisk_tags',
@@ -333,6 +336,17 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                     f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
                     f'&format=png')
                 self.assertEqual(ret.status_code, 200)
+                # one PNG per page; the report has exactly two pages
+                ret = self.c.get(
+                    f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                    f'&format=png&page=2')
+                self.assertEqual(ret.status_code, 200)
+                self.assertEqual(ret.content[:4], b'\x89PNG')
+                for page in ('3', '0', 'x'):
+                    ret = self.c.get(
+                        f'/v1/calc/{job_id}/impact_report?iso3={iso3}'
+                        f'&format=png&page={page}')
+                    self.assertEqual(ret.status_code, 400)
 
             # Run the command-line extractor against the datastore generated
             # by this test.  Hide xdg-open from PATH so the test does not
@@ -350,11 +364,12 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 for iso3 in impact_iso3_list:
                     # Check the standard identifying bytes at the beginning
                     # of each file to confirm its format.
-                    for file_format, signature in (
-                            ('pdf', b'%PDF'), ('png', b'\x89PNG')):
+                    for suffix, signature in (
+                            ('.pdf', b'%PDF'), ('.png', b'\x89PNG'),
+                            ('_page2.png', b'\x89PNG')):
                         report = os.path.join(
                             output_dir,
-                            f'impact_report_{job_id}_{iso3}.{file_format}')
+                            f'impact_report_{job_id}_{iso3}{suffix}')
                         self.assertTrue(os.path.isfile(report))
                         with open(report, 'rb') as f:
                             self.assertEqual(f.read(len(signature)), signature)

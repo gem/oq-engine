@@ -51,7 +51,6 @@ I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
-TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -1903,7 +1902,7 @@ def extract_ruptures(dstore, what):
     if 'rup_id' in qdict:
         rup_id = int(qdict['rup_id'][0])
         ebrups = [getters.get_ebrupture(dstore, rup_id)]
-        info = dstore['source_info'][rup_id // TWO30]
+        info = dstore['source_info'][ebrups[0].source_id]
         comment['source_id'] = info['source_id'].decode('utf8')
     else:
         if 'threshold' in qdict:
@@ -1969,13 +1968,13 @@ def extract_med_gmv(dstore, what):
 @extract.add('high_sites')
 def extract_high_sites(dstore, what):
     """
-    Returns an array of boolean with the high hazard sites (max_poe > .2)
+    Returns an array of boolean with the high hazard sites (max_poe > .04)
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/high_sites
     """
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
     # NSML1 -> NM
-    return (max_hazard > .2).all(axis=1)  # shape N
+    return (max_hazard > .04).all(axis=1)  # shape N
 
 
 def _get_data(dstore, dskey, loss_types, stats):

@@ -777,12 +777,15 @@ class SiteCollection(object):
             return [self]
         elif hint > len(self):
             hint = len(self)
+        # a single stable sort by tile number instead of a pass per tile
+        tilenos = self.sids % hint
+        sids = self.sids[numpy.argsort(tilenos, kind='stable')]
+        counts = numpy.bincount(tilenos, minlength=hint)
         tiles = []
-        for tileno in range(hint):
-            ok = self.sids % hint == tileno
-            if ok.any():
+        for tsids in numpy.split(sids, numpy.cumsum(counts)[:-1]):
+            if len(tsids):
                 sc = SiteCollection.__new__(SiteCollection)
-                sc.array = self.complete.array[self.sids[ok]]
+                sc.array = self.complete.array[tsids]
                 sc.complete = self.complete
                 tiles.append(sc)
         return tiles
@@ -802,11 +805,10 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def count_close(self, location, distance, inclusive=False):
+    def count_close(self, location, distance):
         """
         :param location: a Point, a record with 'hypo', or a Mesh
         :param distance: a distance in km
-        :param inclusive: include sites exactly at the distance (default False)
         :returns: the number of sites within the distance from the location,
                   or an array of counts for a Mesh, in flattened mesh order
 
@@ -814,14 +816,11 @@ class SiteCollection(object):
         faster than calling SourceFilter.close_sids on many point sources.
         """
         if not isinstance(location, Mesh):
-            compare = numpy.less_equal if inclusive else numpy.less
-            return compare(self.get_cdist(location), distance).sum()
-        if distance < 0 or (distance == 0 and not inclusive):
+            return numpy.less_equal(self.get_cdist(location), distance).sum()
+        if distance < 0:
             return numpy.zeros(location.lons.size, dtype=int)
         if not hasattr(self, 'kdt'):
             self.kdt = KDTree(self.xyz)
-        if not inclusive:
-            distance = numpy.nextafter(distance, -numpy.inf)
         return self.kdt.query_ball_point(location.xyz, distance,
                                          return_length=True)
 

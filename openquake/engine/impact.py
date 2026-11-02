@@ -138,7 +138,8 @@ main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.shakemap_version = 'Id of the chosen shakemap version'
 main_cmd.nodal_plane = 'USGS nodal plane to use: NP1 or NP2'
-main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
+main_cmd.time_event = (
+    'Time of the event used in the reports (day, night or transit)')
 main_cmd.maximum_distance = (
     'Maximum distance in km (by default it depends on the magnitude)')
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
@@ -157,7 +158,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
-main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.make_impact_reports = 'Make two-page report for each involved country'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

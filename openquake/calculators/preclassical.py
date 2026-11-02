@@ -25,6 +25,7 @@ from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
 from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
@@ -45,6 +46,13 @@ F64 = numpy.float64
 GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
+# context estimates stored in the datastore as dataset 'nctxs'
+# NB: 'gridded' is the number of contexts of the gridded point sources
+# before collapse_precision, 'collapsed' the number of contexts after
+# collapse_precision
+CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
+                       ('gridded', numpy.int64), ('collapsed', numpy.int64)])
 
 
 def source_data(sources):
@@ -118,6 +126,19 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     return out
 
 
+def max_psdist(psd):
+    """
+    :param psd: a pointsource_distance, i.e. a number, a dictionary
+        TRT -> pointsource_distance, or a list of (mag, distance) pairs
+    :returns: the largest distance of the pointsource_distance
+    """
+    if isinstance(psd, dict):
+        return max(max_psdist(val) for val in psd.values())
+    if isinstance(psd, list):  # magnitude-dependent distances
+        return max(dist for _mag, dist in psd)
+    return psd
+
+
 def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
@@ -171,7 +192,46 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
         return {}
 
     cmaker.set_weight(splits, sf)
-    return {splits[0].grp_id: splits}
+    dic = {splits[0].grp_id: splits}
+    psd = max_psdist(cmaker.pointsource_distance)
+    if not cmaker.ps_grid_spacing and psd < PSD_EXACT:
+        # estimate the reduction due to the pointsource_distance approximation
+        # on the split sources, the ones used in classical
+        pts = [src for src in splits if hasattr(src, 'location')]
+        if pts:
+            dic.update(count_psdist(pts, sf, cmaker, monitor))
+    return dic
+
+
+def count_nogrid(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate without
+    gridding, with the pointsource_distance of the user and with PSD_EXACT,
+    see contexts.estimate_nctxs
+
+    :returns: a dictionary with the estimates under the keys 'psdist_ctxs'
+              and 'exact_ctxs'
+    """
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
+    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
+
+
+def count_psdist(srcs, sf, cmaker, monitor):
+    """
+    Estimate the contexts that the point sources would generate with the
+    pointsource_distance of the user and with PSD_EXACT, see
+    contexts.estimate_nctxs
+
+    :returns: a dictionary with the two estimates
+    """
+    psdist = estimate_nctxs(cmaker, srcs, sf.sitecol)
+    exact = estimate_nctxs(cmaker.copy(pointsource_distance=PSD_EXACT),
+                           srcs, sf.sitecol)
+    return {'psdist_ctxs': int(psdist * sf.multiplier),
+            'exact_ctxs': int(exact * sf.multiplier)}
 
 
 def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
@@ -189,7 +249,15 @@ def preclassical(sources, sf, cmaker, secparams, num_tasks, monitor=None):
                 srcs.extend(split_source(src))
             else:
                 srcs.append(src)
+        # estimate the contexts before gridding, to log the reduction
+        pts = [src for src in srcs if hasattr(src, 'location')]
+        if pts:
+            yield count_nogrid, pts, sf, cmaker
         srcs = grid_point_sources(srcs, cmaker.ps_grid_spacing)
+        # Track the same point sources as the no-gridding estimate.
+        for src in srcs:
+            if hasattr(src, 'location'):
+                src.count_nogrid = True
     else:
         srcs = sources
 
@@ -434,6 +502,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             res = smap.reduce()
         else:
             res = {}
+        psdist_ctxs = res.pop('psdist_ctxs', 0)
+        exact_ctxs = res.pop('exact_ctxs', 0)
+        if exact_ctxs:  # used in classical.log_cfactor
+            self.datastore['nctxs'] = numpy.array(
+                [(exact_ctxs, psdist_ctxs, 0, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(

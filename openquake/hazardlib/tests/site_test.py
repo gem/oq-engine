@@ -268,8 +268,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
     def test_count_close(self):
         col = self.SITES
         location = Point(10, 20, 30)
-        self.assertEqual(col.count_close(location, 0.), 0)
-        self.assertEqual(col.count_close(location, 0., inclusive=True), 1)
+        self.assertEqual(col.count_close(location, 0.), 1)
         self.assertEqual(col.count_close(location, 1.), 1)
         self.assertEqual(col.count_close(Point(10, 20), 1.), 0)
         record = numpy.zeros((), [('hypo', float, 3)])
@@ -281,9 +280,8 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         mesh = Mesh.from_coords(
             [(10, 20, 30), (0, 2, 0), (90, 0, 0)], sort=False)
         assert_eq(col.count_close(mesh, 1.), [1, 1, 0])
-        assert_eq(col.count_close(mesh, 0.), [0, 0, 0])
+        assert_eq(col.count_close(mesh, 0.), [1, 1, 0])
         assert_eq(col.count_close(mesh, -1.), [0, 0, 0])
-        assert_eq(col.count_close(mesh, 0., inclusive=True), [1, 1, 0])
         # A filtered collection must count only its own sites.
         assert_eq(col.filtered([2]).count_close(mesh, 1.), [0, 1, 0])
         surface = Mesh(mesh.lons, mesh.lats)
@@ -296,9 +294,8 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # Exercise a nonzero cutoff using a site directly below the query.
         col = SiteCollection.from_points([0.], [0.], [5.])
         mesh = Mesh.from_coords([(0., 0.)])
-        self.assertEqual(col.count_close(Point(0., 0.), 5.), 0)
-        assert_eq(col.count_close(mesh, 5.), [0])
-        assert_eq(col.count_close(mesh, 5., inclusive=True), [1])
+        self.assertEqual(col.count_close(Point(0., 0.), 5.), 1)
+        assert_eq(col.count_close(mesh, 5.), [1])
 
     def test_lower_res(self):
         # collapsing together two points on the same hexagon

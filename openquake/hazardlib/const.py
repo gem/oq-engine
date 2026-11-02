@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.const` defines various constants.
 """
 from enum import Enum
-import numpy as np
 
 
 class TRT(Enum):
@@ -108,74 +107,3 @@ class IMC(Enum):
     PEAK_SRSS_HORIZONTAL = 'Peak square root of sum of squares of horizontals'
     #: A vertical-to-horizontal spectral ratio
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
-
-
-# #### horizontal components that can be converted into geometric means #### #
-
-OK_COMPONENTS = ['GMRotI50', 'RANDOM_HORIZONTAL',
-                 'GREATER_OF_TWO_HORIZONTAL', 'RotD50']
-
-COEFF = {IMC.GMRotI50: [1, 1, 0.03, 0.04, 1],
-         IMC.RANDOM_HORIZONTAL: [1, 1, 0.07, 0.11, 1.05],
-         IMC.GREATER_OF_TWO_HORIZONTAL: [0.1, 1.117, 0.53, 1.165, 4.48, 1.195,
-                                         8.70, 1.266, 1.266],
-         IMC.RotD50: [0.09, 1.009, 0.58, 1.028, 4.59, 1.042, 8.93, 1.077,
-                      1.077]}
-
-COEFF_PGA_PGV = {IMC.GMRotI50: [1, 0.02, 1, 1, 0.03, 1],
-                 IMC.RANDOM_HORIZONTAL: [1, 0.07, 1.03],
-                 IMC.GREATER_OF_TWO_HORIZONTAL: [1.117, 0, 1, 1, 0, 1],
-                 IMC.RotD50: [1.009, 0, 1, 1, 0, 1]}
-
-
-# used in ContextMaker.set_conv to build the conversion coefficients
-def apply_conversion(imc, imt):
-    """
-    :param imc: IMC instance
-    :param imt: intensity measure type instance
-    :returns: conversion coefficients conv_median, conv_sigma, rstd
-    """
-    C = COEFF[imc]
-    C_PGA_PGV = COEFF_PGA_PGV[imc]
-    if imt.name == 'PGA':
-        conv_median = C_PGA_PGV[0]
-        conv_sigma = C_PGA_PGV[1]
-        rstd = C_PGA_PGV[2]
-    elif imt.name == 'PGV':
-        conv_median = C_PGA_PGV[3]
-        conv_sigma = C_PGA_PGV[4]
-        rstd = C_PGA_PGV[5]
-    elif imt.name == "SA":
-        T = imt.period
-        if imc.name in ('RotD50', 'GREATER_OF_TWO_HORIZONTAL'):
-            term1 = C[1] + (C[3]-C[1]) / np.log(C[2]/C[0]) * np.log(T/C[0])
-            term2 = C[3] + (C[5]-C[3]) / np.log(C[4]/C[2]) * np.log(T/C[2])
-            term3 = C[5] + (C[7]-C[5]) / np.log(C[6]/C[4]) * np.log(T/C[4])
-            term4 = C[8]
-            tmax = np.maximum(
-                np.minimum(term1, term2), np.minimum(term3, term4))
-            conv_median = np.maximum(C[1], tmax)
-            conv_sigma = 0
-            rstd = 1
-        else:
-            if T <= 0.15:
-                conv_median = C[0]
-                conv_sigma = C[2]
-            elif T > 0.8:
-                conv_median = C[1]
-                conv_sigma = C[3]
-            else:
-                conv_median = (C[0] + (C[1]-C[0]) *
-                               np.log10(T/0.15) / np.log10(0.8/0.15))
-                conv_sigma = (C[2] + (C[3]-C[2]) *
-                              np.log10(T/0.15) / np.log10(0.8/0.15))
-            rstd = C[4]
-    else:
-        conv_median = 1
-        conv_sigma = 0
-        rstd = 1
-    
-    return conv_median, conv_sigma, rstd
-
-
-IMC.apply_conversion = apply_conversion

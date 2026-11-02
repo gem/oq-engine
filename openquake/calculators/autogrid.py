@@ -119,15 +119,14 @@ def _get_points(sg, sites, maxdist):
         if src.code in b'AM' and not src.bysrc_unc:
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
-            if sites.count_close(Mesh(mesh.lons, mesh.lats), dist,
-                                 inclusive=True).any():
+            if sites.count_close(Mesh(mesh.lons, mesh.lats), dist).any():
                 points.extend(s for s in split_source(src) if s.code == b'P')
         elif src.code == b'P':
             points.append(src)
     if points:
         mesh = Mesh.from_coords(
             [(p.location.x, p.location.y) for p in points], sort=False)
-        close = sites.count_close(mesh, dist, inclusive=True)
+        close = sites.count_close(mesh, dist)
         points = [p for p, c in zip(points, close) if c]
     return points
 
@@ -143,7 +142,7 @@ def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
         mesh = Mesh.from_coords(
             [(src.location.x, src.location.y) for src in srcs], sort=False)
         nsites = sites.count_close(
-            mesh, cmakers[grp_id].maximum_distance.y[-1], inclusive=True)
+            mesh, cmakers[grp_id].maximum_distance.y[-1])
         pairs.extend((src, src.num_ruptures * (n + 1))
                      for src, n in zip(srcs, nsites))
     maxweight = sum(w for _, w in pairs) / num_tasks

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import tempfile
+
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.commonlib import datastore, logs
@@ -36,6 +38,10 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
     # TODO: we need tests also for event-based
 
     def _check_csv_outputs(self, outputs_list, datastore, testcase):
+        # export in a temporary directory, not in the current one
+        if self.edir is None:  # not set by run_calc, see tearDown
+            self.edir = tempfile.mkdtemp()
+        datastore.export_dir = self.edir
         for output in outputs_list:
             expected_fname = 'expected/infra-' + output + '.csv'
             [got_path] = export(('infra-' + output, 'csv'), datastore)

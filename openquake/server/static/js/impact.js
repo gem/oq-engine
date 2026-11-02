@@ -153,6 +153,19 @@ window.initImpactForm = function() {
         }
     }
 
+    // Show the day of the week of the local timestamp of the event (e.g. 2023-02-06 04:17:34+03:00).
+    // The date is interpreted in UTC, otherwise it would be converted to the time zone of the
+    // browser and the day could be wrong
+    function show_local_weekday(local_timestamp) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(local_timestamp || '');
+        let weekday = '';
+        if (match) {
+            const date = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
+            weekday = date.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
+        }
+        $('#local_weekday').text(weekday);
+    }
+
     function invalidate_retrieved_data(reset_rupture_inputs = true) {
         if (reset_rupture_inputs) {
             reset_rupture_form_inputs();
@@ -160,6 +173,7 @@ window.initImpactForm = function() {
         for (const field of ['local_timestamp', 'maximum_distance', 'description']) {
             $('input#' + field).val(window.IMPACT.impact_form_defaults[field]);
         }
+        show_local_weekday($('input#local_timestamp').val());
         set_default_truncation_level(window.IMPACT.impact_form_defaults.truncation_level);
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
         $('#mosaic_model').empty();
@@ -522,6 +536,7 @@ window.initImpactForm = function() {
             $('#dip').val('dip' in data ? data.dip : '90');
             $('#strike').val('strike' in data ? data.strike : '0');
             $('#local_timestamp').val(data.local_timestamp);
+            show_local_weekday(data.local_timestamp);
             $('#time_event').val(data.time_event);
             // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
             //       set a specific file in an HTML file input element using JavaScript or jQuery,

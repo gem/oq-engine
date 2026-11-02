@@ -46,7 +46,7 @@ from openquake.hazardlib.correlation_models.base import (
     SpatialCrossIMTCorrelationModel, TruncatedCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import (
     get_model, get_model_class)
-from openquake.hazardlib import valid, InvalidFile, site
+from openquake.hazardlib import valid, InvalidFile, site, imc_conversion
 from openquake.hazardlib.gsim_lt import GsimLogicTree, ImtWeight
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.sep.classes import SecondaryPeril
@@ -419,9 +419,25 @@ hazard_maps:
   Example: *hazard_maps = true*.
   Default: False
 
+horiz_comp_to:
+  Convert GMM predictions to the specified horizontal component.
+  Supported values are "geometric_mean", "gmroti50", "rotd50", "rotd100",
+  "greater_of_two_horizontal" and "random_horizontal". The ratios come from
+  Beyer & Bommer (2006) tables 2-3 and Boore & Kishida (2017) table 2 plus
+  the BK17 electronic supplement (PGA/PGV ratios for BK17-sourced pairs
+  live in the e-supplement, not in the paper body) and are implemented in
+  "openquake/hazardlib/imc_conversion". Only pairs with a directly-tabulated
+  ratio in those sources are supported. GSIMs whose native component is
+  already the target are left unchanged; GSIMs whose native component has
+  no direct ratio to the target (either because the component is not
+  covered at all, or because the sources do not publish that particular
+  pair) are logged to inform the user.
+  Example: *horiz_comp_to = rotd50*
+  Default: '' (no conversion applied)
+
 horiz_comp_to_geom_mean:
-  Apply the correction to the geometric mean when possible,
-  depending on the GMPE and the Intensity Measure Component
+  Deprecated alias for "horiz_comp_to=geometric_mean". If true behaves exactly
+  as if "horiz_comp_to=geometric_mean" had been set.
   Example: *horiz_comp_to_geom_mean = true*.
   Default: False
 
@@ -535,7 +551,7 @@ master_seed:
   Default: 123456789
 
 make_impact_reports:
-  Produce a one-page impact reports for each affected country,
+  Produce a two-page impact report for each affected country,
   as postrisk_func
   Example: *make_impact_reports = true*.
   Default: False
@@ -764,6 +780,14 @@ region_grid_spacing:
   In impact mode it is mandatory and it defines the spacing in km of the
   regular grid of sites around the rupture (circulant embedding).
   Example: *region_grid_spacing = 10*.
+  Default: None
+
+report_time_event:
+  Used in impact calculations with *make_impact_reports = true*: the time
+  of the event (day, night or transit) whose occupants losses (fatalities)
+  are displayed in the country reports, while the losses for all the times
+  are computed and stored. It is set by the impact form.
+  Example: *report_time_event = night*.
   Default: None
 
 return_periods:
@@ -1221,6 +1245,7 @@ class OqParam(valid.ParamSet):
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
+    horiz_comp_to = valid.Param(str, '')
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
@@ -1295,6 +1320,8 @@ class OqParam(valid.ParamSet):
         valid.positivefloat, numpy.nan)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    report_time_event = valid.Param(
+        valid.NoneOr(valid.Choice('day', 'night', 'transit')), None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
@@ -1496,6 +1523,19 @@ class OqParam(valid.ParamSet):
         self.fix_legacy_names(names_vals)
         given = set(names_vals)
         super().__init__(**names_vals)
+        if self.horiz_comp_to_geom_mean:
+            if self.horiz_comp_to not in ('', 'geometric_mean'):
+                self.raise_invalid(
+                    f'horiz_comp_to_geom_mean=true conflicts with '
+                    f'horiz_comp_to={self.horiz_comp_to!r} - you can '
+                    f'only pick one'
+                )
+            self.horiz_comp_to = 'geometric_mean'
+        if self.horiz_comp_to and (
+                self.horiz_comp_to not in imc_conversion.TARGET_NAMES):
+            self.raise_invalid(
+                f'horiz_comp_to={self.horiz_comp_to!r}, '
+                f'pick one of {sorted(imc_conversion.TARGET_NAMES)}')
         self._set_truncation_levels(names_vals)
         self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
@@ -2480,14 +2520,6 @@ class OqParam(valid.ParamSet):
         """
         return (self.calculation_mode in
                 'event_based_risk ebrisk event_based_damage')
-
-    def is_valid_disagg_by_src(self):
-        """
-        disagg_by_src can be set only if ps_grid_spacing = 0
-        """
-        if self.disagg_by_src:
-            return self.ps_grid_spacing == 0
-        return True
 
     def is_valid_concurrent_tasks(self):
         """

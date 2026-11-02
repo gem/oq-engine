@@ -30,6 +30,7 @@ from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -45,7 +46,7 @@ from openquake.qa_tests_data.classical import (
     case_69, case_70, case_71, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
     case_87, case_88, case_89, case_90, case_91, case_92, case_93, case_94,
-    case_95, case_96, case_97)
+    case_95, case_96, case_97, case_98)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -700,6 +701,8 @@ class ClassicalTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
+        self.assertIn('nctxs', self.calc.datastore)
+        self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
         [fname] = export(('hmaps/mean', 'csv'), self.calc.datastore)
@@ -1386,6 +1389,34 @@ class ClassicalTestCase(CalculatorTestCase):
         mean = self.calc.datastore['hcurves-stats'][0, 0]
         aac(hcurves[0], mean, rtol=6E-5)
 
+    def test_case_98(self):
+        # Convert BSSA14 GMM to other horz comps (natively its RotD50)
+
+        # target == native: no conversion applied, output stays in RotD50
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd50-PGA.csv',
+             'hazard_curve-convert-to-rotd50-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd50')
+
+        # RotD50 -> GEOM using the BK17 Table 2 RotD50/GMAR ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-geometric_mean-PGA.csv',
+             'hazard_curve-convert-to-geometric_mean-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='geometric_mean')
+
+        # RotD50 -> Larger via the BK17 Larger/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-greater_of_two_horizontal-PGA.csv',
+             'hazard_curve-convert-to-greater_of_two_horizontal-SA(1.0).csv'],
+            case_98.__file__,
+            horiz_comp_to='greater_of_two_horizontal')
+
+        # RotD50 -> RotD100 via the direct BK17 RotD100/RotD50 ratio
+        self.assert_curves_ok(
+            ['hazard_curve-convert-to-rotd100-PGA.csv',
+             'hazard_curve-convert-to-rotd100-SA(1.0).csv'],
+            case_98.__file__, horiz_comp_to='rotd100')
+
 
 class FakeDatastoreCalculator:
     """
@@ -1400,6 +1431,93 @@ class FakeDatastoreCalculator:
         self.datastore.read_df.side_effect = (
             lambda key, index=None: h5.read_df(key, index))
         self.datastore.__getitem__.side_effect = lambda key: h5[key]
+
+
+class ContextReductionTestCase(unittest.TestCase):
+    def setUp(self):
+        self.calc = object.__new__(ClassicalCalculator)
+        self.calc.oqparam = mock.Mock(collapse_precision=.03)
+        self.calc.datastore = {
+            'nctxs': numpy.array([(400, 0, 100, 0)], CTX_EST)}
+
+    def test_gridding_and_precision(self):
+        self.calc.cfactor = numpy.array([96., 4., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 4.17', logs.output[0])
+        self.assertIn('removed only 4.0%', logs.output[1])
+        self.assertIn('collapse_precision should be turned off',
+                      logs.output[1])
+
+    def test_store_grid(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 100.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 96)  # after collapse_precision
+        self.assertEqual(est['gridded'], 100)  # gridded, before collapse
+        self.assertEqual(est['exact'], 0)  # no estimate, not set
+
+    def test_store_exact(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=.03,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 0.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], 100)  # 96 after + 4 removed
+        # an existing estimate is kept
+        self.calc.datastore = {
+            'nctxs': numpy.array([(400, 0, 0, 0)], CTX_EST)}
+        self.calc.store_grid()
+        self.assertEqual(self.calc.datastore['nctxs'][0]['exact'], 400)
+
+    def test_mixed_sources(self):
+        # Include 50 ungridded contexts as well as the 100 gridded ones.
+        self.calc.cfactor = numpy.array([130., 20., 100.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('estimated reduction factor 3.46', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_pointsource_distance(self):
+        self.calc.datastore = {
+            'nctxs': numpy.array([(330, 100, 0, 0)], CTX_EST)}
+        self.calc.cfactor = numpy.array([100., 0., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.30 (psdist 3.30 x '
+                      'collapse 1.00)',
+                      logs.output[0])
+        # 20 contexts removed by collapse_precision: 3.30 * 120 / 100
+        self.calc.cfactor = numpy.array([100., 20., 0.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, reduction factor 3.96 (psdist 3.30 x '
+                      'collapse 1.20)',
+                      logs.output[0])
+
+    def test_gridding_without_collapse(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0)
+        self.calc.cfactor = numpy.array([100., 0., 50.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, estimated reduction factor 4.50 '
+                      '(gridding)', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
+
+    def test_warning_threshold(self):
+        self.calc.datastore = {}
+        for precision, removed, warn in [(.03, 9, True), (.03, 10, False),
+                                         (0., 0, False)]:
+            self.calc.oqparam.collapse_precision = precision
+            self.calc.cfactor = numpy.array([100 - removed, removed, 0.])
+            with self.assertLogs(level='INFO') as logs:
+                self.calc.log_cfactor()
+            self.assertEqual(len(logs.output), 2 if warn else 1)
+            self.assertNotIn('estimated', logs.output[0])
 
 
 class SlowTasksTestCase(unittest.TestCase):

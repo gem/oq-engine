@@ -1,4 +1,32 @@
   [Michele Simionato]
+  * ps_grid_spacing can now be used with disagg_by_src when the calculation has
+    few sites, since the rates are computed one source at the time
+  * Added the nctxs dataset to classical calculations, with the number of
+    contexts after collapse_precision (collapsed) and the number of
+    contexts of the gridded point sources before collapse_precision
+    (gridded). If collapse_precision or ps_grid_spacing is set, exact is
+    the number of contexts before collapse_precision for all source types
+  * Fixed the rupture IDs of the global SES: they are now unique
+    across the models. Existing SES files must be regenerated
+  * Fixed the classical_risk calculator for risk inputs containing assets
+    of different taxonomies at the same site: the loss curves and average
+    losses of each asset were written at the wrong positions, and the
+    statistics could crash with "'int' object is not subscriptable"
+  * Fixed the postclassical and fast_mean calculations for hazard chunks
+    without any site: the MapGetter no longer crashes on an empty chunk
+  * Fixed get_ebruptures: the tectonic region type of each rupture is now
+    read from its trt_smr instead of always using the first TRT
+  * Changed the MapGetter to use 32 bit arrays, as documented but not done
+
+  [Christopher Brooks]
+  * Extended the IMC conversion to support more horizontal component
+    definitions: the job parameter "horiz_comp_to_geom_mean" is replaced
+    by "horiz_comp_to", which accepts targets such as geometric mean,
+    RotD50 and RotD100 (the old boolean flag still works for backwards
+    compatibility). Conversions use the ratios tabulated by Beyer &
+    Bommer (2006) and Boore & Kishida (2017).
+
+  [Michele Simionato]
   * Compute the injured losses for each time event when time_event is not
     specified (injured_day, injured_night, injured_transit, injured_avg),
     like the occupants losses

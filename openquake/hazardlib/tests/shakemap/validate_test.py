@@ -155,7 +155,10 @@ class ImpactValidateTestCase(unittest.TestCase):
                 assert rupdic[key] == expected[key], key
             self.assertEqual(params['asset_hazard_distance'], '15.0')
             self.assertEqual(params['calculation_mode'], 'scenario_risk')
-            self.assertEqual(params['time_event'], 'day')
+            # all the time events are computed, the selected one is
+            # used in the country reports
+            self.assertNotIn('time_event', params)
+            self.assertEqual(params['report_time_event'], 'day')
             self.assertEqual(params['maximum_distance'], '100.0')
             self.assertEqual(params['mosaic_model'], 'IND')
             self.assertEqual(params['truncation_level'], '3.0')

@@ -18,16 +18,17 @@
 
 import os
 import unittest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site
+from openquake.hazardlib import site, contexts
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    ContextMaker, get_distances, collapse_ctx)
+    ContextMaker, get_distances, collapse_ctx, concat)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -38,7 +39,7 @@ from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
-from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.scalerel import WC1994, PointMSR
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     get_distances_planar, build_planar)
@@ -204,6 +205,23 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 rupture
         [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
+
+    def test_collapse_tiles(self):
+        # the multifault distances are cached on all the sites, so they
+        # must be looked up by position when _collapse_by_mag uses tiles
+        sitec = SiteCollection([
+            Site(Point(x, .1), vs30=760, z1pt0=30, z2pt5=.5,
+                 vs30measured=True) for x in numpy.linspace(-.5, .5, 50)])
+        self.src.id = 1
+        out = []
+        for pairs in (5_000_000, 50):  # one tile and many tiles
+            with mock.patch.object(contexts, 'COLLAPSE_PAIRS', pairs):
+                cm = ContextMaker('*', [AbrahamsonEtAl2014()], dict(
+                    imtls={'PGA': [.1]}, collapse_precision=.03))
+                ctx = concat(list(cm.get_ctxs(self.src, sitec)))
+            out.append(ctx[numpy.lexsort((ctx.rup_id, ctx.sids))])
+        for par in ['sids', 'rup_id', 'rrup', 'rjb', 'rx', 'ry0']:
+            numpy.testing.assert_array_equal(out[0][par], out[1][par])
 
     def test_rjb_distance(self):
         rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
@@ -383,6 +401,53 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class EstimateNctxsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.src = PointSource(
+            'ps', 'pointsource', '*',
+            ArbitraryMFD([4., 5., 6., 7.], [.1] * 4), 1., PointMSR(), 1.,
+            tom, 0., 20., Point(0., 0.),
+            PMF([(1., NodalPlane(0., 90., 0.))]),
+            PMF([(.5, 5.), (.5, 10.)]))
+        self.cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 25.), (6., 25.)]},
+            pointsource_distance={'default': 10.})
+        self.sites = SiteCollection([Site(Point(0., 0., dep))
+                                     for dep in [0., 10., 20., 30.]])
+
+    def test_close_and_far(self):
+        # Two magnitudes survive. Each has two close sites (including the
+        # pointsource-distance boundary), one far site and one outside.
+        for max_sites, expected in [(0, 10), (10, 12)]:
+            self.cmaker.max_sites_disagg = max_sites
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src], self.sites), expected)
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src] * 2, self.sites), expected * 2)
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [], self.sites), 0)
+
+    def test_filtered_sites(self):
+        # The complete collection determines fewsites, even when the
+        # filtered collection is below the threshold.
+        self.cmaker.max_sites_disagg = 2
+        sites = self.sites.filtered([1, 2])
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [self.src], sites), 6)
+
+    def test_magnitude_distance_boundary(self):
+        # A site exactly at maximum_distance is counted by the estimate,
+        # although it generates no contexts: the estimate is approximate.
+        sites = SiteCollection.from_points([0.], [0.], [25.])
+        for max_sites in [0, 10]:
+            for psdist in [25., 30.]:
+                self.cmaker.max_sites_disagg = max_sites
+                self.cmaker.pointsource_distance = psdist
+                self.assertEqual(contexts.estimate_nctxs(
+                    self.cmaker, [self.src], sites), 4)
 
 
 class CollapseCtxTestCase(unittest.TestCase):
