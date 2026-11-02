@@ -754,11 +754,12 @@ def install(inst, version, from_fork, noupgrade):
     subprocess.run([oqreal, "--version"])  # compile numba
     upgrade_db(inst, oqreal)
 
+    create_services(inst)
+
     errors += postinstall_standalone(inst)
 
     create_symlink(inst, oqreal)
     activation_message(inst)
-    create_services(inst)
     success_message(inst, oqreal)
 
     return errors
