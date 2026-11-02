@@ -30,13 +30,12 @@ from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-# Shared cache: N sibling epsilon LT branches on the same ctx hit one
+# With a ContextMaker, N sibling epsilon LT branches on the same ctx hit one
 # cached backbone + grid lookup. Size 96 safely holds a classical task's
 # working set under split_by_mag=True (one fingerprint per mag bin, K bins
 # per source group, with K set by the MFD Mw range / width_of_mfd_bin). Other
 # paths (e.g. event-based where split_by_mag=False) produce 1 fingerprint per
-# compute call. Used if gsim._cmaker is unset; otherwise the per-cmaker cache
-_COMPUTE_CACHE = collections.OrderedDict()
+# compute call. Direct calls without gsim._cmaker use an instance-local cache.
 _CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
                 # 66 bins so 96 is safely over this if split_by_mag=True with
                 # a finer (realistic) bin spacing
@@ -629,6 +628,8 @@ class GridAdjustedGMPE(GMPE):
             type(self.gmpe).__name__ + "|"
             + repr(sorted(self.gmpe.kwargs.items())))
         self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
+        # Isolate direct compute calls from other instances' loaded grids.
+        self._compute_cache = collections.OrderedDict()
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
@@ -676,7 +677,7 @@ class GridAdjustedGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Per-cmaker cache if attached, else the shared _COMPUTE_CACHE
+        # Per-cmaker cache if attached, else this instance's fallback cache
         cmaker = getattr(self, "_cmaker", None)
         if cmaker is not None:
             cache = getattr(cmaker, "_grid_adjusted_cache", None)
@@ -684,7 +685,7 @@ class GridAdjustedGMPE(GMPE):
                 cache = collections.OrderedDict()
                 cmaker._grid_adjusted_cache = cache
         else:
-            cache = _COMPUTE_CACHE
+            cache = self._compute_cache
 
         # Build the bundle on the first call for this ctx, reuse it on later
         # calls that share the same key

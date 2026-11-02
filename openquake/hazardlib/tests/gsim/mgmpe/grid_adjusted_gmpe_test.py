@@ -343,6 +343,32 @@ class GridAdjustedGMPETest(unittest.TestCase):
                              epsilons={"dL2L": 1.0, "nope": 0.5})
 
     ### CACHING MEDIANS PER CTX TESTS ###
+    def test_direct_cache_after_grid_replacement(self):
+        # A new instance must use the updated HDF5 at the same path, while
+        # the original instance retains its loaded grid and cached results.
+        with tempfile.TemporaryDirectory() as td:
+            grid_path = os.path.join(td, "adjustments.hdf5")
+            shutil.copy(GRID_HDF5, grid_path)
+            kwargs = dict(gmpe_name=BASE_GSIM, grid_hdf5_file=grid_path)
+            first = GridAdjustedGMPE(**kwargs)
+            cmaker = simple_cmaker([first], ["PGA"])
+            ctx = cmaker.recarray([self._make_ctx(cmaker)])
+
+            # Call compute directly so no ContextMaker cache is attached.
+            def _compute(gsim):
+                out = np.zeros((4, len(cmaker.imts), len(ctx)))
+                gsim.compute(ctx, cmaker.imts, *out)
+                return out
+
+            before = _compute(first)
+            with h5py.File(grid_path, "a") as hf:
+                dataset = hf["dL2L"]["PGA"]["dL2L"]
+                dataset[:] = dataset[:] + 0.5
+            after = _compute(GridAdjustedGMPE(**kwargs))
+            aae(after[0] - before[0], 0.5)
+            np.testing.assert_array_equal(after[1:], before[1:])
+            np.testing.assert_array_equal(_compute(first), before)
+
     def test_cache_cold_vs_warm_equivalence(self):
         # Warm (27 adj GSIMs in one cmaker, cache populated after first)
         # must match cold (each adj in its own fresh cmaker) across all 27
@@ -421,7 +447,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def test_cmaker_attaches_through_wrapper(self):
         # When GridAdjustedGMPE is wrapped (e.g. by ModifiableGMPE), the
         # inner GridAdjustedGMPE must still get its cache attached to the
-        # cmaker rather than falling back to the module-level cache
+        # cmaker rather than falling back to the instance-local cache
         wrapper = ModifiableGMPE(gmpe={"GridAdjustedGMPE": {
             "gmpe_name": BASE_GSIM, "grid_hdf5_file": GRID_HDF5}})
         base = valid.gsim(BASE_GSIM)
