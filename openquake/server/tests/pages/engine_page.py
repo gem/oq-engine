@@ -59,7 +59,8 @@ class EnginePage:
 
     def wait_for_job_completion(self, job_id):
         job_row = self.get_job_row(job_id)
-        expect(job_row).to_contain_text("complete", timeout=120_000)
+        expect(job_row.locator('.calc-status')).to_have_text(
+            'complete', timeout=120_000)
 
     def _confirm_action(self, action):
         # Wait for the custom modal before querying its dynamically labelled
@@ -72,8 +73,9 @@ class EnginePage:
 
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
+        status = job_row.locator('.calc-status')
         abort_link = job_row.get_by_role("link", name="Abort", exact=True)
-        terminal_status = job_row.locator('td').nth(6).filter(
+        terminal_status = status.filter(
             has_text=re.compile(r'complete|failed'))
         # Polls may skip executing altogether. A completed job needs no abort;
         # an unexpected failure must still fail the test.
@@ -86,7 +88,7 @@ class EnginePage:
             self._click_clear_of_backdrop(abort_link, timeout=10_000)
         except PlaywrightTimeoutError:
             # Completion can also remove the link while click is retrying.
-            expect(job_row.locator('td').nth(6)).to_have_text('complete')
+            expect(status).to_have_text('complete')
             return
         self._confirm_action("abort")
         # short jobs may finish before the abort reaches the server, which
@@ -101,12 +103,11 @@ class EnginePage:
             # still complete, or record MasterKilled from SIGINT as failed.
             # After requesting interruption, status alone cannot distinguish
             # an abort-induced failure from an unrelated calculation failure.
-            expect(job_row.locator('td').nth(6)).to_contain_text(
+            expect(status).to_contain_text(
                 re.compile(r'\b(complete|failed)\b'),
                 timeout=20_000)
         else:
-            expect(job_row.get_by_text("complete")).to_be_visible(
-                timeout=20_000)
+            expect(status).to_have_text('complete', timeout=20_000)
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
