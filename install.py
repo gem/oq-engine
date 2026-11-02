@@ -337,6 +337,13 @@ def postinstall_standalone(inst):
     # we cannot use site.getsitepackages here since we are not yet
     # running in the target environment
     pycmd = python_exe(inst)
+    if inst in (server, devel_server):
+        secret_dir = "/etc/openquake"
+        secret_name = "django_secret.env"
+        secret_file = os.path.join(secret_dir, secret_name)
+        with open(secret_file, "r") as f:
+            os.environ["DJANGO_SECRET_KEY"] = f.read().strip()
+        print(os.environ('DJANGO_SECRET_KEY'))
     # Run python manage.py migrate before running app postinstall
     _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
     errors = []

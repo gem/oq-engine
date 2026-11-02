@@ -48,13 +48,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Configure Django secret key
-        shell: sudo bash --noprofile --norc -e -o pipefail {0}
-        run: |
-          install -d -m 700 /etc/openquake
-          umask 077
-          printf 'DJANGO_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" \
-            > /etc/openquake/django_secret.env
       - name: Setup upterm session
         uses: owenthereal/action-upterm@v2
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
@@ -69,9 +62,7 @@ jobs:
           else
              BRANCH=${{ inputs.git-ref }}
           fi
-          sudo -H bash -c '
-            source /etc/openquake/django_secret.env ;
-            "$(which python3)" install.py --version "$BRANCH" server'
+          sudo -H "$(which python3)" install.py --version "$BRANCH" server
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
