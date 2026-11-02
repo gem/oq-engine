@@ -107,6 +107,7 @@ EXPECTED_PATH_SE_ADJ = [
 class GridAdjustedGMPETest(unittest.TestCase):
 
     def _make_ctx(self, cmaker, **overrides):
+        # Build the shared test context, allowing scenario-specific values.
         defaults = dict(mag=6.0, rake=0.0, hypo_depth=10.0, vs30=760.0,
                         rrup=np.array([10.0, 20.0, 30.0, 50.0]),
                         rjb=np.array([10.0, 20.0, 30.0, 50.0]),
@@ -342,20 +343,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
                              epsilons={"dL2L": 1.0, "nope": 0.5})
 
     ### CACHING MEDIANS PER CTX TESTS ###
-    def _make_ctx(self, cmaker):
-        ctx = cmaker.new_ctx(len(LATS))
-        ctx.mag = 6.0
-        ctx.rake = 0.0
-        ctx.hypo_depth = 10.0
-        ctx.vs30 = 760.0
-        ctx.rrup = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.rjb = np.array([10.0, 20.0, 30.0, 50.0])
-        ctx.lat = LATS
-        ctx.lon = LONS
-        ctx.hypo_lat = 0.0
-        ctx.hypo_lon = 0.0
-        return ctx
-
     def test_cache_cold_vs_warm_equivalence(self):
         # Warm (27 adj GSIMs in one cmaker, cache populated after first)
         # must match cold (each adj in its own fresh cmaker) across all 27
