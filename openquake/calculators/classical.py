@@ -660,7 +660,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         pmap_by_kind['hcurves-stats'] = [
             MapArray(sids, M, L1).fill(0) for r in range(S)]
     with monitor('compute stats', measuremem=False):
-        sidx = MapArray(sids, 1, 1).fill(0).sidx
+        sidx = pgetter.sid2idx  # same positions as in pgetter.array
         for sid in sids:
             idx = sidx[sid]
             pc = pgetter.get_hcurve(sid)  # rock hcurve, shape (L, R)

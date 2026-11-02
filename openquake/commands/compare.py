@@ -115,8 +115,8 @@ class Comparator(object):
             high_sites.append(extractor.get('high_sites').array)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
-        hsites = numpy.logical_and(*high_sites)
-        sids, = numpy.where(hsites)
+        hsites = numpy.logical_and(*high_sites)[sids]
+        sids = sids[hsites]
         return numpy.array([a[hsites] for a in arrays]), sids  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):
