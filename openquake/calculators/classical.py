@@ -972,13 +972,25 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_grid(self):
         """
-        Store in the 'grid' field of est_ctxs the contexts of the gridded
-        point sources, before collapse_precision, see contexts.py
+        Store in the est_ctxs dataset the contexts after collapse_precision
+        in the 'collapsed' field and the contexts of the gridded point sources
+        before collapse_precision in the 'gridded' field, see contexts.py.
+        If collapse_precision or ps_grid_spacing is set and there is no
+        estimate in the 'exact' field, the 'exact' field is set to the
+        contexts before collapse_precision, counted for all source types.
         """
+        after, removed, gridded = self.cfactor
         if 'est_ctxs' in self.datastore:
             est = self.datastore['est_ctxs'][()]
-            est['grid'] = int(self.cfactor[2])
-            self.datastore['est_ctxs'] = est
+        else:
+            est = numpy.zeros(1, preclassical.CTX_EST)
+        est['gridded'] = int(gridded)
+        est['collapsed'] = int(after)
+        oq = self.oqparam
+        if ((oq.collapse_precision or oq.ps_grid_spacing)
+                and est['exact'][0] == 0):
+            est['exact'] = int(after + removed)
+        self.datastore['est_ctxs'] = est
 
     def log_cfactor(self):
         """
@@ -993,7 +1005,7 @@ class ClassicalCalculator(base.HazardCalculator):
         psdist, exact, grid = 0, 0, 0
         if 'est_ctxs' in self.datastore:
             est = self.datastore['est_ctxs'][0]
-            psdist, exact, grid = est['psd100'], est['exact'], est['grid']
+            psdist, exact, grid = est['psd100'], est['exact'], est['gridded']
         estimated = grid > 0  # the gridded sources have been estimated
         if psdist > 0 and not estimated:
             # pointsource_distance approximation without gridding, see
