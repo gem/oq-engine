@@ -420,14 +420,44 @@ def _resolve_adj(grid_data, cfg, term, imt, ctx, key):
 
 def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
     """
-    Compute backbone + central mean + sigma adjustments once, snapshot for
-    reuse across sibling LT branches
+    Compute backbone and central grid corrections for reuse across branches.
+
+    Fill the output arrays in place, applying central mean and configured
+    sigma adjustments. Branch-specific epsilon * mean_se shifts and path
+    caps are applied later in compute().
+
+    :param gmpe:
+        Underlying GMM instance used to compute backbone predictions.
+    :param grid_data:
+        Dict returned by load_residual_grids, containing term configurations,
+        spatial grids and scalar sigma adjustments.
+    :param ctx:
+        Context recarray with rupture, site and distance fields required by
+        the backbone GMM and spatial correction lookups.
+    :param imts:
+        Sequence of IMT instances, in output array row order.
+    :param mean:
+        NumPy mean output array of shape (len(imts), len(ctx)).
+    :param sig:
+        Total standard deviation output array, same shape as mean.
+    :param tau:
+        Inter-event standard deviation output array, same shape as mean.
+    :param phi:
+        Intra-event standard deviation output array, same shape as mean.
+    :returns:
+        Copies of (mean, sig, tau, phi), protected from later branch shifts,
+        plus a dict {imt_index: {term: (mean_adj, se_adj)}}. Each adjustment
+        has shape (len(ctx),), or is None when that term/IMT has no data.
     """
     # Backbone output is the same across all branches of the same ctx
     gmpe.compute(ctx, imts, mean, sig, tau, phi)
     resolved = {}
     for m, imt in enumerate(imts):
         per = {}
+        # Apply each correction - example (term, cfg):
+        #   term = 'dL2L'
+        #   cfg  = {'location': 'hypo', 'sig_adjustment': 'sub',
+        #           'sig_comp_modified': 'tau'}
         for term, cfg in grid_data["res_terms"].items():
             # Resolve both central and SE here so each branch only has to add
             # its own eps * SE shift later
@@ -437,6 +467,7 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
                                   ctx, "mean_se")
             per[term] = (mean_adj, se_adj)
             if mean_adj is None:
+                # No central mean data for this term/IMT: skip correction
                 continue
             # Central mean and sigma adjustments do not depend on epsilon,
             # so they are added here and shared across all branches
