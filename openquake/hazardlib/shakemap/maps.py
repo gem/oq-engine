@@ -22,6 +22,8 @@ import logging
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site
 from openquake.hazardlib.shakemap.parsers import get_array
+from openquake.hazardlib.shakemap.realization import (
+    with_metadata, get_metadata)
 
 F32 = numpy.float32
 
@@ -120,9 +122,9 @@ def filter_unused_imts(shakemap, required_imts,
     dtlist = [(name, shakemap.dtype[name] if name in site_fields else F32)
               for name in ('lon', 'lat', 'vs30')]
     dtlist.extend([('val', dt), ('std', dt)])
-    extra_fields = [field for field in ('phi', 'tau', 'CL', 'K')
+    extra_fields = [field for field in ('phi', 'tau', 'CL')
                     if field in shakemap.dtype.names]
-    # Retain each IMT's factor width and precision, including station K.
+    # Retain each IMT's factor width and precision.
     for field in extra_fields:
         dtype = shakemap.dtype[field]
         dtlist.append((field, [(im, dtype[im])
@@ -133,7 +135,12 @@ def filter_unused_imts(shakemap, required_imts,
     for name in ('val', 'std', *extra_fields):
         for im in required_imts:
             data[name][im] = shakemap[name][im]
-    return data
+    # the new dtype has no metadata: keep the stations of the required IMTs
+    stations = get_metadata(shakemap, 'stations')
+    if stations is not None:
+        imts = numpy.array(sorted(required_imts), stations.dtype['imt'])
+        stations = stations[numpy.isin(stations['imt'], imts)]
+    return with_metadata(data, stations, get_metadata(shakemap, 'note'))
 
 
 def check_required_imts(required_imts, available_imts, mode='strict'):

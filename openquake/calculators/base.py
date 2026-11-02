@@ -59,6 +59,7 @@ from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, circulant_embedding_feasible)
+from openquake.hazardlib.shakemap.realization import get_metadata
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -1876,8 +1877,10 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
     if 'CL' in shakemap.dtype.names:
         # the stored posterior components are sampled with Loth and
         # Baker (2013), whatever correlation model was requested
-        conditioning = ('station-conditioned' if 'K' in shakemap.dtype.names
-                        else 'marginal approximation, no station conditioning')
+        conditioning = (
+            'station-conditioned'
+            if get_metadata(shakemap, 'stations') is not None
+            else 'marginal approximation, no station conditioning')
         model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
                  'approximate cross-IMT dependence, between-event terms '
                  'independent across IMTs)')
@@ -1887,6 +1890,9 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
         if strategy != calc.oqparam.correlation_strategy:
             model += (f'; {calc.oqparam.correlation_strategy} is not '
                       'applicable to these sites')
+    note = get_metadata(shakemap, 'note')
+    if note:  # for instance why shake_result.hdf was not used
+        model += f'; {note}'
     calc.datastore['correlation_model_used'] = numpy.array(
         [model], dtype=hdf5.vstr)
 

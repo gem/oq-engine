@@ -28,7 +28,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.oqvalidation import CORRELATION_STRATEGIES
 from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
-    get_nodal_planes_and_product, get_rup_dic)
+    get_nodal_planes_and_product, get_rup_dic, save_shakemap)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -115,8 +115,9 @@ class ImpactParam:
             make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
-            fname = general.gettemp(suffix='.npy')
-            numpy.save(fname, shakemap_array)
+            fname = general.gettemp(suffix='.npz')
+            # keeping the stations of the shake_result.hdf products
+            save_shakemap(fname, shakemap_array)
             params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
             params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:

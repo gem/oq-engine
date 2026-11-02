@@ -1,4 +1,5 @@
 import json
+import os
 
 import h5py
 import numpy
@@ -12,8 +13,14 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt import (
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, _loth_baker_residuals)
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.hazardlib.shakemap.parsers import get_array
-from openquake.hazardlib.shakemap.realization import psd_factor
+from openquake.hazardlib.shakemap.parsers import (
+    get_array, get_array_usgs_id, save_shakemap, ShakeMapProductError)
+from openquake.hazardlib.shakemap import parsers
+from openquake.hazardlib.shakemap.realization import (
+    psd_factor, get_metadata, station_conditioning)
+
+F32 = numpy.float32
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 
 def _raw_correlation(model, distances, im1, im2):
@@ -27,6 +34,9 @@ def _raw_correlation(model, distances, im1, im2):
 def _product(path, conditioned=True, sa_period=.3):
     # Write the actual upstream HDF layout, with two station IMTs and one
     # uncertain observation. Expected covariances use the Schur complement.
+    # As in the real products periods, sigmas and the between-event arrays
+    # are float32; the station coordinates are kept in double precision so
+    # that a station can coincide with a grid point.
     model = loth_baker_2013.ShakeMapLothBaker2013()
     imts = [imt.PGA(), imt.SA(sa_period)]
     lons = numpy.array([-.01, .01, -.01, .01])
@@ -47,7 +57,7 @@ def _product(path, conditioned=True, sa_period=.3):
     with h5py.File(path, 'w') as h5:
         h5['dictionaries/config'] = json.dumps(config)
         h5['arrays/vs30'] = numpy.full((2, 2), 400.)
-        h5['arrays/imt_periods'] = [.01, sa_period]
+        h5['arrays/imt_periods'] = numpy.array([.01, sa_period], F32)
         for i, im in enumerate(imts):
             phi = numpy.full(4, .6 + .1 * i)
             W_YY = model.correlation_block(
@@ -70,16 +80,19 @@ def _product(path, conditioned=True, sa_period=.3):
             group = h5.require_group(
                 f'arrays/imts/GREATER_OF_TWO_HORIZONTAL/{im}')
             group['mean'] = numpy.full((2, 2), numpy.log(.1))
-            group['phi'] = phi.reshape(2, 2)
-            group['tau'] = numpy.sqrt(numpy.diag(between)).reshape(2, 2)
+            group['phi'] = phi.reshape(2, 2).astype(F32)
+            group['tau'] = numpy.sqrt(
+                numpy.diag(between)).reshape(2, 2).astype(F32)
             group['std'] = numpy.sqrt(numpy.maximum(
-                numpy.diag(expected[str(im)]), 0)).reshape(2, 2)
-            group['C'], group['Sigma_HH_YD'] = C, sigma
+                numpy.diag(expected[str(im)]), 0)).reshape(2, 2).astype(F32)
+            group['C'] = C.astype(F32)
+            group['Sigma_HH_YD'] = sigma.astype(F32)
             for name, values in (
                     ('sta_lons_rad', numpy.radians(slons)),
                     ('sta_lats_rad', numpy.radians(slats)),
                     ('sta_per_ix', numpy.array([0, 1])),
-                    ('sta_phi', sphi), ('add_uncertainty', extra)):
+                    ('sta_phi', sphi.astype(F32)),
+                    ('add_uncertainty', extra.astype(F32))):
                 group[name] = values.reshape(1, -1) if conditioned else []
     return expected
 
@@ -98,7 +111,8 @@ def test_hdf_posterior_spatial_covariance(tmp_path, conditioned):
     path = tmp_path / 'shake_result.hdf'
     expected = _product(path, conditioned)
     shakemap = get_array(kind='shake_result_hdf', fname=str(path))
-    assert 'K' in shakemap.dtype.names
+    stations = get_metadata(shakemap, 'stations')
+    assert len(stations) == (4 if conditioned else 0)  # 2 per IMT
     names = list(expected)
     gmfs = _gmfs(shakemap, names)
     for i, name in enumerate(names):
@@ -125,16 +139,18 @@ def test_conditioning_survives_npy_filtering_and_association(tmp_path):
     expected = _product(path)
     shakemap = get_array(kind='shake_result_hdf', fname=str(path))
     cached = tmp_path / 'shake.npy'
-    numpy.save(cached, shakemap)
+    save_shakemap(cached, shakemap)
     indices = [0, 3, 0]
     sites = site.SiteCollection.from_points(
         shakemap['lon'][indices] + numpy.array([.00001, .00002, .00003]),
         shakemap['lat'][indices])
     _, selected, _, names = get_sitecol_shakemap(
         {'kind': 'file_npy', 'fname': str(cached)}, ['SA(0.3)'], sites)
-    assert selected['K'].dtype.names == ('SA(0.3)',)
+    # only the stations of the selected IMT are kept
+    stations = get_metadata(shakemap, 'stations')
     numpy.testing.assert_array_equal(
-        selected['K']['SA(0.3)'], shakemap['K']['SA(0.3)'][indices])
+        get_metadata(selected, 'stations'),
+        stations[stations['imt'] == b'SA(0.3)'])
     gmfs = _gmfs(selected, names)
     numpy.testing.assert_array_equal(gmfs[0], gmfs[2])
     numpy.testing.assert_allclose(
@@ -174,11 +190,14 @@ def test_noiseless_station_with_rounded_correlation(tmp_path):
 
 
 def test_station_conditioning_memory_budget(tmp_path, monkeypatch):
+    # reading does not depend on the budget, since the station correction
+    # is computed only when sampling, for the sites of the calculation
     path = tmp_path / 'shake_result.hdf'
     _product(path)
     monkeypatch.setitem(config.memory, 'correlated_gmf_gb', 1E-9)
-    with pytest.raises(ValueError, match='conditioning exceeds'):
-        get_array(kind='shake_result_hdf', fname=str(path))
+    shakemap = get_array(kind='shake_result_hdf', fname=str(path))
+    with pytest.raises(ValueError, match='correlated_gmf_gb'):
+        _gmfs(shakemap, ['PGA'], count=2)
 
 
 def test_duplicate_noiseless_stations(tmp_path):
@@ -215,7 +234,7 @@ def test_incomplete_station_arrays_warn(tmp_path, caplog):
     with h5py.File(path, 'r+') as h5:
         del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/sta_phi']
     shakemap = get_array(kind='shake_result_hdf', fname=str(path))
-    assert 'K' not in shakemap.dtype.names
+    assert get_metadata(shakemap, 'stations') is None
     _gmfs(shakemap, ['PGA'], count=2)
     assert 'approximation without conditioning' in caplog.text
 
@@ -234,3 +253,55 @@ def test_interpolated_periods_preserve_correlation_and_unit_variance():
 def test_indefinite_covariance_is_not_silently_clipped():
     with pytest.raises(ValueError, match='not positive semidefinite'):
         psd_factor(numpy.array([[1., 2.], [2., 1.]]))
+
+
+def test_real_product_reconstructs_conditional_variance(caplog):
+    # a 10x10 window of the us6000t7uu product (shakemap-modules 1.1.16),
+    # where the stations reduce the variance the most, with all of its
+    # 512 PGA and 514 SA(1.0) stations; the products store float32 values,
+    # including the periods: SA(0.01) used to be rejected by LothBaker2013
+    fname = os.path.join(DATA, 'us6000t7uu_shake_result.hdf')
+    shakemap = get_array(kind='shake_result_hdf', fname=fname)
+    stations = get_metadata(shakemap, 'stations')
+    for im, period in (('PGA', .01), ('SA(1.0)', 1.)):
+        phi = shakemap['phi'][im]
+        K = station_conditioning(
+            shakemap['lon'], shakemap['lat'], period, phi,
+            stations[stations['imt'] == im.encode()])
+        tau2 = (shakemap['CL'][im].astype(numpy.float64) ** 2).sum(axis=1)
+        expected = shakemap['std'][im].astype(numpy.float64) ** 2 - tau2
+        # the stations reduce the prior within-event variance up to 60%
+        assert (expected / phi ** 2).min() < .4
+        numpy.testing.assert_allclose(
+            phi ** 2 - (K ** 2).sum(axis=1), expected, atol=1E-3 * .3)
+    gmfs = _gmfs(shakemap, ['PGA', 'SA(1.0)'], count=20_000)
+    for i, im in enumerate(['PGA', 'SA(1.0)']):
+        numpy.testing.assert_allclose(
+            numpy.log(gmfs[:, :, i]).var(axis=1),
+            shakemap['std'][im] ** 2, rtol=.05)
+    assert 'reproduces the ShakeMap' not in caplog.text
+
+
+def _fallback(monkeypatch, exc):
+    # get_array_usgs_id with a failing shake_result.hdf and a grid.xml
+    xml = numpy.zeros(2, [('lon', float), ('lat', float)])
+
+    def get_array(kind, **kw):
+        if kind == 'shake_result_hdf':
+            raise exc
+        return xml
+    monkeypatch.setattr(parsers, 'get_array', get_array)
+    contents = {'download/shake_result.hdf': {'url': 'hdf'},
+                'download/grid.xml': {'url': 'xml'}}
+    return get_array_usgs_id('usgs_id', 'us0', contents)
+
+
+def test_unusable_product_falls_back_to_xml_with_a_note(monkeypatch):
+    array = _fallback(monkeypatch, ShakeMapProductError('unsupported'))
+    assert get_metadata(array, 'note') == (
+        'shake_result.hdf not used: unsupported')
+
+
+def test_errors_are_not_hidden_by_the_xml_fallback(monkeypatch):
+    with pytest.raises(ValueError, match='a bug'):
+        _fallback(monkeypatch, ValueError('a bug'))

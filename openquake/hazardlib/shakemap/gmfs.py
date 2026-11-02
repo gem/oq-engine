@@ -29,7 +29,8 @@ from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
 from openquake.hazardlib.shakemap.realization import (
-    psd_factor, posterior_within_residuals)
+    psd_factor, posterior_within_residuals, station_conditioning,
+    get_metadata)
 from openquake.hazardlib.calc.gmf import (
     _site_positions, _correlation_budget, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
@@ -457,29 +458,39 @@ def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
 def _condition_within(shakemap, imts, within, conditional_phi):
     # Each linear transformation preserves the posterior covariance of
     # one IMT; cross-IMT dependence is an explicitly defined approximation.
+    # The station correction K is computed only for the distinct points
+    # of the calculation, not for the whole ShakeMap grid
     phi = conditional_phi.reshape(len(imts), -1)
     result = phi[:, :, None] * within
-    if ('K' not in shakemap.dtype.names or
-            not any(numpy.any(shakemap['K'][str(im)]) for im in imts)):
+    stations = get_metadata(shakemap, 'stations')
+    if stations is None or not len(stations):
         return result  # older NPY/HDF products retain a warned approximation
     points, first, inverse = numpy.unique(numpy.column_stack([
         shakemap['lon'], shakemap['lat']]), axis=0,
         return_index=True, return_inverse=True)
-    if 80 * len(points) ** 2 > _correlation_budget():
-        raise ValueError('ShakeMap posterior covariance exceeds '
-                         'correlated_gmf_gb; request fewer sites')
+    U, D = len(points), numpy.unique(stations['imt'], return_counts=True)[1]
+    # the dense posterior covariance and the (U, D) station correction
+    required = 80 * U ** 2 + 8 * U * D.max() + 48 * D.max() ** 2
+    if required > _correlation_budget():
+        raise ValueError(
+            f'The ShakeMap posterior covariance of {U} points requires '
+            f'about {humansize(required)}, more than the correlated_gmf_gb '
+            'of openquake.cfg; request fewer sites')
     dist = None
     model = loth_baker_2013.ShakeMapLothBaker2013()
     for i, im in enumerate(imts):
-        K = shakemap['K'][str(im)][first]
-        if not numpy.any(K):
+        sta = stations[stations['imt'] == str(im).encode()]
+        if not len(sta):
             continue
+        prior_phi = shakemap['phi'][str(im)][first].astype(numpy.float64)
+        K = station_conditioning(
+            points[:, 0], points[:, 1],
+            loth_baker_2013._correlation_period(im), prior_phi, sta)
         if dist is None:
             dist = geo.geodetic.distance_matrix(points[:, 0], points[:, 1])
         correlation = model.correlation_block(dist, [im])
         posterior = posterior_within_residuals(
-            within[i, first], correlation, shakemap['phi'][str(im)][first],
-            K, phi[i, first])
+            within[i, first], correlation, prior_phi, K, phi[i, first])
         result[i] = posterior[inverse]
     return result
 
@@ -515,7 +526,7 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
         logging.warning(
             'The ShakeMap is sampled with LothBaker2013, the requested '
             '%s is not used', spatial_model.__class__.__name__)
-    if 'K' not in shakemap.dtype.names:
+    if get_metadata(shakemap, 'stations') is None:
         logging.warning(
             'Incomplete ShakeMap station bookkeeping: the within-event '
             'correlation uses a marginal approximation without conditioning')
