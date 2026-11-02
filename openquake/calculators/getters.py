@@ -363,13 +363,15 @@ class MapGetter(object):
         if self.array is not None:
             return self.array
         sid2idx = {sid: idx for idx, sid in enumerate(self.sids)}
+        self.sid2idx = sid2idx
         self.array = numpy.zeros((self.N, self.L, self.Gt), F32)
+        if not sid2idx:  # empty chunk, nothing to read
+            return self.array
         lookup = numpy.full(max(sid2idx) + 1, -1, int)
         for sid, idx in sid2idx.items():
             lookup[sid] = idx
         for fname in self.filenames:
             self.read_chunk(fname, lookup)
-        self.sid2idx = sid2idx
         return self.array
 
     def read_chunk(self, fname, lookup):
@@ -451,9 +453,11 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    trts = list(dstore['full_lt/gsim_lt'].values)
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
     for proxy in get_proxies(dstore.filename):
-        ebrs.append(proxy.to_ebr(trts[0]))
+        # the TRT index is in the high bits of trt_smr
+        trt = trts[proxy['trt_smr'] // TWO24]
+        ebrs.append(proxy.to_ebr(trt))
     return ebrs
 
 
