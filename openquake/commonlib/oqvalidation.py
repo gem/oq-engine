@@ -728,8 +728,7 @@ ps_grid_spacing:
   *pointsource_distance* is not set, it is 25 km when gridding and 100 km
   otherwise. If set to *auto*, the engine determines ps_grid_spacing (and
   pointsource_distance, if not set) by comparing the hazard on a sample of
-  sites with a reference calculation; it is recommended to use it with
-  *calculation_mode = preclassical*.
+  sites with a reference calculation.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
