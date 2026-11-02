@@ -126,6 +126,19 @@ def filter_mag(srcs, min_mag, strict, bysrc=False):
     return out
 
 
+def max_psdist(psd):
+    """
+    :param psd: a pointsource_distance, i.e. a number, a dictionary
+        TRT -> pointsource_distance, or a list of (mag, distance) pairs
+    :returns: the largest distance of the pointsource_distance
+    """
+    if isinstance(psd, dict):
+        return max(max_psdist(val) for val in psd.values())
+    if isinstance(psd, list):  # magnitude-dependent distances
+        return max(dist for _mag, dist in psd)
+    return psd
+
+
 def filter_weight(srcs, sf, cmaker, secparams, monitor):
     """
     Filter and weight the sources. Also split them, except for
@@ -180,7 +193,8 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
 
     cmaker.set_weight(splits, sf)
     dic = {splits[0].grp_id: splits}
-    if not cmaker.ps_grid_spacing and cmaker.pointsource_distance < PSD_EXACT:
+    psd = max_psdist(cmaker.pointsource_distance)
+    if not cmaker.ps_grid_spacing and psd < PSD_EXACT:
         # estimate the reduction due to the pointsource_distance approximation
         # on the split sources, the ones used in classical
         pts = [src for src in splits if hasattr(src, 'location')]
