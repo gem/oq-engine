@@ -1586,7 +1586,7 @@ class ContextMaker(object):
         gsim.adj = []  # NSHM2014P adjustments
         compute = gsim.__class__.compute
         if getattr(gsim, "requires_cmaker", False):
-            gsim._cmaker = self
+            gsim._cmaker = self # Non-erg GMM using ctx fingerprinting speed-up
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
