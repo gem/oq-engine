@@ -419,11 +419,15 @@ def calc_abort(calc_id):
         # turn an already completed or failed calculation into an aborted one.
         if not logs.dbcmd('set_aborted', job.id):
             current = logs.dbcmd('get_job', job.id)
-            # A delivered SIGINT can make the worker persist failed/aborted
-            # before our UPDATE. The abort request was still accepted.
+            # The worker may handle SIGINT before our UPDATE: MasterKilled
+            # is recorded as failed by LogContext.__exit__, while other exit
+            # paths record aborted. Preserve either result.
             if current is None or current.status not in ('failed', 'aborted'):
                 return {'error': 'Job %s is not running' % job.id}
         logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
+        # Success acknowledges signal delivery, not the final job outcome.
+        # A concurrent failure may be unrelated to SIGINT, and the worker
+        # can still persist successful completion after this response.
         return {'success': 'Killing job %d' % job.id}
     return {'error': 'PID for job %s not found' % job.id}
 

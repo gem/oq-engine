@@ -97,8 +97,10 @@ class EnginePage:
         was_aborted = aborted.is_visible()
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
         if was_aborted:
-            # Signal delivery is not an acknowledgement from the worker.
-            # It can persist completion, or record SIGINT as a failed job.
+            # The notification acknowledges signal delivery. The worker can
+            # still complete, or record MasterKilled from SIGINT as failed.
+            # After requesting interruption, status alone cannot distinguish
+            # an abort-induced failure from an unrelated calculation failure.
             expect(job_row.locator('td').nth(6)).to_contain_text(
                 re.compile(r'\b(complete|failed)\b'),
                 timeout=20_000)
