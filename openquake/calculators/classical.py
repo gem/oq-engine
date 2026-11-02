@@ -972,7 +972,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_grid(self):
         """
-        Store in the est_ctxs dataset the contexts after collapse_precision
+        Store in the nctxs dataset the contexts after collapse_precision
         in the 'collapsed' field and the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field, see contexts.py.
         If collapse_precision or ps_grid_spacing is set and there is no
@@ -980,8 +980,8 @@ class ClassicalCalculator(base.HazardCalculator):
         contexts before collapse_precision, counted for all source types.
         """
         after, removed, gridded = self.cfactor
-        if 'est_ctxs' in self.datastore:
-            est = self.datastore['est_ctxs'][()]
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][()]
         else:
             est = numpy.zeros(1, preclassical.CTX_EST)
         est['gridded'] = int(gridded)
@@ -990,7 +990,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if ((oq.collapse_precision or oq.ps_grid_spacing)
                 and est['exact'][0] == 0):
             est['exact'] = int(after + removed)
-        self.datastore['est_ctxs'] = est
+        self.datastore['nctxs'] = est
 
     def log_cfactor(self):
         """
@@ -1003,8 +1003,8 @@ class ClassicalCalculator(base.HazardCalculator):
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST
         psdist, exact, grid = 0, 0, 0
-        if 'est_ctxs' in self.datastore:
-            est = self.datastore['est_ctxs'][0]
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][0]
             psdist, exact, grid = est['psd100'], est['exact'], est['gridded']
         estimated = grid > 0  # the gridded sources have been estimated
         if psdist > 0 and not estimated:

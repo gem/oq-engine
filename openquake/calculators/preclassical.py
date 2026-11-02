@@ -47,7 +47,7 @@ GB = 2 ** 30
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
-# context estimates stored in the datastore as dataset 'est_ctxs'
+# context estimates stored in the datastore as dataset 'nctxs'
 # NB: 'gridded' is the number of contexts of the gridded point sources
 # before collapse_precision, 'collapsed' the number of contexts after
 # collapse_precision
@@ -491,7 +491,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         psdist_ctxs = res.pop('psdist_ctxs', 0)
         exact_ctxs = res.pop('exact_ctxs', 0)
         if exact_ctxs:  # used in classical.log_cfactor
-            self.datastore['est_ctxs'] = numpy.array(
+            self.datastore['nctxs'] = numpy.array(
                 [(exact_ctxs, psdist_ctxs, 0, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
