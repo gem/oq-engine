@@ -188,19 +188,28 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
     return result
 
 
-_full_lt_cache = {}  # (dstore filename, ilabel) -> initialized FullLogicTree
+# (dstore filename, ilabel, init) -> FullLogicTree
+_full_lt_cache = {}
 
 
-def read_full_lt(dstore, ilabel=None):
+def read_full_lt(dstore, ilabel=None, init=True):
     """
     :param dstore: a DataStore instance, possibly closed
     :param ilabel: the index of the site label (see site_labels), or None
+    :param init: if False, the realizations are not built
     :returns: the FullLogicTree stored in the datastore, initialized only
         once per process, since the init is not cheap for large LTs;
         with a site label, the gsim logic tree is the one of the label,
         so that the gweights are the right ones (see read_gid_dic)
+
+    NB: without init the FullLogicTree has only the source model
+    realizations, which is enough for get_bset_values; the init is
+    expensive for large logic trees (4.7 GB and 2 minutes for the 7_864_320
+    realizations of CND) and must not be performed in each worker
     """
-    key = (dstore.filename, ilabel or 0)
+    if not init:
+        ilabel = None  # the source model realizations do not depend on it
+    key = (dstore.filename, ilabel or 0, init)
     try:
         return _full_lt_cache[key]
     except KeyError:
@@ -209,7 +218,9 @@ def read_full_lt(dstore, ilabel=None):
         for k in [k for k in _full_lt_cache if k[0] != dstore.filename]:
             del _full_lt_cache[k]
         with dstore:
-            full_lt = dstore['full_lt'].init()
+            full_lt = dstore['full_lt']
+            if init:
+                full_lt.init()
             if ilabel:
                 # the labels are ordered as the cmdict, i.e. Default first;
                 # tested in classical/case_06_disagg_by_src
@@ -514,9 +525,17 @@ def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     # NB: the tilegetter is trivial unless there are site labels;
     # the gweights depend on the label, see get_rates and
     # classical/case_06_disagg_by_src
-    full_lt = read_full_lt(dstore, cmaker.ilabel)
-    return (grps, tilegetter(sitecol, cmaker.ilabel),
-            read_gid_dic(dstore, full_lt), full_lt)
+    gid_dic = getattr(cmaker, 'gid_dic', None)
+    if gid_dic is None:
+        full_lt = read_full_lt(dstore, cmaker.ilabel)
+        gid_dic = read_gid_dic(dstore, full_lt)
+    else:
+        # the gid_dic was computed in the master (see set_gid_dic), so
+        # the realizations are not needed and are not built: with
+        # 160 cores and the 7_864_320 realizations of CND that would
+        # require 160 x 4.7 GB, i.e. the machine would go out of memory
+        full_lt = read_full_lt(dstore, init=False)
+    return grps, tilegetter(sitecol, cmaker.ilabel), gid_dic, full_lt
 
 
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -846,6 +865,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
+        self.full_lt_by_label = full_lt_by_label  # used in set_gid_dic
         trt_smrs = self.datastore['trt_smrs'][:]
         # NB: the gids of the cmakers must be numbered as in the core list,
         # the one used by read_gid_dic in the master and in the workers
@@ -1074,11 +1094,36 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
         return self.rmap[grp_id]
 
+    def set_gid_dic(self, ds):
+        """
+        Compute the gid_dic of each site label once, in the master, and
+        attach it to the cmakers sent to the tasks, so that the workers
+        do not need to build the realizations (see read_task_input)
+
+        :param ds: the datastore read by the tasks
+        :returns: the gid_dic of the Default label
+        """
+        # NB: this is needed for CND, which has 7_864_320 LtRealizations:
+        # building them in each worker requires 4.7 GB per process, i.e.
+        # the machine goes out of memory with 160 workers
+        dics = [read_gid_dic(ds, full_lt)
+                for full_lt in self.full_lt_by_label.values()]
+        # the labels are ordered as the cmdict, i.e. Default first
+        for gid_dic, cmakers in zip(dics, self.cmdict.values()):
+            for cmaker in cmakers:
+                cmaker.gid_dic = gid_dic
+        return dics[0]
+
     def _execute(self, ds):
         oq = self.oqparam
         allargs = []
         weights = []  # estimated weight of each task
         self.rmap = {}
+        # the rates are attributed to the sets of realizations with the
+        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
+        # dataset read by the tasks, which can be the parent calculation
+        # (as in case_36)
+        gid_dic = self.set_gid_dic(ds)
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks)
@@ -1088,11 +1133,6 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
-        # the rates are attributed to the sets of realizations with the
-        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
-        # dataset read by the tasks, which can be the parent calculation
-        # (as in case_36)
-        gid_dic = read_gid_dic(ds, self.full_lt)
         gids = group_gids(self.csm.src_groups, gid_dic)
         for cmaker, tilegetters, grp_keys, atomic, grp_weights in data:
             num_blocks += sum('-' in key for key in grp_keys)
