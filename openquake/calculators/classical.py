@@ -660,7 +660,7 @@ def postclassical(pgetter, hstats, individual_rlzs, amplifier, monitor):
         pmap_by_kind['hcurves-stats'] = [
             MapArray(sids, M, L1).fill(0) for r in range(S)]
     with monitor('compute stats', measuremem=False):
-        sidx = MapArray(sids, 1, 1).fill(0).sidx
+        sidx = pgetter.sid2idx  # same positions as in pgetter.array
         for sid in sids:
             idx = sidx[sid]
             pc = pgetter.get_hcurve(sid)  # rock hcurve, shape (L, R)
@@ -952,6 +952,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
         else:
+            self.store_grid()
             self.log_cfactor()
         self.store_info()
         if self.dparam_mb > 1:
@@ -969,6 +970,28 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['mean_rates_by_src/array'][()])
         return True
 
+    def store_grid(self):
+        """
+        Store in the nctxs dataset the contexts after collapse_precision
+        in the 'collapsed' field and the contexts of the gridded point sources
+        before collapse_precision in the 'gridded' field, see contexts.py.
+        If collapse_precision or ps_grid_spacing is set and there is no
+        estimate in the 'exact' field, the 'exact' field is set to the
+        contexts before collapse_precision, counted for all source types.
+        """
+        after, removed, gridded = self.cfactor
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][()]
+        else:
+            est = numpy.zeros(1, preclassical.CTX_EST)
+        est['gridded'] = int(gridded)
+        est['collapsed'] = int(after)
+        oq = self.oqparam
+        if ((oq.collapse_precision or oq.ps_grid_spacing)
+                and est['exact'][0] == 0):
+            est['exact'] = int(after + removed)
+        self.datastore['nctxs'] = est
+
     def log_cfactor(self):
         """
         Log the overall context reduction, including point-source gridding
@@ -979,10 +1002,11 @@ class ClassicalCalculator(base.HazardCalculator):
         before = after + removed
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST
-        nogrid, psdist, exact = 0, 0, 0
-        if 'est_ctxs' in self.datastore:
-            nogrid, psdist, exact = self.datastore['est_ctxs'][0]
-        estimated = nogrid > 0
+        psdist, exact, grid = 0, 0, 0
+        if 'nctxs' in self.datastore:
+            est = self.datastore['nctxs'][0]
+            psdist, exact, grid = est['psd100'], est['exact'], est['gridded']
+        estimated = grid > 0  # the gridded sources have been estimated
         if psdist > 0 and not estimated:
             # pointsource_distance approximation without gridding, see
             # preclassical.count_psdist: contexts with PSD_EXACT over
@@ -994,10 +1018,15 @@ class ClassicalCalculator(base.HazardCalculator):
         elif estimated:
             # Replace only the gridded sources' original context count;
             # other sources and their precision reduction remain included.
-            grid = (before + max(float(nogrid) - gridded, 0.)) / before
-            logging.info('cfactor = {:_d}, estimated reduction factor {:.2f} '
-                         '(gridding {:.2f} x collapse {:.2f})'.format(
-                             int(after), grid * collapse, grid, collapse))
+            factor = (before + max(float(exact) - gridded, 0.)) / before
+            if self.oqparam.collapse_precision:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding {:.2f} x collapse {:.2f})'
+                             .format(int(after), factor * collapse, factor,
+                                     collapse))
+            else:
+                logging.info('cfactor = {:_d}, estimated reduction factor '
+                             '{:.2f} (gridding)'.format(int(after), factor))
         else:
             logging.info('cfactor = {:_d}, reduction factor {:.2f}'.format(
                 int(after), collapse))
@@ -1016,6 +1045,11 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
+        if oq.disagg_by_src and oq.ps_grid_spacing and not self.few_sites:
+            # with few sites the rates are computed one source at a time,
+            # so the gridded point sources are not mixed with other sources
+            raise ValueError('disagg_by_src with ps_grid_spacing requires '
+                             'less than max_sites_disagg sites')
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:

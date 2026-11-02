@@ -701,7 +701,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
         data = self.calc.datastore.read_df('source_data')
         self.assertGreater(data.nrupts.sum(), 0)
-        self.assertIn('est_ctxs', self.calc.datastore)
+        self.assertIn('nctxs', self.calc.datastore)
         self.assertGreater(self.calc.cfactor[2], 0)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles("expected/hazard_curve-mean-PGA.csv", fname)
@@ -1438,7 +1438,7 @@ class ContextReductionTestCase(unittest.TestCase):
         self.calc = object.__new__(ClassicalCalculator)
         self.calc.oqparam = mock.Mock(collapse_precision=.03)
         self.calc.datastore = {
-            'est_ctxs': numpy.array([(400, 0, 0)], CTX_EST)}
+            'nctxs': numpy.array([(400, 0, 100, 0)], CTX_EST)}
 
     def test_gridding_and_precision(self):
         self.calc.cfactor = numpy.array([96., 4., 100.])
@@ -1448,6 +1448,31 @@ class ContextReductionTestCase(unittest.TestCase):
         self.assertIn('removed only 4.0%', logs.output[1])
         self.assertIn('collapse_precision should be turned off',
                       logs.output[1])
+
+    def test_store_grid(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 100.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 96)  # after collapse_precision
+        self.assertEqual(est['gridded'], 100)  # gridded, before collapse
+        self.assertEqual(est['exact'], 0)  # no estimate, not set
+
+    def test_store_exact(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=.03,
+                                      ps_grid_spacing=0)
+        self.calc.datastore = {}
+        self.calc.cfactor = numpy.array([96., 4., 0.])
+        self.calc.store_grid()
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['exact'], 100)  # 96 after + 4 removed
+        # an existing estimate is kept
+        self.calc.datastore = {
+            'nctxs': numpy.array([(400, 0, 0, 0)], CTX_EST)}
+        self.calc.store_grid()
+        self.assertEqual(self.calc.datastore['nctxs'][0]['exact'], 400)
 
     def test_mixed_sources(self):
         # Include 50 ungridded contexts as well as the 100 gridded ones.
@@ -1459,7 +1484,7 @@ class ContextReductionTestCase(unittest.TestCase):
 
     def test_pointsource_distance(self):
         self.calc.datastore = {
-            'est_ctxs': numpy.array([(0, 100, 330)], CTX_EST)}
+            'nctxs': numpy.array([(330, 100, 0, 0)], CTX_EST)}
         self.calc.cfactor = numpy.array([100., 0., 0.])
         with self.assertLogs(level='INFO') as logs:
             self.calc.log_cfactor()
@@ -1473,6 +1498,15 @@ class ContextReductionTestCase(unittest.TestCase):
         self.assertIn('cfactor = 100, reduction factor 3.96 (psdist 3.30 x '
                       'collapse 1.20)',
                       logs.output[0])
+
+    def test_gridding_without_collapse(self):
+        self.calc.oqparam = mock.Mock(collapse_precision=0)
+        self.calc.cfactor = numpy.array([100., 0., 50.])
+        with self.assertLogs(level='INFO') as logs:
+            self.calc.log_cfactor()
+        self.assertIn('cfactor = 100, estimated reduction factor 4.50 '
+                      '(gridding)', logs.output[0])
+        self.assertEqual(len(logs.output), 1)
 
     def test_warning_threshold(self):
         self.calc.datastore = {}
