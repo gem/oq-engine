@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Fixed the rupture IDs of the global SES made from the mosaic models: the
+    IDs of different models could collide, so the IDs now encode the index
+    of the model (at most 256 models, see MOSAIC_ORDER in countries.py) and
+    the rupture IDs are unique across the models. Existing SES files must
+    be regenerated
   * Changed the MapGetter to use 32 bit arrays, as documented but not done
 
   [Christopher Brooks]
