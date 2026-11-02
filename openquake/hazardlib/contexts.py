@@ -1664,11 +1664,11 @@ class ContextMaker(object):
         # its nctxs suggests. The number of pairs is the relevant
         # quantity, discounted by PAIR_COST
         pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
-        # generating the contexts of pointlike sources is fast
-        fac = .333 if src.code in b'pPAM' else 1  # heuristic
+        # NB: reducing the weight of the pointlike sources, e.g. with a
+        # factor .333, would break test_alaska in oq-risk-tests
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return fac * (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """

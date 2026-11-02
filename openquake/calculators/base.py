@@ -42,9 +42,11 @@ from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -619,9 +621,7 @@ class HazardCalculator(BaseCalculator):
                 and ('classical' in oq.calculation_mode or
                      'disaggregation' in oq.calculation_mode)):
             logging.info(
-                'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/general.html#'
-                'pointsource-distance')
+                'You are not using the pointsource_distance approximation')
         elif 'classical' in oq.calculation_mode:
             if oq.ps_grid_spacing:
                 logging.info('Using pointsource_distance=%s and '
@@ -1260,6 +1260,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol.check_nan(
                 [p for p in site.CORE_SITE_PARAMS
                  if p in oq.req_site_params])
+            # check the site parameters are in the range of the GSIMs
+            gsims = readinput.get_gsim_lt(oq).values.values()
+            check_sites(sum(gsims, []), self.sitecol)
 
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
@@ -1614,9 +1617,15 @@ def import_ruptures_hdf5(h5, fnames):
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
             oq = f['oqparam']
+            if oq.mosaic_model:
+                # the model index goes in the high bits, so that the rupture
+                # IDs of different models cannot collide
+                shift = numpy.int64(mosaic_index(oq.mosaic_model)) << 55
+            else:
+                shift = offset
             events = f['events'][:]
             events['id'] += E
-            events['rup_id'] += offset
+            events['rup_id'] += shift
             if fileno == 0:  # first time
                 h5.create_dataset(
                     'events', (0,), events.dtype, maxshape=(None,), chunks=True,
@@ -1625,7 +1634,13 @@ def import_ruptures_hdf5(h5, fnames):
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
-            rup['id'] += offset
+            if oq.mosaic_model:
+                # the IDs of a model must fit in the 55 low bits, i.e.
+                # the source index in the 25 bits above the 30 bits of
+                # the counter within the source
+                assert rup['id'].max() < 2**55, rup['id'].max()
+                assert rup['source_id'].max() < 2**25, rup['source_id'].max()
+            rup['id'] += shift
             rup['geom_id'] += offset
             rup['e0'] += E
             E += len(events)

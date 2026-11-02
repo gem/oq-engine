@@ -23,8 +23,11 @@ import getpass
 import tempfile
 import logging
 
-from openquake.baselib import config
+from django.core.exceptions import ImproperlyConfigured
+from openquake.baselib import config, is_server_installation
+from openquake.baselib.general import engine_version
 from openquake.commonlib import datastore, auth
+
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -51,7 +54,8 @@ INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
-DEBUG = True
+# Normally do not show debug pages in a server installation
+DEBUG = not is_server_installation()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
@@ -302,6 +306,15 @@ if not TEST:
             # If a local_setting.py does not exist
             # settings in this file only will be used
             pass
+
+# In a devel_server installation we might want to set DEBUG = True
+if is_server_installation() and DEBUG:
+    if 'git' in engine_version():  # devel_server
+        logging.warning(
+            'DEBUG is True. Please check if this is intentional!')
+    else:
+        raise ImproperlyConfigured(
+            'DEBUG = True is not allowed in a server installation:')
 
 # Local defaults must not affect the test suite. In particular, a configured
 # IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.

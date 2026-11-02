@@ -51,7 +51,6 @@ I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
-TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -1903,7 +1902,7 @@ def extract_ruptures(dstore, what):
     if 'rup_id' in qdict:
         rup_id = int(qdict['rup_id'][0])
         ebrups = [getters.get_ebrupture(dstore, rup_id)]
-        info = dstore['source_info'][rup_id // TWO30]
+        info = dstore['source_info'][ebrups[0].source_id]
         comment['source_id'] = info['source_id'].decode('utf8')
     else:
         if 'threshold' in qdict:
