@@ -107,6 +107,7 @@ class server:
     CFG = os.path.join(VENV, "openquake.cfg")
     OQ = "/usr/bin/oq"
     OQDATA = "/opt/openquake/oqdata"
+    ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     CONFIG = f"""[server]
     host = localhost
@@ -788,9 +789,13 @@ def remove(inst):
     elif os.path.exists(inst.VENV):
         shutil.rmtree(inst.VENV)
         print(f"{inst.VENV} has been removed")
-    if inst in (server, devel_server) and os.path.exists(server.OQ):
-        os.remove(server.OQ)
-        print(f"{server.OQ} has been removed")
+    if inst in (server, devel_server):
+        if os.path.exists(server.OQ):
+            os.remove(server.OQ)
+            print(f"{server.OQ} has been removed")
+        if os.path.exists(server.ETC):
+            shutil.rmtree(server.ETC)
+            print(f"{server.ETC} has been removed")
 
 
 if __name__ == "__main__":
