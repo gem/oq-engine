@@ -3,6 +3,8 @@
    computation of the backbone's grid-adjusted mean prediction
  
  [Michele Simionato]
+  * Nonparametric sources with gridded ruptures are now stored as arrays,
+    reducing substantially the memory used by the classical tasks (3x)
   * Internal: extended `oq check_input` to recognize the case of sources with the
     same geometry but different MFDs and suggest a better way to write them
   * Changed `oq engine --param` to use space-separated name=value pairs instead

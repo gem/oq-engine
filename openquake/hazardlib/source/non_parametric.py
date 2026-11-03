@@ -18,13 +18,13 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
-from openquake.baselib.general import block_splitter
+from openquake.baselib.general import block_splitter, WeightedSequence
 from openquake.hazardlib.codes import NON_PARAMETRIC
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (
+    BaseRupture, NonParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            get_spherical_bounding_box)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -34,6 +34,101 @@ from openquake.hazardlib.pmf import PMF
 F32 = numpy.float32
 U32 = numpy.uint32
 BLOCKSIZE = 100
+RUP_ATTRS = {'tectonic_region_type', 'rake', 'mag', 'hypocenter', 'surface',
+             'rupture_slip_direction', 'ruid', 'probs_occur', 'weight'}
+RUP_TYPES = (BaseRupture, NonParametricProbabilisticRupture)
+POINT_ATTRS = {'longitude', 'latitude', 'depth'}
+
+
+# True if the rupture can be stored in arrays and rebuilt exactly,
+# i.e. it is a plain BaseRupture or NonParametricProbabilisticRupture
+# with a GriddedSurface and the probabilities of 0, 1, ... occurrences
+def _is_simple(rup, pmf, first_rup, first_pmf):
+    surf = rup.surface
+    if (type(rup) not in RUP_TYPES or type(rup) is not type(first_rup) or
+            type(surf) is not GriddedSurface or type(pmf) is not PMF or
+            type(surf.mesh) is not Mesh or type(rup.hypocenter) is not Point):
+        return False
+    if (not set(vars(rup)) <= RUP_ATTRS or
+            (surf.idx, surf.strike, surf.dip) != (None, None, None) or
+            rup.rupture_slip_direction is not None or rup.ruid is not None or
+            rup.tectonic_region_type != first_rup.tectonic_region_type or
+            hasattr(rup, 'weight') != hasattr(first_rup, 'weight')):
+        return False
+    arr = surf.mesh.array
+    if (not set(vars(surf.mesh)) <= {'array', 'xyz'} or
+            set(vars(rup.hypocenter)) != POINT_ATTRS or
+            arr.ndim != 2 or len(arr) != 3 or
+            arr.dtype != first_rup.surface.mesh.array.dtype):
+        return False
+    probs = [prob for prob, _ in pmf.data]
+    if ([occ for _, occ in pmf.data] != list(range(len(probs))) or
+            len(probs) != len(first_pmf.data)):
+        return False
+    if type(rup) is BaseRupture:
+        return not hasattr(rup, 'probs_occur')
+    return (rup.probs_occur.dtype == numpy.float64 and
+            numpy.array_equal(rup.probs_occur, probs))
+
+
+# Store the (rup, pmf) pairs in a few arrays, or return None if the
+# ruptures are not simple; the cached cartesian coordinates of the meshes
+# are not stored, since they can be recomputed exactly
+def _to_arrays(data):
+    if not data:
+        return None
+    rup0, pmf0 = data[0]
+    if not all(_is_simple(rup, pmf, rup0, pmf0) for rup, pmf in data):
+        return None
+    meshes = [rup.surface.mesh.array for rup, _ in data]
+    sizes = [mesh.shape[1] for mesh in meshes]
+    arrays = {
+        'mag': numpy.array([rup.mag for rup, _ in data]),
+        'rake': numpy.array([rup.rake for rup, _ in data]),
+        'hypo': numpy.array([(rup.hypocenter.longitude,
+                              rup.hypocenter.latitude,
+                              rup.hypocenter.depth) for rup, _ in data]),
+        'probs': numpy.array([[prob for prob, _ in pmf.data]
+                              for _, pmf in data]),
+        'mesh': numpy.concatenate(meshes, axis=1),
+        'offset': numpy.cumsum([0] + sizes),
+        'trt': rup0.tectonic_region_type, 'rup_type': type(rup0),
+        'mag_type': type(rup0.mag), 'rake_type': type(rup0.rake)}
+    if hasattr(rup0, 'weight'):
+        arrays['weight'] = [rup.weight for rup, _ in data]
+    if isinstance(data, WeightedSequence):
+        arrays['seq_weight'] = data.weight
+    elif type(data) is not list:
+        return None
+    return arrays
+
+
+# Rebuild the (rup, pmf) pairs from the arrays returned by _to_arrays
+def _from_arrays(arrays):
+    out = []
+    mag_type, rake_type = arrays['mag_type'], arrays['rake_type']
+    offset = arrays['offset']
+    weights = arrays.get('weight')
+    for i, (mag, rake, hypo, probs) in enumerate(zip(
+            arrays['mag'], arrays['rake'], arrays['hypo'], arrays['probs'])):
+        mesh = Mesh.__new__(Mesh)
+        mesh.array = arrays['mesh'][:, offset[i]:offset[i + 1]].copy()
+        pmf = PMF([(prob, occ) for occ, prob in enumerate(probs.tolist())])
+        args = (mag_type(mag), rake_type(rake), arrays['trt'], Point(*hypo),
+                GriddedSurface(mesh))
+        if arrays['rup_type'] is BaseRupture:
+            rup = BaseRupture(*args)
+        else:
+            rup = NonParametricProbabilisticRupture(*args, pmf)
+        if weights is not None:
+            rup.weight = weights[i]
+        out.append((rup, pmf))
+    if 'seq_weight' in arrays:
+        seq = WeightedSequence()
+        seq._seq = out
+        seq.weight = arrays['seq_weight']
+        return seq
+    return out
 
 
 class NonParametricSeismicSource(BaseSeismicSource):
@@ -66,6 +161,38 @@ class NonParametricSeismicSource(BaseSeismicSource):
             assert len(weights) == len(data), (len(weights), len(data))
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
+
+    @property
+    def data(self):
+        """
+        The list of pairs (rup, pmf); after unpickling it is rebuilt from
+        compact arrays at each access, so that the ruptures are kept in
+        memory only while they are used
+        """
+        if '_arrays' in self.__dict__:
+            return _from_arrays(self._arrays)
+        return self._data
+
+    @data.setter
+    def data(self, data):
+        self.__dict__.pop('_arrays', None)
+        self._data = data
+
+    def __getstate__(self):
+        # pickle the ruptures as a few arrays, which are much smaller
+        # in memory and faster to unpickle than the rupture objects
+        state = self.__dict__.copy()
+        if '_data' in state:
+            arrays = _to_arrays(state['_data'])
+            if arrays is not None:
+                del state['_data']
+                state['_arrays'] = arrays
+        return state
+
+    def __setstate__(self, state):
+        if 'data' in state:  # pickled before data became a property
+            state['_data'] = state.pop('data')
+        self.__dict__.update(state)
 
     @property
     def rup_weights(self):
@@ -103,6 +230,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
+        if '_arrays' in self.__dict__:
+            return len(self._arrays['mag'])
         return len(self.data)
 
     def get_min_max_mag(self):
@@ -110,6 +239,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Return the minimum and maximum magnitudes of the ruptures generated
         by the source
         """
+        if '_arrays' in self.__dict__:
+            mags = self._arrays['mag']
+            return self._arrays['mag_type'](mags.min()), \
+                self._arrays['mag_type'](mags.max())
         min_mag = min(rup.mag for rup, pmf in self.data)
         max_mag = max(rup.mag for rup, pmf in self.data)
         return min_mag, max_mag

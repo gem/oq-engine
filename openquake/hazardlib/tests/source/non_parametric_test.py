@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import pickle
 import unittest
 import numpy
 
@@ -110,3 +111,26 @@ class NankaiTest(unittest.TestCase):
         west, south, east, north = src.get_bounding_box(0.0)
         expected = [131.772, 31.336, 138.606, 35.43]
         numpy.testing.assert_almost_equal(expected, [west, south, east, north])
+
+    def test_compact_pickle(self):
+        # gridded ruptures are pickled as arrays and rebuilt exactly
+        fname = os.path.join(DATA, 'nankai', 'nankai.xml')
+        sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
+        src = nrml.to_python(fname, sc)[0][0]
+        new = pickle.loads(pickle.dumps(src))
+        self.assertIn('_arrays', vars(new))
+        self.assertEqual(new.count_ruptures(), src.count_ruptures())
+        self.assertEqual(new.get_min_max_mag(), src.get_min_max_mag())
+        self.assertEqual(new.get_bounding_box(10.), src.get_bounding_box(10.))
+        for (r1, p1), (r2, p2) in zip(src.data, new.data):
+            self.assertEqual((r1.mag, r1.rake), (r2.mag, r2.rake))
+            self.assertEqual(vars(r1.hypocenter), vars(r2.hypocenter))
+            numpy.testing.assert_array_equal(
+                r1.surface.mesh.array, r2.surface.mesh.array)
+            self.assertEqual(type(r1), type(r2))
+            self.assertEqual(vars(r1).keys(), vars(r2).keys())
+            self.assertEqual(p1.data, p2.data)
+
+        # ruptures with planar surfaces are pickled as they are
+        src, _ = make_non_parametric_source()
+        self.assertNotIn('_arrays', vars(pickle.loads(pickle.dumps(src))))
