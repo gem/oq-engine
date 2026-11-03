@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: extended `oq check_input` to recognize the case of sources with the
+    same geometry but different MFDs and suggest a better way to write them
   * Changed `oq engine --param` to use space-separated name=value pairs instead
     of comma-separated pairs, for consistency with `oq run --param`
   * Added a new experimental collapse_precision approximation

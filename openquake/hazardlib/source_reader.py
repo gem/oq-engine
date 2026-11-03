@@ -366,8 +366,10 @@ def get_csm(oq, full_lt, dstore=None):
     if found:
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
-    check_same_sources(smdict, oq.inputs.get(
-        'source_model_logic_tree', oq.inputs['job_ini']))
+    smlt = oq.inputs.get('source_model_logic_tree', oq.inputs['job_ini'])
+    check_same_sources(smdict, smlt)
+    if found:
+        check_mfd_variants(smdict, smlt)
 
     # checking ps_grid_spacing
     pointlike_sources = 0
@@ -857,13 +859,76 @@ def check_same_sources(smdict, fname):
                     for smfile, src in same}))
     if errors:
         lines = ['  ' + general.shortlist(err) for err in errors]
-        msg = ('%s: %d sources appear in different source models with '
+        msg = ('%s:\n%d sources appear in different source models with '
                'different IDs, use the same ID for each of them:\n%s' % (
                    fname, len(errors), '\n'.join(lines)))
         # NB: in oq check_input the models must be fixed, so it is an error
         if os.environ.get('OQ_CHECK_INPUT'):
             raise InvalidFile(msg)
         logging.warning(msg)
+
+
+# uncertainty types to suggest in check_mfd_variants, by MFD class
+MFD_UNCERTAINTY = {
+    'EvenlyDiscretizedMFD': 'incrementalMFDAbsolute',
+    'TruncatedGRMFD': 'abGRAbsolute, bGRAbsolute or maxMagGRAbsolute'}
+
+
+def check_mfd_variants(smdict, fname):
+    """
+    Log a warning if a source appears in different source model files
+    with the same ID and the same content except the MFD: then the
+    copies are computed separately, once per file, while they could be
+    computed together, sharing the contexts, if the MFDs were given as
+    uncertainties in the source model logic tree (see make_results).
+    For instance in the IND model the HimalayanThrust source is defined in
+    3 files (himalaya_cut, himalaya_area, himalaya_m55) with different
+    incrementalMFDs and it takes 64% of the time of the calculation.
+
+    :param smdict: a dictionary source model file -> SourceModel
+    :param fname: the source model logic tree file, used in the warning
+    :returns: the list of the IDs of the sources with MFD variants
+
+    NB: must be called after add_bangs, which adds the branch to the
+    sources and a bang to the IDs of the sources with the same ID and a
+    different content
+    """
+    byid = general.AccumDict(accum=[])  # source ID -> [(smfile, src)]
+    for smfile, smodel in smdict.items():
+        for sgroup in smodel.src_groups:
+            for src in sgroup:
+                if '!' in src.source_id and hasattr(src, 'mfd'):
+                    byid[basename(src).split('!')[0]].append((smfile, src))
+    lines = []
+    for srcid, pairs in byid.items():
+        # group the copies by content without the MFD, i.e. by geometry
+        bygeom = general.AccumDict(accum=[])
+        for smfile, src in pairs:
+            bygeom[content_hash(src, NOT_CONTENT | {'mfd'})].append(
+                (smfile, src))
+        for same in bygeom.values():
+            # the copies with the same MFD were already reduced
+            mfds = {checksum(src) for _, src in same}
+            if len(mfds) < 2:
+                continue
+            mfd = type(same[0][1].mfd).__name__
+            # NB: the branches are not listed, since a file can be shared
+            # by several branches but src.branch contains only one of them
+            files = sorted({os.path.basename(smfile) for smfile, _ in same})
+            utype = MFD_UNCERTAINTY.get(mfd, 'an MFD uncertainty')
+            lines.append('  %s: %d %s variants in %s, use %s' % (
+                srcid, len(mfds), mfd, ' '.join(files), utype))
+    if lines:
+        logging.warning(
+            '%s:\n%d source(s) appear in different source model files with '
+            'the same geometry and different MFDs,\nso each copy is '
+            'computed separately. Keep a single copy in one file and move '
+            'the MFDs in the logic tree,\nwith a branchSet with '
+            'applyToSources="<source ID>" (and applyToBranches if needed) '
+            'containing one branch\nper MFD; then the contexts are computed '
+            'once for all the MFDs, which can be much faster:\n%s',
+            fname, len(lines), '\n'.join(lines))
+    return [line.split(':')[0].strip() for line in lines]
 
 
 def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None,
