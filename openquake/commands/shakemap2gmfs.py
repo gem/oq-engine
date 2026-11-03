@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
+from openquake.hazardlib.shakemap.parsers import save_shakemap
 from openquake.commonlib import logs
 from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
@@ -73,7 +73,7 @@ def main(id, site_model='', *, num_gmfs: int = 1, random_seed: int = 42,
             print(f"Considering only imts: {filtered_imts}")
             imts = filtered_imts
         if not os.path.exists(fname):
-            numpy.save(fname, shakemap)
+            save_shakemap(fname, shakemap)  # keeping the stations, if any
             print(f'Saved {fname}')
         print(f'Got {sitecol}')
         if len(disc):

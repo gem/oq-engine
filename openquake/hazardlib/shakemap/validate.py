@@ -25,9 +25,10 @@ import numpy
 from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import CORRELATION_STRATEGIES
 from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
-    get_nodal_planes_and_product, get_rup_dic)
+    get_nodal_planes_and_product, get_rup_dic, save_shakemap)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -61,6 +62,7 @@ class ImpactParam:
     make_impact_reports: bool = False
     region_grid_spacing: float = 10 if TEST_MODE else 1  # km, mandatory
     within_event_correlation_model: str = None
+    correlation_strategy: str = 'circulant_embedding'
     calculation_mode: str = 'scenario_risk'  # hidden from the form
     within_event_correlation_params: dict = None
 
@@ -109,11 +111,13 @@ class ImpactParam:
                 self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
+            correlation_strategy=self.correlation_strategy,
             make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
-            fname = general.gettemp(suffix='.npy')
-            numpy.save(fname, shakemap_array)
+            fname = general.gettemp(suffix='.npz')
+            # keeping the stations of the shake_result.hdf products
+            save_shakemap(fname, shakemap_array)
             params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
             params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
@@ -184,6 +188,8 @@ IMPACT_FORM_LABELS = {
     'calculation_mode': 'Calculation mode',
     'within_event_correlation_model': 'Within-event correlation model',
     'within_event_correlation_params': 'Within-event correlation params',
+    'correlation_strategy': 'Spatial correlation strategy',
+    'spatial_correlation': 'Spatial correlation',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -216,6 +222,14 @@ IMPACT_FORM_PLACEHOLDERS = {
     'description': 'Leave blank to set automatically',
     'notes': '',
 }
+
+IMPACT_SPATIAL_CORRELATION_OPTIONS = (
+    ('none', 'None'),
+    ('cholesky_decomposition',
+     'JayaramBaker2009 (Cholesky decomposition)'),
+    ('circulant_embedding',
+     'JayaramBaker2009 (Circulant embedding)'),
+    ('loth_baker', 'LothBaker2013 (ShakeMap products only)'))
 
 # maximum value of maximum_distance (in km) allowed to level 1 users
 MAX_DISTANCE_LEVEL1 = 500
@@ -293,6 +307,7 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file_input': '',
     'station_data_file_loaded': '',
     'description': '',
+    'spatial_correlation': 'none',
 }
 
 IMPACT_APPROACHES = {
@@ -340,6 +355,9 @@ validators = {
     'notes': valid.utf8,
     'make_impact_reports': valid.boolean,
     'within_event_correlation_model': valid.NoneOr(valid.utf8_not_empty),
+    'correlation_strategy': valid.Choice(*CORRELATION_STRATEGIES),
+    'spatial_correlation': valid.Choice(*(
+        value for value, _label in IMPACT_SPATIAL_CORRELATION_OPTIONS)),
     'calculation_mode': valid.Choice('scenario', 'scenario_risk'),
     'within_event_correlation_params': valid.dictionary,
 }
@@ -375,6 +393,22 @@ def _validate(POST):
             inputdic[field] = value
         else:
             params[field] = value
+
+    # The UI bundles the fixed model with the selected factorization.
+    if not validation_errs and 'spatial_correlation' in params:
+        choice = params.pop('spatial_correlation')
+        params.pop('within_event_correlation_model', None)
+        params.pop('within_event_correlation_params', None)
+        params.pop('correlation_strategy', None)
+        if choice == 'loth_baker':
+            # joint model, only for ShakeMap products (see impact_validate)
+            params['within_event_correlation_model'] = 'LothBaker2013'
+            params['within_event_correlation_params'] = {}
+        elif choice != 'none':
+            params['within_event_correlation_model'] = 'JayaramBaker2009'
+            params['within_event_correlation_params'] = {
+                'vs30_clustering': True}
+            params['correlation_strategy'] = choice
 
     if validation_errs:
         err_msg = 'Invalid input value'
@@ -436,6 +470,32 @@ def _apply_nodal_plane(inputdic, user, monitor):
     return {}
 
 
+# level 1 users cannot exceed MAX_DISTANCE_LEVEL1
+def _check_maximum_distance(params, user):
+    maxdist = params.get('maximum_distance')
+    if (user.level < 2 and maxdist is not None
+            and maxdist > MAX_DISTANCE_LEVEL1):
+        return {"status": "failed",
+                "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
+                              f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
+                "invalid_inputs": ['maximum_distance']}
+    return {}
+
+
+# ShakeMap jobs use the Loth and Baker (2013) model only, rupture jobs
+# use the JayaramBaker2009 options
+def _check_spatial_correlation(POST, use_shakemap):
+    choice = POST.get('spatial_correlation', 'none')
+    if use_shakemap and choice not in ('none', 'loth_baker'):
+        return {'status': 'failed', 'error_msg':
+                'For ShakeMap jobs the spatial correlation must be '
+                'LothBaker2013 or none'}
+    if not use_shakemap and choice == 'loth_baker':
+        return {'status': 'failed', 'error_msg':
+                'LothBaker2013 is available only for ShakeMap jobs'}
+    return {}
+
+
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                     monitor=performance.Monitor()):
     """
@@ -449,13 +509,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     inputdic, params, err = _validate(POST)
     if err:
         return None, inputdic, params, err
-    maxdist = params.get('maximum_distance')
-    if (user.level < 2 and maxdist is not None
-            and maxdist > MAX_DISTANCE_LEVEL1):
-        err = {"status": "failed",
-               "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
-                             f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
-               "invalid_inputs": ['maximum_distance']}
+    err = _check_maximum_distance(params, user)
+    if err:
         return None, inputdic, params, err
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
@@ -470,6 +525,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    err = _check_spatial_correlation(POST, use_shakemap)
+    if err:
+        return None, inputdic, params, err
     shakemap_version = POST.get('shakemap_version') or 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(

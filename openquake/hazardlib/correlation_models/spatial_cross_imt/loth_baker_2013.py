@@ -36,13 +36,13 @@ https://github.com/bakerjw/GMMs/blob/master/correlations/lb_2013_spatial_corr.m
 """
 
 import numpy
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, RegularGridInterpolator
 
 from openquake.hazardlib import const
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCrossIMTCorrelationModel)
 from openquake.hazardlib.correlation_models.registry import register_model
-from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 # The final value is the upper interpolation sentinel used by the authors.
@@ -110,6 +110,10 @@ _B3 = numpy.array([
 ])
 _TABLES = (_B1, _B2, _B3)
 
+# Ranges in km of the exponential short- and long-range structures.
+SHORT_RANGE = 20.
+LONG_RANGE = 70.
+
 
 def _period_interval(period):
     index = numpy.searchsorted(_PERIODS, period, side='right') - 1
@@ -163,10 +167,13 @@ def _correlation_period(imt):
     """Return the SA period used to obtain correlation coefficients.
 
     PGA is represented by SA(0.01), following the operational ShakeMap
-    convention. This mapping affects only correlation coefficients; PGA
-    medians and standard deviations remain those supplied by the GSIM.
+    convention, and PGV by SA(1.0), as in the Jayaram and Baker model.
+    This mapping affects only correlation coefficients; PGA medians and
+    standard deviations remain those supplied by the GSIM.
     """
-    return 0.01 if imt.name == 'PGA' else imt.period
+    if imt.name == 'PGA':
+        return 0.01
+    return 1.0 if imt.name == 'PGV' else imt.period
 
 
 @register_model(
@@ -179,9 +186,9 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     """
 
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01)}
+    INTENSITY_MEASURE_TYPE_APPROXIMATIONS = {PGA: SA(0.01), PGV: SA(1.0)}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
     DEFINED_FOR_DAMPING = 5.0
     DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
@@ -196,8 +203,8 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the joint correlation block in IMT-major order."""
-        short_range = numpy.exp(-3 * distances / 20)
-        long_range = numpy.exp(-3 * distances / 70)
+        short_range = numpy.exp(-3 * distances / SHORT_RANGE)
+        long_range = numpy.exp(-3 * distances / LONG_RANGE)
         same_site = distances == 0
         blocks = []
         for imt1 in imts1:
@@ -210,3 +217,69 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
                     b1 * short_range + b2 * long_range + b3 * same_site)
             blocks.append(row)
         return numpy.block(blocks)
+
+    def coregionalization(self, imts):
+        """Return the coregionalization matrices ``(B1, B2, B3)``.
+
+        The joint correlation of the model is the linear model of
+        coregionalization ``B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I``, where ``R1`` and
+        ``R2`` are exponential spatial correlations with ranges
+        ``SHORT_RANGE`` and ``LONG_RANGE`` and ``I`` is the nugget. Each
+        matrix has shape ``(M, M)``, so a joint field can be sampled with
+        spatial factorizations of size ``N`` instead of ``M * N``.
+        """
+        self.validate_imts(imts)
+        periods = [_correlation_period(imt) for imt in imts]
+        matrices = numpy.zeros((3, len(imts), len(imts)))
+        for i, period1 in enumerate(periods):
+            for j, period2 in enumerate(periods):
+                matrices[:, i, j] = _interpolate_coefficients(
+                    period1, period2)
+        return tuple(matrices)
+
+
+class ShakeMapLothBaker2013(LothBaker2013):
+    """ShakeMap's rounded tables and bilinear period interpolation.
+
+    esi-shakelib 1.2.6 uses the 2021 erratum tables, including rounded B3
+    entries and a separately interpolated diagonal. Its raw zero-distance
+    diagonal can differ from one. ShakeMap nevertheless uses phi squared
+    as the prior output variance: retain raw coefficients for station
+    conditioning and use unit output variances when sampling fields.
+    """
+
+    def raw_coregionalization(self, imts):
+        """Return the coefficients used in ShakeMap's station covariance."""
+        self.validate_imts(imts)
+        periods = numpy.array([_correlation_period(im) for im in imts])
+        p1, p2 = numpy.meshgrid(periods, periods, indexing='ij')
+        pairs = numpy.column_stack([p1.ravel(), p2.ravel()])
+        nugget = numpy.round(_B3, 2)
+        nugget[3, 3], nugget[4, 4] = .26, .20
+        matrices = []
+        for table in (_B1, _B2, nugget):
+            interpolator = RegularGridInterpolator((_PERIODS, _PERIODS), table)
+            matrix = interpolator(pairs).reshape(len(imts), len(imts))
+            diagonal = numpy.interp(periods, _PERIODS, numpy.diag(table))
+            same = periods[:, None] == periods
+            matrix[same] = numpy.broadcast_to(
+                diagonal[:, None], matrix.shape)[same]
+            matrices.append(matrix)
+        return tuple(matrices)
+
+    def coregionalization(self, imts):
+        """Return coefficients with authoritative unit output variances."""
+        b1, b2, b3 = self.raw_coregionalization(imts)
+        periods = numpy.array([_correlation_period(im) for im in imts])
+        same = periods[:, None] == periods
+        b3[same] = (1 - b1 - b2)[same]
+        return b1, b2, b3
+
+    def _correlation_block(self, distances, imts1, imts2, context=None):
+        # Keep the common factorization interface for the HDF sampler.
+        b1, b2, b3 = self.coregionalization([*imts1, *imts2])
+        n = len(imts1)
+        spatial = (numpy.exp(-3 * distances / SHORT_RANGE),
+                   numpy.exp(-3 * distances / LONG_RANGE), distances == 0)
+        return sum(numpy.kron(b[:n, n:], r)
+                   for b, r in zip((b1, b2, b3), spatial))

@@ -33,6 +33,46 @@ proposed by Engler et al. (2022).
 To conditioning of ground shaking to observations in OpenQuake-engine, it is necessary to provide additional input files 
 and adjustments to the configuration file, as presented in the :ref:`input-models` section.
 
+Sampling ShakeMap ground motion fields
+--------------------------------------
+
+When retrieving a ShakeMap by USGS ID, the engine prefers
+``shake_result.hdf``. With spatial correlation enabled, complete HDF products
+provide the conditioned mean and the components needed to reconstruct each
+IMT's posterior spatial covariance. The saved ``phi`` is the prior
+within-event standard deviation; the conditional value is
+
+.. math::
+
+   \phi_c = \sqrt{\sigma_c^2 - \tau_c^2}.
+
+The station correction is reconstructed from station coordinates, periods,
+prior standard deviations and observation uncertainties, using ShakeMap's
+Loth and Baker (2013) coefficients and interpolation. The between-event
+covariance is reconstructed from ``C`` and ``Sigma_HH_YD``. The station data
+are kept with the ShakeMap through site filtering, association and NPY
+caching, and the correction is computed only for the sites of the
+calculation when the ground motion fields are sampled, so its memory does
+not depend on the size of the ShakeMap grid. Since the products store
+single precision values, the reconstructed conditional variances are
+checked against the stored ones within 0.1% of the prior variance (a
+warning is logged above that, and an error is raised above 1%).
+
+ShakeMap does not export joint posterior covariance blocks across IMTs.
+The engine approximates this dependence by transforming each component of a
+shared Loth and Baker prior field to its individual posterior covariance.
+Between-event terms are sampled independently across output IMTs. Each
+individual IMT retains its reconstructed posterior spatial covariance.
+
+XML inputs and incomplete HDF or older NPY products remain supported, with
+warnings when correlated sampling uses marginal uncertainty approximations.
+Unsupported conditioning models fail clearly for explicit HDF inputs;
+retrieval by USGS ID falls back to XML for unreadable or unsupported
+products, and the reason is reported with the correlation model used. With correlation disabled, the
+engine samples independent total residuals. Zero truncation reproduces the
+supplied median. As in ordinary scenario calculations, finite truncation
+reduces residual variances by the variance of the truncated normal.
+
 
 The concept of “mean” ground motion field
 -----------------------------------------

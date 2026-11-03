@@ -21,14 +21,19 @@ import unittest
 import csv
 import gzip
 import io
+import json
+import tempfile
 from http.client import IncompleteRead
+import h5py
+import numpy
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from openquake.hazardlib.shakemap.parsers import (
-    _download_url, get_rup_dic, User, utc_to_local_time,
+    _download_url, get_array, get_rup_dic, User, utc_to_local_time,
     get_stations_from_usgs,
     get_shakemap_versions, get_nodal_planes_and_info,
     get_nodal_planes_and_product)
+from openquake.hazardlib.shakemap.maps import filter_unused_imts
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
@@ -36,6 +41,141 @@ user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
 class ShakemapParsersTestCase(unittest.TestCase):
+    def test_shake_result_hdf(self):
+        config = {
+            'extent': {'bounds': {'extent': [-999.] * 4}},
+            'interp': {
+                'component': 'GREATER_OF_TWO_HORIZONTAL',
+                'prediction_location': {'xres': 1., 'yres': 1.}}}
+        info = {'output': {'map_information': {
+            'min': {'longitude': '10', 'latitude': '20'},
+            'max': {'longitude': '11', 'latitude': '21'}}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['dictionaries/info.json'] = json.dumps(info)
+                h5['arrays/vs30'] = numpy.array([[200, 300], [400, 500]])
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt, mean in (
+                        ('MMI', [[4., 5.], [6., 7.]]),
+                        ('PGA', [[0., numpy.log(.1)],
+                                 [numpy.log(.2), numpy.log(.3)]]),
+                        ('PGV', [[0., numpy.log(2)],
+                                 [numpy.log(3), numpy.log(4)]])):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = mean
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        numpy.testing.assert_array_equal(
+            array['lon'], [10, 11, 10, 11])
+        numpy.testing.assert_array_equal(
+            array['lat'], [21, 21, 20, 20])
+        numpy.testing.assert_allclose(
+            array['val']['PGA'], [100, 10, 20, 30])
+        numpy.testing.assert_allclose(
+            array['val']['PGV'], [1, 2, 3, 4])
+        numpy.testing.assert_array_equal(
+            array['val']['MMI'], [4, 5, 6, 7])
+        self.assertIn('phi', array.dtype.names)
+        self.assertIn('tau', array.dtype.names)
+        # products without the realization arrays have no CL field
+        self.assertNotIn('CL', array.dtype.names)
+        filtered = filter_unused_imts(array, ['PGA'])
+        self.assertEqual(filtered['val'].dtype.names, ('PGA',))
+        numpy.testing.assert_array_equal(
+            filtered['phi']['PGA'], array['phi']['PGA'])
+        numpy.testing.assert_array_equal(
+            filtered['tau']['PGA'], array['tau']['PGA'])
+
+    def test_shake_result_hdf_coarsened_grid(self):
+        # ShakeMap can store a grid coarser than the configured resolution
+        # (to respect its maximum number of points): the coordinates must
+        # come from the grid attributes of the arrays
+        config = {
+            'extent': {'bounds': {'extent': [-999.] * 4}},
+            'interp': {'prediction_location': {'xres': .5, 'yres': .5}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 3), 400.)
+                h5['arrays/vs30'].attrs.update(
+                    xmin=10., xmax=12., ymin=20., ymax=21., dx=1., dy=1.)
+                group = h5.require_group(
+                    'arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA')
+                group['mean'] = numpy.zeros((2, 3))
+                group['std'] = numpy.ones((2, 3))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        numpy.testing.assert_array_equal(
+            array['lon'], [10, 11, 12, 10, 11, 12])
+        numpy.testing.assert_array_equal(
+            array['lat'], [21, 21, 21, 20, 20, 20])
+        # without phi and tau there are no uncertainty components
+        self.assertNotIn('phi', array.dtype.names)
+        self.assertNotIn('CL', array.dtype.names)
+
+    def test_shake_result_hdf_between_event_factor(self):
+        # CL = C @ chol(Sigma_HH_YD), padded to the largest number of
+        # between-event terms, so that CL @ CL.T = C @ Sigma_HH_YD @ C.T
+        config = {
+            'extent': {'bounds': {'extent': [10., 20., 11., 21.]}},
+            'interp': {'prediction_location': {'xres': 1., 'yres': 1.}}}
+        rng = numpy.random.default_rng(42)
+        Cs, sigmas = {}, {}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 2), 400.)
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt, k in (('PGA', 1), ('SA(1.0)', 2)):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = numpy.zeros((2, 2))
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+                    A = rng.standard_normal((k, k))
+                    Cs[imt] = rng.standard_normal((4, k))
+                    sigmas[imt] = A @ A.T
+                    group['C'] = Cs[imt]
+                    group['Sigma_HH_YD'] = sigmas[imt]
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        self.assertEqual(array.dtype['CL'][0].shape, (2,))
+        for imt in Cs:
+            CL = array['CL'][imt]
+            numpy.testing.assert_allclose(
+                CL @ CL.T, Cs[imt] @ sigmas[imt] @ Cs[imt].T,
+                rtol=1E-5, atol=1E-5)
+        filtered = filter_unused_imts(array, ['SA(1.0)'])
+        numpy.testing.assert_array_equal(
+            filtered['CL']['SA(1.0)'], array['CL']['SA(1.0)'])
+
+    def test_shake_result_hdf_without_sigma(self):
+        # with C but without Sigma_HH_YD for an IMT the product is still
+        # read, with phi and tau but without the between-event factor
+        config = {
+            'extent': {'bounds': {'extent': [10., 20., 11., 21.]}},
+            'interp': {'prediction_location': {'xres': 1., 'yres': 1.}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 2), 400.)
+                base = 'arrays/imts/GREATER_OF_TWO_HORIZONTAL'
+                for imt in ('PGA', 'SA(1.0)'):
+                    group = h5.require_group(f'{base}/{imt}')
+                    group['mean'] = numpy.zeros((2, 2))
+                    for field in ('std', 'phi', 'tau'):
+                        group[field] = numpy.ones((2, 2))
+                    group['C'] = numpy.ones((4, 1))
+                    if imt == 'PGA':
+                        group['Sigma_HH_YD'] = numpy.ones((1, 1))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        self.assertIn('phi', array.dtype.names)
+        self.assertIn('tau', array.dtype.names)
+        self.assertNotIn('CL', array.dtype.names)
+
     @classmethod
     def setUp(cls):
         try:

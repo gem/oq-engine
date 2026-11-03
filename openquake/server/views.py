@@ -54,7 +54,8 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1,
+    IMPACT_SPATIAL_CORRELATION_OPTIONS)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
     format_event_time)
@@ -2054,6 +2055,8 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_approaches'] = IMPACT_APPROACHES
+        params['impact_spatial_correlation_options'] = (
+            IMPACT_SPATIAL_CORRELATION_OPTIONS)
         params['impact_max_distance_level1'] = MAX_DISTANCE_LEVEL1
 
         # this is usually ''; can be set in the local settings for debugging
@@ -2323,7 +2326,7 @@ def get_impact_warnings(ds):
     return warnings
 
 
-def format_oqparam(oqparam):
+def format_oqparam(oqparam, strategy_used=None, model_used=None):
     ret_dict = {}
     rupdic = oqparam.rupture_dict
     approach = rupdic['approach']
@@ -2351,6 +2354,24 @@ def format_oqparam(oqparam):
         oqparam.asset_hazard_distance['default']
 
     ret_dict[IMPACT_FORM_LABELS['ses_seed']] = oqparam.ses_seed
+
+    # the spatial correlation really used by the calculation, if any
+    labels = dict(IMPACT_SPATIAL_CORRELATION_OPTIONS)
+    if model_used:
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = model_used
+    elif oqparam.within_event_correlation_model:
+        params = oqparam.within_event_correlation_params or {}
+        requested = oqparam.correlation_strategy
+        used = strategy_used or requested
+        text = (f"{labels[used]}, "
+                f"vs30_clustering={params.get('vs30_clustering')}")
+        if used != requested:
+            text += (f" (requested {labels[requested]}, "
+                     f"not applicable to these sites)")
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = text
+    else:
+        ret_dict[IMPACT_FORM_LABELS['spatial_correlation']] = labels['none']
+
     if approach != 'use_shakemap_from_usgs':
         ret_dict[IMPACT_FORM_LABELS['mosaic_model']] = oqparam.mosaic_model
         ret_dict[IMPACT_FORM_LABELS['trt']] = oqparam.tectonic_region_type
@@ -2421,7 +2442,13 @@ def web_engine_get_outputs_impact(request, calc_id):
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
-        input_params = format_oqparam(oqparam)
+        strategy_used = None  # stored by the ShakeMap jobs
+        if 'correlation_strategy_used' in ds:
+            strategy_used = ds['correlation_strategy_used'][0].decode()
+        model_used = None  # stored by the ShakeMap jobs with a correlation
+        if 'correlation_model_used' in ds:
+            model_used = ds['correlation_model_used'][0].decode()
+        input_params = format_oqparam(oqparam, strategy_used, model_used)
         usgs_id = None
         if hasattr(oqparam.rupture_dict, 'usgs_id'):
             usgs_id = oqparam.rupture_dict['usgs_id']
