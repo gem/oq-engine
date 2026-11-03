@@ -21,7 +21,7 @@ The result is the following::
 	                 [--export-output OUTPUT_ID TARGET_DIR]
 	                 [--export-outputs CALCULATION_ID TARGET_DIR] [-e]
 	                 [-l {debug, info, warn, error, critical}] [-r]
-	                 [--param PARAM]
+	                 [--param [PARAM ...]]
 
 	Run a calculation using the traditional command line API
 
@@ -70,6 +70,6 @@ The result is the following::
 	                        in order of priority
 	  -l, --log-level {debug, info, warn, error, critical}
 	                        Defaults to "info"
-	  --param PARAM, -p PARAM
+	  --param [PARAM ...], -p [PARAM ...]
 	                        Override parameters specified with the syntax
-	                        NAME1=VALUE1,NAME2=VALUE2,...
+	                        NAME1=VALUE1 NAME2=VALUE2 ...
