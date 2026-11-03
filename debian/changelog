@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * collapse_precision now collapses the contexts once per group of GSIMs
+    requiring the same rupture parameters and distances, so that the GSIMs
+    requiring fewer parameters collapse more
   * ps_grid_spacing can now be used with disagg_by_src when the calculation has
     few sites, since the rates are computed one source at the time
   * Added the nctxs dataset to classical calculations, with the number of
