@@ -163,11 +163,10 @@ def load_residual_grids(hdf5_path):
                 cell_ids = grp["cell_id"][:].astype(str)
                 resolutions.update(h3.get_resolution(c) for c in cell_ids)
 
-                # If path-based build OQ pgn grid for this term/IMT (keep
-                # different grid per IMT in case varies with IMT as well)
+                # If path-based build the raytrace lookup for this term/IMT
+                # (per-IMT grid in case the grid varies with IMT as well)
                 if location == "path":
                     raytrace_grids.setdefault(term, {})
-                    # Build the h3 grid in OQ pgns
                     raytrace_grids[term][imt_str] =\
                           build_raytrace_grid(cell_ids, mean_vals)
                 else:
@@ -199,7 +198,7 @@ def load_residual_grids(hdf5_path):
                             dict(zip(cell_ids, se_vals))
 
     return {"grids": grids,
-            "raytrace_grids": raytrace_grids, # Cells are OQ pgns instead of h3
+            "raytrace_grids": raytrace_grids,
             "raytrace_se_grids": raytrace_se_grids,
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
@@ -366,7 +365,7 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
 def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     # Path-based terms are stored in the raytrace grids. Mean / SE
-    # are both returned uncapped here; the att_cap (if set) is applied
+    # are both returned uncapped here; the path_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
     if cfg["location"] == "path":
         grid = grid_data["raytrace_grids"].get(term, {}).get(imt)
@@ -462,8 +461,8 @@ def apply_epsilons(gsim, resolved, imts, mean):
     """
     # Terms with no mean_adj for this IMT contributed nothing to the
     # central mean and so are skipped here as well. For path terms
-    # with att_cap set, the per-branch total (central + eps*SE) is
-    # clipped to [-att_cap, +att_cap] so no single LT realisation's
+    # with path_cap set, the per-branch total (central + eps*SE) is
+    # clipped to [-path_cap, +path_cap] so no single LT realisation's
     # path contribution can exceed the physical bound
     for m, per_term in resolved.items():
         for term, (mean_adj, se_adj) in per_term.items():
@@ -472,7 +471,7 @@ def apply_epsilons(gsim, resolved, imts, mean):
             eps = gsim.epsilons.get(term, 0.0)
             cfg = gsim.grid_data["res_terms"][term]
             path_capped = (cfg["location"] == "path"
-                           and gsim.att_cap is not None)
+                           and gsim.path_cap is not None)
             if eps != 0.0 and se_adj is None:
                 raise ValueError(
                     f"Non-zero epsilon requested for term '{term}' but "
@@ -483,7 +482,7 @@ def apply_epsilons(gsim, resolved, imts, mean):
                 # replace it with the capped (central + eps*SE) total
                 shift = eps * se_adj if eps != 0.0 else 0.0
                 capped_total = np.clip(
-                    mean_adj + shift, -gsim.att_cap, gsim.att_cap)
+                    mean_adj + shift, -gsim.path_cap, gsim.path_cap)
                 mean[m] += capped_total - mean_adj
             elif eps != 0.0:
                 mean[m] += eps * se_adj
@@ -586,9 +585,9 @@ class GridAdjustedGMPE(GMPE):
         epsilon = 0 (central only, no shift). A non-zero epsilon raises an
         error if the matching SE dataset is missing.
 
-    :param att_cap:
+    :param path_cap:
         Optional per-branch cap (nat-log units) on the stacked per-ray path
-        term (central + eps * SE) only, clipped to [-att_cap, +att_cap].
+        term (central + eps * SE) only, clipped to [-path_cap, +path_cap].
         Hypo/site terms (dL2L, dS2S) are unaffected. Default None = no cap.
         A value of ln(2) ~ 0.693 bounds the multiplicative path factor at
         [0.5, 2.0] on every LT realisation. Useful for constraining long
@@ -608,7 +607,7 @@ class GridAdjustedGMPE(GMPE):
     experimental = True # It's not extensively tested yet
 
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
-                 att_cap=None, **kwargs):
+                 path_cap=None, **kwargs):
 
         # Instantiate the underlying GMM
         self.gmpe = registry[gmpe_name](**kwargs)
@@ -619,15 +618,15 @@ class GridAdjustedGMPE(GMPE):
 
         # Per-ray path cap (in natural-log units), also exposed in grid_data.
         # None = no cap; compute() clips the per-branch total after lookup.
-        if att_cap is not None and att_cap <= 0:
+        if path_cap is not None and path_cap <= 0:
             raise ValueError(
-                f"att_cap must be positive (natural-log units) or None, "
-                f"got {att_cap!r}.")
-        self.att_cap = att_cap
-        self.grid_data["att_cap"] = att_cap
+                f"path_cap must be positive (natural-log units) or None, "
+                f"got {path_cap!r}.")
+        self.path_cap = path_cap
+        self.grid_data["path_cap"] = path_cap
 
         # GridAdjustedGMPEs with the same central_key differ only by
-        # epsilons and att_cap, so ContextMaker.get_mean_stds computes
+        # epsilons and path_cap, so ContextMaker.get_mean_stds computes
         # their backbone and central grid adjustments only once
         self.central_key = (
             os.fspath(grid_hdf5_file), type(self.gmpe).__name__,

@@ -121,11 +121,11 @@ class GridAdjustedGMPETest(unittest.TestCase):
             setattr(ctx, k, v)
         return ctx
 
-    def _get_mean_stds(self, imts, epsilons=None, att_cap=None):
+    def _get_mean_stds(self, imts, epsilons=None, path_cap=None):
         # Compute the mean and std devs from grid adjusted GMM and base GMM
         base = valid.gsim(BASE_GSIM)
         adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5,
-                               epsilons=epsilons, att_cap=att_cap)
+                               epsilons=epsilons, path_cap=path_cap)
         cmaker = simple_cmaker([base, adj], imts)
         return cmaker.get_mean_stds([self._make_ctx(cmaker)])
 
@@ -248,14 +248,14 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 aae(mea[GRID, m] - mea_cen[GRID, m], expected_shift,
                     decimal=DP)
 
-    def test_att_cap_clips_per_branch_total(self):
+    def test_path_cap_clips_per_branch_total(self):
         # Per-branch cap bounds (central + eps*SE) on path. Covers both
         # the eps=0 central-only case and the eps!=0 branch case
         cap = 0.5
         for eps in (0.0, 1.732):
             eps_dict = {"dL2L": 0.0, "dS2S": 0.0, "adj_per_km": eps}
             mea, *_ = self._get_mean_stds(
-                IMTS, epsilons=eps_dict, att_cap=cap)
+                IMTS, epsilons=eps_dict, path_cap=cap)
             base_mea, *_ = self._get_mean_stds(IMTS)
             for m in range(len(IMTS)):
                 capped_total = np.clip(
@@ -266,14 +266,14 @@ class GridAdjustedGMPETest(unittest.TestCase):
                 aae(mea[GRID, m] - base_mea[BASE, m], expected_diff,
                     decimal=DP)
 
-    def test_att_cap_is_a_noop_when_non_binding(self):
+    def test_path_cap_is_a_noop_when_non_binding(self):
         # None, or any cap above the largest uncapped total, must leave
         # the mean identical to the uncapped run
         eps_dict = {"dL2L": 0.0, "dS2S": 0.0, "adj_per_km": 1.732}
         mea_ref, *_ = self._get_mean_stds(IMTS, epsilons=eps_dict)
         for cap in (None, 10.0):
             mea, *_ = self._get_mean_stds(
-                IMTS, epsilons=eps_dict, att_cap=cap)
+                IMTS, epsilons=eps_dict, path_cap=cap)
             # cap != None takes a different arithmetic path (adds
             # capped_total - mean_adj) so rounding differs at ~1e-16
             np.testing.assert_array_almost_equal(mea, mea_ref, decimal=14)
@@ -404,14 +404,14 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
 
-    def test_att_cap_differs_across_cap_values(self):
+    def test_path_cap_differs_across_cap_values(self):
         # Different caps on the same ctx share the central part but still
         # produce distinct means (clip is applied in apply_epsilons)
         base = valid.gsim(BASE_GSIM)
         tight = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                 grid_hdf5_file=GRID_HDF5, att_cap=0.5)
+                                 grid_hdf5_file=GRID_HDF5, path_cap=0.5)
         loose = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                 grid_hdf5_file=GRID_HDF5, att_cap=10.0)
+                                 grid_hdf5_file=GRID_HDF5, path_cap=10.0)
         self.assertEqual(tight.central_key, loose.central_key)
         cmaker = simple_cmaker([base, tight, loose], IMTS)
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
