@@ -131,6 +131,24 @@ class NankaiTest(unittest.TestCase):
             self.assertEqual(vars(r1).keys(), vars(r2).keys())
             self.assertEqual(p1.data, p2.data)
 
+        # splitting the arrays gives the same blocks as splitting the data
+        src.data = src.data * 250
+        new = pickle.loads(pickle.dumps(src))
+        self.assertEqual(new.get_mags(), src.get_mags())
+        self.assertEqual(new.get_bounding_box(10.), src.get_bounding_box(10.))
+        blocks1, blocks2 = list(src), list(new)
+        self.assertEqual([b.source_id for b in blocks1],
+                         [b.source_id for b in blocks2])
+        for b1, b2 in zip(blocks1, blocks2):
+            self.assertIn('_arrays', vars(b2))
+            self.assertEqual(b1.count_ruptures(), b2.count_ruptures())
+            self.assertEqual(b1._num_ruptures, b2._num_ruptures)
+            self.assertEqual(b1.data.weight, b2.data.weight)
+            for (r1, _), (r2, _) in zip(b1.data, b2.data):
+                numpy.testing.assert_array_equal(
+                    r1.surface.mesh.array, r2.surface.mesh.array)
+                self.assertEqual(r1.weight, r2.weight)
+
         # ruptures with planar surfaces are pickled as they are
         src, _ = make_non_parametric_source()
         self.assertNotIn('_arrays', vars(pickle.loads(pickle.dumps(src))))

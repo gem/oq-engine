@@ -131,6 +131,35 @@ def _from_arrays(arrays):
     return out
 
 
+# Arrays for the ruptures from start to stop, in a WeightedSequence of
+# weight stop - start, as the blocks returned by block_splitter
+def _slice_arrays(arrays, start, stop):
+    offset = arrays['offset']
+    out = {k: v for k, v in arrays.items() if k != 'seq_weight'}
+    for key in ('mag', 'rake', 'hypo', 'probs'):
+        out[key] = arrays[key][start:stop]
+    out['mesh'] = arrays['mesh'][:, offset[start]:offset[stop]]
+    out['offset'] = offset[start:stop + 1] - offset[start]
+    if 'weight' in arrays:
+        out['weight'] = arrays['weight'][start:stop]
+    out['seq_weight'] = stop - start
+    return out
+
+
+# Longitudes and latitudes of the bounding boxes of the surfaces,
+# in the same order as NonParametricSeismicSource.get_bounding_box
+def _bounds(arrays):
+    offset, mesh = arrays['offset'], arrays['mesh']
+    n = len(offset) - 1
+    lons, lats = numpy.zeros(2 * n), numpy.zeros(2 * n)
+    for i in range(n):
+        start, stop = offset[i], offset[i + 1]
+        (lons[2 * i], lons[2 * i + 1], lats[2 * i], lats[2 * i + 1]) = \
+            get_spherical_bounding_box(mesh[0, start:stop],
+                                       mesh[1, start:stop])
+    return lons, lats
+
+
 class NonParametricSeismicSource(BaseSeismicSource):
     """
     Non Parametric Seismic Source explicitly defines earthquake ruptures in the
@@ -215,8 +244,20 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
-        if len(self.data) == 1:  # there is nothing to split
+        if self.count_ruptures() == 1:  # there is nothing to split
             yield self
+            return
+        if '_arrays' in self.__dict__:  # split without rebuilding
+            n = self.count_ruptures()
+            for i, start in enumerate(range(0, n, BLOCKSIZE)):
+                src = self.__class__.__new__(self.__class__)
+                src.source_id = '%s:%d' % (self.source_id, i)
+                src.name = self.name
+                src.tectonic_region_type = self.tectonic_region_type
+                src._arrays = _slice_arrays(
+                    self._arrays, start, min(start + BLOCKSIZE, n))
+                src._num_ruptures = src.count_ruptures()
+                yield src
             return
         for i, block in enumerate(block_splitter(self.data, BLOCKSIZE)):
             source_id = '%s:%d' % (self.source_id, i)
@@ -251,6 +292,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
+        if '_arrays' in self.__dict__:
+            lons, lats = _bounds(self._arrays)
+            west, east, north, south = get_spherical_bounding_box(lons, lats)
+            a1 = maxdist * KM_TO_DEGREES
+            a2 = angular_distance(maxdist, north, south)
+            return west - a2, south - a1, east + a2, north + a1
         surfaces = []
         for rup, _ in self.data:
             if isinstance(rup.surface, MultiSurface):
@@ -271,10 +318,21 @@ class NonParametricSeismicSource(BaseSeismicSource):
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
 
+    def get_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained in the source
+        """
+        if '_arrays' in self.__dict__:
+            mag_type = self._arrays['mag_type']
+            return sorted(set(map(mag_type, self._arrays['mag'])))
+        return super().get_mags()
+
     def is_gridded(self):
         """
         :returns: True if containing only GriddedRuptures, False otherwise
         """
+        if '_arrays' in self.__dict__:  # only gridded ruptures are stored
+            return True
         for rup, _ in self.data:
             if not isinstance(rup.surface, GriddedSurface):
                 return False
