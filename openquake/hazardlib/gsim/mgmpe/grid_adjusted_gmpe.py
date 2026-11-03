@@ -211,6 +211,28 @@ def load_residual_grids(hdf5_path):
             "res_terms": res_terms}
 
 
+# {(path, mtime, size): grid_data} shared by the GridAdjustedGMPE instances
+# reading the same file, so that it is read once per process
+_GRID_CACHE = {}
+
+
+def get_residual_grids(hdf5_path):
+    """
+    Same as load_residual_grids, but the file is read only once per
+    process and the result is shared between the callers, which must not
+    modify it (except for the lazily filled raytrace_masks).
+
+    :param hdf5_path:
+        Path to the hdf5 containing the grid-based adjustments.
+    """
+    path = os.path.abspath(hdf5_path)
+    stat = os.stat(path)
+    key = path, stat.st_mtime_ns, stat.st_size
+    if key not in _GRID_CACHE:
+        _GRID_CACHE[key] = load_residual_grids(path)
+    return _GRID_CACHE[key]
+
+
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
                       h3_res):
     """
@@ -702,17 +724,18 @@ class GridAdjustedGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
-        # Load grid-based corrections from the hdf5
-        self.grid_data = load_residual_grids(grid_hdf5_file)
+        # Load grid-based corrections from the hdf5; they are shared with
+        # the other instances reading the same file and are not pickled
+        self.grid_hdf5_file = os.path.abspath(grid_hdf5_file)
+        self.grid_data = get_residual_grids(self.grid_hdf5_file)
 
-        # Per-ray path cap (in natural-log units), also exposed in grid_data.
+        # Per-ray path cap (in natural-log units).
         # None = no cap; compute() clips the per-branch total after lookup.
         if path_cap is not None and path_cap <= 0:
             raise ValueError(
                 f"path_cap must be positive (natural-log units) or None, "
                 f"got {path_cap!r}.")
         self.path_cap = path_cap
-        self.grid_data["path_cap"] = path_cap
 
         # GridAdjustedGMPEs with the same central_key differ only by
         # epsilons and path_cap, so ContextMaker.get_mean_stds computes
@@ -760,6 +783,17 @@ class GridAdjustedGMPE(GMPE):
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
+
+    def __getstate__(self):
+        # the grids are big: they are not sent to the workers, which
+        # read them from the file (once per process)
+        state = self.__dict__.copy()
+        del state["grid_data"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.grid_data = get_residual_grids(self.grid_hdf5_file)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
