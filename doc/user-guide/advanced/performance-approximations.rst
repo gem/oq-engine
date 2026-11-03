@@ -106,12 +106,12 @@ For the ``job_vs30.ini`` file of the ``performance.zip`` archive, run with ``ps_
 ``pointsource_distance=15`` and ``collapse_precision=.03`` (engine version 3.27), the ``nctxs`` dataset contains::
 
 	exact      psd100     gridded    collapsed
-	990383445  296658391  48062426   47427817
+	990383445  296658391  48062426   44781744
 
 Here ``psd100`` is computed with a ``pointsource_distance`` of 100 km, and the
 gridding reduces the contexts by a factor of 990383445 / 48062426 = 20.61, the value logged as "estimated reduction
-factor". The collapse_precision reduces them further, from 48062426 to 47427817, a factor of 1.01, so that the total
-reduction logged as "estimated reduction factor" is 20.88 (gridding 20.61 x collapse 1.01).
+factor". The collapse_precision reduces them further, from 48062426 to 44781744, a factor of 1.07, so that the total
+reduction logged as "estimated reduction factor" is 22.12 (gridding 20.61 x collapse 1.07).
 
 If you want to explore other values, you can run a sensitivity analysis. The command ``oq sensitivity_analysis``
 prints a bash script which creates one calculation for each combination of the parameters, given in TOML syntax::
@@ -149,6 +149,18 @@ the average distance, weighted by the rates. The dip, strike, rake and
 width are compared after rounding to one decimal place, while the
 other rupture parameters must be equal.
 
+The GSIMs are grouped by the rupture parameters and the distances they
+require. The contexts are collapsed once per group, using only the
+parameters required by that group, and the probabilities of each group
+are computed with the GSIMs of the group. Therefore the GSIMs requiring
+fewer parameters collapse more, at the cost of collapsing the contexts
+once per group.
+
+For instance, in a logic tree where one GSIM requires the ``hypo_depth``
+parameter in addition to the magnitude and the rake, the contexts are
+collapsed twice: once with all the parameters for the GSIM which needs
+``hypo_depth``, and once without ``hypo_depth`` for the other GSIMs.
+
 The approximation is used only by the ``classical`` calculator, for the Poissonian sources: the nonparametric
 sources and the non-Poissonian temporal occurrence models are never collapsed. The default is
 ``collapse_precision = 0``, meaning no collapsing, and a typical value is ``0.02`` or ``0.03``::
@@ -171,8 +183,7 @@ If the contexts removed by the collapse are less than 10% of the contexts, the e
 ``collapse_precision`` should be turned off. Always check the runtime, since the collapse has a cost of its own.
 
 For instance, on the ``performance.zip`` archive with ``ps_grid_spacing=30`` and engine version 3.27, the collapse removes
-about 4% of the contexts (from 50,182,457 to 48,127,887, a reduction factor of 1.04) and it does not decrease the runtime,
-which is 683 s without the collapse and 717 s with it.
+about 16% of the contexts (from 50,182,457 to 42,110,255, a reduction factor of 1.19).
 
 ***********************************************
 Application: making the Canada model 26x faster
@@ -311,8 +322,8 @@ https://downloads.openquake.org/jobs/performance.zip. The calculations were run 
      - 25
      - 0.03
      - 64
-     - 55,207,568
-     - 17.94 (gridding, estimated)
+     - 50,848,933
+     - 19.48 (gridding, estimated)
 
 Note that the efficiency of the collapse of the ruptures and of the ``pointsource_distance`` approximation depends very
 much on the version of the engine: the numbers above are valid for the engine version 3.27 and they will change in

@@ -170,8 +170,11 @@ collapse_precision:
   with the same rupture parameters (dip, strike and rake rounded to one
   decimal place) and with distances equal within the given
   relative precision (on log(1 + d)) are merged by summing their
-  occurrence rates. The far away sites benefit the most, since many
-  ruptures are at similar distances from them.
+  occurrence rates. The gsims requiring the same rupture parameters and
+  distances are grouped, and the contexts are collapsed once per group
+  using only the parameters required by the group, so the gsims requiring
+  fewer parameters collapse more. The far away sites benefit the most,
+  since many ruptures are at similar distances from them.
   Example: *collapse_precision = 0.02*.
   Default: 0, meaning no collapsing
 
