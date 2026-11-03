@@ -30,7 +30,8 @@ from openquake.baselib.general import (
     getsizeof)
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import IMC, StdDev
+from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -55,8 +56,6 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
-azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
 MEA = 0
 STD = 1
 EPS = 1E-3
@@ -1600,6 +1599,7 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
+        central = {}  # central part shared by sibling GridAdjustedGMPEs
         for g, gsim in enumerate(self.gsims):
             if gsim.conditional and not gsim.from_mgmpe:
                 url = ('https://docs.openquake.org/oq-engine/master/manual/'
@@ -1607,7 +1607,37 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            out[:, g] = self.get_4MN(recarrays, gsim)
+            key = getattr(gsim, 'central_key', None)
+            if key is None:
+                out[:, g] = self.get_4MN(recarrays, gsim)
+                continue
+            if key not in central:
+                central[key] = self._get_central(recarrays, gsim)
+            out[:, g] = self._add_epsilons(central[key], gsim)
+        return out
+
+    # compute the part of a GridAdjustedGMPE independent from the
+    # epsilons, i.e. the backbone and the grid lookups (the expensive part)
+    def _get_central(self, ctxs, gsim):
+        N = sum(len(ctx) for ctx in ctxs)
+        out = numpy.zeros((4, len(self.imts), N))
+        resolved = []
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            res = gag.compute_central(gsim, ctx, self.imts, *out[:, :, slc])
+            resolved.append((slc, res))
+            start = slc.stop
+        return out, resolved
+
+    # add the epsilon shifts of a GridAdjustedGMPE to the central part
+    def _add_epsilons(self, central, gsim):
+        out, resolved = central
+        out = out.copy()
+        gsim.adj = []
+        for slc, res in resolved:
+            gag.apply_epsilons(gsim, res, self.imts, out[0, :, slc])
+        self._check_conv(out, gsim)
         return out
 
     def get_4MN(self, ctxs, gsim):
@@ -1626,13 +1656,17 @@ class ContextMaker(object):
             if adj is not None:
                 gsim.adj.append(adj)
             start = slc.stop
-        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
-            raise ValueError('Total StdDev is zero for %s' % gsim)
         if gsim.adj:
             gsim.adj = numpy.concatenate(gsim.adj)
-        if self.conv:  # apply horizontal component conversion
-            self.apply_horiz_comp_conv(out, gsim)
+        self._check_conv(out, gsim)
         return out
+
+    # check the stddevs and apply the horizontal component conversion
+    def _check_conv(self, out, gsim):
+        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:
+            self.apply_horiz_comp_conv(out, gsim)
 
     # not used right now
     def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,

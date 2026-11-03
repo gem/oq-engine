@@ -1,4 +1,8 @@
-  [Michele Simionato]
+ [Christopher Brooks, Michele Simionato]
+ * GridAdjustedGMPEs differing only by the epsilons now share the
+   computation of the backbone's grid-adjusted mean prediction
+ 
+ [Michele Simionato]
   * Internal: extended `oq check_input` to recognize the case of sources with the
     same geometry but different MFDs and suggest a better way to write them
   * Changed `oq engine --param` to use space-separated name=value pairs instead
