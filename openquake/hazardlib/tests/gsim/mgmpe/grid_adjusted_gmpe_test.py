@@ -160,6 +160,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
             )
             aae(adjs, EXPECTED_PATH_ADJ[m], decimal=DP)
 
+    def test_raytrace_masks_are_exact(self):
+        # The h3 lookups skipped thanks to the masks must all be misses,
+        # so the results must be identical to the ones without masks
+        gd = load_residual_grids(GRID_HDF5)
+        rng = np.random.default_rng(42)
+        slo, sla, hlo, hla = rng.uniform(-5., 45., (4, 300))
+        nomask = (0., 0., None)
+        for imt in IMTS:
+            grids = {"mean": gd["raytrace_grids"]["adj_per_km"][imt]}
+            masks = mod._build_masks(grids["mean"], gd["h3_res"])
+            exp = mod._raytrace_path_adjs(
+                grids, hlo, hla, slo, sla, gd["h3_res"], nomask)["mean"]
+            got = mod._raytrace_path_adjs(
+                grids, hlo, hla, slo, sla, gd["h3_res"], masks)["mean"]
+            self.assertGreater(np.count_nonzero(exp), 0)
+            np.testing.assert_array_equal(got, exp)
+
     def test_mean_and_sigma(self):
         # Check expected values
         mea, sig, tau, phi = self._get_mean_stds(IMTS)
@@ -176,6 +193,31 @@ class GridAdjustedGMPETest(unittest.TestCase):
                         - ATT_SIG[m] ** 2), decimal=DP)
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
+
+    def test_sigma_actions_and_components(self):
+        # Check all actions on every component, with scalar and cell values.
+        # Expected variances start from sig=5, tau=3, phi=4 and adjustment=1.
+        variances = {
+            ("replace", "sig"): [1, 9, 16],
+            ("replace", "tau"): [17, 1, 16],
+            ("replace", "phi"): [10, 9, 1],
+            ("add", "sig"): [26, 9, 16],
+            ("add", "tau"): [26, 10, 16],
+            ("add", "phi"): [26, 9, 17],
+            ("sub", "sig"): [24, 9, 16],
+            ("sub", "tau"): [24, 8, 16],
+            ("sub", "phi"): [24, 9, 15]}
+        for scalar in (True, False):
+            scale = np.ones(2) if scalar else np.array([1., 2.])
+            values = 1. if scalar else scale
+            for (action, component), expected in variances.items():
+                with self.subTest(scalar=scalar, action=action,
+                                  component=component):
+                    out = np.array([5., 3., 4.])[:, None] * scale
+                    mod.adjust_sigma(values, {"sig_comp_modified": component},
+                                     action, *out)
+                    np.testing.assert_allclose(
+                        out, np.sqrt(expected)[:, None] * scale)
 
     def test_resolved_adjustments(self):
         # Check the combined mean, SE and per-cell sigma against expected
