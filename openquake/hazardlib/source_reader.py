@@ -859,7 +859,7 @@ def check_same_sources(smdict, fname):
                     for smfile, src in same}))
     if errors:
         lines = ['  ' + general.shortlist(err) for err in errors]
-        msg = ('%s: %d sources appear in different source models with '
+        msg = ('%s:\n%d sources appear in different source models with '
                'different IDs, use the same ID for each of them:\n%s' % (
                    fname, len(errors), '\n'.join(lines)))
         # NB: in oq check_input the models must be fixed, so it is an error
@@ -920,12 +920,12 @@ def check_mfd_variants(smdict, fname):
                 srcid, len(mfds), mfd, ' '.join(files), utype))
     if lines:
         logging.warning(
-            '%s: %d source(s) appear in different source model files with '
-            'the same geometry and different MFDs, so each copy is '
+            '%s:\n%d source(s) appear in different source model files with '
+            'the same geometry and different MFDs,\nso each copy is '
             'computed separately. Keep a single copy in one file and move '
-            'the MFDs in the logic tree, with a branchSet with '
+            'the MFDs in the logic tree,\nwith a branchSet with '
             'applyToSources="<source ID>" (and applyToBranches if needed) '
-            'containing one branch per MFD; then the contexts are computed '
+            'containing one branch per MFD;\nthen the contexts are computed '
             'once for all the MFDs, which can be much faster:\n%s',
             fname, len(lines), '\n'.join(lines))
     return [line.split(':')[0].strip() for line in lines]
