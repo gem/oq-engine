@@ -275,6 +275,9 @@ def _build_masks(grid, h3_res):
     lat0, lon0 = arr[:, 1].min(), arr[:, 3].min()
     nlat = int(np.floor((arr[:, 2].max() - lat0) / MASK_STEP)) + 1
     nlon = int(np.floor((arr[:, 4].max() - lon0) / MASK_STEP)) + 1
+    # With the current step, margin and latitude limit, at most about
+    # 93 MB per term/IMT: 16 resolutions * 1603 * 3603 one-byte bools.
+    # The rectangle includes empty areas between stored cells.
     mask = np.zeros((len(h3_res), nlat, nlon), bool)
     for r, lat1, lat2, lon1, lon2 in boxes:
         i1, i2 = np.floor((np.array([lat1, lat2]) - lat0) / MASK_STEP)
