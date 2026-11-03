@@ -29,10 +29,8 @@ from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-def load_sigma_for_term(
-        grp, term, imt_str, location,
-        sig_action, cell_ids, grids, sig_scalars
-        ):
+def load_sigma_for_term(grp, term, imt_str, location, sig_action,
+                        cell_ids, grids, sig_scalars):
     """
     Load the sigma adjustment for one term/IMT group into
     grids[imt_str][term]["sig"] (per-cell) OR sig_scalars (scalar).
@@ -51,27 +49,22 @@ def load_sigma_for_term(
         raise ValueError(
             f"sig_adjustment '{sig_action}' requested for term '{term}' "
             f"but '{sig_key}' is missing for '{imt_str}'")
+    if has_sig_dataset and location == "path":
+        # Raise an error if requesting per-cell sigma
+        # adjustment with a path-based term
+        raise ValueError(
+            f"Per-cell sigma is not currently supported for "
+            f"path-based terms (term '{term}'). Use a "
+            f"scalar adjustment instead.")
+    sig_vals = grp[sig_key][:] if has_sig_dataset else grp.attrs[sig_key]
+    if np.any(sig_vals < 0):
+        raise ValueError(
+            f"Negative _sig value found for term "
+            f"'{term}' and IMT '{imt_str}'")
     if has_sig_dataset:
-        if location == "path":
-            # Raise an error if requesting per-cell sigma
-            # adjustment with a path-based term
-            raise ValueError(
-                f"Per-cell sigma is not currently supported for "
-                f"path-based terms (term '{term}'). Use a "
-                f"scalar adjustment instead.")
-        sig_vals = grp[sig_key][:]
-        if np.any(sig_vals < 0):
-            raise ValueError(
-                f"Negative _sig value found for term "
-                f"'{term}' and IMT '{imt_str}'")
         grids[imt_str][term]["sig"] = dict(zip(cell_ids, sig_vals))
     else:
-        sig_scalar = grp.attrs[sig_key]
-        if sig_scalar < 0:
-            raise ValueError(
-                f"Negative _sig value found for term "
-                f"'{term}' and IMT '{imt_str}'")
-        sig_scalars[imt_str][term] = sig_scalar
+        sig_scalars[imt_str][term] = sig_vals
 
 
 def build_raytrace_grid(cell_ids, mean_vals):
@@ -304,14 +297,12 @@ def _candidates(masks, lats, lons, nres):
     return out
 
 
+# Resolve all fields on the same path grid with one raytrace per path.
+# The h3 lookups are performed only for the points which may be in a
+# stored cell, according to the masks (see _build_masks), since the
+# other lookups would miss: the result is the same.
 def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
                         h3_res, masks=None):
-    """
-    Resolve all fields on the same path grid with one raytrace per path.
-    The h3 lookups are performed only for the points which may be in a
-    stored cell, according to the masks (see _build_masks), since the
-    other lookups would miss: the result is the same.
-    """
     # Set some stores
     n_paths = len(hypo_lons)
     ra_per_path = {key: np.zeros(n_paths) for key in grids}
@@ -414,37 +405,20 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
     NOTE: Only one of grids[imt][term]["sig"]/sig_scalars can be populated
     per term/IMT - this is enforced when loading the grid cells.
     """
-    # Get the component to modify
+    # Get the component to modify: tau, phi or total sigma
     sig_comp = cfg["sig_comp_modified"]
+    component = {"tau": tau, "phi": phi}.get(sig_comp, sig)
 
-    # And make the required adjustment to this component
+    # Adjust the selected component with the required action
     if sig_action == "replace":
-        if sig_comp == "tau":
-            # Adjust tau
-            tau[:] = sig_vals
-            # Recompute total sigma accordingly
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        elif sig_comp == "phi":
-            # Adjust phi
-            phi[:] = sig_vals
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        else:
-            # Adjust total sigma
-            sig[:] = sig_vals
+        component[:] = sig_vals
     else:
         sign = -1 if sig_action == "sub" else 1
-        if sig_comp == "tau":
-            # Adjust tau
-            tau[:] = np.sqrt(tau ** 2 + sign * sig_vals ** 2)
-            # Recompute total sigma accordingly
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        elif sig_comp == "phi":
-            # Adjust phi
-            phi[:] = np.sqrt(phi ** 2 + sign * sig_vals ** 2)
-            sig[:] = np.sqrt(tau ** 2 + phi ** 2)
-        else:
-            # Adjust total sigma
-            sig[:] = np.sqrt(sig ** 2 + sign * sig_vals ** 2)
+        component[:] = np.sqrt(component ** 2 + sign * sig_vals ** 2)
+
+    # Recompute total sigma after adjusting tau or phi
+    if sig_comp in ("tau", "phi"):
+        sig[:] = np.sqrt(tau ** 2 + phi ** 2)
 
 
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
@@ -503,14 +477,14 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
     :returns:
-        A dict {imt_index: {term: (mean_adj, se_adj)}}. Each adjustment
-        has shape (len(ctx),), or is None when that term/IMT has no data.
+        A dict {(imt_index, term): (mean_adj, se_adj)} for terms with
+        mean data. Each adjustment has shape (len(ctx),); se_adj is None
+        when that term/IMT has no SE data.
     """
     grid_data = gsim.grid_data
     gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
     resolved = {}
     for m, imt in enumerate(imts):
-        per = {}
         # Apply each correction - example (term, cfg):
         #   term = 'dL2L'
         #   cfg  = {'location': 'hypo', 'sig_adjustment': 'sub',
@@ -520,10 +494,10 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
             # branch only has to add its own eps * SE shift later
             adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
-            per[term] = (mean_adj, se_adj)
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
+            resolved[m, term] = mean_adj, se_adj
             # Central mean and sigma adjustments do not depend on
             # epsilon, so they are added here
             mean[m] += mean_adj
@@ -536,8 +510,8 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
                 sig_vals = adjs.get("sig", scalars.get(term))
                 adjust_sigma(sig_vals, cfg, sig_action,
                              sig[m], tau[m], phi[m])
-        resolved[m] = per
     return resolved
+
 
 def apply_epsilons(gsim, resolved, imts, mean):
     """
@@ -548,33 +522,25 @@ def apply_epsilons(gsim, resolved, imts, mean):
     :param imts: sequence of IMT instances, in output array row order
     :param mean: central mean array of shape (len(imts), N)
     """
-    # Terms with no mean_adj for this IMT contributed nothing to the
-    # central mean and so are skipped here as well. For path terms
-    # with path_cap set, the per-branch total (central + eps*SE) is
-    # clipped to [-path_cap, +path_cap] so no single LT realisation's
-    # path contribution can exceed the physical bound
-    for m, per_term in resolved.items():
-        for term, (mean_adj, se_adj) in per_term.items():
-            if mean_adj is None:
-                continue
-            eps = gsim.epsilons.get(term, 0.0)
-            cfg = gsim.grid_data["res_terms"][term]
-            path_capped = (cfg["location"] == "path"
-                           and gsim.path_cap is not None)
-            if eps != 0.0 and se_adj is None:
-                raise ValueError(
-                    f"Non-zero epsilon requested for term '{term}' but "
-                    f"per-cell '{term}_mean_se' dataset is missing for "
-                    f"IMT '{imts[m]}'.")
-            if path_capped:
-                # mean_adj was already added uncapped in compute_central;
-                # replace it with the capped (central + eps*SE) total
-                shift = eps * se_adj if eps != 0.0 else 0.0
-                capped_total = np.clip(
-                    mean_adj + shift, -gsim.path_cap, gsim.path_cap)
-                mean[m] += capped_total - mean_adj
-            elif eps != 0.0:
-                mean[m] += eps * se_adj
+    # Terms with no mean data contributed nothing to the central mean
+    # and are omitted from resolved. For path terms with path_cap set,
+    # clip the per-branch total (central + eps*SE) so no single LT
+    # realisation's path contribution can exceed the physical bound
+    for (m, term), (mean_adj, se_adj) in resolved.items():
+        eps = gsim.epsilons.get(term, 0.0)
+        if eps != 0.0 and se_adj is None:
+            raise ValueError(
+                f"Non-zero epsilon requested for term '{term}' but "
+                f"per-cell '{term}_mean_se' dataset is missing for "
+                f"IMT '{imts[m]}'.")
+        shift = eps * se_adj if eps != 0.0 else 0.0
+        cfg = gsim.grid_data["res_terms"][term]
+        if cfg["location"] == "path" and gsim.path_cap is not None:
+            # mean_adj was already added uncapped in compute_central;
+            # replace it with the capped (central + eps*SE) total
+            shift = np.clip(mean_adj + shift,
+                            -gsim.path_cap, gsim.path_cap) - mean_adj
+        mean[m] += shift
 
 
 class GridAdjustedGMPE(GMPE):
