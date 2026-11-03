@@ -925,7 +925,7 @@ def check_mfd_variants(smdict, fname):
             'computed separately. Keep a single copy in one file and move '
             'the MFDs in the logic tree,\nwith a branchSet with '
             'applyToSources="<source ID>" (and applyToBranches if needed) '
-            'containing one branch per MFD;\nthen the contexts are computed '
+            'containing one branch\nper MFD; then the contexts are computed '
             'once for all the MFDs, which can be much faster:\n%s',
             fname, len(lines), '\n'.join(lines))
     return [line.split(':')[0].strip() for line in lines]
