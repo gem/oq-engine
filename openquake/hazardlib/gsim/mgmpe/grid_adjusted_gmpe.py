@@ -20,7 +20,9 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 """
 import json
 import os
+import hashlib
 from contextlib import nullcontext
+from functools import lru_cache
 import h5py
 import h3
 import numpy as np
@@ -205,23 +207,38 @@ def load_residual_grids(hdf5_path):
             "res_terms": res_terms}
 
 
-# {(path, mtime, size): grid_data} shared by the GridAdjustedGMPE instances
-# reading the same file, so that it is read once per process
+# {SHA256 content digest: grid_data}, shared by GridAdjustedGMPE instances
+# reading identical files, including copies extracted from saved logic trees.
+# Values contain the correction grids, sigma scalars, term metadata and
+# lazily filled raytrace masks. For the SAM job, two files occupy about
+# 8 MB after loading, or 20 MB with masks for all 26 IMTs. These sizes are
+# per process; the cache has no size limit and retains distinct file contents
+# until the process exits, so larger grids or more files can use much more.
 _GRID_CACHE = {}
+
+
+# Avoid hashing the same file for every branch. The stat signature
+# invalidates the digest when a file changes; only small metadata is cached.
+@lru_cache(maxsize=128)
+def _grid_digest(path, stamp):
+    with open(path, 'rb') as f:
+        return hashlib.file_digest(f, 'sha256').digest()
 
 
 def get_residual_grids(hdf5_path):
     """
-    Same as load_residual_grids, but the file is read only once per
-    process and the result is shared between the callers, which must not
-    modify it (except for the lazily filled raytrace_masks).
+    Same as load_residual_grids, but identical file contents are loaded
+    only once per process, even from different paths. The result is shared
+    between callers, which must not modify it (except for the lazily filled
+    raytrace_masks).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
     """
     path = os.path.abspath(hdf5_path)
     stat = os.stat(path)
-    key = path, stat.st_mtime_ns, stat.st_size
+    key = _grid_digest(
+        path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
     if key not in _GRID_CACHE:
         _GRID_CACHE[key] = load_residual_grids(path)
     return _GRID_CACHE[key]
