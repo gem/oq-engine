@@ -20,6 +20,9 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 """
 import json
 import os
+import hashlib
+from contextlib import nullcontext
+from functools import lru_cache
 import h5py
 import h3
 import numpy as np
@@ -202,6 +205,43 @@ def load_residual_grids(hdf5_path):
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
+
+
+# {SHA256 content digest: grid_data}, shared by GridAdjustedGMPE instances
+# reading identical files, including copies extracted from saved logic trees.
+# Values contain the correction grids, sigma scalars, term metadata and
+# lazily filled raytrace masks. For the SAM job, two files occupy about
+# 8 MB after loading, or 20 MB with masks for all 26 IMTs. These sizes are
+# per process; the cache has no size limit and retains distinct file contents
+# until the process exits, so larger grids or more files can use much more.
+_GRID_CACHE = {}
+
+
+# Avoid hashing the same file for every branch. The stat signature
+# invalidates the digest when a file changes; only small metadata is cached.
+@lru_cache(maxsize=128)
+def _grid_digest(path, stamp):
+    with open(path, 'rb') as f:
+        return hashlib.file_digest(f, 'sha256').digest()
+
+
+def get_residual_grids(hdf5_path):
+    """
+    Same as load_residual_grids, but identical file contents are loaded
+    only once per process, even from different paths. The result is shared
+    between callers, which must not modify it (except for the lazily filled
+    raytrace_masks).
+
+    :param hdf5_path:
+        Path to the hdf5 containing the grid-based adjustments.
+    """
+    path = os.path.abspath(hdf5_path)
+    stat = os.stat(path)
+    key = _grid_digest(
+        path, (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size))
+    if key not in _GRID_CACHE:
+        _GRID_CACHE[key] = load_residual_grids(path)
+    return _GRID_CACHE[key]
 
 
 def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
@@ -425,7 +465,7 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
 
 
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
-def _resolve_adjs(grid_data, cfg, term, imt, ctx):
+def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
     # Path-based terms are stored in the raytrace grids. Mean / SE
     # are both returned uncapped here; the path_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
@@ -441,9 +481,11 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
         if (term, imt) not in cache:
             cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
         masks = cache[term, imt]
-        return _raytrace_path_adjs(
-            grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-            grid_data["h3_res"], masks)
+        # The ContextMaker owns the monitor; standalone GSIMs need none.
+        with gra_mon:
+            return _raytrace_path_adjs(
+                grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+                grid_data["h3_res"], masks)
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
@@ -454,7 +496,8 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
+def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
+                    gra_mon=nullcontext()):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -479,6 +522,8 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
         Inter-event standard deviation output array, same shape as mean.
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
+    :param gra_mon:
+        Optional ray-tracing monitor owned by the ContextMaker.
     :returns:
         A dict {(imt_index, term): (mean_adj, se_adj)} for terms with
         mean data. Each adjustment has shape (len(ctx),); se_adj is None
@@ -495,7 +540,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
         for term, cfg in grid_data["res_terms"].items():
             # Resolve central, SE and per-cell sigma together so each
             # branch only has to add its own eps * SE shift later
-            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
+            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx, gra_mon)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
@@ -671,17 +716,18 @@ class GridAdjustedGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
-        # Load grid-based corrections from the hdf5
-        self.grid_data = load_residual_grids(grid_hdf5_file)
+        # Load grid-based corrections from the hdf5; they are shared with
+        # the other instances reading the same file and are not pickled
+        self.grid_hdf5_file = os.path.abspath(grid_hdf5_file)
+        self.grid_data = get_residual_grids(self.grid_hdf5_file)
 
-        # Per-ray path cap (in natural-log units), also exposed in grid_data.
+        # Per-ray path cap (in natural-log units).
         # None = no cap; compute() clips the per-branch total after lookup.
         if path_cap is not None and path_cap <= 0:
             raise ValueError(
                 f"path_cap must be positive (natural-log units) or None, "
                 f"got {path_cap!r}.")
         self.path_cap = path_cap
-        self.grid_data["path_cap"] = path_cap
 
         # GridAdjustedGMPEs with the same central_key differ only by
         # epsilons and path_cap, so ContextMaker.get_mean_stds computes
@@ -729,6 +775,17 @@ class GridAdjustedGMPE(GMPE):
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
+
+    def __getstate__(self):
+        # the grids are big: they are not sent to the workers, which
+        # read them from the file (once per process)
+        state = self.__dict__.copy()
+        del state["grid_data"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.grid_data = get_residual_grids(self.grid_hdf5_file)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

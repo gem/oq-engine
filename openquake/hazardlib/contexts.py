@@ -814,6 +814,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.gra_mon = monitor('ray tracing', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
@@ -1625,7 +1626,8 @@ class ContextMaker(object):
         start = 0
         for ctx in ctxs:
             slc = slice(start, start + len(ctx))
-            res = gag.compute_central(gsim, ctx, self.imts, *out[:, :, slc])
+            res = gag.compute_central(
+                gsim, ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
             resolved.append((slc, res))
             start = slc.stop
         return out, resolved

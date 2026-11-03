@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import pickle
 import shutil
 import tempfile
 import unittest
@@ -360,6 +361,25 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
 
+    def test_grids_shared_and_not_pickled(self):
+        # Instances reading the same file share the grids, which are
+        # not pickled but read again (from the cache) when unpickling
+        gsims = [GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                  grid_hdf5_file=GRID_HDF5,
+                                  epsilons={"dL2L": eps})
+                 for eps in (-1., 1.)]
+        self.assertIs(gsims[0].grid_data, gsims[1].grid_data)
+        data = pickle.dumps(gsims[1])
+        self.assertLess(len(data), 10_000)
+        new = pickle.loads(data)
+        self.assertIs(new.grid_data, gsims[1].grid_data)
+        cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
+        ctx = self._make_ctx(cmaker)
+        expected = cmaker.get_mean_stds([ctx])
+        cmaker = simple_cmaker([valid.gsim(BASE_GSIM), new], IMTS)
+        np.testing.assert_array_equal(
+            cmaker.get_mean_stds([self._make_ctx(cmaker)]), expected)
+
     ### SHARING OF THE CENTRAL PART TESTS ###
     def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while
@@ -411,6 +431,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
             shared = cm.get_mean_stds([self._make_ctx(cm)])
         # The central part is computed once for all 27 adj GSIMs
         self.assertEqual(central.call_count, 1)
+        # Ray tracing is monitored once per IMT, not once per branch.
+        self.assertEqual(cm.gra_mon.counts, len(IMTS))
+        self.assertIn(cm.gra_mon, cm.monitor.children)
         for i, eps in enumerate(combos):
             for name_i, name in enumerate(("mean", "sig", "tau", "phi")):
                 np.testing.assert_array_equal(
