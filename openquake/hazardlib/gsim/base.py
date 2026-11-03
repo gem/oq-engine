@@ -33,8 +33,8 @@ import numpy
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
+from openquake.hazardlib.const import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
 
 
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',

@@ -30,7 +30,8 @@ from openquake.baselib.general import (
     getsizeof)
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import IMC, StdDev
+from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -55,8 +56,6 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
-azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
 MEA = 0
 STD = 1
 EPS = 1E-3
@@ -1586,7 +1585,6 @@ class ContextMaker(object):
     # compute the part of a GridAdjustedGMPE independent from the
     # epsilons, i.e. the backbone and the grid lookups (the expensive part)
     def _get_central(self, ctxs, gsim):
-        from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
         N = sum(len(ctx) for ctx in ctxs)
         out = numpy.zeros((4, len(self.imts), N))
         resolved = []
@@ -1600,7 +1598,6 @@ class ContextMaker(object):
 
     # add the epsilon shifts of a GridAdjustedGMPE to the central part
     def _add_epsilons(self, central, gsim):
-        from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
         out, resolved = central
         out = out.copy()
         gsim.adj = []
