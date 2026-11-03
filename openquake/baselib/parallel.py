@@ -194,6 +194,7 @@ import logging
 import operator
 import tempfile
 import traceback
+import warnings
 import collections
 from unittest import mock
 import multiprocessing.shared_memory as shmem
@@ -305,6 +306,16 @@ def init_worker():
     else:
         setproctitle('oq-worker')
     Starmap.on = True
+
+
+def init_process_worker():
+    # like init_worker, but also silences the DeprecationWarnings and
+    # UserWarnings, which the GSIM classes raise at instantiation and
+    # which are already shown by the master process; only for process
+    # pools, since a filter in a thread would silence the master too
+    init_worker()
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class Pickled(object):
@@ -783,7 +794,7 @@ class Starmap(object):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = ProcessPoolExecutor(
-                num_cores, mp_context, init_worker)
+                num_cores, mp_context, init_process_worker)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
