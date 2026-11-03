@@ -49,7 +49,8 @@ class MagDepAratioTestCase(unittest.TestCase):
                   (7.5, 2.555), (8.0, 3.216), (8.5, 4.047)]
         rar = MagDepAspectRatio("linear_piecewise", points)
 
-        # Knot values within 2% of expression (5.5 knot pinned to 1.000)
+        # Knot values within 2% of expression (2% here because
+        # 5.5 knot pinned to 1.000)
         for m, a in points:
             rel_err = abs(rar.get(m) - true_a(m)) / true_a(m)
             self.assertLess(rel_err, 0.02, msg=f"knot mag={m}")
