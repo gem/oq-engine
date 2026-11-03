@@ -101,7 +101,7 @@ def load_residual_grids(hdf5_path):
       per-cell SE on the mean for path-based terms. Populated only when
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
-    * raytrace_masks: {(term, imt_str): (lat0, lon0, mask)} - per h3
+    * raytrace_masks: {(term, imt_str): (lon0, lat0, mask)} - per h3
       resolution, the lat/lon boxes where the path points may hit a cell
       of raytrace_grids; used to skip the lookups which would miss. It
       starts empty and is filled for the terms/IMTs actually used.
@@ -252,7 +252,7 @@ MASK_MAX_LAT = 80.
 # contain points of a stored cell of that resolution, i.e. the boxes
 # overlapping the bounding box of the cell vertices enlarged by the margin.
 # Points in a box not flagged cannot be in a stored cell, so their h3
-# lookups would miss and can be skipped; returns (lat0, lon0, mask), with
+# lookups would miss and can be skipped; returns (lon0, lat0, mask), with
 # mask None if the margin is not guaranteed to be enough
 def _build_masks(grid, h3_res):
     boxes = []  # (resolution index, lat1, lat2, lon1, lon2)
@@ -283,13 +283,13 @@ def _build_masks(grid, h3_res):
         i1, i2 = np.floor((np.array([lat1, lat2]) - lat0) / MASK_STEP)
         j1, j2 = np.floor((np.array([lon1, lon2]) - lon0) / MASK_STEP)
         mask[int(r), int(i1):int(i2) + 1, int(j1):int(j2) + 1] = True
-    return lat0, lon0, mask
+    return lon0, lat0, mask
 
 
 # Boolean array of shape (nres, len(lats)), True for the points which may
 # be in a stored cell of the given resolution
 def _candidates(masks, lats, lons, nres):
-    lat0, lon0, mask = masks
+    lon0, lat0, mask = masks
     if mask is None:  # no filtering
         return np.ones((nres, len(lats)), bool)
     i = np.floor((lats - lat0) / MASK_STEP).astype(int)
