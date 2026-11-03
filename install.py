@@ -344,6 +344,8 @@ def postinstall_standalone(inst):
         secret_name = "django_secret.env"
         secret_file = os.path.join(secret_dir, secret_name)
         with open(secret_file, "r") as f:
+            # from something like DJANGO_SECRET_KEY='XXXXXX=XX=XX',
+            # so we split by quote instead of by the equal sign
             os.environ["DJANGO_SECRET_KEY"] = f.read().strip().split('\'')[1]
     # Run python manage.py migrate before running app postinstall
     _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
