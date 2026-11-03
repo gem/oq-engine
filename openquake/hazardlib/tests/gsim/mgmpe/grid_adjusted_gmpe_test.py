@@ -431,6 +431,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
             shared = cm.get_mean_stds([self._make_ctx(cm)])
         # The central part is computed once for all 27 adj GSIMs
         self.assertEqual(central.call_count, 1)
+        # Ray tracing is monitored once per IMT, not once per branch.
+        self.assertEqual(cm.gra_mon.counts, len(IMTS))
+        self.assertIn(cm.gra_mon, cm.monitor.children)
         for i, eps in enumerate(combos):
             for name_i, name in enumerate(("mean", "sig", "tau", "phi")):
                 np.testing.assert_array_equal(

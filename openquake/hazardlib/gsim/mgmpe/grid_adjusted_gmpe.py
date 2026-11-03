@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 """
 import json
 import os
+from contextlib import nullcontext
 import h5py
 import h3
 import numpy as np
@@ -447,7 +448,7 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
 
 
 # Resolve central mean, optional SE and per-cell sigma in one spatial search.
-def _resolve_adjs(grid_data, cfg, term, imt, ctx):
+def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
     # Path-based terms are stored in the raytrace grids. Mean / SE
     # are both returned uncapped here; the path_cap (if set) is applied
     # to the per-branch total (central + eps*SE) in compute()
@@ -463,9 +464,11 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
         if (term, imt) not in cache:
             cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
         masks = cache[term, imt]
-        return _raytrace_path_adjs(
-            grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-            grid_data["h3_res"], masks)
+        # The ContextMaker owns the monitor; standalone GSIMs need none.
+        with gra_mon:
+            return _raytrace_path_adjs(
+                grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
+                grid_data["h3_res"], masks)
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
@@ -476,7 +479,8 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
+def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
+                    gra_mon=nullcontext()):
     """
     Compute the backbone and the central grid corrections, i.e. the
     part of the result which is independent from the epsilons.
@@ -501,6 +505,8 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
         Inter-event standard deviation output array, same shape as mean.
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
+    :param gra_mon:
+        Optional ray-tracing monitor owned by the ContextMaker.
     :returns:
         A dict {(imt_index, term): (mean_adj, se_adj)} for terms with
         mean data. Each adjustment has shape (len(ctx),); se_adj is None
@@ -517,7 +523,7 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
         for term, cfg in grid_data["res_terms"].items():
             # Resolve central, SE and per-cell sigma together so each
             # branch only has to add its own eps * SE shift later
-            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
+            adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx, gra_mon)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
