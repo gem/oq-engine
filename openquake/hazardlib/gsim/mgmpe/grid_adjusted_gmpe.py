@@ -25,10 +25,12 @@ from contextlib import nullcontext
 from functools import lru_cache
 import h5py
 import h3
+from h3.api import basic_int as h3_int
 import numpy as np
 
 from openquake.hazardlib import const
-from openquake.hazardlib.geo.geodetic import npoints_between, distance
+from openquake.baselib.general import gen_slices
+from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -74,11 +76,12 @@ def build_raytrace_grid(cell_ids, mean_vals):
     """
     Build the H3 cell-id lookup for one path-based term/IMT.
 
-    Returns {cell_id: per_km_adj_value}. Raytracing resolves each sample
-    point to a stored cell via h3.latlng_to_cell with finest-to-coarsest
-    fallback (see raytrace_path_adj).
+    Returns {integer_cell_id: per_km_adj_value}, avoiding string conversion
+    at each sample. Raytracing resolves each sample point to a stored cell
+    with finest-to-coarsest fallback (see raytrace_path_adj).
     """
-    return dict(zip(cell_ids, mean_vals))
+    return {h3.str_to_int(cell) if isinstance(cell, str) else cell: value
+            for cell, value in zip(cell_ids, mean_vals)}
 
 
 def load_residual_grids(hdf5_path):
@@ -277,6 +280,8 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
 
 # Number of points used to discretise each path
 NPTS = 100
+# Bound the temporary arrays used when discretising paths in batches.
+PATH_BLOCKSIZE = 1000
 
 # Margin in degrees around the vertices of a cell and step in degrees of
 # the masks; for cells of resolution >= MASK_MIN_RES and latitudes within
@@ -297,10 +302,11 @@ MASK_MAX_LAT = 80.
 def _build_masks(grid, h3_res):
     boxes = []  # (resolution index, lat1, lat2, lon1, lon2)
     for cell in grid:
-        res = h3.get_resolution(cell)
+        cell = h3.str_to_int(cell) if isinstance(cell, str) else cell
+        res = h3_int.get_resolution(cell)
         if res not in h3_res:  # never looked up
             continue
-        bound = np.array(h3.cell_to_boundary(cell))
+        bound = np.array(h3_int.cell_to_boundary(cell))
         lats, lons = bound[:, 0], bound[:, 1]
         if res < MASK_MIN_RES or np.abs(lats).max() > MASK_MAX_LAT:
             return 0., 0., None
@@ -340,6 +346,31 @@ def _candidates(masks, lats, lons, nres):
     return out
 
 
+# Resolve samples finest-to-coarsest, visiting only unresolved candidates.
+# Accumulate in sample order, as in the original per-path Python loop.
+def _path_corrections(grids, lons, lats, h3_res, masks):
+    n_paths, npts = lons.shape
+    lons, lats = lons.ravel(), lats.ravel()
+    cand = _candidates(masks, lats, lons, len(h3_res))
+    unresolved = np.ones(len(lats), bool)
+    # NumPy scalar additions in the original loop retain each grid's dtype.
+    values = {key: np.zeros(len(lats), dtype=np.result_type(
+        next(iter(grid.values()), 0.), 0.)) for key, grid in grids.items()}
+    reference_grid = grids['mean']
+    for r in range(len(h3_res) - 1, -1, -1):
+        for i in np.flatnonzero(cand[r] & unresolved):
+            cell = h3_int.latlng_to_cell(lats[i], lons[i], h3_res[r])
+            if cell in reference_grid:
+                for key, grid in grids.items():
+                    values[key][i] = grid[cell]
+                unresolved[i] = False
+    for key, value in values.items():
+        value = value.reshape(n_paths, npts)
+        np.cumsum(value, axis=1, out=value)
+        values[key] = value[:, -1]
+    return values
+
+
 # Resolve all fields on the same path grid with one raytrace per path.
 # The h3 lookups are performed only for the points which may be in a
 # stored cell, according to the masks (see _build_masks), since the
@@ -350,50 +381,29 @@ def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
     n_paths = len(hypo_lons)
     ra_per_path = {key: np.zeros(n_paths) for key in grids}
     reference_grid = grids["mean"]
+    # Also accept string cell IDs from callers outside the engine.
+    if reference_grid and isinstance(next(iter(reference_grid)), str):
+        grids = {key: build_raytrace_grid(grid, grid.values())
+                 for key, grid in grids.items()}
+        reference_grid = grids["mean"]
     if masks is None:
         masks = _build_masks(reference_grid, h3_res)
-    lons = np.zeros((n_paths, NPTS))
-    lats = np.zeros((n_paths, NPTS))
-    spacing = np.zeros(n_paths)
-
-    for idx_path in range(n_paths): # Iterate over the paths
-
-        # Discretise the line
-        lons[idx_path], lats[idx_path], _ = npoints_between(
-            site_lons[idx_path], site_lats[idx_path], 0.,
-            hypo_lons[idx_path], hypo_lats[idx_path], 0., NPTS)
-
+    for slc in gen_slices(0, n_paths, PATH_BLOCKSIZE):
+        # Discretise the lines in batches, keeping the original endpoints.
+        lons, lats, _ = npoints_between(
+            site_lons[slc], site_lats[slc], 0.,
+            hypo_lons[slc], hypo_lats[slc], 0., NPTS)
         # Distance between consecutive discretised points along the path
-        spacing[idx_path] = distance(
-            lons[idx_path, 0], lats[idx_path, 0], 0.,
-            lons[idx_path, 1], lats[idx_path, 1], 0.)
-
-    # Flag the (resolution, path, point) triples worth a lookup
-    cand = _candidates(masks, lats.ravel(), lons.ravel(),
-                       len(h3_res)).reshape(len(h3_res), n_paths, NPTS)
-    fine_to_coarse = range(len(h3_res) - 1, -1, -1)
-
-    # Get the cumulative correction based on distance traversed per
-    # grid cell and the associated distance-based adjustment terms.
-    # Each sample point resolves to one stored cell via finest-to-
-    # coarsest h3 fallback; points with no stored cell contribute zero
-    for idx_path in np.flatnonzero(cand.any(axis=(0, 2))):
-        adj_sum = dict.fromkeys(grids, 0.0)
-        pcand = cand[:, idx_path]
-        for k in np.flatnonzero(pcand.any(axis=0)):
-            for r in fine_to_coarse:
-                if not pcand[r, k]:
-                    continue
-                cell = h3.latlng_to_cell(
-                    lats[idx_path, k], lons[idx_path, k], h3_res[r])
-                if cell in reference_grid:
-                    for key, grid in grids.items():
-                        adj_sum[key] += grid[cell]
-                    break
-
+        spacing = geodetic_distance(
+            lons[:, 0], lats[:, 0], lons[:, 1], lats[:, 1], dtype=float)
+        # Get the cumulative correction based on distance traversed per
+        # grid cell and the associated distance-based adjustment terms.
+        # Each sample point resolves to one stored cell via finest-to-
+        # coarsest h3 fallback; points with no stored cell contribute zero
+        adj_sum = _path_corrections(grids, lons, lats, h3_res, masks)
         # Store the total cumulative adjustment for the term
         for key in grids:
-            ra_per_path[key][idx_path] = adj_sum[key] * spacing[idx_path]
+            ra_per_path[key][slc] = adj_sum[key] * spacing
 
     return ra_per_path
 
