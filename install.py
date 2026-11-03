@@ -302,7 +302,6 @@ def _run_subprocess(inst, args):
     else:
         # user=inst.USER does not appear to work in the same
         # way as sudo -u $USER
-        subprocess.check_call(['sudo', '-u', inst.USER] + args)
         subprocess.check_call(
             ['sudo', '--preserve-env=DJANGO_SECRET_KEY',
              '-u', inst.USER] + args)
@@ -345,7 +344,7 @@ def postinstall_standalone(inst):
         secret_name = "django_secret.env"
         secret_file = os.path.join(secret_dir, secret_name)
         with open(secret_file, "r") as f:
-            os.environ["DJANGO_SECRET_KEY"] = f.read().strip().split('=')[1]
+            os.environ["DJANGO_SECRET_KEY"] = f.read().strip().split('\'')[1]
     # Run python manage.py migrate before running app postinstall
     _run_subprocess(inst, [pycmd, inst.manage_py(), "migrate"])
     errors = []
