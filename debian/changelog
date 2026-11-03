@@ -1,15 +1,15 @@
- [Christopher Brooks]
+ [Christopher Brooks, Michele Simionato]
  * GridAdjustedGMPEs differing only by the epsilons now share the
    computation of the backbone and of the central grid adjustments
  
  [Michele Simionato]
+  * Internal: extended `oq check_input` to recognize the case of sources with the
+    same geometry but different MFDs and suggest a better way to write them
+  * Changed `oq engine --param` to use space-separated name=value pairs instead
+    of comma-separated pairs, for consistency with `oq run --param`
+  * Added a new experimental collapse_precision approximation
   * ps_grid_spacing can now be used with disagg_by_src when the calculation has
     few sites, since the rates are computed one source at the time
-  * Added the nctxs dataset to classical calculations, with the number of
-    contexts after collapse_precision (collapsed) and the number of
-    contexts of the gridded point sources before collapse_precision
-    (gridded). If collapse_precision or ps_grid_spacing is set, exact is
-    the number of contexts before collapse_precision for all source types
   * Fixed the rupture IDs of the global SES: they are now unique
     across the models. Existing SES files must be regenerated
   * Fixed the classical_risk calculator for risk inputs containing assets

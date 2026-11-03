@@ -1532,6 +1532,11 @@ class ContextMaker(object):
         :param ctx: a context array
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
+        if self.collapse_precision and not rup_mutex and not self.cluster:
+            groups = self._gsim_groups()
+            if len(groups) > 1:
+                self._update_by_group(pmap, ctx, groups)
+                return
         for poes, mea, sig, tau, ctxt in self.gen_poes(ctx):
             # ctxt contains an unique magnitude
             if rup_mutex:
@@ -1542,6 +1547,35 @@ class ContextMaker(object):
                     pmap.array[sidx] *= 1. - poe
             else:
                 pmap.update_indep(poes, ctxt, self.tom.time_span)
+
+    def _gsim_groups(self):
+        # group the gsims requiring the same rupture parameters and
+        # distances; returns a list of triples (gidxs, rparams, dparams)
+        groups = {}
+        for g, gsim in enumerate(self.gsims):
+            key = (frozenset(gsim.REQUIRES_RUPTURE_PARAMETERS),
+                   frozenset(gsim.REQUIRES_DISTANCES))
+            groups.setdefault(key, []).append(g)
+        return [(gidxs, key[0], key[1]) for key, gidxs in groups.items()]
+
+    def _update_by_group(self, pmap, ctx, groups):
+        # collapse the contexts once per group of gsims, using only the
+        # parameters required by the group, so that the groups requiring
+        # fewer parameters collapse more; then the poes of each group are
+        # computed in a vectorized way and update the columns of the group
+        G = len(self.gsims)
+        after0 = self.cfactor[0]  # incremented by gen_poes for each group
+        after = 0.  # average number of contexts per gsim after collapsing
+        for gidxs, rparams, dparams in groups:
+            cctx = collapse_ctx(ctx, rparams, dparams, self.collapse_precision)
+            after += len(cctx) * len(gidxs) / G
+            cm = self.copy(gsims=[self.gsims[g] for g in gidxs])
+            for poes, _mea, _sig, _tau, ctxt in cm.gen_poes(cctx):
+                for k, g in enumerate(gidxs):
+                    pmap.update_indep(poes[:, :, k:k+1], ctxt,
+                                      self.tom.time_span, gslc=slice(g, g+1))
+        self.cfactor[0] = after0 + after
+        self.cfactor[1] += len(ctx) - after  # removed by collapsing
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1698,11 +1732,12 @@ class ContextMaker(object):
         # its nctxs suggests. The number of pairs is the relevant
         # quantity, discounted by PAIR_COST
         pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
-        # NB: reducing the weight of the pointlike sources, e.g. with a
-        # factor .333, would break test_alaska in oq-risk-tests
+        # generating the contexts of pointlike sources is fast
+        fac = .333 if src.code in b'pPAM' else 1  # heuristic
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        return (fac * src.nctxs * len(self.gsims) +
+                pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """
