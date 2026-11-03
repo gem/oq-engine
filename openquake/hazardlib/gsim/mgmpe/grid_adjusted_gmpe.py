@@ -18,8 +18,6 @@
 Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.GridAdjustedGMPE`
 """
-import collections
-import hashlib
 import json
 import os
 import h5py
@@ -29,33 +27,6 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 from openquake.hazardlib.gsim.base import GMPE, registry
-
-
-# With a ContextMaker, N sibling epsilon LT branches on the same ctx hit one
-# cached backbone + grid lookup. Size 96 safely holds a classical task's
-# working set under split_by_mag=True (one fingerprint per mag bin, K bins
-# per source group, with K set by the MFD Mw range / width_of_mfd_bin). Other
-# paths (e.g. event-based where split_by_mag=False) produce 1 fingerprint per
-# compute call. Direct calls without gsim._cmaker use an instance-local cache.
-_CACHE_MAX = 96 # MFD Mw range of 9.5 down to 3 with bin spacing of 0.1 gives
-                # 66 bins so 96 is safely over this if split_by_mag=True with
-                # a finer (realistic) bin spacing
-
-
-def _ctx_fingerprint(ctx, hdf5_path, backbone_id, trt, imts):
-    """
-    Content-based cache key covering every input the compute bundle
-    depends on: the hdf5 path, the backbone identity, the TRT, the imts
-    list, and the full ctx record bytes.
-    """
-    parts = [
-        os.fsencode(hdf5_path),
-        backbone_id.encode(),
-        trt.encode(),
-        repr(tuple(str(i) for i in imts)).encode(),
-        ctx.tobytes(),
-    ]
-    return hashlib.blake2b(b"|".join(parts), digest_size=16).digest()
 
 
 def load_sigma_for_term(
@@ -418,22 +389,21 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
     return grid_lookup(entry, lats, lons, grid_data["h3_res"])
 
 
-def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
+def compute_central(gsim, ctx, imts, mean, sig, tau, phi):
     """
-    Compute backbone and central grid corrections for reuse across branches.
+    Compute the backbone and the central grid corrections, i.e. the
+    part of the result which is independent from the epsilons.
+
+    :param gsim:
+        GridAdjustedGMPE instance
 
     Fill the output arrays in place, applying central mean and configured
     sigma adjustments. Branch-specific epsilon * mean_se shifts and path
-    caps are applied later in compute().
+    caps are applied later by apply_epsilons.
 
-    :param gmpe:
-        Underlying GMM instance used to compute backbone predictions.
-    :param grid_data:
-        Dict returned by load_residual_grids, containing term configurations,
-        spatial grids and scalar sigma adjustments.
     :param ctx:
-        Context recarray with rupture, site and distance fields required by
-        the backbone GMM and spatial correction lookups.
+        Context recarray with rupture, site and distance fields required
+        by the backbone GMM and spatial correction lookups.
     :param imts:
         Sequence of IMT instances, in output array row order.
     :param mean:
@@ -445,12 +415,11 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
     :param phi:
         Intra-event standard deviation output array, same shape as mean.
     :returns:
-        Copies of (mean, sig, tau, phi), protected from later branch shifts,
-        plus a dict {imt_index: {term: (mean_adj, se_adj)}}. Each adjustment
+        A dict {imt_index: {term: (mean_adj, se_adj)}}. Each adjustment
         has shape (len(ctx),), or is None when that term/IMT has no data.
     """
-    # Backbone output is the same across all branches of the same ctx
-    gmpe.compute(ctx, imts, mean, sig, tau, phi)
+    grid_data = gsim.grid_data
+    gsim.gmpe.compute(ctx, imts, mean, sig, tau, phi)
     resolved = {}
     for m, imt in enumerate(imts):
         per = {}
@@ -459,27 +428,65 @@ def _build_bundle(gmpe, grid_data, ctx, imts, mean, sig, tau, phi):
         #   cfg  = {'location': 'hypo', 'sig_adjustment': 'sub',
         #           'sig_comp_modified': 'tau'}
         for term, cfg in grid_data["res_terms"].items():
-            # Resolve central, SE and per-cell sigma together so each branch
-            # only has to add its own eps * SE shift later
+            # Resolve central, SE and per-cell sigma together so each
+            # branch only has to add its own eps * SE shift later
             adjs = _resolve_adjs(grid_data, cfg, term, str(imt), ctx)
             mean_adj, se_adj = adjs.get("mean"), adjs.get("mean_se")
             per[term] = (mean_adj, se_adj)
             if mean_adj is None:
                 # No central mean data for this term/IMT: skip correction
                 continue
-            # Central mean and sigma adjustments do not depend on epsilon,
-            # so they are added here and shared across all branches
+            # Central mean and sigma adjustments do not depend on
+            # epsilon, so they are added here
             mean[m] += mean_adj
             sig_action = cfg.get("sig_adjustment", "none")
             if sig_action != "none":
-                # Resolve sigma values - per-cell grid or scalar. Per-cell
-                # values share the mean lookup; otherwise use the scalar
+                # Resolve sigma values - per-cell grid or scalar.
+                # Per-cell values share the mean lookup; otherwise
+                # use the scalar
                 scalars = grid_data["sig_scalars"].get(str(imt), {})
                 sig_vals = adjs.get("sig", scalars.get(term))
-                adjust_sigma(sig_vals, cfg, sig_action, sig[m], tau[m], phi[m])
+                adjust_sigma(sig_vals, cfg, sig_action,
+                             sig[m], tau[m], phi[m])
         resolved[m] = per
+    return resolved
 
-    return (mean.copy(), sig.copy(), tau.copy(), phi.copy(), resolved)
+def apply_epsilons(gsim, resolved, imts, mean):
+    """
+    Add this branch's eps * mean_se shift to the central mean.
+
+    :param gsim: GridAdjustedGMPE instance
+    :param resolved: the dictionary returned by compute_central
+    :param imts: sequence of IMT instances, in output array row order
+    :param mean: central mean array of shape (len(imts), N)
+    """
+    # Terms with no mean_adj for this IMT contributed nothing to the
+    # central mean and so are skipped here as well. For path terms
+    # with att_cap set, the per-branch total (central + eps*SE) is
+    # clipped to [-att_cap, +att_cap] so no single LT realisation's
+    # path contribution can exceed the physical bound
+    for m, per_term in resolved.items():
+        for term, (mean_adj, se_adj) in per_term.items():
+            if mean_adj is None:
+                continue
+            eps = gsim.epsilons.get(term, 0.0)
+            cfg = gsim.grid_data["res_terms"][term]
+            path_capped = (cfg["location"] == "path"
+                           and gsim.att_cap is not None)
+            if eps != 0.0 and se_adj is None:
+                raise ValueError(
+                    f"Non-zero epsilon requested for term '{term}' but "
+                    f"per-cell '{term}_mean_se' dataset is missing for "
+                    f"IMT '{imts[m]}'.")
+            if path_capped:
+                # mean_adj was already added uncapped in compute_central;
+                # replace it with the capped (central + eps*SE) total
+                shift = eps * se_adj if eps != 0.0 else 0.0
+                capped_total = np.clip(
+                    mean_adj + shift, -gsim.att_cap, gsim.att_cap)
+                mean[m] += capped_total - mean_adj
+            elif eps != 0.0:
+                mean[m] += eps * se_adj
 
 
 class GridAdjustedGMPE(GMPE):
@@ -600,10 +607,6 @@ class GridAdjustedGMPE(GMPE):
 
     experimental = True # It's not extensively tested yet
 
-    # Tells ContextMaker.get_4MN to attach itself as gsim._cmaker so compute()
-    # can store its per-calc cache on the cmaker
-    requires_cmaker = True
-
     def __init__(self, gmpe_name, grid_hdf5_file, epsilons=None,
                  att_cap=None, **kwargs):
 
@@ -623,14 +626,12 @@ class GridAdjustedGMPE(GMPE):
         self.att_cap = att_cap
         self.grid_data["att_cap"] = att_cap
 
-        # Fingerprint the GMM
-        self._cache_hdf5 = grid_hdf5_file
-        self._cache_backbone = (
-            type(self.gmpe).__name__ + "|"
-            + repr(tuple(self.gmpe.kwargs.items())))
-        self._cache_trt = str(self.DEFINED_FOR_TECTONIC_REGION_TYPE)
-        # Isolate direct compute calls from other instances' loaded grids.
-        self._compute_cache = collections.OrderedDict()
+        # GridAdjustedGMPEs with the same central_key differ only by
+        # epsilons and att_cap, so ContextMaker.get_mean_stds computes
+        # their backbone and central grid adjustments only once
+        self.central_key = (
+            os.fspath(grid_hdf5_file), type(self.gmpe).__name__,
+            repr(tuple(self.gmpe.kwargs.items())))
 
         # Per-term epsilons for epistemic SE shift (default 0.0 = central)
         self.epsilons = epsilons or {}
@@ -678,63 +679,5 @@ class GridAdjustedGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Per-cmaker cache if attached, else this instance's fallback cache
-        cmaker = getattr(self, "_cmaker", None)
-        if cmaker is not None:
-            cache = getattr(cmaker, "_grid_adjusted_cache", None)
-            if cache is None:
-                cache = collections.OrderedDict()
-                cmaker._grid_adjusted_cache = cache
-        else:
-            cache = self._compute_cache
-
-        # Build the bundle on the first call for this ctx, reuse it on later
-        # calls that share the same key
-        key = _ctx_fingerprint(ctx, self._cache_hdf5, self._cache_backbone,
-                               self._cache_trt, imts)
-        bundle = cache.get(key)
-        if bundle is None:
-            # _build_bundle writes mean/sig/tau/phi in place; the snapshot
-            # it stores is for future cache hits
-            bundle = _build_bundle(self.gmpe, self.grid_data, ctx, imts,
-                                   mean, sig, tau, phi)
-            cache[key] = bundle
-            if len(cache) > _CACHE_MAX:
-                cache.popitem(last=False)
-            resolved = bundle[4]
-        else:
-            cache.move_to_end(key)
-            # Replay the snapshot into the output buffers
-            bb_mean, bb_sig, bb_tau, bb_phi, resolved = bundle
-            mean[:] = bb_mean
-            sig[:] = bb_sig
-            tau[:] = bb_tau
-            phi[:] = bb_phi
-
-        # Add this branch's eps * mean_se shift. Terms with no mean_adj for
-        # this IMT contributed nothing to the central mean and so are skipped
-        # here as well. For path terms with att_cap set, the per-branch total
-        # (central + eps*SE) is clipped to [-att_cap, +att_cap] so no single
-        # LT realisation's path contribution can exceed the physical bound
-        for m, per_term in resolved.items():
-            for term, (mean_adj, se_adj) in per_term.items():
-                if mean_adj is None:
-                    continue
-                eps = self.epsilons.get(term, 0.0)
-                cfg = self.grid_data["res_terms"][term]
-                path_capped = (cfg["location"] == "path"
-                               and self.att_cap is not None)
-                if eps != 0.0 and se_adj is None:
-                    raise ValueError(
-                        f"Non-zero epsilon requested for term '{term}' but "
-                        f"per-cell '{term}_mean_se' dataset is missing for "
-                        f"IMT '{imts[m]}'.")
-                if path_capped:
-                    # mean_adj was already added uncapped in _build_bundle;
-                    # replace it with the capped (central + eps*SE) total
-                    shift = eps * se_adj if eps != 0.0 else 0.0
-                    capped_total = np.clip(
-                        mean_adj + shift, -self.att_cap, self.att_cap)
-                    mean[m] += capped_total - mean_adj
-                elif eps != 0.0:
-                    mean[m] += eps * se_adj
+        resolved = compute_central(self, ctx, imts, mean, sig, tau, phi)
+        apply_epsilons(self, resolved, imts, mean)

@@ -17,6 +17,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 import h5py
 import numpy as np
@@ -317,10 +318,10 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
 
-    ### CACHING MEDIANS PER CTX TESTS ###
-    def test_direct_cache_after_grid_replacement(self):
+    ### SHARING OF THE CENTRAL PART TESTS ###
+    def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while
-        # the original instance retains its loaded grid and cached results.
+        # the original instance retains its loaded grid
         with tempfile.TemporaryDirectory() as td:
             grid_path = os.path.join(td, "adjustments.hdf5")
             shutil.copy(GRID_HDF5, grid_path)
@@ -329,7 +330,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cmaker = simple_cmaker([first], ["PGA"])
             ctx = cmaker.recarray([self._make_ctx(cmaker)])
 
-            # Call compute directly so no ContextMaker cache is attached.
             def _compute(gsim):
                 out = np.zeros((4, len(cmaker.imts), len(ctx)))
                 gsim.compute(ctx, cmaker.imts, *out)
@@ -344,9 +344,9 @@ class GridAdjustedGMPETest(unittest.TestCase):
             np.testing.assert_array_equal(after[1:], before[1:])
             np.testing.assert_array_equal(_compute(first), before)
 
-    def test_cache_cold_vs_warm_equivalence(self):
-        # Warm (27 adj GSIMs in one cmaker, cache populated after first)
-        # must match cold (each adj in its own fresh cmaker) across all 27
+    def test_shared_vs_separate_equivalence(self):
+        # Shared (27 adj GSIMs in one cmaker, central part computed once)
+        # must match separate (each adj in its own cmaker) across all 27
         # epsilon combos
         levels = [-1.732, 0.0, 1.732]
         combos = [{"dL2L": a, "dS2S": b, "adj_per_km": c}
@@ -360,116 +360,60 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cm = simple_cmaker([base, adj], IMTS)
             reference.append(cm.get_mean_stds([self._make_ctx(cm)]))
 
-        warm_adjs = [
-            GridAdjustedGMPE(
-            gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5, epsilons=eps)
-            for eps in combos
-            ]
-        warm_cm = simple_cmaker([base] + warm_adjs, IMTS)
-        warm = warm_cm.get_mean_stds([self._make_ctx(warm_cm)])
-        
-        # One cache entry shared across all 27 adj GSIMs on the shared ctx
-        self.assertEqual(len(warm_cm._grid_adjusted_cache), 1)
+        adjs = [GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                 grid_hdf5_file=GRID_HDF5, epsilons=eps)
+                for eps in combos]
+        cm = simple_cmaker([base] + adjs, IMTS)
+        with mock.patch.object(mod, "compute_central",
+                               side_effect=mod.compute_central) as central:
+            shared = cm.get_mean_stds([self._make_ctx(cm)])
+        # The central part is computed once for all 27 adj GSIMs
+        self.assertEqual(central.call_count, 1)
         for i, eps in enumerate(combos):
             for name_i, name in enumerate(("mean", "sig", "tau", "phi")):
                 np.testing.assert_array_equal(
-                    reference[i][name_i, 1], warm[name_i, 1 + i],
+                    reference[i][name_i, 1], shared[name_i, 1 + i],
                     err_msg=f"{name} mismatch for epsilons={eps}")
 
-    def test_cache_preserves_backbone_adjustment_order(self):
-        # Caching must preserve the effect of backbone adjustment order
+    def test_sharing_preserves_backbone_adjustment_order(self):
+        # Sharing must preserve the effect of backbone adjustment order
         steps = [("add_between_within_stds", {"with_betw_ratio": 1.0}),
                  ("set_between_epsilon", {"epsilon_tau": 1.0})]
         gsims = [GridAdjustedGMPE(
             gmpe_name="ModifiableGMPE", grid_hdf5_file=GRID_HDF5,
             gmpe={BASE_GSIM: {}}, **dict(order))
             for order in (steps, steps[::-1])]
-        cold = []
+        separate = []
         for gsim in gsims:
             cmaker = simple_cmaker([gsim], ["PGA"])
             out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
-            cold.append(out[:, 0])
-        self.assertFalse(np.array_equal(cold[0][0], cold[1][0]))
+            separate.append(out[:, 0])
+        self.assertFalse(np.array_equal(separate[0][0], separate[1][0]))
         cmaker = simple_cmaker(gsims, ["PGA"])
-        warm = cmaker.get_mean_stds([self._make_ctx(cmaker)])
-        for i, expected in enumerate(cold):
-            np.testing.assert_array_equal(warm[:, i], expected)
+        shared = cmaker.get_mean_stds([self._make_ctx(cmaker)])
+        for i, expected in enumerate(separate):
+            np.testing.assert_array_equal(shared[:, i], expected)
 
-    def test_fingerprint_distinguishes_ctx_fields(self):
-        # Any ctx field change (incl. site params like vs30) must shift
-        # the fingerprint, so cross-calc reuse at same (lat, lon) misses
-        base = valid.gsim(BASE_GSIM)
-        adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM, grid_hdf5_file=GRID_HDF5)
-        cmaker = simple_cmaker([base, adj], IMTS)
-
-        bb_id = adj._cache_backbone
-        trt = str(adj.DEFINED_FOR_TECTONIC_REGION_TYPE)
-        ref_fp = mod._ctx_fingerprint(
-            self._make_ctx(cmaker), GRID_HDF5, bb_id, trt, IMTS)
-
-        # Identical ctx -> same fingerprint
-        self.assertEqual(
-            ref_fp,
-            mod._ctx_fingerprint(
-                self._make_ctx(cmaker), GRID_HDF5, bb_id, trt, IMTS))
-
-        varied = {
-            "mag": self._make_ctx(cmaker, mag=7.0),
-            "rjb": self._make_ctx(
-                cmaker, rjb=np.array([11.0, 20.0, 30.0, 50.0])),
-            "rake": self._make_ctx(cmaker, rake=-90.0),
-            "vs30": self._make_ctx(cmaker, vs30=360.0),
-        }
-        for field, ctx_v in varied.items():
-            fp = mod._ctx_fingerprint(
-                ctx_v, GRID_HDF5, bb_id, trt, IMTS)
-            self.assertNotEqual(
-                ref_fp, fp,
-                f"fingerprint must differ when '{field}' changes "
-                f"(lat/lon unchanged)")
-
-    def test_cmaker_attaches_through_wrapper(self):
-        # When GridAdjustedGMPE is wrapped (e.g. by ModifiableGMPE), the
-        # inner GridAdjustedGMPE must still get its cache attached to the
-        # cmaker rather than falling back to the instance-local cache
+    def test_wrapped_in_modifiable_gmpe(self):
+        # A GridAdjustedGMPE wrapped by ModifiableGMPE is computed via its
+        # compute method and must give the same results
         wrapper = ModifiableGMPE(gmpe={"GridAdjustedGMPE": {
             "gmpe_name": BASE_GSIM, "grid_hdf5_file": GRID_HDF5}})
         base = valid.gsim(BASE_GSIM)
         cmaker = simple_cmaker([base, wrapper], IMTS)
-        cmaker.get_mean_stds([self._make_ctx(cmaker)])
-        self.assertIs(wrapper.gmpe._cmaker, cmaker)
-        self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
+        out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
+        aae(out, self._get_mean_stds(IMTS))
 
-    def test_cmaker_scoped_cache_is_isolated(self):
-        # Two cmakers must not share cached bundles even with identical
-        # backbone, hdf5, trt, ctx and imts
-        base = valid.gsim(BASE_GSIM)
-
-        def _run():
-            adj = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                   grid_hdf5_file=GRID_HDF5)
-            cm = simple_cmaker([base, adj], IMTS)
-            cm.get_mean_stds([self._make_ctx(cm)])
-            return cm
-
-        cm1, cm2 = _run(), _run()
-        # Each cmaker has exactly one entry in its own cache; the two
-        # caches are different objects
-        self.assertEqual(len(cm1._grid_adjusted_cache), 1)
-        self.assertEqual(len(cm2._grid_adjusted_cache), 1)
-        self.assertIsNot(cm1._grid_adjusted_cache, cm2._grid_adjusted_cache)
-
-    def test_att_cap_shares_bundle_across_cap_values(self):
-        # Different caps on the same ctx share one cache entry but still
-        # produce distinct means (clip is applied outside the cached bundle)
+    def test_att_cap_differs_across_cap_values(self):
+        # Different caps on the same ctx share the central part but still
+        # produce distinct means (clip is applied in apply_epsilons)
         base = valid.gsim(BASE_GSIM)
         tight = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                  grid_hdf5_file=GRID_HDF5, att_cap=0.5)
         loose = GridAdjustedGMPE(gmpe_name=BASE_GSIM,
                                  grid_hdf5_file=GRID_HDF5, att_cap=10.0)
+        self.assertEqual(tight.central_key, loose.central_key)
         cmaker = simple_cmaker([base, tight, loose], IMTS)
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
-        # One cache entry on the shared cmaker (ctx is identical)
-        self.assertEqual(len(cmaker._grid_adjusted_cache), 1)
         # Different caps must produce different mean predictions
         self.assertFalse(np.array_equal(out[0, 1], out[0, 2]))
