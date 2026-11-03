@@ -385,7 +385,7 @@ jobs:
           # NOTE: without '|| true' the action would fail if there are no warnings
           grep WARNING < full.log > warnings.log || true
           grep ERROR < full.log > errors.log || true
-
+          sed -i '/A new Django SECRET_KEY was written/d' warnings.log
           if [ $(wc -c < warnings.log) -gt 0 ]; then
               echo
               echo "=== WARNINGS FOUND ==="
