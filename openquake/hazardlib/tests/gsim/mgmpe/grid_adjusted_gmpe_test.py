@@ -160,6 +160,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
             )
             aae(adjs, EXPECTED_PATH_ADJ[m], decimal=DP)
 
+    def test_raytrace_masks_are_exact(self):
+        # The h3 lookups skipped thanks to the masks must all be misses,
+        # so the results must be identical to the ones without masks
+        gd = load_residual_grids(GRID_HDF5)
+        rng = np.random.default_rng(42)
+        slo, sla, hlo, hla = rng.uniform(-5., 45., (4, 300))
+        nomask = (0., 0., None)
+        for imt in IMTS:
+            grids = {"mean": gd["raytrace_grids"]["adj_per_km"][imt]}
+            masks = mod._build_masks(grids["mean"], gd["h3_res"])
+            exp = mod._raytrace_path_adjs(
+                grids, hlo, hla, slo, sla, gd["h3_res"], nomask)["mean"]
+            got = mod._raytrace_path_adjs(
+                grids, hlo, hla, slo, sla, gd["h3_res"], masks)["mean"]
+            self.assertGreater(np.count_nonzero(exp), 0)
+            np.testing.assert_array_equal(got, exp)
+
     def test_mean_and_sigma(self):
         # Check expected values
         mea, sig, tau, phi = self._get_mean_stds(IMTS)

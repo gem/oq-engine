@@ -87,7 +87,7 @@ def build_raytrace_grid(cell_ids, mean_vals):
 
 def load_residual_grids(hdf5_path):
     """
-    Load the hdf5 residual grids into a dict with six keys:
+    Load the hdf5 residual grids into a dict with seven keys:
 
     * grids: nested dict of
       {imt_str: {term: {"mean":    {cell_id: float},
@@ -107,6 +107,11 @@ def load_residual_grids(hdf5_path):
     * raytrace_se_grids: same structure as raytrace_grids but holding the
       per-cell SE on the mean for path-based terms. Populated only when
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
+
+    * raytrace_masks: {(term, imt_str): (lat0, lon0, mask)} - per h3
+      resolution, the lat/lon boxes where the path points may hit a cell
+      of raytrace_grids; used to skip the lookups which would miss. It
+      starts empty and is filled for the terms/IMTs actually used.
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Populated when sig_adjustment is not "none" and the
@@ -200,6 +205,7 @@ def load_residual_grids(hdf5_path):
     return {"grids": grids,
             "raytrace_grids": raytrace_grids,
             "raytrace_se_grids": raytrace_se_grids,
+            "raytrace_masks": {}, # Filled on first use by _resolve_adjs
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
@@ -236,37 +242,116 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
         h3_res)["mean"]
 
 
+# Number of points used to discretise each path
+NPTS = 100
+
+# Margin in degrees around the vertices of a cell and step in degrees of
+# the masks; for cells of resolution >= MASK_MIN_RES and latitudes within
+# MASK_MAX_LAT the margin is larger than the bulge of the great-circle
+# edges (under 0.07 degrees), otherwise the masks are not used
+MASK_MARGIN = 0.1
+MASK_STEP = 0.1
+MASK_MIN_RES = 2
+MASK_MAX_LAT = 80.
+
+
+# For each h3 resolution, a lat/lon raster flagging the boxes which may
+# contain points of a stored cell of that resolution, i.e. the boxes
+# overlapping the bounding box of the cell vertices enlarged by the margin.
+# Points in a box not flagged cannot be in a stored cell, so their h3
+# lookups would miss and can be skipped; returns (lat0, lon0, mask), with
+# mask None if the margin is not guaranteed to be enough
+def _build_masks(grid, h3_res):
+    boxes = []  # (resolution index, lat1, lat2, lon1, lon2)
+    for cell in grid:
+        res = h3.get_resolution(cell)
+        if res not in h3_res:  # never looked up
+            continue
+        bound = np.array(h3.cell_to_boundary(cell))
+        lats, lons = bound[:, 0], bound[:, 1]
+        if res < MASK_MIN_RES or np.abs(lats).max() > MASK_MAX_LAT:
+            return 0., 0., None
+        if lons.max() - lons.min() > 180:  # across the antimeridian
+            lons = np.array([-180., 180.])
+        boxes.append((h3_res.index(res),
+                      lats.min() - MASK_MARGIN, lats.max() + MASK_MARGIN,
+                      lons.min() - MASK_MARGIN, lons.max() + MASK_MARGIN))
+    if not boxes:
+        return 0., 0., np.zeros((len(h3_res), 0, 0), bool)
+    arr = np.array(boxes)
+    lat0, lon0 = arr[:, 1].min(), arr[:, 3].min()
+    nlat = int(np.floor((arr[:, 2].max() - lat0) / MASK_STEP)) + 1
+    nlon = int(np.floor((arr[:, 4].max() - lon0) / MASK_STEP)) + 1
+    mask = np.zeros((len(h3_res), nlat, nlon), bool)
+    for r, lat1, lat2, lon1, lon2 in boxes:
+        i1, i2 = np.floor((np.array([lat1, lat2]) - lat0) / MASK_STEP)
+        j1, j2 = np.floor((np.array([lon1, lon2]) - lon0) / MASK_STEP)
+        mask[int(r), int(i1):int(i2) + 1, int(j1):int(j2) + 1] = True
+    return lat0, lon0, mask
+
+
+# Boolean array of shape (nres, len(lats)), True for the points which may
+# be in a stored cell of the given resolution
+def _candidates(masks, lats, lons, nres):
+    lat0, lon0, mask = masks
+    if mask is None:  # no filtering
+        return np.ones((nres, len(lats)), bool)
+    i = np.floor((lats - lat0) / MASK_STEP).astype(int)
+    j = np.floor((lons - lon0) / MASK_STEP).astype(int)
+    ok = (i >= 0) & (i < mask.shape[1]) & (j >= 0) & (j < mask.shape[2])
+    out = np.zeros((len(mask), len(lats)), bool)
+    out[:, ok] = mask[:, i[ok], j[ok]]
+    return out
+
+
 def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
-                        h3_res):
+                        h3_res, masks=None):
     """
     Resolve all fields on the same path grid with one raytrace per path.
+    The h3 lookups are performed only for the points which may be in a
+    stored cell, according to the masks (see _build_masks), since the
+    other lookups would miss: the result is the same.
     """
     # Set some stores
     n_paths = len(hypo_lons)
     ra_per_path = {key: np.zeros(n_paths) for key in grids}
     reference_grid = grids["mean"]
-    res_fine_to_coarse = list(reversed(h3_res))
+    if masks is None:
+        masks = _build_masks(reference_grid, h3_res)
+    lons = np.zeros((n_paths, NPTS))
+    lats = np.zeros((n_paths, NPTS))
+    spacing = np.zeros(n_paths)
 
     for idx_path in range(n_paths): # Iterate over the paths
 
         # Discretise the line
-        lons, lats, _ = npoints_between(
+        lons[idx_path], lats[idx_path], _ = npoints_between(
             site_lons[idx_path], site_lats[idx_path], 0.,
-            hypo_lons[idx_path], hypo_lats[idx_path], 0.,
-            100)  # npoints
+            hypo_lons[idx_path], hypo_lats[idx_path], 0., NPTS)
 
         # Distance between consecutive discretised points along the path
-        line_spacing = distance(lons[0], lats[0], 0.,
-                                lons[1], lats[1], 0.)
+        spacing[idx_path] = distance(
+            lons[idx_path, 0], lats[idx_path, 0], 0.,
+            lons[idx_path, 1], lats[idx_path, 1], 0.)
 
-        # Get the cumulative correction based on distance traversed per
-        # grid cell and the associated distance-based adjustment terms.
-        # Each sample point resolves to one stored cell via finest-to-
-        # coarsest h3 fallback; points with no stored cell contribute zero
+    # Flag the (resolution, path, point) triples worth a lookup
+    cand = _candidates(masks, lats.ravel(), lons.ravel(),
+                       len(h3_res)).reshape(len(h3_res), n_paths, NPTS)
+    fine_to_coarse = range(len(h3_res) - 1, -1, -1)
+
+    # Get the cumulative correction based on distance traversed per
+    # grid cell and the associated distance-based adjustment terms.
+    # Each sample point resolves to one stored cell via finest-to-
+    # coarsest h3 fallback; points with no stored cell contribute zero
+    for idx_path in np.flatnonzero(cand.any(axis=(0, 2))):
         adj_sum = dict.fromkeys(grids, 0.0)
-        for lat, lon in zip(lats, lons):
-            for res in res_fine_to_coarse:
-                cell = h3.latlng_to_cell(lat, lon, res)
+        pcand = cand[:, idx_path]
+        for k in np.flatnonzero(pcand.any(axis=0)):
+            for r in fine_to_coarse:
+                if not pcand[r, k]:
+                    continue
+                cell = h3.latlng_to_cell(
+                    lats[idx_path, k], lons[idx_path, k], h3_res[r])
                 if cell in reference_grid:
                     for key, grid in grids.items():
                         adj_sum[key] += grid[cell]
@@ -274,7 +359,7 @@ def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
 
         # Store the total cumulative adjustment for the term
         for key in grids:
-            ra_per_path[key][idx_path] = adj_sum[key] * line_spacing
+            ra_per_path[key][idx_path] = adj_sum[key] * spacing[idx_path]
 
     return ra_per_path
 
@@ -375,9 +460,13 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx):
         se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
         if se_grid is not None:
             grids["mean_se"] = se_grid
+        cache = grid_data.setdefault("raytrace_masks", {})
+        if (term, imt) not in cache:
+            cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
+        masks = cache[term, imt]
         return _raytrace_path_adjs(
             grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-            grid_data["h3_res"])
+            grid_data["h3_res"], masks)
 
     # Hypo/site terms are stored as cell_id -> value dicts
     entry = grid_data["grids"].get(imt, {}).get(term, {})
