@@ -61,7 +61,7 @@ on:
 
 jobs:
   docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       EV_NAME: ${{ github.event_name }}
       # during devel was DOCS_BASE: ".oq-engine-docs-refact/"
