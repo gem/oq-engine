@@ -1,7 +1,6 @@
  [Christopher Brooks]
- * Introduce a caching of repeated ctxs in GridAdjustedGMPE to avoid repeatedly
-   retrieving same adjustments for the same rupture-site combinations with only
-   the per-branch scaling by per-term epsilons differing.
+ * GridAdjustedGMPEs differing only by the epsilons now share the
+   computation of the backbone and of the central grid adjustments
  
  [Michele Simionato]
   * ps_grid_spacing can now be used with disagg_by_src when the calculation has
