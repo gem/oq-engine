@@ -1,14 +1,7 @@
   [Michele Simionato]
-  * collapse_precision now collapses the contexts once per group of GSIMs
-    requiring the same rupture parameters and distances, so that the GSIMs
-    requiring fewer parameters collapse more
+  * Added a new experimental collapse_precision approximation
   * ps_grid_spacing can now be used with disagg_by_src when the calculation has
     few sites, since the rates are computed one source at the time
-  * Added the nctxs dataset to classical calculations, with the number of
-    contexts after collapse_precision (collapsed) and the number of
-    contexts of the gridded point sources before collapse_precision
-    (gridded). If collapse_precision or ps_grid_spacing is set, exact is
-    the number of contexts before collapse_precision for all source types
   * Fixed the rupture IDs of the global SES: they are now unique
     across the models. Existing SES files must be regenerated
   * Fixed the classical_risk calculator for risk inputs containing assets
