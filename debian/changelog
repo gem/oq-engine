@@ -1,6 +1,6 @@
  [Christopher Brooks, Michele Simionato]
  * GridAdjustedGMPEs differing only by the epsilons now share the
-   computation of the backbone and of the central grid adjustments
+   computation of the backbone's grid-adjusted mean prediction
  
  [Michele Simionato]
   * Internal: extended `oq check_input` to recognize the case of sources with the
