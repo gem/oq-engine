@@ -55,6 +55,15 @@ class MagDepAratioTestCase(unittest.TestCase):
             self.assertLess(rel_err, 0.02, msg=f"knot mag={m}")
 
         # Between-knot values within 1% of expression
+        #    mag   expression    piecewise  rel_err_%
+        #    3.00      1.0000       1.0000      0.000
+        #    5.00      1.0000       1.0000      0.000
+        #    5.75      1.1421       1.1405      0.138
+        #    6.25      1.4376       1.4470      0.657
+        #    6.75      1.8095       1.8215      0.664
+        #    7.25      2.2776       2.2925      0.652
+        #    7.75      2.8669       2.8855      0.648
+        #    8.25      3.6087       3.6315      0.632
         for m in [3.0, 5.0, 5.75, 6.25, 6.75, 7.25, 7.75, 8.25]:
             rel_err = abs(rar.get(m) - true_a(m)) / true_a(m)
             self.assertLess(rel_err, 0.01, msg=f"between-knot mag={m}")
