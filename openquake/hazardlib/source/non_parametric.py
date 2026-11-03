@@ -40,7 +40,7 @@ RUP_TYPES = (BaseRupture, NonParametricProbabilisticRupture)
 POINT_ATTRS = {'longitude', 'latitude', 'depth'}
 
 
-# True if the rupture can be stored in arrays and rebuilt exactly,
+# True if the rupture can be stored in arrays and rebuilt,
 # i.e. it is a plain BaseRupture or NonParametricProbabilisticRupture
 # with a GriddedSurface and the probabilities of 0, 1, ... occurrences
 def _is_simple(rup, pmf, first_rup, first_pmf):
@@ -58,8 +58,7 @@ def _is_simple(rup, pmf, first_rup, first_pmf):
     arr = surf.mesh.array
     if (not set(vars(surf.mesh)) <= {'array', 'xyz'} or
             set(vars(rup.hypocenter)) != POINT_ATTRS or
-            arr.ndim != 2 or len(arr) != 3 or
-            arr.dtype != first_rup.surface.mesh.array.dtype):
+            arr.ndim != 2 or len(arr) != 3):
         return False
     probs = [prob for prob, _ in pmf.data]
     if ([occ for _, occ in pmf.data] != list(range(len(probs))) or
@@ -71,62 +70,68 @@ def _is_simple(rup, pmf, first_rup, first_pmf):
             numpy.array_equal(rup.probs_occur, probs))
 
 
+# Convert gridded ruptures to the array layout used by the HDF5 format.
+# Mesh coordinates use float32; hypocenters retain their precision here.
+def _to_dict(data):
+    meshes = [rup.surface.mesh.array for rup, _ in data]
+    offsets = numpy.cumsum([0] + [mesh.shape[1] for mesh in meshes])
+    return {
+        'magnitude': numpy.array([rup.mag for rup, _ in data]),
+        'rake': numpy.array([rup.rake for rup, _ in data]),
+        'hypocenter': numpy.array([(rup.hypocenter.x, rup.hypocenter.y,
+                                   rup.hypocenter.z) for rup, _ in data]),
+        'probs_occur': numpy.array([[prob for prob, _ in pmf.data]
+                                    for _, pmf in data]),
+        # shape (npoints, 3), as in the existing HDF5 representation
+        'mesh3d': numpy.concatenate(meshes, axis=1, dtype=F32).T,
+        'slice': numpy.column_stack((offsets[:-1], offsets[1:]))}
+
+
 # Store the (rup, pmf) pairs in a few arrays, or return None if the
 # ruptures are not simple; the cached cartesian coordinates of the meshes
-# are not stored, since they can be recomputed exactly
+# are not stored, since they can be recomputed from the mesh coordinates
 def _to_arrays(data):
-    if not data:
+    if not data or (type(data) is not list and
+                    not isinstance(data, WeightedSequence)):
         return None
     rup0, pmf0 = data[0]
     if not all(_is_simple(rup, pmf, rup0, pmf0) for rup, pmf in data):
         return None
-    meshes = [rup.surface.mesh.array for rup, _ in data]
-    sizes = [mesh.shape[1] for mesh in meshes]
-    arrays = {
-        'mag': numpy.array([rup.mag for rup, _ in data]),
-        'rake': numpy.array([rup.rake for rup, _ in data]),
-        'hypo': numpy.array([(rup.hypocenter.longitude,
-                              rup.hypocenter.latitude,
-                              rup.hypocenter.depth) for rup, _ in data]),
-        'probs': numpy.array([[prob for prob, _ in pmf.data]
-                              for _, pmf in data]),
-        'mesh': numpy.concatenate(meshes, axis=1),
-        'offset': numpy.cumsum([0] + sizes),
-        'trt': rup0.tectonic_region_type, 'rup_type': type(rup0),
-        'mag_type': type(rup0.mag), 'rake_type': type(rup0.rake)}
+    arrays = _to_dict(data)
+    arrays.update(trt=rup0.tectonic_region_type, rup_type=type(rup0),
+                  mag_type=type(rup0.mag), rake_type=type(rup0.rake))
     if hasattr(rup0, 'weight'):
         arrays['weight'] = [rup.weight for rup, _ in data]
     if isinstance(data, WeightedSequence):
         arrays['seq_weight'] = data.weight
-    elif type(data) is not list:
-        return None
     return arrays
 
 
-# Rebuild the (rup, pmf) pairs from the arrays returned by _to_arrays
-def _from_arrays(arrays):
+# Rebuild gridded ruptures from HDF5 or compact pickle arrays.
+def _from_dict(dic, trt, weights=None):
     out = []
-    mag_type, rake_type = arrays['mag_type'], arrays['rake_type']
-    offset = arrays['offset']
-    weights = arrays.get('weight')
-    for i, (mag, rake, hypo, probs) in enumerate(zip(
-            arrays['mag'], arrays['rake'], arrays['hypo'], arrays['probs'])):
-        mesh = Mesh.__new__(Mesh)
-        mesh.array = arrays['mesh'][:, offset[i]:offset[i + 1]].copy()
+    rup_type = dic.get('rup_type', NonParametricProbabilisticRupture)
+    weights = dic.get('weight', weights)
+    for i, (mag, rake, hypo, probs, (start, stop)) in enumerate(zip(
+            dic['magnitude'], dic['rake'], dic['hypocenter'],
+            dic['probs_occur'], dic['slice'])):
+        mesh = Mesh(*dic['mesh3d'][start:stop].T)
         pmf = PMF([(prob, occ) for occ, prob in enumerate(probs.tolist())])
-        args = (mag_type(mag), rake_type(rake), arrays['trt'], Point(*hypo),
-                GriddedSurface(mesh))
-        if arrays['rup_type'] is BaseRupture:
+        if 'mag_type' in dic:
+            mag, rake = dic['mag_type'](mag), dic['rake_type'](rake)
+        args = (mag, rake, trt, Point(*hypo), GriddedSurface(mesh))
+        if rup_type is BaseRupture:
             rup = BaseRupture(*args)
         else:
             rup = NonParametricProbabilisticRupture(*args, pmf)
         if weights is not None:
             rup.weight = weights[i]
         out.append((rup, pmf))
-    if 'seq_weight' in arrays:
+    # Rebuild the weighted blocks returned by _to_arrays as well.
+    if 'seq_weight' in dic:
         seq = WeightedSequence()
         seq._seq = out
-        seq.weight = arrays['seq_weight']
+        seq.weight = dic['seq_weight']
         return seq
     return out
 
@@ -134,12 +139,13 @@ def _from_arrays(arrays):
 # Arrays for the ruptures from start to stop, in a WeightedSequence of
 # weight stop - start, as the blocks returned by block_splitter
 def _slice_arrays(arrays, start, stop):
-    offset = arrays['offset']
-    out = {k: v for k, v in arrays.items() if k != 'seq_weight'}
-    for key in ('mag', 'rake', 'hypo', 'probs'):
+    slices = arrays['slice']
+    first, last = slices[start, 0], slices[stop - 1, 1]
+    out = arrays.copy()
+    for key in ('magnitude', 'rake', 'hypocenter', 'probs_occur'):
         out[key] = arrays[key][start:stop]
-    out['mesh'] = arrays['mesh'][:, offset[start]:offset[stop]]
-    out['offset'] = offset[start:stop + 1] - offset[start]
+    out['mesh3d'] = arrays['mesh3d'][first:last]
+    out['slice'] = slices[start:stop] - first
     if 'weight' in arrays:
         out['weight'] = arrays['weight'][start:stop]
     out['seq_weight'] = stop - start
@@ -149,11 +155,10 @@ def _slice_arrays(arrays, start, stop):
 # Longitudes and latitudes of the bounding boxes of the surfaces,
 # in the same order as NonParametricSeismicSource.get_bounding_box
 def _bounds(arrays):
-    offset, mesh = arrays['offset'], arrays['mesh']
-    n = len(offset) - 1
+    slices, mesh = arrays['slice'], arrays['mesh3d'].T
+    n = len(slices)
     lons, lats = numpy.zeros(2 * n), numpy.zeros(2 * n)
-    for i in range(n):
-        start, stop = offset[i], offset[i + 1]
+    for i, (start, stop) in enumerate(slices):
         (lons[2 * i], lons[2 * i + 1], lats[2 * i], lats[2 * i + 1]) = \
             get_spherical_bounding_box(mesh[0, start:stop],
                                        mesh[1, start:stop])
@@ -199,7 +204,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         memory only while they are used
         """
         if '_arrays' in self.__dict__:
-            return _from_arrays(self._arrays)
+            return _from_dict(self._arrays, self._arrays['trt'])
         return self._data
 
     @data.setter
@@ -272,7 +277,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         if '_arrays' in self.__dict__:
-            return len(self._arrays['mag'])
+            return len(self._arrays['magnitude'])
         return len(self.data)
 
     def get_min_max_mag(self):
@@ -281,7 +286,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         by the source
         """
         if '_arrays' in self.__dict__:
-            mags = self._arrays['mag']
+            mags = self._arrays['magnitude']
             return self._arrays['mag_type'](mags.min()), \
                 self._arrays['mag_type'](mags.max())
         min_mag = min(rup.mag for rup, pmf in self.data)
@@ -294,25 +299,22 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         if '_arrays' in self.__dict__:
             lons, lats = _bounds(self._arrays)
-            west, east, north, south = get_spherical_bounding_box(lons, lats)
-            a1 = maxdist * KM_TO_DEGREES
-            a2 = angular_distance(maxdist, north, south)
-            return west - a2, south - a1, east + a2, north + a1
-        surfaces = []
-        for rup, _ in self.data:
-            if isinstance(rup.surface, MultiSurface):
-                surfaces.extend(rup.surface.surfaces)
-            else:
-                surfaces.append(rup.surface)
-        S = len(surfaces)
-        lons = numpy.zeros(2*S)
-        lats = numpy.zeros(2*S)
-        for i, surf in enumerate(surfaces):
-            lo1, lo2, la1, la2 = surf.get_bounding_box()
-            lons[2*i] = lo1
-            lons[2*i + 1] = lo2
-            lats[2*i] = la1
-            lats[2*i + 1] = la2
+        else:
+            surfaces = []
+            for rup, _ in self.data:
+                if isinstance(rup.surface, MultiSurface):
+                    surfaces.extend(rup.surface.surfaces)
+                else:
+                    surfaces.append(rup.surface)
+            S = len(surfaces)
+            lons = numpy.zeros(2*S)
+            lats = numpy.zeros(2*S)
+            for i, surf in enumerate(surfaces):
+                lo1, lo2, la1, la2 = surf.get_bounding_box()
+                lons[2*i] = lo1
+                lons[2*i + 1] = lo2
+                lats[2*i] = la1
+                lats[2*i + 1] = la2
         west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
@@ -324,7 +326,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         if '_arrays' in self.__dict__:
             mag_type = self._arrays['mag_type']
-            return sorted(set(map(mag_type, self._arrays['mag'])))
+            return sorted(set(map(mag_type, self._arrays['magnitude'])))
         return super().get_mags()
 
     def is_gridded(self):
@@ -343,26 +345,17 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Convert a GriddedSource into a dictionary of arrays
         """
         assert self.is_gridded(), '%s is not gridded' % self
-        n = len(self.data)
-        m = sum(len(rup.surface.mesh) for rup, pmf in self.data)
-        p = len(self.data[0][1].data)
-        dic = {'probs_occur': numpy.zeros((n, p)),
-               'magnitude': numpy.zeros(n),
-               'rake': numpy.zeros(n),
-               'hypocenter': numpy.zeros((n, 3), F32),
-               'mesh3d': numpy.zeros((m, 3), F32),
-               'slice': numpy.zeros((n, 2), U32)}
-        start = 0
-        for i, (rup, pmf) in enumerate(self.data):
-            dic['probs_occur'][i] = [prob for (prob, _) in pmf.data]
-            dic['magnitude'][i] = rup.mag
-            dic['rake'][i] = rup.rake
-            dic['hypocenter'][i] = (rup.hypocenter.x, rup.hypocenter.y,
-                                    rup.hypocenter.z)
-            mesh = rup.surface.mesh.array.T  # shape (npoints, 3)
-            dic['mesh3d'][start: start + len(mesh)] = mesh
-            dic['slice'][i] = start, start + len(mesh)
-            start += len(mesh)
+        if '_arrays' in self.__dict__:
+            dic = {key: self._arrays[key] for key in (
+                'probs_occur', 'magnitude', 'rake', 'hypocenter',
+                'mesh3d', 'slice')}
+        else:
+            dic = _to_dict(self.data)
+        # Keep the existing HDF5 dtypes; pickles retain hypocenter precision.
+        for key in ('probs_occur', 'magnitude', 'rake'):
+            dic[key] = dic[key].astype(numpy.float64)
+        dic['hypocenter'] = dic['hypocenter'].astype(F32)
+        dic['slice'] = dic['slice'].astype(U32)
         return dic
 
     def fromdict(self, dic, weights=None):
@@ -370,21 +363,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
         Populate a GriddedSource with ruptures
         """
         assert not self.data, '%s is not empty' % self
-        i = 0
-        for mag, rake, hp, probs, (start, stop) in zip(
-                dic['magnitude'], dic['rake'], dic['hypocenter'],
-                dic['probs_occur'], dic['slice']):
-            mesh = Mesh(dic['mesh3d'][start:stop, 0],
-                        dic['mesh3d'][start:stop, 1],
-                        dic['mesh3d'][start:stop, 2])
-            surface = GriddedSurface(mesh)
-            pmf = PMF([(prob, i) for i, prob in enumerate(probs)])
-            hypocenter = Point(hp[0], hp[1], hp[2])
-            rup = NonParametricProbabilisticRupture(
-                mag, rake, self.tectonic_region_type, hypocenter, surface, pmf,
-                weight=None if weights is None else weights[i])
-            self.data.append((rup, pmf))
-            i += 1
+        self.data.extend(_from_dict(
+            dic, self.tectonic_region_type, weights=weights))
 
     def __repr__(self):
         return '<%s %s gridded=%s>' % (
