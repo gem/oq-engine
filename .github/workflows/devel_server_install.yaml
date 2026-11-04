@@ -7,6 +7,11 @@ on:
         description: Git Ref Branch
         default: master
         required: true
+      debug_enabled:
+        type: boolean
+        description: "Run the build with upterm debugging enabled"
+        required: false
+        default: false
   schedule:
     - cron: "05 15 * * *"
   push:
