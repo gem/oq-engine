@@ -60,6 +60,8 @@ jobs:
           BRANCH="${GIT_REF:-master}"
           sudo su openquake -c bash << EOF
           cd /home/openquake
+          pwd
+          whoami
           git clone -b $BRANCH https://github.com/gem/oq-engine.git
           cd oq-engine
           sudo -H $(which python3) install.py devel_server
