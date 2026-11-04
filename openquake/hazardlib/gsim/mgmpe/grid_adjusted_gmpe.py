@@ -29,7 +29,7 @@ import h3
 from h3.api import basic_int as h3_int
 from h3._cy import latlng as h3_latlng
 import numpy as np
-from numba import types, typeof
+from numba import njit, types, typeof
 from numba.typed import Dict
 
 from openquake.hazardlib import const
@@ -342,31 +342,38 @@ def _build_masks(grid, h3_res):
     return lon_origin, lat_origin, candidate_mask
 
 
-# H3's C API takes a LatLng (two doubles in radians) and an output cell.
-# Unlike the Cython wrapper, it does not call Python error-handling code
-# and can run without the GIL; a nonzero return value signals an error.
+# The C symbol latLngToCell is linked statically in the h3 extensions and
+# is exported only by ELF/Mach-O builds, not by the MSVC ones on Windows.
+# The portable way is the Cython C API: the capsule exported by h3._cy.latlng
+# points to the C implementation of the cpdef function latlng_to_cell
+# (degrees, resolution, skip_dispatch flag), which returns 1 on error.
 # Pass the callable to Numba as an argument, so the compiled cache does not
 # embed a process-specific function address.
-_H3_CELL = ctypes.CDLL(h3_latlng.__file__).latLngToCell
-_H3_CELL.restype = ctypes.c_uint32
-_H3_CELL.argtypes = (ctypes.POINTER(ctypes.c_double), ctypes.c_int,
-                    ctypes.POINTER(ctypes.c_uint64))
+_capsule_name = ctypes.PYFUNCTYPE(ctypes.c_char_p, ctypes.py_object)(
+    ('PyCapsule_GetName', ctypes.pythonapi))
+_capsule_pointer = ctypes.PYFUNCTYPE(
+    ctypes.c_void_p, ctypes.py_object, ctypes.c_char_p)(
+    ('PyCapsule_GetPointer', ctypes.pythonapi))
+_capsule = h3_latlng.__pyx_capi__['latlng_to_cell']
+_H3_CELL = ctypes.CFUNCTYPE(
+    ctypes.c_uint64, ctypes.c_double, ctypes.c_double, ctypes.c_int,
+    ctypes.c_int)(_capsule_pointer(_capsule, _capsule_name(_capsule)))
 
 
 # Resolve samples finest-to-coarsest, visiting only masked candidates.
 # A mask with zero resolutions disables filtering for unsafe cell bounds.
-@compile(types.int32[:, :](
+# Not compiled with nogil=True (unlike `compile`), since the Cython function
+# uses Python objects to check for errors and so needs the GIL.
+@njit(types.int32[:, :](
     types.float64[:, :], types.float64[:, :], types.int64[:],
     types.Tuple((types.float64, types.float64, types.boolean[:, :, :])),
-    types.uint64[:], typeof(_H3_CELL)))
+    types.uint64[:], typeof(_H3_CELL)), error_model='numpy', cache=True)
 def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
     lon_origin, lat_origin, candidate_mask = masks
     index = Dict.empty(types.uint64, types.int64)
     for i, cell in enumerate(cells):
         index[cell] = i
     out = np.full(lons.shape, -1, np.int32)
-    point = np.empty(2)
-    cell = np.empty(1, np.uint64)
     for res in h3_res:
         if res < 0 or res > 15:
             raise ValueError('Invalid H3 resolution')
@@ -384,14 +391,14 @@ def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
                         x < 0 or x >= candidate_mask.shape[2]):
                     continue
             # Flag the (resolution, point) candidates worth an H3 lookup.
-            point[0], point[1] = np.radians(lat), np.radians(lon)
             for r in range(len(h3_res) - 1, -1, -1):
                 if (len(candidate_mask) and
                         not candidate_mask[r, y, x]):
                     continue
-                if cell_func(point.ctypes, h3_res[r], cell.ctypes):
+                cell = cell_func(lat, lon, h3_res[r], 1)
+                if cell == 1:  # not a valid H3 index: the error value
                     raise ValueError('H3 cell lookup failed')
-                row = index.get(cell[0], -1)
+                row = index.get(cell, -1)
                 if row >= 0:
                     out[i, k] = row
                     break
