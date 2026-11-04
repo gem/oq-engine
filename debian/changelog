@@ -4,7 +4,7 @@
  
  [Michele Simionato]
   * GridAdjustedGMPEs reading the same file now share the raytrace grids,
-    which are not sent to the workers anymore, saving memory and data transfer
+    saving memory and preserving sharing when sent to the workers
   * Nonparametric sources with gridded ruptures are now stored as arrays,
     reducing substantially the memory used by the classical tasks (3x)
   * Internal: extended `oq check_input` to recognize the case of sources with the
