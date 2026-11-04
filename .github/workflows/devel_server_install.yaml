@@ -58,7 +58,8 @@ jobs:
         run: |
           GIT_REF="${{ inputs.git-ref }}"
           BRANCH="${GIT_REF:-master}"
-          sudo su openquake -c bash << EOF
+          sudo runuser -l openquake -c '
+          #sudo su - openquake -c bash << EOF
           cd /home/openquake
           pwd
           whoami
@@ -68,7 +69,7 @@ jobs:
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
-          EOF
+          '
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
