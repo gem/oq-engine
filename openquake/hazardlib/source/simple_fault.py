@@ -246,7 +246,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         the remaining weights are renormalised to sum to 1. 
 
         If fixedDipFrac is specified in the hypoDepthDist then it is
-        assigned to the corresponding depth inssetead of a fraction computed
+        assigned to the corresponding depth instead of a fraction computed
         using the floating rupture's depth range.
 
         NOTE: Depths that resolve to the same dip_frac (whether from
