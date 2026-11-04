@@ -374,7 +374,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         rate of each of those ruptures is the magnitude occurrence rate
         divided by the number of ruptures that can be placed in a fault.
         """
-        step, only_rates = kwargs.get('step', 1), kwargs.get('rates')
+        step = kwargs.get('step', 1)
+        only_rates = kwargs.get('rates')
         n_slip = len(self.slip_list) or 1
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,

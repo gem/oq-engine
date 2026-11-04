@@ -484,8 +484,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # Event-based on the same source goes through simple_fault
         # iter_ruptures(rates=True), where per-rupture rates must be
-        # weighted by the renormalised hypo_depth weights so poisson
-        # sampling totals match the source's true annual rate
+        # weighted by the depth-first allocation so poisson sampling
+        # totals match the source's true annual rate
         self.run_calc(case_28.__file__, 'job_event_based.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 93)
         self.assertEqual(len(self.calc.datastore['events']), 100)

@@ -787,6 +787,18 @@ class HypoDepthListTestCase(unittest.TestCase):
             rup_rows=1, n_rows_total=24, n_cols_total=1)
         self.assertEqual(alloc, {})
 
+    def test_allocation_depth_on_zero_width_band(self):
+        # rup_rows=1 gives a zero-width depth band; a depth landing
+        # exactly on the band's top must map to dip_frac=0.0 without
+        # dividing by zero
+        src = self._make_source([(1.0, 0.0)])
+        alloc = src._hypo_depth_allocation(
+            rup_rows=1, n_rows_total=24, n_cols_total=1)
+        self.assertEqual(len(alloc), 1)
+        dip_frac, rate_frac = alloc[0][0]
+        self.assertEqual(dip_frac, 0.0)
+        self.assertAlmostEqual(rate_frac, 1.0, places=10)
+
     def test_iter_and_count_ruptures_raise_when_no_depth_fits(self):
         # Force a depth no floating rup can host
         src = self._make_source([(1.0, 10.0)])
