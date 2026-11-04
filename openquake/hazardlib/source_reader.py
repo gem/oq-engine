@@ -919,6 +919,8 @@ def check_mfd_variants(smdict, fname):
             lines.append('  %s: %d %s variants in %s, use %s' % (
                 srcid, len(mfds), mfd, ' '.join(files), utype))
     if lines:
+        # log only the first 3 sources, then an ellipsis marker
+        shown = lines[:3] + ['  ...'] if len(lines) > 3 else lines
         logging.warning(
             '%s:\n%d source(s) appear in different source model files with '
             'the same geometry and different MFDs,\nso each copy is '
@@ -927,7 +929,7 @@ def check_mfd_variants(smdict, fname):
             'applyToSources="<source ID>" (and applyToBranches if needed) '
             'containing one branch\nper MFD; then the contexts are computed '
             'once for all the MFDs, which can be much faster:\n%s',
-            fname, len(lines), '\n'.join(lines))
+            fname, len(lines), '\n'.join(shown))
     return [line.split(':')[0].strip() for line in lines]
 
 
