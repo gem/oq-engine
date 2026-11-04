@@ -140,6 +140,8 @@ class _Workflow:
                     s['func']  # each success dictionary must contain a func
                 self.fix_paths(self.success)
                 continue
+            if k.endswith('_skip'):
+                continue
 
             assert k[0].isupper(), k
             assert isinstance(dic, dict), dic
@@ -165,7 +167,10 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
-        assert len(self.inis), self
+        if not len(self.inis):
+            raise InvalidFile(
+                f'{self.workflow_toml}: no runnable jobs; '
+                'all job names end in _skip')
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
