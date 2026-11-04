@@ -742,8 +742,8 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(rate_frac, 1.0, places=10)
 
     def test_marginal_depth_distribution_preserved(self):
-        # Two depths at equal probability with very different N_d; the
-        # total rate at each depth must stay at 0.5 after allocation
+        # Two depths at equal probability with different N_d; the
+        # total rate at each depth must stay at 0.5 after alloc.
         src = self._make_source([(0.5, 3.0), (0.5, 15.0)])
         rup_rows, n_rows_total, n_cols_total = 2, 24, 10
         alloc = src._hypo_depth_allocation(
@@ -766,8 +766,8 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(total, 1.0, places=10)
 
     def test_total_rate_preserved_with_skipped_floats(self):
-        # The top float spans [0, 1.69] km and misses both input depths;
-        # the generated ruptures' rates must still sum to the MFD rate
+        # The top float spans [0, 1.69] km and misses both input depths,
+        # but the generated ruptures' rates must still sum to the MFD rate
         src_mfd = EvenlyDiscretizedMFD(5.05, 0.1, [1.0])
         trace = Line([Point(0.0, 0.0), Point(0.2, 0.0)])
         src = SimpleFaultSource(
@@ -780,8 +780,8 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(total_rate, 1.0, places=10)
 
     def test_allocation_empty_when_no_depth_fits(self):
-        # rup_rows=1 reduces each float's band to a single mesh point so
-        # no hypo depth matches
+        # rup_rows=1 reduces each float's band to a
+        # single mesh point so no hypo depth matches
         src = self._make_source([(1.0, 10.0)])
         alloc = src._hypo_depth_allocation(
             rup_rows=1, n_rows_total=24, n_cols_total=1)
