@@ -58,18 +58,18 @@ jobs:
         run: |
           GIT_REF="${{ inputs.git-ref }}"
           BRANCH="${GIT_REF:-master}"
-          sudo runuser -l openquake -c '
-          #sudo su - openquake -c bash << EOF
+          cat > /tmp/scripts.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "Running as $(whoami) in $(pwd), branch=${BRANCH:-<unset>}"
           cd /home/openquake
-          pwd
-          whoami
-          git clone -b $BRANCH https://github.com/gem/oq-engine.git
+          rm -rf oq-engine
+          git clone -b "$BRANCH" https://github.com/gem/oq-engine.git
           cd oq-engine
           sudo -H $(which python3) install.py devel_server
-          if [[ $EXIT_CODE -ne 0 ]]; then
-                break
-          fi
-          '
+          EOF
+          chmod +x /tmp/scripts.sh
+          sudo -u openquake bash /tmp/scripts.sh
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
