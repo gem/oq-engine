@@ -5,10 +5,10 @@ from openquake.baselib import general
 # NB: MOSAIC_ORDER is append-only, since the index of a model is encoded
 # in the rupture IDs of the global SES (see mosaic_index)
 MOSAIC_ORDER = '''
-ALS ARB AUS CCA CEA CHN CND EUR GLD HAW IDN IND JPN KOR MEX MIE NAF NEA NWA
+ALS ARB AUS CCA CEA CHN CND EUR GLD HAW IID IND JPN KOR MEX MIE NAF NEA NWA
 NZL OAT OIN OPA PAC PAN PAR PHL PNG SAM SEA SSA TEM TUR USA WAF ZAF'''.split()
 MODELS = sorted(MOSAIC_ORDER)
-ALIASES = dict(TWN='TEM')  # manage change of name
+ALIASES = dict(TWN='TEM', IDN='IID')  # manage change of name
 MAX_MOSAIC_MODELS = 256  # the index of a model must fit in 8 bits
 
 
