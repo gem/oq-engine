@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
       - name: Install OQ with ${{ matrix.python-version }} as user openquake
-        shell: sudo -u openquake bash -c "cd ~ && bash --noprofile --norc -e -o pipefail {0}" 
+        shell: /usr/bin/sudo -u openquake bash -s
         run: |
           whoami #openquake
           if [ -z ${{ inputs.git-ref }} ];
