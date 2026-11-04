@@ -333,6 +333,8 @@ The main parts of the format are:
 * A table such as ``[Residential]`` defines one job. It must contain an
   ``ini`` pathname and may override supported shared parameters. Job names
   must start with an uppercase letter and contain at most 20 characters.
+  A name ending in ``_skip``, such as ``[Residential_skip]``, marks the job
+  to be skipped.
 * ``[success]`` defines an optional postprocessing function called after all
   jobs complete successfully. Use ``[[success]]`` for more than one
   postprocessor.

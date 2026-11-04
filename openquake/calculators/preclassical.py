@@ -57,6 +57,38 @@ CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64)])
 
 
+# one real site per H3 cell of resolution `res`, as a complete collection;
+# NB: using the cell centers returned by lower_res would move the sites
+# by up to ~25 km for res=4, so that the estimated contexts of the point
+# sources near the pointsource_distance would be way off
+def _lowres_sites(sites, res):
+    _centers, orig_sids = sites.lower_res(res)
+    first = U32([sids[0] for sids in orig_sids])
+    lowres = object.__new__(sites.__class__)
+    lowres.array = sites.array[numpy.isin(sites.sids, first)]
+    lowres.make_complete()
+    return lowres
+
+
+# SourceFilter used to estimate the weights and contexts of the sources,
+# possibly on a reduced set of sites, with a multiplier compensating
+# for the discarded sites
+def _get_srcfilter(sites, few_sites, maxdist):
+    if not sites:
+        return SourceFilter(None)
+    if not few_sites:
+        # in SAM from 539,831 -> 11,430 sites
+        lowres = _lowres_sites(sites, res=4)  # res=4 ~39 km
+        # if the reduction is not worth it use all the sites, since
+        # the discarded sites make the estimated contexts less accurate
+        if len(lowres) <= len(sites) / 2:
+            sf = SourceFilter(lowres, maxdist)
+            sf.multiplier = len(sites) / len(lowres)
+            logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
+            return sf
+    return SourceFilter(sites, maxdist)
+
+
 def source_data(sources):
     """
     Set the source .id attribute to the index in the source_info table.
@@ -411,16 +443,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             # calculation, so the units are taken from the parent
             self.datastore.hdf5.save_vlen('core_trt_smrs', core)
 
-        if sites and not self.few_sites:
-            # in SAM from 539,831 -> 11,430 sites
-            lowres = sites.lower_res(res=4)[0]  # res=4 ~39 km
-            sf = SourceFilter(lowres, oq.maximum_distance)
-            sf.multiplier = len(sites) / len(lowres)
-            logging.debug('Reducing %d->%d sites', len(sites), len(lowres))
-        elif sites:
-            sf = SourceFilter(sites, oq.maximum_distance)
-        else:
-            sf = SourceFilter(None)
+        sf = _get_srcfilter(sites, self.few_sites, oq.maximum_distance)
         atomic_sources = []
         normal_sources = []
         reqv = 'reqv' in oq.inputs
