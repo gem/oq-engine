@@ -316,6 +316,20 @@ class SimpleFaultSource(ParametricSeismicSource):
                     hypocenter, surface, occurrence_rate * hypo[2] * slip[1],
                     self.temporal_occurrence_model, slip[0])
 
+    def _hypo_depth_allocation_or_raise(self, mag, rup_rows,
+                                        n_rows_total, n_cols_total):
+        """
+        Call _hypo_depth_allocation and raise a diagnostic ValueError
+        if no depth fits any floating rupture at the given magnitude.
+        """
+        alloc = self._hypo_depth_allocation(
+            rup_rows, n_rows_total, n_cols_total)
+        if not alloc:
+            raise ValueError(
+                f'No hypo_depth_list depth fits any floating '
+                f'rupture at M={mag:.2f} on source {self.source_id}')
+        return alloc
+
     def _iter_ruptures_hypo_depth(self, surface, mag, mag_occ_rate, entries):
         """
         Yield ruptures for a given floating position using the
@@ -379,12 +393,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
             if self.hypo_depth_list:
-                alloc = self._hypo_depth_allocation(
-                    rup_rows, num_rup_along_width, num_rup_along_length)
-                if not alloc:
-                    raise ValueError(
-                        f'No hypo_depth_list depth fits any floating '
-                        f'rupture at M={mag:.2f} on source {self.source_id}')
+                alloc = self._hypo_depth_allocation_or_raise(
+                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
             else:
                 occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
@@ -471,12 +481,8 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             if self.hypo_depth_list:
-                # _hypo_depth_allocation filters by each float's depth range
-                # and collapses entries with equal dip_frac (e.g. when the
-                # fixedDipFrac is constant over the depth entries), so the
-                # real per-float count depends on first_row
-                alloc = self._hypo_depth_allocation(
-                    rup_rows, num_rup_along_width, num_rup_along_length)
+                alloc = self._hypo_depth_allocation_or_raise(
+                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
                 n_hypo_total = sum(len(entries) for entries in alloc.values())
                 self._nr.append(num_rup_along_length * n_hypo_total * n_slip)
             else:

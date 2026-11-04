@@ -787,6 +787,21 @@ class HypoDepthListTestCase(unittest.TestCase):
             rup_rows=1, n_rows_total=24, n_cols_total=1)
         self.assertEqual(alloc, {})
 
+    def test_iter_and_count_ruptures_raise_when_no_depth_fits(self):
+        # Force a depth no floating rup can host
+        src = self._make_source([(1.0, 10.0)])
+        src.hypo_depth_list = [(1.0, 100.0, None)]
+        msg = 'No hypo_depth_list depth fits any floating'
+        # iter_ruptures must raise the depth-fits error
+        with self.assertRaises(ValueError) as ar:
+            list(src.iter_ruptures())
+        self.assertIn(msg, str(ar.exception))
+        # count_ruptures must raise rather than silently report
+        # zero ruptures for the affected magnitudes
+        with self.assertRaises(ValueError) as ar:
+            src.count_ruptures()
+        self.assertIn(msg, str(ar.exception))
+
     def test_hypo_depth_dist_xml_roundtrip(self):
         # fixedDipFrac is written to XML when set and omitted when None
         node = build_hypo_depth_dist(
