@@ -740,9 +740,9 @@ class HypoDepthListTestCase(unittest.TestCase):
     def test_floats_with_no_hypo_depths_skipped(self):
         # mesh_spacing=4, dip=25 -> down_dip_delta ~= 1.69 km. For M=5.05
         # rup_rows=2 so the top float spans [0, 1.69] km and cannot host
-        # either 2.5 or 10.5 km; pre-fix this raised ValueError. The float
-        # is now skipped and its share of the magnitude rate is
-        # redistributed across the remaining floats.
+        # either 2.5 or 10.5 km. The floating rup is now skipped and its
+        # share of the magnitude rate is redistributed across the remaining
+        # floating rups.
         src_mfd = EvenlyDiscretizedMFD(5.05, 0.1, [1.0])
         trace = Line([Point(0.0, 0.0), Point(0.2, 0.0)])
         src = SimpleFaultSource(
