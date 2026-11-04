@@ -22,6 +22,7 @@ import json
 import os
 import hashlib
 import ctypes
+from collections import namedtuple
 from contextlib import nullcontext
 from functools import lru_cache
 import h5py
@@ -369,14 +370,15 @@ _H3_CELL = ctypes.CFUNCTYPE(
     ctypes.c_int)(_capsule_pointer(_capsule, _capsule_name(_capsule)))
 
 
-# Type of the lookup structures (lon_origin, lat_origin, candidate_mask,
-# step, raster, subrasters) built by _build_lookup and used by the
-# compiled functions
-_LOOKUP = types.Tuple((
-    types.float64, types.float64, types.boolean[:, :, :], types.float64,
-    types.int32[:, :], types.int32[:, :, :]))
 # Type of the {cell ID: row} dictionaries
 _INDEX = types.DictType(types.uint64, types.int64)
+
+# Lookup structures shared by Python and the compiled functions
+Lookup = namedtuple("Lookup", "lon_origin lat_origin candidate_mask step "
+                    "raster subrasters cells")
+_LOOKUP = types.NamedTuple((
+    types.float64, types.float64, types.boolean[:, :, ::1], types.float64,
+    types.int32[:, ::1], types.int32[:, :, ::1], types.uint64[::1]), Lookup)
 
 
 # Array of the integer cell IDs of a grid, in the order of the grid
@@ -463,7 +465,8 @@ def _h3_row(lon, lat, lon_origin, lat_origin, candidate_mask, h3_res, index,
     _LOOKUP, types.int64[:], _INDEX, typeof(_H3_CELL)))
 def _corner_raster(lon0, lat0, step, nlat, nlon, lookup, h3_res, index,
                    cell_func):
-    lon_origin, lat_origin, candidate_mask = lookup[:3]
+    lon_origin, lat_origin = lookup.lon_origin, lookup.lat_origin
+    candidate_mask = lookup.candidate_mask
     raster = np.empty((nlat, nlon), np.int32)
     prev = np.empty(nlon + 1, np.int64)  # rows at the previous corners
     corners = np.empty(nlon + 1, np.int64)
@@ -490,10 +493,11 @@ def _corner_raster(lon0, lat0, step, nlat, nlon, lookup, h3_res, index,
 # so that only the AMBIGUOUS sub-pixels need h3. A split pixel stores
 # AMBIGUOUS - 1 - k, where k is the index of its subraster.
 @compile(types.Tuple((types.int32[:, :], types.int32[:, :, :]))(
-    _LOOKUP, types.int64, types.int64[:], types.uint64[:], typeof(_H3_CELL)))
-def _build_raster(lookup, factor, h3_res, cells, cell_func):
-    lon_origin, lat_origin, candidate_mask, step, _, _ = lookup
-    index = _cell_index(cells)
+    _LOOKUP, types.int64, types.int64[:], typeof(_H3_CELL)))
+def _build_raster(lookup, factor, h3_res, cell_func):
+    lon_origin, lat_origin = lookup.lon_origin, lookup.lat_origin
+    candidate_mask, step = lookup.candidate_mask, lookup.step
+    index = _cell_index(lookup.cells)
     raster = _corner_raster(
         lon_origin, lat_origin, step, candidate_mask.shape[1] * factor,
         candidate_mask.shape[2] * factor, lookup, h3_res, index, cell_func)
@@ -512,8 +516,8 @@ def _build_lookup(grid, cells, h3_res, raster=True):
     """
     Build the structure used to resolve points into rows of the cells,
     i.e. a tuple (lon_origin, lat_origin, candidate_mask, step, raster,
-    subrasters) where the candidate_mask comes from _build_masks and the
-    raster has pixels of `step` degrees (possibly an empty raster).
+    subrasters, cells). The candidate_mask comes from _build_masks;
+    the raster has pixels of `step` degrees (possibly an empty raster).
 
     :param grid: {cell_id: value}
     :param cells: the cell IDs of the grid as an array of uint64
@@ -524,19 +528,20 @@ def _build_lookup(grid, cells, h3_res, raster=True):
     no_sub = np.zeros((0, 0, 0), np.int32)
     lon_origin, lat_origin, candidate_mask = _build_masks(grid, list(h3_res))
     if candidate_mask is None:  # unsafe masks: always use h3
-        return (0., 0., np.zeros((0, 0, 0), bool), MASK_STEP, no_raster,
-                no_sub)
+        return Lookup(0., 0., np.zeros((0, 0, 0), bool), MASK_STEP, no_raster,
+                      no_sub, cells)
     nboxes = candidate_mask.shape[1] * candidate_mask.shape[2]
     # reduce the raster resolution if there are too many pixels
     factor = min(RASTER_FACTOR,
                  int(np.sqrt(RASTER_MAX_PIXELS / max(nboxes, 1))))
     if not raster or nboxes == 0 or factor < 1:
-        return (lon_origin, lat_origin, candidate_mask, MASK_STEP, no_raster,
-                no_sub)
-    lookup = (lon_origin, lat_origin, candidate_mask, MASK_STEP / factor,
-              no_raster, no_sub)
-    return lookup[:4] + _build_raster(
-        lookup, factor, np.array(h3_res, np.int64), cells, _H3_CELL)
+        return Lookup(lon_origin, lat_origin, candidate_mask, MASK_STEP,
+                      no_raster, no_sub, cells)
+    lookup = Lookup(lon_origin, lat_origin, candidate_mask, MASK_STEP / factor,
+                    no_raster, no_sub, cells)
+    raster, subrasters = _build_raster(
+        lookup, factor, np.array(h3_res, np.int64), _H3_CELL)
+    return lookup._replace(raster=raster, subrasters=subrasters)
 
 
 # Lookup structure for the cells of a grid, built on first use and
@@ -581,12 +586,14 @@ def _azimuth(lon1, lat1, lon2, lat2):
 # distance between consecutive points, as in the original algorithm.
 @compile(types.Tuple((types.float32[:, :], types.float64[:]))(
     types.float64[:], types.float64[:], types.float64[:], types.float64[:],
-    types.int64, _LOOKUP, types.int64[:], types.uint64[:],
+    types.int64, _LOOKUP, types.int64[:],
     types.float32[:, :], typeof(_H3_CELL)))
-def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, cells,
-                 values, cell_func):
-    lon_origin, lat_origin, candidate_mask, step, raster, subrasters = lookup
-    index = _cell_index(cells)
+def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, values,
+                 cell_func):
+    lon_origin, lat_origin = lookup.lon_origin, lookup.lat_origin
+    candidate_mask, step = lookup.candidate_mask, lookup.step
+    raster, subrasters = lookup.raster, lookup.subrasters
+    index = _cell_index(lookup.cells)
     sums = np.zeros((len(values), len(slons)), np.float32)
     spacing = np.zeros(len(slons))
     # the endpoints are finite (NaN hypocenters are rejected by the parsers
@@ -636,20 +643,16 @@ def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, cells,
 def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
                         h3_res, lookup=None):
     reference_grid = grids["mean"]
-    # Also accept string cell IDs from callers outside the engine.
-    if reference_grid and isinstance(next(iter(reference_grid)), str):
-        grids = {key: build_raytrace_grid(grid, grid.values())
-                 for key, grid in grids.items()}
-        reference_grid = grids["mean"]
-    cells = _cell_array(reference_grid)
     if lookup is None:
-        lookup = _build_lookup(reference_grid, cells, h3_res)
+        lookup = _build_lookup(
+            reference_grid, _cell_array(reference_grid), h3_res)
+    cells = lookup.cells
     values = np.zeros((len(grids), len(cells)), np.float32)
     for f, grid in enumerate(grids.values()):
         values[f] = [grid[cell] for cell in reference_grid]
     sums, spacing = _trace_paths(
         _f8(site_lons), _f8(site_lats), _f8(hypo_lons), _f8(hypo_lats),
-        NPTS, lookup, np.array(h3_res, np.int64), cells, values, _H3_CELL)
+        NPTS, lookup, np.array(h3_res, np.int64), values, _H3_CELL)
     # Get the cumulative correction based on distance traversed per
     # grid cell; points with no stored cell contribute zero
     return {key: sums[f] * spacing for f, key in enumerate(grids)}
@@ -658,10 +661,12 @@ def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
 # Rows of the stored cells containing the points (-1 if none)
 @compile(types.int64[:](
     types.float64[:], types.float64[:], _LOOKUP, types.int64[:],
-    types.uint64[:], typeof(_H3_CELL)))
-def _lookup_rows(lons, lats, lookup, h3_res, cells, cell_func):
-    lon_origin, lat_origin, candidate_mask, step, raster, subrasters = lookup
-    index = _cell_index(cells)
+    typeof(_H3_CELL)))
+def _lookup_rows(lons, lats, lookup, h3_res, cell_func):
+    lon_origin, lat_origin = lookup.lon_origin, lookup.lat_origin
+    candidate_mask, step = lookup.candidate_mask, lookup.step
+    raster, subrasters = lookup.raster, lookup.subrasters
+    index = _cell_index(lookup.cells)
     rows = np.empty(len(lons), np.int64)
     for i in range(len(lons)):  # finite points, as in _trace_paths
         row = _raster_row(lons[i], lats[i], lon_origin, lat_origin, step,
@@ -697,11 +702,11 @@ def grid_lookup(grids, lats, lons, h3_res, lookup=None):
     """
     # Mean, SE and optional per-cell sigma share the same stored cell IDs.
     reference_grid = grids["mean"]
-    cells = _cell_array(reference_grid)
     if lookup is None:
-        lookup = _build_lookup(reference_grid, cells, h3_res, raster=False)
+        lookup = _build_lookup(
+            reference_grid, _cell_array(reference_grid), h3_res, raster=False)
     rows = _lookup_rows(_f8(lons), _f8(lats), lookup,
-                        np.array(h3_res, np.int64), cells, _H3_CELL)
+                        np.array(h3_res, np.int64), _H3_CELL)
     found = rows >= 0
     values = {}
     for key, grid in grids.items():

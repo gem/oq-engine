@@ -168,18 +168,21 @@ class GridAdjustedGMPETest(unittest.TestCase):
         gd = load_residual_grids(GRID_HDF5)
         rng = np.random.default_rng(42)
         slo, sla, hlo, hla = rng.uniform(-5., 45., (4, 300))
-        nomask = (0., 0., np.zeros((0, 0, 0), bool), mod.MASK_STEP,
-                  np.zeros((0, 0), np.int32), np.zeros((0, 0, 0), np.int32))
         for imt in IMTS:
             grids = {"mean": gd["raytrace_grids"]["adj_per_km"][imt]}
             cells = mod._cell_array(grids["mean"])
+            nomask = mod.Lookup(
+                lon_origin=0., lat_origin=0.,
+                candidate_mask=np.zeros((0, 0, 0), bool), step=mod.MASK_STEP,
+                raster=np.zeros((0, 0), np.int32),
+                subrasters=np.zeros((0, 0, 0), np.int32), cells=cells)
             exp = mod._raytrace_path_adjs(
                 grids, hlo, hla, slo, sla, gd["h3_res"], nomask)["mean"]
             self.assertGreater(np.count_nonzero(exp), 0)
             for raster in (False, True):
                 lookup = mod._build_lookup(
                     grids["mean"], cells, gd["h3_res"], raster)
-                self.assertEqual(lookup[4].size > 0, raster)
+                self.assertEqual(lookup.raster.size > 0, raster)
                 got = mod._raytrace_path_adjs(
                     grids, hlo, hla, slo, sla, gd["h3_res"], lookup)["mean"]
                 np.testing.assert_array_equal(got, exp)
