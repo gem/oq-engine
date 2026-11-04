@@ -33,9 +33,8 @@ from numba import types, typeof
 from numba.typed import Dict
 
 from openquake.hazardlib import const
-from openquake.baselib.general import gen_slices
-from openquake.baselib.performance import compile
-from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
+from openquake.baselib.performance import compile, jittable
+from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -112,11 +111,12 @@ def load_residual_grids(hdf5_path):
       per-cell SE on the mean for path-based terms. Populated only when
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
-    * raytrace_masks: {(term, imt_str): (lon_origin, lat_origin, mask)}
-      - per h3
-      resolution, the lat/lon boxes where the path points may hit a cell
-      of raytrace_grids; used to skip the lookups which would miss. It
-      starts empty and is filled for the terms/IMTs actually used.
+    * lookups: {(cell_ids_bytes, raster): lookup} - the structures used to
+      resolve points into cells (see _build_lookup), i.e. the lat/lon boxes
+      where the points may hit a cell, per h3 resolution, used to skip the
+      lookups which would miss, and for the path-based terms a raster of
+      the cells. They are shared by the terms/IMTs with the same cells; the
+      dict starts empty and is filled for the grids actually used.
 
     * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
       per term per IMT. Populated when sig_adjustment is not "none" and the
@@ -210,7 +210,7 @@ def load_residual_grids(hdf5_path):
     return {"grids": grids,
             "raytrace_grids": raytrace_grids,
             "raytrace_se_grids": raytrace_se_grids,
-            "raytrace_masks": {}, # Filled on first use by _resolve_adjs
+            "lookups": {}, # Filled on first use by _resolve_adjs
             "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
@@ -219,8 +219,9 @@ def load_residual_grids(hdf5_path):
 # {SHA256 content digest: grid_data}, shared by GridAdjustedGMPE instances
 # reading identical files, including copies extracted from saved logic trees.
 # Values contain the correction grids, sigma scalars, term metadata and
-# lazily filled raytrace masks. For the SAM job, two files occupy about
-# 8 MB after loading, or 20 MB with masks for all 26 IMTs. These sizes are
+# lazily filled lookups. For the SAM job, two files occupy about 8 MB after
+# loading, plus 20 MB for the lookups (shared by all 26 IMTs, mostly the
+# rasters for the path-based terms). These sizes are
 # per process; the cache has no size limit and retains distinct file contents
 # until the process exits, so larger grids or more files can use much more.
 _GRID_CACHE = {}
@@ -239,7 +240,7 @@ def get_residual_grids(hdf5_path):
     Same as load_residual_grids, but identical file contents are loaded
     only once per process, even from different paths. The result is shared
     between callers, which must not modify it (except for the lazily filled
-    raytrace_masks).
+    lookups).
 
     :param hdf5_path:
         Path to the hdf5 containing the grid-based adjustments.
@@ -286,8 +287,6 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
 
 # Number of points used to discretise each path
 NPTS = 100
-# Bound the temporary arrays used when discretising paths in batches.
-PATH_BLOCKSIZE = 1000
 
 # Margin in degrees around the vertices of a cell and step in degrees of
 # the masks; for cells of resolution >= MASK_MIN_RES and latitudes within
@@ -298,6 +297,16 @@ MASK_STEP = 0.1
 MASK_MIN_RES = 2
 MASK_MAX_LAT = 80.
 MAX_GRID_CELLS = 1 << 31
+
+# Each mask box is split in RASTER_FACTOR x RASTER_FACTOR pixels of the
+# raster of the cell rows used by the path lookups (0.02 degrees), unless
+# the raster would exceed RASTER_MAX_PIXELS (4 bytes each); the AMBIGUOUS
+# pixels, crossed by a cell boundary, are split in SUBFACTOR x SUBFACTOR
+# sub-pixels, and the AMBIGUOUS sub-pixels are resolved with h3
+RASTER_FACTOR = 5
+RASTER_MAX_PIXELS = 1 << 23
+SUBFACTOR = 4
+AMBIGUOUS = -2
 
 
 # For each h3 resolution, a lat/lon raster flagging the boxes which may
@@ -360,116 +369,303 @@ _H3_CELL = ctypes.CFUNCTYPE(
     ctypes.c_int)(_capsule_pointer(_capsule, _capsule_name(_capsule)))
 
 
-# Resolve samples finest-to-coarsest, visiting only masked candidates.
-# A mask with zero resolutions disables filtering for unsafe cell bounds.
-# The Cython function uses Python objects to check for errors and so needs
-# the GIL, which is fine since `compile` does not release it.
-@compile(types.int32[:, :](
-    types.float64[:, :], types.float64[:, :], types.int64[:],
-    types.Tuple((types.float64, types.float64, types.boolean[:, :, :])),
-    types.uint64[:], typeof(_H3_CELL)))
-def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
-    lon_origin, lat_origin, candidate_mask = masks
+# Type of the lookup structures (lon_origin, lat_origin, candidate_mask,
+# step, raster, subrasters) built by _build_lookup and used by the
+# compiled functions
+_LOOKUP = types.Tuple((
+    types.float64, types.float64, types.boolean[:, :, :], types.float64,
+    types.int32[:, :], types.int32[:, :, :]))
+
+
+# Array of the integer cell IDs of a grid, in the order of the grid
+def _cell_array(grid):
+    if len(grid) > MAX_GRID_CELLS:
+        raise ValueError(
+            f'Adjustment grid has {len(grid):,} cells; '
+            f'int32 row indices support at most {MAX_GRID_CELLS:,}')
+    return np.array([h3.str_to_int(cell) if isinstance(cell, str) else cell
+                     for cell in grid], np.uint64)
+
+
+# {cell ID: row in cells}
+@jittable
+def _cell_index(cells):
     index = Dict.empty(types.uint64, types.int64)
     for i, cell in enumerate(cells):
         index[cell] = i
-    out = np.full(lons.shape, -1, np.int32)
-    for res in h3_res:
-        if res < 0 or res > 15:
-            raise ValueError('Invalid H3 resolution')
-    for i in range(len(lons)):
-        for k in range(lons.shape[1]):
-            lon, lat = lons[i, k], lats[i, k]
-            # Validate before converting coordinates into raster indices.
-            if not np.isfinite(lon) or not np.isfinite(lat):
-                raise ValueError('Non-finite ray coordinates')
-            y, x = 0, 0
-            if len(candidate_mask):
-                y = int(np.floor((lat - lat_origin) / MASK_STEP))
-                x = int(np.floor((lon - lon_origin) / MASK_STEP))
-                if (y < 0 or y >= candidate_mask.shape[1] or
-                        x < 0 or x >= candidate_mask.shape[2]):
-                    continue
-            # Flag the (resolution, point) candidates worth an H3 lookup.
-            for r in range(len(h3_res) - 1, -1, -1):
-                if (len(candidate_mask) and
-                        not candidate_mask[r, y, x]):
-                    continue
-                cell = cell_func(lat, lon, h3_res[r], 1)
-                if cell == 1:  # not a valid H3 index: the error value
-                    raise ValueError('H3 cell lookup failed')
-                row = index.get(cell, -1)
-                if row >= 0:
-                    out[i, k] = row
-                    break
-    return out
+    return index
 
 
-# Accumulate float32 grid values in sample order, as in the original loop.
-@compile('(i4[:, :], f4[:])')
-def _path_sums(rows, values):
-    sums = np.zeros(len(rows), values.dtype)
-    for i in range(len(rows)):
-        for row in rows[i]:
-            if row >= 0:  # -1 means no matching cell
-                sums[i] += values[row]
-    return sums
+# Row of the stored cell containing the point according to the raster of
+# a lookup (see _build_lookup), or -1 if there is none, or AMBIGUOUS if
+# the point is in an AMBIGUOUS sub-pixel or there is no raster, i.e. h3 is
+# needed (see _h3_row). The raster covers all the mask boxes, so points
+# outside it are in no cell. This is called for each point and must be
+# cheap, so it takes few arguments and no h3 arguments.
+@jittable
+def _raster_row(lon, lat, lon_origin, lat_origin, step, raster, subrasters):
+    if not raster.size:
+        return AMBIGUOUS
+    yf = (lat - lat_origin) / step
+    xf = (lon - lon_origin) / step
+    i, j = int(np.floor(yf)), int(np.floor(xf))
+    if i < 0 or i >= raster.shape[0] or j < 0 or j >= raster.shape[1]:
+        return -1
+    row = raster[i, j]
+    if row < AMBIGUOUS:  # pixel split in sub-pixels
+        sub = subrasters[AMBIGUOUS - 1 - row]
+        n = sub.shape[0]
+        row = sub[min(int((yf - i) * n), n - 1),
+                  min(int((xf - j) * n), n - 1)]
+    return row
+
+
+# Row of the stored cell containing the (finite) point, or -1 if there is
+# none, resolving the cell finest-to-coarsest with h3 and skipping the
+# resolutions excluded by the masks of a lookup. A mask with zero
+# resolutions disables the filtering for unsafe cell bounds.
+# The Cython function uses Python objects to check for errors and so needs
+# the GIL, which is fine since `compile` does not release it.
+@jittable
+def _h3_row(lon, lat, lon_origin, lat_origin, candidate_mask, h3_res, index,
+            cell_func):
+    y, x = 0, 0
+    if len(candidate_mask):
+        y = int(np.floor((lat - lat_origin) / MASK_STEP))
+        x = int(np.floor((lon - lon_origin) / MASK_STEP))
+        if (y < 0 or y >= candidate_mask.shape[1] or
+                x < 0 or x >= candidate_mask.shape[2]):
+            return -1
+    for r in range(len(h3_res) - 1, -1, -1):
+        if len(candidate_mask) and not candidate_mask[r, y, x]:
+            continue
+        cell = cell_func(lat, lon, h3_res[r], 1)
+        if cell == 1:  # not a valid H3 index: the error value
+            raise ValueError('H3 cell lookup failed')
+        if cell in index:
+            return index[cell]
+    return -1
+
+
+# Raster of nlat x nlon pixels of `step` degrees starting at lon0, lat0:
+# the row of a pixel is the row of its four corners if they agree,
+# otherwise AMBIGUOUS. This is approximate only when a cell boundary enters
+# a pixel without containing any of its corners, which is rare and affects
+# tiny areas for pixels much smaller than the cells.
+@jittable
+def _corner_raster(lon0, lat0, step, nlat, nlon, lookup, h3_res, index,
+                   cell_func):
+    lon_origin, lat_origin, candidate_mask = lookup[:3]
+    raster = np.empty((nlat, nlon), np.int32)
+    prev = np.empty(nlon + 1, np.int64)  # rows at the previous corners
+    corners = np.empty(nlon + 1, np.int64)
+    for i in range(nlat + 1):
+        lat = lat0 + i * step
+        for j in range(nlon + 1):
+            corners[j] = _h3_row(lon0 + j * step, lat, lon_origin,
+                                 lat_origin, candidate_mask, h3_res, index,
+                                 cell_func)
+        if i:
+            for j in range(nlon):
+                row = prev[j]
+                if (prev[j + 1] == row and corners[j] == row and
+                        corners[j + 1] == row):
+                    raster[i - 1, j] = row
+                else:
+                    raster[i - 1, j] = AMBIGUOUS
+        prev, corners = corners, prev
+    return raster
+
+
+# Raster of the rows in the boxes of the masks, subdivided in factor x factor
+# pixels; the AMBIGUOUS pixels are split in SUBFACTOR x SUBFACTOR sub-pixels,
+# so that only the AMBIGUOUS sub-pixels need h3. A split pixel stores
+# AMBIGUOUS - 1 - k, where k is the index of its subraster.
+@compile(types.Tuple((types.int32[:, :], types.int32[:, :, :]))(
+    _LOOKUP, types.int64, types.int64[:], types.uint64[:], typeof(_H3_CELL)))
+def _build_raster(lookup, factor, h3_res, cells, cell_func):
+    lon_origin, lat_origin, candidate_mask, step, _, _ = lookup
+    index = _cell_index(cells)
+    raster = _corner_raster(
+        lon_origin, lat_origin, step, candidate_mask.shape[1] * factor,
+        candidate_mask.shape[2] * factor, lookup, h3_res, index, cell_func)
+    ii, jj = np.nonzero(raster == AMBIGUOUS)
+    subrasters = np.empty((len(ii), SUBFACTOR, SUBFACTOR), np.int32)
+    for k in range(len(ii)):
+        i, j = ii[k], jj[k]
+        subrasters[k] = _corner_raster(
+            lon_origin + j * step, lat_origin + i * step, step / SUBFACTOR,
+            SUBFACTOR, SUBFACTOR, lookup, h3_res, index, cell_func)
+        raster[i, j] = AMBIGUOUS - 1 - k
+    return raster, subrasters
+
+
+def _build_lookup(grid, cells, h3_res, raster=True):
+    """
+    Build the structure used to resolve points into rows of the cells,
+    i.e. a tuple (lon_origin, lat_origin, candidate_mask, step, raster,
+    subrasters) where the candidate_mask comes from _build_masks and the
+    raster has pixels of `step` degrees (possibly an empty raster).
+
+    :param grid: {cell_id: value}
+    :param cells: the cell IDs of the grid as an array of uint64
+    :param h3_res: sorted list of h3 resolutions (coarse to fine)
+    :param raster: if False, do not build the raster (exact lookups)
+    """
+    no_raster = np.zeros((0, 0), np.int32)
+    no_sub = np.zeros((0, 0, 0), np.int32)
+    lon_origin, lat_origin, candidate_mask = _build_masks(grid, list(h3_res))
+    if candidate_mask is None:  # unsafe masks: always use h3
+        return (0., 0., np.zeros((0, 0, 0), bool), MASK_STEP, no_raster,
+                no_sub)
+    nboxes = candidate_mask.shape[1] * candidate_mask.shape[2]
+    # reduce the raster resolution if there are too many pixels
+    factor = min(RASTER_FACTOR,
+                 int(np.sqrt(RASTER_MAX_PIXELS / max(nboxes, 1))))
+    if not raster or nboxes == 0 or factor < 1:
+        return (lon_origin, lat_origin, candidate_mask, MASK_STEP, no_raster,
+                no_sub)
+    lookup = (lon_origin, lat_origin, candidate_mask, MASK_STEP / factor,
+              no_raster, no_sub)
+    return lookup[:4] + _build_raster(
+        lookup, factor, np.array(h3_res, np.int64), cells, _H3_CELL)
+
+
+# Lookup structure for the cells of a grid, built on first use and
+# shared by the terms and IMTs with the same cells (in the same order)
+def _get_lookup(grid_data, grid, raster=True):
+    cells = _cell_array(grid)
+    cache = grid_data.setdefault("lookups", {})
+    key = cells.tobytes(), raster
+    if key not in cache:
+        cache[key] = _build_lookup(grid, cells, grid_data["h3_res"], raster)
+    return cache[key]
+
+
+# Great-circle distance in km, as in geodetic_distance
+@jittable
+def _distance(lon1, lat1, lon2, lat2):
+    lon1, lat1 = np.radians(lon1), np.radians(lat1)
+    lon2, lat2 = np.radians(lon2), np.radians(lat2)
+    arr = np.sin((lat1 - lat2) / 2.0) ** 2.0
+    arr += np.cos(lat1) * np.cos(lat2) * np.sin((lon1 - lon2) / 2.0) ** 2.0
+    return 2 * EARTH_RADIUS * np.arcsin(np.sqrt(arr))
+
+
+# Azimuth in degrees from point 1 to point 2, as in geodetic.azimuth
+@jittable
+def _azimuth(lon1, lat1, lon2, lat2):
+    lon1, lat1 = np.radians(lon1), np.radians(lat1)
+    lon2, lat2 = np.radians(lon2), np.radians(lat2)
+    cos_lat2 = np.cos(lat2)
+    true_course = np.degrees(np.arctan2(
+        np.sin(lon1 - lon2) * cos_lat2,
+        np.cos(lat1) * np.sin(lat2)
+        - np.sin(lat1) * cos_lat2 * np.cos(lon1 - lon2)))
+    return (360 - true_course) % 360
+
+
+# Discretise each great-circle path from a site to its hypocentre in npts
+# points, keeping the original endpoints, as npoints_between does, and sum
+# the values (shape (F, C)) of the stored cells containing the points;
+# the sums are accumulated in float32, in sample order. Also return the
+# distance between consecutive points, as in the original algorithm.
+@compile(types.Tuple((types.float32[:, :], types.float64[:]))(
+    types.float64[:], types.float64[:], types.float64[:], types.float64[:],
+    types.int64, _LOOKUP, types.int64[:], types.uint64[:],
+    types.float32[:, :], typeof(_H3_CELL)))
+def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, cells,
+                 values, cell_func):
+    lon_origin, lat_origin, candidate_mask, step, raster, subrasters = lookup
+    index = _cell_index(cells)
+    sums = np.zeros((len(values), len(slons)), np.float32)
+    spacing = np.zeros(len(slons))
+    for p in range(len(slons)):
+        lon1, lat1, lon2, lat2 = slons[p], slats[p], hlons[p], hlats[p]
+        if not (np.isfinite(lon1) and np.isfinite(lat1) and
+                np.isfinite(lon2) and np.isfinite(lat2)):
+            raise ValueError('Non-finite ray coordinates')
+        # see npoints_towards
+        dstep = (_distance(lon1, lat1, lon2, lat2) / EARTH_RADIUS) / (
+            npts - 1)
+        tc = np.radians(360 - _azimuth(lon1, lat1, lon2, lat2))
+        sin_tc, cos_tc = np.sin(tc), np.cos(tc)
+        rlon, rlat = np.radians(lon1), np.radians(lat1)
+        sin_lat, cos_lat = np.sin(rlat), np.cos(rlat)
+        # sin and cos of k * dstep by angle addition, saving two calls
+        sin_step, cos_step = np.sin(dstep), np.cos(dstep)
+        sin_d, cos_d = 0., 1.
+        for k in range(npts):
+            if k == 0:
+                lon, lat = lon1, lat1
+            elif k == npts - 1:
+                lon, lat = lon2, lat2
+            else:
+                sin_d, cos_d = (sin_d * cos_step + cos_d * sin_step,
+                                cos_d * cos_step - sin_d * sin_step)
+                sin_lats = sin_lat * cos_d + cos_lat * sin_d * cos_tc
+                lat = np.degrees(np.arcsin(sin_lats))
+                dlon = np.arctan2(sin_tc * sin_d * cos_lat,
+                                  cos_d - sin_lat * sin_lats)
+                lon = np.degrees((rlon - dlon + np.pi) % (2 * np.pi) - np.pi)
+            if k == 1:
+                spacing[p] = _distance(lon1, lat1, lon, lat)
+            row = _raster_row(lon, lat, lon_origin, lat_origin, step,
+                              raster, subrasters)
+            if row == AMBIGUOUS:
+                row = _h3_row(lon, lat, lon_origin, lat_origin,
+                              candidate_mask, h3_res, index, cell_func)
+            if row >= 0:
+                for f in range(len(values)):
+                    sums[f, p] += values[f, row]
+    return sums, spacing
 
 
 # Resolve all fields on the same path grid with one raytrace per path.
-# The h3 lookups are performed only for the points which may be in a
-# stored cell, according to the masks (see _build_masks), since the
-# other lookups would miss: the result is the same.
+# The lookup (see _build_lookup) is built if not given.
 def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
-                        h3_res, masks=None):
-    # Set some stores
-    n_paths = len(hypo_lons)
-    ra_per_path = {key: np.zeros(n_paths) for key in grids}
+                        h3_res, lookup=None):
     reference_grid = grids["mean"]
     # Also accept string cell IDs from callers outside the engine.
     if reference_grid and isinstance(next(iter(reference_grid)), str):
         grids = {key: build_raytrace_grid(grid, grid.values())
                  for key, grid in grids.items()}
         reference_grid = grids["mean"]
-    num_cells = len(reference_grid)
-    if num_cells > MAX_GRID_CELLS:
-        raise ValueError(
-            f'Path adjustment grid has {num_cells:,} cells; '
-            f'int32 row indices support at most {MAX_GRID_CELLS:,}')
-    if masks is None:
-        masks = _build_masks(reference_grid, h3_res)
-    lon_origin, lat_origin, candidate_mask = masks
-    if candidate_mask is None:  # no filtering
-        candidate_mask = np.empty((0, 0, 0), bool)
-        masks = (lon_origin, lat_origin, candidate_mask)
-    cells = np.array(list(reference_grid), np.uint64)
-    fields = {key: np.array([grid[cell] for cell in reference_grid],
-                            dtype=np.float32)
-              for key, grid in grids.items()}
-    h3_res = np.array(h3_res, np.int64)
-    for slc in gen_slices(0, n_paths, PATH_BLOCKSIZE):
-        # Discretise the lines in batches, keeping the original endpoints.
-        lons, lats, _ = npoints_between(
-            site_lons[slc], site_lats[slc], 0.,
-            hypo_lons[slc], hypo_lats[slc], 0., NPTS)
-        # Distance between consecutive discretised points along the path
-        spacing = geodetic_distance(
-            lons[:, 0], lats[:, 0], lons[:, 1], lats[:, 1], dtype=float)
-        # Get the cumulative correction based on distance traversed per
-        # grid cell and the associated distance-based adjustment terms.
-        # Each sample point resolves to one stored cell via finest-to-
-        # coarsest h3 fallback; points with no stored cell contribute zero
-        rows = _trace_cells(lons, lats, h3_res, masks, cells, _H3_CELL)
-        # Store the total cumulative adjustment for the term
-        for key, field in fields.items():
-            # rows has one cell-row index per path sample (-1 means no hit);
-            # field contains this adjustment value for each row in cells.
-            ra_per_path[key][slc] = _path_sums(rows, field) * spacing
-
-    return ra_per_path
+    cells = _cell_array(reference_grid)
+    if lookup is None:
+        lookup = _build_lookup(reference_grid, cells, h3_res)
+    values = np.zeros((len(grids), len(cells)), np.float32)
+    for f, grid in enumerate(grids.values()):
+        values[f] = [grid[cell] for cell in reference_grid]
+    sums, spacing = _trace_paths(
+        _f8(site_lons), _f8(site_lats), _f8(hypo_lons), _f8(hypo_lats),
+        NPTS, lookup, np.array(h3_res, np.int64), cells, values, _H3_CELL)
+    # Get the cumulative correction based on distance traversed per
+    # grid cell; points with no stored cell contribute zero
+    return {key: sums[f] * spacing for f, key in enumerate(grids)}
 
 
-def grid_lookup(grids, lats, lons, h3_res):
+# Rows of the stored cells containing the points (-1 if none)
+@compile(types.int64[:](
+    types.float64[:], types.float64[:], _LOOKUP, types.int64[:],
+    types.uint64[:], typeof(_H3_CELL)))
+def _lookup_rows(lons, lats, lookup, h3_res, cells, cell_func):
+    lon_origin, lat_origin, candidate_mask, step, raster, subrasters = lookup
+    index = _cell_index(cells)
+    rows = np.empty(len(lons), np.int64)
+    for i in range(len(lons)):
+        if not np.isfinite(lons[i]) or not np.isfinite(lats[i]):
+            raise ValueError('Non-finite coordinates')
+        row = _raster_row(lons[i], lats[i], lon_origin, lat_origin, step,
+                          raster, subrasters)
+        if row == AMBIGUOUS:
+            row = _h3_row(lons[i], lats[i], lon_origin, lat_origin,
+                          candidate_mask, h3_res, index, cell_func)
+        rows[i] = row
+    return rows
+
+
+def grid_lookup(grids, lats, lons, h3_res, lookup=None):
     """
     For each (lat, lon) pair resolve the h3 cell starting at the finest
     h3 resolution and falling back to coarser resolutions, returning the
@@ -485,31 +681,31 @@ def grid_lookup(grids, lats, lons, h3_res):
         Array of longitudes (either hypo or site lons, depending on term)
     :param h3_res:
         Sorted list of h3 resolution levels (coarse to fine)
+    :param lookup:
+        Lookup structure for the cells (see _build_lookup); if not given,
+        an exact one (without raster) is built
     :returns:
         {key: adjustment_vals}, each array of shape (len(lats),)
     """
     # Mean, SE and optional per-cell sigma share the same stored cell IDs.
-    # Set arrays
-    n = len(lats)
-    values = {key: np.zeros(n) for key in grids}
     reference_grid = grids["mean"]
-    found = np.zeros(n, dtype=bool)
-
-    # Go over the h3 resolutions from finest to coarsest,
-    # skipping locations already resolved at a finer level
-    for res in reversed(h3_res):
-        if found.all():
-            break
-        for i in np.where(~found)[0]:
-            # Make a h3 cell for given hypo or site
-            cell = h3.latlng_to_cell(lats[i], lons[i], res)
-            if cell in reference_grid:
-                # Assign each adjustment of the given term to the cell
-                for key, grid in grids.items():
-                    values[key][i] = grid[cell]
-                found[i] = True
-
+    cells = _cell_array(reference_grid)
+    if lookup is None:
+        lookup = _build_lookup(reference_grid, cells, h3_res, raster=False)
+    rows = _lookup_rows(_f8(lons), _f8(lats), lookup,
+                        np.array(h3_res, np.int64), cells, _H3_CELL)
+    found = rows >= 0
+    values = {}
+    for key, grid in grids.items():
+        vals = np.array([grid[cell] for cell in reference_grid], float)
+        values[key] = np.zeros(len(rows))
+        values[key][found] = vals[rows[found]]
     return values
+
+
+# Contiguous float64 array, as required by the compiled functions
+def _f8(arr):
+    return np.ascontiguousarray(arr, np.float64).reshape(-1)
 
 
 def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
@@ -548,23 +744,22 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
         if se_grid is not None:
             grids["mean_se"] = se_grid
-        cache = grid_data.setdefault("raytrace_masks", {})
-        if (term, imt) not in cache:
-            cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
-        masks = cache[term, imt]
+        lookup = _get_lookup(grid_data, grid)
         # The ContextMaker owns the monitor; standalone GSIMs need none.
         with gra_mon:
             return _raytrace_path_adjs(
                 grids, ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat,
-                grid_data["h3_res"], masks)
+                grid_data["h3_res"], lookup)
 
-    # Hypo/site terms are stored as cell_id -> value dicts
+    # Hypo/site terms are stored as cell_id -> value dicts; their lookups
+    # are exact (no raster), since there is one point per context
     entry = grid_data["grids"].get(imt, {}).get(term, {})
     if not entry:
         return {}
     lats, lons = ((ctx.hypo_lat, ctx.hypo_lon) if cfg["location"] == "hypo"
                   else (ctx.lat, ctx.lon))
-    return grid_lookup(entry, lats, lons, grid_data["h3_res"])
+    lookup = _get_lookup(grid_data, entry["mean"], raster=False)
+    return grid_lookup(entry, lats, lons, grid_data["h3_res"], lookup)
 
 
 def compute_central(gsim, ctx, imts, mean, sig, tau, phi,

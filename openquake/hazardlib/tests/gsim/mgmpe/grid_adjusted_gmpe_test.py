@@ -161,22 +161,28 @@ class GridAdjustedGMPETest(unittest.TestCase):
             )
             aae(adjs, EXPECTED_PATH_ADJ[m], decimal=DP)
 
-    def test_raytrace_masks_are_exact(self):
+    def test_raytrace_lookups(self):
         # The h3 lookups skipped thanks to the masks must all be misses,
-        # so the results must be identical to the ones without masks
+        # so the results must be identical to the ones without masks;
+        # here the raster of the cells gives the same results too
         gd = load_residual_grids(GRID_HDF5)
         rng = np.random.default_rng(42)
         slo, sla, hlo, hla = rng.uniform(-5., 45., (4, 300))
-        nomask = (0., 0., None)
+        nomask = (0., 0., np.zeros((0, 0, 0), bool), mod.MASK_STEP,
+                  np.zeros((0, 0), np.int32), np.zeros((0, 0, 0), np.int32))
         for imt in IMTS:
             grids = {"mean": gd["raytrace_grids"]["adj_per_km"][imt]}
-            masks = mod._build_masks(grids["mean"], gd["h3_res"])
+            cells = mod._cell_array(grids["mean"])
             exp = mod._raytrace_path_adjs(
                 grids, hlo, hla, slo, sla, gd["h3_res"], nomask)["mean"]
-            got = mod._raytrace_path_adjs(
-                grids, hlo, hla, slo, sla, gd["h3_res"], masks)["mean"]
             self.assertGreater(np.count_nonzero(exp), 0)
-            np.testing.assert_array_equal(got, exp)
+            for raster in (False, True):
+                lookup = mod._build_lookup(
+                    grids["mean"], cells, gd["h3_res"], raster)
+                self.assertEqual(lookup[4].size > 0, raster)
+                got = mod._raytrace_path_adjs(
+                    grids, hlo, hla, slo, sla, gd["h3_res"], lookup)["mean"]
+                np.testing.assert_array_equal(got, exp)
 
     def test_mean_and_sigma(self):
         # Check expected values
