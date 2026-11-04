@@ -361,18 +361,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
         out = cmaker.get_mean_stds([self._make_ctx(cmaker)])
         aae(out, self._get_mean_stds(IMTS))
 
-    def test_grids_shared_and_not_pickled(self):
-        # Instances reading the same file share the grids, which are
-        # not pickled but read again (from the cache) when unpickling
-        gsims = [GridAdjustedGMPE(gmpe_name=BASE_GSIM,
-                                  grid_hdf5_file=GRID_HDF5,
-                                  epsilons={"dL2L": eps})
-                 for eps in (-1., 1.)]
-        self.assertIs(gsims[0].grid_data, gsims[1].grid_data)
-        data = pickle.dumps(gsims[1])
-        self.assertLess(len(data), 10_000)
-        new = pickle.loads(data)
-        self.assertIs(new.grid_data, gsims[1].grid_data)
+    def test_grids_shared_and_pickled(self):
+        # Like GMPETable, pickling preserves the loaded grids and their
+        # sharing, even after the extracted HDF5 file has been deleted.
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'adjustments.hdf5')
+            shutil.copy(GRID_HDF5, path)
+            gsims = [GridAdjustedGMPE(gmpe_name=BASE_GSIM,
+                                      grid_hdf5_file=path,
+                                      epsilons={"dL2L": eps})
+                     for eps in (-1., 1.)]
+            self.assertIs(gsims[0].grid_data, gsims[1].grid_data)
+            data = pickle.dumps(gsims)
+        with mock.patch.object(mod, 'get_residual_grids',
+                               side_effect=AssertionError('Reopened grids')):
+            restored = pickle.loads(data)
+        self.assertIs(restored[0].grid_data, restored[1].grid_data)
+        new = restored[1]
         cmaker = simple_cmaker([valid.gsim(BASE_GSIM), gsims[1]], IMTS)
         ctx = self._make_ctx(cmaker)
         expected = cmaker.get_mean_stds([ctx])
