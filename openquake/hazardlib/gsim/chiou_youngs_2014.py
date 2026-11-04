@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@
 Module exports :class:`ChiouYoungs2014`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
+               :class:`ChiouYoungs2014ACME2019`
 """
 import numpy as np
 
@@ -36,6 +37,11 @@ CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 REF_VS = 1130.
+BASIN_REFERENCE_VS = 1360.
+BASIN_VS_JAPAN = 412.39
+BASIN_VS_GLOBAL = 570.94
+DIRECTIVITY_MAG_MIN = 5.5
+DIRECTIVITY_MAG_SPAN = 0.8
 
 
 # CyberShake basin adjustments for CY14 (only applied above 
@@ -57,7 +63,8 @@ def japan_mean_z1pt0(vs30):
     Return z1pt0 based on Japan region CY14 relationship
     """
     return (-5.23 / 2.) * np.log(((
-        vs30 ** 2.) + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.))
+        vs30 ** 2.) + BASIN_VS_JAPAN ** 2.) /
+        (BASIN_REFERENCE_VS ** 2. + BASIN_VS_JAPAN ** 2.))
 
 
 def global_mean_z1pt0(vs30):
@@ -65,7 +72,8 @@ def global_mean_z1pt0(vs30):
     Return z1pt0 based on non-Japan region CY14 relationship
     """
     return (-7.15 / 4.) * np.log((
-        (vs30) ** 4. + 570.94 ** 4.) / (1360 ** 4. + 570.94 ** 4.))
+        (vs30) ** 4. + BASIN_VS_GLOBAL ** 4.) /
+        (BASIN_REFERENCE_VS ** 4. + BASIN_VS_GLOBAL ** 4.))
 
 
 def _get_centered_z1pt0(region, vs30, z1pt0):
@@ -103,9 +111,9 @@ def _get_ln_y_ref(ctx, C):
     Implements eq. 13a.
     """
     # Reverse faulting flag
-    Frv = 1. if 30 <= ctx.rake <= 150 else 0.
+    Frv = ((30. <= ctx.rake) & (ctx.rake <= 150.)).astype(float)
     # Normal faulting flag
-    Fnm = 1. if -120 <= ctx.rake <= -60 else 0.
+    Fnm = ((-120. <= ctx.rake) & (ctx.rake <= -60.)).astype(float)
     # A part in eq. 11
     mag_test1 = np.cosh(2. * np.clip(ctx.mag - 4.5, 0., None))
     # Centered DPP
@@ -113,9 +121,7 @@ def _get_ln_y_ref(ctx, C):
     # Centered Ztor
     centered_ztor = 0
 
-    dist_taper = np.fmax(1 - (np.fmax(ctx.rrup - 40,
-                              np.zeros_like(ctx)) / 30.),
-                         np.zeros_like(ctx))
+    dist_taper = np.fmax(1 - np.fmax(ctx.rrup - 40, 0.) / 30., 0.)
     dist_taper = dist_taper.astype(np.float64)
     ln_y_ref = (
         # first part of eq. 11
@@ -128,7 +134,7 @@ def _get_ln_y_ref(ctx, C):
         # second part
         + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
+        * np.logaddexp(0.0, C['cn'] * (C['cm'] - ctx.mag))
         # third part
         + C['c4']
         * np.log(ctx.rrup + C['c5']
@@ -141,7 +147,8 @@ def _get_ln_y_ref(ctx, C):
         * ctx.rrup
         # fifth part
         + C['c8'] * dist_taper
-        * np.clip((ctx.mag - 5.5, 0) / 0.8, 0., 1.)
+        * np.clip((ctx.mag - DIRECTIVITY_MAG_MIN) /
+                  DIRECTIVITY_MAG_SPAN, 0., 1.)
         * np.exp(-1 * C['c8a'] * (ctx.mag - C['c8b']) ** 2) * centered_dpp
         # sixth part
         # + C['c9'] * Fhw * np.cos(math.radians(ctx.dip)) *
@@ -150,25 +157,6 @@ def _get_ln_y_ref(ctx, C):
         #   / (ctx.rrup + 1.0))
     )
     return ln_y_ref
-
-
-def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
-    """
-    Add site effects to an intensity. Implements eq. 13b.
-    """
-    eta = epsilon = 0.
-    ln_y = (
-        # first line of eq. 12
-        ln_y_ref + eta
-        # second line
-        + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
-        # third line
-        + C['phi2'] * (exp1 - exp2)
-        * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
-        # fourth line - removed
-        # fifth line
-        + epsilon)
-    return ln_y
 
 
 def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
@@ -228,7 +216,8 @@ def get_directivity(C, ctx):
         # No directivity term
         return 0.
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
+    f_dir *= np.clip((ctx.mag - DIRECTIVITY_MAG_MIN) /
+                     DIRECTIVITY_MAG_SPAN, 0., 1.)
     rrup_max = ctx.rrup - 40.
     rrup_max[rrup_max < 0.0] = 0.0
     rrup_max = 1.0 - (rrup_max / 30.)
@@ -892,9 +881,21 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
-            ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
+            ln_y_ref = _get_ln_y_ref(ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
             exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, REF_VS) - 360))
             exp2 = np.exp(C['phi3'] * (REF_VS - 360))
-            mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, REF_VS)
+            # Add site effects to an intensity. Implements eq. 13b.
+            eta = epsilon = 0.
+            mean[m] = (
+                # first line of eq. 12
+                ln_y_ref + eta
+                # second line
+                + C['phi1'] * np.log(ctx.vs30 / REF_VS).clip(-np.inf, 0)
+                # third line
+                + C['phi2'] * (exp1 - exp2)
+                * np.logaddexp(0.0, ln_y_ref + eta - np.log(C['phi4']))
+                # fourth line - removed
+                # fifth line
+                + epsilon)

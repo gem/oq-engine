@@ -48,7 +48,8 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import ContextMaker, RmapMaker
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.rmap_maker import RmapMaker
 from openquake.hazardlib.source_group import SourceGroup
 
 
@@ -71,6 +72,7 @@ def classical(group, sitecol, cmaker):
             res = RmapMaker(cmaker, sitecol, grp).make()
             dic['rmap'].array += res['rmap'].array
             dic['source_data'] += res['source_data']
+            dic['cfactor'] = dic['cfactor'] + res['cfactor']
             dic['dparam_mb'] += res['dparam_mb']
             dic['source_mb'] +=res['source_mb']
     else:  # simply a list of sources

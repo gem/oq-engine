@@ -22,8 +22,10 @@ implementations of ground shaking intensity models. See
 :mod:`openquake.hazardlib.gsim.base`.
 """
 import inspect
+
 from openquake.baselib.general import import_all
 from openquake.hazardlib.gsim.base import registry
+
 
 import_all('openquake.hazardlib.gsim')
 

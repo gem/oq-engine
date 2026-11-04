@@ -34,6 +34,7 @@ logic tree file is as in this example::
 """
 import inspect
 import numpy as np
+
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.gsim.base import GMPE, registry
 

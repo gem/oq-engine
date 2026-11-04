@@ -33,10 +33,8 @@ from openquake.baselib import hdf5
 from openquake.commonlib import readinput
 from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
-from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source_group import read_csm
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
-from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
@@ -683,69 +681,6 @@ def make_figure_rups_by_mag_dist(extractors, what):
         im = ax.imshow(counts[:, :, trti], cmap=cmap,
                        extent=extent, aspect='auto', vmin=0, vmax=vmax)
     fig.colorbar(im, ax=axes)
-    return plt
-
-
-def make_figure_dist_by_mag(extractors, what):
-    """
-    $ oq plot "dist_by_mag?"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
-    [ex] = extractors
-    effect = ex.get('effect')
-    mags = ['%.2f' % mag for mag in effect.mags]
-    _fig, ax = plt.subplots()
-    trti = 0
-    for trt, dists in effect.dist_bins.items():
-        dic = dict(zip(mags, effect[:, :, trti]))
-        if ex.oqparam.pointsource_distance:
-            pdist = getdefault(ex.oqparam.pointsource_distance, trt)
-        else:
-            pdist = None
-        eff = Effect(dic, dists, pdist)
-        dist_by_mag = eff.dist_by_mag()
-        ax.plot(effect.mags, list(dist_by_mag.values()), label=trt,
-                color='red')
-        if pdist:
-            dist_by_mag = eff.dist_by_mag(eff.collapse_value)
-            ax.plot(effect.mags, list(dist_by_mag.values()), label=trt,
-                    color='green')
-        ax.set_xlabel('Mag')
-        ax.set_ylabel('Dist')
-        ax.set_title('Integration Distance at intensity=%s' % eff.zero_value)
-        trti += 1
-    ax.legend()
-    return plt
-
-
-def make_figure_effect_by_mag(extractors, what):
-    """
-    $ oq plot "effect_by_mag?"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    import matplotlib.pyplot as plt
-    [ex] = extractors
-    gsims_by_trt = ex.get('gsims_by_trt', asdict=True)
-    mags = ex.get('source_mags').array
-    try:
-        effect = ex.get('effect')
-    except KeyError:
-        onesite = ex.get('sitecol').one()
-        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
-        imtls = ex.oqparam.imtls
-        ebm = get_effect_by_mag(
-            mags, onesite, gsims_by_trt, maximum_distance, imtls)
-        effect = numpy.array(list(ebm.values()))
-    _fig, ax = plt.subplots()
-    trti = 0
-    for trt in gsims_by_trt:
-        ax.plot(mags, effect[:, -1, trti], label=trt)
-        ax.set_xlabel('Mag')
-        ax.set_ylabel('Intensity')
-        ax.set_title('Effect at maximum distance')
-        trti += 1
-    ax.legend()
     return plt
 
 

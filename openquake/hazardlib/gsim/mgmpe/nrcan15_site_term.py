@@ -21,12 +21,14 @@ Module :mod:`openquake.hazardlib.mgmp.nrcan15_site_term` implements
 
 import copy
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     _get_site_amplification_non_linear, _get_site_amplification_linear)
 from openquake.baselib.general import CallableDict
+
 
 BA08_AB06 = CallableDict()
 
@@ -190,7 +192,7 @@ class NRCan15SiteTerm(GMPE):
             C = self.COEFFS_BA08[imt]
             C2 = self.COEFFS_AB06r[imt]
             fa = BA08_AB06(self.kind, C, C2, ctx.vs30, imt, np.exp(mean[m]))
-            mean[m] = np.log(np.exp(mean[m]) * fa)
+            mean[m] = mean[m] + np.log(fa)
 
     COEFFS_AB06r = CoeffsTable(sa_damping=5, table="""\
     IMT  c

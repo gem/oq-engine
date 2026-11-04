@@ -35,6 +35,8 @@ from openquake.hazardlib.source.rupture import (
     EBRupture)
 
 U32 = numpy.uint32
+# ts is the set of realizations with the same uncertainties (see get_ts_sets)
+ts_samples_dt = numpy.dtype([('trt_smr', U32), ('samples', U32), ('ts', U32)])
 F64 = numpy.float64
 I64 = numpy.int64
 TWO30 = I64(2**30)
@@ -213,7 +215,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
     id = -1  # to be set
-    sampling = None  # set by the engine
+    ts_samples = None  # set by the engine
     nsites = 1  # set when filtering the source
     splittable = True
     checksum = 0  # set in source_reader
@@ -221,10 +223,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     nctxs = 1  # updated in estimate_weight
     offset = 0  # set in fix_src_offset
     _num_ruptures = 0  # set by the engine
+    # uncertainties which modify the source without mutating shared data,
+    # so that a copy can share it with the original (see lt.shallow_unc)
+    shallow_uncertainties = frozenset()
     seed = None  # set by the engine
     samples = 1  # set by the engine
     smweight = 1.  # set by the engine
     dt = 0  # set by the engine
+    # set in build_groups for the sources modified by the uncertainties
+    bysrc_unc = False
 
     @abc.abstractproperty
     def MODIFICATIONS(self):
@@ -244,9 +251,35 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a tuple of integers (usually of 1 element)
         """
-        if self.sampling is None:  # in hazardlib
+        if self.ts_samples is None:  # in hazardlib
             return (0,)
-        return tuple(self.sampling['trt_smr'])
+        return tuple(self.ts_samples['trt_smr'])
+
+    def get_ts_samples(self):
+        """
+        :returns: the ts_samples of the source as a structured array
+        """
+        ts_samples = self.ts_samples
+        if isinstance(ts_samples, list):
+            ts_samples = numpy.concatenate(ts_samples, dtype=ts_samples_dt)
+        return ts_samples
+
+    def get_ts_sets(self):
+        """
+        :returns: a tuple of tuples of trt_smr, the sets of realizations with
+            the same uncertainties applied to the source; there is a single
+            set if the uncertainties are the same in all the realizations
+
+        NB: the sets are stored in the field ts of the ts_samples by
+            build_groups, i.e. for the sources modified by the uncertainties;
+            the sources without uncertainties have ts=0 everywhere and a
+            single set.
+        """
+        if self.ts_samples is None:  # in hazardlib
+            return ((0,),)
+        ts_samples = self.get_ts_samples()
+        return tuple(tuple(ts_samples['trt_smr'][ts_samples['ts'] == ts])
+                     for ts in numpy.unique(ts_samples['ts']))
 
     def serial(self, ses_seed):
         """
@@ -287,9 +320,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         How many source model realizations the source belongs to
         """
-        if self.sampling is None:
+        if self.ts_samples is None:
             return 1
-        return len(self.sampling)
+        return len(self.ts_samples)
 
     def sample_ruptures(self, num_ses, ses_seed):
         """
@@ -300,15 +333,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         rng = numpy.random.default_rng(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        samples = self.sampling['samples'].sum()
-        probs = self.sampling['samples'] / samples
+        samples = self.ts_samples['samples'].sum()
+        probs = self.ts_samples['samples'] / samples
         ebrs = []
         for rup, rid, tot_occ in sample(self, num_ses * samples, seed):
             if tot_occ:
                 occs = rng.multinomial(tot_occ, probs)
                 # rng.multinomial(1000, [.1, .2, .3, .4]) = [104, 201, 270, 425]
                 for i, (trt_smr, occ) in enumerate(
-                        zip(self.sampling['trt_smr'], occs)):
+                        zip(self.ts_samples['trt_smr'], occs)):
                     if occ:
                         rupid = rid + i * self.num_ruptures
                         ebr = EBRupture(rup, self.id, trt_smr, occ, rupid,
@@ -330,18 +363,21 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 mags.add(rup.mag)
         return sorted(mags)
 
+    def get_raw_mags(self):
+        """
+        :returns: the magnitudes of the ruptures contained, with repetitions
+        """
+        if hasattr(self, 'mags'):  # MultiFaultSource
+            return self.mags
+        elif hasattr(self, 'data'):  # nonparametric
+            return [item[0].mag for item in self.data]
+        return [item[0] for item in self.get_annual_occurrence_rates()]
+
     def get_magstrs(self):
         """
         :returns: the magnitudes of the ruptures contained as strings
         """
-        if hasattr(self, 'mags'):  # MultiFaultSource
-            mags = {magstr(mag) for mag in self.mags}
-        elif hasattr(self, 'data'):  # nonparametric
-            mags = {magstr(item[0].mag) for item in self.data}
-        else:
-            mags = {magstr(item[0]) for item in
-                    self.get_annual_occurrence_rates()}
-        return sorted(mags)
+        return sorted({magstr(mag) for mag in self.get_raw_mags()})
 
     def __iter__(self):
         """

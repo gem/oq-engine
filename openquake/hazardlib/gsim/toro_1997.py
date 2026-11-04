@@ -29,6 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
 
+
 _compute_finite_fault_correction = CallableDict()
 
 

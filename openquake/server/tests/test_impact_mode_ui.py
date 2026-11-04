@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+# NB: run these tests with OQ_APPLICATION_MODE=IMPACT,
 import pytest
 from openquake.server.tests.pages.impact_page import (
     ImpactPageLevel0, ImpactPageLevel1, ImpactPageLevel2)
@@ -46,6 +47,7 @@ def test_impact_ui_level_1(
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
     page.set_rupture_identifier('us6000t7zp')
+    expect(page.maximum_distance()).not_to_be_visible()
     page.select_shakemap_version(
         value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
     page.retrieve_data()
@@ -53,6 +55,21 @@ def test_impact_ui_level_1(
     expect(page.pga_map()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
+    # the default maximum distance depends on the magnitude
+    expect(page.maximum_distance()).to_be_visible()
+    expect(page.maximum_distance()).not_to_have_value('')
+    expect(page.maximum_distance()).to_be_editable()
+    # selecting another ShakeMap version invalidates the retrieved data
+    page.select_another_shakemap_version()
+    for elem in (page.intensity_map(), page.pga_map(), page.local_timestamp(),
+                 page.maximum_distance(), page.description()):
+        expect(elem).not_to_be_visible()
+    expect(page.run_impact_calc_btn()).to_be_disabled()
+    page.select_shakemap_version(
+        value='urn:usgs-product:us:shakemap:us6000t7zp:1783206003077')
+    page.retrieve_data()
+    expect(page.maximum_distance()).to_be_visible(timeout=30_000)
+    expect(page.run_impact_calc_btn()).to_be_enabled()
     page.set_time_of_the_event('Night')
     expect(page.no_uncertainty_ckb()).to_have_count(0)
     page.set_make_impact_reports()
@@ -121,6 +138,13 @@ def test_impact_ui_level_2_use_point_rupture(
     expect(page.local_timestamp()).to_be_visible(timeout=30_000)
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
+    # M 7.8: the defaults depending on the magnitude
+    expect(page.maximum_distance()).to_have_value('300')
+    expect(page.truncation_level()).to_have_value('3')
+    # unchecking "No uncertainty" restores the default truncation level
+    page.no_uncertainty_ckb().check()
+    page.no_uncertainty_ckb().uncheck()
+    expect(page.truncation_level()).to_have_value('3')
     page.set_no_uncertainty()
     page.run_impact_calc()
     if should_abort_job or should_remove_job:
@@ -140,9 +164,11 @@ def test_impact_ui_level_2_build_rupture(
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
     expect(page.rupture_identifier()).to_be_visible()
+    expect(authenticated_page.locator(
+        'div#shakemap_version_grp')).to_be_visible()
     page.set_rupture_identifier('usp0001ccb')
     page.select_shakemap_version(
-        value="urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087")
+        value='urn:usgs-product:atlas:shakemap:usp0001ccb:1594164792087')
     page.retrieve_stations_from_usgs()
     page.select_nodal_plane()
     page.retrieve_data()
@@ -151,7 +177,12 @@ def test_impact_ui_level_2_build_rupture(
     expect(page.local_timestamp()).not_to_be_editable()
     page.set_time_of_the_event('Night')
     page.set_no_uncertainty()
-    page.run_impact_calc()
+    authenticated_page.locator('select#nodal_plane').select_option('NP2')
+    with authenticated_page.expect_request(
+            lambda req: req.url.endswith('/v1/calc/impact_run')) as request:
+        page.run_impact_calc()
+    assert 'name="nodal_plane"' in request.value.post_data
+    assert 'NP2' in request.value.post_data
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()
         if should_abort_job:

@@ -39,25 +39,41 @@ class EnginePage:
         job_row = self.get_job_row(job_id)
         expect(job_row).to_contain_text("complete", timeout=120_000)
 
+    def _confirm_action(self, action):
+        # Wait for the custom modal before querying its dynamically labelled
+        # button; this also verifies that the initiating click was handled.
+        modal = self.page.locator("#confirmModal")
+        expect(modal).to_be_visible(timeout=20_000)
+        button = modal.locator(".btn-confirm")
+        expect(button).to_have_text(f"Yes, {action}")
+        button.click(timeout=20_000)
+
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
         expect(job_row.get_by_text("executing")).to_be_visible(
             timeout=80_000)
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Abort"), timeout=20_000)
-        self.page.get_by_role("button", name="Yes, abort").click(
-            timeout=20_000)
-        expect(self.page.get_by_text("has been aborted")).to_be_visible(
-            timeout=20_000)
+        self._confirm_action("abort")
+        # short jobs may finish before the abort reaches the server, which
+        # then refuses it: both outcomes are valid, so check the row state
+        aborted = self.page.get_by_text("has been aborted")
+        finished = self.page.get_by_text("is not running")
+        expect(aborted.or_(finished)).to_be_visible(timeout=20_000)
+        was_aborted = aborted.is_visible()
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
-        expect(job_row.get_by_text("failed")).to_be_visible(timeout=20_000)
+        if was_aborted:
+            expect(job_row.get_by_text("failed")).to_be_visible(
+                timeout=20_000)
+        else:
+            expect(job_row.get_by_text("complete")).to_be_visible(
+                timeout=20_000)
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)
         self._click_clear_of_backdrop(
             job_row.get_by_role("link", name="Remove"))
-        self.page.get_by_role("button", name="Yes, remove").click(
-            timeout=30_000)
+        self._confirm_action("remove")
         expect(self.page.get_by_text("has been removed")).to_be_visible(
             timeout=30_000)
         self.page.get_by_role("button", name="Close").click(timeout=30_000)
@@ -69,8 +85,9 @@ class EnginePage:
 
     def to_report(self):
         """Open the report after it has been persisted by the job."""
+        # match the first page only, not the "(ISO3, page 2)" link
         report_link = self.page.get_by_role(
-            "link", name=re.compile(r"^Show impact report"))
+            "link", name=re.compile(r"^Show impact report \(\w+\)$"))
         for _ in range(12):
             try:
                 report_link.click(timeout=10_000)

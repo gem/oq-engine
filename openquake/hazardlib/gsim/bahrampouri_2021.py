@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2021 GEM Foundation
+# Copyright (C) 2021-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,12 @@ class:`bahrampouriEtAl2021SSlab`,
 class:`bahrampouriEtAl2021SInter`,
 """
 import numpy as np
+import shapely.geometry as sg
+from shapely.geometry import LineString
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA
-import shapely.geometry as sg
-from shapely.geometry import LineString
 
 
 
@@ -49,7 +50,6 @@ def _compute_magnitude(ctx, C, trt):
     """
     Compute the source term described in Eq. 7 for ASC and 9 for subduction
     """
-
     if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
         fsource = (C['a1'] + C['a2'] * ctx.mag +
                    C['a3'] * np.maximum((ctx.mag - C['a4']), 0) +
@@ -85,7 +85,6 @@ def _get_site_term(ctx, C):
     """
     compute site scaling as described in Eq.12
     Fsite = c1*ln(vs30)
-
     """
     fsite = C['c1'] * np.log(ctx.vs30)
     return fsite
@@ -109,10 +108,12 @@ def _check_cm_ck(kyushu, honshu, ctx):
     - There is a possibility that the path may not cross either of the volcanic
         fronts. In such cases, these coefficients are taken as 0.
     """
-    tmp = np.array([kyushu.crosses(LineString([(hypo_lon, hypo_lat), (lon, lat)]))
+    tmp = np.array([kyushu.crosses(LineString(
+                        [(hypo_lon, hypo_lat), (lon, lat)]))
                     for hypo_lon, hypo_lat, lon, lat in
                     zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
-    tmp_1 = np.array([honshu.crosses(LineString([(hypo_lon, hypo_lat), (lon, lat)]))
+    tmp_1 = np.array([honshu.crosses(LineString(
+                         [(hypo_lon, hypo_lat), (lon, lat)]))
                      for hypo_lon, hypo_lat, lon, lat in
                      zip(ctx.hypo_lon, ctx.hypo_lat, ctx.lon, ctx.lat)])
     ck = tmp.astype(int)
@@ -204,10 +205,8 @@ def _get_arias_intensity_second_term(ctx, C, trt):
     """
     This is the second term in Eq. 5
     """
-    t1 = []
-    for i, x in enumerate(ctx.vs30):
-        g = np.exp(C['c3']*(min(ctx.vs30[i], 1100)-280))
-        t1.append(g)
+    # the Vs30 is capped at 1100 m/s before computing the site factor
+    t1 = np.exp(C['c3']*(np.minimum(ctx.vs30, 1100)-280))
     t2 = np.exp(C['c3']*(1100-280))
     tmp = (np.exp(_get_arias_intensity_term(ctx, C, trt))+C['c4'])/C['c4']
     t3 = np.log(tmp)

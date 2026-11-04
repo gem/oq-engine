@@ -98,7 +98,6 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         sudo $LXC_KILL -n "$lxc_name"
@@ -698,9 +697,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         ssh "$lxc_ip" "set -e
-                 export PYTHONPATH=\"\$PWD/oq-engine\"
-                 echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
-                 cd oq-engine; nohup /opt/openquake/bin/python3 bin/oq dbserver start &>/tmp/dbserver.log </dev/null"
+                 export PYTHONPATH=\"\$PWD/oq-engine\""
 
         ssh "$lxc_ip" "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
@@ -721,10 +718,8 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commonlib.xml -v openquake/commonlib
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commands.xml -v openquake/commands
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-modules -v openquake/hazardlib
-                 /opt/openquake/bin/python3 bin/oq dbserver stop"
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-modules -v openquake/hazardlib"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
-        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
         # else
         # -- moved up --
         #     if [ -d "$HOME/fake-data/$GEM_GIT_PACKAGE" ]; then
@@ -847,13 +842,6 @@ _pkgtest_innervm_run () {
             exit 1
         fi
 
-        sudo systemctl start openquake-dbserver
-        # dbserver should be already started by systemd. Let's have a check
-        # FIXME instead of using a 'sleep' we should use a better way to check that
-        # the dbserver is alive
-        sleep 10
-        systemctl status openquake-dbserver
-
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
@@ -861,12 +849,6 @@ _pkgtest_innervm_run () {
 
         cd /usr/share/openquake/engine/demos
         oq engine --run risk/EventBasedRisk/job.ini
-
-# Start the DbServer
-# openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
-sudo systemctl start openquake-dbserver
-sleep 10
-sudo systemctl status openquake-dbserver
 
         oq engine --run risk/EventBasedRisk/job.ini
 

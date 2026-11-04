@@ -1,12 +1,364 @@
+ [Christopher Brooks, Michele Simionato]
+ * GridAdjustedGMPEs differing only by the epsilons now share the
+   computation of the backbone's grid-adjusted mean prediction
+ 
+ [Michele Simionato]
+  * GridAdjustedGMPEs reading the same file now share the raytrace grids,
+    saving memory and preserving sharing when sent to the workers
+  * Nonparametric sources with gridded ruptures are now stored as arrays,
+    reducing substantially the memory used by the classical tasks (3x)
+  * Internal: extended `oq check_input` to recognize the case of sources with the
+    same geometry but different MFDs and suggest a better way to write them
+  * Changed `oq engine --param` to use space-separated name=value pairs instead
+    of comma-separated pairs, for consistency with `oq run --param`
+  * Added a new experimental collapse_precision approximation
+  * ps_grid_spacing can now be used with disagg_by_src when the calculation has
+    few sites, since the rates are computed one source at the time
+  * Fixed the rupture IDs of the global SES: they are now unique
+    across the models. Existing SES files must be regenerated
+  * Fixed the classical_risk calculator for risk inputs containing assets
+    of different taxonomies at the same site: the loss curves and average
+    losses of each asset were written at the wrong positions, and the
+    statistics could crash with "'int' object is not subscriptable"
+  * Fixed the postclassical and fast_mean calculations for hazard chunks
+    without any site: the MapGetter no longer crashes on an empty chunk
+  * Fixed get_ebruptures: the tectonic region type of each rupture is now
+    read from its trt_smr instead of always using the first TRT
+  * Changed the MapGetter to use 32 bit arrays, as documented but not done
+
+  [Christopher Brooks]
+  * Extended the IMC conversion to support more horizontal component
+    definitions: the job parameter "horiz_comp_to_geom_mean" is replaced
+    by "horiz_comp_to", which accepts targets such as geometric mean,
+    RotD50 and RotD100 (the old boolean flag still works for backwards
+    compatibility). Conversions use the ratios tabulated by Beyer &
+    Bommer (2006) and Boore & Kishida (2017).
+
+  [Michele Simionato]
+  * Compute the injured losses for each time event when time_event is not
+    specified (injured_day, injured_night, injured_transit, injured_avg),
+    like the occupants losses
+  * Faster Joyner-Boore distances for the 2D meshes, avoiding the shapely
+    polygon: the distances of the sites within 40 km of a rupture can
+    change by a few meters. Faster dip and strike of the floating ruptures
+    of simple faults. In a calculation for Alaska "building contexts" got
+    4x faster but usually the speedup is minor
+  * Fixed the scenario aggregate risk quantiles: the portfolio quantiles are
+    now computed from the total losses of each GMF instead of summing the
+    quantiles of the individual groups
+  * Fixed YuEtAl2013Ms and its subclasses in hazardlib: when called with
+    contexts having different magnitudes, the mean used the magnitude of
+    the last site for all the sites; now each site uses its own magnitude.
+    Other GMPEs (DouglasEtAl2024, BahrampouriEtAl2021, YenierAtkinson2015,
+    YuEtAl2013, BooreAtkinson2008, PankowPechmann2004) have had their loops
+    over the sites vectorized, with unchanged results
+  * Faster standard deviations for the ParkerEtAl2020SInter GMPE by
+    vectorizing the loop over the sites (measured a 10x speedup in
+    "computing mean_stds" in Alaska)
+  * Added the option ps_grid_spacing=auto: the engine determines
+    ps_grid_spacing and pointsource_distance (if not given) by comparing
+    the hazard maps of the point sources on a sample of sites with the
+    exact ones, choosing the cheapest candidate
+  * Faster preclassical for large models: the discretization of the area
+    sources is 4.8 times faster (vectorized check of the points inside the
+    polygon) and the garbage collector is disabled while receiving,
+    gridding, checking and storing the sources; for instance in AUS the
+    computation of the rupture floating factor went down from 29 seconds
+    to 1 second
+  * The distance used to decide if a site is close to a CollapsedPointSource
+    now includes the extent of the source, so that small values of
+    pointsource_distance are safe also for big cells and the precision is good
+  * Faster computation of the PoEs: the truncated normal distribution is
+    computed with fused loops, skipping the levels where the PoE is zero,
+    and the probability maps are updated without temporary arrays; in
+    the performance.zip demo "get_poes" went down from 1,324 s to 899 s
+  * Reading the source models is much faster: the garbage collector is
+    disabled during the reading, the biggest files are read first (in
+    classical calculations with 5 tasks each) and some slow checks were
+    optimized; building the composite source model of AUS now takes 77
+    seconds instead of 252
+  * The task results are unpickled with the garbage collector disabled:
+    in the preclassical phase of Melbourne (AUS model, 3,145 sites) the
+    unpickling went down from 108 seconds to 15
+
+  [Christopher Brooks]
+  * Added some regression tests for the can20 GMMs and fixed a bug in
+    use of "CanadaSHM6_hardrock_site_factor" with the ChiouYoungs2014
+    that resulted in passing of the boolean mask of "vs30_ge1100" as
+    the Vs30 values, so hard-rock sites were corrected using a Vs30 of
+    1 m/s (i.e., the mask being True for that site's idx) rather than
+    the actual Vs30 value of each site
+  * Fixed several bugs present in the ACME 2019 GMMs (phi overwriting
+    total sigma in AlAtikSigmaModel, interpolation/extrapolation bugs
+    in AlAtikSigmaModel, wrong number of args in an untested function
+    in ChiouYoungs2014ACME2019 with a unit test now exposing it)
+
+  [Michele Simionato]
+  * Bug fix: gridding point sources close to the antimeridian with
+    ps_grid_spacing could fail with "longitude -180.000000 outside range"
+  * The contexts are now passed to the GMPEs in chunks of at most 10,000
+    rows, since the GMPEs are memory bound on very large arrays (as the
+    ones of big CollapsedPointSources): in the Tonga model with
+    ps_grid_spacing=50 "computing mean_std" went down from 43,645 s to
+    8,756 s and the total CPU time was halved
+  * Scenario risk: if time_event is not specified, the occupants losses
+    are computed and stored for day, night and transit, limited to
+    the periods present in the exposure, together with occupants_avg
+    from the exposure; the default time_event is now unset instead of
+    "avg". Some outputs now use "occupants_avg" instead of "occupants"
+    for the average occupancy losses
+  * Bug fix: "oq extract agg_losses" failed with a TypeError when the
+    calculation was aggregated by id, and the site_id tags of the
+    aggregated losses were shifted by one site
+  * Bug fix: the "too many potential logic tree paths" error suggested
+    use_rates=true even when it was already set; the message now
+    explains that use_rates only works when computing the mean
+  * Bug fix: exporting the realizations of a multi-model calculation
+    failed; now one realizations_MODEL csv file is written per model,
+    and the realizations of a model can be extracted with
+    /extract/realizations/MODEL
+  * Bug fix: "oq show rlz:N" failed on multi-model calculations; now
+    it shows the realization N of each model
+  * Bug fix: "oq show branches", "oq show branchsets" and "oq show sm_rlzs"
+    failed on multi-model calculations; now they show the rows of
+    each model with a model column
+  * Bug fix: exporting the gmf_data csv of a global SES calculation failed
+    with an IndexError, or silently exported wrong event IDs, because the
+    sigma_epsilon event IDs were looked up as positions in relevant_events
+  * Internal: "oq engine --eo" no longer checks the local database file
+    when a remote database server is used, and otherwise checks the
+    database with os.access, so an unreadable database is reported
+    instead of silently creating a new one
+  * Bug fix: with multiple loss types, aggregated damage results overstated
+    the number of undamaged buildings by dividing damaged counts by the
+    number of loss types a second time
+  * Bug fix: with asset_correlation=1, loss variances were underestimated
+    when assets of the same event belonged to different taxonomies or
+    exposure chunks, since standard deviations were squared too early
+  * Bug fix: damage calculations with multiple perils combined building
+    counts as probabilities, producing incorrect or negative damage counts
+    for assets whose number of buildings differed from one
+  * Added a check forbidding equal sources with different IDs in different
+    source models
+
+  [Christopher Brooks]
+  * Added a NaN check on required core site parameters (vs30, z1pt0,
+    z2pt5, z1pt4, lon, lat) after site-model association; a missing
+    z1pt4 was silently producing zero hazard with MorikawaFujiwara2013
+  * Optimised raytracing performance in GridAdjustedGMPE by avoiding
+    construction of OQ Polygon and OQ Mesh objecion for each travel
+    path.
+
+  [Michele Simionato]
+  * Bug fix: the conditional spectra were not normalized by the total
+    weight of the ruptures, so the mean and standard deviation were wrong
+    (the mean conditional spectrum was not consistent with the IMLs)
+  * Internal: changed the Starmap mechanism to use read-only datastores
+    whenever possible, to avoid corruption in case of out-of-memory
+
+  [Christopher Brooks]
+  * Updated the US NSHM variant of the CEUS non-linear site term (Hashash
+    et al. 2020) to include the Vs30 floor (200 m/s) and rock PGA cap (1 g)
+    as described in the Powers et al. (2026) EQ spectra paper.
+
+  [Michele Simionato]
+  * Bug fix: the regular grids used for impact and circulant embedding were
+    projected in a single UTM zone, so site models spanning a zone boundary
+    (e.g. the 36E boundary) failed. The grids now use a transverse Mercator
+    projection centred on the middle of the longitude extent, with no zone
+    boundaries. The default `region_grid_spacing` of the impact form is 1 km
+  * Internal: the `calc_mcurves` function ignored the IMT-dependent
+    logic-tree weights, so its mean hazard curves could be wrong for the
+    IMTs with IMT-dependent weights
+  * Internal: fixed a crash in the `fastmean` view, which used a stale MapGetter
+    interface
+  * Bug fix: in classical calculations with IMT-dependent logic-tree weights
+    the fastmean algorithm was using the weights of the wrong IMT, so the
+    mean hazard curves could be wrong by up to 30% (the standard algorithm
+    was giving the correct values)
+  * Bug fix: the fastmean algorithm was converting the rates into
+    probabilities in single precision, losing precision for small rates,
+    i.e. for long return periods
+  * Bug fix: the disaggregation was reporting the realizations in the
+    reverse order of their distance to the mean curve, i.e. the realization
+    closest to the mean was the last one
+  * Bug fix: the mean rate distribution was computed with the weights of
+    the wrong gsim when the source groups were not in the order of the
+    gids
+  * Internal: fixed the shape description of the `median_spectra` dataset, which
+    was declaring 4 kinds for an axis of 3 elements (and mislabeling the total
+    weight as `tau`)
+  * Bug fix: with interdependencies analysis and several loss types, the
+    total rows of the non-operational assets were summed over all the loss
+    types, so they were multiplied by the number of loss types
+  * The interdependencies analysis now requires aggregate_by = id in both the
+    parent and the child calculation, since the assets are identified by
+    their index
+  * Bug fix: with maximum_rupture_depth the ruptures deeper than the limit made
+    the calculation fail with an assertion error
+  * Bug fix: when avg_losses_max was exceeded and collect_rlzs was false, the
+    calculation only logged a warning instead of raising an error
+  * Bug fix: when all the events of a risk calculation with collect_rlzs
+    set to false belonged to a single realization other than the first one,
+    the average losses were stored in the first realization, so both the
+    per-realization and the mean average losses were wrong (but all global
+    risk model calculations are unaffected)
+  * Fixed a crash when requesting quantile hazard maps without the mean:
+    mean-map plotting and stability checks now require mean outputs
+  * Fixed mean_rates_by_src in classical calculations with IMT-dependent
+    logic-tree weights: source contributions now use each IMT's weights
+  * Internal: the `[dbserver]` section of openquake.cfg has been renamed
+    to `[server]`, the `file` key is now `dbfile` and the unused `port`
+    key has been removed. Update existing configuration files accordingly.
+    The leftover `openquake-dbserver` service handling in the packaging
+    and reset-db scripts has been removed as well
+  * Internal: the `host_cores` entries of the `[zworkers]` section can now
+    specify a port, as in `127.0.0.1:1910 4`, so that several workerpools
+    can run on the same host; `oq workers status` shows each pool as
+    `host:port`, and stopping the workerpools no longer leaks semaphores.
+  * Bug fix: with few sites only the ruptures of the first atomic group of a
+    task were stored, so the disaggregation missed the ruptures of the other
+    atomic groups
+  * Bug fix: with disagg_by_src the rates of multiple atomic groups were all
+    attributed to the source of the first group in mean_rates_by_src
+  * Bug fix: with site_labels the atomic groups (cluster or mutex sources) were
+    computed only for the sites of the last label. This affects the USA model
+    near New Madrid and Memphis
+
+  [Anirudh Rao]
+  * Added support for generating regular UTM site grids from exposure,
+    sites CSVs, or scenario ruptures in `oq prepare_site_model`, compatible
+    with circulant-embedding-based correlated GMF simulations.
+
+  [Michele Simionato]
+  * Fixed a bug affecting previous versions of the engine: the uncertainties
+    on the magnitude and on the b-value were ignored for multiPointSources
+    with more than 1000 points, since the splitting dropped the MFD
+    modifications; when both were applied only the last one was used
+    (e.g. 2.5% on some hazard curves in AELO WAF)
+
+  [Claudio Schill]
+  * Fix `get_epistemic_sigma` (used by the `sigma_mu_epsilon` option of
+    ASK14, BSSA14, CB14, CY14 and Bradley2013) to now assign M < 5 to the
+    5 <= M < 6 bin values, instead of the M > 7 bin.
+
+  [Michele Simionato]
+  * Fixed a bug affecting previous versions of the engine: applyToSources
+    was not applied to different sources with the same name (banged sources).
+    The numeric difference is minor (<1% on the quantiles for ARB)
+  * Removed the experimental uvicorn/FastAPI approach; the DbServer
+    is still gone and replaced by Django
+  * Internal: removed full tiling since it is not necessary anymore
+  * Buffered the `save_rates` phase, with a 200x speedup in BCHydro-style
+    calculations (but no visible effect in normal calculations)
+  * Building the hazard curves in parallel even in the case of few sites
+    (performance-crucial in BCHydro-style calculations)
+  * Internal: extended `oq sample` to reduce SES.hdf5 files
+  * Internal: now `oq -v` returns the git hash in a development installation
+
+  [Claudio Schill, Christopher Brooks]
+  * Fix an epistemic uncertainty ordering bug in CampbellBozorgnia2014
+    and add a small unit test for this feature.
+
+  [Christopher Brooks]
+  * Introduce a `vs30_strict` parameter to the Allen (2022) GMM which if
+    set to True (default) raises an error if any sites are outside the
+    Vs30 range of the GMM (220 to 800 m/s), and if False clamps the Vs30s
+    to this range instead (requires explicit user specification).
+  * Introduced a epsilon scaling capability in GridAdjustedGMPE
+    with updated unit tests and QA tests (classical/case_11).
+
+  [Anthony Carapetis]
+  * Fix for Allen (2022) GSIM: Vs30 inputs are now clamped to the calibrated
+    range of the model to avoid the singularity at Vs30=150.
+
+  [Michele Simionato]
+  * Geometry-preserving uncertainties are now optimized in classical calculations
+    with few sites: contexts, means, stddevs and poes are computed only once
+    per realization set
+  * Temporarily restored consequences in XML format; this is solely to support
+    the current IPT; the XML is still deprecated and should not be used
+  * Extended the ps_grid_spacing approximation to the case of few sites
+
+  [Catarina Costa, Michele Simionato]
+  * Implemented interdependencies in the connectivity calculator
+    as a postprocessor; see the test infrastructure_risk/interdependencies
+
+  [Vitor Azevedo Monteiro]
+  * Provided an implementation of Monteiro et al. (2026) within-event
+    joint spatial and cross-IMT correlation model and associated unit
+    tests.
+
+  [Christopher Brooks]
+  * Within the KothaEtAl2020regional GSIM class, cache the per-polygon
+    lookup table at instantiation, and use a spatial index for point in
+    polygon assignment to speedup the compute method.
+
+  [Michele Simionato]
+  * Renamed the dataset `trt_smrs_gid` into `core_trt_smrs`, since it has
+    one row per realization set and not one row per gid
+  * Added a dataset `unc_signatures` and then the corresponding view
+    `usignatures`, then documented how source uncertainties are managed
+    in v3.27; made the `usignatures` view more compact, displaying the
+    values of the branchsets with parameters as tuples of fields,
+    reporting the realizations in each realization set in a single
+    `num_rlzs` column and grouping the rows of each source
+  * The uncertainties are no longer applied at build time in the
+    CompositeSourceModel, but in the workers, one set of realizations with
+    the same uncertainties at a time, both for the classical and the
+    event_based calculations. In the event_based case the seeds are
+    generated differently, so the events and the results can change for the
+    same random_seed, but they are statistically consistent; a few expected
+    files have been regenerated.
+  * Using a better source weighting algorithm reducing the slow tasks
+
+  [Christopher Brooks]
+  * Split the Campbell and Bozorgnia 2019 GSIM for CAV and IA into its
+    own dedicated GSIM module and fix a units error reported by Ozan
+    Bilal and Kyle Smith (CAV needed to be in g-sec not m/s for engine
+    unit consistency).
+
+  [Catarina Costa]
+  * Optimized and parallelized network calculations in connectivity.py.
+
+  [Michele Simionato]
+  * Fixed a bug in the ps_grid_spacing approximation: the grid used to collapse
+    the point sources was anchored in the bounding box of the sources in the
+    group, so adding (or removing) a source far away, i.e. a padding source,
+    was changing the collapsing of the nearby sources and thus the hazard at
+    all the sites. Now the grid is global and anchored in the (0, 0) point
+  * Improved the precision of the ps_grid_spacing approximation at the cost of a
+    minor slow down (~20%)
+  * Improved the precision of the pointsource_distance approximations by using circular
+    averages for the angles and weighted averages for the rates
+  * Fixed a crash in the ASCE7 postprocessors (i.e. compute_rtgm) occurring when
+    a source belongs to a different number of logic tree realizations in the
+    original and in the reduced logic tree: the trt_smrs of the source were
+    assigned to a sampling array of incompatible length
+  * Fixed a crash in the ASCE7 postprocessors when an IMT has no relevant
+    source, i.e. when there is no deterministic scenario for that IMT.
+  * The sigmas used by the deterministic MCE of the ASCE7 postprocessors are
+    now combined in the variance domain, i.e. in quadrature, and not
+    linearly, since they are dispersions. Combined with the fix above, the
+    MCE spectra of the AELO models increase (by 34% for the PGA in the
+    PAC model, by 0.8% in the KOR model), since the previous values were
+    based on sigmas which were too small (the linear average is never
+    larger than the quadrature one) and thus underestimated the
+    deterministic MCE
+  * The reduction of a source model logic tree to a single source (i.e. the
+    `source_id` parameter and the `reduce_smlt` command) is now performed on
+    the already parsed logic tree instead of re-reading the XML files: this
+    removes a few corner cases
+
   [Paolo Tormene]
   * Added a summary of the provenance of the scientific model repositories
     used to build the global exposure HDF5, propagating that information into
     impact calculation datastores. Authorized users can use a new API endpoint
-    to extract that summary.
+    to extract that summary
   * Added pagination to WebUI calculation list, showing 10 items by default,
-    configurable via the CALC_LIST_PAGE_SIZE setting.
+    configurable via the CALC_LIST_PAGE_SIZE setting
   * Added client-side sorting by clicking on the headers of tables presented
-    via the extract_html_table endpoint (e.g. impact tables).
+    via the extract_html_table endpoint (e.g. impact tables)
 
   [Christopher Brooks]
   * Fixed a bug which occurred when using `with_betw_ratio` in the job file
@@ -41,9 +393,8 @@
   * Permit interpolation between PGA and lowest period in a CoeffsTable.
 
   [Michele Simionato]
-  * Introduced a uvicorn server replacing the DbServer with a REST API
-    and serving also the Django (sub)applications; introduced a scientific
-    REST API based on FastAPI and supporting OpenAPI
+  * Introduced an experimental uvicorn server replacing the DbServer with a
+    REST API and serving also the Django (sub)applications
 
   [Kendra Johnson, Michele Simionato]
   * Relaxed the constraint on the mosaic model names; now the reference

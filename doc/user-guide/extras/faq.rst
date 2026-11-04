@@ -548,8 +548,10 @@ more tractable. Setting, for instance, ``number_of_logic_tree_samples = 100`` im
 choose (i.e., 'sample') 100 end-branches from the complete logic-tree based on the weight assignments. The requested
 results will be computed for each of these 100 sampled end-branches. Statistics are then computed using the results from
 the 100 sampled end-branches, where the 100 sampled end-branches are considered to be equi-weighted (1/100 weight for each
-sampled end-branch). Note that once the end-branches have been chosen for the calculation, the initial weights assigned
-in the logic-tree files have no further role to play in the computation of the statistics of the requested results. As
+sampled end-branch). With the ``early_*`` sampling methods, once the end-branches have been chosen for the calculation,
+the initial weights assigned in the logic-tree files have no further role to play in the computation of
+the statistics of the requested results (with the ``late_*`` methods the weights are used; see
+:ref:`logic-tree-sampling`). As
 mentioned in the previous section, changing the ``random_seed`` will result in a different set of paths or end-branches
 being sampled.
 

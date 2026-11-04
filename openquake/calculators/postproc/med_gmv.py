@@ -20,7 +20,7 @@ import logging
 import numpy as np
 from openquake.baselib import parallel, general
 from openquake.baselib.general import groupby
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.rmap_maker import read_cmakers
 from openquake.hazardlib.calc.gmf import exp
 from openquake.hazardlib.valid import basename
 

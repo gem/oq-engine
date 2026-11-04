@@ -60,10 +60,10 @@ openquake.server.views module
     :undoc-members:
     :show-inheritance:
 
-openquake.server.asgi module
-----------------------------
+openquake.server.internal_api module
+------------------------------------
 
-.. automodule:: openquake.server.asgi
+.. automodule:: openquake.server.internal_api
     :members:
     :undoc-members:
     :show-inheritance:

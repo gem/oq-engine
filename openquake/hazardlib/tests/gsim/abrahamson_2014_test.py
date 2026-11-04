@@ -16,7 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
+import numpy as np
+from types import SimpleNamespace
+
+from openquake.hazardlib.gsim.abrahamson_2014 import (
+    AbrahamsonEtAl2014, get_epistemic_sigma)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data have been generated from the Matlab implementation available as
@@ -89,3 +93,12 @@ class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
                    'ASK14/ASK14_ResStdPhi_RegJPN.csv',
                    max_discrep_percentage=0.1,
                    region='JPN')
+
+
+def test_epistemic_sigma_small_magnitudes():
+    # M < 5 must use the 5 <= M < 6 bin, not fall through to the M >= 7 bin
+    ctx = SimpleNamespace(mag=np.array([3.5, 4.5, 5.5, 6.5, 7.5]),
+                          rrup=np.full(5, 50.))
+    np.testing.assert_allclose(
+        get_epistemic_sigma(ctx),
+        0.4 * np.sqrt(2 / np.array([94, 94, 94, 13, 4])))

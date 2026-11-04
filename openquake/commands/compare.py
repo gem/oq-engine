@@ -86,10 +86,9 @@ class Comparator(object):
         if imt not in imtls:
             sys.exit('%s not found. The available IMTs are %s' %
                      (imt, list(imtls)))
-        imti = {imt: i for i, imt in enumerate(imtls)}
-        m = imti[imt]
+        # the extractor already selects the IMT, so m is always 0
         what += '?kind=mean&imt=' + imt
-        arrays = [extractor.get(what).mean[sids, m, :]]
+        arrays = [extractor.get(what).mean[sids, 0, :]]
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
@@ -97,7 +96,7 @@ class Comparator(object):
                 aac(oq.imtls[imt], imtls[imt], rtol, atol)
             elif what.startswith('hmaps'):  # array NMP
                 aac(oq.poes, poes, rtol, atol)
-            arrays.append(extractor.get(what).mean[sids, m, :])
+            arrays.append(extractor.get(what).mean[sids, 0, :])
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
@@ -116,8 +115,8 @@ class Comparator(object):
             high_sites.append(extractor.get('high_sites').array)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
-        hsites = numpy.logical_and(*high_sites)
-        sids, = numpy.where(hsites)
+        hsites = numpy.logical_and(*high_sites)[sids]
+        sids = sids[hsites]
         return numpy.array([a[hsites] for a in arrays]), sids  # shape (C, N, M*P)
 
     def getgmf(self, what, imt, sids):

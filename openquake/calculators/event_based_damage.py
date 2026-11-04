@@ -45,6 +45,22 @@ def zero_dmgcsq(A, R, L, crmodel):
     return numpy.zeros((P, A, R, L, Dc), F32)
 
 
+def _compose_damage_counts(dd5, numbers, D):
+    # Compose per-peril probabilities and convert back to building counts.
+    dd4 = numpy.zeros(dd5.shape[1:])
+    A, E, L, _Dc = dd4.shape
+    for a in range(A):
+        if numbers[a] == 0:
+            continue
+        for e in range(E):
+            for li in range(L):
+                fractions = dd5[:, a, e, li, :D] / numbers[a]
+                dd4[a, e, li, :D] = (
+                    scientific.compose_dds(fractions) * numbers[a])
+    dd4[..., D:] = dd5[..., D:].max(axis=0)
+    return dd4
+
+
 def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
     """
     :param df: a DataFrame of GMFs
@@ -69,14 +85,12 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
         if len(gmf_df) == 0:
             continue
         eids = gmf_df.eid.to_numpy()
-        E = len(eids)
         if not oq.float_dmg_dist:
             rng = scientific.MultiEventRNG(
                 oq.master_seed, numpy.unique(eids))
         else:
             rng = None
         for taxo, adf in asset_df.groupby('taxonomy'):
-            A = len(adf)
             ords = adf.ordinal.to_numpy()
             idxs = [idx[o] for o in ords]
             rc = scientific.RiskComputer(crmodel, taxo)
@@ -87,13 +101,8 @@ def damage_from_gmfs(df, assetcol, oq, rlzs, monitor):
                 for e, rlz in enumerate(rlzs[eids]):
                     dmgcsq[:, idxs, rlz] += dd5[:, :, e]
             if P > 1:
-                dd4 = numpy.empty(dd5.shape[1:])
-                for li in range(L):
-                    for a in range(A):
-                        for e in range(E):
-                            dd4[a, e, li, :D] = scientific.compose_dds(
-                                dd5[:, a, e, li, :D])
-                            dd4[a, e, li, D:] = dd5[:, a, e, li, D:].max(axis=0)
+                dd4 = _compose_damage_counts(
+                    dd5, adf['value-number'].to_numpy(), D)
             else:
                 dd4 = dd5[0]
             tot = dd4.sum(axis=0)  # (E, L, Dc)
@@ -118,6 +127,24 @@ def _dframe(dd_dic, csqidx, loss_types):
                 dic[cname].append(dd[li, ci])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
+
+
+def fix_totals(child_df):
+    """
+    Set the total rows (the ones with the maximum agg_id) to the sums of
+    the asset rows with the same event_id and loss_id; child_df is
+    modified in place
+    """
+    total_agg_id = child_df.agg_id.max()
+    asset_mask = (child_df.agg_id != total_agg_id).to_numpy()
+    total_mask = (child_df.agg_id == total_agg_id).to_numpy()
+    keys = pandas.MultiIndex.from_arrays(
+        [child_df.index[total_mask], child_df.loss_id[total_mask]])
+    for col in ['non_operational_inter', 'non_operational']:
+        sums = child_df[asset_mask].groupby(
+            ['event_id', 'loss_id'])[col].sum()
+        child_df.loc[total_mask, col] = sums.reindex(
+            keys, fill_value=0).to_numpy()
 
 
 @base.calculators.add('event_based_damage', 'scenario_damage')
@@ -163,27 +190,30 @@ class DamageCalculator(EventBasedRiskCalculator):
             rlzs = self.datastore['events']['rlz_id']
         else:
             rlzs = None
-        self.datastore.swmr_on()
-        smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore)
-        smap.monitor.save('aggids', aggids)
-        smap.monitor.save('crmodel', self.crmodel)
         ct = oq.concurrent_tasks or 1
         sids = self.assetcol['site_id']
-        for t in range(ct):
-            gmf_tile = gmf_df[gmf_df.sid % ct == t]
-            asset_tile = self.assetcol.new(self.assetcol.array[sids % ct == t])
-            if len(asset_tile):
-                smap.submit((gmf_tile, asset_tile, oq, rlzs))
-        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
         dd_dict = general.AccumDict(accum=0)
-        for ddd, dmgcsq, ords in smap:
-            dd_dict += ddd
-            self.dmgcsq[:, ords] += dmgcsq
+        with self.datastore.reopen('r'):  # read-only in the parallel phase
+            smap =  parallel.Starmap(damage_from_gmfs, h5=self.datastore,
+                                     perf='memory')
+            smap.monitor.save('aggids', aggids)
+            smap.monitor.save('crmodel', self.crmodel)
+            for t in range(ct):
+                gmf_tile = gmf_df[gmf_df.sid % ct == t]
+                asset_tile = self.assetcol.new(
+                    self.assetcol.array[sids % ct == t])
+                if len(asset_tile):
+                    smap.submit((gmf_tile, asset_tile, oq, rlzs))
+            for ddd, dmgcsq, ords in smap:
+                dd_dict += ddd
+                self.dmgcsq[:, ords] += dmgcsq
+        csqidx = {dc: i + 1 for i, dc in enumerate(self.crmodel.get_dmg_csq())}
         df = _dframe(dd_dict, csqidx, oq.loss_types)
         with self.monitor('saving risk_by_event', measuremem=True):
-            for name in df.columns:
-                dset = self.datastore['risk_by_event/' + name]
-                hdf5.extend(dset, df[name].to_numpy())
+            with self.datastore.reopen('a'):
+                for name in df.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, df[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
@@ -191,6 +221,33 @@ class DamageCalculator(EventBasedRiskCalculator):
         Store damages-rlzs/stats, aggrisk and aggcurves
         """
         oq = self.oqparam
+        self._check_no_damage()
+        if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
+            return
+
+        # run postrisk
+        prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        prc.assetcol = self.assetcol
+        if hasattr(self, 'exported'):
+            prc.exported = self.exported
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)
+        self.child_id = prc.result
+        self._fix_no_damage(prc)
+        self._store_damages()
+        if oq.infrastructure_connectivity_analysis:
+            self._run_connectivity()
+        if 'interdependencies' in oq.inputs:  # we are in the child
+            self._store_interdependencies(oq)
+            if oq.infrastructure_connectivity_analysis:
+                self._run_connectivity(prefix='inter')
+
+    def _check_no_damage(self):
+        """
+        Raise or warn if the sites in gmf_data are disjoint from the site
+        collection, i.e. there is no damage at all
+        """
         # no damage check, perhaps the sites where disjoint from gmf_data
         if self.dmgcsq[:, :, :, :, 1:].sum() == 0:
             haz_sids = self.datastore['gmf_data/sid'][:]
@@ -198,20 +255,14 @@ class DamageCalculator(EventBasedRiskCalculator):
             if count == 0:
                 raise ValueError('The sites in gmf_data are disjoint from the '
                                  'site collection!?')
-            else:
-                logging.warning(
-                    'There is no damage, perhaps the hazard is too small?')
-            return
+            logging.warning(
+                'There is no damage, perhaps the hazard is too small?')
 
-        prc = PostRiskCalculator(oq, self.datastore.calc_id)
-        prc.assetcol = self.assetcol
-        if hasattr(self, 'exported'):
-            prc.exported = self.exported
-
-        prc.pre_execute()
-        res = prc.execute()
-        prc.post_execute(res)
-
+    def _fix_no_damage(self, prc):
+        """
+        Fix the no_damage distribution for events with zero damage and
+        correct the small negative damages arising from numeric errors
+        """
         P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
@@ -224,12 +275,17 @@ class DamageCalculator(EventBasedRiskCalculator):
                 for li in range(L):
                     # set no_damage
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
-
         # due numeric errors we can have small negative damages; we fix them
         small = self.dmgcsq < 0
-        assert (small > -1E-6).all()
+        assert (self.dmgcsq[small] > -1E-6).all()
         self.dmgcsq[small] = 0
 
+    def _store_damages(self):
+        """
+        Store the damages-rlzs and, when there are multiple realizations,
+        the mean damages-stats
+        """
+        oq = self.oqparam
         self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
             self.dmgcsq)
         self.datastore.set_shape_descr(
@@ -242,12 +298,78 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.hdf5.create_dataset('damages-stats', data=data)
             self.datastore.set_shape_descr(
                 'damages-stats', asset_id=len(arr), stat=['mean'])
-        if oq.infrastructure_connectivity_analysis:
-            logging.info('Running connectivity analysis')
-            results = connectivity.analysis(self.datastore)
-            self._store_connectivity_analysis_results(results)
 
-    def _store_connectivity_analysis_results(self, conn_results):
+    def _run_connectivity(self, prefix='infra'):
+        """
+        Run the infrastructure connectivity analysis and store its results
+        """
+        logging.info('Running connectivity analysis')
+        results = connectivity.analysis(self.datastore)
+        self._store_connectivity_analysis_results(results, prefix)
+
+    def _store_interdependencies(self, oq):
+        """
+        Build the interdependencies graph between the parent (hazard) and
+        the child (damage) calculations and store the resulting
+        non_operational columns in the child's risk_by_event dataset
+        """
+        asset2id_parent = {a.decode('ascii'): i for i, a in enumerate(
+            self.datastore.parent['assetcol']['id'])}
+        asset2id_child = {a.decode('ascii'): i for i, a in enumerate(
+            self.assetcol['id'])}
+
+        state2column = dict(zip(self.crmodel.damage_states[1:],
+                                self.crmodel.get_dmg_csq()))
+        # Allow non_operational as source state too
+        state2column['non_operational'] = 'non_operational'
+
+        self.interdep_df['col'] = [state2column[s] for s in
+                                   self.interdep_df.source_damage_state]
+        self.interdep_df['parent_id'] = [asset2id_parent[a] for a in
+                                         self.interdep_df.source_asset_id]
+        self.interdep_df['child_id'] = [asset2id_child[a] for a in
+                                        self.interdep_df.target_asset_id]
+        parent_df = self.datastore.parent.read_df('risk_by_event', 'event_id')
+        child_df = self.datastore.read_df('risk_by_event', 'event_id')
+
+        child_df = child_df.rename(
+            columns={'non_operational': 'non_operational_orig'})
+        child_df['non_operational_inter'] = 0
+
+        for i, row in self.interdep_df.iterrows():
+            # Find events where the source assets in in the
+            # triggering damage/functionality state; the states are 0 or 1
+            # only with discrete_damage_distribution = true, which is
+            # required for the interdependencies analysis
+            source_mask = (
+                (parent_df.agg_id == row.parent_id) &
+                (parent_df[row.col] == 1)
+                )
+            selected_events = parent_df.index[source_mask].unique()
+
+            # Set the target asset as non-operational for those events
+            target_mask = (
+                (child_df.agg_id == row.child_id) &
+                child_df.index.isin(selected_events)
+                )
+            child_df.loc[target_mask, 'non_operational_inter'] = 1
+
+        child_df['non_operational'] = numpy.maximum(
+            child_df['non_operational_orig'].to_numpy(),
+            child_df['non_operational_inter'].to_numpy())
+
+        # Correct the total values per event and loss type
+        fix_totals(child_df)
+
+        # Storing new columns in the dstore
+        self.datastore['risk_by_event/non_operational'][:] = (
+            child_df['non_operational'])
+        self.datastore['risk_by_event/non_operational_orig'] = (
+            child_df['non_operational_orig'])
+        self.datastore['risk_by_event/non_operational_inter'] = (
+            child_df['non_operational_inter'])
+
+    def _store_connectivity_analysis_results(self, conn_results, prefix='infra'):
         avg_dict = {}
         if 'avg_connectivity_loss_eff' in conn_results:
             avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
@@ -259,40 +381,40 @@ class DamageCalculator(EventBasedRiskCalculator):
             avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
         if avg_dict:
             self.datastore.create_df(
-                'infra-avg_loss', pandas.DataFrame(data=avg_dict),
+                prefix+'-avg_loss', pandas.DataFrame(data=avg_dict),
                 display_name=DISPLAY_NAME['infra-avg_loss'])
         if 'event_connectivity_loss_eff' in conn_results:
             self.datastore.create_df(
-                'infra-event_efl',
+                prefix+'-event_efl',
                 conn_results['event_connectivity_loss_eff'],
                 display_name=DISPLAY_NAME['infra-event_efl'])
         if 'event_connectivity_loss_pcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_pcl',
+                prefix+'-event_pcl',
                 conn_results['event_connectivity_loss_pcl'],
                 display_name=DISPLAY_NAME['infra-event_pcl'])
         if 'event_connectivity_loss_wcl' in conn_results:
             self.datastore.create_df(
-                'infra-event_wcl',
+                prefix+'-event_wcl',
                 conn_results['event_connectivity_loss_wcl'],
                 display_name=DISPLAY_NAME['infra-event_wcl'])
         if 'event_connectivity_loss_ccl' in conn_results:
             self.datastore.create_df(
-                'infra-event_ccl',
+                prefix+'-event_ccl',
                 conn_results['event_connectivity_loss_ccl'],
                 display_name=DISPLAY_NAME['infra-event_ccl'])
         if 'taz_cl' in conn_results:
             self.datastore.create_df(
-                'infra-taz_cl',
+                prefix+'-taz_cl',
                 conn_results['taz_cl'],
                 display_name=DISPLAY_NAME['infra-taz_cl'])
         if 'dem_cl' in conn_results:
             self.datastore.create_df(
-                'infra-dem_cl',
+                prefix+'-dem_cl',
                 conn_results['dem_cl'],
                 display_name=DISPLAY_NAME['infra-dem_cl'])
         if 'node_el' in conn_results:
             self.datastore.create_df(
-                'infra-node_el',
+                prefix+'-node_el',
                 conn_results['node_el'],
                 display_name=DISPLAY_NAME['infra-node_el'])

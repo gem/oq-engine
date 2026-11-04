@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,8 +34,7 @@ COEFFS_SOIL_IMT_INDEPENDENT = {
     'c4lowmag': 2.1863,
     'c5lowmag': 0.32,
     'c4himag': 0.3825,
-    'c5himag': 0.5882
-}
+    'c5himag': 0.5882}
 
 #: If site vs30 is more than 750 m/s -- treat the soil as rock.
 #: See page 180.
@@ -66,7 +65,7 @@ def get_mean_deep_soil(mag, rrup, is_reverse, C):
     c6 = np.where(is_reverse, C['c6r'], C['c6ss'])
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
-    mag = np.clip(mag, None, 8.5)
+    mag = np.minimum(mag, 8.5)
     return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
             - c3 * np.log(rrup + c4 * np.exp(c5 * mag)))
 
@@ -79,7 +78,7 @@ def get_mean_rock(mag, rrup, is_reverse, low_coeffs, hi_coeffs):
     """
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
-    mag = np.clip(mag, None, 8.5)
+    mag = np.minimum(mag, 8.5)
 
     # determine the coefficients to use depending on the mag
     C = np.where(mag <= NEAR_FIELD_SATURATION_MAG, low_coeffs, hi_coeffs)
@@ -112,7 +111,7 @@ def get_stddev_deep_soil(mag, C):
     """
     # footnote from table 4 says that stderr for magnitudes over 7
     # is equal to one of magnitude 7.
-    return C['sigma0'] + C['magfactor'] * np.clip(mag, None, 7)
+    return C['sigma0'] + C['magfactor'] * np.minimum(mag, 7)
 
 
 class SadighEtAl1997(GMPE):

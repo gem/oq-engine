@@ -134,7 +134,9 @@ class MultiMFD(BaseMFD):
             kwargs['bin_width'] = [width_of_mfd_bin]
         for field in kwargs:
             self.check_size(field, kwargs[field])
-        self.modification = ()
+        # the modifications are applied in order, so that several
+        # uncertainties (e.g. maxMag and b-value) can act on the same MFD
+        self.modification = []
 
     def check_size(self, field, values):
         if len(values) not in (1, self.size):
@@ -152,7 +154,11 @@ class MultiMFD(BaseMFD):
                 kwargs[k] = v
             else:
                 kwargs[k] = v[slc]
-        return self.__class__(self.kind, size, self.width_of_mfd_bin, **kwargs)
+        new = self.__class__(self.kind, size, self.width_of_mfd_bin, **kwargs)
+        # the slice must keep the modifications already applied, otherwise
+        # splitting a source loses its uncertainties
+        new.modification = list(self.modification)
+        return new
 
     def __iter__(self):
         """
@@ -167,8 +173,8 @@ class MultiMFD(BaseMFD):
                 else:
                     args.append(arr[i])
             mfd = self.mfd_class(*args)
-            if self.modification:
-                mfd.modify(*self.modification)
+            for modification, parameters in self.modification:
+                mfd.modify(modification, parameters)
             yield mfd
 
     def __len__(self):
@@ -201,4 +207,4 @@ class MultiMFD(BaseMFD):
         Apply a modification to the underlying point sources, with the
         same parameters for all sources
         """
-        self.modification = (modification, parameters)
+        self.modification.append((modification, parameters))

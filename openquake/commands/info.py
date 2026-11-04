@@ -36,6 +36,8 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import nrml, imt, logictree, site, geo, lt
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import registry
+from openquake.hazardlib.correlation_models import (
+    registry as corr_registry)
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -63,6 +65,16 @@ def print_features(fiona_file):
         header = list(dic)
         rows.append(dic.values())
     print(text_table(rows, header, ext='org'))
+
+
+def print_correlation():
+    """
+    Print the correlation models as type:name
+    """
+    specs = corr_registry.get_model_specs()
+    for name, spec in sorted(specs.items(),
+                             key=lambda kv: (kv[1].model_type, kv[0])):
+        print(f'{spec.model_type}:{name}')
 
 
 def print_subclass(what, cls):
@@ -311,6 +323,8 @@ def main(what, report=False):
         uncs.extend(lt.NOAPPLY_UNCERTAINTIES)
         for i, unc in enumerate(sorted(uncs), 1):
             print('%02d' % i, unc)
+    elif what == 'correlation':
+        print_correlation()
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
@@ -318,7 +332,7 @@ def main(what, report=False):
     elif what.startswith('geohash'):
         print_geohash(what)
     elif what == 'db':
-        print(config.dbserver.file)
+        print(config.server.dbfile)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':

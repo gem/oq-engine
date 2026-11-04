@@ -220,9 +220,12 @@ exposure, one wants to generate a collection of hazard sites covering the exposu
 the vs30 file with a nearest neighbour algorithm::
 
 	$ oq prepare_site_model -h
-	usage: oq prepare_site_model [-h] [-1] [-2] [-3]
+	usage: oq prepare_site_model [-h] [-1] [-2] [-3] [--sentinel-z] [-r]
 	                             [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
 	                             [-s SITES_CSV] [-g 0] [-a 5] [-o site_model.csv]
+	                             [--rupture RUPTURE]
+	                             [--maximum-distance MAXIMUM_DISTANCE]
+	                             [--rupture-mesh-spacing RUPTURE_MESH_SPACING]
 	                             vs30_csv [vs30_csv ...]
 	
 	Prepare a site_model.csv file from exposure xml files/site csv files, vs30 csv
@@ -239,6 +242,8 @@ the vs30 file with a nearest neighbour algorithm::
 	  -1, --z1pt0
 	  -2, --z2pt5           build the z2pt5
 	  -3, --vs30measured    build the vs30measured
+	  --sentinel-z, -999    assign dummy -999 to z1pt0/z2pt5
+	  -r, --regular-grid   build a complete regular grid for circulant embedding
 	  -e [EXPOSURE_XML [EXPOSURE_XML ...]], --exposure-xml [EXPOSURE_XML [EXPOSURE_XML ...]]
 	                        exposure(s) in XML format
 	  -s SITES_CSV, --sites-csv SITES_CSV
@@ -248,6 +253,12 @@ the vs30 file with a nearest neighbour algorithm::
 	                        sites over this distance are discarded
 	  -o site_model.csv, --output site_model.csv
 	                        output file
+	  --rupture RUPTURE     single XML/NRML or OpenQuake CSV scenario rupture
+	  --maximum-distance MAXIMUM_DISTANCE
+	                        extend each side of the projected rupture bounds
+	                        by this distance in km (not an Rrup cutoff)
+	  --rupture-mesh-spacing RUPTURE_MESH_SPACING
+	                        rupture mesh spacing in km (default: 1)
 
 The command works in two modes: with non-gridded exposures (the default) and with gridded exposures. In the first case 
 the unique locations of the assets are identified, and for each location the vs30 coming from the closest vs30 record is taken. 
@@ -295,6 +306,69 @@ Using the command ::
 the site model id generated with gridded points close to exposure sites (red dots), and the it considers the closest vs30 values to the gridded points. In this case a 20km grid was used.
 
 .. figure:: _images/prepare_site_model_opt2.png
+
+**Regular projected grids for circulant embedding**
+
+Use ``--regular-grid`` with a positive ``--grid-spacing`` (in kilometres)
+to build a complete rectangular grid around the input exposure or sites.
+For example::
+
+    oq prepare_site_model vs30.csv --sites-csv sites.csv \
+        --regular-grid --grid-spacing 1 --output site_model_grid.csv
+
+``--exposure-xml exposure.xml`` can be used instead of ``--sites-csv``.
+The grid is constructed with equal steps along the x and y axes of one local
+transverse Mercator projection, then converted back to longitude and latitude.
+This differs from the existing geographic gridding, whose kilometre steps
+along parallels and meridians do not guarantee the lattice required by
+circulant embedding (CE). Without ``--regular-grid``, behaviour is unchanged.
+
+The bounds are expanded by one grid spacing and snapped outward to multiples
+of the spacing from the projected origin. All cells are retained, including
+those without assets. Assigning the nearest Vs30 values does not move or remove
+sites. The exported coordinates are checked with the engine's CE grid detector
+after writing. Existing site-parameter options, including ``--sentinel-z``,
+keep their current defaults and behaviour.
+
+The command logs the projection, dimensions, spacing and site count. Grids
+are limited to two million cells and 2,000 km per axis; unsupported polar,
+antimeridian and inconsistent-projection extents are rejected.
+
+To use the result, set ``site_model_file = site_model_grid.csv`` in the job
+file and leave ``region_grid_spacing`` unset. Otherwise the engine generates
+a new geographic grid instead of using the prepared coordinates. The grid
+extent is not a rupture-distance cutoff: the calculation's
+``maximum_distance`` still determines which sites are affected by a rupture.
+
+To build bounds directly from a scenario rupture instead of exposure or sites,
+use ``--rupture`` with a positive ``--maximum-distance``::
+
+    oq prepare_site_model global_vs30.hdf5 --rupture rupture.xml \
+        --maximum-distance 90 --grid-spacing 1 \
+        --z1pt0 --z2pt5 --sentinel-z --vs30measured \
+        --output site_model_grid.csv
+
+Rupture mode selects regular projected gridding automatically. The input must
+contain exactly one NRML/XML or OpenQuake CSV rupture; multiple surfaces are
+supported.
+``--rupture-mesh-spacing`` defaults to 1 km for XML surface discretization.
+CSV ruptures already contain their meshes. Rupture, exposure and sites inputs
+are mutually exclusive in the new gridding modes.
+
+``--maximum-distance`` controls the requested site-grid extent: each side of
+the rupture's projected bounding rectangle is extended by this distance in
+kilometres, then snapped outward to the grid spacing. For example, projected
+rupture bounds spanning 100 by 20 km become approximately 280 by 200 km with
+``--maximum-distance 90``, before snapping. The complete rectangle is retained;
+corner sites can have Rrup greater than this distance. Set the calculation's
+``maximum_distance`` independently in the job file to filter sites during the
+calculation. Rrup filtering and halo options are not provided by this command.
+
+This grid extent is distinct from CE computational padding. During sampling,
+CE embeds the requested grid in a larger periodic grid to perform the FFTs,
+then retains the values at the requested sites. That internal extension does
+not add sites to the prepared site-model CSV, and ``--maximum-distance`` does
+not control its size.
 
 
 oq show_attrs 

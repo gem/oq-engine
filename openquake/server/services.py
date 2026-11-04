@@ -8,7 +8,6 @@ import multiprocessing as mp
 import os
 import pickle
 import shutil
-import string
 import subprocess
 import sys
 import tempfile
@@ -16,10 +15,12 @@ import traceback
 from datetime import datetime, timezone
 
 from openquake.baselib import config, parallel
+from openquake.baselib.general import zipfiles
 from openquake.calculators.getters import NotFound
 from openquake.commonlib import logs, oqvalidation, readinput
 from openquake.engine import aelo, engine, impact
 from openquake.engine.aelo import get_params_from
+from openquake.engine.export.core import export_from_db
 from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.validate import impact_validate
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
@@ -52,9 +53,63 @@ def get_impact_rupture_data(post, user, rupture_path):
     return rupdic, 200
 
 
-CWD = os.path.dirname(__file__)
-KUBECTL = 'kubectl apply -f -'.split()
 ENGINE = 'python -m openquake.engine.engine'.split()
+
+XML = 'application/xml'
+JSON = 'application/json'
+ZIP = 'application/x-zip'
+
+#: For exporting calculation outputs, the client can request a specific format
+#: (xml, geojson, csv, etc.). If the client does not specify, give them (NRML)
+#: XML by default.
+DEFAULT_EXPORT_TYPE = 'xml'
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
+DEFAULT_CONTENT_TYPE = 'text/plain'
+
+
+def remove_exported(fname):
+    """Remove the temporary directory containing an exported file."""
+    shutil.rmtree(os.path.dirname(fname), ignore_errors=True)
+
+
+def export_result(result_id, export_type=None):
+    """
+    Export a calculation result in the requested format.
+
+    :param result_id: ID of the result to export
+    :param export_type: export format, NRML XML by default
+    :returns: a triple (fname, content_type, exportname) where `fname` is
+        the path of a file inside a fresh temporary directory, or None if
+        the result cannot be exported in the given format
+    :raises: DataStoreExportError if the export fails
+    """
+    export_type = export_type or DEFAULT_EXPORT_TYPE
+    job_id, _, _, datadir, ds_key = logs.dbcmd('get_result', result_id)
+    # NOTE: for some reason, in some cases, the environment variable TMPDIR is
+    # ignored, so we need to use config.directory.custom_tmp if defined
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
+    try:
+        exported = export_from_db(
+            (ds_key, export_type), job_id, datadir, tmpdir)
+        if not exported:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return None
+        if len(exported) > 1:
+            # build an archive, so that there is a single file to download
+            archname = ds_key + '-' + export_type + '.zip'
+            fname = os.path.join(tmpdir, archname)
+            zipfiles(exported, fname, cleanup=True)
+            content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
+        else:  # single file
+            fname = exported[0]
+            content_type = EXPORT_CONTENT_TYPE_MAP.get(
+                export_type, DEFAULT_CONTENT_TYPE)
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+    return fname, content_type, 'output-%s-%s' % (
+        result_id, os.path.basename(fname))
 
 
 def store(request_files, ini, calc_id):
@@ -77,8 +132,7 @@ def store(request_files, ini, calc_id):
         # move each file to calc_dir using the upload file names
         inifiles = []
         for input_file, name in named_files:
-            # input_file is a starlette.datastructures.UploadFile
-            # which contains a .file of kind tempfile.SpooledTemporaryFile
+            # input_file is a Django UploadedFile, whose .file is a file object
             new_path = os.path.join(calc_dir, name)
             with open(new_path, 'wb') as target:
                 shutil.copyfileobj(input_file.file, target)
@@ -124,16 +178,8 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         raise
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
-    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:
         subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
-    elif submit_cmd == KUBECTL and big_job:
-        with open(os.path.join(CWD, 'job.yaml')) as fobj:
-            yaml = string.Template(fobj.read()).substitute(
-                DATABASE='%(host)s:%(port)d' % config.dbserver,
-                CALC_PIK=save_pik(job, custom_tmp),
-                CALC_NAME='calc%d' % job.calc_id)
-        subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         kwargs = {'notify_to': notify_to} if notify_to is not None else {}
         proc = mp.Process(target=engine.run_jobs, args=([job], 1),

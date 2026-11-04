@@ -250,7 +250,8 @@ class DisplacementCalculator(base.HazardCalculator):
         self.csm.set_msparams()
         rlzs = self.full_lt.get_realizations()
         pfd_lt = self.full_lt.extra_lt
-        cmakers = self.csm.get_cmakers()
+        core = source_reader.get_core_trt_smrs(self.csm.src_groups)
+        cmakers = self.csm.get_cmakers(core)
         # only the reference-line methods the PFD models actually declare
         set_pfd_methods(cmakers, pfd_methods(pfd_lt))
         # the sparse table from which the curves are recomputed
@@ -270,9 +271,7 @@ class DisplacementCalculator(base.HazardCalculator):
                 allargs.append((
                     block, cmaker, self.sitecol, pfd_lt, grp_rlzs))
         logging.info('Sending {:_d} tasks'.format(len(allargs)))
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(
-            displacement, allargs, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(displacement, allargs, h5=self.datastore)
         acc = smap.reduce(self.agg, {'src_rates': {}, 'source_data': {}})
         self.store_source_info(acc['source_data'])
         df = pandas.DataFrame(acc['source_data'])

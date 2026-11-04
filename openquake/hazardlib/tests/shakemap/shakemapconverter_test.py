@@ -1,5 +1,6 @@
 import os.path
 import unittest
+import io
 import numpy
 
 from openquake.baselib.general import gettemp
@@ -36,6 +37,10 @@ class ShakemapConverterTestCase(unittest.TestCase):
         for imt in imt_dt.names:
             aae(array['val'][imt], val[imt])
             aae(array['std'][imt], std[imt])
+
+    def test_grid_stream_without_name(self):
+        array = get_shakemap_array(io.BytesIO(example_sa.encode('utf8')))
+        self.assertEqual(len(array), 4)
 
     def test_sa(self):
         imt_dt = numpy.dtype([('PGA', F32), ('SA(0.3)', F32),

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2015-2024 GEM Foundation
+# Copyright (C) 2015-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,9 +18,11 @@ Module exports :class:`Allen2022`
 """
 
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
 
 def _get_distance_scaling(C, rhypo):
     """
@@ -37,8 +39,7 @@ def _get_distance_scaling(C, rhypo):
     return np.where(
         rhypo <= Rx,
         C["c3"] * np.log10(rhypo),
-        C["c3"] * np.log10(Rx) + C["c4"] * (np.log10(rhypo) - np.log10(Rx)),
-    )
+        C["c3"] * np.log10(Rx) + C["c4"] * (np.log10(rhypo) - np.log10(Rx)),)
 
 
 def _get_magnitude_scaling(C, mag):
@@ -84,20 +85,27 @@ def _get_near_source_correction(C, rhypo):
     return np.where(
         rhypo <= Rx,
         C["n0"] * (np.log10(rhypo) - np.log10(Rx)),
-        0.0,
-    )
+        0.0,)
 
 
-def _get_site_scaling(C, vs30):
+def _get_site_scaling(C, vs30, vs30_strict):
     """
     Site amplification [Equation 6, p. 1050].
 
         FS = s0 + s1 / (log10(Vs30) - log10(150))
 
     Calibrated for 220 <= Vs30 <= 800 m/s using topographic-proxy
-    Vs30 estimates (Wald and Allen, 2007). The denominator is zero at
-    Vs30 = 150 m/s; the caller must respect the model applicability range.
+    Vs30 estimates (Wald and Allen, 2007). If vs30_strict is True,
+    a ValueError is raised for any Vs30 outside this range; otherwise
+    the input is clamped to [220, 800] m/s.
     """
+    if vs30_strict:
+        if np.any((vs30 < 220) | (vs30 > 800)):
+            raise ValueError(
+                "Allen2022 site term is calibrated for 220 <= Vs30 <= 800 "
+                "m/s; set vs30_strict=False to clamp out-of-range values.")
+    else:
+        vs30 = np.clip(vs30, 220, 800)
     return C["s0"] + C["s1"] / (np.log10(vs30) - np.log10(150.0))
 
 
@@ -115,11 +123,16 @@ class Allen2022(GMPE):
 
     Note on PGA sigma [Equation 10, p. 1051]:
         sigma_PGA = sqrt(tau_PGA^2 + phi_PGA^2 + lambda_PGA^2)
-        
+
     where lambda_PGA = 0.270 accounts for the additional uncertainty from
     PGA proxy estimation using low-sample-rate data (paper p. 1050).
     This term is already incorporated into the sigma value in Table 1
     (footnote), so sigma is read directly from the table for all IMTs.
+
+    :param vs30_strict:
+        If True (default), raises a ValueError when any input Vs30 falls
+        outside the calibrated range [220, 800] m/s. If False, input Vs30
+        values are clamped to this range before evaluating the site term.
     """
 
     ## Supported tectonic region type is subduction intraslab.
@@ -139,17 +152,23 @@ class Allen2022(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.INTRA_EVENT,}
 
     ## Vs30 (m/s) required for site scaling [Equation 6].
     REQUIRES_SITES_PARAMETERS = {"vs30"}
+
+    ## Calibrated Vs30 range, checked before the calculation starts
+    ## when vs30_strict is True.
+    VS30_RANGE = (220, 800)
 
     ## Moment magnitude and hypocentral depth (km) [Equations 3 and 4].
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
 
     ## Hypocentral distance Rhypo (km) [Equations 2a, 2b, 5a, 5b].
     REQUIRES_DISTANCES = {"rhypo"}
+
+    def __init__(self, vs30_strict=True):
+        self.vs30_strict = vs30_strict
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -170,8 +189,7 @@ class Allen2022(GMPE):
                 + _get_magnitude_scaling(C, ctx.mag)
                 + _get_depth_scaling(C, ctx.hypo_depth)
                 + _get_near_source_correction(C, ctx.rhypo)
-                + _get_site_scaling(C, ctx.vs30)
-            )
+                + _get_site_scaling(C, ctx.vs30, self.vs30_strict))
 
             tau[m] = C["tau"]
             phi[m] = C["phi"]

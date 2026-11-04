@@ -26,15 +26,15 @@ import ast
 import json
 import string
 import toml
-import socket
 import logging
 import inspect
 from functools import partial
 import numpy
 
 from openquake.baselib.general import distinct, pprod
-from openquake.baselib import config, hdf5
+from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
+from openquake.hazardlib.codes import SOURCE_CODES
 from openquake.hazardlib.gsim.base import registry, gsim_aliases, fix_toml
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
@@ -520,6 +520,26 @@ def namelists(value):
     return lists
 
 
+def sourcecodes(value):
+    """
+    :param value: input string
+    :returns: a string of source codes, e.g. 'pPAM'
+
+    >>> sourcecodes('pPAM')
+    'pPAM'
+    >>> sourcecodes('PAZ')
+    Traceback (most recent call last):
+    ...
+    ValueError: Invalid source code 'Z' in 'PAZ', valid codes are ACFKMNPSXp
+    """
+    for code in value:
+        if code not in SOURCE_CODES:
+            raise ValueError('Invalid source code %r in %r, valid codes'
+                             ' are %s' % (code, value,
+                                          ''.join(sorted(SOURCE_CODES))))
+    return value
+
+
 def float_(value):
     """
     :param value: input string
@@ -563,6 +583,8 @@ def longitude(value):
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
         raise ValueError('longitude %s < -180' % lon)
+    elif numpy.isnan(lon):  # would give NaN hypocenters
+        raise ValueError('longitude is NaN')
     return lon
 
 
@@ -581,6 +603,8 @@ def latitude(value):
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
         raise ValueError('latitude %s < -90' % lat)
+    elif numpy.isnan(lat):  # would give NaN hypocenters
+        raise ValueError('latitude is NaN')
     return lat
 
 
@@ -600,7 +624,20 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-depth = float_
+def depth(value):
+    """
+    :param value: input string
+    :returns: a finite float (NaN would give NaN hypocenters)
+
+    >>> depth('nan')
+    Traceback (most recent call last):
+    ...
+    ValueError: depth nan is not finite
+    """
+    dep = float_(value)
+    if not numpy.isfinite(dep):
+        raise ValueError('depth %s is not finite' % dep)
+    return dep
 
 
 def lon_lat(value):
@@ -702,6 +739,21 @@ def positivefloat(value):
     if f < 0:
         raise ValueError('float %s < 0' % f)
     return f
+
+
+def positivefloat_or_auto(value):
+    """
+    :param value: input string
+    :returns: positive float or the string "auto"
+
+    >>> positivefloat_or_auto('auto')
+    'auto'
+    >>> positivefloat_or_auto('50')
+    50.0
+    """
+    if value == 'auto':
+        return value
+    return positivefloat(value)
 
 
 def positivefloats(value):
@@ -1315,22 +1367,6 @@ def uncertainty_model(value):
     if value.lstrip().startswith('['):  # TOML, do not mess with newlines
         return value.strip()
     return ' '.join(value.split())  # remove newlines too
-
-
-def host_port(value=None):
-    """
-    Returns a pair (host_IP, port_number).
-
-    >>> host_port('localhost:1908')
-    ('127.0.0.1', 1908)
-
-    If value is missing returns the parameters in openquake.cfg
-    """
-    if not value:
-        host = os.environ.get('OQ_DATABASE', config.dbserver.host)
-        return (host, config.dbserver.port)
-    host, port = value.split(':')
-    return socket.gethostbyname(host), int(port)
 
 
 # used for the exposure validation

@@ -1,0 +1,38 @@
+name: Nightly uncertainty propagation tests
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+        type: string
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  unc:
+    name: _unc tests (Python 3.13)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.git-ref || github.ref }}
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install OQ in development mode
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python install.py devel
+      - name: Run uncertainty propagation tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          pip install pytest
+          oq engine --upgrade-db
+          pytest -x --disable-warnings --color=yes --durations=10 \
+            openquake/_unc/tests

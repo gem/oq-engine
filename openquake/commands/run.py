@@ -76,7 +76,7 @@ def main(job_ini,
          *,
          slowest: int = None,
          hc: valid.calculation = None,
-         param=(),
+         param=None,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
@@ -88,7 +88,7 @@ def main(job_ini,
     """
     user_name = getpass.getuser()
 
-    dbfile = os.path.expanduser(config.dbserver.file)
+    dbfile = os.path.expanduser(config.server.dbfile)
     if not os.path.exists(dbfile):
         db.actions.upgrade_db(dbapi.db)
     try:
@@ -146,7 +146,8 @@ main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
-main.param = dict(help='override parameters with TOML syntax', nargs='*')
+main.param = dict(help='override parameters with TOML syntax', nargs='*',
+                  action='extend')
 main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',

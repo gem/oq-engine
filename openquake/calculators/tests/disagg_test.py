@@ -21,14 +21,18 @@ from unittest import mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_ctx_by_grp
+from openquake.hazardlib import stats
+from openquake.hazardlib.rmap_maker import read_ctx_by_grp
+from openquake.commonlib.util import log as ulog
+from openquake.calculators import getters
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
+    case_18, case_master)
 
 aae = numpy.testing.assert_almost_equal
 ae = numpy.testing.assert_equal
@@ -62,7 +66,7 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
 
     def test_case_1(self):
-        # case with split_source=false and collapse_level=2
+        # case with split_source=false
         self.assert_curves_ok(
             ['Lon_Lat-0.csv', 'Mag-0.csv', 'Mag_Dist-0.csv'], case_1.__file__)
 
@@ -145,6 +149,32 @@ class DisaggregationTestCase(CalculatorTestCase):
                       225., 250., 275., 300.])
         aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
         self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
+    def test_case_6_best_rlzs(self):
+        # the realizations reported by the disaggregation must be sorted
+        # by the distance of their hazard curve to the mean curve
+        self.run_calc(case_6.__file__, 'job.ini')
+        ds = self.calc.datastore
+        best = ds['best_rlzs'][:]
+        oq = ds['oqparam']
+        full_lt = ds['full_lt'].init()
+        mg = getters.map_getters(ds, full_lt, oq)
+        for sid in range(len(ds['sitecol'])):
+            hcurve = mg[sid].get_hcurve(sid)  # shape (L, R)
+            mean = getters.build_stat_curve(
+                hcurve, oq.imtls, stats.mean_curve,
+                full_lt.gsim_lt.wget).ravel()
+            dists = []
+            for r in range(hcurve.shape[1]):
+                # the distance is computed in log space
+                diff = ulog(hcurve[:, r], 1E-12) - ulog(mean, 1E-12)
+                dists.append(numpy.sqrt((diff * diff).sum()))
+            # the realizations must be sorted by increasing distance
+            got = [dists[r] for r in best[sid]]
+            self.assertEqual(got, sorted(got))
+        # the realization with the largest weight (0.4) is the closest
+        # to the mean, so it must come first
+        self.assertEqual(best[0].tolist(), [0, 1, 2])
 
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
@@ -254,8 +284,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        small1 = mrs1.array[mrs1.array < 2.]  # large rates are different!
-        small50 = mrs50.array[mrs50.array < 2.]
+        # The 1-year calculation uses PGA only; compare its matching IMT.
+        small1 = mrs1.array[:, 0]
+        small50 = mrs50.array[:, 0]
+        small1 = small1[small1 < 2.]  # large rates are different!
+        small50 = small50[small50 < 2.]
         numpy.testing.assert_allclose(small1, small50, rtol=1E-4)
 
     def test_case_16(self):
@@ -264,6 +297,41 @@ class DisaggregationTestCase(CalculatorTestCase):
         # from the K20 GSIM object (test just checks execution not correctness
         # of values)
         self.run_calc(case_16.__file__, 'job_dsg.ini')
+
+    def test_case_17(self):
+        # source model logic tree with extendModel branches, an ambiguous
+        # source and 4 tectonic region types with 2 GSIMs each (the sources
+        # 1, 10, 11, 12 share the prefix "1"): the postprocessor must use
+        # the trt_smrs stored in the sources and the corresponding GSIM
+        # weights, instead of reducing the logic tree
+        self.run_calc(case_17.__file__, 'job.ini')
+        try:
+            __import__('rtgmpy')
+        except ModuleNotFoundError:
+            return  # mag_dst_eps_sig and mce are not generated
+        dstore = self.calc.datastore
+        # the disaggregation by relevant sources returned one row per IMT
+        self.assertEqual(len(dstore['mag_dst_eps_sig/0']), 3)
+        # the sigmas are weighted averages over the GSIMs
+        sigs = [row['sig'] for row in dstore['mag_dst_eps_sig/0'][:]]
+        aae(sigs, [0.5433, 0.5071, 0.6395], 4)
+        # the SA(0.2) MCE is governed by the deterministic scenario;
+        # it depends on the maxMagGRRelative uncertainty on the source 1
+        aae(dstore.read_df("mce").MCE, [0.46, 1.6310, 1.51], 4)
+
+    def test_case_18(self):
+        # Nankai mutex model with two atomic groups in the same task (see
+        # concurrent_tasks in job.ini): the ruptures of both groups must
+        # be stored, while only the ones of the first group were stored
+        # (4 probs_occur instead of 8), so the disaggregation missed the
+        # large Nankai ruptures of the second group (Mag sum .19 vs .41)
+        self.run_calc(case_18.__file__, 'job.ini')
+        probs_occur = self.calc.datastore['rup/probs_occur'][:]
+        self.assertEqual(sum(len(po) for po in probs_occur), 8)
+        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles(
+                'expected_output/' + strip_calc_id(fname), fname)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

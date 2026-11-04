@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import tempfile
+
 import numpy
 from openquake.baselib import InvalidFile
+from openquake.commonlib import datastore, logs
 from openquake.qa_tests_data.infrastructure_risk import (
     case_1, case_2, case_3, five_nodes_demsup_directed,
     five_nodes_demsup_directedunweighted,
     five_nodes_demsup_multidirected,
     demand_supply, directed, eff_loss_random,
-    multidirected, multigraph, undirected)
+    multidirected, multigraph, undirected, interdependencies)
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -36,12 +38,14 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
     # TODO: we need tests also for event-based
 
     def _check_csv_outputs(self, outputs_list, datastore, testcase):
+        # export in a temporary directory, not in the current one
+        if self.edir is None:  # not set by run_calc, see tearDown
+            self.edir = tempfile.mkdtemp()
+        datastore.export_dir = self.edir
         for output in outputs_list:
             expected_fname = 'expected/infra-' + output + '.csv'
-            expected_path = os.path.join(
-                os.path.dirname(testcase.__file__), expected_fname)
             [got_path] = export(('infra-' + output, 'csv'), datastore)
-            self.assertEqualFiles(got_path, expected_path, check_text=True)
+            self.assertEqualFiles(expected_fname, got_path)
 
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job.ini')
@@ -172,3 +176,41 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             self.assertTrue(
                 warning_was_found,
                 'If there are node weights != 1, a warning should be raised')
+
+    def test_interdependencies_aggregate_by(self):
+        # the interdependencies require aggregate_by = id
+        self.run_calc(interdependencies.__file__, 'job.ini')
+        hc_id = str(self.calc.datastore.calc_id)
+        with self.assertRaisesRegex(InvalidFile, 'aggregate_by = id'):
+            self.get_calc(interdependencies.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          interdependencies_file='interdependencies.csv',
+                          aggregate_by='taz')
+
+    def test_interdependencies_parent_aggregate_by(self):
+        # the parent must aggregate by asset too; running it without
+        # postrisk_func avoids building the child from the parent settings
+        self.calc = self.get_calc(interdependencies.__file__, 'job.ini',
+                                  aggregate_by='taxonomy')
+        self.calc.pre_execute()
+        self.calc.execute()
+        hc_id = str(self.calc.datastore.calc_id)
+        with self.assertRaisesRegex(InvalidFile, 'in the parent calculation'):
+            self.get_calc(interdependencies.__file__, 'job.ini',
+                          hazard_calculation_id=hc_id,
+                          interdependencies_file='interdependencies.csv')
+
+    def test_interdependencies(self):
+        # Run the calculation without closing the datastore
+        self.calc = self.get_calc(interdependencies.__file__, 'job.ini')
+        self.calc.pre_execute()
+        result = self.calc.execute()
+        self.calc.post_execute(result)
+        with datastore.read(self.calc.child_id) as child_dstore:
+            outs = 'avg_loss event_efl event_pcl event_wcl node_el'.split()
+            self._check_csv_outputs(outs, child_dstore, interdependencies)
+        # the outputs of the child must be exposed in the database
+        child_outs = logs.dbcmd('get_outputs', self.calc.child_id)
+        keys = {out.ds_key for out in child_outs}
+        for out in outs:
+            self.assertIn('infra-' + out, keys)

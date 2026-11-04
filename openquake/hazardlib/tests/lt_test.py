@@ -145,7 +145,7 @@ class CollapseTestCase(unittest.TestCase):
         time_span = srcs[0].temporal_occurrence_model.time_span
         idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,
-                      collapse_level=1, investigation_time=time_span,
+                      investigation_time=time_span,
                       maximum_distance=idist('default'), af=None)
         cmaker = contexts.ContextMaker(
             srcs[0].tectonic_region_type, self.gsims, params)
@@ -271,7 +271,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <logicTreeBranchSet
         applyToBranches="CD"
         branchSetID="bs2"
-        uncertaintyType="applyToTectonicRegionType"
+        uncertaintyType="gmpeModel"
         >
             <logicTreeBranch
             branchID="E"
@@ -318,7 +318,8 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
                         lt.Branch('D', 7.6, .5, 'bs1')]
 
-        bs2 = lt.BranchSet('applyToTectonicRegionType',
+        # applyToTectonicRegionType is a filter, not an uncertainty type
+        bs2 = lt.BranchSet('gmpeModel',
                            filters={'applyToBranches': 'CD'})
         bs2.branches = [lt.Branch('E', 'A', .3, 'bs2'),
                         lt.Branch('F', 'B', .7, 'bs2')]

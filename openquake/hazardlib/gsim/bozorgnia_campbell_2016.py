@@ -40,10 +40,10 @@ def _get_anelastic_attenuation_term(sgn, C, rrup):
     Returns the anelastic attenuation term, f_atn, defined in equation 25
     """
     Dc20 = _get_delta_c20(sgn, C)
-    f_atn = np.zeros(len(rrup))
-    idx = rrup > 80.0
-    f_atn[idx] = (C["c20"] + Dc20) * (rrup[idx] - 80.0)
-    return f_atn
+    return np.where(
+        rrup > 80.0,
+        (C["c20"] + Dc20) * (rrup - 80.0),
+        0.)
 
 
 def _get_basin_term(C, ctx, region, SJ):
@@ -62,10 +62,10 @@ def _get_basin_term(C, ctx, region, SJ):
         # Estimate unspecified sediment depth according to
         # equations 33 and 34 of CB14
         z2pt5 = z2pt5_ref
-    f_sed = np.zeros_like(z2pt5)
-    idx = z2pt5 < 1.0
-    f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)
-    return f_sed
+    return np.where(
+        z2pt5 < 1.0,
+        (C["c14"] + C["c15"] * SJ) * (z2pt5 - 1.0),
+        0.)
 
 
 def _get_delta_c20(sgn, C):
@@ -133,10 +133,8 @@ def _get_style_of_faulting_term(C, ctx):
     Returns the style-of-faulting scaling term, f_flt, defined in
     equations 4 to 6
     """
-    frv = np.zeros_like(ctx.rake)
-    fnm = np.zeros_like(ctx.rake)
-    frv[(ctx.rake > 30.) & (ctx.rake < 150.)] = 1.
-    fnm[(ctx.rake > -150.) & (ctx.rake < -30.0)] = 1.
+    frv = np.where((ctx.rake > 30.) & (ctx.rake < 150.), 1., 0.)
+    fnm = np.where((ctx.rake > -150.) & (ctx.rake < -30.0), 1., 0.)
     # Re-defined this method to replace c8, which is now
     # IMT-dependent in BC15
     fflt_f = C["c8"] * frv + C["c9"] * fnm

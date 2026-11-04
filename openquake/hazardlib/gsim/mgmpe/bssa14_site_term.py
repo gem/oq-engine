@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.bssa14_site_term` implements
 
 import copy
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -40,7 +41,7 @@ def _get_bssa14_site_term(imt, ctx):
     """
     # Get PGA on rock
     C_PGA = BooreEtAl2014.COEFFS[PGA()]
-    pga_rock = _get_pga_on_rock(kind="base", 
+    pga_rock = _get_pga_on_rock(kind="base",
                                 region="CAL",
                                 sof=True,
                                 C=C_PGA,
@@ -51,10 +52,10 @@ def _get_bssa14_site_term(imt, ctx):
 
     # Get linear component
     flin = _get_linear_site_term(C_IMT, ctx.vs30)
-    
+
     # Get non-linear component
     fnl = _get_nonlinear_site_term(C_IMT, ctx.vs30, pga_rock)
-    
+
     return flin + fnl
 
 
@@ -117,7 +118,7 @@ class BSSA14SiteTerm(GMPE):
 
         # Compute mean on bedrock
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
-        
+
         # Compute and apply the site term for each IMT
         for m, imt in enumerate(imts):
             mean[m] += _get_bssa14_site_term(imt, ctx)

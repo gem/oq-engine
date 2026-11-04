@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -74,21 +74,17 @@ def _compute_site_response_term(C, imt, ctx, pga1100):
     Compute and return site response model term, that is the fifth term
     in equation 1, page 74.
     """
-    site_resp_term = np.zeros_like(ctx.vs30)
-
     vs30_star, _ = _compute_vs30_star_factor(imt, ctx.vs30)
     vlin, c, n = C['VLIN'], CONSTS['c'], CONSTS['n']
     a10, b = C['a10'], C['b']
-
+    site_resp_term = np.zeros_like(ctx.vs30, dtype=float)
     idx = ctx.vs30 < vlin
     arg = vs30_star[idx] / vlin
     site_resp_term[idx] = (a10 * np.log(arg) -
                            b * np.log(pga1100[idx] + c) +
                            b * np.log(pga1100[idx] + c * (arg ** n)))
-
     idx = ctx.vs30 >= vlin
     site_resp_term[idx] = (a10 + b * n) * np.log(vs30_star[idx] / vlin)
-
     return site_resp_term
 
 
@@ -164,11 +160,11 @@ def _get_basin_term(C, ctx, region, imt, v1100=None):
     paragraph 'Soil Depth Model', page 79.
     """
     z1pt0 = ctx.z1pt0.copy()
-    
+
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == -999
     z1pt0[mask] = _compute_median_z1pt0(ctx.vs30[mask])
-    
+
     if v1100 is None:
         vs30 = ctx.vs30
     else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports :class:`BCHydroESHM20SInter`
+               :class:`BCHydroESHM20SInterLow`
+               :class:`BCHydroESHM20SInterHigh`
+               :class:`BCHydroESHM20SSlab`
+               :class:`BCHydroESHM20SSlabLow`
+               :class:`BCHydroESHM20SSlabHigh`
+"""
 import numpy as np
 from scipy.special import erf
 
@@ -176,8 +184,7 @@ AbrahamsonEtAl2015SInter.ESHM20_FABA_MODELS = {
     "Linear": FABATaperLinear,
     "SFunc": FABATaperSFunc,
     "Sigmoid": FABATaperSigmoid,
-    "Gaussian": FABATaperGaussian,
-}
+    "Gaussian": FABATaperGaussian,}
 
 
 class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):

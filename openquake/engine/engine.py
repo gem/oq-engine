@@ -61,7 +61,6 @@ OQ_API = 'https://api.openquake.org'
 U32 = numpy.uint32
 F32 = numpy.float32
 MB = 1024 ** 2
-_PID = os.getpid()  # the PID
 _PPID = os.getppid()  # the controlling terminal PID
 
 
@@ -69,7 +68,7 @@ def get_zmq_ports():
     """
     :returns: an array with the receiver ports
     """
-    start, stop = config.dbserver.receiver_ports.split('-')
+    start, stop = config.server.receiver_ports.split('-')
     return numpy.arange(int(start), int(stop))
 
 
@@ -156,22 +155,21 @@ def poll_queue(job_id, poll_time):
         host = socket.gethostname()
     except Exception:  # gaierror
         host = None
-    offset = config.distribution.serialize_jobs - 1
-    if offset >= 0:
-        first_time = True
-        while True:
-            running = logs.dbcmd('get_running_jobs', host)
-            previous = [job.id for job in running if job.id < job_id - offset]
-            if previous:
-                if first_time:
-                    logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': _PID})
-                    first_time = False
-                    # the logging is not yet initialized, so use a print
-                    print('Waiting for jobs %s' % ' '.join(map(str, previous)))
-                time.sleep(poll_time)
-            else:
-                break
+    # jobs are serialized: a job waits for all the previous jobs
+    first_time = True
+    while True:
+        running = logs.dbcmd('get_running_jobs', host)
+        previous = [job.id for job in running if job.id < job_id]
+        if previous:
+            if first_time:
+                logs.dbcmd('update_job', job_id,
+                           {'status': 'submitted', 'pid': os.getpid()})
+                first_time = False
+                # the logging is not yet initialized, so use a print
+                print('Waiting for jobs %s' % ' '.join(map(str, previous)))
+            time.sleep(poll_time)
+        else:
+            break
 
 
 def run_calc(log, mulfactor=2):
@@ -324,7 +322,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         print(f'================ Using {concurrent_jobs=} ==================')
     dist = parallel.oq_distribute()
     for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID,
+        # the PID must be read here: the module is imported before the fork
+        dic = {'status': 'executing', 'pid': os.getpid(),
                'start_time': datetime.now(UTC)}
         logs.dbcmd('update_job', job.calc_id, dic)
     exc = None
@@ -476,7 +475,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    # run LogContexts stored in jobs.pik, called by job.yaml or slurm
+    # run LogContexts stored in jobs.pik, called by submit_cmd or slurm
     with open(sys.argv[1], 'rb') as f:
         jobctxs = pickle.load(f)
     try:

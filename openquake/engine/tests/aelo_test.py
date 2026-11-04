@@ -52,7 +52,7 @@ EXPECTED_asce7_22 = [
 ASCE07_16 = ['0.50000', '1.50000', 'Very High', '0.60000', 'Very High']
 ASCE07_22 = ['0.50000', '1.50000', '1.35000', '0.90000','Very High', 
              '0.60000', '0.60000', '0.40000', 'Very High']
-ASCE41_17 = ['1.50000', '1.28283', '1.00000', '0.75094', '0.60000', '0.60000',
+ASCE41_17 = ['1.50000', '1.28284', '1.00000', '0.75094', '0.60000', '0.60000',
              '0.40000', '0.40000', 'close']
 ASCE41_23 = ['1.35000', '1.25951', '0.90000', '0.73729', '0.60000', '0.60000',
              '0.40000', '0.40000', 'close']
@@ -79,14 +79,14 @@ def test_PAC():
         if rtgmpy:
             s = calc.datastore['asce07'][0].decode('ascii')
             asce07 = json.loads(s)
-            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 0.83427],
+            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 1.11865],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA
         r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.03272 , 0.040302, 0.7959],
+            aac([r0, r1, a7['PGA']], [0.03272 , 0.040302, 1.07915],
                 atol=1E-6)
 
             # check that there are not warnings about results
@@ -114,7 +114,7 @@ def test_KOR():
         calc.run()
     if rtgmpy:
         asce07 = json.loads(calc.datastore['asce07'][0])
-        aac(asce07['PGA'], 1.68641, atol=5E-5)
+        aac(asce07['PGA'], 1.69988, atol=5E-5)
         # check all plots created
         assert 'png/site.png' in calc.datastore
         assert 'png/mce.png' in calc.datastore

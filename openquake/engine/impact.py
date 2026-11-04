@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    ImpactParam, impact_validate)
+    ImpactParam, IMPACT_FORM_DEFAULTS, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -59,9 +59,9 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None,
              callback=trivial_callback, *,
-             shakemap_version=None, time_event='day',
-             maximum_distance='300', mosaic_model=None, trt=None,
-             truncation_level='3',
+             shakemap_version=None, nodal_plane=None, time_event='day',
+             maximum_distance='', mosaic_model=None, trt=None,
+             truncation_level='',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None,
@@ -71,6 +71,10 @@ def main_cmd(usgs_id, rupture_file=None,
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
              make_impact_reports=False,
+             mmi_file=ImpactParam.mmi_file,
+             description=ImpactParam.description,
+             notes=ImpactParam.notes,
+             region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -85,12 +89,21 @@ def main_cmd(usgs_id, rupture_file=None,
     loc = locals().copy()
     fields = set(ImpactParam.__dataclass_fields__) - {
         'rupture_dict', 'rupture_file', 'station_data_file'}
-    post = {f: loc.get(f) for f in fields}
+    # fields not in the signature (i.e. calculation_mode) keep the defaults
+    post = {f: loc[f] for f in fields if f in loc}
     post['usgs_id'] = usgs_id
     if shakemap_version is not None:
         post['shakemap_version'] = shakemap_version
     post['msr'] = msr
     post['approach'] = approach
+    if nodal_plane:
+        if nodal_plane not in ('NP1', 'NP2'):
+            callback(None, post, exc='nodal_plane must be NP1 or NP2')
+            return
+        post['nodal_plane'] = nodal_plane
+        approach = 'build_rup_from_usgs'
+        post['approach'] = approach
+        userlevel = 2
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
@@ -124,11 +137,15 @@ main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.shakemap_version = 'Id of the chosen shakemap version'
-main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
-main_cmd.maximum_distance = 'Maximum distance in km'
+main_cmd.nodal_plane = 'USGS nodal plane to use: NP1 or NP2'
+main_cmd.time_event = (
+    'Time of the event used in the reports (day, night or transit)')
+main_cmd.maximum_distance = (
+    'Maximum distance in km (by default it depends on the magnitude)')
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
 main_cmd.trt = 'Tectonic region type'
-main_cmd.truncation_level = 'Truncation level'
+main_cmd.truncation_level = (
+    'Truncation level (by default it depends on the magnitude)')
 main_cmd.number_of_ground_motion_fields = 'Number of ground motion fields'
 main_cmd.asset_hazard_distance = 'Asset hazard distance'
 main_cmd.ses_seed = 'SES seed'
@@ -141,7 +158,7 @@ main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
-main_cmd.make_impact_reports = 'Make one-page report for each involved country'
+main_cmd.make_impact_reports = 'Make two-page report for each involved country'
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

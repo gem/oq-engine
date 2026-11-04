@@ -37,7 +37,7 @@ import numpy
 import pandas
 import numba
 
-from openquake.baselib.general import humansize, fast_agg
+from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
 # NB: one can use vstr fields in extensible datasets, but then reading
@@ -51,11 +51,12 @@ task_info_dt = numpy.dtype(
     [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
+# NB: there is one row per task name, since a Starmap can generate
+# tasks with different names, as classical -> baseclassical when the
+# tasks are split for being too slow
 starmap_info_dt = numpy.dtype(
-    [('taskname', '<S50'), ('mean', numpy.float32), ('std', numpy.float32),
-     ('min', numpy.float32), ('max', numpy.float32)])
-F16= numpy.float16
-F64= numpy.float64
+    [('taskname', '<S50'), ('efficiency', numpy.float32),
+     ('maxtime', numpy.float32)])
 I64 = numpy.int64
 
 PStatData = collections.namedtuple(
@@ -202,6 +203,30 @@ def memory_gb(pids=()):
 
 
 # this is not thread-safe
+class PerfBuffer(object):
+    """
+    In-memory replacement of the performance tables of a datastore, used
+    by a Starmap with perf='memory', so that the datastore is not written
+    while the tasks run; the rows are saved in the datastore at the end
+    """
+    mode = 'w'  # so that the Monitor saves its rows
+
+    def __init__(self):
+        self.tables = collections.defaultdict(list)
+
+    def append(self, name, data):
+        self.tables[name].append(data)
+
+
+def _save(h5, name, data):
+    # save the rows in the table `name` of h5, a datastore or a PerfBuffer
+    if isinstance(h5, PerfBuffer):
+        h5.append(name, data)
+    else:
+        hdf5.extend(h5[name], data)
+        h5[name].flush()  # notify the reader
+
+
 class Monitor(object):
     """
     Measure the resident memory occupied by a list of processes during
@@ -345,18 +370,20 @@ class Monitor(object):
         t = (name, self.task_no, self.weight, self.duration, len(res.pik),
              mem_gb)
         data = numpy.array([t], task_info_dt)
-        hdf5.extend(h5['task_info'], data)
-        h5['task_info'].flush()  # notify the reader
+        _save(h5, 'task_info', data)
 
     def save_starmap_info(self, h5, name, times):
         """
-        Called at the end of a Starmap. Store stats about the times per core.
+        Called at the end of a Starmap. Store the efficiency of the times
+        per core for the tasks called `name`, i.e. total_time / num_cores
+        / max_time, and the max_time; the same Starmap can generate tasks
+        with different names, in which case there is one row for each name.
         """
-        t = (name, times.mean(), times.std(), times.min(), times.max())
-        data = numpy.array([t], starmap_info_dt)
-        hdf5.extend(h5['starmap_info'], data)
-        logging.info('Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                     t[1], t[2], t[3], t[4])
+        eff = times.mean() / times.max()
+        data = numpy.array([(name, eff, times.max())], starmap_info_dt)
+        _save(h5, 'starmap_info', data)
+        logging.info('%s: efficiency=%.2f, maxtime=%ds',
+                     name, eff, times.max())
 
     def reset(self):
         """
@@ -370,13 +397,11 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if getattr(h5, 'mode', 'r') == 'r':
-            # in ImpactParam h5 is replaced with a dictionary
+        if h5.mode == 'r':
             return
         data = self.get_data()
         if len(data):
-            hdf5.extend(h5['performance_data'], data)
-            h5['performance_data'].flush()  # notify the reader
+            _save(h5, 'performance_data', data)
             self.reset()
 
     # TODO: rename this as spawn; see what will break
@@ -496,9 +521,11 @@ def jittable(func):
 
 def compile(sigstr):
     """
-    Compile a function Ahead-Of-Time using the given signature string
+    Compile a function Ahead-Of-Time using the given signature string.
+    The GIL is not released, since the engine parallelizes with processes;
+    this allows calling C functions requiring the GIL (i.e. Cython ones)
     """
-    return numba.njit(sigstr, error_model='numpy', cache=True, nogil=True)
+    return numba.njit(sigstr, error_model='numpy', cache=True)
 
 
 # used when reading _rates/sid
@@ -595,45 +622,6 @@ def split_array(arr, indices, counts=None):
     cumcounts = counts.cumsum()
     out = _split(arr, indices, counts, cumcounts)
     return [out[s1:s2][::-1] for s1, s2 in zip(cumcounts, cumcounts + counts)]
-
-
-def kround0(ctx, kfields):
-    """
-    half-precision rounding
-    """
-    out = numpy.zeros(len(ctx), [(k, ctx.dtype[k]) for k in kfields])
-    for kfield in kfields:
-        kval = ctx[kfield]
-        if kval.dtype == F64:
-            out[kfield] = F16(kval)
-        else:
-            out[kfield] = ctx[kfield]
-    return out
-
-
-# this is not so fast
-def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
-    """
-    Given a structured array of N elements with a discrete kfield with
-    K <= N unique values, returns a structured array of K elements
-    obtained by averaging the values associated to the kfield.
-    """
-    k_array = kround(array, kfields)
-    uniq, indices, counts = numpy.unique(
-        k_array, return_inverse=True, return_counts=True)
-    klist = [(k, k_array.dtype[k]) for k in kfields]
-    for mfield in mfields:
-        klist.append((mfield, array.dtype[mfield]))
-    res = numpy.zeros(len(uniq), klist)
-    for kfield in kfields:
-        res[kfield] = uniq[kfield]
-    for mfield in mfields:
-        values = array[mfield]
-        res[mfield] = fast_agg(indices, values) / (
-            counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-    if afield:
-        return res, split_array(array[afield], indices, counts)
-    return res
 
 
 @contextmanager

@@ -27,6 +27,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+
 CONSTANTS = {"mref": 4.5, "mh": 6.5,  "rref": 1.0}
 
 

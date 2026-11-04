@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,14 @@
 Module exports :class:`AmbraseysEtAl1996`.
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+
+LOG10 = np.log(10.0)
 
 
 def _compute_magnitude(ctx, C):
@@ -40,7 +43,7 @@ def _compute_magnitude(ctx, C):
 
 def _compute_distance(ctx, C):
     #convertion from repi to rjb if M>6 (Montaldo et al 2005, eq. 3)
-    
+
     R = np.where(ctx.mag >= 6, -3.5525 + (0.8845 * ctx.repi), ctx.repi)
     R = np.where(R < 0, 0, R)
     return (C['c4']* np.log10(np.sqrt(R ** 2 + C['h'] ** 2)))
@@ -49,41 +52,41 @@ def _site_amplification(ctx, C):
     #site condition
     ssa = np.zeros(len(ctx.vs30))
     sss = np.zeros(len(ctx.vs30))
-    
+
     idx = (ctx.vs30 > 360.0) & (ctx.vs30 <= 750.0)
     ssa[idx] = 1.0
     idx = (ctx.vs30 <= 360.0)
     sss[idx] = 1.0
-    
+
     return C['ca'] * ssa + C['cs'] * sss
 
 def _get_mechanism(ctx, C):
     #style of faulting correction as in Montale et al 2005 (Table 2)
     SS, NS, RS = utils.get_fault_type_dummy_variables(ctx)
-    
+
     idx = (ctx.mag < 6)
     SS[idx] = 0
     NS[idx] = 0
     RS[idx] = 0
-    
+
     Fr = np.log10(1.13)
     Fn = np.log10(0.88)
     Fss = np.log10(0.93)
-    
+
     return Fr*RS + Fn*NS + Fss*SS
 
 
 class AmbraseysEtAl1996(GMPE):
     """
-    Implements GMPE developed by Ambraseys, N. N., Simpson, K. U., & 
+    Implements GMPE developed by Ambraseys, N. N., Simpson, K. U., &
     Bommer, J. J. (1996). Prediction of horizontal response spectra in Europe.
     Earthquake Engineering & Structural Dynamics, 25(4), 371-400.
     SA are given up to 2 s.
     The regressions are developed considering the largest horizontal component
-    
+
     GMPE implemented as adopted in MPS04 (Montaldo et al 2005).
-    In this implementation, a convertion function from Mw to Ms is included 
-    to be consistent with the other gsims in OQ. 
+    In this implementation, a convertion function from Mw to Ms is included
+    to be consistent with the other gsims in OQ.
     """
     #: Supported tectonic region type is 'active shallow crust'
 
@@ -96,7 +99,8 @@ class AmbraseysEtAl1996(GMPE):
 
     #: Supported intensity measure component is the largest
     #: horizontal component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -126,10 +130,10 @@ class AmbraseysEtAl1996(GMPE):
             _get_mechanism(ctx, C)
 
             # convert from base 10 to base e (already in g)
-            mean[m] = np.log(10.0 ** imean)
+            mean[m] = imean * LOG10
 
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
 
 
 

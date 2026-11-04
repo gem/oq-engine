@@ -165,8 +165,8 @@ class _AbrahamsonEtAl2014Correlation:
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.02, 10.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.02, 10.0)
     _CORRELATION = None
 
     def _rho(self, from_imt, to_imt, context=None):

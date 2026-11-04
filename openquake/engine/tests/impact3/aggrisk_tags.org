@@ -1,459 +1,777 @@
-| ID_0    | loss_type       | value       | lossmea   | q05       | q50       | q95        | ID         | NAME                       |
-|---------+-----------------+-------------+-----------+-----------+-----------+------------+------------+----------------------------|
-| ESP     | contents        | 12_689_558  | 167_936   | 9.433E-04 | 0.0867    | 96_760     | nan        | nan                        |
-| ESP     | structural      | 71_518_264  | 1_322_341 | 0.0072    | 21_030    | 2_933_693  | nan        | nan                        |
-| ESP     | occupants       | 671.0       | 0.0430    | 4.254E-08 | 4.613E-06 | 0.0867     | nan        | nan                        |
-| ESP     | area            | 63_294      | 907.2     | 5.667E-06 | 4.638E-04 | 1_888      | nan        | nan                        |
-| ESP     | number          | 533.0       | 8.9542    | 4.999E-08 | 4.510E-06 | 17.9293    | nan        | nan                        |
-| ESP     | residents       | 994.5       | 15.8658   | 0.0       | 6.993E-06 | 40.1907    | nan        | nan                        |
-| ESP     | affectedpop     | 994.5       | 20.0341   | 0.0       | 0.0014    | 74.8508    | nan        | nan                        |
-| ESP     | injured         | 671.0       | 0.2897    | 4.254E-08 | 4.001E-06 | 0.6857     | nan        | nan                        |
-| ESP     | embodied_carbon | 23_219      | 315.0     | 2.422E-06 | 4.4605    | 745.3      | nan        | nan                        |
-| MAR     | contents        | 1_546_860   | 160.0238  | 0.0       | 4.997E-04 | 19.3773    | nan        | nan                        |
-| MAR     | structural      | 7_623_316   | 4_913     | 0.0       | 117.5974  | 19_274     | nan        | nan                        |
-| MAR     | occupants       | 792.1       | 0.0057    | 0.0       | 4.059E-07 | 0.0091     | nan        | nan                        |
-| MAR     | area            | 23_692      | 8.5306    | 0.0       | 9.296E-06 | 19.2666    | nan        | nan                        |
-| MAR     | number          | 214.0       | 0.1088    | 0.0       | 3.000E-08 | 0.1779     | nan        | nan                        |
-| MAR     | residents       | 957.8       | 0.6248    | 0.0       | 3.562E-07 | 1.1170     | nan        | nan                        |
-| MAR     | affectedpop     | 957.8       | 1.0036    | 0.0       | 3.564E-07 | 2.3142     | nan        | nan                        |
-| MAR     | injured         | 792.1       | 0.0127    | 0.0       | 2.730E-07 | 0.0222     | nan        | nan                        |
-| MAR     | embodied_carbon | 8_419       | 4.4560    | 0.0       | 0.0897    | 13.4299    | nan        | nan                        |
-| PRT     | contents        | 17_682_912  | 163_914   | 0.0245    | 0.2645    | 871_518    | nan        | nan                        |
-| PRT     | structural      | 99_048_328  | 1_861_047 | 32_345    | 380_761   | 7_596_905  | nan        | nan                        |
-| PRT     | occupants       | 603.4       | 0.0371    | 2.228E-06 | 0.0025    | 0.1506     | nan        | nan                        |
-| PRT     | area            | 79_103      | 916.2     | 2.282E-04 | 54.7995   | 4_126      | nan        | nan                        |
-| PRT     | number          | 444.4       | 6.1327    | 1.419E-06 | 0.3585    | 29.0059    | nan        | nan                        |
-| PRT     | residents       | 990.2       | 12.1155   | 3.475E-06 | 1.0906    | 56.2793    | nan        | nan                        |
-| PRT     | affectedpop     | 990.2       | 17.4412   | 5.100E-06 | 2.6686    | 73.8274    | nan        | nan                        |
-| PRT     | injured         | 603.4       | 0.2213    | 1.623E-06 | 0.0184    | 0.9995     | nan        | nan                        |
-| PRT     | embodied_carbon | 26_095      | 355.8     | 3.9365    | 59.8739   | 1_637      | nan        | nan                        |
-| *total* | affectedpop     | 2_942       | 38.4789   | 5.100E-06 | 2.6700    | 150.9924   | nan        | nan                        |
-| *total* | area            | 166_089     | 1_832     | 2.339E-04 | 54.8000   | 6_033      | nan        | nan                        |
-| *total* | contents        | 31_919_330  | 332_010   | 0.0255    | 0.3516    | 968_298    | nan        | nan                        |
-| *total* | embodied_carbon | 57_733      | 675.3     | 3.9365    | 64.4241   | 2_396      | nan        | nan                        |
-| *total* | injured         | 2_066       | 0.5237    | 1.665E-06 | 0.0184    | 1.7074     | nan        | nan                        |
-| *total* | number          | 1_191       | 15.1957   | 1.469E-06 | 0.3585    | 47.1130    | nan        | nan                        |
-| *total* | occupants       | 2_066       | 0.0857    | 2.271E-06 | 0.0025    | 0.2464     | nan        | nan                        |
-| *total* | residents       | 2_942       | 28.6061   | 3.475E-06 | 1.0906    | 97.5869    | nan        | nan                        |
-| *total* | structural      | 178_189_904 | 3_188_300 | 32_345    | 401_908   | 10_549_872 | nan        | nan                        |
-| nan     | contents        | 187_674     | 7_119     | 0.0       | 0.0019    | 16_358     | 1008       | Division No.  8            |
-| nan     | structural      | 1_063_484   | 20_442    | 0.0       | 65.3927   | 121_678    | 1008       | Division No.  8            |
-| nan     | occupants       | 3.8609      | 2.901E-04 | 0.0       | 3.861E-08 | 0.0012     | 1008       | Division No.  8            |
-| nan     | area            | 932.9       | 13.4356   | 0.0       | 9.329E-06 | 73.1727    | 1008       | Division No.  8            |
-| nan     | number          | 5.9860      | 0.0862    | 0.0       | 5.986E-08 | 0.4695     | 1008       | Division No.  8            |
-| nan     | residents       | 6.9880      | 0.1164    | 0.0       | 6.988E-08 | 0.7667     | 1008       | Division No.  8            |
-| nan     | affectedpop     | 6.9880      | 0.1576    | 0.0       | 6.988E-08 | 1.3897     | 1008       | Division No.  8            |
-| nan     | injured         | 3.8609      | 0.0020    | 0.0       | 3.861E-08 | 0.0125     | 1008       | Division No.  8            |
-| nan     | embodied_carbon | 338.0       | 4.0499    | 0.0       | 3.380E-06 | 24.3003    | 1008       | Division No.  8            |
-| nan     | contents        | 120_448     | 511.9     | 0.0       | 9.314E-04 | 49.8483    | 101        | Hanumangarh                |
-| nan     | structural      | 527_301     | 6_351     | 0.0       | 705.1     | 31_298     | 101        | Hanumangarh                |
-| nan     | occupants       | 9.9376      | 8.771E-04 | 0.0       | 9.938E-08 | 0.0052     | 101        | Hanumangarh                |
-| nan     | area            | 498.9       | 3.0996    | 0.0       | 4.989E-06 | 18.2005    | 101        | Hanumangarh                |
-| nan     | number          | 2.0084      | 0.0222    | 0.0       | 2.008E-08 | 0.1322     | 101        | Hanumangarh                |
-| nan     | residents       | 1.7828      | 0.0466    | 0.0       | 1.783E-08 | 0.3112     | 101        | Hanumangarh                |
-| nan     | affectedpop     | 1.7828      | 0.0632    | 0.0       | 1.783E-08 | 0.4926     | 101        | Hanumangarh                |
-| nan     | injured         | 9.9376      | 9.905E-04 | 0.0       | 9.938E-08 | 0.0058     | 101        | Hanumangarh                |
-| nan     | embodied_carbon | 200.7       | 2.0110    | 0.0       | 0.2179    | 10.9187    | 101        | Hanumangarh                |
-| nan     | contents        | 564_358     | 9_168     | 0.0       | 0.0056    | 0.0056     | 1015       | Pombal                     |
-| nan     | structural      | 3_198_028   | 74_001    | 0.0       | 422.4     | 106_617    | 1015       | Pombal                     |
-| nan     | occupants       | 17.0858     | 0.0021    | 0.0       | 1.709E-07 | 0.0010     | 1015       | Pombal                     |
-| nan     | area            | 2_805       | 60.4268   | 0.0       | 2.805E-05 | 47.7109    | 1015       | Pombal                     |
-| nan     | number          | 18.0006     | 0.3877    | 0.0       | 1.800E-07 | 0.3061     | 1015       | Pombal                     |
-| nan     | residents       | 30.9246     | 0.7201    | 0.0       | 3.092E-07 | 0.7963     | 1015       | Pombal                     |
-| nan     | affectedpop     | 30.9246     | 0.8299    | 0.0       | 3.092E-07 | 1.8698     | 1015       | Pombal                     |
-| nan     | injured         | 17.0858     | 0.0130    | 0.0       | 1.709E-07 | 0.0132     | 1015       | Pombal                     |
-| nan     | embodied_carbon | 1_016       | 18.7835   | 0.0       | 1.016E-05 | 15.4179    | 1015       | Pombal                     |
-| nan     | contents        | 2_101_577   | 5_416     | 0.0078    | 0.0133    | 0.0313     | 1110       | BIREUEN Regency            |
-| nan     | structural      | 11_908_934  | 504_120   | 0.0440    | 6_285     | 5_913_826  | 1110       | BIREUEN Regency            |
-| nan     | occupants       | 61.6560     | 0.0104    | 2.175E-07 | 6.166E-07 | 0.1198     | 1110       | BIREUEN Regency            |
-| nan     | area            | 8_036       | 254.9     | 2.968E-05 | 8.036E-05 | 2_943      | 1110       | BIREUEN Regency            |
-| nan     | number          | 51.5625     | 1.6354    | 1.905E-07 | 5.156E-07 | 18.8824    | 1110       | BIREUEN Regency            |
-| nan     | residents       | 114.0329    | 4.2325    | 4.023E-07 | 1.140E-06 | 48.5819    | 1110       | BIREUEN Regency            |
-| nan     | affectedpop     | 114.0329    | 5.3460    | 4.023E-07 | 1.140E-06 | 58.5047    | 1110       | BIREUEN Regency            |
-| nan     | injured         | 61.6560     | 0.0724    | 2.175E-07 | 6.166E-07 | 0.8308     | 1110       | BIREUEN Regency            |
-| nan     | embodied_carbon | 2_725       | 79.7779   | 8.884E-06 | 0.7378    | 819.8      | 1110       | BIREUEN Regency            |
-| nan     | contents        | 52_078      | 443.5     | 0.0       | 4.213E-15 | 5.208E-04  | 1111       | ACEH UTARA Regency         |
-| nan     | structural      | 295_108     | 6_451     | 0.0       | 2_180     | 24_019     | 1111       | ACEH UTARA Regency         |
-| nan     | occupants       | 2.0723      | 6.472E-05 | 0.0       | 2.072E-08 | 1.840E-04  | 1111       | ACEH UTARA Regency         |
-| nan     | area            | 199.1       | 0.8293    | 0.0       | 1.991E-06 | 2.5413     | 1111       | ACEH UTARA Regency         |
-| nan     | number          | 0.9561      | 0.0040    | 0.0       | 9.561E-09 | 0.0122     | 1111       | ACEH UTARA Regency         |
-| nan     | residents       | 3.8322      | 0.0309    | 0.0       | 3.832E-08 | 0.1239     | 1111       | ACEH UTARA Regency         |
-| nan     | affectedpop     | 3.8322      | 0.0987    | 0.0       | 3.832E-08 | 0.5729     | 1111       | ACEH UTARA Regency         |
-| nan     | injured         | 2.0723      | 3.535E-04 | 0.0       | 2.072E-08 | 0.0012     | 1111       | ACEH UTARA Regency         |
-| nan     | embodied_carbon | 59.7046     | 0.7191    | 0.0       | 0.1845    | 2.8412     | 1111       | ACEH UTARA Regency         |
-| nan     | contents        | 787_228     | 213.4     | 0.0       | 0.0064    | 0.0079     | 1113       | GAYO LUES Regency          |
-| nan     | structural      | 4_460_960   | 38_915    | 0.0       | 17_901    | 126_360    | 1113       | GAYO LUES Regency          |
-| nan     | occupants       | 34.9475     | 2.167E-04 | 0.0       | 1.308E-06 | 9.085E-04  | 1113       | GAYO LUES Regency          |
-| nan     | area            | 3_557       | 2.8787    | 0.0       | 3.557E-05 | 10.8284    | 1113       | GAYO LUES Regency          |
-| nan     | number          | 14.9531     | 0.0071    | 0.0       | 1.495E-07 | 0.0252     | 1113       | GAYO LUES Regency          |
-| nan     | residents       | 64.6335     | 0.0787    | 0.0       | 6.463E-07 | 0.3612     | 1113       | GAYO LUES Regency          |
-| nan     | affectedpop     | 64.6335     | 0.2059    | 0.0       | 6.463E-07 | 0.8622     | 1113       | GAYO LUES Regency          |
-| nan     | injured         | 34.9475     | 0.0012    | 0.0       | 3.495E-07 | 0.0056     | 1113       | GAYO LUES Regency          |
-| nan     | embodied_carbon | 1_108       | 5.7591    | 0.0       | 2.3667    | 18.1673    | 1113       | GAYO LUES Regency          |
-| nan     | contents        | 3_459_565   | 94_693    | 0.0       | 0.0346    | 0.0346     | 117        | Udaipur                    |
-| nan     | structural      | 19_604_202  | 564_401   | 0.0       | 7_684     | 2_552_830  | 117        | Udaipur                    |
-| nan     | occupants       | 104.1364    | 0.0174    | 0.0       | 1.041E-06 | 0.0526     | 117        | Udaipur                    |
-| nan     | area            | 17_197      | 399.0     | 0.0       | 1.720E-04 | 1_310      | 117        | Udaipur                    |
-| nan     | number          | 124.9162    | 2.8984    | 0.0       | 1.249E-06 | 9.5156     | 117        | Udaipur                    |
-| nan     | residents       | 188.5       | 5.0691    | 0.0       | 1.885E-06 | 21.1750    | 117        | Udaipur                    |
-| nan     | affectedpop     | 188.5       | 6.4717    | 0.0       | 1.885E-06 | 38.1182    | 117        | Udaipur                    |
-| nan     | injured         | 104.1364    | 0.0995    | 0.0       | 1.041E-06 | 0.3706     | 117        | Udaipur                    |
-| nan     | embodied_carbon | 6_235       | 133.7215  | 0.0       | 1.1234    | 502.7      | 117        | Udaipur                    |
-| nan     | contents        | 327_423     | 874.9     | 0.0       | 0.0033    | 0.1717     | 1306       | Hebei                      |
-| nan     | structural      | 1_855_398   | 16_452    | 0.0       | 206.0     | 33_624     | 1306       | Hebei                      |
-| nan     | occupants       | 11.2577     | 2.024E-04 | 0.0       | 1.126E-07 | 4.224E-05  | 1306       | Hebei                      |
-| nan     | area            | 1_252       | 4.8095    | 0.0       | 1.252E-05 | 0.3401     | 1306       | Hebei                      |
-| nan     | number          | 8.0334      | 0.0309    | 0.0       | 8.033E-08 | 0.0022     | 1306       | Hebei                      |
-| nan     | residents       | 20.8212     | 0.1015    | 0.0       | 2.082E-07 | 0.0065     | 1306       | Hebei                      |
-| nan     | affectedpop     | 20.8212     | 0.1738    | 0.0       | 2.082E-07 | 0.0935     | 1306       | Hebei                      |
-| nan     | injured         | 11.2577     | 0.0015    | 0.0       | 1.126E-07 | 1.126E-07  | 1306       | Hebei                      |
-| nan     | embodied_carbon | 374.7       | 1.6795    | 0.0       | 3.747E-06 | 3.5473     | 1306       | Hebei                      |
-| nan     | contents        | 30_328      | 222.4     | 0.0       | 3.033E-04 | 3.033E-04  | 1311       | Hebei                      |
-| nan     | structural      | 121_314     | 2_908     | 0.0       | 83.4817   | 9_091      | 1311       | Hebei                      |
-| nan     | occupants       | 3.1844      | 4.669E-04 | 0.0       | 3.184E-08 | 8.156E-04  | 1311       | Hebei                      |
-| nan     | area            | 118.2397    | 2.4067    | 0.0       | 1.182E-06 | 4.5852     | 1311       | Hebei                      |
-| nan     | number          | 0.5975      | 0.0122    | 0.0       | 5.975E-09 | 0.0232     | 1311       | Hebei                      |
-| nan     | injured         | 3.1844      | 0.0027    | 0.0       | 3.184E-08 | 0.0060     | 1311       | Hebei                      |
-| nan     | embodied_carbon | 61.1175     | 1.1861    | 0.0       | 0.0200    | 2.6063     | 1311       | Hebei                      |
-| nan     | contents        | 718_557     | 6.5149    | 0.0       | 0.0066    | 0.0794     | 1314       | Restigouche                |
-| nan     | structural      | 4_071_821   | 7_244     | 0.0       | 1_306     | 32_631     | 1314       | Restigouche                |
-| nan     | occupants       | 32.8463     | 3.228E-06 | 0.0       | 3.034E-07 | 3.285E-07  | 1314       | Restigouche                |
-| nan     | area            | 3_572       | 0.0822    | 0.0       | 3.298E-05 | 3.572E-05  | 1314       | Restigouche                |
-| nan     | number          | 25.9453     | 5.969E-04 | 0.0       | 2.395E-07 | 2.595E-07  | 1314       | Restigouche                |
-| nan     | residents       | 59.4502     | 0.0016    | 0.0       | 5.492E-07 | 5.945E-07  | 1314       | Restigouche                |
-| nan     | affectedpop     | 59.4502     | 0.0106    | 0.0       | 5.492E-07 | 5.945E-07  | 1314       | Restigouche                |
-| nan     | injured         | 32.8463     | 3.147E-05 | 0.0       | 3.034E-07 | 3.285E-07  | 1314       | Restigouche                |
-| nan     | embodied_carbon | 1_070       | 1.4611    | 0.0       | 0.3136    | 7.1338     | 1314       | Restigouche                |
-| nan     | contents        | 356_776     | 0.0024    | 0.0       | 0.0036    | 0.0036     | 1317       | Vila Nova de Gaia          |
-| nan     | structural      | 2_021_731   | 18.1665   | 0.0       | 0.0202    | 0.0202     | 1317       | Vila Nova de Gaia          |
-| nan     | occupants       | 15.5664     | 1.061E-07 | 0.0       | 1.557E-07 | 1.557E-07  | 1317       | Vila Nova de Gaia          |
-| nan     | area            | 1_773       | 1.208E-05 | 0.0       | 1.773E-05 | 1.773E-05  | 1317       | Vila Nova de Gaia          |
-| nan     | number          | 11.3796     | 7.754E-08 | 0.0       | 1.138E-07 | 1.138E-07  | 1317       | Vila Nova de Gaia          |
-| nan     | residents       | 28.1740     | 1.920E-07 | 0.0       | 2.817E-07 | 2.817E-07  | 1317       | Vila Nova de Gaia          |
-| nan     | affectedpop     | 28.1740     | 1.920E-07 | 0.0       | 2.817E-07 | 2.817E-07  | 1317       | Vila Nova de Gaia          |
-| nan     | injured         | 15.5664     | 1.061E-07 | 0.0       | 1.557E-07 | 1.557E-07  | 1317       | Vila Nova de Gaia          |
-| nan     | embodied_carbon | 530.8       | 0.1422    | 0.0       | 5.308E-06 | 0.5261     | 1317       | Vila Nova de Gaia          |
-| nan     | contents        | 599_780     | 62.6098   | 0.0       | 0.0060    | 0.1817     | 1318       | Trofa                      |
-| nan     | structural      | 3_398_752   | 23_077    | 0.0       | 12_043    | 118_869    | 1318       | Trofa                      |
-| nan     | occupants       | 36.7892     | 6.733E-05 | 0.0       | 3.679E-07 | 1.083E-05  | 1318       | Trofa                      |
-| nan     | area            | 2_981       | 1.0728    | 0.0       | 2.981E-05 | 0.1422     | 1318       | Trofa                      |
-| nan     | number          | 3.0494      | 0.0011    | 0.0       | 3.049E-08 | 1.454E-04  | 1318       | Trofa                      |
-| nan     | residents       | 66.5866     | 0.0578    | 0.0       | 6.659E-07 | 0.0145     | 1318       | Trofa                      |
-| nan     | affectedpop     | 66.5866     | 0.2247    | 0.0       | 6.659E-07 | 0.3134     | 1318       | Trofa                      |
-| nan     | injured         | 36.7892     | 4.641E-04 | 0.0       | 3.679E-07 | 3.679E-07  | 1318       | Trofa                      |
-| nan     | embodied_carbon | 895.4       | 3.1934    | 0.0       | 1.3946    | 16.3258    | 1318       | Trofa                      |
-| nan     | contents        | 1_871_902   | 9_151     | 0.0       | 0.0187    | 23_710     | 1503       | Nei Mongol                 |
-| nan     | structural      | 10_607_443  | 208_663   | 0.0       | 26_163    | 1_464_099  | 1503       | Nei Mongol                 |
-| nan     | occupants       | 65.0493     | 3.876E-04 | 0.0       | 6.505E-07 | 0.0032     | 1503       | Nei Mongol                 |
-| nan     | area            | 7_158       | 10.9080   | 0.0       | 7.158E-05 | 89.3283    | 1503       | Nei Mongol                 |
-| nan     | number          | 51.9921     | 0.0792    | 0.0       | 5.199E-07 | 0.6489     | 1503       | Nei Mongol                 |
-| nan     | residents       | 120.3062    | 0.2811    | 0.0       | 1.203E-06 | 2.1586     | 1503       | Nei Mongol                 |
-| nan     | affectedpop     | 120.3062    | 1.2348    | 0.0       | 1.203E-06 | 10.7820    | 1503       | Nei Mongol                 |
-| nan     | injured         | 65.0493     | 0.0041    | 0.0       | 6.505E-07 | 0.0341     | 1503       | Nei Mongol                 |
-| nan     | embodied_carbon | 2_144       | 26.4786   | 0.0       | 3.9271    | 202.2      | 1503       | Nei Mongol                 |
-| nan     | contents        | 433_754     | 221.6     | 0.0       | 0.0043    | 0.9491     | 1507       | Nei Mongol                 |
-| nan     | structural      | 2_457_940   | 38_812    | 0.0       | 11_802    | 94_208     | 1507       | Nei Mongol                 |
-| nan     | occupants       | 17.3282     | 1.926E-04 | 0.0       | 1.733E-07 | 5.487E-05  | 1507       | Nei Mongol                 |
-| nan     | area            | 1_659       | 4.5573    | 0.0       | 1.659E-05 | 1.3916     | 1507       | Nei Mongol                 |
-| nan     | number          | 7.9635      | 0.0219    | 0.0       | 7.964E-08 | 0.0067     | 1507       | Nei Mongol                 |
-| nan     | residents       | 32.0476     | 0.1370    | 0.0       | 3.205E-07 | 0.0269     | 1507       | Nei Mongol                 |
-| nan     | affectedpop     | 32.0476     | 0.3291    | 0.0       | 3.205E-07 | 0.0744     | 1507       | Nei Mongol                 |
-| nan     | injured         | 17.3282     | 0.0019    | 0.0       | 1.733E-07 | 1.733E-07  | 1507       | Nei Mongol                 |
-| nan     | embodied_carbon | 497.3       | 4.7692    | 0.0       | 1.2889    | 11.2228    | 1507       | Nei Mongol                 |
-| nan     | contents        | 49_440      | 9.2891    | 0.0       | 4.944E-04 | 4.944E-04  | 1713       | Vila Pouca de Aguiar       |
-| nan     | structural      | 197_759     | 337.2     | 0.0       | 83.0466   | 2_089      | 1713       | Vila Pouca de Aguiar       |
-| nan     | occupants       | 8.4200      | 4.664E-08 | 0.0       | 8.420E-08 | 8.420E-08  | 1713       | Vila Pouca de Aguiar       |
-| nan     | area            | 192.7       | 2.696E-05 | 0.0       | 1.927E-06 | 1.927E-06  | 1713       | Vila Pouca de Aguiar       |
-| nan     | number          | 0.8882      | 1.242E-07 | 0.0       | 8.882E-09 | 8.882E-09  | 1713       | Vila Pouca de Aguiar       |
-| nan     | injured         | 8.4200      | 4.474E-08 | 0.0       | 8.420E-08 | 8.420E-08  | 1713       | Vila Pouca de Aguiar       |
-| nan     | embodied_carbon | 90.3082     | 0.1118    | 0.0       | 0.0238    | 0.6910     | 1713       | Vila Pouca de Aguiar       |
-| nan     | contents        | 30_214      | 0.1051    | 0.0       | 3.021E-04 | 3.021E-04  | 1820       | Tarouca                    |
-| nan     | structural      | 171_211     | 1_060     | 0.0       | 9.3658    | 7_356      | 1820       | Tarouca                    |
-| nan     | occupants       | 0.6514      | 5.351E-06 | 0.0       | 6.514E-09 | 2.270E-05  | 1820       | Tarouca                    |
-| nan     | area            | 150.1854    | 0.2403    | 0.0       | 1.502E-06 | 0.6795     | 1820       | Tarouca                    |
-| nan     | number          | 0.9637      | 0.0015    | 0.0       | 9.637E-09 | 0.0044     | 1820       | Tarouca                    |
-| nan     | residents       | 1.1794      | 0.0028    | 0.0       | 1.179E-08 | 0.0094     | 1820       | Tarouca                    |
-| nan     | affectedpop     | 1.1794      | 0.0086    | 0.0       | 1.179E-08 | 0.0571     | 1820       | Tarouca                    |
-| nan     | injured         | 0.6514      | 3.570E-05 | 0.0       | 6.514E-09 | 9.357E-05  | 1820       | Tarouca                    |
-| nan     | embodied_carbon | 44.9528     | 0.1644    | 0.0       | 4.495E-07 | 1.0995     | 1820       | Tarouca                    |
-| nan     | contents        | 56_331      | 4.601E-04 | 0.0       | 5.633E-04 | 5.633E-04  | 202        | Khagaria                   |
-| nan     | structural      | 225_324     | 294.3     | 0.0       | 0.0023    | 103.0027   | 202        | Khagaria                   |
-| nan     | occupants       | 5.3743      | 4.169E-08 | 0.0       | 5.374E-08 | 5.374E-08  | 202        | Khagaria                   |
-| nan     | area            | 219.6       | 1.704E-06 | 0.0       | 2.196E-06 | 2.196E-06  | 202        | Khagaria                   |
-| nan     | number          | 1.0285      | 7.978E-09 | 0.0       | 1.028E-08 | 1.028E-08  | 202        | Khagaria                   |
-| nan     | injured         | 5.3743      | 4.169E-08 | 0.0       | 5.374E-08 | 5.374E-08  | 202        | Khagaria                   |
-| nan     | embodied_carbon | 102.8954    | 0.4253    | 0.0       | 0.0553    | 0.5680     | 202        | Khagaria                   |
-| nan     | contents        | 310_955     | 114.5204  | 0.0       | 0.0       | 0.0031     | 302        | Tinsukia                   |
-| nan     | structural      | 1_762_076   | 1_447     | 0.0       | 323.6     | 7_269      | 302        | Tinsukia                   |
-| nan     | occupants       | 16.2171     | 1.320E-06 | 0.0       | 1.622E-07 | 1.622E-07  | 302        | Tinsukia                   |
-| nan     | area            | 1_546       | 0.0791    | 0.0       | 1.546E-05 | 1.546E-05  | 302        | Tinsukia                   |
-| nan     | number          | 1.0031      | 5.132E-05 | 0.0       | 1.003E-08 | 1.003E-08  | 302        | Tinsukia                   |
-| nan     | residents       | 29.3526     | 0.0036    | 0.0       | 2.935E-07 | 2.935E-07  | 302        | Tinsukia                   |
-| nan     | affectedpop     | 29.3526     | 0.0136    | 0.0       | 2.935E-07 | 2.935E-07  | 302        | Tinsukia                   |
-| nan     | injured         | 16.2171     | 3.060E-05 | 0.0       | 1.622E-07 | 1.622E-07  | 302        | Tinsukia                   |
-| nan     | embodied_carbon | 505.1       | 1.3640    | 0.0       | 0.4073    | 7.7466     | 302        | Tinsukia                   |
-| nan     | contents        | 51_471      | 0.9312    | 0.0       | 5.147E-04 | 5.147E-04  | 306        | Purba Bardhaman            |
-| nan     | structural      | 205_884     | 586.6     | 0.0       | 47.2361   | 4_341      | 306        | Purba Bardhaman            |
-| nan     | occupants       | 5.1210      | 1.003E-05 | 0.0       | 5.121E-08 | 2.521E-05  | 306        | Purba Bardhaman            |
-| nan     | area            | 200.7       | 0.0596    | 0.0       | 2.007E-06 | 0.0774     | 306        | Purba Bardhaman            |
-| nan     | number          | 0.9387      | 2.790E-04 | 0.0       | 9.387E-09 | 3.619E-04  | 306        | Purba Bardhaman            |
-| nan     | injured         | 5.1210      | 4.549E-05 | 0.0       | 5.121E-08 | 5.121E-08  | 306        | Purba Bardhaman            |
-| nan     | embodied_carbon | 86.8618     | 0.1488    | 0.0       | 0.0102    | 1.0694     | 306        | Purba Bardhaman            |
-| nan     | contents        | 109_054     | 20.0736   | 0.0       | 0.0011    | 0.0011     | 307        | Birbhum                    |
-| nan     | structural      | 617_971     | 102.9435  | 0.0       | 0.0062    | 9.2184     | 307        | Birbhum                    |
-| nan     | occupants       | 3.4377      | 1.943E-07 | 0.0       | 3.438E-08 | 3.438E-08  | 307        | Birbhum                    |
-| nan     | area            | 542.1       | 0.0223    | 0.0       | 5.421E-06 | 5.421E-06  | 307        | Birbhum                    |
-| nan     | number          | 3.4783      | 1.433E-04 | 0.0       | 3.478E-08 | 3.478E-08  | 307        | Birbhum                    |
-| nan     | residents       | 6.2267      | 2.931E-04 | 0.0       | 6.227E-08 | 6.227E-08  | 307        | Birbhum                    |
-| nan     | affectedpop     | 6.2267      | 4.776E-04 | 0.0       | 6.227E-08 | 6.227E-08  | 307        | Birbhum                    |
-| nan     | injured         | 3.4377      | 4.881E-06 | 0.0       | 3.438E-08 | 3.438E-08  | 307        | Birbhum                    |
-| nan     | embodied_carbon | 162.2456    | 0.1547    | 0.0       | 1.622E-06 | 0.4515     | 307        | Birbhum                    |
-| nan     | contents        | 1_629_803   | 2_506     | 0.0       | 0.0042    | 7.6520     | 603        | South East                 |
-| nan     | structural      | 9_235_552   | 107_290   | 0.0       | 28_051    | 367_385    | 603        | South East                 |
-| nan     | occupants       | 49.4590     | 0.0014    | 0.0       | 5.615E-07 | 0.0013     | 603        | South East                 |
-| nan     | area            | 6_232       | 22.9874   | 0.0       | 6.232E-05 | 23.8705    | 603        | South East                 |
-| nan     | number          | 14.7923     | 0.0978    | 0.0       | 1.479E-07 | 0.0908     | 603        | South East                 |
-| nan     | residents       | 91.4711     | 0.3564    | 0.0       | 9.147E-07 | 0.6182     | 603        | South East                 |
-| nan     | affectedpop     | 91.4711     | 0.8171    | 0.0       | 9.147E-07 | 3.8633     | 603        | South East                 |
-| nan     | injured         | 49.4590     | 0.0061    | 0.0       | 4.946E-07 | 0.0073     | 603        | South East                 |
-| nan     | embodied_carbon | 1_901       | 12.2757   | 0.0       | 2.2756    | 40.4127    | 603        | South East                 |
-| nan     | contents        | 16_248      | 1.144E-04 | 0.0       | 1.625E-04 | 1.625E-04  | 612        | Chirang                    |
-| nan     | structural      | 92_072      | 21.8239   | 0.0       | 9.207E-04 | 98.2108    | 612        | Chirang                    |
-| nan     | occupants       | 0.1147      | 8.082E-10 | 0.0       | 1.147E-09 | 1.147E-09  | 612        | Chirang                    |
-| nan     | area            | 80.7645     | 5.691E-07 | 0.0       | 8.076E-07 | 8.076E-07  | 612        | Chirang                    |
-| nan     | number          | 0.5183      | 3.652E-09 | 0.0       | 5.183E-09 | 5.183E-09  | 612        | Chirang                    |
-| nan     | residents       | 0.2109      | 6.080E-08 | 0.0       | 2.109E-09 | 2.109E-09  | 612        | Chirang                    |
-| nan     | affectedpop     | 0.2109      | 2.521E-06 | 0.0       | 2.109E-09 | 2.109E-09  | 612        | Chirang                    |
-| nan     | injured         | 0.1147      | 8.082E-10 | 0.0       | 1.147E-09 | 1.147E-09  | 612        | Chirang                    |
-| nan     | embodied_carbon | 30.4542     | 0.0027    | 0.0       | 3.045E-07 | 0.0134     | 612        | Chirang                    |
-| nan     | contents        | 11_570      | 254.1     | 0.0       | 1.157E-04 | 1.157E-04  | 615        | Longleng                   |
-| nan     | structural      | 46_280      | 1_067     | 0.0       | 4.628E-04 | 2_408      | 615        | Longleng                   |
-| nan     | occupants       | 0.6600      | 5.294E-05 | 0.0       | 6.600E-09 | 7.735E-05  | 615        | Longleng                   |
-| nan     | area            | 45.1068     | 0.7282    | 0.0       | 4.511E-07 | 1.4788     | 615        | Longleng                   |
-| nan     | number          | 0.6019      | 0.0097    | 0.0       | 6.019E-09 | 0.0197     | 615        | Longleng                   |
-| nan     | injured         | 0.6600      | 3.910E-04 | 0.0       | 6.600E-09 | 9.511E-04  | 615        | Longleng                   |
-| nan     | embodied_carbon | 23.3005     | 0.3765    | 0.0       | 2.330E-07 | 0.6885     | 615        | Longleng                   |
-| nan     | contents        | 130_289     | 0.0010    | 0.0       | 0.0013    | 0.0013     | 702        | Kalimpong                  |
-| nan     | structural      | 521_156     | 3_779     | 0.0       | 816.4     | 17_866     | 702        | Kalimpong                  |
-| nan     | occupants       | 6.2420      | 5.857E-08 | 0.0       | 6.242E-08 | 6.242E-08  | 702        | Kalimpong                  |
-| nan     | area            | 507.9       | 2.701E-04 | 0.0       | 5.079E-06 | 5.079E-06  | 702        | Kalimpong                  |
-| nan     | number          | 1.2135      | 6.454E-07 | 0.0       | 1.214E-08 | 1.214E-08  | 702        | Kalimpong                  |
-| nan     | injured         | 6.2420      | 1.813E-07 | 0.0       | 6.242E-08 | 6.242E-08  | 702        | Kalimpong                  |
-| nan     | embodied_carbon | 238.2       | 1.3279    | 0.0       | 0.2787    | 6.5230     | 702        | Kalimpong                  |
-| nan     | contents        | 159_979     | 463.3     | 0.0       | 2.646E-11 | 0.1819     | 811        | Portimão                   |
-| nan     | structural      | 906_548     | 39_359    | 2_246     | 10_638    | 148_263    | 811        | Portimão                   |
-| nan     | occupants       | 5.8907      | 8.882E-04 | 5.891E-08 | 3.296E-07 | 0.0036     | 811        | Portimão                   |
-| nan     | area            | 722.9       | 13.4526   | 7.229E-06 | 7.229E-06 | 59.2067    | 811        | Portimão                   |
-| nan     | number          | 3.4712      | 0.0646    | 3.471E-08 | 3.471E-08 | 0.2843     | 811        | Portimão                   |
-| nan     | residents       | 10.8941     | 0.3067    | 1.089E-07 | 1.089E-07 | 1.7087     | 811        | Portimão                   |
-| nan     | affectedpop     | 10.8941     | 0.6756    | 1.089E-07 | 0.0019    | 4.4675     | 811        | Portimão                   |
-| nan     | injured         | 5.8907      | 0.0045    | 5.891E-08 | 5.891E-08 | 0.0202     | 811        | Portimão                   |
-| nan     | embodied_carbon | 216.7       | 6.7232    | 0.1925    | 1.1805    | 28.6746    | 811        | Portimão                   |
-| nan     | contents        | 148_755     | 2_893     | 0.0       | 0.0       | 0.0015     | 901        | Aguiar da Beira            |
-| nan     | structural      | 842_944     | 10_530    | 0.0       | 0.0       | 8_726      | 901        | Aguiar da Beira            |
-| nan     | occupants       | 1.6831      | 7.299E-04 | 0.0       | 0.0       | 3.092E-04  | 901        | Aguiar da Beira            |
-| nan     | area            | 739.4       | 8.2347    | 0.0       | 0.0       | 2.5649     | 901        | Aguiar da Beira            |
-| nan     | number          | 5.3712      | 0.0598    | 0.0       | 0.0       | 0.0186     | 901        | Aguiar da Beira            |
-| nan     | residents       | 3.0462      | 0.0388    | 0.0       | 0.0       | 0.0108     | 901        | Aguiar da Beira            |
-| nan     | affectedpop     | 3.0462      | 0.0481    | 0.0       | 0.0       | 0.0290     | 901        | Aguiar da Beira            |
-| nan     | injured         | 1.6831      | 7.665E-04 | 0.0       | 0.0       | 2.471E-04  | 901        | Aguiar da Beira            |
-| nan     | embodied_carbon | 236.0       | 3.3362    | 0.0       | 0.0       | 2.0242     | 901        | Aguiar da Beira            |
-| nan     | contents        | 199_679     | 5_253     | 0.0       | 0.0       | 0.0020     | 906        | Gouveia                    |
-| nan     | structural      | 1_131_515   | 21_648    | 0.0       | 657.7     | 72_580     | 906        | Gouveia                    |
-| nan     | occupants       | 2.5761      | 3.054E-04 | 0.0       | 2.576E-08 | 5.731E-04  | 906        | Gouveia                    |
-| nan     | area            | 992.6       | 16.7435   | 0.0       | 9.926E-06 | 33.3547    | 906        | Gouveia                    |
-| nan     | number          | 7.2099      | 0.1216    | 0.0       | 7.210E-08 | 0.2423     | 906        | Gouveia                    |
-| nan     | residents       | 4.6631      | 0.0952    | 0.0       | 4.663E-08 | 0.2436     | 906        | Gouveia                    |
-| nan     | affectedpop     | 4.6631      | 0.1294    | 0.0       | 4.663E-08 | 0.4984     | 906        | Gouveia                    |
-| nan     | injured         | 2.5761      | 0.0018    | 0.0       | 2.576E-08 | 0.0042     | 906        | Gouveia                    |
-| nan     | embodied_carbon | 359.9       | 6.0901    | 0.0       | 0.0985    | 15.1436    | 906        | Gouveia                    |
-| nan     | contents        | 2_320_426   | 3_080     | 0.0       | 8.284E-13 | 0.0232     | 909        | Mêda                       |
-| nan     | structural      | 13_149_079  | 52_079    | 0.0       | 20_226    | 132_176    | 909        | Mêda                       |
-| nan     | occupants       | 53.1850     | 2.504E-04 | 0.0       | 5.318E-07 | 8.908E-07  | 909        | Mêda                       |
-| nan     | area            | 11_534      | 12.8169   | 0.0       | 1.153E-04 | 1.153E-04  | 909        | Mêda                       |
-| nan     | number          | 55.3822     | 0.0615    | 0.0       | 5.538E-07 | 5.538E-07  | 909        | Mêda                       |
-| nan     | residents       | 96.2618     | 0.1556    | 0.0       | 9.626E-07 | 9.626E-07  | 909        | Mêda                       |
-| nan     | affectedpop     | 96.2618     | 0.2654    | 0.0       | 9.626E-07 | 9.626E-07  | 909        | Mêda                       |
-| nan     | injured         | 53.1850     | 0.0024    | 0.0       | 5.318E-07 | 5.318E-07  | 909        | Mêda                       |
-| nan     | embodied_carbon | 3_458       | 9.9819    | 0.0       | 2.8273    | 19.3394    | 909        | Mêda                       |
-| nan     | contents        | 576_937     | 21_215    | 0.0       | 0.0058    | 149.4658   | 911        | Sabugal                    |
-| nan     | structural      | 3_269_308   | 109_591   | 0.0       | 0.0327    | 338_070    | 911        | Sabugal                    |
-| nan     | occupants       | 4.8998      | 7.689E-04 | 0.0       | 4.900E-08 | 0.0014     | 911        | Sabugal                    |
-| nan     | area            | 2_868       | 82.4165   | 0.0       | 2.868E-05 | 207.8      | 911        | Sabugal                    |
-| nan     | number          | 18.4018     | 0.5288    | 0.0       | 1.840E-07 | 1.3332     | 911        | Sabugal                    |
-| nan     | residents       | 8.8658      | 0.2827    | 0.0       | 8.866E-08 | 0.8990     | 911        | Sabugal                    |
-| nan     | affectedpop     | 8.8658      | 0.3371    | 0.0       | 8.866E-08 | 1.6365     | 911        | Sabugal                    |
-| nan     | injured         | 4.8998      | 0.0050    | 0.0       | 4.900E-08 | 0.0147     | 911        | Sabugal                    |
-| nan     | embodied_carbon | 1_039       | 29.5714   | 0.0       | 1.039E-05 | 65.8974    | 911        | Sabugal                    |
-| nan     | contents        | 233_534     | 1.160E-04 | 0.0       | 0.0       | 0.0023     | ES-AN      | Andalucía                  |
-| nan     | structural      | 934_135     | 66.4210   | 0.0       | 0.0       | 1_331      | ES-AN      | Andalucía                  |
-| nan     | occupants       | 42.3202     | 4.242E-08 | 0.0       | 0.0       | 7.259E-07  | ES-AN      | Andalucía                  |
-| nan     | area            | 716.2       | 7.161E-06 | 0.0       | 0.0       | 7.162E-06  | ES-AN      | Andalucía                  |
-| nan     | number          | 2.0008      | 2.728E-08 | 0.0       | 0.0       | 2.001E-08  | ES-AN      | Andalucía                  |
-| nan     | injured         | 42.3202     | 2.102E-08 | 0.0       | 0.0       | 4.232E-07  | ES-AN      | Andalucía                  |
-| nan     | embodied_carbon | 348.7       | 0.0113    | 0.0       | 0.0       | 0.2319     | ES-AN      | Andalucía                  |
-| nan     | contents        | 281_612     | 1_296     | 0.0       | 0.0028    | 0.0028     | ES-EX      | Extremadura                |
-| nan     | structural      | 1_595_802   | 3_880     | 0.0       | 0.0160    | 6_306      | ES-EX      | Extremadura                |
-| nan     | occupants       | 61.2243     | 5.084E-04 | 0.0       | 6.122E-07 | 6.122E-07  | ES-EX      | Extremadura                |
-| nan     | area            | 1_140       | 1.7949    | 0.0       | 1.140E-05 | 1.140E-05  | ES-EX      | Extremadura                |
-| nan     | number          | 4.9994      | 0.0079    | 0.0       | 4.999E-08 | 4.999E-08  | ES-EX      | Extremadura                |
-| nan     | injured         | 61.2243     | 0.0033    | 0.0       | 6.122E-07 | 6.122E-07  | ES-EX      | Extremadura                |
-| nan     | embodied_carbon | 493.4       | 1.0554    | 0.0       | 4.934E-06 | 1.3759     | ES-EX      | Extremadura                |
-| nan     | contents        | 785_912     | 6.8475    | 0.0       | 0.0       | 8.023E-06  | ESP.1.2_1  | Cádiz                      |
-| nan     | structural      | 4_453_499   | 11_641    | 0.0       | 0.0       | 90_463     | ESP.1.2_1  | Cádiz                      |
-| nan     | occupants       | 55.4867     | 3.511E-06 | 0.0       | 0.0       | 5.549E-07  | ESP.1.2_1  | Cádiz                      |
-| nan     | area            | 3_426       | 0.0202    | 0.0       | 0.0       | 3.426E-05  | ESP.1.2_1  | Cádiz                      |
-| nan     | number          | 0.9887      | 5.824E-06 | 0.0       | 0.0       | 9.887E-09  | ESP.1.2_1  | Cádiz                      |
-| nan     | residents       | 98.8891     | 0.0025    | 0.0       | 0.0       | 9.889E-07  | ESP.1.2_1  | Cádiz                      |
-| nan     | affectedpop     | 98.8891     | 0.0210    | 0.0       | 0.0       | 0.0658     | ESP.1.2_1  | Cádiz                      |
-| nan     | injured         | 55.4867     | 8.576E-06 | 0.0       | 0.0       | 5.549E-07  | ESP.1.2_1  | Cádiz                      |
-| nan     | embodied_carbon | 1_100       | 1.2334    | 0.0       | 0.0       | 9.5565     | ESP.1.2_1  | Cádiz                      |
-| nan     | contents        | 418_295     | 0.1561    | 0.0       | 3.490E-04 | 0.0038     | ESP.1.3_1  | Córdoba                    |
-| nan     | structural      | 2_370_338   | 57.3758   | 0.0       | 10.0590   | 495.0      | ESP.1.3_1  | Córdoba                    |
-| nan     | occupants       | 20.6622     | 2.063E-06 | 0.0       | 2.147E-08 | 2.066E-07  | ESP.1.3_1  | Córdoba                    |
-| nan     | area            | 1_909       | 0.0189    | 0.0       | 1.798E-06 | 1.709E-05  | ESP.1.3_1  | Córdoba                    |
-| nan     | number          | 11.9966     | 1.051E-04 | 0.0       | 9.988E-09 | 1.100E-07  | ESP.1.3_1  | Córdoba                    |
-| nan     | residents       | 36.5959     | 4.701E-04 | 0.0       | 3.750E-08 | 3.284E-07  | ESP.1.3_1  | Córdoba                    |
-| nan     | affectedpop     | 36.5959     | 6.301E-04 | 0.0       | 3.750E-08 | 2.841E-06  | ESP.1.3_1  | Córdoba                    |
-| nan     | injured         | 20.6622     | 9.079E-06 | 0.0       | 2.147E-08 | 1.851E-07  | ESP.1.3_1  | Córdoba                    |
-| nan     | embodied_carbon | 709.4       | 0.0129    | 0.0       | 4.656E-07 | 0.1130     | ESP.1.3_1  | Córdoba                    |
-| nan     | contents        | 116_468     | 0.0171    | 0.0       | 3.882E-04 | 0.0012     | ESP.1.4_1  | Granada                    |
-| nan     | structural      | 659_986     | 13.4777   | 0.0       | 0.0022    | 315.5      | ESP.1.4_1  | Granada                    |
-| nan     | occupants       | 5.4179      | 1.071E-08 | 0.0       | 1.806E-08 | 5.418E-08  | ESP.1.4_1  | Granada                    |
-| nan     | area            | 600.0       | 1.934E-04 | 0.0       | 2.000E-06 | 6.000E-06  | ESP.1.4_1  | Granada                    |
-| nan     | number          | 3.9999      | 1.101E-06 | 0.0       | 2.000E-08 | 4.000E-08  | ESP.1.4_1  | Granada                    |
-| nan     | residents       | 9.4636      | 3.070E-06 | 0.0       | 3.154E-08 | 9.464E-08  | ESP.1.4_1  | Granada                    |
-| nan     | affectedpop     | 9.4636      | 9.154E-06 | 0.0       | 3.154E-08 | 9.464E-08  | ESP.1.4_1  | Granada                    |
-| nan     | injured         | 5.4179      | 2.278E-08 | 0.0       | 1.806E-08 | 5.418E-08  | ESP.1.4_1  | Granada                    |
-| nan     | embodied_carbon | 203.0       | 0.0015    | 0.0       | 7.541E-07 | 0.0442     | ESP.1.4_1  | Granada                    |
-| nan     | contents        | 172_209     | 0.6396    | 0.0       | 0.0       | 0.0017     | ESP.1.8_1  | Sevilla                    |
-| nan     | structural      | 975_855     | 570.0     | 0.0       | 0.0       | 1_968      | ESP.1.8_1  | Sevilla                    |
-| nan     | occupants       | 10.5462     | 5.598E-06 | 0.0       | 0.0       | 2.108E-07  | ESP.1.8_1  | Sevilla                    |
-| nan     | area            | 814.4       | 0.0494    | 0.0       | 0.0       | 8.144E-06  | ESP.1.8_1  | Sevilla                    |
-| nan     | number          | 2.9988      | 1.985E-04 | 0.0       | 0.0       | 2.999E-08  | ESP.1.8_1  | Sevilla                    |
-| nan     | residents       | 18.5859     | 0.0016    | 0.0       | 0.0       | 1.859E-07  | ESP.1.8_1  | Sevilla                    |
-| nan     | affectedpop     | 18.5859     | 0.0059    | 0.0       | 0.0       | 1.859E-07  | ESP.1.8_1  | Sevilla                    |
-| nan     | injured         | 10.5462     | 2.750E-05 | 0.0       | 0.0       | 1.055E-07  | ESP.1.8_1  | Sevilla                    |
-| nan     | embodied_carbon | 276.5       | 0.0734    | 0.0       | 0.0       | 0.1761     | ESP.1.8_1  | Sevilla                    |
-| nan     | contents        | 8_763_084   | 162_901   | 0.0       | 0.0839    | 6_701      | ESP.11.1_1 | Badajoz                    |
-| nan     | structural      | 49_657_476  | 1_220_307 | 0.0       | 9_217     | 2_181_196  | ESP.11.1_1 | Badajoz                    |
-| nan     | occupants       | 400.3       | 0.0407    | 0.0       | 3.848E-06 | 0.0367     | ESP.11.1_1 | Badajoz                    |
-| nan     | area            | 45_066      | 866.4     | 0.0       | 4.350E-04 | 1_161      | ESP.11.1_1 | Badajoz                    |
-| nan     | number          | 441.0       | 8.6251    | 0.0       | 4.327E-06 | 11.6105    | ESP.11.1_1 | Badajoz                    |
-| nan     | residents       | 699.3       | 15.1633   | 0.0       | 6.731E-06 | 26.7897    | ESP.11.1_1 | Badajoz                    |
-| nan     | affectedpop     | 699.3       | 18.7644   | 0.0       | 6.914E-06 | 58.4870    | ESP.11.1_1 | Badajoz                    |
-| nan     | injured         | 400.3       | 0.2755    | 0.0       | 3.817E-06 | 0.4553     | ESP.11.1_1 | Badajoz                    |
-| nan     | embodied_carbon | 16_876      | 295.0     | 0.0       | 2.3580    | 397.3      | ESP.11.1_1 | Badajoz                    |
-| nan     | contents        | 19_411      | 17.5932   | 0.0       | 1.941E-04 | 1.941E-04  | ESP.12.2_1 | Lugo                       |
-| nan     | structural      | 109_994     | 1_059     | 0.0       | 5.3976    | 2_192      | ESP.12.2_1 | Lugo                       |
-| nan     | occupants       | 0.5880      | 1.974E-05 | 0.0       | 5.880E-09 | 1.966E-05  | ESP.12.2_1 | Lugo                       |
-| nan     | area            | 99.9950     | 0.7127    | 0.0       | 9.999E-07 | 0.9299     | ESP.12.2_1 | Lugo                       |
-| nan     | number          | 0.9999      | 0.0071    | 0.0       | 9.999E-09 | 0.0093     | ESP.12.2_1 | Lugo                       |
-| nan     | residents       | 1.0270      | 0.0089    | 0.0       | 1.027E-08 | 0.0143     | ESP.12.2_1 | Lugo                       |
-| nan     | affectedpop     | 1.0270      | 0.0132    | 0.0       | 1.027E-08 | 0.0374     | ESP.12.2_1 | Lugo                       |
-| nan     | injured         | 0.5880      | 1.578E-04 | 0.0       | 5.880E-09 | 2.569E-04  | ESP.12.2_1 | Lugo                       |
-| nan     | embodied_carbon | 37.7048     | 0.2193    | 0.0       | 3.770E-07 | 0.3603     | ESP.12.2_1 | Lugo                       |
-| nan     | contents        | 328_216     | 799.3     | 0.0       | 0.0014    | 352.1      | ESP.12.4_1 | Pontevedra                 |
-| nan     | structural      | 1_859_885   | 19_174    | 0.0       | 3_362     | 80_210     | ESP.12.4_1 | Pontevedra                 |
-| nan     | occupants       | 13.5757     | 6.395E-04 | 0.0       | 5.088E-08 | 0.0011     | ESP.12.4_1 | Pontevedra                 |
-| nan     | area            | 1_431       | 6.1325    | 0.0       | 6.000E-06 | 15.7382    | ESP.12.4_1 | Pontevedra                 |
-| nan     | number          | 8.0013      | 0.0156    | 0.0       | 6.000E-08 | 0.0576     | ESP.12.4_1 | Pontevedra                 |
-| nan     | residents       | 24.1947     | 0.1681    | 0.0       | 9.068E-08 | 0.6699     | ESP.12.4_1 | Pontevedra                 |
-| nan     | affectedpop     | 24.1947     | 0.3499    | 0.0       | 9.068E-08 | 2.7669     | ESP.12.4_1 | Pontevedra                 |
-| nan     | injured         | 13.5757     | 0.0022    | 0.0       | 5.088E-08 | 0.0046     | ESP.12.4_1 | Pontevedra                 |
-| nan     | embodied_carbon | 448.9       | 3.0393    | 0.0       | 0.3176    | 12.3695    | ESP.12.4_1 | Pontevedra                 |
-| nan     | contents        | 38_838      | 1.398E-05 | 0.0       | 0.0       | 3.884E-04  | ESP.5.1_1  | Ávila                      |
-| nan     | structural      | 220_083     | 22.3496   | 0.0       | 0.0       | 706.3      | ESP.5.1_1  | Ávila                      |
-| nan     | occupants       | 0.8858      | 4.269E-10 | 0.0       | 0.0       | 8.858E-09  | ESP.5.1_1  | Ávila                      |
-| nan     | area            | 200.1       | 7.239E-08 | 0.0       | 0.0       | 2.001E-06  | ESP.5.1_1  | Ávila                      |
-| nan     | number          | 1.0004      | 3.620E-10 | 0.0       | 0.0       | 1.000E-08  | ESP.5.1_1  | Ávila                      |
-| nan     | residents       | 1.5472      | 5.598E-10 | 0.0       | 0.0       | 1.547E-08  | ESP.5.1_1  | Ávila                      |
-| nan     | affectedpop     | 1.5472      | 2.050E-08 | 0.0       | 0.0       | 1.547E-08  | ESP.5.1_1  | Ávila                      |
-| nan     | injured         | 0.8858      | 3.205E-10 | 0.0       | 0.0       | 8.858E-09  | ESP.5.1_1  | Ávila                      |
-| nan     | embodied_carbon | 59.9365     | 0.0024    | 0.0       | 0.0       | 0.0750     | ESP.5.1_1  | Ávila                      |
-| nan     | contents        | 1_531_979   | 2_914     | 0.0       | 0.0049    | 1.7873     | ESP.5.5_1  | Salamanca                  |
-| nan     | structural      | 8_681_212   | 65_550    | 0.0       | 2_120     | 339_377    | ESP.5.5_1  | Salamanca                  |
-| nan     | occupants       | 60.0383     | 0.0011    | 0.0       | 4.660E-07 | 0.0046     | ESP.5.5_1  | Salamanca                  |
-| nan     | area            | 7_892       | 32.0145   | 0.0       | 2.500E-05 | 154.9104   | ESP.5.5_1  | Salamanca                  |
-| nan     | number          | 54.9548     | 0.2981    | 0.0       | 2.500E-07 | 1.5464     | ESP.5.5_1  | Salamanca                  |
-| nan     | residents       | 104.8700    | 0.5209    | 0.0       | 3.087E-07 | 2.6869     | ESP.5.5_1  | Salamanca                  |
-| nan     | affectedpop     | 104.8700    | 0.8791    | 0.0       | 3.087E-07 | 5.0961     | ESP.5.5_1  | Salamanca                  |
-| nan     | injured         | 60.0383     | 0.0085    | 0.0       | 1.768E-07 | 0.0442     | ESP.5.5_1  | Salamanca                  |
-| nan     | embodied_carbon | 2_666       | 14.3572   | 0.0       | 0.3616    | 68.6737    | ESP.5.5_1  | Salamanca                  |
-| nan     | contents        | 296_011     | 3.4052    | 0.0       | 0.0       | 0.0027     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | structural      | 1_657_357   | 406.7     | 0.0       | 0.0       | 3_494      | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | occupants       | 144.6591    | 4.177E-04 | 0.0       | 0.0       | 5.544E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | area            | 4_842       | 0.5107    | 0.0       | 0.0       | 4.633E-05  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | number          | 47.0090     | 0.0044    | 0.0       | 0.0       | 4.432E-07  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | residents       | 152.7525    | 0.0320    | 0.0       | 2.943E-07 | 0.0750     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | affectedpop     | 152.7525    | 0.0494    | 0.0       | 2.943E-07 | 0.2972     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | injured         | 144.6591    | 6.588E-04 | 0.0       | 0.0       | 1.286E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | embodied_carbon | 1_616       | 0.1792    | 0.0       | 0.0       | 1.5625     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
-| nan     | contents        | 23_403      | 8.475E-06 | 0.0       | 1.301E-21 | 1.642E-04  | MA-03      | Fez-Meknes                 |
-| nan     | structural      | 120_972     | 5.9358    | 0.0       | 3.4136    | 79.9857    | MA-03      | Fez-Meknes                 |
-| nan     | occupants       | 16.4908     | 1.205E-06 | 0.0       | 2.772E-08 | 2.958E-06  | MA-03      | Fez-Meknes                 |
-| nan     | area            | 519.9       | 0.0039    | 0.0       | 9.978E-07 | 0.0050     | MA-03      | Fez-Meknes                 |
-| nan     | number          | 6.0000      | 6.208E-05 | 0.0       | 1.000E-08 | 8.358E-05  | MA-03      | Fez-Meknes                 |
-| nan     | residents       | 24.8042     | 3.509E-04 | 0.0       | 4.134E-08 | 3.570E-04  | MA-03      | Fez-Meknes                 |
-| nan     | affectedpop     | 24.8042     | 9.868E-04 | 0.0       | 4.134E-08 | 7.762E-04  | MA-03      | Fez-Meknes                 |
-| nan     | injured         | 16.4908     | 7.866E-06 | 0.0       | 2.772E-08 | 1.372E-07  | MA-03      | Fez-Meknes                 |
-| nan     | embodied_carbon | 260.4       | 0.0071    | 0.0       | 1.056E-07 | 0.1074     | MA-03      | Fez-Meknes                 |
-| nan     | contents        | 432_585     | 7.9182    | 0.0       | 7.949E-05 | 6.8829     | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | structural      | 1_750_457   | 902.6     | 0.0       | 0.9587    | 5_101      | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | occupants       | 145.1012    | 2.986E-07 | 0.0       | 8.158E-08 | 1.369E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | area            | 4_345       | 0.0025    | 0.0       | 1.802E-06 | 4.165E-05  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | number          | 12.9684     | 1.091E-05 | 0.0       | 1.994E-08 | 9.966E-08  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | residents       | 146.2619    | 1.944E-05 | 0.0       | 0.0       | 1.463E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | affectedpop     | 146.2619    | 3.047E-04 | 0.0       | 0.0       | 1.463E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | injured         | 145.1012    | 1.498E-06 | 0.0       | 8.158E-08 | 1.369E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | embodied_carbon | 1_546       | 0.3191    | 0.0       | 2.408E-08 | 1.8725     | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
-| nan     | contents        | 76_967      | 6.773E-05 | 0.0       | 0.0       | 7.203E-04  | MA-05      | Béni Mellal-Khénifra       |
-| nan     | structural      | 244_079     | 52.5790   | 0.0       | 0.0       | 499.1      | MA-05      | Béni Mellal-Khénifra       |
-| nan     | occupants       | 16.9245     | 1.332E-08 | 0.0       | 0.0       | 1.414E-07  | MA-05      | Béni Mellal-Khénifra       |
-| nan     | area            | 580.2       | 4.525E-07 | 0.0       | 0.0       | 4.802E-06  | MA-05      | Béni Mellal-Khénifra       |
-| nan     | number          | 1.9762      | 9.199E-10 | 0.0       | 0.0       | 9.762E-09  | MA-05      | Béni Mellal-Khénifra       |
-| nan     | injured         | 16.9245     | 1.332E-08 | 0.0       | 0.0       | 1.414E-07  | MA-05      | Béni Mellal-Khénifra       |
-| nan     | embodied_carbon | 187.8       | 0.0161    | 0.0       | 0.0       | 0.1375     | MA-05      | Béni Mellal-Khénifra       |
-| nan     | contents        | 311_529     | 24.7364   | 0.0       | 4.515E-04 | 0.0010     | MA-06      | Casablanca-Settat          |
-| nan     | structural      | 1_765_324   | 518.2     | 0.0       | 58.9234   | 2_473      | MA-06      | Casablanca-Settat          |
-| nan     | occupants       | 191.1       | 1.749E-04 | 0.0       | 2.172E-07 | 1.690E-04  | MA-06      | Casablanca-Settat          |
-| nan     | area            | 5_989       | 0.6311    | 0.0       | 7.996E-06 | 0.5467     | MA-06      | Casablanca-Settat          |
-| nan     | number          | 56.0004     | 0.0044    | 0.0       | 1.999E-08 | 0.0031     | MA-06      | Casablanca-Settat          |
-| nan     | residents       | 286.8       | 0.0476    | 0.0       | 3.323E-07 | 0.0289     | MA-06      | Casablanca-Settat          |
-| nan     | affectedpop     | 286.8       | 0.0758    | 0.0       | 3.323E-07 | 0.1244     | MA-06      | Casablanca-Settat          |
-| nan     | injured         | 191.1       | 0.0010    | 0.0       | 2.172E-07 | 0.0012     | MA-06      | Casablanca-Settat          |
-| nan     | embodied_carbon | 1_837       | 0.5527    | 0.0       | 0.0492    | 1.7619     | MA-06      | Casablanca-Settat          |
-| nan     | contents        | 305_309     | 121.0960  | 0.0       | 1.271E-05 | 0.0905     | MA-07      | Marrakech-Safi             |
-| nan     | structural      | 1_601_993   | 2_865     | 0.0       | 3.5394    | 15_143     | MA-07      | Marrakech-Safi             |
-| nan     | occupants       | 192.4       | 0.0040    | 0.0       | 2.722E-08 | 0.0125     | MA-07      | Marrakech-Safi             |
-| nan     | area            | 5_070       | 6.4892    | 0.0       | 6.000E-07 | 17.0160    | MA-07      | Marrakech-Safi             |
-| nan     | number          | 59.0006     | 0.0850    | 0.0       | 1.000E-08 | 0.2157     | MA-07      | Marrakech-Safi             |
-| nan     | residents       | 227.4       | 0.4656    | 0.0       | 4.060E-08 | 1.1576     | MA-07      | Marrakech-Safi             |
-| nan     | affectedpop     | 227.4       | 0.7611    | 0.0       | 4.060E-08 | 2.5199     | MA-07      | Marrakech-Safi             |
-| nan     | injured         | 192.4       | 0.0094    | 0.0       | 2.722E-08 | 0.0257     | MA-07      | Marrakech-Safi             |
-| nan     | embodied_carbon | 2_569       | 3.3306    | 0.0       | 7.316E-04 | 13.8331    | MA-07      | Marrakech-Safi             |
-| nan     | contents        | 33_572      | 2.354E-05 | 0.0       | 0.0       | 3.357E-04  | MA-08      | Drâa-Tafilalet             |
-| nan     | structural      | 100_716     | 0.8186    | 0.0       | 0.0       | 38.4280    | MA-08      | Drâa-Tafilalet             |
-| nan     | occupants       | 7.9164      | 5.552E-09 | 0.0       | 0.0       | 7.916E-08  | MA-08      | Drâa-Tafilalet             |
-| nan     | area            | 223.8       | 1.570E-07 | 0.0       | 0.0       | 2.238E-06  | MA-08      | Drâa-Tafilalet             |
-| nan     | number          | 1.0111      | 7.091E-10 | 0.0       | 0.0       | 1.011E-08  | MA-08      | Drâa-Tafilalet             |
-| nan     | injured         | 7.9164      | 5.552E-09 | 0.0       | 0.0       | 7.916E-08  | MA-08      | Drâa-Tafilalet             |
-| nan     | embodied_carbon | 113.3772    | 1.630E-04 | 0.0       | 0.0       | 0.0031     | MA-08      | Drâa-Tafilalet             |
-| nan     | contents        | 27_954      | 2.8680    | 0.0       | 1.271E-04 | 0.0071     | MA-09      | Souss-Massa                |
-| nan     | structural      | 158_408     | 161.2419  | 0.0       | 34.7302   | 599.3      | MA-09      | Souss-Massa                |
-| nan     | occupants       | 61.3029     | 0.0011    | 0.0       | 3.344E-07 | 0.0010     | MA-09      | Souss-Massa                |
-| nan     | area            | 1_320       | 0.8932    | 0.0       | 7.200E-06 | 0.7480     | MA-09      | Souss-Massa                |
-| nan     | number          | 22.0007     | 0.0149    | 0.0       | 1.200E-07 | 0.0125     | MA-09      | Souss-Massa                |
-| nan     | residents       | 91.4423     | 0.0792    | 0.0       | 4.988E-07 | 0.0767     | MA-09      | Souss-Massa                |
-| nan     | affectedpop     | 91.4423     | 0.1159    | 0.0       | 4.988E-07 | 0.3436     | MA-09      | Souss-Massa                |
-| nan     | injured         | 61.3029     | 0.0016    | 0.0       | 3.344E-07 | 6.130E-07  | MA-09      | Souss-Massa                |
-| nan     | embodied_carbon | 97.8419     | 0.0512    | 0.0       | 0.0080    | 0.1405     | MA-09      | Souss-Massa                |
-| nan     | affectedpop     | 2_914       | 38.4789   | 5.112E-07 | 0.0019    | 193.4      | *total*    | *total*                    |
-| nan     | area            | 164_498     | 1_832     | 3.691E-05 | 0.0013    | 6_181      | *total*    | *total*                    |
-| nan     | contents        | 31_609_488  | 332_010   | 0.0078    | 0.2146    | 47_339     | *total*    | *total*                    |
-| nan     | embodied_carbon | 57_199      | 675.3     | 0.1925    | 21.8268   | 2_338      | *total*    | *total*                    |
-| nan     | injured         | 2_026       | 0.5237    | 2.764E-07 | 1.114E-05 | 1.8588     | *total*    | *total*                    |
-| nan     | number          | 1_182       | 15.1957   | 2.252E-07 | 9.259E-06 | 45.4732    | *total*    | *total*                    |
-| nan     | occupants       | 2_026       | 0.0857    | 2.764E-07 | 1.276E-05 | 0.2484     | *total*    | *total*                    |
-| nan     | residents       | 2_914       | 28.6061   | 5.112E-07 | 1.824E-05 | 109.3119   | *total*    | *total*                    |
-| nan     | structural      | 176_884_672 | 3_188_300 | 2_246     | 162_515   | 14_469_876 | *total*    | *total*                    |
+| ID_0    | loss_type         | value       | lossmea   | q05       | q50       | q95        | ID         | NAME                       |
+|---------+-------------------+-------------+-----------+-----------+-----------+------------+------------+----------------------------|
+| ESP     | contents          | 12_689_558  | 48_141    | 0.0       | 0.0919    | 5_600      | nan        | nan                        |
+| ESP     | structural        | 71_518_256  | 1_318_236 | 0.0       | 27_866    | 3_978_023  | nan        | nan                        |
+| ESP     | occupants_day     | 466.0       | 0.0205    | 0.0       | 3.121E-06 | 0.0401     | nan        | nan                        |
+| ESP     | occupants_night   | 967.8       | 0.0874    | 0.0       | 7.246E-06 | 0.1720     | nan        | nan                        |
+| ESP     | occupants_transit | 579.1       | 0.0485    | 0.0       | 4.281E-06 | 0.0955     | nan        | nan                        |
+| ESP     | area              | 63_294      | 1_062     | 0.0       | 4.751E-04 | 3_067      | nan        | nan                        |
+| ESP     | number            | 533.0       | 10.5542   | 0.0       | 4.590E-06 | 30.6689    | nan        | nan                        |
+| ESP     | residents         | 994.5       | 18.1402   | 0.0       | 7.168E-06 | 66.5742    | nan        | nan                        |
+| ESP     | affectedpop       | 994.5       | 22.2027   | 0.0       | 0.0015    | 122.3908   | nan        | nan                        |
+| ESP     | embodied_carbon   | 23_219      | 415.0     | 0.0       | 5.2874    | 792.8      | nan        | nan                        |
+| ESP     | occupants_avg     | 671.0       | 0.0521    | 0.0       | 4.883E-06 | 0.1025     | nan        | nan                        |
+| ESP     | injured_day       | 466.0       | 0.1312    | 0.0       | 3.053E-06 | 0.4398     | nan        | nan                        |
+| ESP     | injured_night     | 967.8       | 0.5592    | 0.0       | 6.962E-06 | 1.8843     | nan        | nan                        |
+| ESP     | injured_transit   | 579.1       | 0.3107    | 0.0       | 4.119E-06 | 1.0467     | nan        | nan                        |
+| ESP     | injured_avg       | 671.0       | 0.3337    | 0.0       | 4.708E-06 | 1.1236     | nan        | nan                        |
+| MAR     | contents          | 1_546_860   | 298.7     | 0.0       | 8.639E-04 | 0.1926     | nan        | nan                        |
+| MAR     | structural        | 7_623_316   | 7_212     | 0.0       | 278.8     | 18_841     | nan        | nan                        |
+| MAR     | occupants_day     | 728.9       | 0.0029    | 0.0       | 4.470E-07 | 0.0011     | nan        | nan                        |
+| MAR     | occupants_night   | 966.8       | 0.0079    | 0.0       | 8.166E-07 | 0.0029     | nan        | nan                        |
+| MAR     | occupants_transit | 680.7       | 0.0051    | 0.0       | 5.244E-07 | 0.0019     | nan        | nan                        |
+| MAR     | area              | 23_692      | 14.3189   | 0.0       | 1.769E-05 | 5.6793     | nan        | nan                        |
+| MAR     | number            | 214.0       | 0.1578    | 0.0       | 7.000E-08 | 0.0280     | nan        | nan                        |
+| MAR     | residents         | 957.8       | 0.8311    | 0.0       | 8.301E-07 | 0.2438     | nan        | nan                        |
+| MAR     | affectedpop       | 957.8       | 1.1751    | 0.0       | 8.301E-07 | 0.7433     | nan        | nan                        |
+| MAR     | embodied_carbon   | 8_419       | 10.0802   | 0.0       | 0.1985    | 8.6253     | nan        | nan                        |
+| MAR     | occupants_avg     | 792.1       | 0.0053    | 0.0       | 5.447E-07 | 0.0019     | nan        | nan                        |
+| MAR     | injured_day       | 728.9       | 0.0099    | 0.0       | 4.470E-07 | 0.0058     | nan        | nan                        |
+| MAR     | injured_night     | 966.8       | 0.0267    | 0.0       | 8.166E-07 | 0.0069     | nan        | nan                        |
+| MAR     | injured_transit   | 680.7       | 0.0173    | 0.0       | 5.244E-07 | 0.0063     | nan        | nan                        |
+| MAR     | injured_avg       | 792.1       | 0.0180    | 0.0       | 5.447E-07 | 0.0101     | nan        | nan                        |
+| PRT     | contents          | 17_682_912  | 115_450   | 0.0391    | 0.6470    | 588_545    | nan        | nan                        |
+| PRT     | structural        | 99_048_352  | 1_658_799 | 27_148    | 344_870   | 7_641_194  | nan        | nan                        |
+| PRT     | occupants_day     | 335.7       | 0.0131    | 9.495E-07 | 3.087E-04 | 0.0702     | nan        | nan                        |
+| PRT     | occupants_night   | 952.7       | 0.0578    | 3.465E-06 | 5.858E-04 | 0.2274     | nan        | nan                        |
+| PRT     | occupants_transit | 521.7       | 0.0305    | 1.839E-06 | 3.101E-04 | 0.1202     | nan        | nan                        |
+| PRT     | area              | 79_103      | 859.3     | 2.321E-04 | 12.2609   | 4_089      | nan        | nan                        |
+| PRT     | number            | 444.4       | 5.5952    | 1.371E-06 | 0.0759    | 26.0269    | nan        | nan                        |
+| PRT     | residents         | 990.2       | 12.2488   | 3.347E-06 | 0.1420    | 49.6209    | nan        | nan                        |
+| PRT     | affectedpop       | 990.2       | 17.2941   | 3.591E-06 | 0.5392    | 80.0233    | nan        | nan                        |
+| PRT     | embodied_carbon   | 26_095      | 350.3     | 3.8021    | 46.6740   | 1_690      | nan        | nan                        |
+| PRT     | occupants_avg     | 603.4       | 0.0338    | 2.054E-06 | 4.896E-04 | 0.1320     | nan        | nan                        |
+| PRT     | injured_day       | 335.7       | 0.0834    | 6.873E-07 | 0.0013    | 0.3609     | nan        | nan                        |
+| PRT     | injured_night     | 952.7       | 0.3706    | 2.451E-06 | 0.0046    | 1.4291     | nan        | nan                        |
+| PRT     | injured_transit   | 521.7       | 0.1950    | 1.292E-06 | 0.0031    | 0.7513     | nan        | nan                        |
+| PRT     | injured_avg       | 603.4       | 0.2163    | 1.473E-06 | 0.0039    | 0.8251     | nan        | nan                        |
+| *total* | affectedpop       | 2_942       | 40.6719   | 8.135E-06 | 1.1392    | 225.2      | nan        | nan                        |
+| *total* | area              | 166_089     | 1_936     | 3.142E-04 | 13.3214   | 8_190      | nan        | nan                        |
+| *total* | contents          | 31_919_330  | 163_891   | 0.0460    | 3.9941    | 1_253_210  | nan        | nan                        |
+| *total* | embodied_carbon   | 57_733      | 775.4     | 4.7031    | 69.0582   | 3_830      | nan        | nan                        |
+| *total* | injured_avg       | 2_066       | 0.5680    | 2.279E-06 | 0.0070    | 2.3547     | nan        | nan                        |
+| *total* | injured_day       | 1_531       | 0.2246    | 1.142E-06 | 0.0046    | 0.8529     | nan        | nan                        |
+| *total* | injured_night     | 2_887       | 0.9565    | 3.131E-06 | 0.0081    | 4.0463     | nan        | nan                        |
+| *total* | injured_transit   | 1_781       | 0.5230    | 1.886E-06 | 0.0055    | 2.1648     | nan        | nan                        |
+| *total* | number            | 1_191       | 16.3072   | 1.531E-06 | 0.1201    | 60.7678    | nan        | nan                        |
+| *total* | occupants_avg     | 2_066       | 0.0912    | 2.989E-06 | 0.0016    | 0.3758     | nan        | nan                        |
+| *total* | occupants_day     | 1_531       | 0.0365    | 2.496E-06 | 0.0011    | 0.1403     | nan        | nan                        |
+| *total* | occupants_night   | 2_887       | 0.1531    | 5.028E-06 | 0.0016    | 0.6404     | nan        | nan                        |
+| *total* | occupants_transit | 1_781       | 0.0842    | 2.668E-06 | 0.0011    | 0.3467     | nan        | nan                        |
+| *total* | residents         | 2_942       | 31.2201   | 4.984E-06 | 0.2605    | 130.6350   | nan        | nan                        |
+| *total* | structural        | 178_189_920 | 2_984_247 | 30_332    | 420_802   | 15_938_193 | nan        | nan                        |
+| nan     | contents          | 187_674     | 855.1     | 0.0       | 8.769E-05 | 0.0019     | 1008       | Division No.  8            |
+| nan     | structural        | 1_063_484   | 15_286    | 0.0       | 195.9     | 63_861     | 1008       | Division No.  8            |
+| nan     | occupants_day     | 1.3654      | 7.272E-05 | 0.0       | 1.365E-08 | 1.707E-04  | 1008       | Division No.  8            |
+| nan     | occupants_night   | 6.6812      | 3.558E-04 | 0.0       | 6.681E-08 | 8.351E-04  | 1008       | Division No.  8            |
+| nan     | occupants_transit | 3.5353      | 1.883E-04 | 0.0       | 3.535E-08 | 4.419E-04  | 1008       | Division No.  8            |
+| nan     | area              | 932.9       | 10.9760   | 0.0       | 9.329E-06 | 32.7466    | 1008       | Division No.  8            |
+| nan     | number            | 5.9860      | 0.0704    | 0.0       | 5.986E-08 | 0.2101     | 1008       | Division No.  8            |
+| nan     | residents         | 6.9880      | 0.1030    | 0.0       | 6.988E-08 | 0.3656     | 1008       | Division No.  8            |
+| nan     | affectedpop       | 6.9880      | 0.1544    | 0.0       | 6.988E-08 | 0.7679     | 1008       | Division No.  8            |
+| nan     | embodied_carbon   | 338.0       | 3.9383    | 0.0       | 0.0011    | 9.4014     | 1008       | Division No.  8            |
+| nan     | occupants_avg     | 3.8609      | 2.056E-04 | 0.0       | 3.861E-08 | 4.826E-04  | 1008       | Division No.  8            |
+| nan     | injured_day       | 1.3654      | 6.095E-04 | 0.0       | 1.365E-08 | 0.0021     | 1008       | Division No.  8            |
+| nan     | injured_night     | 6.6812      | 0.0030    | 0.0       | 6.681E-08 | 0.0103     | 1008       | Division No.  8            |
+| nan     | injured_transit   | 3.5353      | 0.0016    | 0.0       | 3.535E-08 | 0.0055     | 1008       | Division No.  8            |
+| nan     | injured_avg       | 3.8609      | 0.0017    | 0.0       | 3.861E-08 | 0.0060     | 1008       | Division No.  8            |
+| nan     | contents          | 120_448     | 302.0     | 0.0       | 9.314E-04 | 0.0012     | 101        | Hanumangarh                |
+| nan     | structural        | 527_301     | 6_606     | 0.0       | 1_562     | 35_268     | 101        | Hanumangarh                |
+| nan     | occupants_day     | 22.3718     | 2.742E-04 | 0.0       | 2.237E-07 | 0.0017     | 101        | Hanumangarh                |
+| nan     | occupants_night   | 2.9305      | 0.0013    | 0.0       | 2.930E-08 | 0.0085     | 101        | Hanumangarh                |
+| nan     | occupants_transit | 4.5257      | 6.731E-04 | 0.0       | 4.526E-08 | 0.0045     | 101        | Hanumangarh                |
+| nan     | area              | 498.9       | 2.5732    | 0.0       | 4.989E-06 | 17.4113    | 101        | Hanumangarh                |
+| nan     | number            | 2.0084      | 0.0185    | 0.0       | 2.008E-08 | 0.1265     | 101        | Hanumangarh                |
+| nan     | residents         | 1.7828      | 0.0378    | 0.0       | 1.783E-08 | 0.2980     | 101        | Hanumangarh                |
+| nan     | affectedpop       | 1.7828      | 0.0492    | 0.0       | 1.783E-08 | 0.4751     | 101        | Hanumangarh                |
+| nan     | embodied_carbon   | 200.7       | 1.8015    | 0.0       | 0.4766    | 7.6063     | 101        | Hanumangarh                |
+| nan     | occupants_avg     | 9.9376      | 7.385E-04 | 0.0       | 9.938E-08 | 0.0049     | 101        | Hanumangarh                |
+| nan     | injured_day       | 22.3718     | 3.859E-04 | 0.0       | 2.237E-07 | 0.0020     | 101        | Hanumangarh                |
+| nan     | injured_night     | 2.9305      | 0.0013    | 0.0       | 2.930E-08 | 0.0096     | 101        | Hanumangarh                |
+| nan     | injured_transit   | 4.5257      | 7.078E-04 | 0.0       | 4.526E-08 | 0.0051     | 101        | Hanumangarh                |
+| nan     | injured_avg       | 9.9376      | 8.002E-04 | 0.0       | 9.938E-08 | 0.0056     | 101        | Hanumangarh                |
+| nan     | contents          | 564_358     | 25_224    | 0.0       | 0.0056    | 157_351    | 1015       | Pombal                     |
+| nan     | structural        | 3_198_028   | 148_304   | 0.0       | 932.3     | 986_182    | 1015       | Pombal                     |
+| nan     | occupants_day     | 6.0427      | 0.0015    | 0.0       | 6.043E-08 | 0.0109     | 1015       | Pombal                     |
+| nan     | occupants_night   | 29.5670     | 0.0072    | 0.0       | 2.957E-07 | 0.0536     | 1015       | Pombal                     |
+| nan     | occupants_transit | 15.6447     | 0.0038    | 0.0       | 1.564E-07 | 0.0283     | 1015       | Pombal                     |
+| nan     | area              | 2_805       | 138.0833  | 0.0       | 2.805E-05 | 1_065      | 1015       | Pombal                     |
+| nan     | number            | 18.0006     | 0.8860    | 0.0       | 1.800E-07 | 6.8310     | 1015       | Pombal                     |
+| nan     | residents         | 30.9246     | 1.7877    | 0.0       | 3.092E-07 | 14.0591    | 1015       | Pombal                     |
+| nan     | affectedpop       | 30.9246     | 2.3219    | 0.0       | 3.092E-07 | 18.3104    | 1015       | Pombal                     |
+| nan     | embodied_carbon   | 1_016       | 42.5928   | 0.0       | 0.1398    | 317.1      | 1015       | Pombal                     |
+| nan     | occupants_avg     | 17.0858     | 0.0042    | 0.0       | 1.709E-07 | 0.0309     | 1015       | Pombal                     |
+| nan     | injured_day       | 6.0427      | 0.0109    | 0.0       | 6.043E-08 | 0.0844     | 1015       | Pombal                     |
+| nan     | injured_night     | 29.5670     | 0.0532    | 0.0       | 2.957E-07 | 0.4130     | 1015       | Pombal                     |
+| nan     | injured_transit   | 15.6447     | 0.0282    | 0.0       | 1.564E-07 | 0.2185     | 1015       | Pombal                     |
+| nan     | injured_avg       | 17.0858     | 0.0308    | 0.0       | 1.709E-07 | 0.2386     | 1015       | Pombal                     |
+| nan     | contents          | 2_101_577   | 55_616    | 0.0       | 0.0210    | 82_064     | 1110       | BIREUEN Regency            |
+| nan     | structural        | 11_908_934  | 581_321   | 0.0       | 3_482     | 3_349_848  | 1110       | BIREUEN Regency            |
+| nan     | occupants_day     | 20.4714     | 0.0047    | 0.0       | 2.047E-07 | 0.0322     | 1110       | BIREUEN Regency            |
+| nan     | occupants_night   | 108.4457    | 0.0251    | 0.0       | 1.084E-06 | 0.1706     | 1110       | BIREUEN Regency            |
+| nan     | occupants_transit | 56.0342     | 0.0130    | 0.0       | 5.603E-07 | 0.0882     | 1110       | BIREUEN Regency            |
+| nan     | area              | 8_036       | 352.5     | 0.0       | 8.036E-05 | 2_464      | 1110       | BIREUEN Regency            |
+| nan     | number            | 51.5625     | 2.2617    | 0.0       | 5.156E-07 | 15.8105    | 1110       | BIREUEN Regency            |
+| nan     | residents         | 114.0329    | 5.9018    | 0.0       | 1.140E-06 | 41.8548    | 1110       | BIREUEN Regency            |
+| nan     | affectedpop       | 114.0329    | 7.3054    | 0.0       | 1.140E-06 | 51.4327    | 1110       | BIREUEN Regency            |
+| nan     | embodied_carbon   | 2_725       | 115.9891  | 0.0       | 0.4017    | 709.1      | 1110       | BIREUEN Regency            |
+| nan     | occupants_avg     | 61.6560     | 0.0143    | 0.0       | 6.166E-07 | 0.0970     | 1110       | BIREUEN Regency            |
+| nan     | injured_day       | 20.4714     | 0.0333    | 0.0       | 2.047E-07 | 0.2340     | 1110       | BIREUEN Regency            |
+| nan     | injured_night     | 108.4457    | 0.1765    | 0.0       | 1.084E-06 | 1.2394     | 1110       | BIREUEN Regency            |
+| nan     | injured_transit   | 56.0342     | 0.0912    | 0.0       | 5.603E-07 | 0.6404     | 1110       | BIREUEN Regency            |
+| nan     | injured_avg       | 61.6560     | 0.1003    | 0.0       | 6.166E-07 | 0.7046     | 1110       | BIREUEN Regency            |
+| nan     | contents          | 52_078      | 777.6     | 0.0       | 5.276E-07 | 3_139      | 1111       | ACEH UTARA Regency         |
+| nan     | structural        | 295_108     | 9_612     | 0.0       | 2_346     | 34_356     | 1111       | ACEH UTARA Regency         |
+| nan     | occupants_day     | 0.6881      | 7.574E-05 | 0.0       | 6.881E-09 | 1.680E-04  | 1111       | ACEH UTARA Regency         |
+| nan     | occupants_night   | 3.6441      | 4.011E-04 | 0.0       | 3.644E-08 | 8.894E-04  | 1111       | ACEH UTARA Regency         |
+| nan     | occupants_transit | 1.8836      | 2.073E-04 | 0.0       | 1.884E-08 | 4.597E-04  | 1111       | ACEH UTARA Regency         |
+| nan     | area              | 199.1       | 2.6819    | 0.0       | 1.991E-06 | 6.7593     | 1111       | ACEH UTARA Regency         |
+| nan     | number            | 0.9561      | 0.0129    | 0.0       | 9.561E-09 | 0.0325     | 1111       | ACEH UTARA Regency         |
+| nan     | residents         | 3.8322      | 0.0756    | 0.0       | 3.832E-08 | 0.2856     | 1111       | ACEH UTARA Regency         |
+| nan     | affectedpop       | 3.8322      | 0.1549    | 0.0       | 3.832E-08 | 0.9854     | 1111       | ACEH UTARA Regency         |
+| nan     | embodied_carbon   | 59.7046     | 1.2639    | 0.0       | 0.2032    | 4.5069     | 1111       | ACEH UTARA Regency         |
+| nan     | occupants_avg     | 2.0723      | 2.281E-04 | 0.0       | 2.072E-08 | 5.058E-04  | 1111       | ACEH UTARA Regency         |
+| nan     | injured_day       | 0.6881      | 3.789E-04 | 0.0       | 6.881E-09 | 9.976E-04  | 1111       | ACEH UTARA Regency         |
+| nan     | injured_night     | 3.6441      | 0.0020    | 0.0       | 3.644E-08 | 0.0053     | 1111       | ACEH UTARA Regency         |
+| nan     | injured_transit   | 1.8836      | 0.0010    | 0.0       | 1.884E-08 | 0.0027     | 1111       | ACEH UTARA Regency         |
+| nan     | injured_avg       | 2.0723      | 0.0011    | 0.0       | 2.072E-08 | 0.0030     | 1111       | ACEH UTARA Regency         |
+| nan     | contents          | 787_228     | 547.8     | 0.0       | 0.0064    | 6.4544     | 1113       | GAYO LUES Regency          |
+| nan     | structural        | 4_460_960   | 57_809    | 0.0       | 16_021    | 240_845    | 1113       | GAYO LUES Regency          |
+| nan     | occupants_day     | 11.6013     | 3.190E-04 | 0.0       | 1.208E-07 | 0.0011     | 1113       | GAYO LUES Regency          |
+| nan     | occupants_night   | 61.4665     | 0.0017    | 0.0       | 6.402E-07 | 0.0056     | 1113       | GAYO LUES Regency          |
+| nan     | occupants_transit | 31.7608     | 8.732E-04 | 0.0       | 3.308E-07 | 0.0029     | 1113       | GAYO LUES Regency          |
+| nan     | area              | 3_557       | 12.0864   | 0.0       | 3.557E-05 | 36.5606    | 1113       | GAYO LUES Regency          |
+| nan     | number            | 14.9531     | 0.0272    | 0.0       | 1.495E-07 | 0.1481     | 1113       | GAYO LUES Regency          |
+| nan     | residents         | 64.6335     | 0.2875    | 0.0       | 6.463E-07 | 1.0971     | 1113       | GAYO LUES Regency          |
+| nan     | affectedpop       | 64.6335     | 0.5483    | 0.0       | 6.463E-07 | 3.5657     | 1113       | GAYO LUES Regency          |
+| nan     | embodied_carbon   | 1_108       | 9.7313    | 0.0       | 2.0911    | 49.0937    | 1113       | GAYO LUES Regency          |
+| nan     | occupants_avg     | 34.9475     | 9.608E-04 | 0.0       | 3.640E-07 | 0.0032     | 1113       | GAYO LUES Regency          |
+| nan     | injured_day       | 11.6013     | 0.0016    | 0.0       | 1.160E-07 | 0.0058     | 1113       | GAYO LUES Regency          |
+| nan     | injured_night     | 61.4665     | 0.0087    | 0.0       | 6.147E-07 | 0.0310     | 1113       | GAYO LUES Regency          |
+| nan     | injured_transit   | 31.7608     | 0.0045    | 0.0       | 3.176E-07 | 0.0160     | 1113       | GAYO LUES Regency          |
+| nan     | injured_avg       | 34.9475     | 0.0049    | 0.0       | 3.495E-07 | 0.0176     | 1113       | GAYO LUES Regency          |
+| nan     | contents          | 3_459_565   | 14_135    | 0.0       | 0.0346    | 0.0346     | 117        | Udaipur                    |
+| nan     | structural        | 19_604_202  | 345_518   | 0.0       | 5_748     | 489_484    | 117        | Udaipur                    |
+| nan     | occupants_day     | 36.8284     | 0.0032    | 0.0       | 3.683E-07 | 0.0027     | 117        | Udaipur                    |
+| nan     | occupants_night   | 180.2       | 0.0155    | 0.0       | 1.802E-06 | 0.0134     | 117        | Udaipur                    |
+| nan     | occupants_transit | 95.3534     | 0.0082    | 0.0       | 9.535E-07 | 0.0071     | 117        | Udaipur                    |
+| nan     | area              | 17_197      | 213.4     | 0.0       | 1.720E-04 | 186.6      | 117        | Udaipur                    |
+| nan     | number            | 124.9162    | 1.5500    | 0.0       | 1.249E-06 | 1.3552     | 117        | Udaipur                    |
+| nan     | residents         | 188.5       | 2.9189    | 0.0       | 1.885E-06 | 3.0318     | 117        | Udaipur                    |
+| nan     | affectedpop       | 188.5       | 4.0855    | 0.0       | 1.885E-06 | 7.3899     | 117        | Udaipur                    |
+| nan     | embodied_carbon   | 6_235       | 90.8993   | 0.0       | 0.8289    | 99.0757    | 117        | Udaipur                    |
+| nan     | occupants_avg     | 104.1364    | 0.0089    | 0.0       | 1.041E-06 | 0.0077     | 117        | Udaipur                    |
+| nan     | injured_day       | 36.8284     | 0.0194    | 0.0       | 3.683E-07 | 0.0202     | 117        | Udaipur                    |
+| nan     | injured_night     | 180.2       | 0.0949    | 0.0       | 1.802E-06 | 0.0990     | 117        | Udaipur                    |
+| nan     | injured_transit   | 95.3534     | 0.0502    | 0.0       | 9.535E-07 | 0.0524     | 117        | Udaipur                    |
+| nan     | injured_avg       | 104.1364    | 0.0548    | 0.0       | 1.041E-06 | 0.0572     | 117        | Udaipur                    |
+| nan     | contents          | 327_423     | 0.0582    | 0.0       | 0.0033    | 0.0033     | 1306       | Hebei                      |
+| nan     | structural        | 1_855_398   | 4_807     | 0.0       | 201.0     | 13_100     | 1306       | Hebei                      |
+| nan     | occupants_day     | 3.7374      | 1.019E-05 | 0.0       | 3.737E-08 | 9.376E-07  | 1306       | Hebei                      |
+| nan     | occupants_night   | 19.8009     | 5.400E-05 | 0.0       | 1.980E-07 | 4.967E-06  | 1306       | Hebei                      |
+| nan     | occupants_transit | 10.2313     | 2.790E-05 | 0.0       | 1.023E-07 | 2.567E-06  | 1306       | Hebei                      |
+| nan     | area              | 1_252       | 0.6588    | 0.0       | 1.252E-05 | 1.252E-05  | 1306       | Hebei                      |
+| nan     | number            | 8.0334      | 0.0042    | 0.0       | 8.033E-08 | 8.033E-08  | 1306       | Hebei                      |
+| nan     | residents         | 20.8212     | 0.0154    | 0.0       | 2.082E-07 | 2.082E-07  | 1306       | Hebei                      |
+| nan     | affectedpop       | 20.8212     | 0.0429    | 0.0       | 2.082E-07 | 0.0034     | 1306       | Hebei                      |
+| nan     | embodied_carbon   | 374.7       | 0.4885    | 0.0       | 3.747E-06 | 1.2707     | 1306       | Hebei                      |
+| nan     | occupants_avg     | 11.2577     | 3.070E-05 | 0.0       | 1.126E-07 | 2.824E-06  | 1306       | Hebei                      |
+| nan     | injured_day       | 3.7374      | 6.413E-05 | 0.0       | 3.737E-08 | 3.737E-08  | 1306       | Hebei                      |
+| nan     | injured_night     | 19.8009     | 3.398E-04 | 0.0       | 1.980E-07 | 1.980E-07  | 1306       | Hebei                      |
+| nan     | injured_transit   | 10.2313     | 1.756E-04 | 0.0       | 1.023E-07 | 1.023E-07  | 1306       | Hebei                      |
+| nan     | injured_avg       | 11.2577     | 1.932E-04 | 0.0       | 1.126E-07 | 1.126E-07  | 1306       | Hebei                      |
+| nan     | contents          | 30_328      | 343.2     | 0.0       | 0.0       | 3.033E-04  | 1311       | Hebei                      |
+| nan     | structural        | 121_314     | 4_135     | 0.0       | 29.4965   | 23_947     | 1311       | Hebei                      |
+| nan     | occupants_day     | 7.8437      | 0.0014    | 0.0       | 7.844E-08 | 0.0077     | 1311       | Hebei                      |
+| nan     | occupants_night   | 0.4367      | 7.753E-05 | 0.0       | 4.367E-09 | 4.290E-04  | 1311       | Hebei                      |
+| nan     | occupants_transit | 1.2887      | 2.288E-04 | 0.0       | 1.289E-08 | 0.0013     | 1311       | Hebei                      |
+| nan     | area              | 118.2397    | 2.9517    | 0.0       | 1.182E-06 | 17.3797    | 1311       | Hebei                      |
+| nan     | number            | 0.5975      | 0.0149    | 0.0       | 5.975E-09 | 0.0878     | 1311       | Hebei                      |
+| nan     | embodied_carbon   | 61.1175     | 1.8996    | 0.0       | 0.0060    | 14.8964    | 1311       | Hebei                      |
+| nan     | occupants_avg     | 3.1844      | 5.653E-04 | 0.0       | 3.184E-08 | 0.0031     | 1311       | Hebei                      |
+| nan     | injured_day       | 7.8437      | 0.0082    | 0.0       | 7.844E-08 | 0.0515     | 1311       | Hebei                      |
+| nan     | injured_night     | 0.4367      | 4.550E-04 | 0.0       | 4.367E-09 | 0.0029     | 1311       | Hebei                      |
+| nan     | injured_transit   | 1.2887      | 0.0013    | 0.0       | 1.289E-08 | 0.0085     | 1311       | Hebei                      |
+| nan     | injured_avg       | 3.1844      | 0.0033    | 0.0       | 3.184E-08 | 0.0209     | 1311       | Hebei                      |
+| nan     | contents          | 718_557     | 96.4461   | 0.0       | 0.0066    | 0.0072     | 1314       | Restigouche                |
+| nan     | structural        | 4_071_821   | 10_980    | 0.0       | 2_013     | 28_813     | 1314       | Restigouche                |
+| nan     | occupants_day     | 11.6164     | 6.963E-06 | 0.0       | 1.162E-07 | 1.162E-07  | 1314       | Restigouche                |
+| nan     | occupants_night   | 56.8407     | 3.407E-05 | 0.0       | 5.684E-07 | 5.684E-07  | 1314       | Restigouche                |
+| nan     | occupants_transit | 30.0754     | 1.803E-05 | 0.0       | 3.008E-07 | 3.008E-07  | 1314       | Restigouche                |
+| nan     | area              | 3_572       | 0.5652    | 0.0       | 3.572E-05 | 3.572E-05  | 1314       | Restigouche                |
+| nan     | number            | 25.9453     | 0.0041    | 0.0       | 2.595E-07 | 2.595E-07  | 1314       | Restigouche                |
+| nan     | residents         | 59.4502     | 0.0148    | 0.0       | 5.945E-07 | 5.945E-07  | 1314       | Restigouche                |
+| nan     | affectedpop       | 59.4502     | 0.0552    | 0.0       | 5.945E-07 | 5.945E-07  | 1314       | Restigouche                |
+| nan     | embodied_carbon   | 1_070       | 2.0337    | 0.0       | 0.4668    | 5.3229     | 1314       | Restigouche                |
+| nan     | occupants_avg     | 32.8463     | 1.969E-05 | 0.0       | 3.285E-07 | 3.285E-07  | 1314       | Restigouche                |
+| nan     | injured_day       | 11.6164     | 7.605E-05 | 0.0       | 1.162E-07 | 1.162E-07  | 1314       | Restigouche                |
+| nan     | injured_night     | 56.8407     | 3.721E-04 | 0.0       | 5.684E-07 | 5.684E-07  | 1314       | Restigouche                |
+| nan     | injured_transit   | 30.0754     | 1.969E-04 | 0.0       | 3.008E-07 | 3.008E-07  | 1314       | Restigouche                |
+| nan     | injured_avg       | 32.8463     | 2.150E-04 | 0.0       | 3.285E-07 | 3.285E-07  | 1314       | Restigouche                |
+| nan     | contents          | 356_776     | 0.0019    | 0.0       | 0.0036    | 0.0036     | 1317       | Vila Nova de Gaia          |
+| nan     | structural        | 2_021_731   | 200.3     | 0.0       | 0.0202    | 0.0202     | 1317       | Vila Nova de Gaia          |
+| nan     | occupants_day     | 5.5049      | 3.041E-08 | 0.0       | 5.505E-08 | 5.505E-08  | 1317       | Vila Nova de Gaia          |
+| nan     | occupants_night   | 26.9376     | 1.488E-07 | 0.0       | 2.694E-07 | 2.694E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | occupants_transit | 14.2537     | 7.874E-08 | 0.0       | 1.425E-07 | 1.425E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | area              | 1_773       | 9.768E-06 | 0.0       | 1.773E-05 | 1.773E-05  | 1317       | Vila Nova de Gaia          |
+| nan     | number            | 11.3796     | 6.268E-08 | 0.0       | 1.138E-07 | 1.138E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | residents         | 28.1740     | 1.552E-07 | 0.0       | 2.817E-07 | 2.817E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | affectedpop       | 28.1740     | 1.070E-05 | 0.0       | 2.817E-07 | 2.817E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | embodied_carbon   | 530.8       | 0.4186    | 0.0       | 5.308E-06 | 1.0793     | 1317       | Vila Nova de Gaia          |
+| nan     | occupants_avg     | 15.5664     | 8.599E-08 | 0.0       | 1.557E-07 | 1.557E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | injured_day       | 5.5049      | 3.032E-08 | 0.0       | 5.505E-08 | 5.505E-08  | 1317       | Vila Nova de Gaia          |
+| nan     | injured_night     | 26.9376     | 1.484E-07 | 0.0       | 2.694E-07 | 2.694E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | injured_transit   | 14.2537     | 7.851E-08 | 0.0       | 1.425E-07 | 1.425E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | injured_avg       | 15.5664     | 8.574E-08 | 0.0       | 1.557E-07 | 1.557E-07  | 1317       | Vila Nova de Gaia          |
+| nan     | contents          | 599_780     | 155.6375  | 0.0       | 0.0060    | 0.0060     | 1318       | Trofa                      |
+| nan     | structural        | 3_398_752   | 23_051    | 0.0       | 9_591     | 97_497     | 1318       | Trofa                      |
+| nan     | occupants_day     | 13.0109     | 1.801E-05 | 0.0       | 1.301E-07 | 1.135E-06  | 1318       | Trofa                      |
+| nan     | occupants_night   | 63.6634     | 8.814E-05 | 0.0       | 6.366E-07 | 5.552E-06  | 1318       | Trofa                      |
+| nan     | occupants_transit | 33.6864     | 4.664E-05 | 0.0       | 3.369E-07 | 2.938E-06  | 1318       | Trofa                      |
+| nan     | area              | 2_981       | 0.7575    | 0.0       | 2.981E-05 | 2.981E-05  | 1318       | Trofa                      |
+| nan     | number            | 3.0494      | 7.748E-04 | 0.0       | 3.049E-08 | 3.049E-08  | 1318       | Trofa                      |
+| nan     | residents         | 66.5866     | 0.0347    | 0.0       | 6.659E-07 | 9.989E-04  | 1318       | Trofa                      |
+| nan     | affectedpop       | 66.5866     | 0.1638    | 0.0       | 6.659E-07 | 0.1052     | 1318       | Trofa                      |
+| nan     | embodied_carbon   | 895.4       | 3.0907    | 0.0       | 1.1064    | 12.6213    | 1318       | Trofa                      |
+| nan     | occupants_avg     | 36.7892     | 5.093E-05 | 0.0       | 3.679E-07 | 3.209E-06  | 1318       | Trofa                      |
+| nan     | injured_day       | 13.0109     | 1.181E-04 | 0.0       | 1.301E-07 | 1.301E-07  | 1318       | Trofa                      |
+| nan     | injured_night     | 63.6634     | 5.779E-04 | 0.0       | 6.366E-07 | 6.366E-07  | 1318       | Trofa                      |
+| nan     | injured_transit   | 33.6864     | 3.058E-04 | 0.0       | 3.369E-07 | 3.369E-07  | 1318       | Trofa                      |
+| nan     | injured_avg       | 36.7892     | 3.339E-04 | 0.0       | 3.679E-07 | 3.679E-07  | 1318       | Trofa                      |
+| nan     | contents          | 1_871_902   | 218.6     | 0.0       | 0.0187    | 0.6209     | 1503       | Nei Mongol                 |
+| nan     | structural        | 10_607_443  | 85_779    | 0.0       | 12_346    | 439_031    | 1503       | Nei Mongol                 |
+| nan     | occupants_day     | 21.5948     | 2.278E-05 | 0.0       | 2.159E-07 | 1.044E-05  | 1503       | Nei Mongol                 |
+| nan     | occupants_night   | 114.4116    | 1.207E-04 | 0.0       | 1.144E-06 | 5.532E-05  | 1503       | Nei Mongol                 |
+| nan     | occupants_transit | 59.1182     | 6.236E-05 | 0.0       | 5.912E-07 | 2.858E-05  | 1503       | Nei Mongol                 |
+| nan     | area              | 7_158       | 1.9134    | 0.0       | 7.158E-05 | 0.1613     | 1503       | Nei Mongol                 |
+| nan     | number            | 51.9921     | 0.0139    | 0.0       | 5.199E-07 | 0.0012     | 1503       | Nei Mongol                 |
+| nan     | residents         | 120.3062    | 0.0442    | 0.0       | 1.203E-06 | 0.0029     | 1503       | Nei Mongol                 |
+| nan     | affectedpop       | 120.3062    | 0.2032    | 0.0       | 1.203E-06 | 0.0851     | 1503       | Nei Mongol                 |
+| nan     | embodied_carbon   | 2_144       | 11.4290   | 0.0       | 1.9721    | 55.9174    | 1503       | Nei Mongol                 |
+| nan     | occupants_avg     | 65.0493     | 6.862E-05 | 0.0       | 6.505E-07 | 3.145E-05  | 1503       | Nei Mongol                 |
+| nan     | injured_day       | 21.5948     | 2.238E-04 | 0.0       | 2.159E-07 | 2.159E-07  | 1503       | Nei Mongol                 |
+| nan     | injured_night     | 114.4116    | 0.0012    | 0.0       | 1.144E-06 | 1.144E-06  | 1503       | Nei Mongol                 |
+| nan     | injured_transit   | 59.1182     | 6.128E-04 | 0.0       | 5.912E-07 | 5.912E-07  | 1503       | Nei Mongol                 |
+| nan     | injured_avg       | 65.0493     | 6.742E-04 | 0.0       | 6.505E-07 | 6.505E-07  | 1503       | Nei Mongol                 |
+| nan     | contents          | 433_754     | 616.3     | 0.0       | 0.0043    | 54.0630    | 1507       | Nei Mongol                 |
+| nan     | structural        | 2_457_940   | 35_873    | 0.0       | 9_602     | 140_407    | 1507       | Nei Mongol                 |
+| nan     | occupants_day     | 5.7526      | 2.946E-05 | 0.0       | 5.753E-08 | 6.491E-05  | 1507       | Nei Mongol                 |
+| nan     | occupants_night   | 30.4774     | 1.561E-04 | 0.0       | 3.048E-07 | 3.439E-04  | 1507       | Nei Mongol                 |
+| nan     | occupants_transit | 15.7481     | 8.065E-05 | 0.0       | 1.575E-07 | 1.777E-04  | 1507       | Nei Mongol                 |
+| nan     | area              | 1_659       | 2.1994    | 0.0       | 1.659E-05 | 4.9068     | 1507       | Nei Mongol                 |
+| nan     | number            | 7.9635      | 0.0106    | 0.0       | 7.964E-08 | 0.0236     | 1507       | Nei Mongol                 |
+| nan     | residents         | 32.0476     | 0.0675    | 0.0       | 3.205E-07 | 0.0949     | 1507       | Nei Mongol                 |
+| nan     | affectedpop       | 32.0476     | 0.2504    | 0.0       | 3.205E-07 | 0.4354     | 1507       | Nei Mongol                 |
+| nan     | embodied_carbon   | 497.3       | 4.1698    | 0.0       | 1.0706    | 17.2138    | 1507       | Nei Mongol                 |
+| nan     | occupants_avg     | 17.3282     | 8.874E-05 | 0.0       | 1.733E-07 | 1.955E-04  | 1507       | Nei Mongol                 |
+| nan     | injured_day       | 5.7526      | 3.016E-04 | 0.0       | 5.753E-08 | 5.406E-04  | 1507       | Nei Mongol                 |
+| nan     | injured_night     | 30.4774     | 0.0016    | 0.0       | 3.048E-07 | 0.0029     | 1507       | Nei Mongol                 |
+| nan     | injured_transit   | 15.7481     | 8.257E-04 | 0.0       | 1.575E-07 | 0.0015     | 1507       | Nei Mongol                 |
+| nan     | injured_avg       | 17.3282     | 9.085E-04 | 0.0       | 1.733E-07 | 0.0016     | 1507       | Nei Mongol                 |
+| nan     | contents          | 49_440      | 2.952E-04 | 0.0       | 4.944E-04 | 4.944E-04  | 1713       | Vila Pouca de Aguiar       |
+| nan     | structural        | 197_759     | 404.4     | 0.0       | 110.5088  | 1_632      | 1713       | Vila Pouca de Aguiar       |
+| nan     | occupants_day     | 20.7100     | 1.237E-07 | 0.0       | 2.071E-07 | 2.071E-07  | 1713       | Vila Pouca de Aguiar       |
+| nan     | occupants_night   | 1.1500      | 6.869E-09 | 0.0       | 1.150E-08 | 1.150E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | occupants_transit | 3.4100      | 2.037E-08 | 0.0       | 3.410E-08 | 3.410E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | area              | 192.7       | 1.151E-06 | 0.0       | 1.927E-06 | 1.927E-06  | 1713       | Vila Pouca de Aguiar       |
+| nan     | number            | 0.8882      | 5.305E-09 | 0.0       | 8.882E-09 | 8.882E-09  | 1713       | Vila Pouca de Aguiar       |
+| nan     | embodied_carbon   | 90.3082     | 0.1322    | 0.0       | 0.0323    | 0.5347     | 1713       | Vila Pouca de Aguiar       |
+| nan     | occupants_avg     | 8.4200      | 5.029E-08 | 0.0       | 8.420E-08 | 8.420E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | injured_day       | 20.7100     | 1.237E-07 | 0.0       | 2.071E-07 | 2.071E-07  | 1713       | Vila Pouca de Aguiar       |
+| nan     | injured_night     | 1.1500      | 6.869E-09 | 0.0       | 1.150E-08 | 1.150E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | injured_transit   | 3.4100      | 2.037E-08 | 0.0       | 3.410E-08 | 3.410E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | injured_avg       | 8.4200      | 5.029E-08 | 0.0       | 8.420E-08 | 8.420E-08  | 1713       | Vila Pouca de Aguiar       |
+| nan     | contents          | 30_214      | 5.9634    | 0.0       | 3.021E-04 | 3.021E-04  | 1820       | Tarouca                    |
+| nan     | structural        | 171_211     | 503.1     | 0.0       | 49.0996   | 1_375      | 1820       | Tarouca                    |
+| nan     | occupants_day     | 0.2306      | 1.048E-06 | 0.0       | 2.306E-09 | 8.695E-08  | 1820       | Tarouca                    |
+| nan     | occupants_night   | 1.1277      | 5.126E-06 | 0.0       | 1.128E-08 | 4.252E-07  | 1820       | Tarouca                    |
+| nan     | occupants_transit | 0.5964      | 2.711E-06 | 0.0       | 5.964E-09 | 2.249E-07  | 1820       | Tarouca                    |
+| nan     | area              | 150.1854    | 0.1383    | 0.0       | 1.502E-06 | 1.502E-06  | 1820       | Tarouca                    |
+| nan     | number            | 0.9637      | 8.875E-04 | 0.0       | 9.637E-09 | 9.637E-09  | 1820       | Tarouca                    |
+| nan     | residents         | 1.1794      | 0.0016    | 0.0       | 1.179E-08 | 1.179E-08  | 1820       | Tarouca                    |
+| nan     | affectedpop       | 1.1794      | 0.0040    | 0.0       | 1.179E-08 | 3.448E-04  | 1820       | Tarouca                    |
+| nan     | embodied_carbon   | 44.9528     | 0.0764    | 0.0       | 0.0062    | 0.1812     | 1820       | Tarouca                    |
+| nan     | occupants_avg     | 0.6514      | 2.961E-06 | 0.0       | 6.514E-09 | 2.456E-07  | 1820       | Tarouca                    |
+| nan     | injured_day       | 0.2306      | 7.260E-06 | 0.0       | 2.306E-09 | 2.306E-09  | 1820       | Tarouca                    |
+| nan     | injured_night     | 1.1277      | 3.551E-05 | 0.0       | 1.128E-08 | 1.128E-08  | 1820       | Tarouca                    |
+| nan     | injured_transit   | 0.5964      | 1.878E-05 | 0.0       | 5.964E-09 | 5.964E-09  | 1820       | Tarouca                    |
+| nan     | injured_avg       | 0.6514      | 2.051E-05 | 0.0       | 6.514E-09 | 6.514E-09  | 1820       | Tarouca                    |
+| nan     | contents          | 56_331      | 10.5930   | 0.0       | 5.633E-04 | 5.633E-04  | 202        | Khagaria                   |
+| nan     | structural        | 225_324     | 113.7509  | 0.0       | 0.0023    | 1_338      | 202        | Khagaria                   |
+| nan     | occupants_day     | 13.2210     | 1.059E-07 | 0.0       | 1.322E-07 | 1.322E-07  | 202        | Khagaria                   |
+| nan     | occupants_night   | 0.7362      | 5.897E-09 | 0.0       | 7.362E-09 | 7.362E-09  | 202        | Khagaria                   |
+| nan     | occupants_transit | 2.1764      | 1.743E-08 | 0.0       | 2.176E-08 | 2.176E-08  | 202        | Khagaria                   |
+| nan     | area              | 219.6       | 1.759E-06 | 0.0       | 2.196E-06 | 2.196E-06  | 202        | Khagaria                   |
+| nan     | number            | 1.0285      | 8.239E-09 | 0.0       | 1.028E-08 | 1.028E-08  | 202        | Khagaria                   |
+| nan     | embodied_carbon   | 102.8954    | 0.3593    | 0.0       | 0.0639    | 3.3269     | 202        | Khagaria                   |
+| nan     | occupants_avg     | 5.3743      | 4.305E-08 | 0.0       | 5.374E-08 | 5.374E-08  | 202        | Khagaria                   |
+| nan     | injured_day       | 13.2210     | 1.059E-07 | 0.0       | 1.322E-07 | 1.322E-07  | 202        | Khagaria                   |
+| nan     | injured_night     | 0.7362      | 5.897E-09 | 0.0       | 7.362E-09 | 7.362E-09  | 202        | Khagaria                   |
+| nan     | injured_transit   | 2.1764      | 1.743E-08 | 0.0       | 2.176E-08 | 2.176E-08  | 202        | Khagaria                   |
+| nan     | injured_avg       | 5.3743      | 4.305E-08 | 0.0       | 5.374E-08 | 5.374E-08  | 202        | Khagaria                   |
+| nan     | contents          | 310_955     | 5.4857    | 0.0       | 0.0031    | 0.0031     | 302        | Tinsukia                   |
+| nan     | structural        | 1_762_076   | 1_035     | 0.0       | 393.5     | 5_990      | 302        | Tinsukia                   |
+| nan     | occupants_day     | 5.7356      | 4.435E-08 | 0.0       | 5.736E-08 | 5.736E-08  | 302        | Tinsukia                   |
+| nan     | occupants_night   | 28.0639     | 2.170E-07 | 0.0       | 2.806E-07 | 2.806E-07  | 302        | Tinsukia                   |
+| nan     | occupants_transit | 14.8497     | 1.148E-07 | 0.0       | 1.485E-07 | 1.485E-07  | 302        | Tinsukia                   |
+| nan     | area              | 1_546       | 0.0013    | 0.0       | 1.546E-05 | 1.546E-05  | 302        | Tinsukia                   |
+| nan     | number            | 1.0031      | 8.375E-07 | 0.0       | 1.003E-08 | 1.003E-08  | 302        | Tinsukia                   |
+| nan     | residents         | 29.3526     | 7.126E-05 | 0.0       | 2.935E-07 | 2.935E-07  | 302        | Tinsukia                   |
+| nan     | affectedpop       | 29.3526     | 6.559E-04 | 0.0       | 2.935E-07 | 2.935E-07  | 302        | Tinsukia                   |
+| nan     | embodied_carbon   | 505.1       | 1.1293    | 0.0       | 0.4913    | 6.3842     | 302        | Tinsukia                   |
+| nan     | occupants_avg     | 16.2171     | 1.254E-07 | 0.0       | 1.622E-07 | 1.622E-07  | 302        | Tinsukia                   |
+| nan     | injured_day       | 5.7356      | 7.902E-08 | 0.0       | 5.736E-08 | 5.736E-08  | 302        | Tinsukia                   |
+| nan     | injured_night     | 28.0639     | 3.866E-07 | 0.0       | 2.806E-07 | 2.806E-07  | 302        | Tinsukia                   |
+| nan     | injured_transit   | 14.8497     | 2.046E-07 | 0.0       | 1.485E-07 | 1.485E-07  | 302        | Tinsukia                   |
+| nan     | injured_avg       | 16.2171     | 2.234E-07 | 0.0       | 1.622E-07 | 1.622E-07  | 302        | Tinsukia                   |
+| nan     | contents          | 51_471      | 95.9214   | 0.0       | 5.147E-04 | 5.147E-04  | 306        | Purba Bardhaman            |
+| nan     | structural        | 205_884     | 1_424     | 0.0       | 4.8789    | 4_163      | 306        | Purba Bardhaman            |
+| nan     | occupants_day     | 12.5990     | 1.545E-04 | 0.0       | 1.260E-07 | 5.631E-05  | 306        | Purba Bardhaman            |
+| nan     | occupants_night   | 0.7035      | 8.624E-06 | 0.0       | 7.035E-09 | 3.144E-06  | 306        | Purba Bardhaman            |
+| nan     | occupants_transit | 2.0744      | 2.543E-05 | 0.0       | 2.074E-08 | 9.272E-06  | 306        | Purba Bardhaman            |
+| nan     | area              | 200.7       | 0.5280    | 0.0       | 2.007E-06 | 0.0685     | 306        | Purba Bardhaman            |
+| nan     | number            | 0.9387      | 0.0025    | 0.0       | 9.387E-09 | 3.206E-04  | 306        | Purba Bardhaman            |
+| nan     | embodied_carbon   | 86.8618     | 0.3747    | 0.0       | 8.686E-07 | 1.0228     | 306        | Purba Bardhaman            |
+| nan     | occupants_avg     | 5.1210      | 6.278E-05 | 0.0       | 5.121E-08 | 2.289E-05  | 306        | Purba Bardhaman            |
+| nan     | injured_day       | 12.5990     | 0.0012    | 0.0       | 1.260E-07 | 1.260E-07  | 306        | Purba Bardhaman            |
+| nan     | injured_night     | 0.7035      | 6.436E-05 | 0.0       | 7.035E-09 | 7.035E-09  | 306        | Purba Bardhaman            |
+| nan     | injured_transit   | 2.0744      | 1.898E-04 | 0.0       | 2.074E-08 | 2.074E-08  | 306        | Purba Bardhaman            |
+| nan     | injured_avg       | 5.1210      | 4.685E-04 | 0.0       | 5.121E-08 | 5.121E-08  | 306        | Purba Bardhaman            |
+| nan     | contents          | 109_054     | 6.569E-04 | 0.0       | 0.0011    | 0.0011     | 307        | Birbhum                    |
+| nan     | structural        | 617_971     | 9.7582    | 0.0       | 0.0062    | 0.0062     | 307        | Birbhum                    |
+| nan     | occupants_day     | 1.2186      | 7.350E-09 | 0.0       | 1.219E-08 | 1.219E-08  | 307        | Birbhum                    |
+| nan     | occupants_night   | 5.9518      | 3.590E-08 | 0.0       | 5.952E-08 | 5.952E-08  | 307        | Birbhum                    |
+| nan     | occupants_transit | 3.1491      | 1.899E-08 | 0.0       | 3.149E-08 | 3.149E-08  | 307        | Birbhum                    |
+| nan     | area              | 542.1       | 3.269E-06 | 0.0       | 5.421E-06 | 5.421E-06  | 307        | Birbhum                    |
+| nan     | number            | 3.4783      | 2.098E-08 | 0.0       | 3.478E-08 | 3.478E-08  | 307        | Birbhum                    |
+| nan     | residents         | 6.2267      | 3.755E-08 | 0.0       | 6.227E-08 | 6.227E-08  | 307        | Birbhum                    |
+| nan     | affectedpop       | 6.2267      | 3.755E-08 | 0.0       | 6.227E-08 | 6.227E-08  | 307        | Birbhum                    |
+| nan     | embodied_carbon   | 162.2456    | 0.0519    | 0.0       | 1.622E-06 | 0.1872     | 307        | Birbhum                    |
+| nan     | occupants_avg     | 3.4377      | 2.073E-08 | 0.0       | 3.438E-08 | 3.438E-08  | 307        | Birbhum                    |
+| nan     | injured_day       | 1.2186      | 7.350E-09 | 0.0       | 1.219E-08 | 1.219E-08  | 307        | Birbhum                    |
+| nan     | injured_night     | 5.9518      | 3.590E-08 | 0.0       | 5.952E-08 | 5.952E-08  | 307        | Birbhum                    |
+| nan     | injured_transit   | 3.1491      | 1.899E-08 | 0.0       | 3.149E-08 | 3.149E-08  | 307        | Birbhum                    |
+| nan     | injured_avg       | 3.4377      | 2.073E-08 | 0.0       | 3.438E-08 | 3.438E-08  | 307        | Birbhum                    |
+| nan     | contents          | 1_629_803   | 2_688     | 0.0       | 0.0042    | 0.5728     | 603        | South East                 |
+| nan     | structural        | 9_235_552   | 92_152    | 0.0       | 32_751    | 391_858    | 603        | South East                 |
+| nan     | occupants_day     | 16.4193     | 4.206E-04 | 0.0       | 1.642E-07 | 0.0011     | 603        | South East                 |
+| nan     | occupants_night   | 86.9893     | 0.0022    | 0.0       | 8.699E-07 | 0.0058     | 603        | South East                 |
+| nan     | occupants_transit | 44.9487     | 0.0012    | 0.0       | 4.495E-07 | 0.0030     | 603        | South East                 |
+| nan     | area              | 6_232       | 19.9746   | 0.0       | 6.232E-05 | 54.5643    | 603        | South East                 |
+| nan     | number            | 14.7923     | 0.0690    | 0.0       | 1.479E-07 | 0.2253     | 603        | South East                 |
+| nan     | residents         | 91.4711     | 0.3909    | 0.0       | 9.147E-07 | 1.4432     | 603        | South East                 |
+| nan     | affectedpop       | 91.4711     | 0.8843    | 0.0       | 9.147E-07 | 6.7046     | 603        | South East                 |
+| nan     | embodied_carbon   | 1_901       | 11.2451   | 0.0       | 2.5582    | 57.4417    | 603        | South East                 |
+| nan     | occupants_avg     | 49.4590     | 0.0013    | 0.0       | 4.946E-07 | 0.0033     | 603        | South East                 |
+| nan     | injured_day       | 16.4193     | 0.0019    | 0.0       | 1.642E-07 | 0.0055     | 603        | South East                 |
+| nan     | injured_night     | 86.9893     | 0.0099    | 0.0       | 8.699E-07 | 0.0292     | 603        | South East                 |
+| nan     | injured_transit   | 44.9487     | 0.0051    | 0.0       | 4.495E-07 | 0.0151     | 603        | South East                 |
+| nan     | injured_avg       | 49.4590     | 0.0056    | 0.0       | 4.946E-07 | 0.0166     | 603        | South East                 |
+| nan     | contents          | 16_248      | 1.080E-04 | 0.0       | 1.625E-04 | 1.625E-04  | 612        | Chirang                    |
+| nan     | structural        | 92_072      | 370.0     | 0.0       | 9.207E-04 | 30.1042    | 612        | Chirang                    |
+| nan     | occupants_day     | 0.0430      | 2.667E-08 | 0.0       | 4.300E-10 | 4.300E-10  | 612        | Chirang                    |
+| nan     | occupants_night   | 0.2008      | 1.245E-07 | 0.0       | 2.008E-09 | 2.008E-09  | 612        | Chirang                    |
+| nan     | occupants_transit | 0.1052      | 6.524E-08 | 0.0       | 1.052E-09 | 1.052E-09  | 612        | Chirang                    |
+| nan     | area              | 80.7645     | 0.0659    | 0.0       | 8.076E-07 | 8.076E-07  | 612        | Chirang                    |
+| nan     | number            | 0.5183      | 4.226E-04 | 0.0       | 5.183E-09 | 5.183E-09  | 612        | Chirang                    |
+| nan     | residents         | 0.2109      | 4.716E-04 | 0.0       | 2.109E-09 | 2.109E-09  | 612        | Chirang                    |
+| nan     | affectedpop       | 0.2109      | 0.0014    | 0.0       | 2.109E-09 | 2.109E-09  | 612        | Chirang                    |
+| nan     | embodied_carbon   | 30.4542     | 0.0704    | 0.0       | 3.045E-07 | 0.0038     | 612        | Chirang                    |
+| nan     | occupants_avg     | 0.1147      | 7.113E-08 | 0.0       | 1.147E-09 | 1.147E-09  | 612        | Chirang                    |
+| nan     | injured_day       | 0.0430      | 1.309E-06 | 0.0       | 4.300E-10 | 4.300E-10  | 612        | Chirang                    |
+| nan     | injured_night     | 0.2008      | 6.113E-06 | 0.0       | 2.008E-09 | 2.008E-09  | 612        | Chirang                    |
+| nan     | injured_transit   | 0.1052      | 3.203E-06 | 0.0       | 1.052E-09 | 1.052E-09  | 612        | Chirang                    |
+| nan     | injured_avg       | 0.1147      | 3.492E-06 | 0.0       | 1.147E-09 | 1.147E-09  | 612        | Chirang                    |
+| nan     | contents          | 11_570      | 225.6     | 0.0       | 1.157E-04 | 1.157E-04  | 615        | Longleng                   |
+| nan     | structural        | 46_280      | 1_089     | 0.0       | 5.5983    | 892.1      | 615        | Longleng                   |
+| nan     | occupants_day     | 1.6300      | 2.348E-04 | 0.0       | 1.630E-08 | 4.875E-05  | 615        | Longleng                   |
+| nan     | occupants_night   | 0.0900      | 1.296E-05 | 0.0       | 9.000E-10 | 2.692E-06  | 615        | Longleng                   |
+| nan     | occupants_transit | 0.2700      | 3.889E-05 | 0.0       | 2.700E-09 | 8.075E-06  | 615        | Longleng                   |
+| nan     | area              | 45.1068     | 1.1636    | 0.0       | 4.511E-07 | 0.3781     | 615        | Longleng                   |
+| nan     | number            | 0.6019      | 0.0155    | 0.0       | 6.019E-09 | 0.0050     | 615        | Longleng                   |
+| nan     | embodied_carbon   | 23.3005     | 0.5905    | 0.0       | 2.330E-07 | 0.2053     | 615        | Longleng                   |
+| nan     | occupants_avg     | 0.6600      | 9.506E-05 | 0.0       | 6.600E-09 | 1.974E-05  | 615        | Longleng                   |
+| nan     | injured_day       | 1.6300      | 0.0015    | 0.0       | 1.630E-08 | 6.424E-04  | 615        | Longleng                   |
+| nan     | injured_night     | 0.0900      | 8.215E-05 | 0.0       | 9.000E-10 | 3.547E-05  | 615        | Longleng                   |
+| nan     | injured_transit   | 0.2700      | 2.464E-04 | 0.0       | 2.700E-09 | 1.064E-04  | 615        | Longleng                   |
+| nan     | injured_avg       | 0.6600      | 6.024E-04 | 0.0       | 6.600E-09 | 2.601E-04  | 615        | Longleng                   |
+| nan     | contents          | 130_289     | 0.0010    | 0.0       | 0.0013    | 0.0013     | 702        | Kalimpong                  |
+| nan     | structural        | 521_156     | 3_405     | 0.0       | 954.4     | 11_684     | 702        | Kalimpong                  |
+| nan     | occupants_day     | 15.3541     | 3.173E-07 | 0.0       | 1.535E-07 | 1.535E-07  | 702        | Kalimpong                  |
+| nan     | occupants_night   | 0.8559      | 1.769E-08 | 0.0       | 8.559E-09 | 8.559E-09  | 702        | Kalimpong                  |
+| nan     | occupants_transit | 2.5283      | 5.225E-08 | 0.0       | 2.528E-08 | 2.528E-08  | 702        | Kalimpong                  |
+| nan     | area              | 507.9       | 0.0032    | 0.0       | 5.079E-06 | 5.079E-06  | 702        | Kalimpong                  |
+| nan     | number            | 1.2135      | 7.623E-06 | 0.0       | 1.214E-08 | 1.214E-08  | 702        | Kalimpong                  |
+| nan     | embodied_carbon   | 238.2       | 1.2004    | 0.0       | 0.3285    | 4.0920     | 702        | Kalimpong                  |
+| nan     | occupants_avg     | 6.2420      | 1.290E-07 | 0.0       | 6.242E-08 | 6.242E-08  | 702        | Kalimpong                  |
+| nan     | injured_day       | 15.3541     | 4.155E-06 | 0.0       | 1.535E-07 | 1.535E-07  | 702        | Kalimpong                  |
+| nan     | injured_night     | 0.8559      | 2.316E-07 | 0.0       | 8.559E-09 | 8.559E-09  | 702        | Kalimpong                  |
+| nan     | injured_transit   | 2.5283      | 6.842E-07 | 0.0       | 2.528E-08 | 2.528E-08  | 702        | Kalimpong                  |
+| nan     | injured_avg       | 6.2420      | 1.689E-06 | 0.0       | 6.242E-08 | 6.242E-08  | 702        | Kalimpong                  |
+| nan     | contents          | 159_979     | 197.7     | 0.0       | 9.330E-32 | 0.0103     | 811        | Portimão                   |
+| nan     | structural        | 906_548     | 20_905    | 1_901     | 8_900     | 72_610     | 811        | Portimão                   |
+| nan     | occupants_day     | 1.9552      | 4.233E-05 | 1.955E-08 | 4.070E-08 | 2.063E-04  | 811        | Portimão                   |
+| nan     | occupants_night   | 10.3600     | 2.243E-04 | 1.036E-07 | 2.156E-07 | 0.0011     | 811        | Portimão                   |
+| nan     | occupants_transit | 5.3540      | 1.159E-04 | 5.354E-08 | 1.114E-07 | 5.648E-04  | 811        | Portimão                   |
+| nan     | area              | 722.9       | 2.1001    | 7.229E-06 | 7.229E-06 | 10.9049    | 811        | Portimão                   |
+| nan     | number            | 3.4712      | 0.0101    | 3.471E-08 | 3.471E-08 | 0.0524     | 811        | Portimão                   |
+| nan     | residents         | 10.8941     | 0.0641    | 1.089E-07 | 1.089E-07 | 0.4054     | 811        | Portimão                   |
+| nan     | affectedpop       | 10.8941     | 0.2613    | 1.089E-07 | 1.089E-07 | 1.7795     | 811        | Portimão                   |
+| nan     | embodied_carbon   | 216.7       | 2.7899    | 0.1604    | 0.9211    | 10.4834    | 811        | Portimão                   |
+| nan     | occupants_avg     | 5.8907      | 1.275E-04 | 5.891E-08 | 1.226E-07 | 6.214E-04  | 811        | Portimão                   |
+| nan     | injured_day       | 1.9552      | 2.295E-04 | 1.955E-08 | 1.955E-08 | 0.0013     | 811        | Portimão                   |
+| nan     | injured_night     | 10.3600     | 0.0012    | 1.036E-07 | 1.036E-07 | 0.0068     | 811        | Portimão                   |
+| nan     | injured_transit   | 5.3540      | 6.286E-04 | 5.354E-08 | 5.354E-08 | 0.0035     | 811        | Portimão                   |
+| nan     | injured_avg       | 5.8907      | 6.916E-04 | 5.891E-08 | 5.891E-08 | 0.0039     | 811        | Portimão                   |
+| nan     | contents          | 148_755     | 726.0     | 0.0       | 0.0015    | 0.0015     | 901        | Aguiar da Beira            |
+| nan     | structural        | 842_944     | 15_270    | 0.0       | 517.3     | 25_004     | 901        | Aguiar da Beira            |
+| nan     | occupants_day     | 0.5949      | 2.852E-04 | 0.0       | 5.949E-09 | 4.326E-04  | 901        | Aguiar da Beira            |
+| nan     | occupants_night   | 2.9126      | 0.0014    | 0.0       | 2.913E-08 | 0.0021     | 901        | Aguiar da Beira            |
+| nan     | occupants_transit | 1.5408      | 7.386E-04 | 0.0       | 1.541E-08 | 0.0011     | 901        | Aguiar da Beira            |
+| nan     | area              | 739.4       | 9.1151    | 0.0       | 7.394E-06 | 11.4344    | 901        | Aguiar da Beira            |
+| nan     | number            | 5.3712      | 0.0662    | 0.0       | 5.371E-08 | 0.0831     | 901        | Aguiar da Beira            |
+| nan     | residents         | 3.0462      | 0.0443    | 0.0       | 3.046E-08 | 0.0645     | 901        | Aguiar da Beira            |
+| nan     | affectedpop       | 3.0462      | 0.0584    | 0.0       | 3.046E-08 | 0.1409     | 901        | Aguiar da Beira            |
+| nan     | embodied_carbon   | 236.0       | 3.8633    | 0.0       | 0.0830    | 6.8702     | 901        | Aguiar da Beira            |
+| nan     | occupants_avg     | 1.6831      | 8.068E-04 | 0.0       | 1.683E-08 | 0.0012     | 901        | Aguiar da Beira            |
+| nan     | injured_day       | 0.5949      | 3.039E-04 | 0.0       | 5.949E-09 | 4.398E-04  | 901        | Aguiar da Beira            |
+| nan     | injured_night     | 2.9126      | 0.0015    | 0.0       | 2.913E-08 | 0.0022     | 901        | Aguiar da Beira            |
+| nan     | injured_transit   | 1.5408      | 7.872E-04 | 0.0       | 1.541E-08 | 0.0011     | 901        | Aguiar da Beira            |
+| nan     | injured_avg       | 1.6831      | 8.599E-04 | 0.0       | 1.683E-08 | 0.0012     | 901        | Aguiar da Beira            |
+| nan     | contents          | 199_679     | 5_239     | 0.0       | 8.308E-04 | 0.0020     | 906        | Gouveia                    |
+| nan     | structural        | 1_131_515   | 39_354    | 0.0       | 496.1     | 290_421    | 906        | Gouveia                    |
+| nan     | occupants_day     | 0.9122      | 2.000E-04 | 0.0       | 9.122E-09 | 0.0014     | 906        | Gouveia                    |
+| nan     | occupants_night   | 4.4601      | 9.779E-04 | 0.0       | 4.460E-08 | 0.0067     | 906        | Gouveia                    |
+| nan     | occupants_transit | 2.3607      | 5.176E-04 | 0.0       | 2.361E-08 | 0.0036     | 906        | Gouveia                    |
+| nan     | area              | 992.6       | 30.2967   | 0.0       | 9.926E-06 | 222.2      | 906        | Gouveia                    |
+| nan     | number            | 7.2099      | 0.2201    | 0.0       | 7.210E-08 | 1.6139     | 906        | Gouveia                    |
+| nan     | residents         | 4.6631      | 0.1653    | 0.0       | 4.663E-08 | 1.3759     | 906        | Gouveia                    |
+| nan     | affectedpop       | 4.6631      | 0.2089    | 0.0       | 4.663E-08 | 2.0195     | 906        | Gouveia                    |
+| nan     | embodied_carbon   | 359.9       | 10.3938   | 0.0       | 0.0734    | 79.0948    | 906        | Gouveia                    |
+| nan     | occupants_avg     | 2.5761      | 5.648E-04 | 0.0       | 2.576E-08 | 0.0039     | 906        | Gouveia                    |
+| nan     | injured_day       | 0.9122      | 0.0011    | 0.0       | 9.122E-09 | 0.0089     | 906        | Gouveia                    |
+| nan     | injured_night     | 4.4601      | 0.0056    | 0.0       | 4.460E-08 | 0.0434     | 906        | Gouveia                    |
+| nan     | injured_transit   | 2.3607      | 0.0030    | 0.0       | 2.361E-08 | 0.0229     | 906        | Gouveia                    |
+| nan     | injured_avg       | 2.5761      | 0.0032    | 0.0       | 2.576E-08 | 0.0250     | 906        | Gouveia                    |
+| nan     | contents          | 2_320_426   | 3_914     | 0.0       | 0.0232    | 181.1      | 909        | Mêda                       |
+| nan     | structural        | 13_149_079  | 93_932    | 0.0       | 27_149    | 323_936    | 909        | Mêda                       |
+| nan     | occupants_day     | 18.8098     | 6.121E-05 | 0.0       | 1.881E-07 | 1.224E-05  | 909        | Mêda                       |
+| nan     | occupants_night   | 92.0367     | 2.995E-04 | 0.0       | 9.204E-07 | 5.989E-05  | 909        | Mêda                       |
+| nan     | occupants_transit | 48.6982     | 1.585E-04 | 0.0       | 4.870E-07 | 3.169E-05  | 909        | Mêda                       |
+| nan     | area              | 11_534      | 9.2769    | 0.0       | 1.153E-04 | 2.0039     | 909        | Mêda                       |
+| nan     | number            | 55.3822     | 0.0445    | 0.0       | 5.538E-07 | 0.0096     | 909        | Mêda                       |
+| nan     | residents         | 96.2618     | 0.1186    | 0.0       | 9.626E-07 | 0.0168     | 909        | Mêda                       |
+| nan     | affectedpop       | 96.2618     | 0.2829    | 0.0       | 9.626E-07 | 0.0212     | 909        | Mêda                       |
+| nan     | embodied_carbon   | 3_458       | 14.0267   | 0.0       | 3.8863    | 46.1688    | 909        | Mêda                       |
+| nan     | occupants_avg     | 53.1850     | 1.731E-04 | 0.0       | 5.318E-07 | 3.461E-05  | 909        | Mêda                       |
+| nan     | injured_day       | 18.8098     | 5.939E-04 | 0.0       | 1.881E-07 | 1.881E-07  | 909        | Mêda                       |
+| nan     | injured_night     | 92.0367     | 0.0029    | 0.0       | 9.204E-07 | 9.204E-07  | 909        | Mêda                       |
+| nan     | injured_transit   | 48.6982     | 0.0015    | 0.0       | 4.870E-07 | 4.870E-07  | 909        | Mêda                       |
+| nan     | injured_avg       | 53.1850     | 0.0017    | 0.0       | 5.318E-07 | 5.318E-07  | 909        | Mêda                       |
+| nan     | contents          | 576_937     | 3_453     | 0.0       | 0.0058    | 0.0058     | 911        | Sabugal                    |
+| nan     | structural        | 3_269_308   | 59_551    | 0.0       | 0.0327    | 358_056    | 911        | Sabugal                    |
+| nan     | occupants_day     | 1.7334      | 1.261E-04 | 0.0       | 1.733E-08 | 7.707E-04  | 911        | Sabugal                    |
+| nan     | occupants_night   | 8.4764      | 6.165E-04 | 0.0       | 8.476E-08 | 0.0038     | 911        | Sabugal                    |
+| nan     | occupants_transit | 4.4838      | 3.261E-04 | 0.0       | 4.484E-08 | 0.0020     | 911        | Sabugal                    |
+| nan     | area              | 2_868       | 45.3342   | 0.0       | 2.868E-05 | 319.1      | 911        | Sabugal                    |
+| nan     | number            | 18.4018     | 0.2909    | 0.0       | 1.840E-07 | 2.0473     | 911        | Sabugal                    |
+| nan     | residents         | 8.8658      | 0.1746    | 0.0       | 8.866E-08 | 1.3372     | 911        | Sabugal                    |
+| nan     | affectedpop       | 8.8658      | 0.2571    | 0.0       | 8.866E-08 | 2.2542     | 911        | Sabugal                    |
+| nan     | embodied_carbon   | 1_039       | 14.2218   | 0.0       | 1.039E-05 | 85.8660    | 911        | Sabugal                    |
+| nan     | occupants_avg     | 4.8998      | 3.564E-04 | 0.0       | 4.900E-08 | 0.0022     | 911        | Sabugal                    |
+| nan     | injured_day       | 1.7334      | 0.0010    | 0.0       | 1.733E-08 | 0.0077     | 911        | Sabugal                    |
+| nan     | injured_night     | 8.4764      | 0.0051    | 0.0       | 8.476E-08 | 0.0379     | 911        | Sabugal                    |
+| nan     | injured_transit   | 4.4838      | 0.0027    | 0.0       | 4.484E-08 | 0.0200     | 911        | Sabugal                    |
+| nan     | injured_avg       | 4.8998      | 0.0029    | 0.0       | 4.900E-08 | 0.0219     | 911        | Sabugal                    |
+| nan     | contents          | 233_534     | 7.980E-05 | 0.0       | 0.0       | 0.0014     | ES-AN      | Andalucía                  |
+| nan     | structural        | 934_135     | 41.4075   | 0.0       | 0.0       | 1_484      | ES-AN      | Andalucía                  |
+| nan     | occupants_day     | 100.3523    | 4.236E-07 | 0.0       | 0.0       | 1.004E-06  | ES-AN      | Andalucía                  |
+| nan     | occupants_night   | 5.5556      | 2.345E-08 | 0.0       | 0.0       | 5.556E-08  | ES-AN      | Andalucía                  |
+| nan     | occupants_transit | 21.0139     | 8.870E-08 | 0.0       | 0.0       | 2.101E-07  | ES-AN      | Andalucía                  |
+| nan     | area              | 716.2       | 3.632E-04 | 0.0       | 0.0       | 7.162E-06  | ES-AN      | Andalucía                  |
+| nan     | number            | 2.0008      | 7.950E-07 | 0.0       | 0.0       | 2.001E-08  | ES-AN      | Andalucía                  |
+| nan     | embodied_carbon   | 348.7       | 0.0073    | 0.0       | 0.0       | 0.2835     | ES-AN      | Andalucía                  |
+| nan     | occupants_avg     | 42.3202     | 1.786E-07 | 0.0       | 0.0       | 4.232E-07  | ES-AN      | Andalucía                  |
+| nan     | injured_day       | 100.3523    | 2.396E-06 | 0.0       | 0.0       | 1.004E-06  | ES-AN      | Andalucía                  |
+| nan     | injured_night     | 5.5556      | 1.326E-07 | 0.0       | 0.0       | 5.556E-08  | ES-AN      | Andalucía                  |
+| nan     | injured_transit   | 21.0139     | 5.017E-07 | 0.0       | 0.0       | 2.101E-07  | ES-AN      | Andalucía                  |
+| nan     | injured_avg       | 42.3202     | 1.010E-06 | 0.0       | 0.0       | 4.232E-07  | ES-AN      | Andalucía                  |
+| nan     | contents          | 281_612     | 0.0016    | 0.0       | 0.0028    | 0.0028     | ES-EX      | Extremadura                |
+| nan     | structural        | 1_595_802   | 1_639     | 0.0       | 0.0160    | 5_877      | ES-EX      | Extremadura                |
+| nan     | occupants_day     | 145.1786    | 1.132E-04 | 0.0       | 1.452E-06 | 1.452E-06  | ES-EX      | Extremadura                |
+| nan     | occupants_night   | 8.0373      | 6.268E-06 | 0.0       | 8.037E-08 | 8.037E-08  | ES-EX      | Extremadura                |
+| nan     | occupants_transit | 30.4006     | 2.371E-05 | 0.0       | 3.040E-07 | 3.040E-07  | ES-EX      | Extremadura                |
+| nan     | area              | 1_140       | 0.1855    | 0.0       | 1.140E-05 | 1.140E-05  | ES-EX      | Extremadura                |
+| nan     | number            | 4.9994      | 8.134E-04 | 0.0       | 4.999E-08 | 4.999E-08  | ES-EX      | Extremadura                |
+| nan     | embodied_carbon   | 493.4       | 0.3342    | 0.0       | 4.934E-06 | 1.2678     | ES-EX      | Extremadura                |
+| nan     | occupants_avg     | 61.2243     | 4.775E-05 | 0.0       | 6.122E-07 | 6.122E-07  | ES-EX      | Extremadura                |
+| nan     | injured_day       | 145.1786    | 7.961E-04 | 0.0       | 1.452E-06 | 1.452E-06  | ES-EX      | Extremadura                |
+| nan     | injured_night     | 8.0373      | 4.407E-05 | 0.0       | 8.037E-08 | 8.037E-08  | ES-EX      | Extremadura                |
+| nan     | injured_transit   | 30.4006     | 1.667E-04 | 0.0       | 3.040E-07 | 3.040E-07  | ES-EX      | Extremadura                |
+| nan     | injured_avg       | 61.2243     | 3.357E-04 | 0.0       | 6.122E-07 | 6.122E-07  | ES-EX      | Extremadura                |
+| nan     | contents          | 785_912     | 1.5474    | 0.0       | 0.0       | 0.4754     | ESP.1.2_1  | Cádiz                      |
+| nan     | structural        | 4_453_499   | 10_900    | 0.0       | 0.0       | 90_973     | ESP.1.2_1  | Cádiz                      |
+| nan     | occupants_day     | 20.7371     | 1.520E-06 | 0.0       | 0.0       | 2.074E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | occupants_night   | 94.5775     | 6.933E-06 | 0.0       | 0.0       | 9.458E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | occupants_transit | 51.1356     | 3.748E-06 | 0.0       | 0.0       | 5.114E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | area              | 3_426       | 0.0264    | 0.0       | 0.0       | 3.426E-05  | ESP.1.2_1  | Cádiz                      |
+| nan     | number            | 0.9887      | 7.616E-06 | 0.0       | 0.0       | 9.887E-09  | ESP.1.2_1  | Cádiz                      |
+| nan     | residents         | 98.8891     | 0.0053    | 0.0       | 0.0       | 9.889E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | affectedpop       | 98.8891     | 0.0491    | 0.0       | 0.0       | 0.0837     | ESP.1.2_1  | Cádiz                      |
+| nan     | embodied_carbon   | 1_100       | 1.1927    | 0.0       | 0.0       | 10.2777    | ESP.1.2_1  | Cádiz                      |
+| nan     | occupants_avg     | 55.4867     | 4.067E-06 | 0.0       | 0.0       | 5.549E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | injured_day       | 20.7371     | 2.776E-06 | 0.0       | 0.0       | 2.074E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | injured_night     | 94.5775     | 1.266E-05 | 0.0       | 0.0       | 9.458E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | injured_transit   | 51.1356     | 6.846E-06 | 0.0       | 0.0       | 5.114E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | injured_avg       | 55.4867     | 7.429E-06 | 0.0       | 0.0       | 5.549E-07  | ESP.1.2_1  | Cádiz                      |
+| nan     | contents          | 418_295     | 0.5382    | 0.0       | 0.0       | 0.0035     | ESP.1.3_1  | Córdoba                    |
+| nan     | structural        | 2_370_338   | 74.0521   | 0.0       | 0.0       | 677.1      | ESP.1.3_1  | Córdoba                    |
+| nan     | occupants_day     | 7.8363      | 6.763E-07 | 0.0       | 0.0       | 8.335E-08  | ESP.1.3_1  | Córdoba                    |
+| nan     | occupants_night   | 35.0419     | 2.899E-06 | 0.0       | 0.0       | 3.718E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | occupants_transit | 19.1062     | 1.610E-06 | 0.0       | 0.0       | 2.029E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | area              | 1_909       | 0.0154    | 0.0       | 0.0       | 1.730E-05  | ESP.1.3_1  | Córdoba                    |
+| nan     | number            | 11.9966     | 8.550E-05 | 0.0       | 0.0       | 1.100E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | residents         | 36.5959     | 4.292E-04 | 0.0       | 0.0       | 3.285E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | affectedpop       | 36.5959     | 6.969E-04 | 0.0       | 0.0       | 3.285E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | embodied_carbon   | 709.4       | 0.0145    | 0.0       | 0.0       | 0.1383     | ESP.1.3_1  | Córdoba                    |
+| nan     | occupants_avg     | 20.6622     | 1.728E-06 | 0.0       | 0.0       | 2.194E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | injured_day       | 7.8363      | 2.963E-06 | 0.0       | 0.0       | 6.154E-08  | ESP.1.3_1  | Córdoba                    |
+| nan     | injured_night     | 35.0419     | 1.269E-05 | 0.0       | 0.0       | 2.783E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | injured_transit   | 19.1062     | 7.051E-06 | 0.0       | 0.0       | 1.510E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | injured_avg       | 20.6622     | 7.570E-06 | 0.0       | 0.0       | 1.636E-07  | ESP.1.3_1  | Córdoba                    |
+| nan     | contents          | 116_468     | 5.057E-05 | 0.0       | 0.0       | 7.765E-04  | ESP.1.4_1  | Granada                    |
+| nan     | structural        | 659_986     | 12.1901   | 0.0       | 0.0       | 507.8      | ESP.1.4_1  | Granada                    |
+| nan     | occupants_day     | 2.1208      | 2.334E-09 | 0.0       | 0.0       | 2.121E-08  | ESP.1.4_1  | Granada                    |
+| nan     | occupants_night   | 9.0860      | 1.000E-08 | 0.0       | 0.0       | 9.086E-08  | ESP.1.4_1  | Granada                    |
+| nan     | occupants_transit | 5.0469      | 5.555E-09 | 0.0       | 0.0       | 5.047E-08  | ESP.1.4_1  | Granada                    |
+| nan     | area              | 600.0       | 1.255E-04 | 0.0       | 0.0       | 6.000E-06  | ESP.1.4_1  | Granada                    |
+| nan     | number            | 3.9999      | 1.254E-06 | 0.0       | 0.0       | 4.000E-08  | ESP.1.4_1  | Granada                    |
+| nan     | residents         | 9.4636      | 1.973E-06 | 0.0       | 0.0       | 9.464E-08  | ESP.1.4_1  | Granada                    |
+| nan     | affectedpop       | 9.4636      | 9.535E-06 | 0.0       | 0.0       | 9.464E-08  | ESP.1.4_1  | Granada                    |
+| nan     | embodied_carbon   | 203.0       | 0.0013    | 0.0       | 0.0       | 0.0669     | ESP.1.4_1  | Granada                    |
+| nan     | occupants_avg     | 5.4179      | 5.963E-09 | 0.0       | 0.0       | 5.418E-08  | ESP.1.4_1  | Granada                    |
+| nan     | injured_day       | 2.1208      | 9.538E-10 | 0.0       | 0.0       | 2.121E-08  | ESP.1.4_1  | Granada                    |
+| nan     | injured_night     | 9.0860      | 4.086E-09 | 0.0       | 0.0       | 9.086E-08  | ESP.1.4_1  | Granada                    |
+| nan     | injured_transit   | 5.0469      | 2.270E-09 | 0.0       | 0.0       | 5.047E-08  | ESP.1.4_1  | Granada                    |
+| nan     | injured_avg       | 5.4179      | 2.437E-09 | 0.0       | 0.0       | 5.418E-08  | ESP.1.4_1  | Granada                    |
+| nan     | contents          | 172_209     | 1.0666    | 0.0       | 8.042E-04 | 0.0017     | ESP.1.8_1  | Sevilla                    |
+| nan     | structural        | 975_855     | 483.9     | 0.0       | 176.0681  | 5_175      | ESP.1.8_1  | Sevilla                    |
+| nan     | occupants_day     | 4.0460      | 1.984E-06 | 0.0       | 1.734E-08 | 1.309E-06  | ESP.1.8_1  | Sevilla                    |
+| nan     | occupants_night   | 17.8138     | 8.549E-06 | 0.0       | 7.909E-08 | 5.612E-06  | ESP.1.8_1  | Sevilla                    |
+| nan     | occupants_transit | 9.7779      | 4.736E-06 | 0.0       | 4.276E-08 | 3.116E-06  | ESP.1.8_1  | Sevilla                    |
+| nan     | area              | 814.4       | 0.0369    | 0.0       | 4.001E-06 | 8.144E-06  | ESP.1.8_1  | Sevilla                    |
+| nan     | number            | 2.9988      | 1.028E-04 | 0.0       | 9.983E-09 | 2.999E-08  | ESP.1.8_1  | Sevilla                    |
+| nan     | residents         | 18.5859     | 0.0014    | 0.0       | 8.269E-08 | 1.859E-07  | ESP.1.8_1  | Sevilla                    |
+| nan     | affectedpop       | 18.5859     | 0.0030    | 0.0       | 8.269E-08 | 0.0012     | ESP.1.8_1  | Sevilla                    |
+| nan     | embodied_carbon   | 276.5       | 0.0621    | 0.0       | 0.0224    | 0.5259     | ESP.1.8_1  | Sevilla                    |
+| nan     | occupants_avg     | 10.5462     | 5.090E-06 | 0.0       | 4.640E-08 | 3.346E-06  | ESP.1.8_1  | Sevilla                    |
+| nan     | injured_day       | 4.0460      | 9.380E-06 | 0.0       | 1.734E-08 | 4.046E-08  | ESP.1.8_1  | Sevilla                    |
+| nan     | injured_night     | 17.8138     | 4.045E-05 | 0.0       | 7.909E-08 | 1.781E-07  | ESP.1.8_1  | Sevilla                    |
+| nan     | injured_transit   | 9.7779      | 2.240E-05 | 0.0       | 4.276E-08 | 9.778E-08  | ESP.1.8_1  | Sevilla                    |
+| nan     | injured_avg       | 10.5462     | 2.408E-05 | 0.0       | 4.640E-08 | 1.055E-07  | ESP.1.8_1  | Sevilla                    |
+| nan     | contents          | 8_763_084   | 40_527    | 0.0       | 0.0867    | 537.1      | ESP.11.1_1 | Badajoz                    |
+| nan     | structural        | 49_657_476  | 1_233_842 | 0.0       | 16_299    | 3_970_266  | ESP.11.1_1 | Badajoz                    |
+| nan     | occupants_day     | 156.5997    | 0.0199    | 0.0       | 1.549E-06 | 0.0401     | ESP.11.1_1 | Badajoz                    |
+| nan     | occupants_night   | 671.4       | 0.0853    | 0.0       | 6.638E-06 | 0.1720     | ESP.11.1_1 | Badajoz                    |
+| nan     | occupants_transit | 372.8       | 0.0473    | 0.0       | 3.687E-06 | 0.0955     | ESP.11.1_1 | Badajoz                    |
+| nan     | area              | 45_066      | 1_031     | 0.0       | 4.464E-04 | 3_067      | ESP.11.1_1 | Badajoz                    |
+| nan     | number            | 441.0       | 10.2610   | 0.0       | 4.400E-06 | 30.6689    | ESP.11.1_1 | Badajoz                    |
+| nan     | residents         | 699.3       | 17.6084   | 0.0       | 6.914E-06 | 66.5742    | ESP.11.1_1 | Badajoz                    |
+| nan     | affectedpop       | 699.3       | 21.2346   | 0.0       | 6.993E-06 | 122.3908   | ESP.11.1_1 | Badajoz                    |
+| nan     | embodied_carbon   | 16_876      | 400.2     | 0.0       | 3.8779    | 791.8      | ESP.11.1_1 | Badajoz                    |
+| nan     | occupants_avg     | 400.3       | 0.0508    | 0.0       | 3.958E-06 | 0.1025     | ESP.11.1_1 | Badajoz                    |
+| nan     | injured_day       | 156.5997    | 0.1271    | 0.0       | 1.549E-06 | 0.4398     | ESP.11.1_1 | Badajoz                    |
+| nan     | injured_night     | 671.4       | 0.5448    | 0.0       | 6.638E-06 | 1.8843     | ESP.11.1_1 | Badajoz                    |
+| nan     | injured_transit   | 372.8       | 0.3025    | 0.0       | 3.687E-06 | 1.0467     | ESP.11.1_1 | Badajoz                    |
+| nan     | injured_avg       | 400.3       | 0.3248    | 0.0       | 3.958E-06 | 1.1236     | ESP.11.1_1 | Badajoz                    |
+| nan     | contents          | 19_411      | 86.8523   | 0.0       | 0.0       | 1.941E-04  | ESP.12.2_1 | Lugo                       |
+| nan     | structural        | 109_994     | 1_731     | 0.0       | 0.0011    | 5_819      | ESP.12.2_1 | Lugo                       |
+| nan     | occupants_day     | 0.2302      | 1.388E-05 | 0.0       | 2.302E-09 | 2.931E-05  | ESP.12.2_1 | Lugo                       |
+| nan     | occupants_night   | 0.9860      | 5.945E-05 | 0.0       | 9.860E-09 | 1.255E-04  | ESP.12.2_1 | Lugo                       |
+| nan     | occupants_transit | 0.5477      | 3.302E-05 | 0.0       | 5.477E-09 | 6.973E-05  | ESP.12.2_1 | Lugo                       |
+| nan     | area              | 99.9950     | 1.2482    | 0.0       | 9.999E-07 | 3.5679     | ESP.12.2_1 | Lugo                       |
+| nan     | number            | 0.9999      | 0.0125    | 0.0       | 9.999E-09 | 0.0357     | ESP.12.2_1 | Lugo                       |
+| nan     | residents         | 1.0270      | 0.0155    | 0.0       | 1.027E-08 | 0.0545     | ESP.12.2_1 | Lugo                       |
+| nan     | affectedpop       | 1.0270      | 0.0219    | 0.0       | 1.027E-08 | 0.1141     | ESP.12.2_1 | Lugo                       |
+| nan     | embodied_carbon   | 37.7048     | 0.3576    | 0.0       | 3.770E-07 | 1.0645     | ESP.12.2_1 | Lugo                       |
+| nan     | occupants_avg     | 0.5880      | 3.545E-05 | 0.0       | 5.880E-09 | 7.486E-05  | ESP.12.2_1 | Lugo                       |
+| nan     | injured_day       | 0.2302      | 1.075E-04 | 0.0       | 2.302E-09 | 3.609E-04  | ESP.12.2_1 | Lugo                       |
+| nan     | injured_night     | 0.9860      | 4.605E-04 | 0.0       | 9.860E-09 | 0.0015     | ESP.12.2_1 | Lugo                       |
+| nan     | injured_transit   | 0.5477      | 2.558E-04 | 0.0       | 5.477E-09 | 8.586E-04  | ESP.12.2_1 | Lugo                       |
+| nan     | injured_avg       | 0.5880      | 2.746E-04 | 0.0       | 5.880E-09 | 9.218E-04  | ESP.12.2_1 | Lugo                       |
+| nan     | contents          | 328_216     | 374.8     | 0.0       | 0.0014    | 42.1524    | ESP.12.4_1 | Pontevedra                 |
+| nan     | structural        | 1_859_885   | 12_659    | 0.0       | 177.2506  | 45_739     | ESP.12.4_1 | Pontevedra                 |
+| nan     | occupants_day     | 5.0736      | 8.981E-05 | 0.0       | 1.901E-08 | 2.956E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | occupants_night   | 23.1397     | 4.096E-04 | 0.0       | 8.672E-08 | 1.348E-04  | ESP.12.4_1 | Pontevedra                 |
+| nan     | occupants_transit | 12.5110     | 2.215E-04 | 0.0       | 4.689E-08 | 7.290E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | area              | 1_431       | 2.4662    | 0.0       | 6.000E-06 | 0.8119     | ESP.12.4_1 | Pontevedra                 |
+| nan     | number            | 8.0013      | 0.0070    | 0.0       | 6.000E-08 | 0.0020     | ESP.12.4_1 | Pontevedra                 |
+| nan     | residents         | 24.1947     | 0.0768    | 0.0       | 9.068E-08 | 0.0828     | ESP.12.4_1 | Pontevedra                 |
+| nan     | affectedpop       | 24.1947     | 0.1957    | 0.0       | 9.068E-08 | 0.7671     | ESP.12.4_1 | Pontevedra                 |
+| nan     | embodied_carbon   | 448.9       | 1.6803    | 0.0       | 0.0174    | 5.7950     | ESP.12.4_1 | Pontevedra                 |
+| nan     | occupants_avg     | 13.5757     | 2.403E-04 | 0.0       | 5.088E-08 | 7.910E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | injured_day       | 5.0736      | 3.243E-04 | 0.0       | 1.901E-08 | 3.372E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | injured_night     | 23.1397     | 0.0015    | 0.0       | 8.672E-08 | 1.538E-04  | ESP.12.4_1 | Pontevedra                 |
+| nan     | injured_transit   | 12.5110     | 7.998E-04 | 0.0       | 4.689E-08 | 8.315E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | injured_avg       | 13.5757     | 8.679E-04 | 0.0       | 5.088E-08 | 9.023E-05  | ESP.12.4_1 | Pontevedra                 |
+| nan     | contents          | 38_838      | 1.492E-05 | 0.0       | 0.0       | 3.884E-04  | ESP.5.1_1  | Ávila                      |
+| nan     | structural        | 220_083     | 36.0569   | 0.0       | 0.0       | 518.6      | ESP.5.1_1  | Ávila                      |
+| nan     | occupants_day     | 0.3467      | 1.858E-08 | 0.0       | 0.0       | 3.467E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | occupants_night   | 1.4855      | 7.961E-08 | 0.0       | 0.0       | 1.485E-08  | ESP.5.1_1  | Ávila                      |
+| nan     | occupants_transit | 0.8251      | 4.422E-08 | 0.0       | 0.0       | 8.251E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | area              | 200.1       | 0.0013    | 0.0       | 0.0       | 2.001E-06  | ESP.5.1_1  | Ávila                      |
+| nan     | number            | 1.0004      | 6.480E-06 | 0.0       | 0.0       | 1.000E-08  | ESP.5.1_1  | Ávila                      |
+| nan     | residents         | 1.5472      | 1.006E-05 | 0.0       | 0.0       | 1.547E-08  | ESP.5.1_1  | Ávila                      |
+| nan     | affectedpop       | 1.5472      | 4.581E-05 | 0.0       | 0.0       | 1.547E-08  | ESP.5.1_1  | Ávila                      |
+| nan     | embodied_carbon   | 59.9365     | 0.0049    | 0.0       | 0.0       | 0.0526     | ESP.5.1_1  | Ávila                      |
+| nan     | occupants_avg     | 0.8858      | 4.747E-08 | 0.0       | 0.0       | 8.858E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | injured_day       | 0.3467      | 1.004E-10 | 0.0       | 0.0       | 3.467E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | injured_night     | 1.4855      | 4.301E-10 | 0.0       | 0.0       | 1.485E-08  | ESP.5.1_1  | Ávila                      |
+| nan     | injured_transit   | 0.8251      | 2.389E-10 | 0.0       | 0.0       | 8.251E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | injured_avg       | 0.8858      | 2.565E-10 | 0.0       | 0.0       | 8.858E-09  | ESP.5.1_1  | Ávila                      |
+| nan     | contents          | 1_531_979   | 7_149     | 0.0       | 0.0037    | 44.7470    | ESP.5.5_1  | Salamanca                  |
+| nan     | structural        | 8_681_212   | 56_818    | 0.0       | 4_234     | 266_596    | ESP.5.5_1  | Salamanca                  |
+| nan     | occupants_day     | 23.5011     | 3.820E-04 | 0.0       | 2.184E-07 | 0.0016     | ESP.5.5_1  | Salamanca                  |
+| nan     | occupants_night   | 100.6858    | 0.0016    | 0.0       | 9.357E-07 | 0.0068     | ESP.5.5_1  | Salamanca                  |
+| nan     | occupants_transit | 55.9272     | 9.090E-04 | 0.0       | 5.198E-07 | 0.0038     | ESP.5.5_1  | Salamanca                  |
+| nan     | area              | 7_892       | 27.8452   | 0.0       | 2.500E-05 | 118.2934   | ESP.5.5_1  | Salamanca                  |
+| nan     | number            | 54.9548     | 0.2726    | 0.0       | 2.500E-07 | 0.9932     | ESP.5.5_1  | Salamanca                  |
+| nan     | residents         | 104.8700    | 0.4324    | 0.0       | 3.087E-07 | 2.6880     | ESP.5.5_1  | Salamanca                  |
+| nan     | affectedpop       | 104.8700    | 0.6978    | 0.0       | 9.746E-07 | 6.0187     | ESP.5.5_1  | Salamanca                  |
+| nan     | embodied_carbon   | 2_666       | 11.1792   | 0.0       | 0.7093    | 51.3174    | ESP.5.5_1  | Salamanca                  |
+| nan     | occupants_avg     | 60.0383     | 9.759E-04 | 0.0       | 5.580E-07 | 0.0041     | ESP.5.5_1  | Salamanca                  |
+| nan     | injured_day       | 23.5011     | 0.0029    | 0.0       | 6.919E-08 | 0.0143     | ESP.5.5_1  | Salamanca                  |
+| nan     | injured_night     | 100.6858    | 0.0124    | 0.0       | 2.964E-07 | 0.0612     | ESP.5.5_1  | Salamanca                  |
+| nan     | injured_transit   | 55.9272     | 0.0069    | 0.0       | 1.647E-07 | 0.0340     | ESP.5.5_1  | Salamanca                  |
+| nan     | injured_avg       | 60.0383     | 0.0074    | 0.0       | 1.768E-07 | 0.0365     | ESP.5.5_1  | Salamanca                  |
+| nan     | contents          | 296_011     | 33.8008   | 0.0       | 8.826E-05 | 0.0029     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | structural        | 1_657_357   | 368.0     | 0.0       | 7.4944    | 3_683      | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | occupants_day     | 167.0576    | 2.293E-04 | 0.0       | 1.638E-07 | 8.111E-05  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | occupants_night   | 153.4829    | 5.685E-04 | 0.0       | 2.380E-08 | 1.935E-04  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | occupants_transit | 113.5568    | 3.876E-04 | 0.0       | 3.339E-08 | 1.322E-04  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | area              | 4_842       | 0.5106    | 0.0       | 1.300E-06 | 0.1908     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | number            | 47.0090     | 0.0044    | 0.0       | 9.996E-09 | 0.0015     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | residents         | 152.7525    | 0.0310    | 0.0       | 2.622E-07 | 0.0361     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | affectedpop       | 152.7525    | 0.0496    | 0.0       | 2.622E-07 | 0.2332     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | embodied_carbon   | 1_616       | 0.1710    | 0.0       | 0.0022    | 1.5597     | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | occupants_avg     | 144.6591    | 3.951E-04 | 0.0       | 1.054E-07 | 1.356E-04  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | injured_day       | 167.0576    | 5.665E-04 | 0.0       | 1.494E-07 | 1.671E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | injured_night     | 153.4829    | 8.956E-04 | 0.0       | 2.380E-08 | 1.535E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | injured_transit   | 113.5568    | 6.303E-04 | 0.0       | 3.339E-08 | 1.136E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | injured_avg       | 144.6591    | 6.974E-04 | 0.0       | 1.054E-07 | 1.447E-06  | MA-01      | Tangier-Tetouan-Al-Hoceïma |
+| nan     | contents          | 23_403      | 1.478E-05 | 0.0       | 0.0       | 1.642E-04  | MA-03      | Fez-Meknes                 |
+| nan     | structural        | 120_972     | 22.9442   | 0.0       | 0.0       | 89.2313    | MA-03      | Fez-Meknes                 |
+| nan     | occupants_day     | 8.8237      | 8.597E-06 | 0.0       | 0.0       | 3.548E-07  | MA-03      | Fez-Meknes                 |
+| nan     | occupants_night   | 24.4288     | 2.399E-05 | 0.0       | 0.0       | 9.885E-07  | MA-03      | Fez-Meknes                 |
+| nan     | occupants_transit | 16.2188     | 1.526E-05 | 0.0       | 0.0       | 6.338E-07  | MA-03      | Fez-Meknes                 |
+| nan     | area              | 519.9       | 0.0559    | 0.0       | 0.0       | 4.201E-06  | MA-03      | Fez-Meknes                 |
+| nan     | number            | 6.0000      | 9.295E-04 | 0.0       | 0.0       | 5.000E-08  | MA-03      | Fez-Meknes                 |
+| nan     | residents         | 24.8042     | 0.0054    | 0.0       | 0.0       | 2.067E-07  | MA-03      | Fez-Meknes                 |
+| nan     | affectedpop       | 24.8042     | 0.0094    | 0.0       | 0.0       | 2.067E-07  | MA-03      | Fez-Meknes                 |
+| nan     | embodied_carbon   | 260.4       | 0.0306    | 0.0       | 0.0       | 0.1065     | MA-03      | Fez-Meknes                 |
+| nan     | occupants_avg     | 16.4908     | 1.595E-05 | 0.0       | 0.0       | 6.590E-07  | MA-03      | Fez-Meknes                 |
+| nan     | injured_day       | 8.8237      | 6.173E-05 | 0.0       | 0.0       | 7.346E-08  | MA-03      | Fez-Meknes                 |
+| nan     | injured_night     | 24.4288     | 1.723E-04 | 0.0       | 0.0       | 2.035E-07  | MA-03      | Fez-Meknes                 |
+| nan     | injured_transit   | 16.2188     | 1.096E-04 | 0.0       | 0.0       | 1.346E-07  | MA-03      | Fez-Meknes                 |
+| nan     | injured_avg       | 16.4908     | 1.145E-04 | 0.0       | 0.0       | 1.372E-07  | MA-03      | Fez-Meknes                 |
+| nan     | contents          | 432_585     | 214.3     | 0.0       | 0.0       | 0.1894     | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | structural        | 1_750_457   | 1_407     | 0.0       | 0.0       | 7_665      | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | occupants_day     | 167.3721    | 3.948E-07 | 0.0       | 0.0       | 1.630E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | occupants_night   | 155.4772    | 3.331E-07 | 0.0       | 0.0       | 1.502E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | occupants_transit | 112.3628    | 2.443E-07 | 0.0       | 0.0       | 1.046E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | area              | 4_345       | 0.0262    | 0.0       | 0.0       | 4.165E-05  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | number            | 12.9684     | 1.211E-04 | 0.0       | 0.0       | 9.975E-08  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | residents         | 146.2619    | 8.227E-05 | 0.0       | 0.0       | 1.463E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | affectedpop       | 146.2619    | 7.264E-04 | 0.0       | 0.0       | 1.463E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | embodied_carbon   | 1_546       | 0.5131    | 0.0       | 0.0       | 3.0522     | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | occupants_avg     | 145.1012    | 3.242E-07 | 0.0       | 0.0       | 1.369E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | injured_day       | 167.3721    | 7.031E-05 | 0.0       | 0.0       | 1.630E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | injured_night     | 155.4772    | 6.289E-06 | 0.0       | 0.0       | 1.502E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | injured_transit   | 112.3628    | 1.178E-05 | 0.0       | 0.0       | 1.046E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | injured_avg       | 145.1012    | 2.950E-05 | 0.0       | 0.0       | 1.369E-06  | MA-04      | Al-Rabat-Salé-Al-Kénitra   |
+| nan     | contents          | 76_967      | 7.646E-05 | 0.0       | 7.203E-04 | 7.203E-04  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | structural        | 244_079     | 46.6545   | 0.0       | 113.4289  | 1_143      | MA-05      | Béni Mellal-Khénifra       |
+| nan     | occupants_day     | 33.7083     | 3.421E-08 | 0.0       | 3.222E-07 | 3.222E-07  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | occupants_night   | 7.9259      | 4.065E-09 | 0.0       | 3.829E-08 | 3.829E-08  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | occupants_transit | 9.1388      | 6.754E-09 | 0.0       | 6.362E-08 | 6.362E-08  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | area              | 580.2       | 5.097E-07 | 0.0       | 4.802E-06 | 4.802E-06  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | number            | 1.9762      | 1.036E-09 | 0.0       | 9.762E-09 | 9.762E-09  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | embodied_carbon   | 187.8       | 0.0133    | 0.0       | 0.0277    | 0.3353     | MA-05      | Béni Mellal-Khénifra       |
+| nan     | occupants_avg     | 16.9245     | 1.501E-08 | 0.0       | 1.414E-07 | 1.414E-07  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | injured_day       | 33.7083     | 3.421E-08 | 0.0       | 3.222E-07 | 3.222E-07  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | injured_night     | 7.9259      | 4.065E-09 | 0.0       | 3.829E-08 | 3.829E-08  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | injured_transit   | 9.1388      | 6.754E-09 | 0.0       | 6.362E-08 | 6.362E-08  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | injured_avg       | 16.9245     | 1.501E-08 | 0.0       | 1.414E-07 | 1.414E-07  | MA-05      | Béni Mellal-Khénifra       |
+| nan     | contents          | 311_529     | 8.2463    | 0.0       | 6.671E-05 | 0.0011     | MA-06      | Casablanca-Settat          |
+| nan     | structural        | 1_765_324   | 636.3     | 0.0       | 74.5387   | 2_383      | MA-06      | Casablanca-Settat          |
+| nan     | occupants_day     | 102.1377    | 8.752E-05 | 0.0       | 1.171E-07 | 6.985E-05  | MA-06      | Casablanca-Settat          |
+| nan     | occupants_night   | 282.5       | 2.430E-04 | 0.0       | 3.268E-07 | 1.949E-04  | MA-06      | Casablanca-Settat          |
+| nan     | occupants_transit | 188.6       | 1.587E-04 | 0.0       | 2.078E-07 | 1.240E-04  | MA-06      | Casablanca-Settat          |
+| nan     | area              | 5_989       | 0.6192    | 0.0       | 7.798E-06 | 0.3304     | MA-06      | Casablanca-Settat          |
+| nan     | number            | 56.0004     | 0.0034    | 0.0       | 1.999E-08 | 8.260E-04  | MA-06      | Casablanca-Settat          |
+| nan     | residents         | 286.8       | 0.0407    | 0.0       | 3.323E-07 | 0.0137     | MA-06      | Casablanca-Settat          |
+| nan     | affectedpop       | 286.8       | 0.0662    | 0.0       | 3.323E-07 | 0.0141     | MA-06      | Casablanca-Settat          |
+| nan     | embodied_carbon   | 1_837       | 0.6690    | 0.0       | 0.0597    | 1.6179     | MA-06      | Casablanca-Settat          |
+| nan     | occupants_avg     | 191.1       | 1.631E-04 | 0.0       | 2.172E-07 | 1.296E-04  | MA-06      | Casablanca-Settat          |
+| nan     | injured_day       | 102.1377    | 4.705E-04 | 0.0       | 4.456E-08 | 3.232E-07  | MA-06      | Casablanca-Settat          |
+| nan     | injured_night     | 282.5       | 0.0013    | 0.0       | 1.229E-07 | 8.995E-07  | MA-06      | Casablanca-Settat          |
+| nan     | injured_transit   | 188.6       | 8.595E-04 | 0.0       | 8.331E-08 | 5.806E-07  | MA-06      | Casablanca-Settat          |
+| nan     | injured_avg       | 191.1       | 8.782E-04 | 0.0       | 8.359E-08 | 6.011E-07  | MA-06      | Casablanca-Settat          |
+| nan     | contents          | 305_309     | 37.0835   | 0.0       | 1.271E-05 | 0.0024     | MA-07      | Marrakech-Safi             |
+| nan     | structural        | 1_601_993   | 4_581     | 0.0       | 6.0453    | 2_166      | MA-07      | Marrakech-Safi             |
+| nan     | occupants_day     | 190.4       | 0.0020    | 0.0       | 1.653E-08 | 6.043E-04  | MA-07      | Marrakech-Safi             |
+| nan     | occupants_night   | 226.8       | 0.0055    | 0.0       | 4.560E-08 | 0.0017     | MA-07      | Marrakech-Safi             |
+| nan     | occupants_transit | 159.9576    | 0.0035    | 0.0       | 3.091E-08 | 0.0011     | MA-07      | Marrakech-Safi             |
+| nan     | area              | 5_070       | 12.2347   | 0.0       | 6.000E-07 | 1.3461     | MA-07      | Marrakech-Safi             |
+| nan     | number            | 59.0006     | 0.1344    | 0.0       | 1.000E-08 | 0.0224     | MA-07      | Marrakech-Safi             |
+| nan     | residents         | 227.4       | 0.6763    | 0.0       | 4.060E-08 | 0.1462     | MA-07      | Marrakech-Safi             |
+| nan     | affectedpop       | 227.4       | 0.9332    | 0.0       | 4.060E-08 | 0.3727     | MA-07      | Marrakech-Safi             |
+| nan     | embodied_carbon   | 2_569       | 8.6294    | 0.0       | 9.701E-04 | 2.1539     | MA-07      | Marrakech-Safi             |
+| nan     | occupants_avg     | 192.4       | 0.0037    | 0.0       | 3.102E-08 | 0.0011     | MA-07      | Marrakech-Safi             |
+| nan     | injured_day       | 190.4       | 0.0079    | 0.0       | 1.451E-08 | 0.0013     | MA-07      | Marrakech-Safi             |
+| nan     | injured_night     | 226.8       | 0.0221    | 0.0       | 4.002E-08 | 0.0035     | MA-07      | Marrakech-Safi             |
+| nan     | injured_transit   | 159.9576    | 0.0141    | 0.0       | 2.713E-08 | 0.0024     | MA-07      | Marrakech-Safi             |
+| nan     | injured_avg       | 192.4       | 0.0147    | 0.0       | 2.722E-08 | 0.0024     | MA-07      | Marrakech-Safi             |
+| nan     | contents          | 33_572      | 1.533E-05 | 0.0       | 0.0       | 3.357E-04  | MA-08      | Drâa-Tafilalet             |
+| nan     | structural        | 100_716     | 0.3468    | 0.0       | 0.0       | 9.4324     | MA-08      | Drâa-Tafilalet             |
+| nan     | occupants_day     | 18.0428     | 8.237E-09 | 0.0       | 0.0       | 1.804E-07  | MA-08      | Drâa-Tafilalet             |
+| nan     | occupants_night   | 2.1440      | 9.788E-10 | 0.0       | 0.0       | 2.144E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | occupants_transit | 3.5624      | 1.626E-09 | 0.0       | 0.0       | 3.562E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | area              | 223.8       | 1.022E-07 | 0.0       | 0.0       | 2.238E-06  | MA-08      | Drâa-Tafilalet             |
+| nan     | number            | 1.0111      | 4.616E-10 | 0.0       | 0.0       | 1.011E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | embodied_carbon   | 113.3772    | 2.977E-05 | 0.0       | 0.0       | 1.134E-06  | MA-08      | Drâa-Tafilalet             |
+| nan     | occupants_avg     | 7.9164      | 3.614E-09 | 0.0       | 0.0       | 7.916E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | injured_day       | 18.0428     | 8.237E-09 | 0.0       | 0.0       | 1.804E-07  | MA-08      | Drâa-Tafilalet             |
+| nan     | injured_night     | 2.1440      | 9.788E-10 | 0.0       | 0.0       | 2.144E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | injured_transit   | 3.5624      | 1.626E-09 | 0.0       | 0.0       | 3.562E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | injured_avg       | 7.9164      | 3.614E-09 | 0.0       | 0.0       | 7.916E-08  | MA-08      | Drâa-Tafilalet             |
+| nan     | contents          | 27_954      | 5.2553    | 0.0       | 1.271E-04 | 2.795E-04  | MA-09      | Souss-Massa                |
+| nan     | structural        | 158_408     | 149.2534  | 0.0       | 31.8310   | 639.6      | MA-09      | Souss-Massa                |
+| nan     | occupants_day     | 32.6815     | 5.630E-04 | 0.0       | 1.783E-07 | 4.936E-04  | MA-09      | Souss-Massa                |
+| nan     | occupants_night   | 90.1255     | 0.0016    | 0.0       | 4.916E-07 | 0.0014     | MA-09      | Souss-Massa                |
+| nan     | occupants_transit | 61.0926     | 0.0011    | 0.0       | 3.332E-07 | 9.227E-04  | MA-09      | Souss-Massa                |
+| nan     | area              | 1_320       | 0.8723    | 0.0       | 7.200E-06 | 0.6739     | MA-09      | Souss-Massa                |
+| nan     | number            | 22.0007     | 0.0145    | 0.0       | 1.200E-07 | 0.0112     | MA-09      | Souss-Massa                |
+| nan     | residents         | 91.4423     | 0.0776    | 0.0       | 4.988E-07 | 0.0683     | MA-09      | Souss-Massa                |
+| nan     | affectedpop       | 91.4423     | 0.1159    | 0.0       | 4.988E-07 | 0.3107     | MA-09      | Souss-Massa                |
+| nan     | embodied_carbon   | 97.8419     | 0.0537    | 0.0       | 0.0088    | 0.1706     | MA-09      | Souss-Massa                |
+| nan     | occupants_avg     | 61.3029     | 0.0011    | 0.0       | 3.344E-07 | 9.259E-04  | MA-09      | Souss-Massa                |
+| nan     | injured_day       | 32.6815     | 8.201E-04 | 0.0       | 1.783E-07 | 3.268E-07  | MA-09      | Souss-Massa                |
+| nan     | injured_night     | 90.1255     | 0.0023    | 0.0       | 4.916E-07 | 9.013E-07  | MA-09      | Souss-Massa                |
+| nan     | injured_transit   | 61.0926     | 0.0015    | 0.0       | 3.332E-07 | 6.109E-07  | MA-09      | Souss-Massa                |
+| nan     | injured_avg       | 61.3029     | 0.0015    | 0.0       | 3.344E-07 | 6.130E-07  | MA-09      | Souss-Massa                |
+| nan     | affectedpop       | 2_914       | 40.6719   | 8.135E-06 | 1.1392    | 225.2      | *total*    | *total*                    |
+| nan     | area              | 164_498     | 1_936     | 3.142E-04 | 13.3214   | 8_190      | *total*    | *total*                    |
+| nan     | contents          | 31_609_488  | 163_891   | 0.0460    | 3.9941    | 1_253_210  | *total*    | *total*                    |
+| nan     | embodied_carbon   | 57_199      | 775.4     | 4.7031    | 69.0582   | 3_830      | *total*    | *total*                    |
+| nan     | injured_avg       | 2_026       | 0.5680    | 2.279E-06 | 0.0070    | 2.3547     | *total*    | *total*                    |
+| nan     | injured_day       | 1_466       | 0.2246    | 1.142E-06 | 0.0046    | 0.8529     | *total*    | *total*                    |
+| nan     | injured_night     | 2_860       | 0.9565    | 3.131E-06 | 0.0081    | 4.0463     | *total*    | *total*                    |
+| nan     | injured_transit   | 1_753       | 0.5230    | 1.886E-06 | 0.0055    | 2.1648     | *total*    | *total*                    |
+| nan     | number            | 1_182       | 16.3072   | 1.531E-06 | 0.1201    | 60.7678    | *total*    | *total*                    |
+| nan     | occupants_avg     | 2_026       | 0.0912    | 2.989E-06 | 0.0016    | 0.3758     | *total*    | *total*                    |
+| nan     | occupants_day     | 1_466       | 0.0365    | 2.496E-06 | 0.0011    | 0.1403     | *total*    | *total*                    |
+| nan     | occupants_night   | 2_860       | 0.1531    | 5.028E-06 | 0.0016    | 0.6404     | *total*    | *total*                    |
+| nan     | occupants_transit | 1_753       | 0.0842    | 2.668E-06 | 0.0011    | 0.3467     | *total*    | *total*                    |
+| nan     | residents         | 2_914       | 31.2201   | 4.984E-06 | 0.2605    | 130.6350   | *total*    | *total*                    |
+| nan     | structural        | 176_884_672 | 2_984_247 | 30_332    | 420_802   | 15_938_193 | *total*    | *total*                    |

@@ -16,7 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.allen_2022 import Allen2022
+import unittest
+
+import numpy as np
+
+from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.gsim.allen_2022 import Allen2022, _get_site_scaling
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -28,4 +33,14 @@ class Allen2022TestCase(BaseGSIMTestCase):
                    'A22/Allen2022_STD_TOTAL.csv',
                    max_discrep_percentage=0.4,
                    std_discrep_percentage=0.1)
-                   
+
+
+class Allen2022Vs30StrictTestCase(unittest.TestCase):
+
+    def test_vs30_strict(self):
+        C = Allen2022.COEFFS[PGA()]
+        with self.assertRaises(ValueError):
+            _get_site_scaling(C, np.array([200.0]), vs30_strict=True)
+        np.testing.assert_allclose(
+            _get_site_scaling(C, np.array([200.0]), vs30_strict=False),
+            _get_site_scaling(C, np.array([220.0]), vs30_strict=False))

@@ -25,7 +25,8 @@ from openquake.baselib.general import decode
 from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import (
+    read_cmakers, read_ctx_by_grp, read_core_trt_smrs)
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -45,8 +46,9 @@ def to_spectra(outdic, n, p):
     out = numpy.zeros((R, M, 2))
     for r in range(R):
         c = outdic[r]
-        out[r, :, 0] = numpy.exp(c[:, n, 1, p])  # NB: seems wrong!
-        out[r, :, 1] = numpy.sqrt(c[:, n, 2, p])
+        # normalize the moments by the total weight c[:, n, 0, p]
+        out[r, :, 0] = numpy.exp(c[:, n, 1, p] / c[:, n, 0, p])
+        out[r, :, 1] = numpy.sqrt(c[:, n, 2, p] / c[:, n, 0, p])
     return out
 
 
@@ -67,6 +69,32 @@ def store_spectra(dstore, name, R, oq, spectra):
     # dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
 
 
+def get_blocks(dstore, oq, cmakers, ctx_by_grp):
+    """
+    :returns: a pair (blocks, trt_rlzs) where blocks is a list of
+        (cmaker, ctx, tom) tuples, one per realization set, i.e. per set
+        of realizations with the same uncertainties, and trt_rlzs
+        is the list of the realizations associated to the gid of each block
+
+    NB: the contexts of a group contain the sources with different
+    uncertainties, so they must be attributed to the sets of realizations
+    with the same uncertainties, see read_gid_dic
+    """
+    full_lt = dstore['full_lt'].init()
+    toms = decode(dstore['toms'][:])
+    units = read_core_trt_smrs(dstore)
+    gids = full_lt.get_gids(units)  # one array per unit
+    unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
+    blocks = []
+    for grp_id, ctx in ctx_by_grp.items():
+        tom = valid.occurrence_model(toms[grp_id])
+        for gid in numpy.unique(ctx.gid):
+            unit = unit_of[gid]
+            blocks.append((cmakers[grp_id].copy(gid=gids[unit]),
+                           ctx[ctx.gid == gid], tom))
+    return blocks, full_lt.get_trt_rlzs(units)
+
+
 def compute_cs(dstore, oq, N, M, P):
     """
     Compute the conditional spectrum in a sequential way.
@@ -74,9 +102,7 @@ def compute_cs(dstore, oq, N, M, P):
     sites, there is no point in parallelizing: the computation is dominated
     by the time spent reading the contexts, not by the CPU.
     """
-    full_lt = dstore['full_lt'].init()
-    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-    R = full_lt.get_num_paths()
+    R = dstore['full_lt'].init().get_num_paths()
     imts = list(oq.imtls)
     imti = imts.index(oq.imt_ref)
     totrups = len(dstore['rup/mag'])
@@ -97,15 +123,13 @@ def compute_cs(dstore, oq, N, M, P):
     cmakers = read_cmakers(dstore).to_array()
 
     # Computing CS
-    toms = decode(dstore['toms'][:])
-    ctx_by_grp = read_ctx_by_grp(dstore)
-    dstore.swmr_on()
-    smap = parallel.Starmap(get_cs_out, h5=dstore)
-    for grp_id, ctx in ctx_by_grp.items():
-        tom = valid.occurrence_model(toms[grp_id])
-        cmaker = cmakers[grp_id]
-        smap.submit((cmaker, ctx, imti, imls, tom))
-    out = smap.reduce()
+    blocks, trt_rlzs = get_blocks(dstore, oq, cmakers,
+                                  read_ctx_by_grp(dstore))
+    with dstore.reopen('r'):  # read-only in the parallel phase
+        smap = parallel.Starmap(get_cs_out, h5=dstore, perf='memory')
+        for cmaker, ctx, tom in blocks:
+            smap.submit((cmaker, ctx, imti, imls, tom))
+        out = smap.reduce()
 
     # Apply weights and get two dictionaries with integer keys
     # (corresponding to the rlz ID) and array values
@@ -118,7 +142,8 @@ def compute_cs(dstore, oq, N, M, P):
 
     # sanity check: the mean conditional spectrum must be close to the imls
     ref_idx = list(oq.imtls).index(oq.imt_ref)
-    mean_cs = numpy.exp(outmean[0][ref_idx, :, 1, :])  # shape (N, P)
+    om = outmean[0][ref_idx]  # shape (N, 3, P)
+    mean_cs = numpy.exp(om[:, 1, :] / om[:, 0, :])  # shape (N, P)
     for n in range(N):
         for p in range(P):
             diff = abs(1. - imls[n, p]/ mean_cs[n, p])
@@ -129,10 +154,8 @@ def compute_cs(dstore, oq, N, M, P):
                                 mean_cs[n, p], imls[n, p])
 
     # Computing standard deviation
-    dstore.swmr_on()
     smap = parallel.Starmap(get_cs_out, h5=dstore.hdf5)
-    for grp_id, ctx in ctx_by_grp.items():
-        cmaker = cmakers[grp_id]
+    for cmaker, ctx, tom in blocks:
         smap.submit((cmaker, ctx, imti, imls, tom, outmean[0]))
     for res in smap:
         for g in res:

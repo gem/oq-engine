@@ -18,13 +18,18 @@
 
 import os
 import sys
+import shutil
+import tempfile
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
 from openquake.calculators import base
 from openquake.calculators.export import export
+from openquake.calculators.views import view
 from openquake.engine import global_ses
+from openquake.commands.sample import reduce_rupture_file
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
@@ -58,6 +63,8 @@ def check(dstore, calcs):
         rups = ds['ruptures'][:]
         nrup = len(rups)
         assert nrup == nrup_EUR + nrup_MIE  # no double counting
+        # the rupture IDs must be unique across the models
+        assert len(numpy.unique(rups['id'])) == nrup
 
 
 def setup_module():
@@ -107,6 +114,63 @@ def test_one_site():
     assert not hasattr(calc.oqparam, 'maximum_distance')
 
 
+def test_export_gmf_data_csv():
+    global last_job
+    calc = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5')
+    last_job = calc.datastore.calc_id
+    fname, sig_eps_csv, _sitemesh = export(
+        ('gmf_data', 'csv'), calc.datastore)
+    # sigma_epsilon event IDs must match the stored ones, not be remapped
+    sig_eps = calc.datastore['gmf_data/sigma_epsilon'][()]
+    df = pandas.read_csv(sig_eps_csv, comment='#')
+    ae(df['event_id'].to_numpy(), numpy.sort(sig_eps['eid']))
+    gmf_df = pandas.read_csv(fname, comment='#')
+    assert set(df['event_id']) <= set(gmf_df['event_id'])
+
+
+def test_export_realizations_csv():
+    global last_job
+    calc = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5')
+    last_job = calc.datastore.calc_id
+    fnames = export(('realizations', 'csv'), calc.datastore)
+    # one file per model, with the same columns as a single model
+    assert len(fnames) == 2
+    for model in ['EUR', 'MIE']:
+        [fname] = [f for f in fnames
+                   if os.path.basename(f).startswith(f'realizations_{model}')]
+        df = pandas.read_csv(fname, comment='#')
+        assert list(df.columns) == ['rlz_id', 'branch_path', 'weight']
+        rlzs = calc.datastore[f'full_lt/{model}'].rlzs
+        ae(df['rlz_id'].to_numpy(), numpy.arange(len(rlzs)))
+        ae(df['branch_path'].to_numpy(), rlzs['branch_path'])
+
+
+def test_view_rlz():
+    # the realization is shown for each model of the parent datastore
+    with read(RUP_HDF5) as dstore:
+        arr = view('rlz:0', dstore)
+    assert list(arr.dtype.names) == [
+        'model', 'uncertainty_type', 'uvalue']
+    for model in ['EUR', 'MIE']:
+        assert (arr['model'] == model).sum() > 0, model
+
+
+def test_view_logic_tree():
+    # the logic tree views show the rows of each model of the parent
+    with read(RUP_HDF5) as dstore:
+        bsets = view('branchsets', dstore)
+        branches = view('branches', dstore)
+        sm_rlzs = view('sm_rlzs', dstore)
+    assert 'model' in bsets.splitlines()[0]
+    assert 'model' in sm_rlzs.splitlines()[0]
+    for model in ['EUR', 'MIE']:
+        assert ('| %s ' % model) in bsets
+        assert ('| %s ' % model) in sm_rlzs
+    ae(sorted(set(branches['model'])), ['EUR', 'MIE'])
+
+
 def test_sites():  # 5 sites
     global last_job
     calc = base.run_calc(
@@ -133,7 +197,7 @@ def test_site_model():  # 5 sites
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
     assert len(rdf) == 15870
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16590
+    assert len(edf) == 16587
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == len(rdf)
 
@@ -142,10 +206,32 @@ def test_site_model():  # 5 sites
                              'read_source_model', 'count_ruptures'])
 
 
+def check_reduced(fname):
+    # check the links between ruptures, events and geometries
+    with hdf5.File(fname + '.bak') as orig, hdf5.File(fname) as red:
+        nrup_orig = len(orig['ruptures'])
+        rups = red['ruptures'][:]
+        evs = red['events'][:]
+        assert 0 < len(rups) < nrup_orig, (len(rups), nrup_orig)
+        assert len(red['rupgeoms']) == len(rups)
+        ae(rups['geom_id'], numpy.arange(len(rups)))
+        assert len(evs) == rups['n_occ'].sum()
+        for rec in rups:
+            blk = evs[rec['e0']:rec['e0'] + rec['n_occ']]
+            assert (blk['rup_id'] == rec['id']).all()
+
+
 def teardown_module():
-    dstore = read(RUP_HDF5)
-    occ_df = dstore.read_df('occ_by_trt_smr')
+    with read(RUP_HDF5) as dstore:
+        occ_df = dstore.read_df('occ_by_trt_smr')
     assert list(occ_df.columns) == ['trt_smr', 'n_occ', 'name']
+    # reduce a copy, since RUP_HDF5 is still open in the datastores
+    tmpdir = tempfile.mkdtemp()
+    tmp = os.path.join(tmpdir, 'SES.hdf5')
+    shutil.copy(RUP_HDF5, tmp)
+    reduce_rupture_file(tmp, .1)  # sample the ruptures
+    check_reduced(tmp)
+    shutil.rmtree(tmpdir)
     if sys.platform != 'win32':
         os.remove(RUP_HDF5)
     if last_job:

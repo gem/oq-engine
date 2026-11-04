@@ -8,15 +8,15 @@
       ssh_key_bits: 2048
       ssh_key_file: .ssh/id_rsa
 
-  - name: Check if dbserver is running on the hosts
-    script: files/db_server.bash
+  - name: Check if WebUI is running on the hosts
+    script: files/oq_webui.bash
     ignore_errors: true
     changed_when: false
-    register: dbserver_pid
+    register: webui_pid
 
-  - name: Kill dbserver
+  - name: Kill webUI
     shell: "kill -9 {{ item }}"
-    with_items: "{{ dbserver_pid.stdout_lines }}"
+    with_items: "{{ webui_pid.stdout_lines }}"
 
   - name: Install latest wheel setuptools and pip in virtualenv
     pip:

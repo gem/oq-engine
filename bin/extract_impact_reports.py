@@ -16,14 +16,16 @@ def main(calc_id: int):
         print(f"Found ISO3 reports: {iso3_codes}")
         for iso3 in iso3_codes:
             country_group = impact_group[iso3]
-            for file_format in ("pdf", "png"):
-                report_name = f"report_{file_format}"
+            # the PDF contains all pages, while there is a PNG for each
+            # page (reports by older engine versions have a single page)
+            for report_name, suffix in (("report_pdf", ".pdf"),
+                                        ("report_png", ".png"),
+                                        ("report_png_2", "_page2.png")):
                 if report_name not in country_group:
                     print(f"No {report_name} found for {iso3}")
                     continue
                 report_bytes = country_group[report_name][()]
-                fname = Path(
-                    f"impact_report_{calc_id}_{iso3}.{file_format}")
+                fname = Path(f"impact_report_{calc_id}_{iso3}{suffix}")
                 with open(fname, "wb") as f:
                     f.write(report_bytes)
                 print(f"Wrote {fname}")

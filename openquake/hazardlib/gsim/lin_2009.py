@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation, Chung-Han Chan
+# Copyright (C) 2014-2026 GEM Foundation, Chung-Han Chan
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,9 +40,8 @@ def _get_fault_type_dummy_variables(rake):
     reverse faulting (f_r) from rake. Classification based on that
     found in the original fortran code of Lin (2009)
     """
-    f_n, f_r = np.zeros_like(rake), np.zeros_like(rake)
-    f_n[(rake >= -120) & (rake <= -60)] = 1.  # normal
-    f_r[(rake >= 30) & (rake <= 150)] = 1.  # reverse
+    f_n = np.where((rake >= -120) & (rake <= -60), 1., 0.)
+    f_r = np.where((rake >= 30) & (rake <= 150), 1., 0.)
     return f_n, f_r
 
 

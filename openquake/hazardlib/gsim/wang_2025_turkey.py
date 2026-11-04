@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports :class:`WangEtAl2025`
+"""
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

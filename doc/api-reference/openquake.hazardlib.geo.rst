@@ -67,6 +67,14 @@ utils
     :undoc-members:
     :show-inheritance:
 
+regular_grid
+------------------------------------
+
+.. automodule:: openquake.hazardlib.geo.regular_grid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

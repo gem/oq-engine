@@ -21,7 +21,6 @@ import ast
 import csv
 import shutil
 import json
-import string
 import pickle
 import logging
 import os
@@ -31,7 +30,6 @@ import traceback
 import zlib
 import re
 import psutil
-import requests
 
 from threading import Event
 from collections import defaultdict
@@ -56,26 +54,26 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES, MAX_DISTANCE_LEVEL1)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info,
+    format_event_time)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, AGGRISK_FIELD_EXPLANATION,
+    EXPOSED_VALUE_EXPLANATION, REPORTED_VALUE_EXPLANATION,
     EXPOSURE_FIELD_DESCRIPTION, DISPLAY_NAME)
 from openquake.calculators.extract import extract as _extract
+from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
-from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
-from openquake.engine.export.core import DataStoreExportError
-from openquake.server import utils
-from openquake.server.services import store
-from openquake.commonlib.auth import API_KEY
+from openquake.server import internal_api, utils
+from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 
 from django.conf import settings
 from django.http import FileResponse
@@ -86,7 +84,6 @@ if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
 UTC = timezone.utc
-CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 
@@ -95,13 +92,6 @@ JSON = 'application/json'
 HDF5 = 'application/x-hdf'
 ZIP = 'application/x-zip'
 
-#: For exporting calculation outputs, the client can request a specific format
-#: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
-#: XML by default.
-DEFAULT_EXPORT_TYPE = 'xml'
-
-EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
-DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
 
@@ -110,8 +100,19 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
 
-KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
+
+# impact metrics sharing the same meaning of the exposed value
+EXPOSED_VALUE_LABELS = [
+    ('Affected population and Rendered homeless', 'residents'),
+    ('Floor area lost (m²)', 'area'),
+    ('Number of injured people and fatalities', 'occupants'),
+    ('Buildings destroyed', 'number'),
+    ('Economic loss (USD)', 'economic')]
+
+# loss types not displayed in the impact tables: embodied carbon and the
+# averages over the times of the day (shown for day, night and transit)
+IMPACT_HIDDEN = ['embodied_carbon', 'occupants_avg', 'injured_avg']
 
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
@@ -469,8 +470,10 @@ def validate_ini(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    return _post_api(
-        request, 'v0/calc/validate_ini', request.POST.dict())
+    return internal_api.run(
+        internal_api.validate_upload,
+        internal_api.make_form(request.POST, request.FILES),
+        'job_ini', 'Missing job_ini file')
 
 
 @csrf_exempt
@@ -489,8 +492,10 @@ def validate_zip(request):
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
     """
-    return _post_api(
-        request, 'v0/calc/validate_zip', request.POST.dict())
+    return internal_api.run(
+        internal_api.validate_upload,
+        internal_api.make_form(request.POST, request.FILES),
+        'archive', 'Missing archive file')
 
 
 @require_http_methods(['GET'])
@@ -518,55 +523,13 @@ def download_png(request, calc_id, what):
             content_type='text/plain', status=500)
 
 
-def _call_api(request, endpoint, params=None, headers=None):
-    """Call an internal FastAPI endpoint and return its JSON response."""
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    request_headers = {'X-API-Key': API_KEY}
-    if headers:
-        request_headers.update(headers)
-    try:
-        response = requests.get(
-            url, params=params, headers=request_headers, timeout=10)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code != 200:
-        return HttpResponse(status=502)
-    return HttpResponse(content=response.content, content_type=JSON)
-
-
-def _post_api(request, endpoint, data, timeout=10):
-    """Post form data and uploaded files to an internal API endpoint."""
-    files = []
-    for field, uploads in request.FILES.lists():
-        for upload in uploads:
-            files.append((
-                field, (upload.name, upload.file, upload.content_type)))
-    url = '%s/%s' % (_get_base_url(request), endpoint)
-    try:
-        response = requests.post(
-            url, data=data, files=files or None,
-            headers={'X-API-Key': API_KEY}, timeout=timeout)
-    except requests.RequestException:
-        return HttpResponse(status=503)
-    if response.status_code == 404:
-        return HttpResponseNotFound()
-    if response.status_code not in (200, 400, 500):
-        return HttpResponse(status=502)
-    return HttpResponse(
-        content=response.content, content_type=JSON,
-        status=response.status_code)
-
-
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
     """
-    Authenticate the request and proxy calculation information to FastAPI.
+    Authenticate the request and return the calculation information.
 
-    Django remains responsible for the user and ACL checks. The internal
-    FastAPI endpoint owns the calculation-information query.
+    Django remains responsible for the user and ACL checks.
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
@@ -575,7 +538,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return _call_api(request, 'v1/calc_info/%s' % calc_id)
+    return internal_api.run(internal_api.calc_info, int(calc_id))
 
 
 @require_http_methods(['GET'])
@@ -602,16 +565,23 @@ def calc_list(request, id=None):
         utils.get_valid_users(request),
         not utils.is_superuser(request), id)
     response_data = []
-    username = psutil.Process(os.getpid()).username()
+    username = utils.get_username(request)
+    superuser = utils.is_superuser(request)
+    can_share_own_jobs = (
+        get_user_level(request) >= 2 or
+        request.user.has_perm('auth.can_share_own_jobs'))
+    process_username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
          parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
+        can_manage_sharing = superuser or (
+            owner == username and can_share_own_jobs)
         if settings.DISPLAY_USER_HOST and host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
-                if psutil.Process(pid).username() == username:
+                if psutil.Process(pid).username() == process_username:
                     abortable = True
             except psutil.NoSuchProcess:
                 pass
@@ -622,6 +592,7 @@ def calc_list(request, id=None):
             dict(id=hc_id, owner=owner,
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
+                 can_manage_sharing=can_manage_sharing,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
                  start_time=start_time_str, relevant=relevant, tags=tags))
 
@@ -639,13 +610,10 @@ def calc_list(request, id=None):
 @cross_domain_ajax
 def calc_count(request):
     """Return the number of calculations matching the requested filters."""
-    headers = {
-        'X-Valid-Users': json.dumps(utils.get_valid_users(request)),
-        'X-User-ACL-On': str(not utils.is_superuser(request)),
-    }
-    return _call_api(
-        request, 'v1/calc_list/count',
-        params=dict(request.GET.items()), headers=headers)
+    return internal_api.run(
+        internal_api.calc_list_count, dict(request.GET.items()),
+        utils.get_valid_users(request),
+        str(not utils.is_superuser(request)))
 
 
 @csrf_exempt
@@ -663,7 +631,7 @@ def calc_abort(request, calc_id):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return JsonResponse(message, status=403)
-    return _post_api(request, 'v0/calc/%s/abort' % calc_id, {})
+    return internal_api.run(internal_api.calc_abort, int(calc_id))
 
 
 @csrf_exempt
@@ -672,12 +640,23 @@ def calc_abort(request, calc_id):
 def calc_remove(request, calc_id):
     """Remove a calculation for its owner."""
     user = utils.get_username(request)
-    return _post_api(
-        request, 'v0/calc/%s/remove' % calc_id, {'username': user})
+    return internal_api.run(
+        internal_api.calc_remove, int(calc_id), user)
 
 
-def share_job(user_level, calc_id, share):
-    if user_level < 2:
+def share_job(request, calc_id, share):
+    user_level = get_user_level(request)
+    superuser = utils.is_superuser(request)
+    if (user_level < 2 and not superuser and
+            not request.user.has_perm('auth.can_share_own_jobs')):
+        return HttpResponseForbidden()
+    try:
+        job = logs.dbcmd('get_job', calc_id)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    if job is None:
+        return HttpResponseNotFound()
+    if not superuser and job.user_name != utils.get_username(request):
         return HttpResponseForbidden()
     try:
         message = logs.dbcmd('share_job', calc_id, share)
@@ -800,8 +779,7 @@ def calc_unshare(request, calc_id):
     """
     Unshare the calculation of the given id
     """
-    user_level = get_user_level(request)
-    return share_job(user_level, calc_id, share=False)
+    return share_job(request, calc_id, share=False)
 
 
 @csrf_exempt
@@ -811,8 +789,7 @@ def calc_share(request, calc_id):
     """
     Share the calculation of the given id
     """
-    user_level = get_user_level(request)
-    return share_job(user_level, calc_id, share=True)
+    return share_job(request, calc_id, share=True)
 
 
 def log_to_json(log):
@@ -826,9 +803,10 @@ def log_to_json(log):
 def calc_log(request, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/log/%s:%s' % (calc_id, start, stop))
+    return internal_api.run(
+        internal_api.calc_log, int(calc_id), int(start or 0),
+        int(stop or 0))
 
 
 @require_http_methods(['GET'])
@@ -836,9 +814,8 @@ def calc_log(request, calc_id, start, stop):
 def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/log/size' % calc_id)
+    return internal_api.run(internal_api.calc_log_size, int(calc_id))
 
 
 job_complete_callback_state = {'event': Event(), 'data': {}}
@@ -900,7 +877,8 @@ def calc_run(request):
         'hazard_job_id': hazard_job_id or '',
         'notify_to': request.POST.get('notify_to') or '',
     }
-    return _post_api(request, 'v0/calc/run', data)
+    return internal_api.run(
+        internal_api.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -938,7 +916,8 @@ def calc_run_ini(request):
         'hazard_job_id': hazard_job_id or '',
         'notify_to': request.POST.get('notify_to') or '',
     }
-    return _post_api(request, 'v0/calc/run', data)
+    return internal_api.run(
+        internal_api.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -951,9 +930,9 @@ def calc_run_scenario_from_ses(request, rup_id):
         username = request.POST.get('job_owner') or username
     data = request.POST.dict()
     data['username'] = username
-    return _post_api(
-        request, 'v0/calc/run_scenario_calc_from_ses_rupture/%s' % rup_id,
-        data, timeout=120)
+    return internal_api.run(
+        internal_api.run_scenario_calc_from_ses_rupture, int(rup_id),
+        internal_api.make_form(data, request.FILES))
 
 
 def aelo_callback(
@@ -1124,8 +1103,9 @@ def impact_get_rupture_data(request):
     """
     data = request.POST.dict()
     data['user_level'] = str(request.user.level)
-    return _post_api(
-        request, 'v0/calc/impact_get_rupture_data', data, timeout=120)
+    return internal_api.run(
+        internal_api.impact_get_rupture_data,
+        internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1269,7 +1249,8 @@ def impact_run(request):
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/impact_run', data, timeout=300)
+    return internal_api.run(
+        internal_api.impact_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1314,15 +1295,112 @@ def impact_run_with_shakemap(request):
         username=utils.get_username(request),
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/impact_run', post, timeout=300)
+    return internal_api.run(
+        internal_api.impact_run, internal_api.make_form(post, request.FILES))
 
 
-def extract_report_from_datastore(dstore, iso3, file_format):
+def extract_report_from_datastore(dstore, iso3, file_format, page=1):
     impact_group = dstore['impact']
     if iso3 not in impact_group:
         raise ValueError(f"ISO3 '{iso3}' not found")
-    data = impact_group[iso3][f'report_{file_format}'][()]
+    # the PNG of the first page is stored as report_png, the following
+    # ones as report_png_2, report_png_3, ...
+    name = f'report_{file_format}' + ('' if page == 1 else f'_{page}')
+    if name not in impact_group[iso3]:
+        raise ValueError(
+            f"Page {page} of the {file_format} report not found for '{iso3}'")
+    data = impact_group[iso3][name][()]
     return bytes(data)
+
+
+# Resolve API routes by name so generated URLs respect any URL prefix.
+def _impact_output_url(request, route_name, calc_id, args=(), query=None):
+    url = request.build_absolute_uri(
+        reverse(route_name, args=[calc_id, *args]))
+    if query:
+        url += '?' + urlencode(query)
+    return url
+
+
+def build_impact_resources(request, calc_id, dstore):
+    """Describe impact resources and their presentation URLs."""
+    available = internal_api.get_impact_resource_data(dstore)
+    outputs = {
+        'avg_gmf_plots': {
+            imt: _impact_output_url(
+                request, 'download_png', calc_id, [name])
+            for imt, name in available['avg_gmf_plots'].items()},
+        'assets': None,
+        'aggrisk': None,
+        'aggrisk_tags': None,
+        'exposure_by_mmi': None,
+        'exposure_by_lse': {},
+        'country_reports': {},
+    }
+    if available['assets']:
+        outputs['assets'] = dict(png=_impact_output_url(
+            request, 'download_png', calc_id, ['assets.png']))
+    if available['aggrisk']:
+        outputs['aggrisk'] = dict(csv=_impact_output_url(
+            request, 'download_aggrisk', calc_id))
+    if available['aggrisk_tags']:
+        outputs['aggrisk_tags'] = dict(
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['aggrisk_tags']),
+            summary_table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['aggrisk_tags'],
+                dict(summarize=1)),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['aggrisk_tags']))
+    if available['exposure_by_mmi']:
+        outputs['exposure_by_mmi'] = dict(
+            json=_impact_output_url(
+                request, 'exposure_by_mmi', calc_id),
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id, ['mmi_tags']),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['mmi_tags']))
+    for peril, is_available in available['exposure_by_lse'].items():
+        outputs['exposure_by_lse'][peril] = None
+        if not is_available:
+            continue
+        query = dict(secondary_peril=peril)
+        outputs['exposure_by_lse'][peril] = dict(
+            json=_impact_output_url(
+                request, 'exposure_by_lse', calc_id, query=query),
+            table=_impact_output_url(
+                request, 'extract_html_table', calc_id,
+                ['exposure_by_lse'], query),
+            npz=_impact_output_url(
+                request, 'calc_extract', calc_id, ['exposure_by_lse'],
+                query))
+    report_url = reverse('impact_report', args=[calc_id])
+    report_url = request.build_absolute_uri(report_url)
+    for iso3 in available['country_reports']:
+        urls = {}
+        for file_format in ('pdf', 'png'):
+            query = urlencode(dict(iso3=iso3, format=file_format))
+            urls[file_format] = f'{report_url}?{query}'
+        # reports produced by older engine versions have a single page
+        if f'impact/{iso3}/report_png_2' in dstore:
+            query = urlencode(dict(iso3=iso3, format='png', page=2))
+            urls['png_page2'] = f'{report_url}?{query}'
+        outputs['country_reports'][iso3] = urls
+    return outputs
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_impact_resources(request, calc_id):
+    """Return impact-specific resources and their retrieval URLs."""
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        resources = build_impact_resources(request, calc_id, ds)
+    return JsonResponse(resources)
 
 
 @csrf_exempt
@@ -1342,9 +1420,17 @@ def impact_report(request, calc_id):
         return HttpResponse(
             f'Invalid format parameter "{file_format}".'
             f' Choose "pdf" or "png".', status=400)
+    # the PDF contains all pages, while there is a PNG for each page
+    page = request.GET.get("page", "1") if file_format == "png" else "1"
+    if not page.isdigit() or int(page) < 1:
+        return HttpResponse(
+            f'Invalid page parameter "{page}".'
+            f' It must be a positive integer.', status=400)
+    page = int(page)
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            report_bytes = extract_report_from_datastore(ds, iso3, file_format)
+            report_bytes = extract_report_from_datastore(
+                ds, iso3, file_format, page)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -1353,9 +1439,10 @@ def impact_report(request, calc_id):
             status=400
         )
     if file_format == "png":
+        suffix = '' if page == 1 else f'_page{page}'
         response = HttpResponse(report_bytes, content_type="image/png")
         response["Content-Disposition"] = (
-            f"inline; filename=impact_report_{iso3}.png")
+            f"inline; filename=impact_report_{iso3}{suffix}.png")
     else:
         response = HttpResponse(report_bytes, content_type="application/pdf")
         response["Content-Disposition"] = (
@@ -1505,7 +1592,8 @@ def aelo_run(request):
         username=utils.get_username(request),
         email=getattr(getattr(request, 'user', None), 'email', ''),
         base_url=_get_base_url(request))
-    return _post_api(request, 'v0/calc/aelo_run', data)
+    return internal_api.run(
+        internal_api.aelo_run, internal_api.make_form(data, request.FILES))
 
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):
@@ -1544,18 +1632,9 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
 
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
-    big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
             subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
-    elif submit_cmd == KUBECTL and big_job:
-        for job in jobs:
-            with open(os.path.join(CWD, 'job.yaml')) as f:
-                yaml = string.Template(f.read()).substitute(
-                    DATABASE='%(host)s:%(port)d' % config.dbserver,
-                    CALC_PIK=save_pik(job, custom_tmp),
-                    CALC_NAME='calc%d' % job.calc_id)
-            subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         kwargs = {}
         if notify_to is not None:
@@ -1660,9 +1739,8 @@ def calc_results(request, calc_id):
 def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
-    Proxies to the internal FastAPI endpoint with X-API-Key header.
     """
-    return _call_api(request, 'v0/calc/%s/traceback' % calc_id)
+    return internal_api.run(internal_api.calc_traceback, int(calc_id))
 
 
 @cross_domain_ajax
@@ -1690,9 +1768,10 @@ def calc_result(request, result_id):
     """
     # If the result for the requested ID doesn't exist, OR
     # the job which it is related too is not complete,
-    # throw back a 404.
+    # throw back a 404. Django remains responsible for the user and ACL
+    # checks, while the export is performed by the internal API.
     try:
-        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
+        _, job_status, job_user, _, ds_key = logs.dbcmd(
             'get_result', result_id)
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
@@ -1706,37 +1785,9 @@ def calc_result(request, result_id):
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
-    etype = request.GET.get('export_type')
-    export_type = etype or DEFAULT_EXPORT_TYPE
-
-    # NOTE: for some reason, in some cases the environment variable TMPDIR is
-    # ignored, so we need to use config.directory.custom_tmp if defined
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    tmpdir = tempfile.mkdtemp(dir=temp_dir)
-    try:
-        exported = core.export_from_db(
-            (ds_key, export_type), job_id, datadir, tmpdir)
-    except DataStoreExportError as exc:
-        # TODO: there should be a better error page
-        return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
-                            content_type='text/plain', status=500)
-    if not exported:
-        # Throw back a 404 if the exact export parameters are not supported
-        return HttpResponseNotFound(
-            'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
-    elif len(exported) > 1:
-        # Building an archive so that there can be a single file download
-        archname = ds_key + '-' + export_type + '.zip'
-        zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
-        exported = os.path.join(tmpdir, archname)
-        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
-    else:  # single file
-        exported = exported[0]
-        content_type = EXPORT_CONTENT_TYPE_MAP.get(
-            export_type, DEFAULT_CONTENT_TYPE)
-
-    fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-    return stream_response(exported, content_type, fname)
+    export_type = request.GET.get('export_type') or DEFAULT_EXPORT_TYPE
+    return internal_api.run(
+        internal_api.calc_result, int(result_id), export_type)
 
 
 @cross_domain_ajax
@@ -1892,7 +1943,7 @@ def extract(request, calc_id, what):
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
 def model_provenance(request, calc_id):
-    """Authenticate and proxy model provenance to FastAPI."""
+    """Authenticate and return the model provenance."""
     if get_user_level(request) < 2:
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(calc_id))
@@ -1900,7 +1951,8 @@ def model_provenance(request, calc_id):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    return _call_api(request, f'v0/calc/model_provenance/{calc_id}')
+    return internal_api.run(
+        internal_api.model_provenance, int(calc_id))
 
 
 @cross_domain_ajax
@@ -2002,6 +2054,7 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_approaches'] = IMPACT_APPROACHES
+        params['impact_max_distance_level1'] = MAX_DISTANCE_LEVEL1
 
         # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
@@ -2278,7 +2331,9 @@ def format_oqparam(oqparam):
     if 'from_usgs' in approach:
         ret_dict[IMPACT_FORM_LABELS['usgs_id']] = rupdic['usgs_id']
         ret_dict[IMPACT_FORM_LABELS['shakemap_desc']] = rupdic['shakemap_desc']
-        ret_dict[IMPACT_FORM_LABELS['time_event']] = oqparam.time_event
+        # the time of the event selected by the user, used in the reports
+        ret_dict[IMPACT_FORM_LABELS['time_event']] = (
+            oqparam.report_time_event or oqparam.time_event)
 
     # e.g. from {'default': [[2.5, 150.0], [10.2, 150.0]]} to 150
     ret_dict[IMPACT_FORM_LABELS['maximum_distance']] = \
@@ -2307,6 +2362,9 @@ def format_oqparam(oqparam):
         ret_dict[IMPACT_FORM_LABELS['lat']] = rupdic['lat']
         ret_dict[IMPACT_FORM_LABELS['dep']] = rupdic['dep']
         ret_dict[IMPACT_FORM_LABELS['mag']] = rupdic['mag']
+        if 'nodal_plane' in rupdic:
+            ret_dict[IMPACT_FORM_LABELS['nodal_plane']] = \
+                rupdic['nodal_plane']
         ret_dict[IMPACT_FORM_LABELS['msr']] = rupdic['msr']
         ret_dict[IMPACT_FORM_LABELS['aspect_ratio']] = rupdic['aspect_ratio']
         ret_dict[IMPACT_FORM_LABELS['rake']] = rupdic['rake']
@@ -2327,6 +2385,26 @@ def format_oqparam(oqparam):
     return ret_dict
 
 
+def _get_impact_losses(ds):
+    # returns (losses, losses_header, weights_precision) for the table in
+    # the impact outputs page, or a message and None, None if the hazard
+    # is too low to compute the risk
+    try:
+        losses = views.view('aggrisk', ds)
+    except KeyError:
+        max_avg_gmf = ds['avg_gmf'][0].max()
+        msg = (f'The risk can not be computed since the hazard is too low:'
+               f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+        return msg, None, None
+    losses = losses[[n for n in losses.dtype.names
+                     if n not in IMPACT_HIDDEN]]
+    # display only the descriptions, not the internal names of the fields
+    losses_header = [
+        AGGRISK_FIELD_DESCRIPTION.get(field, field.capitalize())
+        for field in losses.dtype.names]
+    return losses, losses_header, determine_precision(losses['weight'])
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2337,30 +2415,11 @@ def web_engine_get_outputs_impact(request, calc_id):
     job_start_time = job.start_time
     job_start_time_str = job.start_time.strftime('%Y-%m-%d %H:%M:%S') + ' UTC'
     local_timestamp_str = None
+    event_time_str = None
     time_job_after_event = None
     time_job_after_event_str = None
-    pngs = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        try:
-            losses = views.view('aggrisk', ds)
-        except KeyError:
-            max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (
-                f'The risk can not be computed since the hazard is too low:'
-                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
-            losses_header = None
-            weights_precision = None
-        else:
-            losses_header = [
-                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
-                if field in AGGRISK_FIELD_DESCRIPTION
-                else field.capitalize()
-                for field in losses.dtype.names]
-            weights_precision = determine_precision(losses['weight'])
-        if 'png' in ds:
-            pngs['avg_gmf'] = [k for k in ds['png']
-                               if k.startswith('avg_gmf-')]
-            pngs['assets'] = 'assets.png' in ds['png']
+        losses, losses_header, weights_precision = _get_impact_losses(ds)
         oqparam = ds['oqparam']
         input_params = format_oqparam(oqparam)
         usgs_id = None
@@ -2370,43 +2429,25 @@ def web_engine_get_outputs_impact(request, calc_id):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
-        if 'impact' in ds:
-            impact_iso3_list = list(ds['impact'])
-        else:
-            impact_iso3_list = []
+        impact_resources = build_impact_resources(request, calc_id, ds)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     warnings = get_impact_warnings(ds)
-    mmi_tags = 'mmi_tags' in ds
-    exposure_by_liq_lse = 'exposure_by_liquefaction_lse' in ds
-    exposure_by_land_lse = 'exposure_by_landslide_lse' in ds
-    # NOTE: aggrisk_tags is not available as an attribute of the datastore
-    try:
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            _extract(ds, 'aggrisk_tags')
-    except KeyError:
-        aggrisk_tags = False
-    else:
-        aggrisk_tags = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
         time_job_after_event = (
             job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
         time_job_after_event_str = format_time_delta(time_job_after_event)
+        event_time_str = format_event_time(local_timestamp_str)
     return render(request, "engine/get_outputs_impact.html",
                   dict(calc_id=calc_id, description=description,
-                       local_timestamp=local_timestamp_str,
+                       local_timestamp=event_time_str,
                        job_start_time=job_start_time_str,
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        weights_precision=weights_precision,
-                       pngs=pngs,
-                       warnings=warnings, mmi_tags=mmi_tags,
-                       impact_iso3_list=impact_iso3_list,
-                       aggrisk_tags=aggrisk_tags,
-                       exposure_by_liq_lse=exposure_by_liq_lse,
-                       exposure_by_land_lse=exposure_by_land_lse,
+                       warnings=warnings, impact_resources=impact_resources,
                        usgs_id=usgs_id, input_params=input_params)
                   )
 
@@ -2456,6 +2497,29 @@ def can_extract(request, resource):
     return False
 
 
+def _impact_summary_hidden(oqparam):
+    # loss types hidden in the impact summary table: the IMPACT_HIDDEN ones
+    # and, if a time of the event was selected, the fatalities and injured
+    # for the other times of the day
+    te = oqparam.report_time_event
+    if te is None:
+        return IMPACT_HIDDEN
+    return IMPACT_HIDDEN + [f'{lt}_{other}' for lt in TIME_LOSSES
+                            for other in TIME_EVENTS if other != te]
+
+
+def _impact_summary_labels(oqparam):
+    # display names of the loss types in the impact summary table; if a time
+    # of the event was selected, the fatalities and injured are shown only
+    # for that time, so their names do not mention it (the explanations do)
+    labels = dict(AGGRISK_FIELD_DESCRIPTION, injured='Injured people')
+    te = oqparam.report_time_event
+    if te is not None:
+        labels[f'occupants_{te}'] = labels['occupants']
+        labels[f'injured_{te}'] = labels['injured']
+    return labels
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2473,6 +2537,7 @@ def extract_html_table(request, calc_id, name):
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             table = _extract(ds, name)
+            oqparam = ds['oqparam']
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
@@ -2545,9 +2610,10 @@ def extract_html_table(request, calc_id, name):
         table_contents = table_contents[table_contents[:, 0] == '*total*'][
             :, 1:-2]
 
-        # NOTE: Intentionally excluding embodied_carbon from this summary
-        table_contents = table_contents[
-            table_contents[:, 0] != 'embodied_carbon']
+        # NOTE: Intentionally excluding some loss types, see IMPACT_HIDDEN;
+        # fatalities and injured are shown only for the selected time
+        table_contents = table_contents[~numpy.isin(
+            table_contents[:, 0], _impact_summary_hidden(oqparam))]
 
         # replace the following rows with their sum (economic loss)
         rows_to_sum = ['structural', 'nonstructural', 'contents']
@@ -2557,52 +2623,33 @@ def extract_html_table(request, calc_id, name):
             ([numpy.str_('economic')], summed))
         remaining = table_contents[~mask]
         table_contents = numpy.vstack([remaining, economic_loss_row])
-        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+        # explain only the loss types displayed in the summary
+        displayed = set(table_contents[:, 0])
+        labels = _impact_summary_labels(oqparam)
+        for key, value in labels.items():
             table_contents[table_contents == key] = value
         loss_types = '<ul>' + ''.join(
             '<li><strong>%s:</strong> %s%s</li>' % (
-                AGGRISK_FIELD_DESCRIPTION.get(key, key), explanation,
-                '<span>.</span>' if key == 'injured' else '.')
+                labels.get(key, key), explanation,
+                '<span>.</span>' if key.startswith('injured') else '.')
             for key, explanation in AGGRISK_FIELD_EXPLANATION.items()
+            if key in displayed
+        ) + '</ul>'
+        exposed_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                label, EXPOSED_VALUE_EXPLANATION[key])
+            for label, key in EXPOSED_VALUE_LABELS) + '</ul>'
+        reported_values = '<ul>' + ''.join(
+            '<li><strong>%s:</strong> %s.</li>' % (
+                AGGRISK_FIELD_DESCRIPTION[key], explanation)
+            for key, explanation in REPORTED_VALUE_EXPLANATION.items()
         ) + '</ul>'
         additional_explanations = {
             'value': (
                 'The exposed value depends on the impact metric. Below we '
                 'describe the meaning of the exposed value per impact metric:'
-                '<ul>'
-                '<li><strong>Affected population and Rendered homeless:'
-                '</strong> Population that lives in the area included in the '
-                'impact analysis.</li>'
-                '<li><strong>Floor area lost (m²):</strong> Total floor area '
-                'of buildings, including all storeys, in the area included in '
-                'the impact analysis.</li>'
-                '<li><strong>Number of injured people and fatalities:'
-                '</strong> Population assumed to be inside the building stock '
-                'in the area included in the impact analysis when the event '
-                'occurs.</li>'
-                '<li><strong>Buildings destroyed:</strong> Number of buildings '
-                'in the area included in the impact analysis.</li>'
-                '<li><strong>Economic loss (USD):</strong> Replacement value '
-                'of buildings and their contents in the area included in the '
-                'impact analysis.'
-                '</li></ul>'
-            ),
-            'Reported values': (
-                '<ul>'
-                '<li><strong>Mean:</strong> Arithmetic mean of the estimated '
-                'impact values, accounting for the uncertainties propagated '
-                'through the impact analysis.</li>'
-                '<li><strong>Median:</strong> The 50th percentile of the '
-                'estimated impact distribution. Half of the estimated impact '
-                'values are below the median and half are above it.</li>'
-                '<li><strong>5th percentile:</strong> Value below which 5% '
-                'of the estimated impact values fall. It represents the lower '
-                'end of the range of plausible impacts.</li>'
-                '<li><strong>95th percentile:</strong> Value below which 95% '
-                'of the estimated impact values fall. It represents the upper '
-                'end of the range of plausible impacts.</li>'
-                '</ul>'
-            ),
+                + exposed_values),
+            'Reported values': reported_values,
         }
         explanations = {
             'Loss types': loss_types,
@@ -2656,10 +2703,13 @@ def on_same_fs(request):
 
     :param request:
         `django.http.HttpRequest` object, containing mandatory parameters
-        filename and checksum.
+        filename and checksum. The caller authenticates with the internal
+        API key, since it is not necessarily a logged-in user.
     """
-    filename = request.POST['filename']
-    checksum_in = request.POST['checksum']
+    if not internal_api.has_api_key(request):
+        return HttpResponseForbidden()
+    filename = request.POST.get('filename')
+    checksum_in = request.POST.get('checksum')
 
     checksum = 0
     try:
@@ -2667,7 +2717,7 @@ def on_same_fs(request):
         checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
             return JsonResponse({'success': True}, status=200)
-    except (IOError, ValueError):
+    except (IOError, TypeError, ValueError):
         pass
 
     return JsonResponse({'success': False}, status=200)

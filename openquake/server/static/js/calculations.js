@@ -50,6 +50,7 @@ var CalculationTable = Backbone.View.extend({
 
         /* if false, it prevents the table to be refreshed */
         this.can_be_rendered = true;
+        this.table_html = null;
 
         this.render();
     },
@@ -358,9 +359,17 @@ var CalculationTable = Backbone.View.extend({
 
     render: function () {
         if (!this.can_be_rendered) return;
-        this.$el.html(_.template($('#calculation-table-template').html(), {
-            calculations: this.calculations.models
-        }));
+        var table_html = _.template(
+            $('#calculation-table-template').html(), {
+                calculations: this.calculations.models
+            });
+        // Keep row nodes stable across unchanged polls so a refresh cannot
+        // detach an action link while the user is clicking it.
+        if (table_html !== this.table_html) {
+            this.$el.html(table_html);
+            this.table_html = table_html;
+        }
+        this.$el.find('.pagination').remove();
         this.render_pagination();
     }
 });

@@ -30,10 +30,10 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+
 _DATA_DIR = os.path.join(
     os.path.dirname(__file__),
-    "karimzadeh_azores_2023_data",
-)
+    "karimzadeh_azores_2023_data",)
 
 # Standard deviations file
 _STDS_FILE = os.path.join(_DATA_DIR, "stds.csv")
@@ -44,8 +44,7 @@ _BUNDLED_MODEL_NAME = "karimzadeh_azores_islands_2023_bundled.onnx.gz"
 # Index 0: PGA, Index 1: PGV, Index 2+: SA periods
 _PERIOD_TO_INDEX = {
     0.03: 2, 0.05: 3, 0.075: 4, 0.1: 5, 0.15: 6, 0.2: 7, 0.25: 8,
-    0.3: 9, 0.4: 10, 0.5: 11, 0.75: 12, 1.0: 13, 1.5: 14, 2.0: 15
-}
+    0.3: 9, 0.4: 10, 0.5: 11, 0.75: 12, 1.0: 13, 1.5: 14, 2.0: 15}
 
 def _predict_im(sess: PicklableInferenceSession, X: np.ndarray) -> np.ndarray:
     """
@@ -86,7 +85,7 @@ def _mean_and_std_from_ctx(gsim, ctx, imt):
 
     # Predict all IMTs at once (N, 16).
     all_outputs = _predict_im(gsim.session, X)
-    
+
     # Extract the requested IMT
     ln_im_train = all_outputs[:, index]
 
@@ -131,8 +130,7 @@ class Karimzadeh2023Azores(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.INTRA_EVENT,
         const.StdDev.INTER_EVENT,
-        const.StdDev.TOTAL,
-    }
+        const.StdDev.TOTAL,}
     DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
@@ -144,7 +142,7 @@ class Karimzadeh2023Azores(GMPE):
         self.sigma_intra = {}
         self.tau_inter = {}
         self.phi_total = {}
-        
+
         if not os.path.exists(_STDS_FILE):
             raise IOError(f"Cannot find stds.csv at {_STDS_FILE}")
 
@@ -167,8 +165,7 @@ class Karimzadeh2023Azores(GMPE):
         """
         for m, imt in enumerate(imts):
             ln_im, sigma_intra, tau_inter, phi_total = _mean_and_std_from_ctx(
-                self, ctx, imt
-            )
+                self, ctx, imt)
             mean[m, :] = ln_im
             sig[m, :]  = phi_total     # TOTAL
             tau[m, :]  = tau_inter     # INTER-EVENT

@@ -23,8 +23,11 @@ import getpass
 import tempfile
 import logging
 
-from openquake.baselib import config
+from django.core.exceptions import ImproperlyConfigured
+from openquake.baselib import config, is_server_installation
+from openquake.baselib.general import engine_version
 from openquake.commonlib import datastore, auth
+
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -45,13 +48,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
 
 TEST = ('test' in sys.argv or any('pytest' in arg for arg in sys.argv)
-        or os.environ.get('GITHUB_ACTIONS'))
+        or os.environ.get('GITHUB_ACTIONS') or os.environ.get('OQ_TEST'))
 
 INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
-DEBUG = True
+# Normally do not show debug pages in a server installation
+DEBUG = not is_server_installation()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
@@ -87,9 +91,9 @@ STATICFILES_DIRS = [
 
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': os.path.expanduser(config.dbserver.file),
+    'NAME': os.path.expanduser(config.server.dbfile),
     'USER': getpass.getuser(),
-    'HOST': config.dbserver.host,
+    'HOST': config.server.host,
 }
 DATABASES = {'default': DATABASE}
 
@@ -149,6 +153,7 @@ ALLOW_DATASTORE_DOWNLOAD = True
 AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
+WSGI_APPLICATION = 'openquake.server.wsgi.application'
 
 INSTALLED_APPS += (
     'django.contrib.staticfiles',
@@ -302,6 +307,15 @@ if not TEST:
             # settings in this file only will be used
             pass
 
+# In a devel_server installation we might want to set DEBUG = True
+if is_server_installation() and DEBUG:
+    if 'git' in engine_version():  # devel_server
+        logging.warning(
+            'DEBUG is True. Please check if this is intentional!')
+    else:
+        raise ImproperlyConfigured(
+            'DEBUG = True is not allowed in a server installation:')
+
 # Local defaults must not affect the test suite. In particular, a configured
 # IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
 if TEST:
@@ -338,6 +352,7 @@ if APPLICATION_MODE not in ('PUBLIC',):
         TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'openquake.server.authorization',
                 'openquake.server.user_profile', 'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
@@ -445,6 +460,8 @@ if LOCKDOWN:
         f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
         f'{WEBUI_PATHPREFIX}/v1/authentication/status',
         'reset_password', 'reset/', 'cookies/',
+        'v0/', 'v1/calc_info/', 'v1/calc_list/count', 'v1/on_same_fs',
+        'v1/aelo_site_classes', 'v1/get_impact_form_defaults',
     )
     LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
 

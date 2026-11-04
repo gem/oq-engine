@@ -28,7 +28,7 @@ from openquake.baselib import config, hdf5, writers, general, node
 from openquake.baselib.general import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import mean_curve
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 from openquake.commonlib import readinput
 from openquake.calculators.extract import (
     extract, sanitize, _get_data, aggexp_tags)
@@ -760,7 +760,16 @@ def export_reinsurance(ekey, dstore):
             ('infra-event_ccl', 'csv'),
             ('infra-event_pcl', 'csv'),
             ('infra-event_wcl', 'csv'),
-            ('infra-event_efl', 'csv'))
+            ('infra-event_efl', 'csv'),
+            ('inter-avg_loss', 'csv'),
+            ('inter-node_el', 'csv'),
+            ('inter-taz_cl', 'csv'),
+            ('inter-dem_cl', 'csv'),
+            ('inter-event_ccl', 'csv'),
+            ('inter-event_pcl', 'csv'),
+            ('inter-event_wcl', 'csv'),
+            ('inter-event_efl', 'csv'))
+
 def export_node_el(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
@@ -920,10 +929,12 @@ def _get_gsim_lt(dstore, oq, inputs):
         if not oq.shakemap_uri:
             oq.shakemap_uri = {'kind': 'usgs_id',
                                'id': oq.rupture_dict['usgs_id']}
-            oq.rupture_dict.pop('rupture_file', None)
-            oq.rupture_dict.pop('mmi_file', None)
-            oq.inputs.pop('rupture', None)
-            oq.inputs.pop('mmi', None)
+            oq.rupture_dict = {
+                k: v for k, v in oq.rupture_dict.items()
+                if k not in ('rupture_file', 'mmi_file')}
+            oq.inputs = {
+                k: v for k, v in oq.inputs.items()
+                if k not in ('rupture', 'mmi')}
         return None  # from shakemap
     elif 'ruptures' in dstore and len(dstore['ruptures']) > 0:
         model = dstore['ruptures'][0]['model'].decode('ascii')
@@ -944,7 +955,8 @@ def _export_taxmap_and_consequences(dstore, oq, ddic, inputs):
         writer.save(taxmap, dest)
         inputs['taxonomy_mapping'] = dest
 
-    if 'consequence' in oq.inputs:
+    if 'consequence' in oq.inputs or riskmodels.get_xml_consequence_files(
+            oq.inputs):
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
         consdict = readinput.read_consdict(oq, oq.limit_states, list(ddic))
         dic = {}
@@ -1009,11 +1021,13 @@ def export_job_zip(ekey, dstore):
         inputs.update(export_vulnerability_xml(dstore))
     elif oq.calculation_mode.endswith('damage'):
         ddic = export_fragility_xml(dstore)
+        toremove = set()
         for peril, ltype_by_path in ddic.items():
             inputs[f'{peril}_fragility'] = ltype_by_path
-            for ltype in ltype_by_path:
-                # needed for PAPERS
-                oq.inputs.pop(f'{ltype}_fragility', None)
+            toremove.update(f'{ltype}_fragility' for ltype in ltype_by_path)
+        # needed for PAPERS: use a new instance dict
+        oq.inputs = {k: v for k, v in oq.inputs.items()
+                     if k not in toremove}
 
     _export_taxmap_and_consequences(dstore, oq, ddic, inputs)
 

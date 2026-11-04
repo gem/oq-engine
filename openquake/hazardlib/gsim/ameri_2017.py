@@ -30,6 +30,10 @@ from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+
+LOG10 = np.log(10.0)
+
+
 g = 9.81  # According to G. Ameri, pers. communication (May 20th, 2019)
 
 CONSTS = {"Mref": 5.5, "Mh": 6.75, "Rref": 1.0}
@@ -164,7 +168,7 @@ def _get_stddevs(kind, C_SIGMA, mag):
         sigma = np.sqrt(tau ** 2 + phi ** 2)
         return sigma, tau, phi
 
-    if kind not in "rjb repi":
+    if kind not in ("rjb", "repi"):
         mag = None
     tau = _compute_between_events_std(C_SIGMA, mag)
     phi = _compute_within_event_std(C_SIGMA)
@@ -259,12 +263,12 @@ class AmeriEtAl2017Rjb(GMPE):
             imean = _get_mean(self.kind, self.norm_stress_drop,
                               C, C_STRESS, ctx)
             # Convert mean to ln(SA) with SA in units of g:
-            mean[m] = np.log(10.0 ** (imean - 2.0) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             mean[m] += self.adjustment_factor
             s, t, p = _get_stddevs(self.kind, C_SIGMA, ctx.mag)
-            sig[m] = np.log(10.0 ** s)
-            tau[m] = np.log(10.0 ** t)
-            phi[m] = np.log(10.0 ** p)
+            sig[m] = s * LOG10
+            tau[m] = t * LOG10
+            phi[m] = p * LOG10
 
     #: Coefficients from Table "10518_2017_171_MOESM2_ESM.xlsx" in electronic supplementary material:
     COEFFS = CoeffsTable(sa_damping=5, table="""
@@ -299,13 +303,13 @@ class AmeriEtAl2017Rjb(GMPE):
     """)
 
     # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic supplementary material:
-    # NB: Coefficients from the original table have been modified so as to account for the authors' 
-    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only, 
+    # NB: Coefficients from the original table have been modified so as to account for the authors'
+    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only,
     #     and the homoscedastic model for longer periods".
     #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU values for the following
     #     periods: 1.3 s., 1.5 s., 1.8 s., 2.0 s., 2.6 s., 3.0 s.
     COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""
-        imt             tau       tau1       tau2       phi        
+        imt             tau       tau1       tau2       phi
         pga         0.170688   0.299730   0.177908   0.303741
        0.01         0.171851   0.299730   0.177908   0.305812
        0.02         0.173021   0.311915   0.186848   0.307893
@@ -450,8 +454,8 @@ class AmeriEtAl2017Repi(AmeriEtAl2017Rjb):
     """)
 
     # Coefficients from Table "10518_2017_171_MOESM3_ESM.xlsx" in electronic supplementary material:
-    # NB: Coefficients from the original table have been modified so as to account for the authors' 
-    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only, 
+    # NB: Coefficients from the original table have been modified so as to account for the authors'
+    #     advice in the article (p.4707, "we recommend the heteroscedastic model for T<=1 s only,
     #     and the homoscedastic model for longer periods".
     #     Accordingly, values for TAU1 and TAU2 have been edited to match TAU values for the following
     #     periods: 1.3 s., 1.5 s., 1.8 s., 2.0 s., 2.6 s., 3.0 s.

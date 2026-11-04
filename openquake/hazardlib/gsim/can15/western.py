@@ -22,9 +22,13 @@
 
 import copy
 import numpy as np
+
 from openquake.hazardlib.gsim.can15.utils import get_equivalent_distances_west
 from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
 from openquake.hazardlib.const import StdDev
+
+
+LOG10 = np.log(10.0)
 
 
 def get_sigma(imt):
@@ -37,11 +41,11 @@ def get_sigma(imt):
         A float representing the total sigma value
     """
     if imt.period < 0.2:
-        return np.log(10**0.23)
+        return 0.23 * LOG10
     elif imt.period > 1.0:
-        return np.log(10**0.27)
+        return 0.27 * LOG10
     else:
-        return np.log(10**(0.23 + (imt.period - 0.2)/0.8 * 0.04))
+        return (0.23 + (imt.period - 0.2) / 0.8 * 0.04) * LOG10
 
 
 class WesternCan15Mid(BooreAtkinson2011):
@@ -82,11 +86,10 @@ class WesternCan15Mid(BooreAtkinson2011):
         super().compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
             if self.sgn:
-                # adjust mean values using the reccomended delta
+                # adjust mean values using the recommended delta
                 # (see Atkinson and Adams, 2013)
-                tmp = 0.1 + 0.0007 * ctx.rjb
-                tmp = np.vstack((tmp, np.full_like(tmp, 0.3)))
-                delta = np.log(10. ** np.amin(tmp, axis=0))
+                # adjust mean values using the reccomended delta
+                delta = np.minimum(0.1 + 0.0007 * ctx.rjb, 0.3) * LOG10
                 mean[m] += self.sgn * delta
             sig[m] = get_sigma(imt)
 

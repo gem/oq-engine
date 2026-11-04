@@ -28,6 +28,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+LOG10 = np.log(10.0)
+
+
 # TODO: Check whether lower validity bound is 4 or 7 km
 def _compute(self, ctx: np.recarray, imts, mean, sig, tau, phi,
              mag_conversion_sigma=0.):
@@ -46,9 +49,9 @@ def _compute(self, ctx: np.recarray, imts, mean, sig, tau, phi,
         mean[m, ctx.vs30 < 800] += C['c2']
 
         # convert from log10 to ln, and from cm/s2 to g
-        mean[m] = mean[m] * np.log(10) - 2 * np.log(10) - np.log(g)
+        mean[m] = mean[m] * LOG10 - 2 * LOG10 - np.log(g)
 
-        sigma = C['sigma'] * np.log(10)
+        sigma = C['sigma'] * LOG10
         sig[m] = np.sqrt(sigma**2 + C['a']**2 * mag_conversion_sigma**2)
 
 

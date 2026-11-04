@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+Logic tree with IMT-dependent weights whose IMTs (PGA and SA(1.0)) are NOT
+a prefix of the IMTs of the calculation (PGA, SA(0.2), SA(1.0)); this
+exercises the mapping of the IMTs onto the weight columns.
+-->
+<nrml>
+	<logicTree logicTreeID="">
+        <logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="b_00_00">
+                <uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_01">
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_02">
+                <uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">0</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b_00_03">
+                <uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+                <uncertaintyWeight>0.25</uncertaintyWeight>
+                <uncertaintyWeight imt="PGA">1</uncertaintyWeight>
+                <uncertaintyWeight imt="SA(1.0)">0.4</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

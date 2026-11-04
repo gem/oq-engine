@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -58,9 +58,9 @@ def _get_basin_term(C, ctx, region):
             phi6 = 300
         else:
             phi6 = 800
-    
+
     z1pt0 = ctx.z1pt0.copy()
-    mask = z1pt0 == -999 # None-measured values
+    mask = z1pt0 == -999  # None-measured values
     z1pt0[mask] = ez_1[mask]
 
     d_z1 = z1pt0 - ez_1
@@ -175,7 +175,7 @@ class PhungEtAl2020Asc(GMPE):
             # fmag [6, 7]
             lnmed += s['c2'] * (ctx.mag - 6)
             lnmed += (s['c2'] - C['c3']) / C['c_n'] \
-                * np.log(1 + np.exp(C['c_n'] * (C['c_m'] - ctx.mag)))
+                * np.logaddexp(0.0, C['c_n'] * (C['c_m'] - ctx.mag))
             lnmed += _distance_attenuation(
                 s, self.region, self.aftershocks, C, ctx.mag, ctx.rrup, ztor)
 
@@ -288,13 +288,11 @@ def _fz1pt0(region, C, vs30, z1pt0):
                                          / (1360 ** 2 + 412.39 ** 2)))
 
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == -999
-    z1pt0[mask] = ez_1[mask]
-
-    result = np.zeros_like(z1pt0)
-    idx = np.where(z1pt0 >= 0)
-
-    result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
+    z1pt0_eff = np.where(z1pt0 == -999, ez_1, z1pt0)
+    result = np.zeros_like(z1pt0_eff)
+    idx = z1pt0_eff >= 0
+    result[idx] = C['a8' + region] * np.minimum(
+        np.log(z1pt0_eff[idx] / ez_1[idx]), 1)
     return result
 
 
@@ -360,19 +358,20 @@ class PhungEtAl2020SInter(GMPE):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C_PGA = self.COEFFS[PGA()]
         s = self.CONSTANTS
+        # PGA at rock with Vs30 = 1000 m/s
+        pga_1000 = pga_rock(
+            trt, self.region, s, C_PGA, ctx.mag, ctx.rrup, ctx.ztor, 1000)
+        # site effect
+        vs30 = np.minimum(ctx.vs30, 1000)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             f_mag = _fmag(self.region, C, ctx.mag)
             f_ztor = _fztor(trt, C, ctx.ztor)
             # path term
             f_p = _fp(trt, self.region, s, C, ctx.mag, ctx.rrup)
-            # PGA at rock with Vs30 = 1000 m/s
-            pga_1000 = pga_rock(
-                trt, self.region, self.CONSTANTS, C_PGA, ctx.mag,
-                ctx.rrup, ctx.ztor, 1000)
-            # site effect
-            vs30 = np.minimum(ctx.vs30, 1000)
             # non-linear component
+            # PGA at rock with Vs30 = 1000 m/s
+            # site effect
             f_site = _fsite(s, self.region, C, vs30, pga_1000)
             # basin depth term
             z1pt0 = ctx.z1pt0.copy()

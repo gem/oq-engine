@@ -213,6 +213,7 @@ class _GeographicObjects(object):
         station_sids = station_sids or set()
         dic = {}
         discarded = []
+        far = []  # (distance, sid, lon, lat, obj) outside assoc_dist
         for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
             obj, distance = self.get_closest(lon, lat)
             if assoc_dist is None:
@@ -221,10 +222,7 @@ class _GeographicObjects(object):
                 dic[sid] = obj  # associate within
             elif mode == 'warn':
                 dic[sid] = obj  # associate outside
-                logging.warning(
-                    'The closest vs30 site (%.1f %.1f) is distant more than %d'
-                    ' km from site #%d (%.1f %.1f)', obj['lon'], obj['lat'],
-                    int(distance), sid, lon, lat)
+                far.append((distance, sid, lon, lat, obj))
             elif mode == 'filter':
                 discarded.append(obj)
             elif mode == 'strict':
@@ -237,6 +235,13 @@ class _GeographicObjects(object):
                     raise SiteAssociationError(
                         'There is nothing closer than %s km '
                         'to site (%s %s)' % (assoc_dist, lon, lat))
+        if far:  # a single warning, since there can be many far sites
+            distance, sid, lon, lat, obj = max(far, key=lambda x: x[0])
+            logging.warning(
+                '%d sites are distant more than %d km from the closest vs30 '
+                'site; the most distant one is site #%d (%.1f %.1f), %d km '
+                'from the vs30 site (%.1f %.1f)', len(far), assoc_dist,
+                sid, lon, lat, int(distance), obj['lon'], obj['lat'])
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)

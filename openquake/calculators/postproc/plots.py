@@ -20,6 +20,7 @@ import io
 import base64
 import numpy
 import functools
+import math
 from pathlib import Path
 from shapely.geometry import Polygon, box
 from dataclasses import dataclass
@@ -480,22 +481,24 @@ def get_assetcol(calc_id):
         return assetcol
 
 
-def _resolve_limits(ax, x_limits, y_limits, epicenter=None, buffer_ratio=0.05):
+def _resolve_limits(ax, x_limits, y_limits, points=None, buffer_ratio=0.05):
     """
-    Resolve axis limits ensuring epicenter visibility with a margin.
+    Resolve axis limits ensuring the visibility of the given points
+    (i.e. the epicenter or the rupture boundaries) with a margin.
+    :param points: a pair (lons, lats) of arrays or None
     :param buffer_ratio: fraction of axis span to use as padding
     """
     # Start from user limits or current limits
     xmin, xmax = x_limits if x_limits else ax.get_xlim()
     ymin, ymax = y_limits if y_limits else ax.get_ylim()
 
-    if epicenter is not None:
-        lon, lat = epicenter
+    if points is not None:
+        lons, lats = points
 
-        xmin = min(xmin, lon)
-        xmax = max(xmax, lon)
-        ymin = min(ymin, lat)
-        ymax = max(ymax, lat)
+        xmin = min(xmin, numpy.min(lons))
+        xmax = max(xmax, numpy.max(lons))
+        ymin = min(ymin, numpy.min(lats))
+        ymax = max(ymax, numpy.max(lats))
 
         # Calculate current directional spans
         xspan = max(xmax - xmin, 1e-6)
@@ -658,6 +661,64 @@ class MapDataElements:
     y_limits: tuple[float, float] | None = None
     basemap_path: str | Path | Any | None = None
     epicenter: tuple[float, float] | None = None
+    rupture: Any = None  # if given, it is plotted with the epicenter
+    scale_bar: bool = False
+
+
+def _longitude_km_per_degree(latitude):
+    # Distance along a WGS84 parallel for one longitude degree.
+    semi_major_axis = 6378.137
+    eccentricity_squared = 0.00669437999014
+    lat_rad = math.radians(latitude)
+    sin_lat = math.sin(lat_rad)
+    prime_vertical = semi_major_axis / math.sqrt(
+        1 - eccentricity_squared * sin_lat ** 2)
+    return (prime_vertical * math.cos(lat_rad) * math.pi / 180)
+
+
+def _overlay_scale_bar(ax):
+    # Calibrate the scale at the map's central latitude.
+    # Import lazily: matplotlib-scalebar is an impact-report dependency.
+    from matplotlib_scalebar.scalebar import ScaleBar
+
+    ymin, ymax = ax.get_ylim()
+    km_per_degree = _longitude_km_per_degree((ymin + ymax) / 2)
+    if km_per_degree <= 1e-6:
+        return
+    ax.add_artist(ScaleBar(
+        km_per_degree, units='km', location='lower left',
+        length_fraction=0.2, width_fraction=0.003,
+        color='black', box_color='white', box_alpha=0.6,
+        border_pad=0.5, font_properties={'size': 14},
+        rotation='horizontal-only'))
+
+
+def _overlay_event(ax, elements):
+    # Plot the rupture surface (if available) and the epicenter.
+    # Return the legend handles and the (lons, lats) to keep in view.
+    handles, lons, lats = [], [], []
+    if elements.rupture is not None:
+        surface = elements.rupture.surface
+        for surf in getattr(surface, 'surfaces', [surface]):
+            slons, slats = surf.get_surface_boundaries()
+            [handle] = ax.fill(
+                slons, slats, facecolor='yellow', alpha=0.5,
+                edgecolor='black', linewidth=1.2, zorder=10,
+                label='Rupture')
+            lons.append(slons)
+            lats.append(slats)
+        handles.append(handle)
+    if elements.epicenter is not None:
+        lon, lat = elements.epicenter
+        handles.append(ax.scatter(
+            lon, lat, marker='*', s=150, color='yellow',
+            edgecolor='black', linewidth=1, zorder=11, label='Epicenter'
+        ))
+        lons.append([lon])
+        lats.append([lat])
+    if not handles:
+        return handles, None
+    return handles, (numpy.concatenate(lons), numpy.concatenate(lats))
 
 
 def plot_variable(df, admin_boundaries, column, classifier, colors, *,
@@ -689,19 +750,12 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
             subset.plot(ax=ax, color=color, edgecolor="none",
                         alpha=style.region_alpha)
 
-    epicenter_handle = None
-    if elements.epicenter is not None:
-        lon, lat = elements.epicenter
-        epicenter_handle = ax.scatter(
-            lon, lat, marker='*', s=150, color='yellow',
-            edgecolor='black', linewidth=1, zorder=10, label='Epicenter'
-        )
+    event_handles, event_points = _overlay_event(ax, elements)
 
     # Create legend handles
     handles = [mpatches.Patch(color=col, label=lab)
                for col, lab in zip(colors, labels)]
-    if epicenter_handle is not None:
-        handles.append(epicenter_handle)
+    handles.extend(event_handles)
 
     ax.legend(handles=handles, title=elements.legend_title, framealpha=0.7,
               title_fontsize=style.font_size,
@@ -709,9 +763,10 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
 
     admin_boundaries.plot(ax=ax, alpha=0.4, edgecolor="black",
                           facecolor="none", linewidth=0.4)
-    _resolve_limits(ax, elements.x_limits, elements.y_limits,
-                    elements.epicenter)
+    _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
     _overlay_cities(ax, elements.cities, style.city_font_size)
+    if elements.scale_bar:
+        _overlay_scale_bar(ax)
 
     if elements.plot_title:
         ax.set_title(elements.plot_title, fontsize=style.title_font_size)
@@ -720,4 +775,117 @@ def plot_variable(df, admin_boundaries, column, classifier, colors, *,
     ax.set_ylabel("Latitude", fontsize=style.font_size)
     ax.set_aspect('equal', adjustable='box')
     fig.tight_layout()
+    return fig, ax
+
+
+def _overlay_region_names(ax, admin_boundaries, font_size):
+    # Write the name of each region inside its visible part
+    import matplotlib.patheffects as path_effects
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    viewport = box(xmin, ymin, xmax, ymax)
+    for geom, name in zip(admin_boundaries.geometry,
+                          admin_boundaries['region_name']):
+        if geom is None or not geom.intersects(viewport):
+            continue
+        pt = viewport_label_point(geom, viewport)
+        if pt is None:
+            continue
+        txt = ax.text(pt.x, pt.y, name, ha='center', va='center',
+                      fontsize=font_size, color='black', zorder=7,
+                      clip_on=True)
+        txt.set_path_effects([
+            path_effects.Stroke(linewidth=2, foreground='white'),
+            path_effects.Normal()])
+
+
+def _plot_basemap_with_borders(admin_boundaries, elements, style):
+    # Create a figure with the basemap and the borders of the regions
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=style.figsize)
+    _overlay_basemap(ax, elements.basemap_path, admin_boundaries.crs)
+    admin_boundaries.plot(ax=ax, edgecolor='black', facecolor='none',
+                          linewidth=0.8)
+    return fig, ax
+
+
+def _add_map_decorations(fig, ax, elements, style):
+    # Add rupture/epicenter and legend, set the viewport, then add the scale
+    # bar, title and axis labels, consistently with plot_variable
+    # NOTE: the legend handles of the event are taken from _overlay_event,
+    # which returns a single handle for a rupture with multiple surfaces
+    handles = ax.get_legend_handles_labels()[0]
+    event_handles, event_points = _overlay_event(ax, elements)
+    handles.extend(event_handles)
+    if handles:
+        ax.legend(handles=handles, framealpha=0.7,
+                  title=elements.legend_title,
+                  title_fontsize=style.font_size,
+                  fontsize=style.legend_font_size, loc='best')
+    _resolve_limits(ax, elements.x_limits, elements.y_limits, event_points)
+    if elements.scale_bar:
+        _overlay_scale_bar(ax)
+    if elements.plot_title:
+        ax.set_title(elements.plot_title, fontsize=style.title_font_size)
+    ax.set_xlabel("Longitude", fontsize=style.font_size)
+    ax.set_ylabel("Latitude", fontsize=style.font_size)
+    ax.set_aspect('equal', adjustable='box')
+    fig.tight_layout()
+
+
+def plot_region_names(admin_boundaries, *, elements: MapDataElements = None,
+                      style: MapStyleConfig = None):
+    """
+    Plot the borders of the administrative regions and their names,
+    with optional basemap, epicenter and scale bar.
+
+    :param admin_boundaries: GeoDataFrame with a 'region_name' column
+    :param elements: optional geographical annotations and limits
+    :param style: optional sizing and styling properties
+    :returns: the matplotlib figure and axis
+    """
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
+    _add_map_decorations(fig, ax, elements, style)
+    _overlay_region_names(ax, admin_boundaries, style.city_font_size)
+    return fig, ax
+
+
+def plot_assets_map(lons, lats, admin_boundaries, *,
+                    elements: MapDataElements = None,
+                    style: MapStyleConfig = None):
+    """
+    Plot the locations of the assets over the borders of the
+    administrative regions, with optional basemap, cities, epicenter
+    and scale bar.
+
+    :param lons: longitudes of the assets
+    :param lats: latitudes of the assets
+    :param admin_boundaries: GeoDataFrame with the regions to display
+    :param elements: optional geographical annotations and limits
+    :param style: optional sizing and styling properties
+    :returns: the matplotlib figure and axis
+    """
+    style = style or MapStyleConfig()
+    elements = elements or MapDataElements()
+    fig, ax = _plot_basemap_with_borders(admin_boundaries, elements, style)
+    # many assets can share the same location: plot each location once
+    lonlats = numpy.unique(numpy.column_stack([lons, lats]), axis=0)
+    # bright orange contrasts with both land and sea; the markers shrink
+    # as the number of locations grows, to limit overlaps, and the dark
+    # edge is kept only while they are big enough not to hide the fill
+    size = numpy.clip(120 / numpy.sqrt(len(lonlats)), 0.5, 12)
+    ax.scatter(lonlats[:, 0], lonlats[:, 1], marker='o', s=size,
+               color='#ff7f00', edgecolor='black',
+               linewidth=0.4 if size >= 4 else 0, alpha=0.9, zorder=5,
+               label='Asset locations')
+    _add_map_decorations(fig, ax, elements, style)
+    # keep the marker in the legend readable, whatever the size in the map
+    legend = ax.get_legend()
+    for handle, text in zip(legend.legend_handles, legend.get_texts()):
+        if text.get_text() == 'Asset locations':
+            handle.set_sizes([30])
+            handle.set_linewidth(0.4)
+    _overlay_cities(ax, elements.cities, style.city_font_size)
     return fig, ax

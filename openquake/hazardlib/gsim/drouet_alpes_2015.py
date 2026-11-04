@@ -39,11 +39,14 @@ Module exports :class:`DrouetAlpes2015Rjb`
 # Additional 6 GMPEs for large magnitude stress parameter 50 bars
 # The coefficients are not published
 import numpy as np
+from scipy.constants import g
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
-from scipy.constants import g
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_mean(C, mag, r):

@@ -17,11 +17,22 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import importlib
 from django.apps import AppConfig
 from django.conf import settings
 from openquake.baselib import config
 from openquake.commonlib import dbapi
 from openquake.server.db import actions
+
+# optional dependencies needed in IMPACT mode: (module, package, purpose)
+IMPACT_DEPENDENCIES = [
+    ('timezonefinder', 'timezonefinder',
+     'convert the UTC time to the local time of the event'),
+    ('matplotlib_scalebar.scalebar', 'matplotlib-scalebar',
+     'draw the scale bar of the impact reports'),
+    ('reportlab', 'reportlab', 'create the impact reports'),
+    ('fitz', 'PyMuPDF', 'create the impact reports'),  # PyMuPDF
+]
 
 oqdir = os.path.dirname(os.path.dirname(__file__))
 
@@ -43,22 +54,24 @@ class ServerConfig(AppConfig):
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
 
-        # reset any computation left in the 'executing' state
-        actions.reset_is_running(dbapi.db)
+        # reset any computation left in the 'executing' state;
+        # the database may not exist yet (this happens when building
+        # the docs, since doc/conf.py calls django.setup())
+        if actions.has_job_table(dbapi.db):
+            actions.reset_is_running(dbapi.db)
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(
                 f'Invalid application mode: "{settings.APPLICATION_MODE}".'
                 f' It must be one of {settings.APPLICATION_MODES}')
         if settings.APPLICATION_MODE == 'IMPACT':
-            try:
-                # NOTE: optional dependency needed for IMPACT
-                from timezonefinder import TimezoneFinder  # noqa
-            except ImportError:
-                raise ImportError(
-                    'The python package "timezonefinder" is not installed.'
-                    ' It is required in order to convert the UTC time to'
-                    ' the local time of the event.')
+            for module, package, purpose in IMPACT_DEPENDENCIES:
+                try:
+                    importlib.import_module(module)
+                except ImportError:
+                    raise ImportError(
+                        f'The python package "{package}" is not installed.'
+                        f' It is required in order to {purpose}.')
         if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined

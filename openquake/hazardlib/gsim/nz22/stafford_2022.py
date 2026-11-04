@@ -34,8 +34,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     get_directivity,
     _get_basin_term,
     get_linear_site_term,
-    get_nonlinear_site_term,
-)
+    get_nonlinear_site_term,)
 
 CONSTANTS = {
     "c2": 1.06,
@@ -45,8 +44,7 @@ CONSTANTS = {
     "c8a": 0.2695,
     "c11": 0.0,
     "phi6": 300.0,
-    "phi6jp": 800.0,
-}
+    "phi6jp": 800.0,}
 
 
 def _sigmoid1d(x, start, finish, centre, slope):
@@ -71,8 +69,7 @@ def _empirical_sigma(T, r, m, start=0.4, finish=0.15):
     slope_m = _sigmoid1d(T, 0.42, 0.38, 2.5, 0.2)
     amplitude = finish - start
     s_lnr = _sigmoid1d(
-        np.log(np.clip(r, 10**-10, None)), 0.0, 1.0, centre_r, slope_r
-    )
+        np.log(np.clip(r, 10**-10, None)), 0.0, 1.0, centre_r, slope_r)
     s_m = _sigmoid1d(m, 1.0, 0.0, centre_m, slope_m)
     y = start + amplitude * s_lnr * s_m
     return y
@@ -85,18 +82,17 @@ def _saturation_sigma(m, r):
     """
     return _sigmoid1d(
         np.log(np.clip(r, 10**-10, None)),
-        0.6638 - 0.2570 * (np.clip(m, -np.inf, 7.0) - 6.0),
+        0.6638 - 0.2570 * (np.minimum(m, 7.0) - 6.0),
         0.0,
         0.7990,
-        0.9835,
-    )
+        0.9835,)
 
 
 def _anelastic_correction(T):
     """
     Mean anelastic attenuation correction -- a function of period `T`
     """
-    return np.clip(0.0024 * np.tanh(0.8 * np.log(T / 1.8)), -np.inf, 0.0)
+    return np.minimum(0.0024 * np.tanh(0.8 * np.log(T / 1.8)), 0.0)
 
 
 def _anelastic_sigma(T):
@@ -135,8 +131,7 @@ def _between_station(T):
     β4_S2S = 0.7170
 
     ϕS2S = β0_S2S + β1_S2S * (T / β4_S2S) ** (β2_S2S) * np.exp(
-        -β3_S2S * (T / β4_S2S)
-    )
+        -β3_S2S * (T / β4_S2S))
     return ϕS2S
 
 
@@ -172,29 +167,25 @@ def get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
                 * epistemic_scale_factor
                 * _empirical_sigma(T, ctx.rrup, ctx.mag)
                 if adjust_c1
-                else 0.0
-            ),
+                else 0.0),
             "delta_c1hm": (
                 -1.28155
                 * epistemic_scale_factor
                 * ρEhEx
                 * _saturation_sigma(ctx.mag, ctx.rrup)
                 if adjust_chm
-                else 0.0
-            ),
+                else 0.0),
             "delta_c7": (-0.02578 if adjust_c7 else 0.0),
             "delta_c7b": (
                 _sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875)
                 if adjust_c7
-                else 0.0
-            ),
+                else 0.0),
             "delta_cg1": (
                 _anelastic_correction(T)
                 - 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
                 if adjust_cg1
                 else 0.0
-            ),
-        },
+            ),},
         "Central": {
             "delta_c1": 0.0,
             "delta_c1hm": 0.0,
@@ -202,36 +193,30 @@ def get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
             "delta_c7b": (
                 _sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266)
                 if adjust_c7
-                else 0.0
-            ),
-            "delta_cg1": (_anelastic_correction(T) if adjust_cg1 else 0.0),
-        },
+                else 0.0),
+            "delta_cg1": (_anelastic_correction(T) if adjust_cg1 else 0.0),},
         "Upper": {
             "delta_c1": (
                 1.28155
                 * epistemic_scale_factor
                 * _empirical_sigma(T, ctx.rrup, ctx.mag)
                 if adjust_c1
-                else 0.0
-            ),
+                else 0.0),
             "delta_c1hm": (
                 1.28155
                 * epistemic_scale_factor
                 * ρEhEx
                 * _saturation_sigma(ctx.mag, ctx.rrup)
                 if adjust_chm
-                else 0.0
-            ),
+                else 0.0),
             "delta_c7": 0.0,
             "delta_c7b": 0.0,
             "delta_cg1": (
                 _anelastic_correction(T)
                 + 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
                 if adjust_cg1
-                else 0.0
-            ),
-        },
-    }
+                else 0.0),
+        },}
     return MEAN_ADJUSTMENT_TERMS_IF
 
 
@@ -264,14 +249,12 @@ def get_far_field_distance_scaling(
 
     # Get the attenuation distance scaling
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
-        np.sqrt(ctx.rrup**2.0 + CONSTANTS["crb"] ** 2.0)
-    )
+        np.sqrt(ctx.rrup**2.0 + CONSTANTS["crb"] ** 2.0))
     # Get the magnitude dependent term
     f_rm = (
         C["cg1"]
         + delta_cg1
-        + C["cg2"] / np.cosh(np.clip(ctx.mag - C["cg3"], 0.0, None))
-    )
+        + C["cg2"] / np.cosh(np.clip(ctx.mag - C["cg3"], 0.0, None)))
     return f_r + f_rm * ctx.rrup
 
 
@@ -298,15 +281,16 @@ def get_source_scaling_terms(
         T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
     )[mu_branch]["delta_c7b"]
 
-    f_src = np.zeros_like(ctx.mag)
-    coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0.0, None))
     # Style of faulting term
+    coshm = np.cosh(2.0 * np.maximum(ctx.mag - 4.5, 0.0))
+    # Style of faulting term: reverse (pos rake) / normal (neg rake) /
+    # else zero
     pos = (30 <= ctx.rake) & (ctx.rake <= 150)
     neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
     # reverse faulting flag
-    f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
     # normal faulting flag
-    f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
+    f_src = np.where(pos, C["c1a"] + C["c1c"] / coshm,
+                     np.where(neg, C["c1b"] + C["c1d"] / coshm, 0.))
     # Top of rupture term
     f_src += (
         (C["c7"] + delta_c7) + ((C["c7b"] + delta_c7b) / coshm)
@@ -327,8 +311,7 @@ def get_ln_y_ref(
     delta_ztor = _get_centered_ztor(ctx)
     return (
         get_stress_scaling(
-            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
-        )
+            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)
         + get_magnitude_scaling(C, ctx.mag, delta_cm=0)
         + get_source_scaling_terms(
             T,
@@ -339,15 +322,12 @@ def get_ln_y_ref(
             adjust_c1,
             adjust_chm,
             adjust_c7,
-            adjust_cg1,
-        )
+            adjust_cg1,)
         + get_hanging_wall_term(C, ctx)
         + get_geometric_spreading(C, ctx.mag, ctx.rrup)
         + get_far_field_distance_scaling(
-            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
-        )
-        + get_directivity(C, ctx)
-    )
+            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)
+        + get_directivity(C, ctx))
 
 
 def _nl_sigma(C, ctx, ln_y_ref):
@@ -355,10 +335,8 @@ def _nl_sigma(C, ctx, ln_y_ref):
     NL = C["phi2"] * (
         (
             np.exp(C["phi3"] * (vs - 360.0))
-            - np.exp(C["phi3"] * (1130.0 - 360.0))
-        )
-        * (np.exp(ln_y_ref) / (np.exp(ln_y_ref) + C["phi4"]))
-    )
+            - np.exp(C["phi3"] * (1130.0 - 360.0)))
+        * (np.exp(ln_y_ref) / (np.exp(ln_y_ref) + C["phi4"])))
     return NL
 
 
@@ -372,8 +350,7 @@ def get_stddevs(T, ln_y_ref, C, ctx, sigma_branch):
     phi_SS = 0.39
     NL = _nl_sigma(C, ctx, ln_y_ref)
     phi = np.sqrt(
-        phi_S2S**2 + (1.0 + NL) ** 2 * 0.736 * phi_SS**2 + 0.264 * phi_SS**2
-    )
+        phi_S2S**2 + (1.0 + NL) ** 2 * 0.736 * phi_SS**2 + 0.264 * phi_SS**2)
     # nominal total standard deviation for the branch
     sigma = np.sqrt((1.0 + NL) ** 2 * tau**2 + phi**2)
 
@@ -386,16 +363,13 @@ def get_stddevs(T, ln_y_ref, C, ctx, sigma_branch):
     ndof = neff / nfac
     if sigma_branch == "Lower":
         sigma = np.sqrt(
-            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.1, ndof - 1)
-        )
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.1, ndof - 1))
     elif sigma_branch == "Central":
         sigma = np.sqrt(
-            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.5, ndof - 1)
-        )
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.5, ndof - 1))
     elif sigma_branch == "Upper":
         sigma = np.sqrt(
-            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.9, ndof - 1)
-        )
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.9, ndof - 1))
     else:
         print("sigma branch not recognised: "
               "must be one of :Lower, :Central, :Upper")
@@ -420,8 +394,7 @@ def get_mean_stddevs(
     """
     # Get ground motion on reference rock
     ln_y_ref = get_ln_y_ref(
-        T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
-    )
+        T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
@@ -524,8 +497,7 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[SA(0.01)],
                     ctx,
-                    imt
-                )
+                    imt)
                 # Peter has used T = 0.01 as the period for PGA because the
                 # coefficients (for 0.01s and PGA) are identical.
                 mean[m] = pga_mean
@@ -542,8 +514,7 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[imt],
                     ctx,
-                    imt
-                )
+                    imt)
                 mean[m] = imt_mean
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
@@ -578,5 +549,4 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 5     -4.5143  0.0484 -0.101  -0.0484 0.101  1.7228   6.2856  1.06  2.9169  -2.1  -0.5  50  7.5818  3.8376  0.45    0.0029  -0.0424  0.2154 0.2695  7.0389  0.      0.1     6.5     0.      -0.1001    -0.00101   -0.00364   3.709   -0.9872   0.       -0.00144   0.003223  0.321  300  3.7292  0.      -0.656   1.433    800.        0.4584  0.3435  0.4535  0.4535  0.7     0.4517
 7.5   -5.0009  0.022  -0.101  -0.022  0.101  1.5737   6.5428  1.06  2.932   -2.1  -0.5  50  7.5818  3.838   0.45    0.0007  -0.0348  0.2154 0.2695  7.4666  0.      0.1     6.5     0.      -0.1       -0.000964  -0.003686  3.6632  -0.8274   0.       -0.001369  0.001134  0.329  300  2.3763  0.      -0.5202  1.46     800.        0.4601  0.3459  0.4471  0.4471  0.7     0.4167
 10    -5.3461  0.0124 -0.1    -0.0124 0.1    1.5265   6.7415  1.06  2.9396  -2.1  -0.5  50  7.5818  3.838   0.45    0.0003  -0.0253  0.2154 0.2695  7.77    0.      0.1     6.5     0.      -0.1       -0.00095   -0.0037    3.623   -0.7053   0.       -0.001361  0.000515  0.33   300  1.7679  0.      -0.4068  1.464    800.        0.4612  0.3474  0.4426  0.4426  0.7     0.3755
-""",
-    )
+""",)

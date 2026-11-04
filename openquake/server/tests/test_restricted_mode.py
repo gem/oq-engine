@@ -16,21 +16,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+# NB: run these tests with OQ_APPLICATION_MODE=RESTRICTED (not verified yet for this file),
 import sys
 import zlib
 import json
 import string
 import random
 import tempfile
-from unittest import skipIf
+from unittest import mock, skipIf
 import django
 from datetime import datetime, timedelta
+from openquake.baselib import config
+from openquake.commands import db as cmd_db
+from openquake.commands import engine as cmd_engine
+from openquake.commands import workers as cmd_workers
 from openquake.commonlib import logs
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib.dbapi import db
+from openquake.engine import engine as engine_mod
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import (
-    get_or_create_user, random_string, start_uvicorn, stop_uvicorn)
+    get_or_create_user, random_string, start_webui, stop_webui)
 
 
 class RestrictedModeTestCase(django.test.TransactionTestCase):
@@ -48,7 +54,16 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
     def setUpClass(cls):
         super().setUpClass()
         (cls.webserver, cls.webserver_thread,
-         cls.c) = start_uvicorn()
+         cls.c) = start_webui()
+        # emulate a multi-user installation in this process: the database
+        # is reached through the WebUI server, as in db_api_test.py
+        cls.old_server = config.webapi.server
+        config.webapi.server = cls.c.base_url
+        cls.patches = [
+            mock.patch.object(mod, 'use_server', new=lambda: True)
+            for mod in (logs, engine_mod, cmd_db, cmd_engine, cmd_workers)]
+        for patch in cls.patches:
+            patch.start()
 
     def setUp(self):
         self.user0, self.password0 = get_or_create_user(0)
@@ -57,7 +72,10 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        stop_uvicorn(cls.webserver, cls.webserver_thread)
+        for patch in cls.patches:
+            patch.stop()
+        config.webapi.server = cls.old_server
+        stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 
     def remove_calc(self, calc_id):
@@ -149,6 +167,95 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         self.assertEqual(ret.json(),
                          {'success': f'The status of calculation {job.calc_id} was'
                                      f' changed from "shared" to "complete"'})
+        self.remove_calc(job.calc_id)
+
+    def test_level_2_can_only_share_own_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_level_2_job_ownership')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'complete')
+
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared'}, job.calc_id)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            job.calc_id)[0].status, 'shared')
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete'}, job.calc_id)
+        self.remove_calc(job.calc_id)
+
+    def test_group_permission_allows_low_level_users_to_share_own_jobs(self):
+        from django.contrib.auth.models import Group, Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get(
+            app_label='auth', model='permission')
+        permission, _ = Permission.objects.get_or_create(
+            codename='can_share_own_jobs', name='Can share own jobs',
+            content_type=content_type)
+        group, _ = Group.objects.get_or_create(
+            name='test-can-share-own-jobs')
+        group.permissions.add(permission)
+        self.user1.groups.add(group)
+
+        own_dic = dict(calculation_mode='event_based',
+                       description='test_group_share_own_job')
+        other_dic = dict(calculation_mode='event_based',
+                         description='test_group_share_other_job')
+        [own_job] = create_jobs([own_dic], user_name=self.user1.username)
+        [other_job] = create_jobs([other_dic], user_name=self.user2.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, own_job.calc_id)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'shared', 'is_running': 0}, other_job.calc_id)
+
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.post(f'{own_job.calc_id}/share')
+        self.assertEqual(ret.status_code, 200)
+        ret = self.post(f'{own_job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 200)
+
+        ret = self.post(f'{other_job.calc_id}/share')
+        self.assertEqual(ret.status_code, 403)
+        self.assertEqual(db('SELECT status FROM job WHERE id=?x',
+                            other_job.calc_id)[0].status, 'shared')
+        ret = self.get('list', include_shared=1)
+        listed = {calc['id']: calc for calc in ret.json()}
+        self.assertTrue(listed[own_job.calc_id]['can_manage_sharing'])
+        self.assertFalse(listed[other_job.calc_id]['can_manage_sharing'])
+
+        self.remove_calc(own_job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+        self.remove_calc(other_job.calc_id)
+
+    def test_superuser_can_share_other_users_jobs(self):
+        job_dic = dict(calculation_mode='event_based',
+                       description='test_superuser_share_job')
+        [job] = create_jobs([job_dic], user_name=self.user1.username)
+        db("UPDATE job SET ?D WHERE id=?x",
+           {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.user2.is_superuser = True
+        self.user2.save()
+        self.user2.profile.level = 1
+        self.user2.profile.save()
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        ret = self.post(f'{job.calc_id}/share')
+        self.assertEqual(ret.status_code, 200)
+        ret = self.post(f'{job.calc_id}/unshare')
+        self.assertEqual(ret.status_code, 200)
+
+        self.c.login(username=self.user1.username, password=self.password1)
         self.remove_calc(job.calc_id)
 
     def test_share_or_unshare_user_level_below_2(self):

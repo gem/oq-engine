@@ -13,13 +13,12 @@ sys.path.insert(0, os.path.abspath('..'))
 
 from openquake import engine
 
-# The Django setup below requires the OpenQuake database (oq db) to be
-# available, which is not needed (and often not present) when building the
-# documentation, so it is commented out.
-# os.environ.setdefault(
-#     "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-# import django
-# django.setup()
+# The Django setup lets autodoc import the openquake.server modules; it
+# does not need the OpenQuake database.
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
+import django
+django.setup()
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information

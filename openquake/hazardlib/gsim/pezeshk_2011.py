@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_attenuation(ctx, imt, C):
     """
     Compute the second term of the equation described on p. 1866:
@@ -35,28 +38,13 @@ def _compute_attenuation(ctx, imt, C):
     [(c4 + c5 * M) * max{ min{ log10(R/70.), log10(140./70.) }, 0.}] +
     [(c8 + c9 * M) * max{ log10(R/140.), 0}] "
     """
-    vec = np.ones(len(ctx.rrup))
-
-    a1 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0)),
-          np.log10(70. * vec))
-
-    a = np.column_stack([a1[0], a1[1]])
-
-    b3 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0) /
-                   (70. * vec)),
-          np.log10((140. / 70.) * vec))
-
-    b2 = np.column_stack([b3[0], b3[1]])
-    b1 = ([np.min(b2, axis=1), 0. * vec])
-    b = np.column_stack([b1[0], b1[1]])
-
-    c1 = (np.log10(np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0) /
-          (140.) * vec), 0. * vec)
-    c = np.column_stack([c1[0], c1[1]])
-
-    return (((C['c4'] + C['c5'] * ctx.mag) * np.min(a, axis=1)) +
-            ((C['c6'] + C['c7'] * ctx.mag) * np.max(b, axis=1)) +
-            ((C['c8'] + C['c9'] * ctx.mag) * np.max(c, axis=1)))
+    distance = np.sqrt(ctx.rrup ** 2.0 + C['c11'] ** 2.0)
+    first = np.minimum(np.log10(distance), np.log10(70.))
+    second = np.clip(np.log10(distance / 70.), 0., np.log10(140. / 70.))
+    third = np.maximum(np.log10(distance / 140.), 0.)
+    return ((C['c4'] + C['c5'] * ctx.mag) * first +
+            (C['c6'] + C['c7'] * ctx.mag) * second +
+            (C['c8'] + C['c9'] * ctx.mag) * third)
 
 
 def _compute_distance(ctx, imt, C):
@@ -82,11 +70,9 @@ def _compute_standard_dev(ctx, imt, C):
     Compute the the standard deviation in terms of magnitude
     described on p. 1866, eq. 6
     """
-    sigma_mean = np.zeros_like(ctx.mag)
-    below = ctx.mag <= 7.0
-    sigma_mean[below] = (C['c12'] * ctx.mag[below]) + C['c13']
-    sigma_mean[~below] = (-0.00695 * ctx.mag[~below]) + C['c14']
-    return sigma_mean
+    sigma_below = (C['c12'] * ctx.mag) + C['c13']
+    sigma_above = (-0.00695 * ctx.mag) + C['c14']
+    return np.where(ctx.mag <= 7.0, sigma_below, sigma_above)
 
 
 def _get_stddev(C, ctx, imt):
@@ -148,8 +134,8 @@ class PezeshkEtAl2011(GMPE):
             imean = (_compute_magnitude(ctx, C) +
                      _compute_attenuation(ctx, imt, C) +
                      _compute_distance(ctx, imt, C))
-            mean[m] = np.log(10.0 ** imean)
-            sig[m] = np.log(10.0 ** _get_stddev(C, ctx, imt))
+            mean[m] = imean * LOG10
+            sig[m] = _get_stddev(C, ctx, imt) * LOG10
 
     #: Equation coefficients, described in Table 2 on pp. 1865
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -203,7 +189,7 @@ class PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
         super().compute(ctx, imts, mean, sig, tau, phi)
         for m, imt in enumerate(imts):
             C_AMP = self.COEFFS_SITE[imt]
-            mean[m] += C_AMP["F"] * np.log(10.)
+            mean[m] += C_AMP["F"] * LOG10
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""
     IMT         F

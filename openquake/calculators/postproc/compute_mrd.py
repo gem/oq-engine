@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import parallel
 from openquake.hazardlib.calc.mrd import calc_mean_rate_dist
-from openquake.hazardlib import contexts
+from openquake.hazardlib import rmap_maker
 from openquake.hazardlib.correlation_models.registry import get_model
 
 
@@ -64,6 +64,23 @@ def combine_mrds(acc, g_weights):
     return out
 
 
+def get_gid_weights(cmakers):
+    """
+    :param cmakers: a list of ContextMaker instances
+    :returns: an array of weights indexed by the global gid
+
+    NB: the weights of a cmaker are ordered by the gsim_idx of the
+    cmaker, i.e. by the global gids, and not necessarily by the gid
+    itself, so they cannot be concatenated and indexed by gid
+    """
+    gtot = 1 + max(cm.gsim_idx.max() for cm in cmakers)
+    gweights = numpy.zeros(gtot)
+    for cm in cmakers:
+        for w, g in zip(cm.wei, cm.gsim_idx):
+            gweights[g] = w
+    return gweights
+
+
 def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
          method='indirect'):
     """
@@ -79,17 +96,19 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
         logging.warning('There are many intensity levels (%d), the '
                         'calculation can be pretty slow', L1 + 1)
     assert N <= oq.max_sites_disagg, 'Too many sites: %d' % N
-    cmakers = contexts.read_cmakers(dstore).to_array()
-    ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    cmakers = rmap_maker.read_cmakers(dstore).to_array()
+    ctx_by_grp = rmap_maker.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
-    smap = parallel.Starmap(compute_mrd, h5=dstore)
-    for grp_id, ctx in ctx_by_grp.items():
-        # NB: a trivial splitting of the contexts would case task-dependency!
-        cmaker = cmakers[grp_id]
-        smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
-                     meabins, sigbins, method))
-    acc = smap.reduce()
-    mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    gweights = numpy.concatenate([cm.wei for cm in cmakers])
-    mrd[:] = combine_mrds(acc, gweights)
+    with dstore.reopen('r'):  # read-only during the parallel phase
+        smap = parallel.Starmap(compute_mrd, h5=dstore, perf='memory')
+        for grp_id, ctx in ctx_by_grp.items():
+            # NB: a trivial splitting of the contexts would case
+            # task-dependency!
+            cmaker = cmakers[grp_id]
+            smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
+                         meabins, sigbins, method))
+        acc = smap.reduce()
+    with dstore.reopen('a'):
+        mrd = dstore.create_dset('mrd', float, (L1, L1, N))
+        mrd[:] = combine_mrds(acc, get_gid_weights(cmakers))

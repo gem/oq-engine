@@ -84,17 +84,14 @@ def get_assetdf_startstop(assetcol):
     return assetdf, U32(iss)
 
 
-def fast_agg(keys, values, correl, li, loss2):
+def fast_agg(keys, values, li, loss2):
     """
     :param keys: an array of N uint64 numbers encoding (event_id, agg_id)
     :param values: an array of (N, D) floats
-    :param correl: True if there is asset correlation
     :param li: loss type index
     :param loss2: dictionary unique key -> array(L, D)
     """
     ukeys, avalues = general.fast_agg2(keys, values)
-    if correl:  # restore the variances
-        avalues[:, 0] = avalues[:, 0] ** 2
     for ukey, avalue in zip(ukeys, avalues):
         loss2[ukey][li] += avalue
 
@@ -113,7 +110,9 @@ def update(loss3, lti, X, alt, rlz_id, collect_rlzs):
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy()))
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
-        rlzs = numpy.zeros_like(tot, U32)
+        # the single realization is 0 when collecting, else rlz_id[0]
+        rlz = 0 if collect_rlzs else rlz_id[0]
+        rlzs = numpy.full(len(tot), rlz, U32)
     else:
         # rare case
         ldf = pandas.DataFrame(
@@ -153,13 +152,16 @@ def build_avg(loss3, A, X):
     return avg
 
 
-def build_alt(loss2, xtypes):
+def build_alt(loss2, xtypes, correl=False):
     """
     Build aggregated loss table
     """
     lis = range(len(xtypes))
     dic = general.AccumDict(accum=[])
     for ukey, arr in loss2.items():
+        if correl:  # square after summing sigmas across all asset chunks
+            arr = arr.copy()
+            arr[:, 0] **= 2
         eid, kid = divmod(ukey, TWO32)
         for li in lis:
             if arr[li].any():
@@ -190,12 +192,12 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
         eids = alt.eid.to_numpy() * TWO32  # U64
         values = numpy.array([alt[col] for col in value_cols]).T
         # aggregate all assets
-        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
+        fast_agg(eids + U64(oq.K), values, li, loss2)
         if len(aggids):
             # aggregate assets for each tag combination
             aids = alt.aid.to_numpy()
             for kids in aggids[:, aids]:
-                fast_agg(eids + U64(kids), values, correl, li, loss2)
+                fast_agg(eids + U64(kids), values, li, loss2)
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -317,7 +319,7 @@ def event_based_risk(gmf_df, monitor):
             with agg_mon:
                 aggreg(out, aggids, rlz_id, oq, loss2, loss3)
     avg = build_avg(loss3, oq.A, R*X)
-    alt = build_alt(loss2, xtypes)
+    alt = build_alt(loss2, xtypes, int(oq.asset_correlation))
     return dict(avg=avg, alt=alt, gmf_bytes=gmf_df.memory_usage().sum())
 
 
@@ -334,21 +336,29 @@ def ebrisk(allrups, cmakers, sids, secperils, dstore, monitor):
     oq = cmakers[0].oq
     oq.ground_motion_fields = True
     # NB: there is one dataframe per filtered rupture
-    dfs = (dic['gmfdata'] for dic in event_based.event_based(
-        allrups, cmakers, sids, secperils, dstore, monitor)
-           if len(dic['gmfdata']))
+    # NB: the times are kept also for the batches without GMFs, since
+    # the record of a rupture can be in the last (empty) batch
+    items = ((dic['gmfdata'], dic.get('times', ()))
+             for dic in event_based.event_based(
+                 allrups, cmakers, sids, secperils, dstore, monitor))
     num_assets = monitor.read('num_assets')
     for blk in general.block_splitter(
-            dfs, AE_MAX, lambda gmf_df: num_assets[gmf_df.sid].sum()):
+            items, AE_MAX, lambda item: num_assets[item[0].sid].sum()):
+        times = [t for _, t in blk if len(t)]
+        if times:
+            yield dict(times=numpy.concatenate(times))
+        dfs = [df for df, _ in blk if len(df)]
+        if not dfs:
+            continue
         # NB: it is essential to concatenate the small dataframes to have
         # long arrays (around AE_MAX) and hence a good performance
-        ae = int(sum(num_assets[df.sid].sum() for df in blk))
+        ae = int(sum(num_assets[df.sid].sum() for df in dfs))
         if ae > AE_MAX:  # big task
             calc_id, task_no = monitor.calc_id, monitor.task_no
             print(f'{calc_id=}, {task_no=}, {ae=:_d}')
-            yield event_based_risk, pandas.concat(blk)
+            yield event_based_risk, pandas.concat(dfs)
         else:
-            yield event_based_risk(pandas.concat(blk), monitor)
+            yield event_based_risk(pandas.concat(dfs), monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
@@ -430,12 +440,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             R = 1 if oq.collect_rlzs else self.R
             logging.info('Transfering %s * %d per task in avg_losses',
                          general.humansize(A * 8 * R), ELT)
-            if A * ELT * 8 > int(config.memory.avg_losses_max):
-                logging.warning('For large exposures consider setting '
-                                'avg_losses=false')
-            elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
-                raise ValueError('For large exposures you must set '
-                                 'collect_rlzs = true')
+            # NB: the size to check is the one transferred, i.e. with R
+            if A * ELT * R * 8 > int(config.memory.avg_losses_max):
+                if oq.collect_rlzs:
+                    logging.warning('For large exposures consider setting '
+                                    'avg_losses=false')
+                else:
+                    raise ValueError('For large exposures you must set '
+                                     'collect_rlzs = true')
         if (oq.aggregate_by and (
                 self.E * A > float(config.memory.max_potential_gmfs) and
                 all(val == 0 for val in oq.minimum_asset_loss.values()))):

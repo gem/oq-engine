@@ -427,7 +427,10 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
                    _mesh_test_data.TEST5_JB_DISTANCE)
 
     def test_version(self):
-        # this test is sensitive to different versions of shapely/libgeos
+        # vertical mesh, i.e. its projection is a line; the distance does
+        # not depend on shapely/libgeos anymore, since the 2D meshes are
+        # managed with numpy, and it is the distance from the line minus
+        # the tolerance of 5 meters
         lons = numpy.array(
             [[-121.3956, -121.41050474, -121.42542273, -121.44035399,
               -121.45529855, -121.47025643],
@@ -441,10 +444,7 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats)
         dist = mesh.get_joyner_boore_distance(
             Mesh.from_points_list([Point(-121.76, 37.23)]))
-        dist_ubuntu_12_04 = 36.61260128
-        dist_ubuntu_14_04 = 36.61389245
-        self.assertTrue(numpy.allclose(dist, dist_ubuntu_12_04) or
-                        numpy.allclose(dist, dist_ubuntu_14_04))
+        numpy.testing.assert_allclose(dist, [36.61101062])
 
 
 class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):

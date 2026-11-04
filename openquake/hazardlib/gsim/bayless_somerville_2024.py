@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2015-2024 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@ Module exports :class:`BaylessSomerville2024Cratonic`,
                :class:`BaylessSomerville2024NonCratonic`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -378,8 +379,7 @@ class BaylessSomerville2024Cratonic(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.INTRA_EVENT,}
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor', 'dip', 'width'}
@@ -405,8 +405,7 @@ class BaylessSomerville2024Cratonic(GMPE):
         pga_rock = np.exp(
             _get_fM(C_PGA, ctx.mag)
             + _get_fP(C_PGA, ctx.mag, ctx.rrup)
-            + _get_fZtor(C_PGA, ctx.ztor)
-        )
+            + _get_fZtor(C_PGA, ctx.ztor))
         # Pass 2: each IMT
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -418,8 +417,7 @@ class BaylessSomerville2024Cratonic(GMPE):
                 + _get_fS(C, ctx.vs30, pga_rock)
                 + _get_fZ10(C, ctx.z1pt0, ctx.vs30, imt_period)
                 + (_get_fHW(C, ctx) if self.hwflag == 1
-                   else np.zeros_like(ctx.mag))
-            )
+                   else np.zeros_like(ctx.mag)))
             sig[m], tau[m], phi[m] = _get_stddevs(C, ctx.mag)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

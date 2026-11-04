@@ -99,7 +99,7 @@ def test_models_are_registered_with_calibration_metadata():
     assert (
         WangDu2013SpectralAcceleration.DEFINED_FOR_INTENSITY_MEASURE_TYPES
         == {SA})
-    assert WangDu2013SpectralAcceleration.DEFINED_FOR_SA_DAMPING == 5.0
+    assert WangDu2013SpectralAcceleration.DEFINED_FOR_DAMPING == 5.0
 
 
 @pytest.mark.parametrize(('model', 'imts1', 'imts2'), [

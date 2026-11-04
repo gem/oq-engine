@@ -33,7 +33,7 @@ commands = ['start', 'status', 'stop']
 
 
 def _find_webui_process(hostport):
-    """Find the Uvicorn process listening on the requested port."""
+    """Find the process listening on the requested port."""
     _host, port = hostport.rsplit(':', 1)
     for connection in psutil.net_connections(kind='tcp'):
         if (connection.status == psutil.CONN_LISTEN and
@@ -54,7 +54,7 @@ def _status(hostport):
 
 
 def _stop(hostport):
-    """Stop the Uvicorn process serving the requested WebUI port."""
+    """Stop the process serving the requested WebUI port."""
     process = _find_webui_process(hostport)
     if process is None:
         print('WebUI is not running')
@@ -69,25 +69,19 @@ def _stop(hostport):
 
 
 def runserver(hostport=None, skip_browser=False):
-    """Start Uvicorn and serve the combined WebUI application."""
+    """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
     if check_webserver_running(url, max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         return
 
-    host, port = hostport.rsplit(':', 1)
-    api_host = '127.0.0.1' if host == '0.0.0.0' else host
-    env = os.environ.copy()
-    env.update(
-        OQ_API_KEY=API_KEY,
-        OQ_WEBAPI_SERVER='http://%s:%s' % (api_host, port))
-    process = subprocess.Popen([
-        sys.executable, '-m', 'uvicorn',
-        'openquake.server.asgi:app',
-        '--host', host,
-        '--port', port,
-    ], env=env)
+    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
+    # the reload functionality of the Django development server interferes
+    # with SIGCHLD and causes zombies, thus it is disabled
+    args.append('--noreload')
+    args.append(hostport)
+    process = subprocess.Popen(args)
     if not skip_browser and check_webserver_running(url):
         webbrowser.open(url)
     try:
@@ -119,7 +113,7 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         api_host = '127.0.0.1'
     os.environ.setdefault(
         'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
-    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
+    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')

@@ -27,6 +27,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _get_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
@@ -91,7 +94,7 @@ class MegawatiPan2010(GMPE):
             mean[m] = (_get_magnitude_scaling(C, ctx.mag) +
                        _get_distance_scaling(C, ctx.mag, ctx.rhypo))
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log(np.exp(mean[m]) / (100.0 * g))
+                mean[m] = mean[m] - np.log(100.0 * g)
             sig[m] = C['sigma']
 
     #: Coefficient table for rock ctx, see table 3 page 227.

@@ -28,7 +28,7 @@ try:
 except ImportError:  # old version
     from h3.api.numpy_int import (
         geo_to_h3 as latlng_to_cell, h3_to_geo as cell_to_latlng)
-from scipy.spatial import distance
+from scipy.spatial import KDTree, distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
@@ -51,6 +51,10 @@ param = dict(
     z1pt4='reference_depth_to_1pt4km_per_sec',
     region='region',
     xvf='xvf')
+
+#: Core site parameters whose NaN values would silently produce NaN
+#: hazard; lon/lat included because valid.coordinates accepts 'nan'
+CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
 
 
 def get_countries(lons, lats):
@@ -620,14 +624,15 @@ class SiteCollection(object):
 
     def reduce(self, nsites):
         """
-        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        :returns: a filtered SiteCollection with at most nsites sites
+                  evenly spread over the region, obtained by taking every
+                  n-th site in geohash order, with n = ceil(N / nsites)
         """
-        N = len(self.complete)
-        n = N // nsites
+        n = int(numpy.ceil(len(self) / nsites))
         if n <= 1:
             return self
-        sids, = numpy.where(self.complete.sids % n == 0)
-        return self.filtered(sids)
+        idx = numpy.sort(numpy.argsort(self.geohash(8))[::n])
+        return self.filtered(self.sids[idx])
 
     def add_col(self, colname, dtype, values=None):
         """
@@ -764,18 +769,23 @@ class SiteCollection(object):
 
     def split_in_tiles(self, hint):
         """
-        Split a SiteCollection into a set of tiles with contiguous site IDs
+        Split a SiteCollection into at most `hint` tiles, assigning the site
+        IDs round-robin (sids % hint), so that the sites of a tile are not
+        contiguous in space; the empty tiles are dropped
         """
         if hint <= 1:
             return [self]
         elif hint > len(self):
             hint = len(self)
+        # a single stable sort by tile number instead of a pass per tile
+        tilenos = self.sids % hint
+        sids = self.sids[numpy.argsort(tilenos, kind='stable')]
+        counts = numpy.bincount(tilenos, minlength=hint)
         tiles = []
-        for tileno in range(hint):
-            ok = self.sids % hint == tileno
-            if ok.any():
+        for tsids in numpy.split(sids, numpy.cumsum(counts)[:-1]):
+            if len(tsids):
                 sc = SiteCollection.__new__(SiteCollection)
-                sc.array = self.complete.array[self.sids[ok]]
+                sc.array = self.complete.array[tsids]
                 sc.complete = self.complete
                 tiles.append(sc)
         return tiles
@@ -797,9 +807,22 @@ class SiteCollection(object):
 
     def count_close(self, location, distance):
         """
-        :returns: the number of sites within the distance from the location
+        :param location: a Point, a record with 'hypo', or a Mesh
+        :param distance: a distance in km
+        :returns: the number of sites within the distance from the location,
+                  or an array of counts for a Mesh, in flattened mesh order
+
+        NB: mesh queries are vectorized and reuse a KDTree, so they are much
+        faster than calling SourceFilter.close_sids on many point sources.
         """
-        return (self.get_cdist(location) < distance).sum()
+        if not isinstance(location, Mesh):
+            return numpy.less_equal(self.get_cdist(location), distance).sum()
+        if distance < 0:
+            return numpy.zeros(location.lons.size, dtype=int)
+        if not hasattr(self, 'kdt'):
+            self.kdt = KDTree(self.xyz)
+        return self.kdt.query_ball_point(location.xyz, distance,
+                                         return_length=True)
 
     def __iter__(self):
         """
@@ -994,18 +1017,25 @@ class SiteCollection(object):
         """
         self.array['z2pt5'] = calculate_z2pt5(self.vs30, self.countries)
 
-    def check_nan(self, field):
+    def check_nan(self, fields):
         """
-        Raise a ValueError if the field contains NaNs
+        Raise a ValueError if any of the given fields contains NaNs.
+        ``fields`` may be a single field name or a sequence of them.
         """
-        try:
-            values = getattr(self, field)
-        except ValueError:  # in scenario test_case_14
-            pass
-        else:
-            if numpy.isnan(values).any():
-                raise ValueError(f'The {field} is NaN, missing site model '
-                                 'or site parameter')
+        if isinstance(fields, str):
+            fields = (fields,)
+        for field in fields:
+            try:
+                values = getattr(self, field)
+            except ValueError:  # in scenario test_case_14
+                continue
+            if not numpy.isnan(values).any():
+                continue
+            hint = (f" or set reference {param[field]} in the job file"
+                    if field in param else "")
+            raise ValueError(
+                f"Missing {field} for one or more sites. Supply it "
+                f"in the site model{hint}.")
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

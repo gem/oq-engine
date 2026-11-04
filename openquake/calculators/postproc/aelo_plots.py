@@ -266,6 +266,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/mce.png'] = Image.open(bio)
+        plt.close(fig)
     return plt
 
 
@@ -335,6 +336,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/mce_spectra.png'] = Image.open(bio)
+        plt.close(_fig)
     return plt
 
 
@@ -390,6 +392,7 @@ def plot_governing_mce(dstore, update_dstore=False):
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/governing_mce.png'] = Image.open(bio)
+        plt.close(fig)
 
     return plt
 
@@ -510,6 +513,7 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
     vs30 = vs30s[sid]
     dstore[f'png/disagg_by_src-{imt}-vs30_{vs30}.png'] = Image.open(bio1)
     fig1.tight_layout()
+    plt.close(fig1)
 
 
 def plot_disagg_by_src(dstore, sid=0, axes=None):

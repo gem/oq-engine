@@ -39,3 +39,33 @@ class HashashEtAl2020Test(unittest.TestCase):
         # results computed by hand
         expected = np.array([-0.146867, -0.      ,  0.])
         np.testing.assert_allclose(fv, expected, atol=1e-6)
+
+    def test_usgs_vs30_floor(self):
+        # Under usgs=True, Vs30 valus below 200 m/s should give the
+        # same nonlinear term as Vs30 = 200 m/s (floor adopted by the
+        # US 2023 NSHM revisions in Powers et al., EQS, 2026)
+        imt = from_string('SA(1.0)')
+        ref_vs30 = 3000.0
+        ref_pga = np.array([0.3, 0.3])
+        vs30_low = np.array([150.0, 180.0])
+        vs30_floor = np.array([200.0, 200.0])
+        f_low = hashash2020_non_linear_scaling(
+            imt, vs30_low, ref_pga, ref_vs30, usgs=True)
+        f_floor = hashash2020_non_linear_scaling(
+            imt, vs30_floor, ref_pga, ref_vs30, usgs=True)
+        np.testing.assert_allclose(f_low, f_floor, atol=1e-10)
+
+    def test_usgs_pga_rock_cap(self):
+        # Under usgs=True, PGA-rock values above 1.0 g should give the
+        # same nonlinear term as PGA-rock = 1.0 g (cap adopted by the
+        # US 2023 NSHM revisions in Powers et al., EQS, 2026)
+        imt = from_string('SA(1.0)')
+        ref_vs30 = 3000.0
+        vs30 = np.array([250.0, 300.0])
+        ref_pga_high = np.array([1.5, 2.0])
+        ref_pga_cap = np.array([1.0, 1.0])
+        f_high = hashash2020_non_linear_scaling(
+            imt, vs30, ref_pga_high, ref_vs30, usgs=True)
+        f_cap = hashash2020_non_linear_scaling(
+            imt, vs30, ref_pga_cap, ref_vs30, usgs=True)
+        np.testing.assert_allclose(f_high, f_cap, atol=1e-10)

@@ -373,12 +373,12 @@ from openquake.baselib import config, performance
 from openquake.baselib.general import humansize
 from openquake.hazardlib.truncated_mvn import TruncatedMVN
 from openquake.hazardlib.calc.gmf import (
-    CE_MIN_SITES, GmfComputer, TRUNCATION_THRESHOLD)
+    GmfComputer, TRUNCATION_THRESHOLD)
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import (
     ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    CirculantEmbeddingFactor, GRID_TOLERANCE, RegularGridLayout)
+    CirculantEmbeddingFactor, GRID_TOLERANCE, RegularGridLayout, _local_crs)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
     import BakerJayaram2008
 from openquake.hazardlib.correlation_models.cross_imt.goda_atkinson_2009 \
@@ -463,6 +463,15 @@ def get_precomputed(rupture, cmaker, inp, compute_covs=True):
     return Precomputed(ctx_Y, ctx_D, YY, YD, DY, DD, [])
 
 
+def grid_crs(complete, station_sids):
+    """
+    :returns: the projection of the target grid, i.e. of the complete sites
+        without the stations, which the grid is regular in
+    """
+    grid = complete.filter(~numpy.isin(complete.sids, station_sids))
+    return _local_crs(grid.lons, grid.lats)
+
+
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
         self.gsim = gsim
@@ -521,7 +530,7 @@ class ConditionedGmfComputer(GmfComputer):
             observed_imts, cmaker, within_event_model=None,
             between_event_model=None, within_event_correlation_params=None,
             number_of_ground_motion_fields=1, amplifier=None, sec_perils=(),
-            **legacy):
+            crs=None, **legacy):
         aliases = {
             'spatial_correl': 'within_event_model',
             'cross_correl_between': 'between_event_model',
@@ -560,11 +569,13 @@ class ConditionedGmfComputer(GmfComputer):
         between_event_model = between_event_model or GodaAtkinson2009()
         separable_cross_imt_model = BakerJayaram2008()
 
+        if crs is None:
+            crs = grid_crs(sitecol.complete, station_sitecol.sids)
         self.inp = Input(
             sitecol, station_sitecol,
             target_imts, observed_imts, station_data,
             within_event_model, between_event_model,
-            separable_cross_imt_model, self.correlation_context)
+            separable_cross_imt_model, self.correlation_context, crs)
 
     def _compute_mvn(self, mu_Y, cov_WY_WY, cov_BY_BY, E):
         rng = numpy.random.default_rng(self.seed)
@@ -619,6 +630,7 @@ class Input:
     between_event_model: object = 0
     separable_cross_imt_model: object = 0
     correlation_context: object = None
+    crs: object = None  # projection of the full target grid
 
 
 @dataclass
@@ -745,7 +757,7 @@ def _target_grid(inp):
 
 def _conditioning_layout(inp, order):
     """Fit the target lattice and pad it around the station sites."""
-    layout = RegularGridLayout.from_sites(_target_grid(inp))
+    layout = RegularGridLayout.from_sites(_target_grid(inp), crs=inp.crs)
     return layout.expanded(inp.sites_D, order)
 
 
@@ -1515,7 +1527,8 @@ def use_circulant_conditioning(computer):
     model = computer.inp.within_event_model
     return (use_joint_conditioning(computer) and
             getattr(model, 'SUPPORTS_CIRCULANT_EMBEDDING', False) and
-            getattr(computer, 'N', 0) >= CE_MIN_SITES)
+            computer.cmaker.oq.correlation_strategy ==
+            'circulant_embedding')
 
 
 def _conditioning_batch_size(computer, sampler, weights, memory_budget):

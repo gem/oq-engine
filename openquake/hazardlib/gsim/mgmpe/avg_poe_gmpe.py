@@ -37,6 +37,7 @@ in the semantic, since the `AvgGMPE` performs averages on the log(intensities)
 while `AvgPoeGMPE` performs averages on the PoEs.
 """
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 

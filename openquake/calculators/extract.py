@@ -35,8 +35,8 @@ from openquake.baselib import config, hdf5, general, performance, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, InvalidFile
-from openquake.hazardlib.contexts import (
-    ContextMaker, read_cmakers, read_ctx_by_grp)
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats, compute_stats2
 from openquake.hazardlib.source import rupture
@@ -51,7 +51,6 @@ I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
-TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -229,18 +228,13 @@ def extract_oqparam(dstore, dummy):
     return ArrayWrapper((), {'json': js})
 
 
-# used by the QGIS plugin in scenario
-@extract.add('realizations')
-def extract_realizations(dstore, dummy):
-    """
-    Extract an array of realizations. Use it as /extract/realizations
-    """
-    oq = dstore['oqparam']
+def _realizations_array(dstore, oq, path, full_lt):
+    # path is the datastore path of full_lt, like 'full_lt' or
+    # 'full_lt/EUR' in a multi-model datastore
     scenario = 'scenario' in oq.calculation_mode
-    full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        gsims = encode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
+        gsims = encode(dstore.getitem(f'{path}/gsim_lt')['uncertainty'])
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         bplen = max(len(gsim) for gsim in gsims)  # list of bytes
@@ -260,6 +254,23 @@ def extract_realizations(dstore, dummy):
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
     return arr
+
+
+# used by the QGIS plugin in scenario
+@extract.add('realizations')
+def extract_realizations(dstore, model):
+    """
+    Extract an array of realizations. Use it as /extract/realizations
+    or, in a multi-model datastore, as /extract/realizations/MODEL
+    """
+    oq = dstore['oqparam']
+    if not isinstance(dstore['full_lt'], Group):  # single model
+        return _realizations_array(dstore, oq, 'full_lt', dstore['full_lt'])
+    if model not in dstore['full_lt']:
+        raise ValueError('Multi-model datastore: specify a model among %s'
+                         % list(dstore['full_lt']))
+    path = f'full_lt/{model}'
+    return _realizations_array(dstore, oq, path, dstore[path])
 
 
 @extract.add('weights')
@@ -920,6 +931,27 @@ def extract_exposure_by_lse(dstore, what):
 
 
 # tested in impact_test and partially in case_1_ins
+# set the quantiles of the portfolio total rows: they must come from the
+# full portfolio losses, not from summing the quantiles of the groups
+def _set_total_quantiles(total, qdf, qfields, K):
+    if not len(qdf):  # no quantiles to set
+        return
+    for idx, row in total.iterrows():
+        loss_id = LOSSID[row.loss_type]
+        if (K, loss_id) in qdf.index:
+            total.loc[idx, qfields] = qdf.loc[(K, loss_id)].to_numpy()
+
+
+def _add_name_2(out, exposure_hdf5):
+    # add the NAME_2 column, mapping each ID_2 to its name
+    with hdf5.File(exposure_hdf5) as f:
+        id2s = f['tagcol/ID_2'][:]
+        name2s = f['NAME_2'][:]
+        name2dic = {id2.decode('utf8'): name2.decode('utf8')
+                    for id2, name2 in zip(id2s, name2s)}
+    out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -970,7 +1002,10 @@ def extract_aggrisk_tags(dstore, what):
                     if lt == 'affectedpop':
                         valuelt = 'residents'
                     elif lt in ['occupants', 'injured']:
-                        valuelt = 'occupants_' + oq.time_event
+                        # without a time_event use the average occupants
+                        valuelt = 'occupants_' + (oq.time_event or 'avg')
+                    elif lt.startswith('injured_'):  # injured_day, ...
+                        valuelt = 'occupants_' + lt[len('injured_'):]
                     acc['value'].append(df.loc[agg_id][valuelt])
                     acc['lossmea'].append(row.loss)
                 if len(qdf):
@@ -981,14 +1016,9 @@ def extract_aggrisk_tags(dstore, what):
             continue
         out = pandas.DataFrame(acc)
         if aggby == ['ID_2']:
-            exposure_hdf5 = oq.inputs['exposure'][0]
-            with hdf5.File(exposure_hdf5) as f:
-                id2s = f['tagcol/ID_2'][:]
-                name2s = f['NAME_2'][:]
-                name2dic = {id2.decode('utf8'): name2.decode('utf8')
-                            for id2, name2 in zip(id2s, name2s)}
-            out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
+            _add_name_2(out, oq.inputs['exposure'][0])
         total = out.groupby('loss_type', as_index=False).sum()
+        _set_total_quantiles(total, qdf, qfields, aggdf.agg_id.max())
         total[aggby] = '*total*'
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
@@ -1872,7 +1902,7 @@ def extract_ruptures(dstore, what):
     if 'rup_id' in qdict:
         rup_id = int(qdict['rup_id'][0])
         ebrups = [getters.get_ebrupture(dstore, rup_id)]
-        info = dstore['source_info'][rup_id // TWO30]
+        info = dstore['source_info'][ebrups[0].source_id]
         comment['source_id'] = info['source_id'].decode('utf8')
     else:
         if 'threshold' in qdict:
@@ -1938,13 +1968,13 @@ def extract_med_gmv(dstore, what):
 @extract.add('high_sites')
 def extract_high_sites(dstore, what):
     """
-    Returns an array of boolean with the high hazard sites (max_poe > .2)
+    Returns an array of boolean with the high hazard sites (max_poe > .04)
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/high_sites
     """
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
     # NSML1 -> NM
-    return (max_hazard > .2).all(axis=1)  # shape N
+    return (max_hazard > .04).all(axis=1)  # shape N
 
 
 def _get_data(dstore, dskey, loss_types, stats):

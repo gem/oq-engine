@@ -30,6 +30,7 @@ from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import AvgSA, SA, PGA
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import compute_imts_subset
 
+
 CORR_COEFFS_FOLDER = Path(__file__).parent / "corr_coeffs"
 
 
@@ -104,7 +105,8 @@ class GenericGmpeAvgSA(GMPE):
         in classical/case34).
         """
         # Get mean and std devs for averaging periods
-        averaging_periods = [SA(period) if period != 0 else PGA() for period in self.avg_periods]
+        averaging_periods = [SA(period) if period != 0 else PGA()
+                                for period in self.avg_periods]
         out = contexts.get_mean_stds(self.gmpe, ctx, averaging_periods)
 
         # Compute average SA
@@ -130,7 +132,7 @@ def _get_periods(t_low, t_high, t_num, max_num_per, imts):
     Used in GmpeIndirectAvgSA class to compute target periods per AvgSA
     IMT and determine if interpolation is required.
     """
-    # For each IMT get target period range 
+    # For each IMT get target period range
     periods_per_avgsa_imt = {
         imt.string: np.linspace(
             t_low * imt.period, t_high * imt.period, t_num)
@@ -157,7 +159,7 @@ def _get_periods(t_low, t_high, t_num, max_num_per, imts):
     else:
         periods_all = unique_periods
         apply_interpolation = False
-    
+
     return periods_all, apply_interpolation, periods_per_avgsa_imt
 
 
@@ -267,7 +269,7 @@ class GmpeIndirectAvgSA(GMPE):
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
             if imt.name == "AvgSA": # Only proceed for AvgSA imts
-                
+
                 # Target periods for given IMT
                 target_periods = periods_per_avgsa_imt[imt.string]
 
@@ -279,7 +281,7 @@ class GmpeIndirectAvgSA(GMPE):
                                             mean_sa[0, :], mean_sa[-1, :]),
                                             assume_sorted=True)
                     m_target = ipl_mean(target_periods).T
-                    
+
                     ipl_sig = interp1d(periods_all, sigma_sa.T,
                                        bounds_error=False,
                                        fill_value=(
@@ -301,11 +303,11 @@ class GmpeIndirectAvgSA(GMPE):
                 # accounting for the cross-correlation
                 for j, t_1 in enumerate(target_periods):
                     for k, t_2 in enumerate(target_periods):
-                        rho = 1.0 if j == k else self.corr_func.get_correlation(
-                            t_1, t_2)
+                        rho = (1.0 if j == k else
+                               self.corr_func.get_correlation(t_1, t_2))
                         sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
                 sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
-    
+
 
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
     """
@@ -332,7 +334,7 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
 
 class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
     """
-    Intermediate class to handle the interpolation of empirical correlation 
+    Intermediate class to handle the interpolation of empirical correlation
     data and the construction of the correlation matrices.
     """
     def __init__(self, avg_periods, rho_arrays, rho_periods):
@@ -366,17 +368,17 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         """
         # rho_arrays is dictionary of the arrays of corr coeffs that are part
         # of the correlation model. The keys of this dictionary indicate what
-        # correlation functions can be called without raising an error. 
+        # correlation functions can be called without raising an error.
 
         if not isinstance(rho_arrays, dict):
             raise TypeError("rho_arrays must be of type dict")
         if "total" not in rho_arrays.keys():
             raise ValueError("rho_arrays must contain the key 'total'")
-        
+
         # store the raw correlation data
         self.raw_rhos = rho_arrays
         self.raw_Ts = rho_periods
-        self.valid_residual_types = list(rho_arrays.keys()) 
+        self.valid_residual_types = list(rho_arrays.keys())
 
         # create the interpolation functions for each residual type / array
         self._create_interpers()
@@ -386,14 +388,14 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
                 raise ValueError(f"Period ({min(avg_periods):.3f}) is less "
                                 f"than the minimum allowable period for the "
                                 f"correlation model ({min(rho_periods):.3f}).")
-            
+
             if any(avg_periods > max(rho_periods)):
                 raise ValueError(f"Period ({max(avg_periods):.3f}) is greater "
                                 f"than the maximum allowable period for the "
                                 f"correlation model ({max(rho_periods):.3f}).")
 
         super().__init__(avg_periods)
-        
+
     def build_correlation_matrix(self):
         """
         Interpolate the raw correlation data for required periods (avg_periods)
@@ -407,10 +409,9 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         Returns a dict with keys indicating the type of residual and the values 
         being 2D numpy arrays of interpolated corr coeffs.
         """
-        # interpolates the raw coeff data for all the provided matrices and 
+        # interpolates the raw coeff data for all the provided matrices and
         # returns a dictionary with the keys indicating the type of residual
         # and the values being 2D numpy arrays of interpolated corr coeffs.
-
         corr_mats = {}
         for residual_type, interper in self.interpers.items():
             corr_mats[residual_type] = self._interpolate_matrix(
@@ -428,19 +429,18 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
             interper = RegularGridInterpolator(
                 points=(self.raw_Ts, self.raw_Ts),
                 values=rho_mat,
-                method="linear"
-                )
+                method="linear")
             interpers[residual_type] = interper
-        self.interpers = interpers  
+        self.interpers = interpers
 
     def _interpolate_matrix(self, interper, new_Ts):
         """
         2D interpolation of the correlation matrix.
         Returns a symmetric nxn matrix with 1s on the diagonal
-        
+
         :param RegularGridInterpolator interper: 
             interpolation function to be used
-        
+
         :param np.ndarray new_Ts:
             array of periods at which the matrix should be interpolated
         """
@@ -453,20 +453,20 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         np.fill_diagonal(interped_rhos, 1.0)
 
         return interped_rhos
-    
+
     def _check_valid_residual_type(self, residual_type):
         if residual_type not in self.valid_residual_types:
             raise ValueError(f"Invalid type of residual ({residual_type}) for "
                              f"correlation model.")
-    
+
     def _get_correlation(self, interper, t1, t2):
         """
         Computes the correlation coefficient for the specified periods for the
         correlation matrix defined in the interpolation function.
-        
+
         :param RegularGridInterpolator interper: 
             interpolation function for the correlation matrix
-        
+
         :param float t1:
             First period of interest.
 
@@ -476,21 +476,20 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         :return float rho:
             The estimated correlation coefficient.
         """
-
         if all(min(t1, t2) < self.raw_Ts):
              raise ValueError(f"Period {min(t1, t2):.2f} is outside the "
                              "allowable range.")
-        
+
         elif all(max(t1, t2) > self.raw_Ts):
             raise ValueError(f"Period {max(t1, t2):.2f} is outside the "
                              "allowable range.")
-        
+
         if t1 == t2:
             return 1.0  # the same period must have a correlation of 1.0
-        
+
         rho = interper(np.array([[t1, t2]]))
         return float(rho[0])
-    
+
     def get_correlation(self, t1, t2):
         """
         Computes the correlation coefficient for the specified periods for the
@@ -508,7 +507,7 @@ class EmpiricalAvgSACorrelationModel(BaseAvgSACorrelationModel):
         self._check_valid_residual_type("total")
         interper = self.interpers["total"]
         return self._get_correlation(interper, t1, t2)
-        
+
     def get_between_event_correlation(self, t1, t2):
         """
         As per the get_correlation function but for the between-event
@@ -544,19 +543,18 @@ def load_corr_coeff_data_from_hdf5(fp, group_name):
     with h5py.File(fp, "r") as f:
         if group_name not in f:
             raise KeyError(f"Group '{group_name}' not found.")
-        
+
         group = f[group_name]
-        
-        # Dictionary comprehension: 
+
+        # Dictionary comprehension:
         # item[()] loads the dataset into a numpy array
         rho_dict = {
-            key: item[()] 
-            for key, item in group.items() 
-            if isinstance(item, h5py.Dataset)
-        }
+            key: item[()]
+            for key, item in group.items()
+            if isinstance(item, h5py.Dataset)}
 
     periods = rho_dict.pop("periods")
-        
+
     return rho_dict, periods
 
 
@@ -568,7 +566,7 @@ class ClemettCorrelationModelAsc(EmpiricalAvgSACorrelationModel):
     def __init__(self, avg_periods):
         fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
         rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "asc")
-        super().__init__(avg_periods, rho_arrays, rho_periods) 
+        super().__init__(avg_periods, rho_arrays, rho_periods)
 
 
 class ClemettCorrelationModelSInter(EmpiricalAvgSACorrelationModel):
@@ -579,7 +577,7 @@ class ClemettCorrelationModelSInter(EmpiricalAvgSACorrelationModel):
     def __init__(self, avg_periods):
         fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
         rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sinter")
-        super().__init__(avg_periods, rho_arrays, rho_periods) 
+        super().__init__(avg_periods, rho_arrays, rho_periods)
 
 
 class ClemettCorrelationModelSSlab(EmpiricalAvgSACorrelationModel):
@@ -590,7 +588,7 @@ class ClemettCorrelationModelSSlab(EmpiricalAvgSACorrelationModel):
     def __init__(self, avg_periods):
         fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
         rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "sslab")
-        super().__init__(avg_periods, rho_arrays, rho_periods)  
+        super().__init__(avg_periods, rho_arrays, rho_periods)
 
 
 class ClemettCorrelationModelVrancea(EmpiricalAvgSACorrelationModel):
@@ -601,7 +599,7 @@ class ClemettCorrelationModelVrancea(EmpiricalAvgSACorrelationModel):
     def __init__(self, avg_periods):
         fp = CORR_COEFFS_FOLDER / "clemett_corr_coeffs.hdf5"
         rho_arrays, rho_periods = load_corr_coeff_data_from_hdf5(fp, "vrancea")
-        super().__init__(avg_periods, rho_arrays, rho_periods)  
+        super().__init__(avg_periods, rho_arrays, rho_periods)
 
 
 class AkkarCorrelationModel(BaseAvgSACorrelationModel):
@@ -617,8 +615,7 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3,
         0.32, 0.34, 0.36, 0.38, 0.4, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55, 0.6,
         0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.1, 1.2, 1.3, 1.4, 1.5,
-        1.6, 1.7, 1.8, 1.9, 2, 2.2, 2.4, 2.6, 2.8, 3, 3.2, 3.4, 3.6, 3.8, 4
-        ]
+        1.6, 1.7, 1.8, 1.9, 2, 2.2, 2.4, 2.6, 2.8, 3, 3.2, 3.4, 3.6, 3.8, 4]
 
     coeff_table = []
     path = os.path.join(
@@ -713,8 +710,7 @@ ESHM20_COEFFICIENTS = {
      "total": (0.18141134, 0.1555742,  -0.10851875, 0.08, 0.2),
      "between-event": (0.15881576, 0.08439678, -0.13915732, 0.08, 0.2),
      "between-site": (0.15751022, 0.15934185, -0.17513388, 0.08, 0.2),
-     "within-event": (0.26023904, 0.27590487, -0.0951078, 0.08, 0.2)
-}
+     "within-event": (0.26023904, 0.27590487, -0.0951078, 0.08, 0.2)}
 
 
 def baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5, t1, t2):
@@ -881,5 +877,4 @@ CORRELATION_FUNCTION_HANDLES = {
     "clemett_sinter": ClemettCorrelationModelSInter,
     "clemett_sslab": ClemettCorrelationModelSSlab,
     "clemett_vrancea": ClemettCorrelationModelVrancea,
-    'none': DummyCorrelationModel
-}
+    'none': DummyCorrelationModel}

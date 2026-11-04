@@ -67,8 +67,7 @@ override_dh_install:
 	dh_install
 	sed -i 's@#!.*env \+python[23]\?@#!/opt/openquake/bin/python3@g' \
 	  $$(grep -l 'env python' $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/lib/python3/dist-packages/openquake -name '*.py') \
-          $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/bin -type f) \
-	  $$(find $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/utils -type f))
+          $$(find $(PWD)/debian/python3-oq-engine$(PREFIX)/bin -type f))
 
 	# Make a zipped copy of each demo
 	helpers/zipdemos.sh $(PWD)/debian/python3-oq-engine/usr/share/openquake/engine/demos

@@ -445,7 +445,7 @@ rupture by rupture basis but a classification scheme is used instead.
 Ruptures are classified in terms of the following parameters:
 
 - magnitude (:math:`M`)
-- distance to rupture surface-projection (Joyner-Boore distance) (:math:`r_{jb}`)
+- closest distance to rupture surface (:math:`r_{rup}`)
 - longitude and latitude of rupture surface-projection closest
   point (:math:`\lambda` , :math:`\phi`) 
 - tectonic region type (:math:`TRT`)

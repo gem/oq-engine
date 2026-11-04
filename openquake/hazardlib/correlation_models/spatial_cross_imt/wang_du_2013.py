@@ -169,8 +169,8 @@ class WangDu2013SpectralAcceleration(_WangDu2013):
     """
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA}
-    DEFINED_FOR_SA_DAMPING = 5.0
-    DEFINED_FOR_SA_PERIOD_RANGE = (0.01, 10.0)
+    DEFINED_FOR_DAMPING = 5.0
+    DEFINED_FOR_PERIOD_RANGE = (0.01, 10.0)
 
     def _correlation_block(self, distances, imts1, imts2, context=None):
         """Return the normalized joint correlation block."""

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
 
 
 def _compute_magnitude(ctx, C):
@@ -41,7 +42,10 @@ def _compute_magnitude(ctx, C):
     PCM 3274 del 20 marzo 2003. Rapporto Conclusivo per il Dipartimento 
     della Protezione Civile, INGV, Milano-Roma"
     """
-    M = np.where(ctx.mag < 5.5, (ctx.mag - 1.145)/ 0.812, (ctx.mag - 1.938)/0.673)
+    M = np.where(
+    ctx.mag < 5.5,
+    (ctx.mag - 1.145)/ 0.812,
+     (ctx.mag - 1.938)/0.673)
     return C['a'] + (C['b'] * M)
 
 def _compute_distance(ctx, C):
@@ -74,15 +78,15 @@ def _get_mechanism(ctx, C):
 
 class SabettaPugliese1996(GMPE):
     """
-    Implements GMPE developed by Sabetta, F., & Pugliese, A. (1996). 
-    Estimation of response spectra and simulation of nonstationary earthquake 
+    Implements GMPE developed by Sabetta, F., & Pugliese, A. (1996).
+    Estimation of response spectra and simulation of nonstationary earthquake
     ground motions. Bulletin of the Seismological Society of America, 86(2), 337-352.
     SA are given up to 4 s.
     The regressions are developed considering the largest horizontal component
     and epicentral distance (Table 2 of Sabetta and Pugliese, 1996).
-    
+
     GMPE implemented as adopted in MPS04 (Montaldo et al 2005)
-    In this implementation, a convertion function from Mw to Ms/ML is included 
+    In this implementation, a convertion function from Mw to Ms/ML is included
     to be consistent with the other gsims in OQ.
     """
     #: Supported tectonic region type is 'active shallow crust'
@@ -96,7 +100,8 @@ class SabettaPugliese1996(GMPE):
 
     #: Supported intensity measure component is the largest
     #: horizontal component
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation type is total
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
@@ -128,16 +133,17 @@ class SabettaPugliese1996(GMPE):
             # Convert units to g (only pga is already in g)
             # Sa in PSV (cm/s)
             if imt.string.startswith(('SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) * (2*pi/imt.period) / g)
+                mean[m] = ((imean - 2.0) * LOG10 +
+                           np.log(2 * pi / imt.period) - np.log(g))
             elif imt == PGV():
                 #PGV - convert in g unit and from base 10 to base e
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
                 # PGA - from base 10 to base e
-                mean[m] = np.log(10.0 ** imean)
-            
+                mean[m] = imean * LOG10
+
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
 
 
     #: Coefficients for PGA and SA

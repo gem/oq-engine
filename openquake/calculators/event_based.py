@@ -35,14 +35,16 @@ from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.source_reader import (
+    get_bset_values, get_core_trt_smrs)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.filters import (
     close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
-    conditioned, conditioned_ce, use_circulant_conditioning,
+    conditioned, conditioned_ce, grid_crs, use_circulant_conditioning,
     use_joint_conditioning, use_joint_gaussian_sampling)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
@@ -70,6 +72,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+# workers send GMFs to the parent in messages of at least this many rows
+GMF_MSG_ROWS = 100_000
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('weight', F32),
@@ -176,7 +180,7 @@ def count_ruptures(srcs, monitor):
 
 
 def get_computer(cmaker, ebr, sites, sec_perils=(),
-                 station_data=(), station_sids=()):
+                 station_data=(), station_sids=(), crs=None):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -196,7 +200,7 @@ def get_computer(cmaker, ebr, sites, sec_perils=(),
                 oq.get_between_event_correlation_model(),
                 oq.within_event_correlation_params,
                 oq.number_of_ground_motion_fields,
-                oq._amplifier, sec_perils)
+                oq._amplifier, sec_perils, crs=crs)
         else:
             logging.warning('There are no stations!')
 
@@ -226,7 +230,9 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
         # the computer while batches are processed. Keep track of the list
         # position so each batch transfers only newly appended records.
         mtp_start = 0
+        ngmfs = 0  # GMFs of the rupture, in all the batches so far
         for df, indices, last in computer.compute_all_batches(cmon, umon):
+            ngmfs += len(df)
             dic = dict(
                 gmfdata=df,
                 sig_eps=computer.build_sig_eps(se_dt, indices))
@@ -235,12 +241,54 @@ def _event_based(proxies, cmaker, sec_perils, srcfilter, cmon, umon):
                 mtp_start = len(computer.mea_tau_phi)
                 mtp = numpy.array(records, GmfComputer.mtp_dt)
                 dic['mea_tau_phi'] = {col: mtp[col] for col in mtp.dtype.names}
-            if last:
+            if last and ngmfs:  # the rupture produced GMFs
                 dt = time.time() - t0
                 dic['times'] = numpy.array([
                     (proxy['id'], computer.ctx.rrup.min(), dt,
                      rup_weight(proxy), cmon.task_no)], rup_dt)
             yield dic
+
+
+def _merge_dics(dics):
+    """
+    :returns: a single dictionary with the concatenated fields
+    """
+    out = dict(gmfdata=pandas.concat([d['gmfdata'] for d in dics],
+                                     ignore_index=True))
+    # sig_eps is kept only for the batches with GMFs, while times and
+    # mea_tau_phi are kept for all the batches (the times of a rupture
+    # are in its last batch, which can be empty)
+    full = [d for d in dics if len(d['gmfdata'])]
+    if full:
+        out['sig_eps'] = numpy.concatenate([d['sig_eps'] for d in full])
+    times = [d['times'] for d in dics if 'times' in d]
+    if times:
+        out['times'] = numpy.concatenate(times)
+    if 'mea_tau_phi' in dics[0]:  # same columns in all the dicts
+        out['mea_tau_phi'] = {
+            col: numpy.concatenate([d['mea_tau_phi'][col] for d in dics])
+            for col in dics[0]['mea_tau_phi']}
+    return out
+
+
+# this is CRUCIAL for Manuela's calculations starting from a global SES
+# of 55 GB, since storing millions of small arrays was ultra-slow; we
+# went down from 30 hours to less than 1 hour
+def buffered(dics, max_rows=GMF_MSG_ROWS):
+    """
+    Merge the dictionaries yielded by _event_based into bigger ones,
+    with at least max_rows GMF rows each (the last one may be smaller),
+    to reduce the number of messages sent to the parent process
+    """
+    buf, nrows = [], 0
+    for dic in dics:
+        buf.append(dic)
+        nrows += len(dic['gmfdata'])
+        if nrows >= max_rows:
+            yield _merge_dics(buf)
+            buf, nrows = [], 0
+    if buf:
+        yield _merge_dics(buf)
 
 
 def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
@@ -271,7 +319,8 @@ def event_based(allrups, cmakers, sids, secperils, dstore, monitor):
                 proxies = get_proxies(dstore.filename, rups)
             except KeyError:  # search in the parent
                 proxies = get_proxies(dstore.parent.filename, rups)
-        yield from _event_based(proxies, cmaker, secperils, srcfilter, cmon, umon)
+        yield from buffered(_event_based(
+            proxies, cmaker, secperils, srcfilter, cmon, umon))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -324,15 +373,21 @@ def _filter_rups(oq, sitecol, trts, dstore):
     affected = 0
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
-    hypo_deps = filrups['hypo'][:, 2]
-    for model, trt_smr in pairs:
-        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
-        if oq.maximum_rupture_depth:
+    if oq.maximum_rupture_depth:
+        # drop the ruptures too deep for their TRT from filrups itself, so
+        # that filtered_ruptures and the per-pair arrays stay consistent
+        keep = numpy.ones(len(filrups), bool)
+        hypo_deps = filrups['hypo'][:, 2]
+        for model, trt_smr in pairs:
+            ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
             amodel = model.decode('ascii')
             trt_array = trts.get(amodel, trts.get('???'))
             trt = trt_array[trt_smr // TWO24]
             maxdep = getdefault(oq.maximum_rupture_depth, trt)
-            ok &= hypo_deps <= maxdep
+            keep[ok & (hypo_deps > maxdep)] = False
+        filrups = filrups[keep]
+    for model, trt_smr in pairs:
+        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
         rups = filrups[ok]
         if len(rups):
             acc[model, trt_smr] = rups
@@ -492,7 +547,8 @@ def _store_conditioned(calc, gmf_df):
         hdf5.extend(dstore[f'gmf_data/{col}'], gmf_df[col])
 
 
-def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
+def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites,
+                    crs=None):
     """Run a conditioned scenario calculation and store the GMFs."""
     dstore = calc.datastore
     considered = station_sites if station_sites else []
@@ -510,7 +566,7 @@ def run_conditioned(oq, proxy, full_lt, calc, station_data, station_sites):
     if station_sites:
         computer = get_computer(
             cmaker, ebr, sites, calc.sec_perils,
-            station_data, station_sites.sids)
+            station_data, station_sites.sids, crs)
         computer.init_eid_rlz_sig_eps()
         G = len(cmaker.gsims)
         N = len(computer.ctx)
@@ -645,8 +701,10 @@ def run(func, oq, rup0, calc):
         station_data, station_sites = filter_stations(
             station_df, calc.sitecol.complete, rup, maxdist)
         if station_sites:
+            # the projection of the grid is computed from all the stations
+            crs = grid_crs(calc.sitecol.complete, station_df.index)
             run_conditioned(oq, proxy, full_lt, calc,
-                            station_data, station_sites)
+                            station_data, station_sites, crs)
             return
 
     trts = {model: full_lt.trts for model, full_lt in get_model_lts(dstore)}
@@ -843,7 +901,8 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         maxw = self.counting_ruptures()
         trt_smrs = self.csm.get_trt_smrs()
-        cmakers = get_cmakers(trt_smrs, self.full_lt, oq)
+        core = get_core_trt_smrs(self.csm.src_groups)
+        cmakers = get_cmakers(trt_smrs, self.full_lt, oq, core)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         preclassical.store_csm(self.datastore, self.csm, self.sitecol, cmakers)
         allargs = []
@@ -861,6 +920,11 @@ class EventBasedCalculator(base.HazardCalculator):
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
+            # NB: the uncertainties are not applied at the CSM level, but
+            # in sample_ruptures via modified_groups, one set of
+            # realizations at a time; the values are computed here, since
+            # the logic tree is too big to be sent to the workers
+            param['bset_values'] = get_bset_values(self.full_lt, sg)
             mfs = [src for src in sg if src.code == b'F']
             if sg.atomic:
                 allargs.append((sg, param))
@@ -880,7 +944,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         return smap
-        
+
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
@@ -943,12 +1007,12 @@ class EventBasedCalculator(base.HazardCalculator):
         sec_imts = self.oqparam.sec_imts
         with sav_mon:
             gmfdata = result.pop('gmfdata')
+            times = result.pop('times', ())
+            if len(times):
+                hdf5.extend(self.datastore['ruptimes'], times)
             if len(gmfdata):
                 df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
-                times = result.pop('times', ())
-                if len(times):
-                    hdf5.extend(self.datastore['ruptimes'], times)
                 if self.N >= SLICE_BY_EVENT_NSITES:
                     sbe = build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
@@ -1189,8 +1253,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:
             maxsize = int(config.memory.gmf_data_rows)
-            if size > maxsize:
-                msg = 'gmf_data has {:_d} rows > {:_d}'.format(size, maxsize)
+            nrows = len(self.datastore['gmf_data/sid'])  # NB: not bytes
+            if nrows > maxsize:
+                msg = 'gmf_data has {:_d} rows > {:_d}'.format(nrows, maxsize)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             logging.info('Building hazard curves and possibly maps')
             build_hcurves(self.datastore)
@@ -1210,7 +1275,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     all = slice(None)
                     for im in oq.imtls:
                         cl_mean_curves = get_mean_curve(
-                            self.datastore, im, all)
+                            self.cl.datastore, im, all)
                         eb_mean_curves = get_mean_curve(
                             self.datastore, im, all)
                         self.rdiff, index = util.max_rel_diff_index(

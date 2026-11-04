@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 :module:`openquake.hazardlib.gsim.nrcan15` implements
 :class:`EasternCan15Mid`, :class:`EasterCnan15Low`,
@@ -19,6 +37,9 @@ from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002SingleCornerSaturation, SilvaEtAl2002DoubleCornerSaturation)
 
 
+LOG10 = np.log(10.0)
+
+
 def _get_delta(stds, repi):
     """
     Computes the additional delta to be used for the computation of the
@@ -34,7 +55,7 @@ def apply_correction_to_BC(cff, mean, imt, repi):
         tmp = -0.3 + 0.15 * np.log10(repi)
     else:
         raise ValueError('Unsupported IMT', imt.string)
-    return mean + np.log(10**tmp)
+    return mean + (tmp * LOG10)
 
 
 class EasternCan15Mid(GMPE):
@@ -83,21 +104,16 @@ class EasternCan15Mid(GMPE):
     #: :attr:'~openquake.hazardlib.const.IMC.GMRotI50'.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = IMC.GMRotI50
 
-    #: Required rupture parameters are magnitude (eq. 4, page 1866).
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    #: Required rupture parameters are magnitude (eq. 4, page 1866) and rake.
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
-    #: Required distance measure is RRup, explained in page 1864 (eq. 2 page
-    #: 1861, eq. 5 page 1866).
-    REQUIRES_DISTANCES = {'rrup'}
+    #: Required distance is only repi since rrup and rjb are obtained from repi
+    #: (base distance measure for the underlying GMPEs is RRup — explained in
+    #: page 1864 (eq. 2 page 1861, eq. 5 page 1866)).
+    REQUIRES_DISTANCES = {'repi'}
 
     #: Required site parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required distance is only repi since rrup and rjb are obtained from repi
-    REQUIRES_DISTANCES = {'repi'}
-
-    #: Required rupture parameters
-    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
@@ -152,9 +168,8 @@ class EasternCan15Mid(GMPE):
             # Note that in this case we do not apply a triangular smoothing on
             # distance as explained at page 996 of Atkinson and Adams (2013)
             # for the calculation of the standard deviation
-            stds = np.log(np.exp(stds1) * 0.2 + np.exp(stds2) * 0.2 +
-                          np.exp(stds3) * 0.2 + np.exp(stds4) * 0.2 +
-                          np.exp(stds5) * 0.2)
+            stds = (np.logaddexp.reduce(
+                [stds1, stds2, stds3, stds4, stds5]) + np.log(0.2))
             sig[m] = get_sigma(imt)
             if self.sgn:
                 mean[m] += self.sgn * (stds + _get_delta(stds, ctx.repi))

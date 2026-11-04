@@ -108,8 +108,8 @@ def test_registry_and_calibration_metadata():
         SA, PGA, PGV, IA, CAV, RSD575, RSD595}
     assert spec.calibrated_imts == spec.supported_imts
     assert spec.imc is None
-    assert spec.sa_damping == 5.0
-    assert spec.sa_period_range == (0.01, 10.0)
+    assert spec.damping == 5.0
+    assert spec.period_range == (0.01, 10.0)
     assert spec.region is None
     interpolated = get_model_specs(
         'spatial_cross_imt')['DuNing2021Interpolated']
@@ -118,8 +118,8 @@ def test_registry_and_calibration_metadata():
     assert interpolated.supported_imts == spec.supported_imts
     assert interpolated.calibrated_imts == spec.calibrated_imts
     assert interpolated.imc is None
-    assert interpolated.sa_damping == 5.0
-    assert interpolated.sa_period_range == (0.01, 10.0)
+    assert interpolated.damping == 5.0
+    assert interpolated.period_range == (0.01, 10.0)
     assert interpolated.region is None
 
 

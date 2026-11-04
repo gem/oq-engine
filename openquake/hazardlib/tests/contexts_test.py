@@ -18,15 +18,17 @@
 
 import os
 import unittest
+from unittest import mock
 import numpy
 
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import site
+from openquake.hazardlib import site, contexts
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.contexts import Effect, ContextMaker, get_distances
+from openquake.hazardlib.contexts import (
+    ContextMaker, get_distances, collapse_ctx, concat)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -37,7 +39,7 @@ from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import ArbitraryMFD
-from openquake.hazardlib.scalerel import WC1994
+from openquake.hazardlib.scalerel import WC1994, PointMSR
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
     get_distances_planar, build_planar)
@@ -47,12 +49,6 @@ from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 PLOTTING = False
 aac = numpy.testing.assert_allclose
-dists = numpy.array([0, 10, 20, 30, 40, 50])
-intensities = {
-    '4.5': numpy.array([1.0, .95, .7, .6, .5, .3]),
-    '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
-    '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
-    '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
 tom = PoissonTOM(50.)
 JOB = os.path.join(os.path.dirname(__file__), 'data/context/job.ini')
 BASE_PATH = os.path.dirname(__file__)
@@ -174,19 +170,6 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         self.assertTrue(abs(dsts[1, 1]-0.0) < 1e-2, msg)
 
 
-class EffectTestCase(unittest.TestCase):
-    def test_dist_by_mag(self):
-        effect = Effect(intensities, dists)
-        dist = list(effect.dist_by_mag(0).values())
-        numpy.testing.assert_allclose(dist, [50, 50, 50, 50])
-
-        dist = list(effect.dist_by_mag(.9).values())
-        numpy.testing.assert_allclose(dist, [12, 15, 19.677419, 20])
-
-        dist = list(effect.dist_by_mag(1.1).values())
-        numpy.testing.assert_allclose(dist, [0, 10, 13.225806, 16.666667])
-
-
 class GetCtxs01TestCase(unittest.TestCase):
     """
     Test for calculation of distances with caching
@@ -222,6 +205,23 @@ class GetCtxs01TestCase(unittest.TestCase):
 
         # extract magnitude 7 rupture
         [self.rup] = [rup for rup in self.src.iter_ruptures() if rup.mag == 7.]
+
+    def test_collapse_tiles(self):
+        # the multifault distances are cached on all the sites, so they
+        # must be looked up by position when _collapse_by_mag uses tiles
+        sitec = SiteCollection([
+            Site(Point(x, .1), vs30=760, z1pt0=30, z2pt5=.5,
+                 vs30measured=True) for x in numpy.linspace(-.5, .5, 50)])
+        self.src.id = 1
+        out = []
+        for pairs in (5_000_000, 50):  # one tile and many tiles
+            with mock.patch.object(contexts, 'COLLAPSE_PAIRS', pairs):
+                cm = ContextMaker('*', [AbrahamsonEtAl2014()], dict(
+                    imtls={'PGA': [.1]}, collapse_precision=.03))
+                ctx = concat(list(cm.get_ctxs(self.src, sitec)))
+            out.append(ctx[numpy.lexsort((ctx.rup_id, ctx.sids))])
+        for par in ['sids', 'rup_id', 'rrup', 'rjb', 'rx', 'ry0']:
+            numpy.testing.assert_array_equal(out[0][par], out[1][par])
 
     def test_rjb_distance(self):
         rjb = self.rup.surface.get_joyner_boore_distance(self.sitec.mesh)
@@ -300,14 +300,25 @@ class FastRatesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from openquake.commonlib import readinput
-        job_ini =os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
+        from openquake.hazardlib.rmap_maker import get_cmakers
+        from openquake.hazardlib.source_reader import (
+            get_bset_values, modified_groups)
+        job_ini = os.path.join(os.path.dirname(__file__), 'data/area/job.ini')
         oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)
-        cls.sources = csm.get_sources()
-        cls.cmakers = csm.get_cmakers()
+        # the uncertainties are applied in the workers, one set of
+        # realizations at a time, so the groups below are the sets of
+        # realizations with the same uncertainties, as in classical
+        [cls.grp] = csm.src_groups
+        bset_values = get_bset_values(csm.full_lt, cls.grp)
+        cls.src_groups = [sg for _trt, sg
+                          in modified_groups(cls.grp, bset_values)]
+        cls.sources = [sg[0] for sg in cls.src_groups]
+        cls.cmakers = get_cmakers([sg[0].trt_smrs for sg in cls.src_groups],
+                                  csm.full_lt, oq)
         cls.sitecol = readinput.get_site_collection(oq)
         with Monitor('get_rmap', measuremem=True) as cls.mon:
-            cls.rmap = cls.cmakers.get_rmap(csm.src_groups, cls.sitecol)
+            cls.rmap = cls.cmakers.get_rmap(cls.src_groups, cls.sitecol)
 
     def test_get_rmaps(self):
         # changing 100 times abGR on an area sources is 10x faster
@@ -390,3 +401,113 @@ class PlanarDistancesTestCase(unittest.TestCase):
         # test att_curves which are functions N-distances -> (G, M, N) arrays
         mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
         aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
+
+
+class EstimateNctxsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.src = PointSource(
+            'ps', 'pointsource', '*',
+            ArbitraryMFD([4., 5., 6., 7.], [.1] * 4), 1., PointMSR(), 1.,
+            tom, 0., 20., Point(0., 0.),
+            PMF([(1., NodalPlane(0., 90., 0.))]),
+            PMF([(.5, 5.), (.5, 10.)]))
+        self.cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 25.), (6., 25.)]},
+            pointsource_distance={'default': 10.})
+        self.sites = SiteCollection([Site(Point(0., 0., dep))
+                                     for dep in [0., 10., 20., 30.]])
+
+    def test_close_and_far(self):
+        # Two magnitudes survive. Each has two close sites (including the
+        # pointsource-distance boundary), one far site and one outside.
+        for max_sites, expected in [(0, 10), (10, 12)]:
+            self.cmaker.max_sites_disagg = max_sites
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src], self.sites), expected)
+            self.assertEqual(contexts.estimate_nctxs(
+                self.cmaker, [self.src] * 2, self.sites), expected * 2)
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [], self.sites), 0)
+
+    def test_filtered_sites(self):
+        # The complete collection determines fewsites, even when the
+        # filtered collection is below the threshold.
+        self.cmaker.max_sites_disagg = 2
+        sites = self.sites.filtered([1, 2])
+        self.assertEqual(contexts.estimate_nctxs(
+            self.cmaker, [self.src], sites), 6)
+
+    def test_magnitude_distance_boundary(self):
+        # A site exactly at maximum_distance is counted by the estimate,
+        # although it generates no contexts: the estimate is approximate.
+        sites = SiteCollection.from_points([0.], [0.], [25.])
+        for max_sites in [0, 10]:
+            for psdist in [25., 30.]:
+                self.cmaker.max_sites_disagg = max_sites
+                self.cmaker.pointsource_distance = psdist
+                self.assertEqual(contexts.estimate_nctxs(
+                    self.cmaker, [self.src], sites), 4)
+
+
+class CollapseCtxTestCase(unittest.TestCase):
+    def test(self):
+        # the first two rows have the same site, rupture parameters and
+        # distances within 1%, so they are merged; the others differ by
+        # distance, site or rake
+        ctx = numpy.rec.fromarrays(
+            [[0, 0, 0, 1, 0], [6.5] * 5, [90., 90., 90., 90., 0.],
+             [106., 106.2, 150., 106., 106.], [107., 107.2, 152., 107., 107.],
+             [.01, .03, .01, .01, .01]],
+            names='sids,mag,rake,rjb,rrup,occurrence_rate')
+        out = collapse_ctx(ctx, {'mag', 'rake'}, {'rjb'}, .01)
+        self.assertEqual(len(out), 4)
+        [row] = out[(out.sids == 0) & (out.rake == 90.) & (out.rjb < 120)]
+        numpy.testing.assert_allclose(row.occurrence_rate, .04)
+        numpy.testing.assert_allclose(row.rjb, (106 * .01 + 106.2 * .03) / .04)
+        numpy.testing.assert_allclose(row.rrup, (107 * .01 + 107.2 * .03) / .04)
+
+        # nonpoissonian ruptures are not collapsed
+        ctx.occurrence_rate[:] = numpy.nan
+        self.assertEqual(len(collapse_ctx(ctx, {'mag'}, {'rjb'}, .01)), 5)
+
+    def test_exact_rupture_parameters(self):
+        # Small differences must survive, including for signed parameters.
+        for par, value in [('mag', 6.5), ('hypo_lon', -120.), ('hypo_lat', -30.),
+                           ('hypo_depth', -.1), ('ztor', 5.)]:
+            with self.subTest(par=par):
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, [value, value, value + .0001],
+                     [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(
+                    out[par], [value, value + .0001])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_angles(self):
+        # Group by rounded angles while retaining original context values.
+        for par, value in [('dip', 30.), ('strike', 120.), ('rake', -90.)]:
+            with self.subTest(par=par):
+                angles = [value + .01, value + .04, value + .06]
+                ctx = numpy.rec.fromarrays(
+                    [[0] * 3, angles, [106.] * 3, [.01, .03, .02]],
+                    names=f'sids,{par},rrup,occurrence_rate')
+                out = collapse_ctx(ctx, {par}, {'rrup'}, .01)
+                self.assertEqual(len(out), 2)
+                numpy.testing.assert_array_equal(out[par],
+                                                 [angles[0], angles[2]])
+                numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+    def test_rounded_width(self):
+        # The width is rounded to 0.1 km, since the widths of the ruptures
+        # of a fault differ by mesh noise; NaN parameters compare equal
+        widths = [10.01, 10.04, 10.06]
+        ctx = numpy.rec.fromarrays(
+            [[0] * 3, widths, [numpy.nan] * 3, [106.] * 3, [.01, .03, .02]],
+            names='sids,width,crjb,rrup,occurrence_rate')
+        out = collapse_ctx(ctx, {'width', 'crjb'}, {'rrup'}, .01)
+        self.assertEqual(len(out), 2)
+        numpy.testing.assert_array_equal(out.width, [widths[0], widths[2]])
+        numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])

@@ -27,6 +27,7 @@ Module exports :class:`AkkarEtAlRjb2014Armenia`,
 :class:`ChiouYoungs2014Armenia`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb

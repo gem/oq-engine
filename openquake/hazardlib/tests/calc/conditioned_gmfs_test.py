@@ -469,16 +469,22 @@ class BasisRNG:
         return result
 
 
-def _utm_sitecol(x, y):
-    """Build a site collection from UTM zone 10 coordinates."""
-    transformer = Transformer.from_crs(32610, 4326, always_xy=True)
+# Lattices are centred on the central meridian, so the projection of the
+# layout, centred on the middle of the target longitudes, is an approximation
+# of this one, well within the lattice tolerance of RegularGridLayout
+TEST_CRS = '+proj=tmerc +lon_0=-123 +k=1 +datum=WGS84 +units=m +no_defs'
+
+
+def _sitecol(x, y, crs=TEST_CRS):
+    """Build a site collection from coordinates in the projection crs."""
+    transformer = Transformer.from_crs(crs, 4326, always_xy=True)
     lon, lat = transformer.transform(
         numpy.asarray(x, dtype=float), numpy.asarray(y, dtype=float))
     return SiteCollection.from_points(lon, lat)
 
 
-def _projected_distances(first, second):
-    transformer = Transformer.from_crs(4326, 32610, always_xy=True)
+def _projected_distances(first, second, crs):
+    transformer = Transformer.from_crs(4326, crs, always_xy=True)
     x1, y1 = transformer.transform(first.lons, first.lats)
     x2, y2 = transformer.transform(second.lons, second.lats)
     first_points = numpy.column_stack((x1, y1)) / 1_000
@@ -492,12 +498,11 @@ def test_ce_prior_covariance():
     # An identity basis recovers the covariance of every random term. This
     # checks that paired target/station draws share the same local field.
     rows, columns = numpy.indices((4, 4))
-    targets = _utm_sitecol(
-        500_000 + columns.ravel() * 1_000,
-        4_200_000 + rows.ravel() * 1_000)
-    station_points = _utm_sitecol(
-        [501_000, 501_300, 501_700],
-        [4_201_000, 4_201_200, 4_201_800])
+    x = (columns.ravel() - 1.5) * 1_000
+    y = 4_200_000 + rows.ravel() * 1_000
+    targets = _sitecol(x, y)
+    station_points = _sitecol(
+        [-500, -200, 200], [4_201_000, 4_201_200, 4_201_800])
     targets.extend(station_points.lons, station_points.lats)
     station_sids = []
     for lon, lat in zip(station_points.lons, station_points.lats):
@@ -523,7 +528,7 @@ def test_ce_prior_covariance():
     mean_stds_Y[2, 0] = [[0.25], [0.55]]
     mean_stds_Y[3, 0] = [[0.75], [0.45]]
 
-    DD = _projected_distances(sites_D, sites_D)
+    DD = _projected_distances(sites_D, sites_D, TEST_CRS)
     station = build_station_conditioning(inp, mean_stds_D, DD)
     sampler = CirculantConditioningSampler.build(inp, station, order=2)
     total = (sampler.grid_factor.input_size +
@@ -540,7 +545,7 @@ def test_ce_prior_covariance():
         m * N + target_positions for m in range(len(imts))])
     actual = unconditional_Y[target_rows] @ unconditional_D.T
     YD = _projected_distances(
-        targets.filtered(target_positions), sites_D)
+        targets.filtered(target_positions), sites_D, TEST_CRS)
     phi_Y = mean_stds_Y[3, 0][:, target_positions].reshape(-1)
     tau_Y = mean_stds_Y[2, 0][:, target_positions].reshape(-1)
     expected = compute_within_event_covariance_matrix(
@@ -556,7 +561,7 @@ def test_ce_prior_covariance():
         inp, mean_stds_Y, station, sampler,
         max_block_elements=len(imts) * len(station.zeta_D) * 3)
     conditioned = weights.condition(unconditional_Y, unconditional_D)
-    YD = _projected_distances(targets, sites_D)
+    YD = _projected_distances(targets, sites_D, TEST_CRS)
     full = build_joint_conditioning(
         inp, mean_stds_Y, station, None, YD)
     expected = full.condition(unconditional_Y, unconditional_D)
@@ -567,11 +572,11 @@ def test_ce_prior_covariance():
 def test_ce_conditioned_batches(monkeypatch):
     # Exercise the production generator above the automatic CE threshold.
     rows, columns = numpy.indices((32, 32))
-    targets = _utm_sitecol(
-        500_000 + columns.ravel() * 1_000,
-        4_200_000 + rows.ravel() * 1_000)
-    station_points = _utm_sitecol(
-        [510_300, 510_700], [4_210_200, 4_210_800])
+    x = (columns.ravel() - 15.5) * 1_000
+    y = 4_200_000 + rows.ravel() * 1_000
+    targets = _sitecol(x, y)
+    station_points = _sitecol(
+        [-5_200, -4_800], [4_210_200, 4_210_800])
     targets.extend(station_points.lons, station_points.lats)
     sites_D = targets.filtered([1024, 1025])
     imts = [PGA(), SA(0.3)]

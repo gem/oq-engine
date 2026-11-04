@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import math
 from openquake.hazardlib import geo, mfd
+from openquake.hazardlib.codes import AREA
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -40,7 +41,7 @@ class AreaSource(ParametricSeismicSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    code = b'A'
+    code = AREA
     MODIFICATIONS = {
         'adjust_aspect_ratio',
         'set_aspect_ratio',
@@ -156,7 +157,8 @@ class AreaSource(ParametricSeismicSource):
         b_ac = 0.3
         delta_mac = 1.0
         gamma_eff = 0.9185 # Corrected gamma_eff from eq 1.2 of BCHydro AC memo
-        bin_width = 0.1
+        # the job parameter width_of_mfd_bin, 0.1 if not set
+        bin_width = getattr(self, 'width_of_mfd_bin', 0.1)
 
         # Get params from recurRow, preferring bg-prefixed keys (alt3)
         mmax = self.mmax
@@ -170,15 +172,13 @@ class AreaSource(ParametricSeismicSource):
             a_val = math.log10(rate) + bval * ref_mag
             self.mfd = TruncatedGRMFD(
                 min_mag=ref_mag, max_mag=mmax,
-                bin_width=bin_width, a_val=a_val, b_val=bval,
-                )
+                bin_width=bin_width, a_val=a_val, b_val=bval)
         else:
             assert recur_model == "AC"
             self.mfd = AlternativeCharacteristicMFD(
                 min_mag=ref_mag, max_mag=mmax, b_GR=bval, b_AC=b_ac,
                 bin_width=bin_width, gamma=gamma_eff, delta_m_AC=delta_mac,
-                total_rate=rate,
-                )
+                total_rate=rate)
 
         # Piecewise partition above Mmax-1 if a rate_split_bg_frac is active
         bg_frac = getattr(self, 'rate_split_bg_frac', None)
@@ -291,6 +291,8 @@ class AreaSource(ParametricSeismicSource):
                 hypocenter_distribution=self.hypocenter_distribution,
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt._num_ruptures = pt.count_ruptures()
+            if hasattr(self, 'mmax_offset'):
+                pt.mmax_offset = self.mmax_offset
             yield pt
 
     def wkt(self):

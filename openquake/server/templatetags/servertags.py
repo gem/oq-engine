@@ -1,4 +1,5 @@
 from django import template
+from openquake.baselib.general import humanize_number
 
 register = template.Library()
 
@@ -11,22 +12,7 @@ def get_imt(string):
     return string.split('-')[1].rstrip('.png')
 
 
-@register.filter
-def humanize_number(value):
-    """
-    Converts a large number into a human-readable format, e.g., 1000 -> 1K
-    """
-    try:
-        value = float(value)
-    except (ValueError, TypeError):
-        return str(value)
-    if value < 1000:
-        return f'{value:.2f}'
-    if 1000 <= value < 1000000:
-        return f'{value/1000:.2f}K'
-    if 1000000 <= value < 1000000000:
-        return f'{value/1000000:.2f}M'
-    return f'{value/1000000000:.2f}B'
+register.filter(humanize_number)
 
 
 @register.simple_tag()

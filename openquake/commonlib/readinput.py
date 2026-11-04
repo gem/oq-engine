@@ -53,7 +53,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, get_duplicates, check_extension, gettemp,
     AccumDict)
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
@@ -69,6 +69,7 @@ from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures, get_ebrupture)
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
+from openquake.hazardlib.geo.regular_grid import regular_grid
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
@@ -87,19 +88,27 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
+def model_in(word, path):
+    """
+    :returns: True if the 3-character mosaic code word occurs in path
+    """
+    assert len(word) == 3, word
+    return re.search(rf'\b{word}\b', path) is not None
+
+
 def get_country_or_model(job_ini):
     """
     If the path to job_ini contains a recognized country, returns the
     country code or the mosaic code, else the empty string.
     """
     for name, cc in country2code.items():
-        if name in job_ini:
+        if re.search(rf'\b{re.escape(name)}\b', job_ini):
             return cc
     for model in MODELS:
-        if model in job_ini:
+        if model_in(model, job_ini):
             return model
     for model in ALIASES:
-        if model in job_ini:
+        if model_in(model, job_ini):
             return ALIASES[model]
     return ''
 
@@ -368,7 +377,7 @@ def get_model(job_ini):
     model, else the empty string
     """
     for mod in MODELS:
-        if mod in job_ini:
+        if model_in(mod, job_ini):
             return mod
     return ''
 
@@ -411,6 +420,23 @@ def get_params(job_ini, kw={}):
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
+    params = _params_from_cp(cp, base_path, job_ini)
+    try:
+        update(params, kw.items(), base_path)  # override on demand
+    except Exception:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
+    if input_zip:
+        params['inputs']['input_zip'] = os.path.abspath(input_zip)
+    return params
+
+
+def _params_from_cp(cp, base_path, job_ini):
+    """
+    Build a parameters dictionary from an already parsed .ini file,
+    converting the ``<name>_file`` keys into the ``inputs`` subdictionary
+    with absolute paths (see update). Shared by get_params and to_dict.
+    """
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
@@ -429,13 +455,30 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     try:
         update(params, items, base_path)
-        update(params, kw.items(), base_path)  # override on demand
     except Exception:
         print(f'Error in {job_ini}', file=sys.stderr)
         raise
-    if input_zip:
-        params['inputs']['input_zip'] = os.path.abspath(input_zip)
     return params
+
+
+def to_dict(oqparam, **inputs):
+    """
+    Convert an OqParam into a parameters dictionary with the same structure
+    produced by get_params, so it can be fed directly to run_calc without
+    writing a job.ini file on disk. The input files are stored in the
+    'inputs' subdictionary with absolute paths.
+
+    :param oqparam:
+        an OqParam instance
+    :param inputs:
+        optionally override some input files (e.g. exposure='x.xml')
+    :returns:
+        a dictionary of parameters
+    """
+    cp = configparser.ConfigParser(interpolation=None)
+    cp.read_string(oqparam.to_ini(**inputs))
+    base_path = getattr(oqparam, 'base_path', '') or '<in-memory>'
+    return _params_from_cp(cp, base_path, '<in-memory>')
 
 
 def is_fraction(string):
@@ -526,9 +569,12 @@ def get_mesh_exp(oqparam, h5=None):
     """
     exposure = get_exposure(oqparam, h5)
     if oqparam.impact:
+        # the sites are a regular grid enclosing the site model around
+        # the rupture, as required by circulant embedding; the site model
+        # parameters are associated to the grid in base.py
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
-        return mesh, exposure
+        return regular_grid(mesh, oqparam.region_grid_spacing), exposure
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
         return mesh, exposure
@@ -817,15 +863,12 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if h5 and 'site_model' in h5:
+        if oqparam.impact:
+            # the grid is not the site model: the parameters are associated
+            # to the sites in base.py
+            sm = None
+        elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
-        elif oqparam.impact and (
-                    not oqparam.infrastructure_connectivity_analysis):
-            # filter the far away sites
-            rup = get_rupture(oqparam)
-            dist = oqparam.maximum_distance('*')(rup.mag)
-            [expo_hdf5] = oqparam.inputs['exposure']
-            sm = get_site_model_around(expo_hdf5, rup, dist)
         elif (not h5 and 'site_model' in oqparam.inputs and
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
@@ -1111,10 +1154,18 @@ def get_full_lt(oqparam):
     elif ('classical' in oqparam.calculation_mode
           and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
+            # use_rates helps only when computing the mean, i.e. without
+            # quantiles, individual realizations or site labels
+            if oqparam.use_rates:
+                rates = ('use_rates=true is not enough: it works only when '
+                         'computing the mean, i.e. without quantiles, '
+                         'individual realizations or site labels')
+            else:
+                rates = 'or set use_rates=true (only when computing the mean)'
             raise ValueError(
-                'There are too many potential logic tree paths (%d):'
+                'There are too many potential logic tree paths (%d): '
                 'raise `max_potential_paths`, use sampling instead of '
-                'full enumeration, or set use_rates=true ' % p)
+                'full enumeration, %s' % (p, rates))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt
@@ -1148,6 +1199,10 @@ def _check_csm(csm, oqparam, h5):
     csm.gsim_lt.check_imts(oqparam.imtls)
 
     srcs = csm.get_sources()
+    if oqparam.filter_sourcecodes and not srcs:
+        raise RuntimeError(
+            'No sources left after filtering by filter_sourcecodes=%s'
+            % oqparam.filter_sourcecodes)
     check_min_mag(srcs, oqparam.minimum_magnitude)
 
     if h5 and 'sitecol' in h5:
@@ -1162,25 +1217,33 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-def get_composite_source_model(oqparam, dstore=None, apply_unc=True):
+def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
+
+    NB: the uncertainties are not applied, since they are applied in the
+    workers, one set of realizations at a time, see modified_groups
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param dstore:
          an open datastore where to save the source info
-    :param apply_unc:
-         apply the uncertainties
     """
     if 'source_model_logic_tree' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     elif 'source_model' in oqparam.inputs:
         logging.info('Reading %s', oqparam.inputs['source_model'])
     full_lt = get_full_lt(oqparam)
-    csm = source_reader.get_csm(oqparam, full_lt, dstore, apply_unc)
-    _check_csm(csm, oqparam, dstore)
-    oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
+    # the garbage collector is disabled while building and checking the
+    # composite source model, since it would traverse many times the
+    # millions of objects created by _merge_strides, add_bangs,
+    # build_groups, etc. (the unpickling is managed in
+    # parallel.Result.get): in AUS this reduces the time from ~135 to ~90
+    # seconds without increasing the memory
+    with gc_disabled():
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+        _check_csm(csm, oqparam, dstore)
+        oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
 
 
@@ -1235,7 +1298,8 @@ def get_crmodel(oqparam):
     elif 'damage' in oqparam.calculation_mode and limit_states:
         assert oqparam.limit_states == limit_states
 
-    if 'consequence' in oqparam.inputs:
+    if 'consequence' in oqparam.inputs or (
+            riskmodels.get_xml_consequence_files(oqparam.inputs)):
         consdict = read_consdict(oqparam, limit_states, perils)
     else:
         consdict = {}
@@ -1252,22 +1316,25 @@ def read_consdict(oqparam, limit_states, perils):
     if not limit_states:
         raise InvalidFile('Missing fragility functions in %s' %
                           oqparam.inputs['job_ini'])
-    # build consdict of the form consequence_by_tagname -> tag -> array
-    consdict = {}
-    for by, fnames in oqparam.inputs['consequence'].items():
-        if by == 'taxonomy':  # obsolete name
-            by = 'risk_id'
+    # collect (by, fname, dframe) triples, one per consequence source
+    sources = []
+    for by, fnames in oqparam.inputs.get('consequence', {}).items():
         if isinstance(fnames, str):  # single file
             fnames = [fnames]
         # i.e. files collapsed.csv, fatalities.csv, ... with headers like
         # taxonomy,consequence,slight,moderate,extensive
-        dfs = []
         for fname in fnames:
             if os.path.exists(fname):
-                dfs.append(pandas.read_csv(fname))
-        if not dfs:
-            continue
-        df = pandas.concat(dfs)
+                sources.append((by, fname, pandas.read_csv(fname)))
+    # NRML consequence models, i.e. structural_consequence_file = x.xml
+    for fname in riskmodels.get_xml_consequence_files(oqparam.inputs):
+        sources.append(('taxonomy', fname,
+                        _read_xml_consequence(fname, limit_states)))
+    # build consdict of the form consequence_by_tagname -> tag -> array
+    consdict = {}
+    for by, fname, df in sources:
+        if by == 'taxonomy':  # obsolete name
+            by = 'risk_id'
         # NB: consequence files depend on loss_type, unlike fragility files
         if 'taxonomy' in df.columns:  # obsolete name
             df['risk_id'] = df['taxonomy']
@@ -1279,13 +1346,32 @@ def read_consdict(oqparam, limit_states, perils):
         for consequence in df.consequence.unique():
             if consequence not in scientific.KNOWN_CONSEQUENCES:
                 raise InvalidFile('Unknown consequence %s in %s' %
-                                  (consequence, fnames))
+                                  (consequence, fname))
             if by == 'risk_id':  # by is risk_id or taxonomy
                 key = f'{consequence}_by_{by}'
             else:
                 key = by
-            consdict[key] = df[df.consequence == consequence]
+            sub = df[df.consequence == consequence]
+            if key in consdict:  # same consequence from several sources
+                sub = pandas.concat([consdict[key], sub])
+            consdict[key] = sub
     return consdict
+
+
+def _read_xml_consequence(fname, limit_states):
+    """
+    :returns: a DataFrame with columns risk_id, consequence, loss_type,
+        peril and the limit states, read from a NRML consequenceModel
+    """
+    cmodel = nrml.to_python(fname)
+    if list(cmodel.limitStates) != list(limit_states):
+        raise InvalidFile('%s: the limit states %s do not match the '
+                          'fragility ones %s' % (
+                              fname, cmodel.limitStates, limit_states))
+    rows = [[risk_id, 'losses', cmodel.lossCategory, 'groundshaking',
+             *coeffs] for risk_id, coeffs in cmodel.items()]
+    columns = ['risk_id', 'consequence', 'loss_type', 'peril']
+    return pandas.DataFrame(rows, columns=columns + list(limit_states))
 
 
 def get_exposure(oqparam, h5=None):
@@ -1323,7 +1409,8 @@ def get_exposure(oqparam, h5=None):
                 # used in the tests
                 loss_types = f['crmAfrica'].attrs['loss_types']
                 oq.all_cost_types = loss_types
-                oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
+                # use oq.loss_types to include the occupants_<time_event>
+                oq.minimum_asset_loss = {lt: 0 for lt in oq.loss_types}
     else:
         exposure = asset.Exposure.read_all(
             oq.inputs['exposure'], oq.calculation_mode,
@@ -1339,6 +1426,13 @@ def concat_if_different(values):
     # If all values are identical, return the single unique value,
     # otherwise join with "|"
     return '|'.join(unique_values)
+
+
+def get_interdependencies(oqparam):
+    """
+    Read the interdependencies.csv file used in composite infrastructure risk calculations
+    """
+    return pandas.read_csv(oqparam.inputs['interdependencies'])
 
 
 def read_df(fname, lon, lat, id, duplicates_strategy='error'):

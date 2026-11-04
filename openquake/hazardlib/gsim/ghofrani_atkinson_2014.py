@@ -34,6 +34,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _get_distance_term(C, rrup, backarc):
     """
     Returns the distance scaling term, which varies depending on whether
@@ -175,12 +178,12 @@ class GhofraniAtkinson2014(GMPE):
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             else:
-                mean[m] = np.log((10.0 ** (imean)))
-            sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))
-            tau[m] = np.log(10.0 ** C["tau"])
-            phi[m] = np.log(10.0 ** C["sigma"])
+                mean[m] = imean * LOG10
+            sig[m] = np.sqrt(C['tau'] ** 2. + C['sigma'] ** 2.) * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = C['sigma'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        c0         a        b         c1         c2       c3   sig_init       af   sigma     tau   sig_tot

@@ -23,11 +23,13 @@ Module exports :class:'AmbraseysEtAl2005'
 import numpy as np
 from scipy.constants import g
 
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim import utils
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_distance_scaling(C, rjb, mag):
@@ -67,7 +69,7 @@ def _get_site_type_dummy_variables(vs30):
     softSoil[idx] = 1.0
     # Stiff Soil; 360 < Vs30 <= 750 m/s.
     idx = (vs30 > 360) & (vs30 <= 750)
-    stifSoil[idx] = 1.0    
+    stifSoil[idx] = 1.0
     return softSoil, stifSoil
 
 def _get_mechanism(C, ctx):
@@ -79,25 +81,30 @@ def _get_mechanism(C, ctx):
     """
     fO, fN, fT = utils.get_fault_type_dummy_variables(ctx)
     return (C['a8'] * fN + C['a9'] * fT + C['a10'] * fO)
-    
+
 class AmbraseysEtAl2005(GMPE):
     """
     Implements the horizontal PGA and SA GMPE of "N.N. AMBRASEYS1, J. DOUGLAS1, S.K. SARMA and
     P.M. SMIT (2005): Equations for the Estimation of Strong Ground Motions from Shallow Crustal
-    Earthquakes Using Data from Europe and the Middle East: Horizontal Peak Ground Acceleration and 
+    Earthquakes Using Data from Europe and the Middle East: Horizontal Peak Ground Acceleration and
     Spectral Acceleration, Bulletin of Earthquake Engineering: 3:1–53, DOI 10.1007/s10518-005-0183-0.
     """
     #: The GMPE is derived from shallow earthquakes in EU and Middle-east
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
-    #: Supported intensity measure types are are peak ground acceleration and period <= 2.5 (s)
+    #: Supported intensity measure types are are peak ground acceleration and
+    #: period <= 2.5 (s)
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component the larger horizontal component,
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation types are total, inter- and intra- events.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+    const.StdDev.TOTAL,
+    const.StdDev.INTER_EVENT,
+     const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -123,17 +130,17 @@ class AmbraseysEtAl2005(GMPE):
                      _get_mechanism(C, ctx))
             # Original GMPE returns log10 acceleration in m/s/s
             # Converts to natural logarithm of g
-            mean[m] = np.log((10.0 ** (imean)) / g)
+            mean[m] = imean * LOG10 - np.log(g)
 
 
             # Return stddevs in terms of natural log scaling
             stdevIntra = C['Sig1a'] - np.multiply(C['Sig1b'],ctx.mag)
             stdevInter = C['Sig2a'] - np.multiply(C['Sig2b'],ctx.mag)
-            sig[m] = np.log(10.0 ** np.sqrt(np.add(np.power(stdevIntra,2), np.power(stdevInter,2))))
-            tau[m] = np.log(10.0 ** stdevInter)
-            phi[m] = np.log(10.0 ** stdevIntra)
+            sig[m] = np.sqrt(stdevIntra ** 2 + stdevInter ** 2) * LOG10
+            tau[m] = stdevInter * LOG10
+            phi[m] = stdevIntra * LOG10
 
-    #: Table II        
+    #: Table II
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT	    a1	     a2	     a3	     a4	    a5	    a6	    a7	     a8	     a9	     a10	Sig1a	Sig1b	Sig2a	Sig2b
     PGA	    2.522	-0.142	-3.184	 0.314	7.600	0.137	0.050	-0.084	 0.062	-0.044	0.665	0.065	0.222	0.022
@@ -204,7 +211,7 @@ class AmbraseysEtAl2005Vertical(AmbraseysEtAl2005):
     """
     Implements the vertical PGA and SA GMPE of "N.N. AMBRASEYS1, J. DOUGLAS1, S.K. SARMA and
     P.M. SMIT (2005): Equations for the Estimation of Strong Ground Motions from Shallow Crustal
-    Earthquakes Using Data from Europe and the Middle East: Vertical Peak Ground Acceleration and 
+    Earthquakes Using Data from Europe and the Middle East: Vertical Peak Ground Acceleration and
     Spectral Acceleration, Bulletin of Earthquake Engineering: 3:55–73, DOI 10.1007/s10518-005-0186-x.
     """
 

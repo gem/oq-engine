@@ -23,10 +23,12 @@ Module exports :class:'FukushimaTanaka1990' and :class:
 import numpy as np
 from scipy.constants import g
 
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_distance_scaling(C, rrup, mag):
@@ -54,7 +56,7 @@ def _compute_site_scaling(vs30, mean):
     site_factor[idx] = 1.4
     idx = vs30 > 760.0
     site_factor[idx] = 0.6
-    return np.log(np.exp(mean) * site_factor)
+    return mean + np.log(site_factor)
 
 
 class FukushimaTanaka1990(GMPE):
@@ -105,12 +107,12 @@ class FukushimaTanaka1990(GMPE):
                      _compute_distance_scaling(C, ctx.rrup, ctx.mag))
             # Original GMPE returns log10 acceleration in cm/s/s
             # Converts to natural logarithm of g
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
             if self.REQUIRES_SITES_PARAMETERS:  # in subclass
                 mean[m] = _compute_site_scaling(ctx.vs30, mean[m])
 
             # Convert from common logarithm to natural logarithm
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT     c1      c2     c3         c4    c5   sigma

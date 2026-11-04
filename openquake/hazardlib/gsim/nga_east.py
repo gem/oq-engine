@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ import os
 import numpy as np
 from copy import deepcopy
 from scipy.stats import chi2
+
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.gmpe_table import (
     GMPETable, interp_table, _get_mean)
@@ -67,15 +68,13 @@ def _at_percentile(tau, var_tau, percentile):
 # Mean tau values from the global model - Table 5.1
 GLOBAL_TAU_MEAN = {
     "PGV": {"tau1": 0.3733, "tau2": 0.3639, "tau3": 0.3434, "tau4": 0.3236},
-    "SA": {"tau1": 0.4518, "tau2": 0.4270, "tau3": 0.3863, "tau4": 0.3508}
-    }
+    "SA": {"tau1": 0.4518, "tau2": 0.4270, "tau3": 0.3863, "tau4": 0.3508}}
 
 
 # Standard deviation of tau values from the global model - Table 5.1
 GLOBAL_TAU_SD = {
     "PGV": {"tau1": 0.0558, "tau2": 0.0554, "tau3": 0.0477, "tau4": 0.0449},
-    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491}
-}
+    "SA": {"tau1": 0.0671, "tau2": 0.0688, "tau3": 0.0661, "tau4": 0.0491}}
 
 
 # Mean tau values from the CENA constant-tau model
@@ -89,15 +88,13 @@ CENA_CONSTANT_TAU_SD = {"PGV": {"tau": 0.0554}, "SA": {"tau": 0.0688}}
 # Mean tau values from the CENA tau model
 CENA_TAU_MEAN = {
     "PGV": {"tau1": 0.3477, "tau2": 0.3281, "tau3": 0.3092},
-    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064}
-    }
+    "SA": {"tau1": 0.3730, "tau2": 0.3375, "tau3": 0.3064}}
 
 
 # Standard deviation of tau values from the CENA tau model
 CENA_TAU_SD = {
     "PGV": {"tau1": 0.0554, "tau2": 0.0477, "tau3": 0.0449},
-    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491}
-    }
+    "SA": {"tau1": 0.0688, "tau2": 0.0661, "tau3": 0.0491}}
 
 
 def global_tau(imt, mag, params):
@@ -170,8 +167,7 @@ TAU_SETUP = {
     "cena": {"MEAN": CENA_TAU_MEAN, "STD": CENA_TAU_SD},
     "cena_constant": {"MEAN": CENA_CONSTANT_TAU_MEAN,
                       "STD": CENA_CONSTANT_TAU_SD},
-    "global": {"MEAN": GLOBAL_TAU_MEAN, "STD": GLOBAL_TAU_SD}
-    }
+    "global": {"MEAN": GLOBAL_TAU_MEAN, "STD": GLOBAL_TAU_SD}}
 
 # Gather tau model implementation functions into dictionary
 TAU_EXECUTION = {
@@ -280,11 +276,13 @@ pga     0.4608   0.0238
 """)
 
 
-def get_phi_ss_at_quantile(phi_model, quantile):
+def get_phi_ss_at_quantile(phi_model, quantile, logratio=True):
     """
     Returns the phi_ss values at the specified quantile as an instance of
     `class`:: openquake.hazardlib.gsim.base.CoeffsTable - applies to the
     magnitude-dependent cases
+
+    Use logratio=False for linear interpolation between spectral periods.
     """
     # Setup SA coeffs - the backward compatible Python 2.7 way
     coeffs = deepcopy(phi_model.sa_coeffs)
@@ -301,7 +299,7 @@ def get_phi_ss_at_quantile(phi_model, quantile):
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
                                     quantile)}
-    return CoeffsTable.fromdict(coeffs)
+    return CoeffsTable.fromdict(coeffs, logratio=logratio)
 
 
 def get_phi_s2ss_at_quantile(phi_model, quantile):
@@ -390,18 +388,27 @@ def _get_fv(C_LIN, vs30s, f760, CONSTANTS):
 def get_fnl(C_NL, pga_rock, vs30, period, us23=None):
     """
     Returns the nonlinear mean amplification according to equation 2
-    of Hashash et al. (2019)
+    of Hashash et al. (2020). If us23 is True, apply the US 2023 NSHM
+    form of the nonlinear term: use 0.5*f4 + 0.5*f4_mod coefficients,
+    floor Vs30 at 200 m/s and cap pga_rock at 1.0 g (the latter two
+    are the applicability limits imposed by the US 2023 NSHM revisions
+    described in Powers et al., Earthquake Spectra, 2026).
     """
     if period < 0.4:
         vref = 760.
     else:
         vref = 3000.
+    if us23:
+        # Floor Vs30 at 200 m/s and cap PGA-rock at 1.0 g
+        # for the nonlinear term
+        vs30 = np.maximum(vs30, 200.)
+        pga_rock = np.minimum(pga_rock, 1.)
     f_nl = np.zeros(vs30.shape)
     f_rk = np.log((pga_rock + C_NL["f3"]) / C_NL["f3"])
     idx = vs30 < C_NL["Vc"]
     if np.any(idx):
         # f2 term of the mean nonlinear amplification model
-        # according to equation 3 of Hashash et al., (2019)
+        # according to equation 3 of Hashash et al., (2020)
         c_vs = np.copy(vs30[idx])
         c_vs[c_vs > vref] = vref
         if us23: # US 2023 NSHMP
@@ -475,7 +482,7 @@ def get_hard_rock_mean(self, mag, ctx, imt):
 def get_site_amplification(self, imt, pga_r, vs30s, us23=False):
     """
     Returns the sum of the linear (Stewart et al., 2019) and non-linear
-    (Hashash et al., 2019) amplification terms
+    (Hashash et al., 2020) amplification terms
     """
     # Get the coefficients for the IMT
     C_LIN = COEFFS_LINEAR[imt]
@@ -631,7 +638,7 @@ class NGAEastGMPE(GMPETable):
     NGA East ground motion models.
 
     The site amplification model is developed using the model described by
-    Stewart et al. (2019) and Hashash et al. (2019). The model contains a
+    Stewart et al. (2019) and Hashash et al. (2020). The model contains a
     linear and a non-linear component of amplification.
 
     The linear model is described in Stewart et al., (2017) and Stewart et al
@@ -649,7 +656,7 @@ class NGAEastGMPE(GMPETable):
     and Eastern North America", Earthquake Spectra, in press
 
     The nonlinear model is described in Hashash et al. (2017) and Hashash et
-    al. (2019), with the latter taken as the authoritarive source where
+    al. (2020), with the latter taken as the authoritarive source where
     differences arise:
 
     Hashash, Y. M. A., Harmon, J. A., Ilhan, O., Parker, G. and Stewart, J. P.
@@ -658,9 +665,9 @@ class NGAEastGMPE(GMPETable):
     Earthquake Engineering Research Center, University of California, Berkeley.
 
     Hashash, Y. M. A., Ilhan, O., Harmon, J. A., Parker, G. A., Stewart, J. P.
-    Rathje, E. M., Campbell, K. W., and Silva, W. J. (2019) "Nonlinear site
+    Rathje, E. M., Campbell, K. W., and Silva, W. J. (2020) "Nonlinear site
     amplification model for ergodic seismic hazard analysis in Central and
-    Eastern North America", Earthquake Spectra, in press
+    Eastern North America", Earthquake Spectra
 
     Note that the uncertainty provided in this model is treated as an
     epistemic rather than aleatory variable. As such there is no modification

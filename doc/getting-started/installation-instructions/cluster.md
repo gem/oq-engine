@@ -105,6 +105,20 @@ need to install anything on the worker nodes except Python.
 
 ## OpenQuake Engine 'master' node configuration File
 
+```{warning}
+The `[dbserver]` section of `openquake.cfg` does not exist anymore.
+Starting from version 3.27 its keys live in the `[server]` section:
+
+- `host`, `receiver_host` and `receiver_ports` keep their names;
+- `file` has been renamed `dbfile`;
+- the `port` key has been removed;
+- the `oq dbserver` command and the DbServer daemon have been removed.
+
+Versions up to 3.26, including the LTS release 3.23, still use the
+`[dbserver]` section with the `file` key, so the configuration files
+must be updated when upgrading.
+```
+
 ### Enable zmq distribution
 
 The following file (on all nodes) should be modified to enable
@@ -117,7 +131,7 @@ The following file (on all nodes) should be modified to enable
 # enable celery only if you have a cluster
 oq_distribute = zmq
 
-[dbserver]
+[server]
 # address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
@@ -136,9 +150,6 @@ engine will automatically start and stop zmq processes on the worker
 nodes at each new calculation, *provided the user openquake has ssh
 access to the workers*.  Please note that you must list explicitly the
 workers that you want to use.
-
-NB: when using the zmq mechanism you should not touch the parameter
-`serialize_jobs` and keep it at its default value of `true`.
 
 ### Configuring the WebUI service
 

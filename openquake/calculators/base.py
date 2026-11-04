@@ -42,9 +42,11 @@ from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
 from openquake.hazardlib.amp_lt import AmplificationLogicTree
@@ -89,7 +91,7 @@ def get_aelo_changelog():
     """
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
-    if 'pytest' in sys.argv[0]:
+    if 'pytest' in sys.argv[0] or os.environ.get('OQ_TEST'):
         mosaic_dir = mosaic.__path__[0]  # qa_tests_data/mosaic
     else:
         mosaic_dir = config.directory.mosaic_dir
@@ -519,7 +521,8 @@ def check_time_event(oqparam, occupancy_periods):
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event != 'avg' and time_event not in occupancy_periods:
+    if time_event not in (None, 'avg') and (
+            time_event not in occupancy_periods):
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, oqparam.inputs['job_ini'],
@@ -599,6 +602,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: True if there are less than max_sites_disagg
         """
+        if self.sitecol is None:
+            # preclassical without sites: there is nothing to disaggregate
+            return True
         return len(self.sitecol.complete) <= self.oqparam.max_sites_disagg
 
     def check_overflow(self):
@@ -615,13 +621,12 @@ class HazardCalculator(BaseCalculator):
                 and ('classical' in oq.calculation_mode or
                      'disaggregation' in oq.calculation_mode)):
             logging.info(
-                'You are not using the pointsource_distance approximation:\n'
-                'https://docs.openquake.org/oq-engine/advanced/general.html#'
-                'pointsource-distance')
+                'You are not using the pointsource_distance approximation')
         elif 'classical' in oq.calculation_mode:
             if oq.ps_grid_spacing:
-                logging.info('Using pointsource_distance=%s + %d',
-                             oq.pointsource_distance, int(oq.ps_grid_spacing))
+                logging.info('Using pointsource_distance=%s and '
+                             'ps_grid_spacing=%s', oq.pointsource_distance,
+                             oq.ps_grid_spacing)
             else:
                 logging.info('Using pointsource_distance=%s',
                              oq.pointsource_distance)
@@ -794,9 +799,9 @@ class HazardCalculator(BaseCalculator):
             for name in (
                 'csm param sitecol assetcol crmodel realizations max_gb '
                 'max_weight amplifier policy_df treaty_df '
-                'full_lt exported trt_rlzs gids'
+                'full_lt exported trt_rlzs gids interdep_df'
             ).split():
-                if hasattr(calc, name):
+                if hasattr(calc, name) and name not in self.__dict__:
                     setattr(self, name, getattr(calc, name))
         else:
             with self.monitor('importing inputs', measuremem=True):
@@ -1057,7 +1062,8 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (datastore.get_oq(self.datastore.parent)
                      if self.datastore.parent else None)
-        if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        # if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
+        if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['exposure'] = exposure
@@ -1092,6 +1098,10 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
             self._read_no_exposure(haz_sitecol)
+        if hasattr(self, 'assetcol'):
+            # the occupants are computed only for the exposure time events
+            oq.set_time_events(self.assetcol.occupancy_periods)
+            self.datastore['oqparam'] = oq
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 oq.ground_motion_fields and self.N > 1000 and
                 len(oq.min_iml) == 0):
@@ -1104,8 +1114,9 @@ class HazardCalculator(BaseCalculator):
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
                 raise ValueError('Missing exposure both in hazard and risk!'
                                  f' [hc_id={oq.hazard_calculation_id}]')
-            if (oq_hazard.time_event != 'avg' and
-                    oq_hazard.time_event != oq.time_event):
+            # None or avg in the hazard mean that all the times are stored
+            if oq.time_event and oq_hazard.time_event not in (
+                    None, 'avg', oq.time_event):
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
@@ -1142,6 +1153,48 @@ class HazardCalculator(BaseCalculator):
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
+            # read interpendencies if any
+            if 'interdependencies' in oq.inputs: # we are in the child
+                self.interdep_df = readinput.get_interdependencies(oq)
+                
+                # check if source_damage_state is valid
+                valid_states = set(self.crmodel.damage_states) | {'non_operational'}
+                interdep_states = self.interdep_df.source_damage_state.unique()
+                for state in interdep_states:
+                    if state not in valid_states:
+                        raise InvalidFile(
+                            f'{oq.inputs["interdependencies"]}\n'
+                            f'source_damage_state={state!r} not in the fragili'
+                            f'ty functions {self.crmodel.damage_states}')
+                
+                # check if source_asset_ids exist
+                parent_assetcol = self.datastore.parent['assetcol']
+                asset2id = {
+                    general.decode(asset_id): i
+                    for i, asset_id in enumerate(parent_assetcol['id'])
+                }
+                interdep_assets = set(self.interdep_df.source_asset_id.unique())
+                missing_assets = interdep_assets - set(asset2id)
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'source_asset_id(s) {sorted(missing_assets)!r} do not'
+                        f' exist in the source exposure model')                
+                
+                # check if target_asset_ids exist
+                interdep_assets_child = set(self.interdep_df.target_asset_id.unique())
+                target_asset_ids = {
+                    general.decode(asset_id)
+                    for asset_id in self.assetcol['id']
+                }
+                missing_assets = interdep_assets_child - target_asset_ids
+                if missing_assets:
+                    raise InvalidFile(
+                        f'{oq.inputs["interdependencies"]}\n'
+                        f'target_asset_id(s) {sorted(missing_assets)!r} do not exist '
+                        f'in the target exposure model'
+                    )
+                
     def _read_risk3(self):
         oq = self.oqparam
         station_sids = set()
@@ -1163,6 +1216,16 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else ASSOC_DIST)
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
+                if oq.impact:
+                    # the grid sites have no parameters: add the site model
+                    # ones and the required ones, both to the sitecol and to
+                    # the complete sitecol
+                    params = set(sm.dtype.names) | set(oq.req_site_params)
+                    for name in sorted(params):
+                        if name in site.site_param_dt:
+                            dt = site.site_param_dt[name]
+                            self.sitecol.add_col(name, dt)
+                            self.sitecol.complete.add_col(name, dt)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq, oq.req_site_params)
@@ -1175,7 +1238,7 @@ class HazardCalculator(BaseCalculator):
                             or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode,
                                        station_sids=station_sids)
-                    if 'station_data' in oq.inputs:
+                    if 'station_data' in oq.inputs or oq.impact:
                         # the complete sitecol is required
                         self.sitecol.complete.assoc(sm, assoc_dist, mode,
                                                     station_sids=station_sids)
@@ -1191,6 +1254,15 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.calculate_z1pt0()
                 if 'z2pt5' in names:
                     self.sitecol.calculate_z2pt5()
+
+            # NaN check on core params after final site-model association:
+            # catches silent zero hazard from missing z1pt4 and similar
+            self.sitecol.check_nan(
+                [p for p in site.CORE_SITE_PARAMS
+                 if p in oq.req_site_params])
+            # check the site parameters are in the range of the GSIMs
+            gsims = readinput.get_gsim_lt(oq).values.values()
+            check_sites(sum(gsims, []), self.sitecol)
 
             self.datastore['sitecol'] = self.sitecol
             if self.sitecol is not self.sitecol.complete:
@@ -1340,7 +1412,7 @@ class HazardCalculator(BaseCalculator):
                 else:  # read the csm from the parent calculation
                     csm = self.datastore.parent['_csm']
                     csm.full_lt = self.datastore.parent['full_lt'].init()
-                oq.postproc_args['csm'] = csm
+                oq.postproc_args = {**oq.postproc_args, 'csm': csm}
             with self._monitor(oq.postproc_func, measuremem=True):
                 func(self.datastore, **oq.postproc_args)
 
@@ -1545,9 +1617,15 @@ def import_ruptures_hdf5(h5, fnames):
     for fileno, fname in enumerate(fnames):
         with hdf5.File(fname, 'r') as f:
             oq = f['oqparam']
+            if oq.mosaic_model:
+                # the model index goes in the high bits, so that the rupture
+                # IDs of different models cannot collide
+                shift = numpy.int64(mosaic_index(oq.mosaic_model)) << 55
+            else:
+                shift = offset
             events = f['events'][:]
             events['id'] += E
-            events['rup_id'] += offset
+            events['rup_id'] += shift
             if fileno == 0:  # first time
                 h5.create_dataset(
                     'events', (0,), events.dtype, maxshape=(None,), chunks=True,
@@ -1556,7 +1634,13 @@ def import_ruptures_hdf5(h5, fnames):
             arr = f['rupgeoms'][:]
             h5.save_vlen('rupgeoms', list(arr))
             rup = f['ruptures'][:]
-            rup['id'] += offset
+            if oq.mosaic_model:
+                # the IDs of a model must fit in the 55 low bits, i.e.
+                # the source index in the 25 bits above the 30 bits of
+                # the counter within the source
+                assert rup['id'].max() < 2**55, rup['id'].max()
+                assert rup['source_id'].max() < 2**25, rup['source_id'].max()
+            rup['id'] += shift
             rup['geom_id'] += offset
             rup['e0'] += E
             E += len(events)

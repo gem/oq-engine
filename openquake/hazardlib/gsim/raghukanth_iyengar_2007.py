@@ -17,13 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.raghukanth_iyengar_2007`
-exports
-:class:`RaghukanthIyengar2007`
-:class:`RaghukanthIyengar2007KoynaWarna`
-:class:`RaghukanthIyengar2007Southern`
-:class:`RaghukanthIyengar2007WesternCentral`
+Module exports :class:`RaghukanthIyengar2007`
+               :class:`RaghukanthIyengar2007KoynaWarna`
+               :class:`RaghukanthIyengar2007Southern`
+               :class:`RaghukanthIyengar2007WesternCentral`
 """
 import warnings
 import numpy as np
@@ -31,6 +28,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
 
 CONSTS = {'ref_mag': 6., 'vs_bedrock': 3600.}
 
@@ -72,16 +70,16 @@ def _get_site_coeffs(NEHRP, NEHRP_UPPER, sites, imt):
         If vs30 is below limit for site class D, since "E- and F-type
         sites [...] are susceptible for liquefaction and failure." p. 205.
     """
-
     site_classes = get_nehrp_classes(NEHRP_UPPER, sites)
     is_rock = is_bedrock(sites)
 
     if 'E' in site_classes:
         warnings.warn('Site class E and F not supported', UserWarning)
 
-    a_1 = np.nan*np.ones_like(sites.vs30)
-    a_2 = np.nan*np.ones_like(sites.vs30)
-    sigma = np.nan*np.ones_like(sites.vs30)
+    dtype = np.result_type(sites.vs30, np.nan)
+    a_1 = np.full_like(sites.vs30, np.nan, dtype=dtype)
+    a_2 = np.full_like(sites.vs30, np.nan, dtype=dtype)
+    sigma = np.full_like(sites.vs30, np.nan, dtype=dtype)
     for key in NEHRP:
         indices = (site_classes == key) & ~is_rock
         a_1[indices] = NEHRP[key][imt]['a1']
@@ -407,16 +405,14 @@ class RaghukanthIyengar2007(GMPE):
     2.500  0.37  0.68   0.15
     3.000  0.13  0.60   0.13
     4.000  0.12  0.44   0.15
-    """),
-    }
+    """),}
 
     NEHRP_VS30_UPPER_BOUNDS = {
         'A': np.inf,
         'B': 1500.,
         'C': 760.,
         'D': 360.,
-        'E': 180.,
-        }
+        'E': 180.,}
 
 
 class RaghukanthIyengar2007KoynaWarna(RaghukanthIyengar2007):

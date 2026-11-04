@@ -18,6 +18,7 @@
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 
+
 COEFFS_FS_ROCK_SWISS05 = CoeffsTable(sa_damping=5, table="""\
        IMT    k_adj           a1              a2              b1              b2              Rm             phi_11     phi_21  C2      Mc1     Mc2     Rc11        Rc21        mean_phi_ss
        pga    0.893272000     1.642085E+00    1.833001E+00    1.000000E+00    0.000000E+00    1.000000E+09   0.58000    0.47000 0.35000 5.00000 7.00000 16.00000    36.00000    0.46

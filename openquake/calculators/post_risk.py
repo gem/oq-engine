@@ -328,7 +328,6 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     """
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
-    L = len(oq.loss_types)
     weights = base.get_weights(oq, dstore)
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
@@ -354,9 +353,9 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
             acc['rlz_id'].append(rlz_id)
             acc['loss_id'].append(loss_id)
             if dmgs:
-                # infer the number of buildings in nodamage state
+                # Already grouped by loss type: average over events only.
                 ndamaged = sum(df[col].sum() for col in dmgs)
-                dmg0 = aggnumber[agg_id] - ndamaged / (ne * L)
+                dmg0 = aggnumber[agg_id] - ndamaged / ne
                 assert dmg0 >= 0, dmg0
                 acc['dmg_0'].append(dmg0)
             for col in columns:
@@ -366,7 +365,10 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 if oq.quantiles and not col.startswith('dmg_'):
                     ls, ws = quantiles[agg_id, loss_id]
                     ls.extend(sorted_losses)
-                    ws.extend([weights[rlz_id]] * len(sorted_losses))
+                    weight = weights[rlz_id]
+                    if oq.calculation_mode == 'scenario_risk':
+                        weight /= ne
+                    ws.extend([weight] * len(sorted_losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -379,7 +381,17 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     out = general.AccumDict(accum=[])
     if quantiles:
         for (agg_id, loss_id), (losses, ws) in quantiles.items():
-            qs = weighted_quantiles(oq.quantiles, losses, ws)
+            if oq.calculation_mode == 'scenario_risk':
+                # Each GMF is one equally weighted simulation within its rlz.
+                order = numpy.argsort(losses)
+                losses = numpy.asarray(losses)[order]
+                qweights = numpy.asarray(ws)[order]
+                cweights = qweights.cumsum()
+                indices = numpy.searchsorted(
+                    cweights, numpy.asarray(oq.quantiles) * cweights[-1])
+                qs = losses[numpy.minimum(indices, len(losses) - 1)]
+            else:
+                qs = weighted_quantiles(oq.quantiles, losses, ws)
             out['agg_id'].append(agg_id)
             out['loss_id'].append(loss_id)
             for q, qvalue in zip(oq.quantiles, qs):
@@ -526,6 +538,8 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     Compute losses and loss curves starting from an event loss table.
     """
+    result = None  # set by the postrisk_func
+
     def pre_execute(self):
         oq = self.oqparam
         ds = self.datastore
@@ -582,15 +596,16 @@ class PostRiskCalculator(base.RiskCalculator):
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in general.split_in_blocks(
                            self.policy_df, ct)]
-            self.datastore.swmr_on()
-            smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
-                                    h5=self.datastore.hdf5)
-            rbp = pandas.concat(list(smap))
+            with self.datastore.reopen('r'):  # read-only while in parallel
+                smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
+                                        h5=self.datastore, perf='memory')
+                rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
                 raise ValueError('No data in risk_by_event for %r' % lt)
             rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
-            self.datastore.create_df('reinsurance_by_policy', rbp)
-            self.datastore.create_df('reinsurance-risk_by_event', rbe)
+            with self.datastore.reopen('a'):
+                self.datastore.create_df('reinsurance_by_policy', rbp)
+                self.datastore.create_df('reinsurance-risk_by_event', rbe)
 
         if eff_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
@@ -719,7 +734,7 @@ class PostRiskCalculator(base.RiskCalculator):
             mod = getattr(postrisk, modname)
             func = getattr(mod, funcname)
             with self._monitor(oq.postrisk_func, measuremem=True):
-                func(self.datastore, **oq.postrisk_args)
+                self.result = func(self.datastore, **oq.postrisk_args)
 
 
 def post_aggregate(calc_id: int, aggregate_by):

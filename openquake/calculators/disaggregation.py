@@ -30,7 +30,8 @@ from openquake.baselib.general import (
 from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import (
+    read_cmakers, read_ctx_by_grp, read_core_trt_smrs)
 from openquake.commonlib import util
 from openquake.calculators import base, getters
 
@@ -47,7 +48,7 @@ F32 = numpy.float32
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                   amplifier, monitor):
+                   amplifier, gid_by_rlz, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -79,7 +80,8 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     out = []
     for site in sitecol:
         try:
-            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges)
+            dis = disagg.Disaggregator([ctxt], site, cmaker, bin_edges,
+                                       gid_by_rlz)
         except disagg.FarAwayRupture:
             continue
         if amplifier is not None:
@@ -119,14 +121,25 @@ def output_dict(shapedic, disagg_outputs, Z):
     return dic
 
 
+def gids_by_rlz(ctx, gid_to_rlzs):
+    """Map realization IDs to context gids available in an array."""
+    if not gid_to_rlzs or 'gid' not in (ctx.dtype.names or ()):
+        return None
+    out = {}
+    for gid in numpy.unique(ctx.gid):
+        for rlz in gid_to_rlzs.get(int(gid), ()):
+            out.setdefault(int(rlz), []).append(int(gid))
+    return out
+
+
 def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-           amplifier):
+           amplifier, gid_by_rlz):
     mags = list(numpy.unique(ctxt.mag))
     logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
                   len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
                   shortlist(mags))
     smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
-                 amplifier))
+                 amplifier, gid_by_rlz))
 
 
 def check_memory(N, Z, shape8D):
@@ -217,9 +230,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                         # reshape mean (N, M, L1) -> (N, L) with N=1
                         mean = mgetter.get_fast_mean().array.reshape((1, -1))
                     else:
+                        # build_stat_curve returns an array of shape (L, 1)
                         mean = getters.build_stat_curve(
                             hcurve, oq.imtls, stats.mean_curve,
-                            full_lt.gsim_lt.wget)
+                            full_lt.gsim_lt.wget).reshape((1, -1))
                     # mean has shape (1, L)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
@@ -261,6 +275,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         return self.compute()
 
     def _submit_all(self, smap, cmakers, ctx_by_grp, src_mutex_by_grp):
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         # compute the total weight of the contexts and the maxsize
         ct = self.oqparam.concurrent_tasks or 1
         totweight = sum(cmakers[grp_id].Z * len(ctx)
@@ -271,8 +287,18 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
+        gid_to_rlzs = {}
+        if 'core_trt_smrs' in dstore:
+            full_lt = dstore['full_lt'].init()
+            core_trt_smrs = read_core_trt_smrs(dstore)
+            for trt_smrs, gids in zip(
+                    core_trt_smrs, full_lt.get_gids(core_trt_smrs)):
+                rlzs = full_lt.get_rlzs_by_gsim(trt_smrs).values()
+                gid_to_rlzs[int(gids[0])] = numpy.concatenate(list(rlzs))
+
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
+            gid_by_rlz = gids_by_rlz(ctxt, gid_to_rlzs)
             src_mutex = src_mutex_by_grp.get(grp_id, {})
             rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
@@ -294,7 +320,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
-                       self.bin_edges, src_mutex, rwdic, self.amplifier)
+                       self.bin_edges, src_mutex, rwdic, self.amplifier,
+                       gid_by_rlz)
                 continue
 
             # split by tiles
@@ -307,11 +334,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                             ctx, self.bin_edges[0]).values():
                         submit(smap, self.datastore, c, tile, cmaker,
                                self.bin_edges, src_mutex, rwdic,
-                               self.amplifier)
+                               self.amplifier, gid_by_rlz)
                 elif len(ctx):
                     # see case_multi in the oq-risk-tests
                     submit(smap, self.datastore, ctx, tile, cmaker,
-                           self.bin_edges, src_mutex, rwdic, self.amplifier)
+                           self.bin_edges, src_mutex, rwdic, self.amplifier,
+                           gid_by_rlz)
 
     def compute(self):
         """
@@ -337,23 +365,24 @@ class DisaggregationCalculator(base.HazardCalculator):
         ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        # IMPORTANT!! we rely on the fact that the classical part
-        # of the calculation stores the ruptures in chunks of constant
-        # grp_id, therefore it is possible to build (start, stop) slices;
-        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
-        # that would break the ordering of the indices causing an incredibly
-        # worse performance, but visible only in extra-large calculations!
-
-        self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp)
         s = self.shapedic
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
         check_memory(self.N, self.Z, shape8D)
         acc = AccumDict(accum=numpy.zeros(shape8D))
         # NB: a lot of memory can go in this AccumDict, please reduce the bins
-        results = smap.reduce(self.agg_result, acc)
+        with self.datastore.reopen('r'):  # read-only in the parallel phase
+            smap = parallel.Starmap(
+                compute_disagg, h5=self.datastore, perf='memory')
+            # IMPORTANT!! we rely on the fact that the classical part
+            # of the calculation stores the ruptures in chunks of constant
+            # grp_id, therefore it is possible to build (start, stop) slices;
+            # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
+            # that would break the ordering of the indices causing an
+            # incredibly worse performance, but visible only in extra-large
+            # calculations!
+            self._submit_all(smap, cmakers, ctx_by_grp, src_mutex_by_grp)
+            results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 
     def agg_result(self, acc, results):

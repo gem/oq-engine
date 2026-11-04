@@ -23,15 +23,18 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
 import numpy as np
-
 from scipy import interpolate
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z1pt0_usgs_basin_scaling
 
+
 METRES_PER_KM = 1000.
+DISTANCES_REGIONAL_JPN = (30., 50., 80.)
+REFERENCE_MAGNITUDE = 8.5
 
 #: equation constants (that are IMT independent)
 CONSTS = {
@@ -41,19 +44,18 @@ CONSTS = {
     # h1, h2, h3 specified at page 1040 (top)
     'h1': +0.25,
     'h2': +1.50,
-    'h3': -0.75
-    }
+    'h3': -0.75}
 
-# CyberShake basin adjustments for ASK14 (only applied above 
+# CyberShake basin adjustments for ASK14 (only applied above
 # 1.9 seconds so we don't provide values listed below 2.0 s)
 # Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/ASK14.csv?ref_type=heads
 COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
-IMT   a44cy    a45cy                      
-2.0   0.048    0.114     
+IMT   a44cy    a45cy
+2.0   0.048    0.114
 3.0   0.092    0.223
 4.0   0.202    0.333
 5.0   0.270    0.399
-6.0   0.320    0.200  
+6.0   0.320    0.200
 7.5   0.354    0.426
 10    0.343    0.334
 """)
@@ -77,17 +79,15 @@ def _get_phi_al_regional_JPN(C, mag, vs30measured, rrup):
     """
     Returns intra-event (Tau) standard deviation (equation 26, page 1046)
     """
-    phi_al = np.ones((len(vs30measured)))
-
-    idx = rrup < 30
+    lower, span, upper = DISTANCES_REGIONAL_JPN
+    phi_al = np.ones(np.shape(vs30measured))
+    idx = rrup < lower
     phi_al[idx] *= C['s5']
-
-    idx = (rrup <= 80.) & (rrup >= 30.)
-    phi_al[idx] *= C['s5'] + (C['s6'] - C['s5']) / 50. * (rrup[idx] - 30.)
-
-    idx = rrup > 80
+    idx = (rrup <= upper) & (rrup >= lower)
+    phi_al[idx] *= (C['s5'] +
+                    (C['s6'] - C['s5']) / span * (rrup[idx] - lower))
+    idx = rrup > upper
     phi_al[idx] *= C['s6']
-
     return phi_al
 
 
@@ -107,15 +107,15 @@ def _get_basic_term(C, ctx):
     within = (ctx.mag >= CONSTS['m2']) & (ctx.mag < C['m1'])
     before = ctx.mag < CONSTS['m2']
     base_term[after] += (C['a5'] * (ctx.mag[after] - C['m1']) +
-                         C['a8'] * (8.5 - ctx.mag[after])**2. +
+                         C['a8'] * (REFERENCE_MAGNITUDE - ctx.mag[after])**2. +
                          (C['a2'] + C['a3'] * (ctx.mag[after] - C['m1'])) *
                          np.log(R[after]))
     base_term[within] += (C['a4'] * (ctx.mag[within] - C['m1']) +
-                          C['a8'] * (8.5 - ctx.mag[within])**2. +
+                          C['a8'] * (REFERENCE_MAGNITUDE - ctx.mag[within])**2. +
                           (C['a2'] + C['a3'] * (ctx.mag[within] - C['m1'])) *
                           np.log(R[within]))
     base_term[before] += (C['a4'] * (CONSTS['m2'] - C['m1']) +
-                          C['a8'] * (8.5 - CONSTS['m2'])**2. +
+                          C['a8'] * (REFERENCE_MAGNITUDE - CONSTS['m2'])**2. +
                           C['a6'] * (ctx.mag[before] - CONSTS['m2']) +
                           C['a7'] * (ctx.mag[before] - CONSTS['m2'])**2. +
                           (C['a2'] + C['a3'] * (CONSTS['m2'] - C['m1'])) *
@@ -165,7 +165,7 @@ def _get_aftershock_term(C, ctx):
     # Initially zero adjustment until classified as class 2 (aftershock)
     sub = np.zeros_like(crjb)
     # Class 2 (aftershock) events are those with crjb of less than 15 km
-    idx = crjb <= 5. 
+    idx = crjb <= 5.
     sub[idx] = C['a14']
     idx = (crjb > 5.) & (crjb < 15.)
     sub[idx] = C['a14'] * (1. - (crjb[idx] - 5.) / 10.)
@@ -276,19 +276,21 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     # vs30 star
     vs30_star = _get_vs30star(vs30, imt)
     # compute the site term
-    site_resp_term = np.zeros_like(vs30)
-    gt_vlin = vs30 >= C['vlin']
-    lw_vlin = vs30 < C['vlin']
-    # compute site response term for ctx with vs30 greater than vlin
     vs30_rat = vs30_star / C['vlin']
-    site_resp_term[gt_vlin] = ((C['a10'] + C['b'] * CONSTS['n']) *
-                               np.log(vs30_rat[gt_vlin]))
+    site_resp_term = np.zeros_like(vs30, dtype=float)
+
+    # compute site response term for ctx with vs30 greater than vlin
+    idx = vs30 >= C['vlin']
+    site_resp_term[idx] = (
+        C['a10'] + C['b'] * CONSTS['n']) * np.log(vs30_rat[idx])
+
     # compute site response term for ctx with vs30 lower than vlin
-    site_resp_term[lw_vlin] = (C['a10'] * np.log(vs30_rat[lw_vlin]) -
-                               C['b'] * np.log(sa1180[lw_vlin] + C['c']) +
-                               C['b'] * np.log(sa1180[lw_vlin] + C['c'] *
-                                               vs30_rat[lw_vlin] **
-                                               CONSTS['n']))
+    idx = vs30 < C['vlin']
+    site_resp_term[idx] = (
+        C['a10'] * np.log(vs30_rat[idx]) -
+        C['b'] * np.log(sa1180[idx] + C['c']) +
+        C['b'] * np.log(sa1180[idx] + C['c'] * vs30_rat[idx] ** CONSTS['n']))
+
     return site_resp_term
 
 
@@ -314,19 +316,19 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
         usgs_baf = np.ones(len(vs30))
 
     # Get reference z1pt0
-    z1ref = _get_z1pt0ref(region, vs30) # in km
+    z1ref = _get_z1pt0ref(region, vs30)  # in km
     # Get z1pt0
-    z10 /= METRES_PER_KM # convert site z1pt0 to km
+    z10 /= METRES_PER_KM  # convert site z1pt0 to km
     # This is used for the calculation of the motion on reference rock
     idx = z10 < 0
-    z10[idx] = z1ref[idx] # -999 z1pt0 values in site model updated here
+    z10[idx] = z1ref[idx]  # -999 z1pt0 values in site model updated here
     factor = np.log((z10 + 0.01) / (z1ref + 0.01))
-    
+
     # Get cybershake adjustments if required and SA(T > 1.9)
     if cy and imt.period > 1.9:
         a44 = COEFFS_CY[imt]['a44cy']
         a45 = COEFFS_CY[imt]['a45cy']
-        adj = 0.1 # CY_CSIM variable in USGS java code for ASK14
+        adj = 0.1  # CY_CSIM variable in USGS java code for ASK14
     # Regular basin term
     else:
         a44 = C['a44']
@@ -342,7 +344,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
                               [C['a43'], C['a43'], a44, a45, C['a46'],
                                C['a46'], C['a46']], kind='linear')
     f10 = (f2(vs30) * factor) + adj
-    
+
     return f10 * usgs_baf
 
 
@@ -400,7 +402,7 @@ def _get_z1pt0ref(region, vs30):
     if region == 'JPN':
         return np.exp(-5.23/2.*np.log(
             (vs30**2+412.**2.) / (1360.**2+412**2.))) / METRES_PER_KM
-    else:    
+    else:
         return np.exp((-7.67 / 4.)*np.log(
             (vs30**4 + 610.**4) / (1360.**4 + 610.**4))) / METRES_PER_KM
 
@@ -418,7 +420,8 @@ def _hw_taper2(ctx):
     a2hw = 0.2
     T2 = (1. + a2hw * (ctx.mag - 6.5) - (1. - a2hw) *
           (ctx.mag - 6.5)**2)
-    T2[ctx.mag > 6.5] = 1. + a2hw * (ctx.mag[ctx.mag > 6.5] - 6.5)
+    idx = ctx.mag > 6.5
+    T2[idx] = 1. + a2hw * (ctx.mag[idx] - 6.5)
     T2[ctx.mag <= 5.5] = 0.
     return T2
 
@@ -430,7 +433,7 @@ def _hw_taper3(ctx):
     r1 = ctx.width * np.cos(np.radians(ctx.dip))
     r2 = 3. * r1
     idx = ctx.rx < r1
-    T3[idx] = (np.ones_like(ctx.rx)[idx] * CONSTS['h1'] +
+    T3[idx] = (CONSTS['h1'] +
                CONSTS['h2'] * (ctx.rx[idx] / r1[idx]) +
                CONSTS['h3'] * (ctx.rx[idx] / r1[idx])**2)
     idx = (ctx.rx >= r1) & (ctx.rx <= r2)
@@ -441,7 +444,8 @@ def _hw_taper3(ctx):
 def _hw_taper4(ctx):
     # Compute taper t4 (eq. 14 at page 1040)
     T4 = np.zeros_like(ctx.rx)
-    T4[ctx.ztor <= 10.] = 1. - ctx.ztor[ctx.ztor <= 10.]**2. / 100.
+    idx = ctx.ztor <= 10.
+    T4[idx] = 1. - ctx.ztor[idx]**2. / 100.
     return T4
 
 
@@ -480,24 +484,42 @@ def get_epistemic_sigma(ctx):
     """
     This function gives the epistemic sigma computed following USGS-2014
     approach. Also, note that the events are counted in each magnitude and
-    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
+    distance bins. However, the epistemic sigma is based on NZ SMDB v1.0.
+    Magnitudes below 5 (outside the calibration bins) are assigned the
+    5 <= M < 6 values.
     """
     n = 2
-    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11),
-                             np.where((ctx.rrup > 10) & (ctx.rrup <30),
-                                      0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+    # Distance bins: near (<= 10 km), mid (10-30 km), far (>= 30 km)
+    rrup = ctx.rrup
+    near = (rrup <= 10)
+    mid = (rrup > 10) & (rrup < 30)
+    far = (rrup >= 30)
 
-    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2),
-                             np.where((ctx.rrup > 10) & (ctx.rrup <30),
-                                      0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+    # Epistemic sigma for each magnitude bin, ordered as [near, mid, far]
+    mag_coeff = {
+        '5_6': [0.4*np.sqrt(n/11), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)],
+        '6_7': [0.4*np.sqrt(n/2), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)],
+        '7_above': [0.4*np.sqrt(n/2), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)]}
 
-    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2),
-                                 np.where((ctx.rrup > 10) & (ctx.rrup <30),
-                                          0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+    sigma_epi = np.zeros_like(ctx.mag, dtype=float)
 
-    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6,
-                         np.where((ctx.mag >=6) & (ctx.mag < 7),
-                                  dist_func_6_7, dist_func_7_above))
+    # M < 6, including magnitudes below the M5 calibration limit
+    idx_mag1 = ctx.mag < 6
+    sigma_epi[idx_mag1 & near] = mag_coeff['5_6'][0]
+    sigma_epi[idx_mag1 & mid] = mag_coeff['5_6'][1]
+    sigma_epi[idx_mag1 & far] = mag_coeff['5_6'][2]
+
+    # 6 <= M < 7
+    idx_mag2 = (ctx.mag >= 6) & (ctx.mag < 7)
+    sigma_epi[idx_mag2 & near] = mag_coeff['6_7'][0]
+    sigma_epi[idx_mag2 & mid] = mag_coeff['6_7'][1]
+    sigma_epi[idx_mag2 & far] = mag_coeff['6_7'][2]
+
+    # M >= 7
+    idx_mag3 = ctx.mag >= 7
+    sigma_epi[idx_mag3 & near] = mag_coeff['7_above'][0]
+    sigma_epi[idx_mag3 & mid] = mag_coeff['7_above'][1]
+    sigma_epi[idx_mag3 & far] = mag_coeff['7_above'][2]
 
     return sigma_epi
 
@@ -592,7 +614,7 @@ class AbrahamsonEtAl2014(GMPE):
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a7   a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6      
+IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a7   a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6
 pga     6.75    660     -1.47   2.4     4.5     0.587   -0.79   0.275   -0.1    -0.41   2.154   0.0  -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
 pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    -0.41   2.366   0.0  -0.094  2.36    0       -0.1    0.25    0.22    0.3     -0.0005 0.28    0.15    0.09    0.07    -0.0001 0.0005  -0.0037 -0.1462 0.377   0.212   0.157   0       0.095   -0.038  0.065   0.662   0.51    0.38    0.38    0.66    0.51    0.58    0.5300
 0.01    6.75    660     -1.47   2.4     4.5     0.587   -0.790  0.275   -0.1    -0.41   2.154   0.0  -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300

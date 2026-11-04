@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,6 +26,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_magnitude(ctx, C):
     """
     Compute the first term of the equation described on p. 742:
@@ -43,27 +46,13 @@ def _compute_attenuation(ctx, imt, C):
     [(c6 + c7 * M) * max{ min{ log10(R/60.), log10(120./60.) }, 0.}] +
     [(c8 + c9 * M) * max{ log10(R/120.), 0}] "
     """
-    vec = np.ones(len(ctx.rjb))
-
-    a1 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0)),
-          np.log10(60. * vec))
-
-    a = np.column_stack([a1[0], a1[1]])
-
-    b3 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0) /
-                   (60. * vec)), np.log10((120. / 60.) * vec))
-
-    b2 = np.column_stack([b3[0], b3[1]])
-    b1 = ([np.min(b2, axis=1), 0. * vec])
-    b = np.column_stack([b1[0], b1[1]])
-
-    c1 = (np.log10(np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0) /
-          (120.) * vec), 0. * vec)
-    c = np.column_stack([c1[0], c1[1]])
-
-    return (((C['c4'] + C['c5'] * ctx.mag) * np.min(a, axis=1)) +
-            ((C['c6'] + C['c7'] * ctx.mag) * np.max(b, axis=1)) +
-            ((C['c8'] + C['c9'] * ctx.mag) * np.max(c, axis=1)))
+    distance = np.sqrt(ctx.rjb ** 2.0 + C['c11'] ** 2.0)
+    first = np.minimum(np.log10(distance), np.log10(60.))
+    second = np.clip(np.log10(distance / 60.), 0., np.log10(120. / 60.))
+    third = np.maximum(np.log10(distance / 120.), 0.)
+    return ((C['c4'] + C['c5'] * ctx.mag) * first +
+            (C['c6'] + C['c7'] * ctx.mag) * second +
+            (C['c8'] + C['c9'] * ctx.mag) * third)
 
 
 def _compute_distance(ctx, imt, C):
@@ -149,11 +138,11 @@ class ShahjoueiPezeshk2016(GMPE):
                      _compute_attenuation(ctx, imt, C) +
                      _compute_distance(ctx, imt, C))
 
-            mean[m] = np.log(10.0 ** imean)
+            mean[m] = imean * LOG10
 
             sigma_mean = _compute_standard_dev(ctx, imt, C)
             sigma_tot = np.sqrt(sigma_mean ** 2 + C['SigmaReg'] ** 2)
-            sig[m] = np.log(10.0 ** np.log10(np.exp(sigma_tot)))
+            sig[m] = sigma_tot
 
     #: Equation coefficients, described in Table 2 on pp. 1865
     COEFFS = CoeffsTable(sa_damping=5, table="""

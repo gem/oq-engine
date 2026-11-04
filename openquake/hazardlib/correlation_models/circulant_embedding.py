@@ -57,15 +57,17 @@ def _pair(value, name, cast):
     return pair
 
 
-def _utm_crs(lons, lats):
-    """Return the local UTM coordinate reference system."""
-    longitude = float(numpy.median(lons))
+def _local_crs(lons, lats):
+    """Return a transverse Mercator projection centred on the sites."""
     latitude = float(numpy.median(lats))
     if not -80 <= latitude <= 84:
         raise ValueError('Circulant embedding requires sites within the '
-                         'UTM latitude range')
-    zone = min(60, max(1, int((longitude + 180) // 6) + 1))
-    return 32600 + zone if latitude >= 0 else 32700 + zone
+                         'latitude range [-80, 84]')
+    # No zone boundaries: the central meridian is the middle of the extent.
+    # The scale error is about 0.07% at 400 km from the central meridian.
+    central = (float(numpy.min(lons)) + float(numpy.max(lons))) / 2
+    return (f'+proj=tmerc +lon_0={central:.6f} +k=1 +datum=WGS84 '
+            '+units=m +no_defs')
 
 
 def _grid_spacing(x, y):
@@ -81,18 +83,44 @@ def _grid_spacing(x, y):
 
 @dataclass(frozen=True)
 class RegularGridLayout:
-    """Projected regular-grid geometry for a geographic site collection."""
+    """Map geographic sites to the regular lattice used by CE.
+
+    ``from_sites`` projects all coordinates with one transverse Mercator
+    projection, centred on the middle of the longitude extent unless ``crs``
+    is given, then fits and validates an axis-aligned lattice.
+    ``site_indices`` maps the original site order to flattened grid cells;
+    holes remain unused cells in the enclosing rectangle.
+
+    CE constructs stationary covariance lags from Euclidean distances between
+    lattice cells. A fixed row/column offset must have the same displacement
+    everywhere, giving the repeated covariance structure required by the FFT.
+    Geographic grids built along parallels and meridians do not generally
+    satisfy this condition. Substituting geographic pairwise distances would
+    in general lose that structure, rather than merely change the projection.
+
+    The projection is a local planar approximation to surface geometry, not
+    an intrinsic requirement of CE; another suitable planar projection would
+    require consistent support throughout grid detection and sampling. The
+    covariance sampled here uses projected distances, not exact geodesic
+    distances.
+
+    ``grid_shape`` and ``spacing`` follow row/column order, with spacing in
+    kilometres. ``projected_origin`` is northing/easting in metres, ``crs`` is
+    a projection specification accepted by pyproj, and ``maximum_error`` is
+    the largest distance in metres between an input site and its fitted
+    lattice position.
+    """
 
     grid_shape: tuple
     spacing: tuple
     site_indices: numpy.ndarray
-    crs: int
+    crs: str
     projected_origin: tuple
     maximum_error: float
 
     @classmethod
-    def from_sites(cls, sites, max_cell_ratio=MAX_GRID_CELL_RATIO):
-        """Infer a square UTM lattice, retaining holes as unused cells."""
+    def from_sites(cls, sites, max_cell_ratio=MAX_GRID_CELL_RATIO, crs=None):
+        """Infer a square lattice, retaining holes as unused cells."""
         lons = numpy.asarray(sites.lons, dtype=numpy.float64)
         lats = numpy.asarray(sites.lats, dtype=numpy.float64)
         if len(lons) < 4 or len(lons) != len(lats):
@@ -101,7 +129,8 @@ class RegularGridLayout:
         if not numpy.isfinite(lons).all() or not numpy.isfinite(lats).all():
             raise ValueError('Correlation grid coordinates must be finite')
 
-        crs = _utm_crs(lons, lats)
+        if crs is None:
+            crs = _local_crs(lons, lats)
         transformer = Transformer.from_crs(
             4326, crs, always_xy=True)
         x, y = transformer.transform(lons, lats)
@@ -124,7 +153,7 @@ class RegularGridLayout:
             2.0, max(spacing_x, spacing_y) * GRID_TOLERANCE)
         if errors.max() > tolerance:
             raise ValueError(
-                'Sites do not form an axis-aligned regular UTM grid; '
+                'Sites do not form an axis-aligned regular grid; '
                 f'maximum coordinate error is {errors.max():g} m')
 
         minimum_x = ix.min()

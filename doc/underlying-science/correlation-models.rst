@@ -226,6 +226,40 @@ a larger periodic grid produces a block-circulant with circulant blocks (BCCB)
 covariance while preserving all covariances between cells in the original
 grid.
 
+A regular grid here means equal steps along fixed Cartesian axes, not simply
+regular longitude/latitude coordinates. For example, two cells separated by
+one column must have the same displacement wherever they occur in the grid.
+Geographic grids built by stepping along parallels and meridians, including
+the engine's existing region grid builder, do not generally satisfy this
+condition: the physical displacement associated with a row/column offset can
+vary with location. Using geographic pairwise distances instead would in
+general lose the repeated covariance structure required by this FFT method.
+
+The OpenQuake engine therefore uses one local transverse Mercator projection
+for the whole grid and evaluates covariance lags using Euclidean distances in
+that plane. New grids use a projection centred on their longitude extent.
+The selected projection is reused for station interpolation; geographic sites
+are not moved or resampled. An explicit CRS passed to
+``RegularGridLayout.from_sites`` is always respected.
+
+Other suitable planar projections can also be used for circulant embedding.
+A valid embedding reproduces the covariance model evaluated using distances
+in the chosen projection. Those distances approximate distances along the
+Earth's surface, so the projection must be suitable for the grid's geographic
+extent.
+This concerns correlation sampling; it does not replace the rupture-distance
+calculations used by ground-motion models or distance filtering.
+
+``oq prepare_site_model`` can build such a grid with ``--regular-grid`` or
+directly from a rupture with ``--rupture``. It lays out the cells in the local
+projection before converting them back to longitude and latitude for the
+site-model CSV. Reading that CSV does not change the underlying lattice.
+In rupture mode, ``--maximum-distance`` defines the site-grid extent by
+expanding the projected rupture bounds. This is separate from the larger
+periodic grid constructed internally for CE: that computational padding is
+not part of the site-model CSV. Station locations do not need to lie on the
+requested lattice; off-grid stations are handled separately as described below.
+
 An FFT changes the spatial representation from grid cells to sinusoidal
 spatial frequencies. In this representation, the large BCCB matrix separates
 into one small :math:`M \times M` spectral covariance matrix for every
@@ -279,7 +313,7 @@ Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,
 :ref:`event-based PSHA <event-based-psha-params>`,
 :ref:`ShakeMap workflows <scenarios-from-shakemaps>`, and
-:ref:`advanced calculations <advanced-calculations>`. The implemented model
+:ref:`large calculations <large-calculations>`. The implemented model
 classes and interfaces are listed in the
 :ref:`hazardlib API reference <openquake-hazardlib-correlation-models>`.
 
@@ -386,3 +420,8 @@ References
   for ground motion spectral accelerations at multiple periods. *Earthquake
   Engineering & Structural Dynamics*, 49(3), 315-316.
   https://doi.org/10.1002/eqe.3233
+* Monteiro, V.A, Aristeidou, S., and O'Reilly, G. J. (2026). Spatial
+  Cross-Correlation Models for Next-Generation Amplitude and Cumulative
+  Intensity Measures.. *Earthquake Spectra*, 42(2), e70076.
+  https://doi.org/10.1177/8755293020952442
+

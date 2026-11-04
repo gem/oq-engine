@@ -16,4 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib import __version__  # noqa
+from openquake.baselib.general import engine_version
+
+# __version__ includes the git hash in development installations
+__version__ = engine_version()

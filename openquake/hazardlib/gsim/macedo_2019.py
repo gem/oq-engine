@@ -21,6 +21,7 @@ Module exports: :class:`MacedoEtAl2019SInter`,
 """
 
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA, PGA, SA
 from openquake.hazardlib.gsim.base import GMPE

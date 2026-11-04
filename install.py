@@ -100,9 +100,9 @@ class server:
     OQ = "/usr/bin/oq"
     OQDATA = "/opt/openquake/oqdata"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    CONFIG = f"""[dbserver]
+    CONFIG = f"""[server]
     host = localhost
-    file = {DBPATH}
+    dbfile = {DBPATH}
     [directory]
     """
     USER = "openquake"

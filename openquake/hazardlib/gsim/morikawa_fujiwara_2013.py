@@ -44,6 +44,11 @@ from openquake.hazardlib.gsim.si_midorikawa_1999 import (
     set_mean as _sm1999_set_mean, _get_min_distance_to_volcanic_front)
 
 
+
+
+LOG10 = np.log(10.0)
+
+
 CONSTS = {
     "D0": 300.,
     "e": 0.5,
@@ -164,7 +169,7 @@ def _apply_nied_sigma(imts, sig, sigma_log10):
         if imt.name == 'JMA':
             sig[m] = 2 * sigma_log10
         else:
-            sig[m] = sigma_log10 * np.log(10)
+            sig[m] = sigma_log10 * LOG10
 
 
 def _infer_z1pt4_from_vs30(vs30, z1pt4, mask):
@@ -215,7 +220,7 @@ def _get_basin_term(C, ctx, region=None):
     vs30 = ctx.vs30
     # Get sites that have sentinel (-999) z1pt4
     mask = z1pt4 == -999
-    if len(mask):
+    if mask.any():
         # Use GEM estimate of z1pt4 from vs30 for these sites
         z1pt4 = _infer_z1pt4_from_vs30(vs30, z1pt4, mask)
     # Now compute basin term as usual
@@ -405,7 +410,7 @@ class MorikawaFujiwara2013Crustal(GMPE):
             if imt.name == "JMA":
                 sig[m] = 2 * C['sigma'] # Already in JMA units but still JMA/2
             else:
-                sig[m] = C['sigma'] * np.log(10)  # log10 to ln
+                sig[m] = C['sigma'] * LOG10  # log10 to ln
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
   IMT       a        b1        b2        b3      c1      c2      c3         d        pd  Dlmin        ps   Vsmax   V0       gNE       gSW      PH   sigma

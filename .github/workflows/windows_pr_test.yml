@@ -97,7 +97,7 @@ jobs:
               python install.py devel --version ${env:GITHUB_HEAD_REF}
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
-            python -m pip install pytest pyshp flake8
+            python -m pip install pytest flake8
           }
       - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
         if: always() && env.to_run == 0

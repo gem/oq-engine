@@ -73,7 +73,7 @@ jobs:
           source ~/openquake/bin/activate
           pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k "not classical"
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -104,13 +104,12 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
-          pip install pyshp pytest flake8 ruff
+          pip install pytest flake8 ruff
           pip install -r requirements-aelo-py-linux64.txt
           oq engine --upgrade-db
           ruff check openquake
           curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
           pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/{sep,hmtk,risklib,commonlib,baselib,hazardlib,pfd}
-          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 openquake/calculators -k classical
           pytest --doctest-modules doc/contributing/*.rst
         shell: bash
 
@@ -228,3 +227,15 @@ jobs:
           name: playwright-artifacts-python${{ matrix.python-version }}-${{ matrix.os }}-${{ matrix.browser }}
           path: test-results
           retention-days: 7
+
+  irmt_qgis:
+    name: IRMT QGIS integration tests
+    uses: gem/oq-irmt-qgis/.github/workflows/test_push.yml@master
+    with:
+      engine_repository: ${{ github.event.pull_request.head.repo.full_name }}
+      engine_ref: ${{ github.event.pull_request.head.sha }}
+      irmt_ref: master
+      integration_only: true
+      python_versions: '["3.13"]'
+    permissions:
+      contents: read

@@ -46,7 +46,7 @@ def _compute_mean(C, g, ctx):
     mean = C['c1'] + C['c2'] * mag + C['c3'] * np.log(trm4)
 
     # convert from cm/s**2 to 'g'
-    mean = np.log(np.exp(mean) * 1e-2 / g)
+    mean = mean + np.log(0.01 / g)
     return mean
 
 

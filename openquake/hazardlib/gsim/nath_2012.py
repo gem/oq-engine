@@ -17,17 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module
-:mod:`openquake.hazardlib.gsim.nath_2012`
-exports
-:class:`NathEtAl2012Lower`
-:class:`NathEtAl2012Upper`
+Module exports :class:`NathEtAl2012Lower`
+               :class:`NathEtAl2012Upper`
 """
 import numpy as np
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
+
+LOG10 = np.log(10.0)
+
 
 CONSTS = {'ref_mag': 10.}
 
@@ -51,7 +52,7 @@ def _get_stddev(coeffs):
     "ln" to denote common and natural logarithm elsewhere in the paper.
     """
     log_stddev = coeffs['sigma']
-    ln_stddev = log_stddev*np.log(10)
+    ln_stddev = log_stddev*LOG10
     return ln_stddev
 
 

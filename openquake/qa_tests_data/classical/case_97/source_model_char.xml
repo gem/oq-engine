@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <sourceModel name="Example Source Model Containing a Simple Fault Source and a single M6 delta function">
+        <sourceGroup name="group1" tectonicRegion="Active Shallow Crust">
+            <characteristicFaultSource id="001" name="PEER Simple Fault Source with Delta M6 MFD" tectonicRegion="Active Shallow Crust">
+                <surface>
+                    <planarSurface
+                    dip="90.0"
+                    strike="0.0"
+                    >
+                        <topLeft depth="0.0" lat="-0.11240" lon="-65.0"/>
+                        <topRight depth="0.0" lat="0.11240" lon="-65.0"/>
+                        <bottomLeft depth="12.0" lat="-0.11240" lon="-65.0"/>
+                        <bottomRight depth="12.0" lat="0.11240" lon="-65.0"/>
+                    </planarSurface>
+                </surface>
+                <arbitraryMFD>
+                    <magnitudes>6.0</magnitudes>
+                    <occurRates>0.01604252</occurRates>
+                </arbitraryMFD>
+                <rake>0.0</rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

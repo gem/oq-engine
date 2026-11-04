@@ -194,6 +194,7 @@ import logging
 import operator
 import tempfile
 import traceback
+import warnings
 import collections
 from unittest import mock
 import multiprocessing.shared_memory as shmem
@@ -203,10 +204,10 @@ import psutil
 import numpy
 
 from openquake.baselib import config, hdf5
-from openquake.baselib.general import decode
+from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
-    Monitor, memory_gb, init_performance)
+    Monitor, PerfBuffer, memory_gb, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
     gettemp, engine_version, shortlist, compress, decompress, mp as mp_context)
@@ -217,6 +218,18 @@ submit = CallableDict()
 MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
+
+
+def parse_hostcore(hostcore, default_port):
+    """
+    :param hostcore: a string "host cores" or "host:port cores"
+    :param default_port: the ctrl_port to use if the port is missing
+    :returns: a triple (host, port, cores) with port an integer
+    """
+    hostport, cores = hostcore.split()
+    host, sep, port = hostport.partition(':')
+    # without an explicit port the default ctrl_port is used
+    return host, (int(port) if sep else int(default_port)), cores
 
 
 def calc_dir(job_id_or_fname):
@@ -241,7 +254,9 @@ def calc_dir(job_id_or_fname):
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
-    safely_call(func, args, self.task_no, monitor)
+    # the results are collected in-process: sending them via zmq
+    # would deadlock, since the master thread is the only receiver
+    safely_call(func, args, self.task_no, monitor, InprocSocket(self.inproc))
 
 
 @submit.add('processpool', 'threadpool')
@@ -253,8 +268,8 @@ def processpool_submit(self, func, args, monitor):
 @submit.add('zmq', 'slurm')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    host = host_cores[idx].split()[0]
-    port = int(config.zworkers.ctrl_port)
+    host, port, _cores = parse_hostcore(
+        host_cores[idx], config.zworkers.ctrl_port)
     dest = 'tcp://%s:%d' % (host, port)
     logging.debug('Sending to %s', dest)
     with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
@@ -291,6 +306,16 @@ def init_worker():
     else:
         setproctitle('oq-worker')
     Starmap.on = True
+
+
+def init_process_worker():
+    # like init_worker, but also silences the DeprecationWarnings and
+    # UserWarnings, which the GSIM classes raise at instantiation and
+    # which are already shown by the master process; only for process
+    # pools, since a filter in a thread would silence the master too
+    init_worker()
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class Pickled(object):
@@ -417,7 +442,11 @@ class Result(object):
         Returns the underlying value or raise the underlying exception
         """
         t0 = time.time()
-        val = self.pik.unpickle()
+        # disabling the garbage collector makes the unpickling of
+        # millions of objects (for instance the sources returned by
+        # preclassical) much faster
+        with gc_disabled():
+            val = self.pik.unpickle()
         self.dt = time.time() - t0
         if self.tb_str:
             etype = val.__class__
@@ -443,10 +472,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     engine_version()))
-            if mon.database_host != config.dbserver.host:
+            if mon.database_host != config.server.host:
                 raise RuntimeError(
                     'The worker has database.host=%s while the master has %s'
-                    % (mon.database_host, config.dbserver.host))
+                    % (mon.database_host, config.server.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -506,7 +535,56 @@ def sendback(res, zsocket):
     return nbytes
 
 
-def safely_call(func, args, task_no, mon):
+def task_weight(arg):
+    """
+    :param arg: the first argument of a task
+    :returns: the weight of the argument, used in the task_info dataset
+
+    The weight of a task is the estimated cost of the work it performs,
+    so it is the sum of the weights of the items it will process. The
+    argument is however often a plain list of identifiers (see the
+    classical tasks, which receive the keys of the source groups) and
+    then the weight has to be set by the task itself (see
+    `openquake.calculators.classical.classical`).
+    """
+    try:
+        return arg.weight  # for instance a SourceGroup
+    except AttributeError:
+        pass
+    if isinstance(arg, (list, tuple)) and arg:
+        try:
+            return sum(item.weight for item in arg)
+        except AttributeError:
+            pass
+    return 1.
+
+
+class InprocSocket(object):
+    """
+    A stand-in for the zmq PUSH socket which appends the results to
+    a deque, used when OQ_DISTRIBUTE=no (single process)
+    """
+    def __init__(self, results):
+        self.results = results
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def send(self, res):
+        self.results.append(res)
+
+
+def _channel(sink, mon):
+    # return the sink, if given, otherwise a zmq PUSH socket
+    if sink is not None:
+        return sink
+    return Socket(mon.backurl, zmq.PUSH, 'connect')
+
+
+def safely_call(func, args, task_no, mon, sink=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -518,6 +596,7 @@ def safely_call(func, args, task_no, mon):
     :param args: the arguments
     :param task_no: the task number
     :param mon: a monitor
+    :param sink: where to send the results (default: zmq socket)
     """
     isgenfunc = inspect.isgeneratorfunction(func)
     if hasattr(args[0], 'unpickle'):
@@ -529,13 +608,13 @@ def safely_call(func, args, task_no, mon):
     else:
         name = func.__name__
     mon = mon.new(operation='total ' + name, measuremem=True)
-    mon.weight = getattr(args[0], 'weight', 1.)  # used in task_info
+    mon.weight = task_weight(args[0])  # used in task_info
     mon.task_no = task_no
     if mon.inject:
         args += (mon,)
     sentbytes = 0
     if isgenfunc:
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             it = func(*args)
             while True:
                 res = Result.new(next, (it,), mon, sentbytes)
@@ -547,7 +626,7 @@ def safely_call(func, args, task_no, mon):
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
-        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+        with _channel(sink, mon) as zsocket:
             sentbytes += sendback(res, zsocket)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
@@ -715,7 +794,7 @@ class Starmap(object):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = ProcessPoolExecutor(
-                num_cores, mp_context, init_worker)
+                num_cores, mp_context, init_process_worker)
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
@@ -733,7 +812,8 @@ class Starmap(object):
             if hasattr(cls.pool, '_processes') and cls.pool._processes:
                 for p in cls.pool._processes.values():
                     p.terminate()  # SIGTERM is graceful
-            cls.pool.shutdown()
+            # wait and cancel_futures are explicit to avoid a Python 3.11 bug
+            cls.pool.shutdown(wait=False, cancel_futures=True)
             del cls.pool
 
     @classmethod
@@ -770,8 +850,12 @@ class Starmap(object):
         return cls(task, taskargs, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None):
+                 progress=logging.info, h5=None, perf='datastore'):
+        # perf 'datastore': the performance info is saved in h5 (an
+        # hdf5.File or a DataStore); perf 'memory': h5 must be a DataStore,
+        # the performance info is kept in memory and saved into it at the end
         self.__class__.init(distribute=distribute)
+        self.perf = perf
         self.task_func = task_func
         if h5:
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
@@ -782,12 +866,15 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.name = task_func.__name__
-        self.monitor = Monitor(self.name, database_host=config.dbserver.host)
+        self.monitor = Monitor(self.name, database_host=config.server.host)
         self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         if distribute == 'zmq':
             self.monitor.version = h5['/'].attrs.get('engine_version')
         self.progress = progress
+        if perf == 'memory':
+            self.dstore = h5
+            h5 = PerfBuffer()
         self.h5 = h5
         self.task_queue = []
         try:
@@ -799,14 +886,15 @@ class Starmap(object):
         self.sent = AccumDict(accum=AccumDict())  # fname -> argname -> nbytes
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
-        self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
+        self.receiver = 'tcp://0.0.0.0:%s' % config.server.receiver_ports
         if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = get_return_ip(config.dbserver.receiver_host)
+            self.return_ip = get_return_ip(config.server.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = {}  # populated by .submit
+        self.inproc = collections.deque()  # used when distribute=no
         self.task_no = 0
         self._shared = {}
         self.n_out = 0
@@ -938,8 +1026,30 @@ class Starmap(object):
             if task.done():
                 task.result(timeout=0)
 
+    def _inproc_results(self):
+        # a task submitted while consuming (a subtask) appends more
+        # results, which are seen by the loop since we pop lazily
+        while self.inproc:
+            yield self.inproc.popleft()
+
+    def save_info(self):
+        """
+        :returns: True if the performance info can be saved in self.h5
+        """
+        return self.perf == 'memory' or self.h5.mode != 'r'
+
     def _loop(self):
-        self.busytime = AccumDict(accum=[])  # pid -> time
+        # the performance info is merged also when the iteration is
+        # stopped early, since the generator is closed in that case
+        try:
+            yield from self._loop_tasks()
+        finally:
+            if self.perf == 'memory':
+                self._merge_performance()
+
+    def _loop_tasks(self):
+        self.busytime = AccumDict()  # name -> pid -> time
+        self.subtask_names = set()  # names of the subtasks generated
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
             self.monitor.task_no = self.task_no  # total number of tasks
@@ -957,7 +1067,10 @@ class Starmap(object):
         logging.warning('Sent %d %s tasks, %s', len(self.tasks),
                         self.name, humansize(nbytes))
 
-        isocket = iter(self.socket)  # read from the PULL socket
+        if dist == 'no':  # the results are already in self.inproc
+            isocket = self._inproc_results()
+        else:
+            isocket = iter(self.socket)  # read from the PULL socket
         finished = set()
         while self.tasks:
             res = next(isocket)
@@ -968,6 +1081,7 @@ class Starmap(object):
             elif res.msg == 'TASK_ENDED':
                 self._task_ended(res, finished)
             elif res.func:  # add subtask
+                self.subtask_names.add(res.func.__name__)
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
             else:
@@ -980,34 +1094,58 @@ class Starmap(object):
         if self.expected_outputs:
             assert self.expected_outputs == self.n_out, (
                 self.expected_outputs, self.n_out)
-        if len(self.busytime) > 1:
-            times = numpy.array(list(self.busytime.values()))
-            if self.h5.mode != 'r':
-                self.monitor.save_starmap_info(self.h5, self.name, times)
+        # NB: a Starmap can generate subtasks with different names, as
+        # preclassical -> filter_weight, or classical -> baseclassical
+        # when the tasks are split for being too slow (see the comment
+        # in classical.py); the busy times of the subtasks are summed to
+        # the ones of the Starmap, per worker, so that the efficiency is
+        # computed from the total busy times and ascribed to the Starmap
+        for name in self.subtask_names & set(self.busytime):
+            base = self.busytime.pop(name)
+            parent = self.busytime.setdefault(self.name, AccumDict(accum=0.))
+            parent += base
+        for name, dic in self.busytime.items():
+            if len(dic) > 1:  # no statistics with a single core
+                times = numpy.array(list(dic.values()))
+                if self.save_info():
+                    self.monitor.save_starmap_info(self.h5, name, times)
+
+    def _merge_performance(self):
+        # save the performance info collected in memory and the task_sent
+        # in the datastore, which is opened in 'a' mode for the purpose
+        dstore = self.dstore
+        with dstore.reopen('a'):
+            for name, rows in self.h5.tables.items():
+                hdf5.extend(dstore.hdf5[name], numpy.concatenate(rows))
+            task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
+            task_sent.update(self.sent)
+            dstore['task_sent'] = str(task_sent)
 
     def _task_ended(self, res, finished):
         finished.add(res.mon.task_no)
-        self.busytime += {res.workerid: res.mon.duration}
+        name = res.mon.operation[6:]  # strip 'total '
+        dic = self.busytime.setdefault(name, AccumDict(accum=0.))
+        dic += {res.workerid: res.mon.duration}
         del self.tasks[res.mon.task_no]
         self._submit_many(1)
         todo = set(range(self.task_no)) - finished
         logging.debug('%d tasks todo %s', len(todo),
                       shortlist(sorted(todo)))
-        task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-        task_sent.update(self.sent)
-        if self.h5.mode != 'r':
-            del self.h5['task_sent']
-            self.h5['task_sent'] = str(task_sent)
-        name = res.mon.operation[6:]  # strip 'total '
+        if self.perf != 'memory':  # task_sent is saved at the end otherwise
+            task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+            task_sent.update(self.sent)
+            if self.save_info():
+                del self.h5['task_sent']
+                self.h5['task_sent'] = str(task_sent)
         if self.distribute in ('zmq', 'slurm'):
             mem_gb = 0
             if res.mon.task_no % 10 == 0:
                 # measure the memory only for 1 task out of 10
                 # with 8 nodes the time to get the memory is 0.01 secs
                 for line in host_cores:
-                    host, _cores = line.split()
-                    addr = 'tcp://%s:%s' % (
-                        host, config.zworkers.ctrl_port)
+                    host, port, _cores = parse_hostcore(
+                        line, config.zworkers.ctrl_port)
+                    addr = 'tcp://%s:%s' % (host, port)
                     with Socket(addr, zmq.REQ, 'connect') as sock:
                         mem_gb += sock.send('memory_gb')
         elif self._shared:
@@ -1021,13 +1159,25 @@ class Starmap(object):
                 mem_gb = memory_gb()
         else:
             mem_gb = 0
-        if self.h5.mode != 'r':
+        if self.save_info():
             res.mon.save_task_info(self.h5, res, name, mem_gb)
             res.mon.flush(self.h5)
 
     def __del__(self):
         if hasattr(self, 'socket'):
             self.socket.close()
+
+
+def heaviest_first(allargs, weights):
+    """
+    :param allargs: a list of task arguments
+    :param weights: a list of weights, one for each task
+    :returns: the task arguments sorted by decreasing weight, so that the
+              heaviest tasks are submitted first and do not end up last
+              with most of the cores idle
+    """
+    order = numpy.argsort(-numpy.array(weights), kind='stable')
+    return [allargs[i] for i in order]
 
 
 def sequential_apply(task, args, concurrent_tasks=Starmap.CT,

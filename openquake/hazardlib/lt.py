@@ -32,7 +32,8 @@ from openquake.hazardlib.sourceconverter import (
 from openquake.hazardlib import valid
 
 NOAPPLY_UNCERTAINTIES = [
-    'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
+    'sourceModel', 'extendModel', 'gmpeModel']
+
 
 class LogicTreeError(Exception):
     """
@@ -408,54 +409,63 @@ def _char_fault_geom_absolute(utype, source, value):
     source.modify('set_geometry', dict(surface=to_surface(value)))
 
 
+def _modify_mfd(source, name, parameters):
+    # NB: a CollapsedPointSource has no mfd, so the modification is
+    # applied to each of its underlying point sources
+    if hasattr(source, 'pointsources'):
+        source.apply_mfd_modification(name, parameters)
+    else:
+        source.mfd.modify(name, parameters)
+
+
 @apply_uncertainty.add('abGRAbsolute')
 def _abGR_absolute(utype, source, value):
     a, b = value
-    source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
+    _modify_mfd(source, 'set_ab', dict(a_val=a, b_val=b))
 
 
 @apply_uncertainty.add('abMaxMagAbsolute')
 def _abMMax_absolute(utype, source, value):
     a, b, mm = value
-    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
+    _modify_mfd(source, 'set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
 
 
 @apply_uncertainty.add('bGRAbsolute')
 def _bGR_absolute(utype, source, value):
     b_val = float(value)
-    source.mfd.modify('set_bGR', dict(b_val=b_val))
+    _modify_mfd(source, 'set_bGR', dict(b_val=b_val))
 
 
 @apply_uncertainty.add('bACAbsolute')
 def _bAC_absolute(utype, source, value):
     b_val = float(value)
-    source.mfd.modify('set_bAC', dict(b_val=b_val))
+    _modify_mfd(source, 'set_bAC', dict(b_val=b_val))
 
 
 @apply_uncertainty.add('bGRRelative')
 def _abGR_relative(utype, source, value):
-    source.mfd.modify('increment_b', dict(value=value))
+    _modify_mfd(source, 'increment_b', dict(value=value))
 
 
 @apply_uncertainty.add('bACRelative')
 def _bAC_relative(utype, source, value):
-    source.mfd.modify('increment_b_AC', dict(value=value))
+    _modify_mfd(source, 'increment_b_AC', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelative')
 def _maxmagGR_relative(utype, source, value):
-    source.mfd.modify('increment_max_mag', dict(value=value))
+    _modify_mfd(source, 'increment_max_mag', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagGRRelativeNoMoBalance')
 def _maxmagGRnoMoBalance_relative(utype, source, value):
-    source.mfd.modify('increment_max_mag_no_mo_balance', dict(value=value))
+    _modify_mfd(source, 'increment_max_mag_no_mo_balance', dict(value=value))
 
 
 @apply_uncertainty.add('maxMagAndDeltaMagACRelative')
 def _maxmagAndDeltaMagAC_relative(utype, source, value):
     delta_max_mag, delta_m_AC = value
-    source.mfd.modify('increment_max_mag_and_delta_m_AC',
+    _modify_mfd(source, 'increment_max_mag_and_delta_m_AC',
                       dict(delta_max_mag=delta_max_mag,
                            delta_m_AC=delta_m_AC))
 
@@ -463,20 +473,20 @@ def _maxmagAndDeltaMagAC_relative(utype, source, value):
 @apply_uncertainty.add('maxMagAndDeltaMagACRelativeNoMoBalance')
 def _maxmagAndDeltaMagACnoMoBalance_relative(utype, source, value):
     delta_max_mag, delta_m_AC = value
-    source.mfd.modify('increment_max_mag_and_delta_m_AC_no_mo_balance',
+    _modify_mfd(source, 'increment_max_mag_and_delta_m_AC_no_mo_balance',
                       dict(delta_max_mag=delta_max_mag,
                            delta_m_AC=delta_m_AC))
 
 
 @apply_uncertainty.add('maxMagGRAbsolute')
 def _maxmagGR_absolute(utype, source, value):
-    source.mfd.modify('set_max_mag', dict(value=value))
+    _modify_mfd(source, 'set_max_mag', dict(value=value))
 
 
 @apply_uncertainty.add('incrementalMFDAbsolute')
 def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
-    source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
+    _modify_mfd(source, 'set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
 
 
@@ -566,39 +576,144 @@ def _dummy(utype, source, value):
     pass
 
 
+# uncertainties changing only the MFD or the rates, i.e. keeping the geometry
+# of the ruptures; the others (and the unknown ones) are geometry-changing,
+# see classical.geometry_key.
+GEOMETRY_PRESERVING = frozenset([
+    'abGRAbsolute', 'abMaxMagAbsolute', 'bGRAbsolute', 'bACAbsolute',
+    'bGRRelative', 'bACRelative', 'maxMagGRRelative',
+    'maxMagGRRelativeNoMoBalance', 'maxMagAndDeltaMagACRelative',
+    'maxMagAndDeltaMagACRelativeNoMoBalance', 'maxMagGRAbsolute',
+    'incrementalMFDAbsolute', 'truncatedGRFromSlipAbsolute',
+    'recurSet', 'recurRow', 'rateSplit', 'dummy'])
+
+
 # ######################### apply_uncertainties ########################### #
 
-def apply_uncertainties(bset_values, src_group):
+def lt_source_id(source):
     """
-    :param bset_value: a list of pairs (branchset, value)
-        List of branch IDs
+    :param source: a source instance
+    :returns: the source ID as written in the logic tree
+
+    NB: sources with the same ID but different content in different
+    source models get the branch ID appended after a "!" (see
+    source_reader.add_bangs), i.e. 'src!b1' for 'src'; the "!" cannot
+    appear in the original IDs, so everything after it is removed
+    """
+    return source.source_id.split('!')[0]
+
+
+def get_bset_value(bset, value, source):
+    """
+    :param bset: a BranchSet instance
+    :param value: the value of the branch
+    :param source: a source instance
+    :returns: a pair (ok, value), where ok tells if the branchset applies
+        to the source and value is the value to apply to it
+
+    NB: the source of a correlated branchset is looked up by ID and by
+    basename, since it can be a fragment of the source in the logic tree
+    (i.e. 'area1.0' for 'area1'); this happens when the uncertainties are
+    applied after the splitting of the sources, as done by classical
+    """
+    if bset.correlated:
+        src_id = lt_source_id(source)
+        if src_id in value:
+            return True, value[src_id]
+        bname = valid.basename(src_id)
+        return bname in value, value.get(bname)
+    return bset.filter_source(source), value
+
+
+def get_bset_values(lt_path, source_model_lt):
+    """
+    :param lt_path: the logic tree path of a source model realization
+    :param source_model_lt: a SourceModelLogicTree instance
+    :returns: the list of (branchset, value) pairs whose uncertainties must
+        be applied to the sources, i.e. excluding the extendModel
+        branchsets, which add sources and are handled in gen_groups
+    """
+    bset_values = source_model_lt.bset_values(lt_path)
+    while (bset_values and
+           bset_values[0][0].uncertainty_type == 'extendModel'):
+        bset_values = bset_values[1:]
+    return bset_values
+
+
+def check_correlated(bset_values, src_group):
+    """
+    Check that the sources of the correlated branchsets are in the group.
+    The sources are also looked up by basename, since they can be fragments
+    of the sources in the logic tree (i.e. 'area1.0' for 'area1')
+    """
+    srcs = set(src.source_id for src in src_group)
+    bnames = set(valid.basename(src) for src in src_group)
+    for bset, value in bset_values:
+        if bset.correlated:
+            for source_id in value:
+                if source_id not in srcs and source_id not in bnames:
+                    raise NameError(
+                        f'The source {source_id} in {bset.uncertainty_type} is'
+                        ' missing, maybe you mispelled the name?')
+
+
+def shallow_unc(bset_values, bset_applications, source):
+    # True if the uncertainties applied to source modify only its MFD
+    # (see GEOMETRY_PRESERVING) or the attributes listed in its
+    # shallow_uncertainties, so the copy can share the rest
+    # NB: bset_applications has a pair (applies, value) per branchset, e.g.
+    #   bset_values = [(bset_dip, 45.0), (bset_other, {'src2': 0.5})]
+    #   bset_applications = [(True, 45.0), (False, None)]
+    #   the first branchset sets the dip of the source to 45.0, the second
+    #   one is correlated to 'src2' and does not apply to the source
+    if hasattr(source, 'pointsources') or not hasattr(source, 'mfd'):
+        return False  # point sources modify their sub-sources in place
+    allowed = GEOMETRY_PRESERVING | source.shallow_uncertainties
+    return all(bset.uncertainty_type in allowed and not bset.collapsed
+               for (bset, _), (ok, _) in zip(bset_values,
+                                             bset_applications) if ok)
+
+
+def _copy_source(source, shallow):
+    if not shallow:
+        return copy.deepcopy(source)
+    # share the geometry with the original, but copy the MFD, which is
+    # modified in place by the uncertainties
+    src = copy.copy(source)
+    src.mfd = copy.deepcopy(source.mfd)
+    return src
+
+
+def apply_uncertainties(bset_values, src_group, check=True):
+    """
+    :param bset_values: a list of pairs (branchset, value)
     :param src_group:
         SourceGroup instance
+    :param check:
+        if True, check that the sources of the correlated branchsets exist;
+        set it to False when the group is a fragment of the original one
+        (as it happens applying the uncertainties in the workers)
     :returns:
         A copy of the original group with possibly modified sources
     """
     sg = copy.copy(src_group)
     sg.sources = []
-    sg.changes = 0
-    srcs = set(src.source_id for src in src_group)
-    for bset, value in bset_values:
-        if bset.correlated:
-            for source_id in value:
-                if source_id not in srcs:
-                    raise NameError(
-                        f'The source {source_id} in {bset.uncertainty_type} is'
-                        ' missing, maybe you mispelled the name?')
+    if check:
+        check_correlated(bset_values, src_group)
     for source in src_group:
-        oks = []
-        for bset, value in bset_values:
-            if bset.correlated:
-                oks.append(source.source_id in value)
-            else:
-                oks.append(bset.filter_source(source))
-        if sum(oks):  # source not filtered out
-            src = copy.deepcopy(source)
+        # NB: the correlated branchsets are resolved here, once per
+        # branchset and source
+        pairs = [get_bset_value(bset, value, source)
+                 for bset, value in bset_values]
+        if any(ok for ok, _ in pairs):  # source not filtered out
+            shallow = shallow_unc(bset_values, pairs, source)
+            src = _copy_source(source, shallow)
+            # the uncertainties can change the number of ruptures, for
+            # instance by truncating the MFD, so a cached value is not
+            # valid anymore
+            src._num_ruptures = 0
             srcs = []
-            for (bset, value), ok in zip(bset_values, oks):
+            for (bset, _v), (ok, v) in zip(bset_values, pairs):
                 if ok and bset.collapsed:
                     if src.code == b'N':
                         raise NotImplementedError(
@@ -610,24 +725,33 @@ def apply_uncertainties(bset_values, src_group):
                         apply_uncertainty(
                             bset.uncertainty_type, newsrc, br.value)
                         srcs.append(newsrc)
-                    sg.changes += len(srcs)
                 elif ok:
                     if not srcs:  # only the first time
                         srcs.append(src)
                     for s in srcs:
                         # tested in test_mixed_collapsed_apply_uncertainties
-                        if bset.correlated:
-                            apply_uncertainty(
-                                bset.uncertainty_type, s,
-                                value[source.source_id])
-                        else:
-                            apply_uncertainty(bset.uncertainty_type, s, value)
-                    sg.changes += 1
+                        apply_uncertainty(bset.uncertainty_type, s, v)
             sg.sources.extend(srcs)
         else:
             # no copy
             sg.sources.append(source)
     return sg
+
+
+# ####################### uncertainties and sampling ###################### #
+
+
+def restrict_ts_samples(src, trt_smrs):
+    """
+    :returns: a copy of the source with the ts_samples restricted to
+        trt_smrs, i.e. belonging to a single set of uncertainties
+    """
+    new = copy.copy(src)
+    ts_samples = src.get_ts_samples()
+    new.ts_samples = ts_samples[
+        numpy.isin(ts_samples['trt_smr'], trt_smrs)]
+    return new
+
 
 # ######################### sampling ######################## #
 
@@ -933,7 +1057,7 @@ class BranchSet(object):
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSources':
-                if source and source.source_id not in value:
+                if source and lt_source_id(source) not in value:
                     return False
             elif key == 'applyToBranches':
                 pass
@@ -1157,11 +1281,22 @@ def attach_branches(ltree, override=False):
             branchdic[br.branch_id] = br
 
         prev_ids = [pb.branch_id for pb in previous_branches]
-        app2brs = [brid for brid in bset.filters.get('applyToBranches', [])
-                   if brid in branchdic]
+        atb = bset.filters.get('applyToBranches', [])
+        app2brs = [brid for brid in atb if brid in branchdic]
         dummies = []
         next_previous = []
-        if app2brs and app2brs != prev_ids:
+        if atb and not app2brs:
+            # None of the branches in applyToBranches survived, which can
+            # happen only in a logic tree reduced to a single source (see
+            # SourceModelLogicTree.reduce). The branchset does not apply
+            # to the surviving branches, so a dummy branchset is attached
+            # to each of them, exactly as for a partial match below; this
+            # also keeps them leaves, so that the branchsets applied later
+            # on can be attached to them
+            for br in previous_branches:
+                br.bset = dummy = dummy_branchset(br.branch_id)
+                dummies.append(dummy.branches[0])
+        elif app2brs and app2brs != prev_ids:
             bset.applied = app2brs
             target_bs_ids = {
                 branchdic[brid].bs_id for brid in app2brs
@@ -1184,6 +1319,8 @@ def attach_branches(ltree, override=False):
                     else:
                         next_previous.append(br)
         else:
+            # no applyToBranches, i.e. the branchset becomes the child of
+            # all the branches of the previous level
             for br in previous_branches:
                 br.bset = bset
         set_short_id(bset.branches, BASE183[brno:])
@@ -1360,3 +1497,4 @@ def build(*bslists, applyToSources=''):
         bset.branches = branches
         bsets.append(bset)
     return CompositeLogicTree(bsets)
+

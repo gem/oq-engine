@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,6 @@ import copy
 import numpy as np
 import shapely
 
-from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
@@ -51,7 +50,8 @@ def _get_basin_term(C, ctx, region=None):
     z1pt0 = ctx.z1pt0.copy()
     # Use GMM's vs30 to z1pt0 for non-measured values
     mask = z1pt0 == -999
-    z1pt0[mask] = _get_z1_ref(ctx.vs30[mask]) # pp.1805 states CY08 vs30 vs z2pt5
+    # pp.1805 states CY08 vs30 vs z2pt5
+    z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])
 
     fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
         C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
@@ -196,114 +196,54 @@ def set_adjusted_stddevs(
     tau[:] += np.sqrt(scaled_tau ** 2 + additional_sigma ** 2 / 2)
 
 
+BASIN_FACTORS = {
+    # Table 3 and equation 19 of 2013 report.
+    'L2L': ((0.18, 0.35, 10.), (-0.06, 0.12, 0.65)),
+    # Table 4 of 2013 report
+    'CBD': ((0., 0.15, 0.45, 3.2, 5., 10.),
+            (0.05, -0.15, 0.4, 0.4, 0.08, 0.08)),
+    # The West parameters have been digitised from Figure 8a of the
+    # Bradley (2013b) report, as the actual parameters are not provided in the
+    # report, and could not be provided by the author (B. Bradley,
+    # pers. comm. 01/02/2019).
+    'West': ((0., 0.85, 1.4, 3.2, 5., 10.),
+             (-0.2, -0.55, -0.18, -0.18, 0.22, 0.22)),
+    # The East parameters have been digitised from Figure 9a of the
+    # Bradley (2013b) report, as the actual parameters are not provided in the
+    # report, and could not be provided by the author (B. Bradley,
+    # pers. comm. 01/02/2019).
+    'East': ((0., 0.25, 1.5, 10.), (0.05, 0.05, 0.15, 0.1)),
+    # The North parameters have been digitised from Figure 10a of
+    # the Bradley (2013b) report, as the actual parameters are not provided in
+    # the report, and could not be provided by the author (B. Bradley,
+    # pers. comm. 01/02/2019).
+    'North': ((0., 0.2, 0.6, 10.), (-0.31, -0.4, 0.2, 0.2))}
+
+
+def _interpolate_basin_factor(imt_per, periods, factors):
+    # Interpolate between tabulated periods, returning zero outside the range.
+    if not periods[0] <= imt_per <= periods[-1]:
+        return 0.
+    idx = np.searchsorted(periods, imt_per, side='right') - 1
+    if idx == len(periods) - 1:
+        return factors[-1]
+    return _interp_function(factors[idx + 1], factors[idx],
+                            periods[idx + 1], periods[idx], imt_per)
+
+
 def _get_dL2L(imt_per):
     """
     Table 3 and equation 19 of 2013 report.
     """
-    if imt_per < 0.18:
-        dL2L = -0.06
-    elif 0.18 <= imt_per < 0.35:
-        dL2L = _interp_function(0.12, -0.06, 0.35, 0.18, imt_per)
-    elif 0.35 <= imt_per <= 10:
-        dL2L = _interp_function(0.65, 0.12, 10, 0.35, imt_per)
-    else:
-        dL2L = 0
-
-    return dL2L
+    periods, factors = BASIN_FACTORS['L2L']
+    if imt_per < periods[0]:
+        return factors[0]
+    return _interpolate_basin_factor(imt_per, periods, factors)
 
 
-_get_dS2S = CallableDict()
-
-
-@_get_dS2S.add("CBD")
-def _get_dS2S_1(region, imt_per):
-    """
-    Table 4 of 2013 report
-    """
-    if imt_per == 0:
-        dS2S = 0.05
-    elif 0 < imt_per < 0.15:
-        dS2S = _interp_function(-0.15, 0.05, 0.15, 0, imt_per)
-    elif 0.15 <= imt_per < 0.45:
-        dS2S = _interp_function(0.4, -0.15, 0.45, 0.15, imt_per)
-    elif 0.45 <= imt_per < 3.2:
-        dS2S = 0.4
-    elif 3.2 <= imt_per < 5:
-        dS2S = _interp_function(0.08, 0.4, 5, 3.2, imt_per)
-    elif 5 <= imt_per <= 10:
-        dS2S = 0.08
-    else:
-        dS2S = 0
-
-    return dS2S
-
-
-@_get_dS2S.add("West")
-def _get_dS2S_2(region, imt_per):
-    """
-    The parameters of this function have been digitised from Figure 8a
-    of the Bradley (2013b) report, as the actual parameters are not
-    provided in the report, and could not be provided by the author
-    (B. Bradley, pers. comm. 01/02/2019).
-    """
-    if imt_per == 0:
-        dS2S = -0.2
-    elif 0 < imt_per < 0.85:
-        dS2S = _interp_function(-0.55, -0.2, 0.85, 0, imt_per)
-    elif 0.85 <= imt_per < 1.4:
-        dS2S = _interp_function(-0.18, -0.55, 1.4, 0.85, imt_per)
-    elif 1.4 <= imt_per < 3.2:
-        dS2S = -0.18
-    elif 3.2 <= imt_per < 5:
-        dS2S = _interp_function(0.22, -0.18, 5, 3.2, imt_per)
-    elif 5 <= imt_per <= 10:
-        dS2S = 0.22
-    else:
-        dS2S = 0
-
-    return dS2S
-
-
-@_get_dS2S.add("East")
-def _get_dS2S_3(region, imt_per):
-    """
-    The parameters of this function have been digitised from Figure 9a
-    of the Bradley (2013b) report, as the actual parameters are not
-    provided in the report, and could not be provided by the author
-    (B. Bradley, pers. comm. 01/02/2019).
-    """
-    if 0 <= imt_per <= 0.25:
-        dS2S = 0.05
-    elif 0.25 < imt_per < 1.5:
-        dS2S = _interp_function(0.15, 0.05, 1.5, 0.25, imt_per)
-    elif 1.5 <= imt_per <= 10:
-        dS2S = _interp_function(0.1, 0.15, 10, 1.5, imt_per)
-    else:
-        dS2S = 0
-
-    return dS2S
-
-
-@_get_dS2S.add("North")
-def _get_dS2S_4(region, imt_per):
-    """
-    The parameters of this function have been digitised from Figure 10a
-    of the Bradley (2013b) report, as the actual parameters are not
-    provided in the report, and could not be provided by the author
-    (B. Bradley, pers. comm. 01/02/2019).
-    """
-    if imt_per == 0:
-        dS2S = -0.31
-    elif 0 < imt_per < 0.2:
-        dS2S = _interp_function(-0.4, -0.31, 0.2, 0, imt_per)
-    elif 0.2 <= imt_per < 0.6:
-        dS2S = _interp_function(0.2, -0.4, 0.6, 0.2, imt_per)
-    elif 0.6 <= imt_per <= 10:
-        dS2S = 0.2
-    else:
-        dS2S = 0
-
-    return dS2S
+def _get_dS2S(region, imt_per):
+    # Return the regional S2S correction for the requested period.
+    return _interpolate_basin_factor(imt_per, *BASIN_FACTORS[region])
 
 
 def _get_ln_y_ref(trt, ctx, C):
@@ -334,13 +274,13 @@ def _get_ln_y_ref(trt, ctx, C):
         C['c1']
         + (C['c1a'] * Frv
            + C['c1b'] * Fnm
-           + C['c7'] * (np.clip(ctx.ztor, -np.inf, C['c8']) - 4))
+           + C['c7'] * (np.minimum(ctx.ztor, C['c8']) - 4))
         * (1 - AS)
         + (C['c10'] + C['c7a'] * (ctx.ztor - 4)) * AS
         # second line
         + C['c2'] * (ctx.mag - 6)
         + ((C['c2'] - C['c3']) / C['cn'])
-        * np.log(1 + np.exp(C['cn'] * (C['cm'] - ctx.mag)))
+        * np.logaddexp(0.0, C['cn'] * (C['cm'] - ctx.mag))
         # third line
         + C['c4']
         * np.log(ctx.rrup
@@ -377,10 +317,10 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1):
     ln_y = (
         # first line of eq. 13b
         ln_y_ref + C['phi1'] *
-        np.log(np.clip(ctx.vs30, -np.inf, v1) / 1130)
+        np.log(np.minimum(ctx.vs30, v1) / 1130)
         # second line
         + C['phi2'] * (exp1 - exp2)
-        * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
+        * np.logaddexp(0.0, ln_y_ref - np.log(C['phi4']))
         # third line
         + _get_basin_term(C, ctx)
         # fourth line
@@ -437,7 +377,7 @@ def _get_v1(imt):
         v1 = 1800.
     else:
         v1a = np.clip((1130 * (T / 0.75)**-0.11), 1130, np.inf)
-        v1 = np.clip(v1a, -np.inf, 1800.)
+        v1 = np.minimum(v1a, 1800.)
     return v1
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ Module exports :class:`AkkarEtAlRjb2014`
                :class:`AkkarEtAlRhypo2014`.
 """
 import numpy as np
+
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -99,25 +100,21 @@ def _compute_non_linear_term(C, pga_only, ctx):
     """
     Vref = 750.0
     Vcon = 1000.0
-    lnS = np.zeros_like(ctx.vs30)
 
+    lnS = np.zeros_like(ctx.vs30, dtype=float)
     # equation (3a)
     idx = ctx.vs30 < Vref
+    ratio = ctx.vs30[idx] / Vref
     lnS[idx] = (
-        C['b1'] * np.log(ctx.vs30[idx] / Vref) +
+        C['b1'] * np.log(ratio) +
         C['b2'] * np.log(
-            (pga_only[idx] + C['c'] * (ctx.vs30[idx] / Vref) ** C['n']) /
-            ((pga_only[idx] + C['c']) * (ctx.vs30[idx] / Vref) ** C['n'])
-        ))
-
+            (pga_only[idx] + C['c'] * ratio ** C['n']) /
+            ((pga_only[idx] + C['c']) * ratio ** C['n'])))
     # equation (3b)
     idx = (ctx.vs30 >= Vref) & (ctx.vs30 <= Vcon)
     lnS[idx] = C['b1'] * np.log(ctx.vs30[idx] / Vref)
-
     # equation (3c)
-    idx = ctx.vs30 > Vcon
-    lnS[idx] = C['b1'] * np.log(Vcon / Vref)
-
+    lnS[ctx.vs30 > Vcon] = C['b1'] * np.log(Vcon / Vref)
     return lnS
 
 

@@ -62,7 +62,7 @@ def _worker_api(action, *args):
 
 
 def _decode_db_value(value):
-    """Restore values encoded by the FastAPI database endpoint."""
+    """Restore values encoded by the internal database API."""
     if isinstance(value, dict):
         kind = value.get('__oq_type__')
         if kind == 'datetime':
@@ -94,7 +94,7 @@ def _encode_db_value(value):
 
 
 def _db_api(action, *args):
-    """Call a database action through the FastAPI endpoint."""
+    """Call a database action through the internal API endpoint."""
     server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
     endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
     try:
@@ -292,8 +292,13 @@ class LogContext:
                 user_name, None if isinstance(hc_id, str) else hc_id,
                 host)
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
-            if os.path.exists(path):  # sanity check on the calculation ID
-                raise RuntimeError('There is a pre-existing file %s' % path)
+            if os.path.exists(path):
+                if use_server():
+                    raise RuntimeError('There is a pre-existing file %s' % path)
+                else:
+                    # single user installation with pre-existing calculation
+                    logging.warning(f'Overwriting {path}')
+                    os.remove(path)                    
         else:
             # assume the calc_id was alreay created in the db
             self.new = False

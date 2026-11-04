@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.rmap_maker import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 PLOT = False

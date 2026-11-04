@@ -93,7 +93,7 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, ctx.ztor, ctx.rrup)
-            sig[m] = C['gc4'] + C['gc5'] * np.clip(ctx.mag, None, 8.)
+            sig[m] = C['gc4'] + C['gc5'] * np.minimum(ctx.mag, 8.)
 
     #: Coefficient table obtained from coefficient arrays and variables
     #: defined in subroutine getGeom in hazgridXnga2.f

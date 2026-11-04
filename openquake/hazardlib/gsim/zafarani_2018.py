@@ -29,6 +29,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_distance(C, ctx):
     """
     Compute the second term of the equation 1 which is presented in eq.3 and c2 is zero:
@@ -47,7 +50,6 @@ def _compute_magnitude(C, ctx):
     e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
     e1 + b3 * (M-Mh) otherwise
     """
-    
     return np.where(
         ctx.mag <= C['mh'],
         C["e1"] + C['b1'] * (ctx.mag - C['mh']) + C['b2'] * (ctx.mag - C['mh']) ** 2,
@@ -114,7 +116,7 @@ class ZafaraniEtAl2018(GMPE):
     """
     Implements GMPE developed by H.Zafarani, L.Luzi, G.Lanzano,
     M.R.Soghrat and published as "Empirical equations for the
-    prediction of PGA and pseudo spectral accelerations using 
+    prediction of PGA and pseudo spectral accelerations using
     Iranian strong-motion data",
     J Seismol, DOI 10.1007/s10950-017-9704-y.
     SA are given from 0.04 s to 4 s.
@@ -162,12 +164,12 @@ class ZafaraniEtAl2018(GMPE):
                      _get_mechanism(C, ctx))
 
 
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            mean[m] = (imean - 2.0) * LOG10 - np.log(g)
 
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
-            tau[m] = np.log(10.0 ** C['SigmaB'])
-            phi[m] = np.log(10.0 ** C['SigmaW'])
+            sig[m] = C['SigmaTot'] * LOG10
+            tau[m] = C['SigmaB'] * LOG10
+            phi[m] = C['SigmaW'] * LOG10
 
     #: Coefficients for PGA and SA from Table 1
 
@@ -205,7 +207,8 @@ class ZafaraniEtAl2018VHratio(ZafaraniEtAl2018):
     Calculates the V/H ratio.
     """
 
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -221,12 +224,12 @@ class ZafaraniEtAl2018VHratio(ZafaraniEtAl2018):
                      _get_mechanism(C, ctx))
 
 
-            mean[m] = np.log(10.0 ** imean)
+            mean[m] = imean * LOG10
 
             # Return stddevs in terms of natural log scaling
-            sig[m] = np.log(10.0 ** C['SigmaTot'])
-            tau[m] = np.log(10.0 ** C['SigmaB'])
-            phi[m] = np.log(10.0 ** C['SigmaW'])
+            sig[m] = C['SigmaTot'] * LOG10
+            tau[m] = C['SigmaB'] * LOG10
+            phi[m] = C['SigmaW'] * LOG10
 
     #: Coefficients for V/H from Table 2
 
@@ -257,6 +260,5 @@ class ZafaraniEtAl2018VHratio(ZafaraniEtAl2018):
     2.50	6.9	  -0.184	0.011	 0.000     -0.004	  0.011	    12.964	   0.008	 0.050	 -0.065	  -0.089	-0.081	  0.070	   0.209	 0.220
     3.00	7.0	  -0.188	0.023	 0.005	   -0.052	  0.020	    11.714	   0.007	 0.055	 -0.057	  -0.084	-0.047	  0.069	   0.207	 0.218
     4.00	7.2	  -0.212	0.014	 0.005	   -0.232	  0.036	    12.426	   0.000	 0.047	 -0.064	  -0.082	-0.028	  0.074	   0.223	 0.235
-
     """)
 

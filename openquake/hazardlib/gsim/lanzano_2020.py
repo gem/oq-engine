@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020, GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.gsim.lanzano_2020` implements
-:class:`~openquake.hazardlib.gsim.lanzano_2020.LanzanoEtAl2020`
+Module exports :class:`LanzanoEtAl2020_ref`
+               :class:`LanzanoEtAl2020_EC8`
+               :class:`LanzanoEtAl2020_Cluster`
 """
 
 import numpy as np
@@ -27,6 +28,10 @@ from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
+
+LOG10 = np.log(10.0)
+
 
 CONSTS = {'Mh': 5.0,
           'Rref': 1.0,
@@ -91,20 +96,11 @@ def _get_site_type_dummy_variables_1(kind, ctx):
     """
     Get site type dummy variables for five different EC8 site classes
     """
-    ssb = np.zeros(len(ctx.siteclass))
-    ssc = np.zeros(len(ctx.siteclass))
-    ssd = np.zeros(len(ctx.siteclass))
-    sse = np.zeros(len(ctx.siteclass))
-
-    list_sites = [x.decode('utf-8') for x in ctx.siteclass]
-    idx = [index for index, value in enumerate(list_sites) if value == 'B']
-    ssb[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == 'C']
-    ssc[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == 'D']
-    ssd[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == 'E']
-    sse[idx] = 1.0
+    sites = np.array([x.decode('utf-8') for x in ctx.siteclass])
+    ssb = (sites == 'B').astype(float)
+    ssc = (sites == 'C').astype(float)
+    ssd = (sites == 'D').astype(float)
+    sse = (sites == 'E').astype(float)
     return ssb, ssc, ssd, sse
 
 
@@ -114,32 +110,15 @@ def _get_site_type_dummy_variables_2(kind, ctx):
     Get site type dummy variables.
     The recording sites are classified into 9 different clusters.
     """
-    cl2 = np.zeros(len(ctx.siteclass))
-    cl3 = np.zeros(len(ctx.siteclass))
-    cl4 = np.zeros(len(ctx.siteclass))
-    cl5 = np.zeros(len(ctx.siteclass))
-    cl6 = np.zeros(len(ctx.siteclass))
-    cl7 = np.zeros(len(ctx.siteclass))
-    cl8 = np.zeros(len(ctx.siteclass))
-    cl9 = np.zeros(len(ctx.siteclass))
-
-    list_sites = [x.decode('utf-8') for x in ctx.siteclass]
-    idx = [index for index, value in enumerate(list_sites) if value == '2']
-    cl2[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '3']
-    cl3[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '4']
-    cl4[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '5']
-    cl5[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '6']
-    cl6[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '7']
-    cl7[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '8']
-    cl8[idx] = 1.0
-    idx = [index for index, value in enumerate(list_sites) if value == '9']
-    cl9[idx] = 1.0
+    sites = np.array([x.decode('utf-8') for x in ctx.siteclass])
+    cl2 = (sites == '2').astype(float)
+    cl3 = (sites == '3').astype(float)
+    cl4 = (sites == '4').astype(float)
+    cl5 = (sites == '5').astype(float)
+    cl6 = (sites == '6').astype(float)
+    cl7 = (sites == '7').astype(float)
+    cl8 = (sites == '8').astype(float)
+    cl9 = (sites == '9').astype(float)
     return cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9
 
 
@@ -190,14 +169,14 @@ class LanzanoEtAl2020_ref(GMPE):
                        _get_distance_term(C, ctx.mag, ctx) +
                        _get_site_correction(self.kind, ctx, C))
             # To natural logarithm and fraction of g
-            mean[m] = np.log(10.0 ** mean[m] / (gravity_acc * 100))
+            mean[m] = mean[m] * LOG10 - np.log(gravity_acc * 100)
             # Get stds
 
-            sig[m] = np.log(10.0 ** np.sqrt(
-                C['tau'] ** 2 + C['phi_S2S'] ** 2 + C['phi_0'] ** 2))
-            tau[m] = np.log(10.0 ** C['tau'])
-            phi[m] = np.log(10.0 ** np.sqrt(
-                C['phi_S2S'] ** 2 + C['phi_0'] ** 2))
+            sig[m] = np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
+                             C['phi_0'] ** 2) * LOG10
+            tau[m] = C['tau'] * LOG10
+            phi[m] = (np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) *
+                      LOG10)
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
 IMT                 a                   b1                  b2                  c1                  c2                  c3                      s_other             Mref                tau                 phi_S2S             phi_0               sigma

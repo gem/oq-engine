@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) Active Crust GMMs.
 
@@ -28,7 +43,6 @@ import openquake.hazardlib.gsim.boore_2014 as BA14
 import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
 import openquake.hazardlib.gsim.chiou_youngs_2014 as CY14
 import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
-
 from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
@@ -136,7 +150,7 @@ def shm6_site_correction(C, mean, ctx, imt):
 
     # CanadaSHM6 hard rock site factor
     factor = CanadaSHM6_hardrock_site_factor(cy14_1100div760, cy14_2000div760,
-                                             vs30_ge1100, imt)
+                                             ctx.vs30[vs30_ge1100], imt)
 
     # for Vs30 > 1100 add CY14 amplification at 760 and CanadaSHM6 factor
     mean[vs30_ge1100] = factor + cy14_760 + mean[vs30_ge1100]

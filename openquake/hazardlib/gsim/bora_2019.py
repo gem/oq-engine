@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,9 +23,11 @@ Module exports :class:`BoraEtAl2019`, :class:`BoraEtAl2019Drvt`
 
 import os
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import FAS, DRVT
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+
 
 B_COEFFS = os.path.join(os.path.dirname(__file__), "bora_2019",
                           "bora_2019.csv")
@@ -45,15 +47,11 @@ CONST_DURATION = {"M": 5.3,
 
 
 def _get_source_term_duration(C, ctx):
-    above = ctx.mag > CONST_DURATION['M']
-    below = ctx.mag <= CONST_DURATION['M']
-    fsource = np.zeros_like(ctx.mag)
-    if np.any(below):
-        fsource[below] = C['d1'] * ctx.mag[below]
-    if np.any(above):
-        fsource[above] =  (C['d1'] * CONST_DURATION['M'] +
-                           C['d2'] * (ctx.mag[above] - CONST_DURATION['M']))
-    return fsource
+    return np.where(
+        ctx.mag <= CONST_DURATION['M'],
+        C['d1'] * ctx.mag,
+        C['d1'] * CONST_DURATION['M'] + C['d2'] * (ctx.mag - CONST_DURATION['M'])
+    )
 
 
 def _get_path_term_duration(C, ctx):
@@ -61,34 +59,27 @@ def _get_path_term_duration(C, ctx):
 
 
 def _get_site_term_duration(C, ctx):
-    fsite = np.ones_like(ctx.vs30)
-    below = ctx.vs30 <= CONST_DURATION['Vs30']
-    above = ctx.vs30 > CONST_DURATION['Vs30']
-    fsite[below] = C['d5'] * np.log(ctx.vs30[below])
-    fsite[above] = C['d5'] * np.log(CONST_DURATION['Vs30'])
-    return fsite
+    return np.where(
+        ctx.vs30 <= CONST_DURATION['Vs30'],
+        C['d5'] * np.log(ctx.vs30),
+        C['d5'] * np.log(CONST_DURATION['Vs30']))
 
 
 def _get_source_term(C, ctx):
-    above = ctx.mag > CONSTANTS['Mh']
-    below = ctx.mag <= CONSTANTS['Mh']
-    fsource = np.zeros_like(ctx.mag)
-    if np.any(above):
-        fsource[above] = (C['c3'] * (ctx.mag[above] - CONSTANTS['Mh']) +
-                          C['c2'] * (8.5 - ctx.mag[above])**2)
-    if np.any(below):
-        fsource[below] = (C['c1'] * (ctx.mag[below] - CONSTANTS['Mh']) +
-                          C['c2'] * (8.5 - ctx.mag[below])**2)
-    return fsource
+    return np.where(
+        ctx.mag > CONSTANTS['Mh'],
+        C['c3'] * (ctx.mag - CONSTANTS['Mh']) + C['c2'] * (8.5 - ctx.mag)**2,
+        C['c1'] * (ctx.mag - CONSTANTS['Mh']) + C['c2'] * (8.5 - ctx.mag)**2)
 
 
 def _get_finite_fault_factor(C, ctx):
-    h = np.ones_like(ctx.mag)
-    h[ctx.mag <= 4] = 2
-    selec = (ctx.mag > 4) & (ctx.mag <= 5)
-    h[selec] = C['c4'] - (C['c4'] - 1)*(5 - ctx.mag[selec])
-    h[ctx.mag > 5] = C['c4']
-    return h
+    return np.where(
+        ctx.mag <= 4,
+        2.,
+        np.where(
+            ctx.mag <= 5,
+            C['c4'] - (C['c4'] - 1) * (5 - ctx.mag),
+            C['c4']))
 
 
 def _get_path_term(C, ctx):

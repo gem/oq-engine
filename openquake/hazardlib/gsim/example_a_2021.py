@@ -16,7 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports :class:`ExampleA2021`
+"""
 import numpy as np
+
 from openquake.baselib.performance import jittable
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const

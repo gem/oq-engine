@@ -22,8 +22,8 @@ import numpy as np
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (CampbellBozorgnia2014,
-                                                              _get_z2pt5_ref)
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
+    CampbellBozorgnia2014, _get_z2pt5_ref)
 
 
 def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
@@ -44,7 +44,7 @@ def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
     idx = z2pt5 > 3.0
     fb[idx] = C["c16"] * C["k3"] * np.exp(-0.75) * (
         1. - np.exp(-0.25 * (z2pt5[idx] - 3.)))
-    
+
     return fb
 
 
@@ -60,7 +60,7 @@ class CB14BasinTerm(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
     # Others are set from underlying GMM
-    REQUIRES_DISTANCES = set() 
+    REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
@@ -72,12 +72,12 @@ class CB14BasinTerm(GMPE):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
 
-        # Need z2pt5 in req site params to ensure in ctx site col 
+        # Need z2pt5 in req site params to ensure in ctx site col
         if 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS = frozenset(
                 self.gmpe.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
-        
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):      
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`

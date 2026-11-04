@@ -26,7 +26,8 @@ import configparser
 import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
-    geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
+    geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid,
+    rmap_maker)
 from openquake.hazardlib.source.rupture import (
     EBRupture, get_ruptures_aw, get_ebr)
 from openquake.hazardlib.calc.filters import IntegrationDistance
@@ -236,6 +237,7 @@ class Input(object):
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)
         hparams.setdefault('source_nodes', '')
+        hparams.setdefault('filter_sourcecodes', '')
         hparams.setdefault('infer_occur_rates', False)
         hparams.setdefault('rlz_index', None)
         hparams.setdefault('disagg_bin_edges', {})
@@ -258,6 +260,7 @@ class Input(object):
             hparams['floating_y_step'],
             hparams['source_nodes'],
             hparams['infer_occur_rates'],
+            filter_sourcecodes=hparams['filter_sourcecodes'],
         )
         if read_all:
             self.groups, self.cmakers = self.get_groups_cmakers()
@@ -320,7 +323,7 @@ class Input(object):
                     ebr.n_occ = ngmfs * num_rlzs
                     ebr.trt_smrs = (ebr.trt_smr,)
         trt_smrs = [group[0].trt_smrs for group in groups]
-        return groups, contexts.get_cmakers(trt_smrs, self.full_lt, self.oq)
+        return groups, rmap_maker.get_cmakers(trt_smrs, self.full_lt, self.oq)
 
     @property
     def cmaker(self):

@@ -85,6 +85,12 @@ Joint spatial and cross-IMT models
     :members:
     :show-inheritance:
 
+.. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.monteiro_et_al_2026
+
+.. autoclass:: MonteiroEtAl2026
+    :members:
+    :show-inheritance:
+
 .. currentmodule:: openquake.hazardlib.correlation_models.spatial_cross_imt.wang_du_2013
 
 .. autoclass:: WangDu2013PGAIAPGV

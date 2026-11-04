@@ -27,6 +27,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 
+
+LOG10 = np.log(10.0)
+
+
 CONSTS = {'Mr': 5,
           'Vref': 1530,
           'c4': 0.1,
@@ -103,8 +107,8 @@ def _get_stddevs(C):
     Returns the standard deviations
     """
     # sigma_e and sigma_r are in log10 base, so we need to transform them
-    tau = np.log(10 ** C['sigma_e'])
-    phi = np.log(10 ** C['sigma_r'])
+    tau = C['sigma_e'] * LOG10
+    phi = C['sigma_r'] * LOG10
     return [np.sqrt(tau ** 2.0 + phi ** 2.0), tau, phi]
 
 
@@ -158,7 +162,7 @@ class IdiniEtAl2017SInter(GMPE):
                        _get_distance_term(trt, C, ctx) +
                        _get_site_term(C, ctx))
             # Convert from log10 to ln
-            mean[m] = np.log(10 ** mean[m])
+            mean[m] = mean[m] * LOG10
             sig[m], tau[m], phi[m] = _get_stddevs(C)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

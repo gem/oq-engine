@@ -47,7 +47,6 @@ U32 = np.uint32
 I64 = np.int64
 F32 = np.float32
 TRUNCATION_THRESHOLD = 1E-9
-CE_MIN_SITES = 1_000
 
 
 def _correlation_budget():
@@ -78,6 +77,22 @@ def _site_positions(complete, selected):
             np.any(sorted_sids[positions] != selected_sids)):
         raise ValueError('Affected sites are absent from the complete grid')
     return order[positions]
+
+
+def _ce_layout(sites):
+    """Fit the complete grid, falling back to the affected sites."""
+    complete = sites.complete
+    try:
+        return complete, RegularGridLayout.from_sites(complete)
+    except ValueError as complete_error:
+        if sites is complete:
+            raise
+        layout = RegularGridLayout.from_sites(sites)
+        logging.warning(
+            'Using %d affected sites for circulant embedding because the '
+            'complete collection of %d sites cannot be used: %s',
+            len(sites), len(complete), complete_error)
+        return sites, layout
 
 
 def _truncated_normals(shape, level, rng):
@@ -474,7 +489,7 @@ class GmfComputer(object):
             if not conditioned:
                 with self.cmaker.gmf_mon:
                     mean_stds = self.cmaker.get_4MN([self.ctx], gs).astype(F32)
-            gs.gid = self.cmaker.gid[g]
+            gs.idx = self.cmaker.gsim_idx[g]
             idxs, = np.where(np.isin(self.rlz, rlzs))
             E = len(idxs)
             if E == 0:  # crucial for performance
@@ -516,7 +531,7 @@ class GmfComputer(object):
         if rng is None:
             rng = self.rng
         gsim, rlzs = list(self.cmaker.gsims.items())[g]
-        gsim.gid = self.cmaker.gid[g]
+        gsim.idx = self.cmaker.gsim_idx[g]
         num_events = len(indices)
         expected = (self.M, self.N, num_events)
         if fields.shape != expected:
@@ -582,7 +597,7 @@ class GmfComputer(object):
                 with self.cmaker.gmf_mon:
                     mean_stds_by_gsim[g] = self.cmaker.get_4MN(
                         [self.ctx], gs).astype(F32)
-            gs.gid = self.cmaker.gid[g]
+            gs.idx = self.cmaker.gsim_idx[g]
             record_stats = g not in recorded_gsims
             df = self._compute_ce_batch(
                 factor, gs, rlzs, mean_stds_by_gsim[g], idxs, max_iml,
@@ -628,24 +643,19 @@ class GmfComputer(object):
         self._ce_checked = True
         model = self.within_event_model
         dense_bytes = _dense_correlation_bytes(model, self.sites, self.M)
-        dense_sites = (len(self.sites.complete)
-                       if isinstance(model, SpatialCorrelationModel)
-                       else len(self.sites))
-        compatible = model.SUPPORTS_CIRCULANT_EMBEDDING
-        if dense_sites < CE_MIN_SITES or not compatible:
+        compatible = (model.SUPPORTS_CIRCULANT_EMBEDDING and
+                      self.cmaker.oq.correlation_strategy ==
+                      'circulant_embedding')
+        if not compatible:
             if dense_bytes > _correlation_budget():
-                qualifier = ('too small for automatic circulant embedding'
-                             if compatible else
-                             'not enabled for circulant embedding')
                 raise ValueError(
-                    f'{model.__class__.__name__} is {qualifier}; its dense '
-                    f'factorization requires about '
-                    f'{humansize(dense_bytes)}')
+                    f'{model.__class__.__name__} is not enabled for '
+                    f'circulant embedding; its dense factorization '
+                    f'requires about {humansize(dense_bytes)}')
             return None
 
         try:
-            complete = self.sites.complete
-            layout = RegularGridLayout.from_sites(complete)
+            complete, layout = _ce_layout(self.sites)
             positions = _site_positions(complete, self.sites)
             site_indices = layout.site_indices[positions]
             self._ce_factor = CirculantEmbeddingFactor.build(
@@ -737,15 +747,12 @@ class GmfComputer(object):
             for s, sid in enumerate(self.ctx.sids):
                 if gmv[s] > min_iml:
                     self.mea_tau_phi.append(
-                        (self.rup_id, sid, gsim.gid, m,
+                        (self.rup_id, sid, gsim.idx, m,
                          mean[s], tau[s], phi[s]))
 
         if (self.tlw <= TRUNCATION_THRESHOLD and
                 self.tlb <= TRUNCATION_THRESHOLD):
             # for zero between/within truncation there is only mean, no stds
-            if self.within_event_model:
-                raise ValueError('truncation_level_within=0 requires '
-                                 'no correlation model')
             gmf = exp(mean, im != 'MMI')[:, np.newaxis].repeat(
                 len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:

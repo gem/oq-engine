@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -54,8 +54,9 @@ def _get_intra_event_sigmas(ctx):
     and the expected ground motion. In this case the sigma coefficients
     are determined from the site class as described below Eq. 14
     """
-    sigma1 = 1.18 * np.ones_like(ctx.vs30)
-    sigma2 = 0.94 * np.ones_like(ctx.vs30)
+    dtype = np.result_type(ctx.vs30, 1.18)
+    sigma1 = np.full_like(ctx.vs30, 1.18, dtype=dtype)
+    sigma2 = np.full_like(ctx.vs30, 0.94, dtype=dtype)
 
     idx1 = np.logical_and(ctx.vs30 >= 360.0, ctx.vs30 < 760.0)
     idx2 = ctx.vs30 < 360.0

@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,8 @@ soft_mem_limit = 90
 # use a lower value to protect against loss of control when OOM occurs
 hard_mem_limit = 98
 
-[dbserver]
-file = {{ workdir_services }}/oqdata/db.sqlite3
+[server]
+dbfile = {{ workdir_services }}/oqdata/db.sqlite3
 # daemon bind address; must be a valid IP address
 # example: 0.0.0.0
 listen = {{ server_host }}
@@ -36,15 +36,12 @@ listen = {{ server_host }}
 # of the master node (on the master node cfg too)
 # example: master.hpc
 host = {{ server_host }}
-# port 1908 has a good reputation:
-# https://isc.sans.edu/port.html?port=1908
-port = 1908
 # port range used by workers to send back results
 # to the master node
 receiver_ports = 1921-1930
 
 [webapi]
-server = "http://{{ server_host }}:8800"
+server = http://127.0.0.1:8800
 username =
 password =
 authkey = changeme

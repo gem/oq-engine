@@ -21,6 +21,7 @@ Module exports :class:`KaleEtAl2015Turkey`
                :class:`KaleEtAl2015Iran`.
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -263,8 +264,7 @@ class KaleEtAl2015Turkey(GMPE):
         'Vref': 750.0,
         'Vcon': 1000.0,
         'c': 2.5,
-        'n': 3.2
-    }
+        'n': 3.2}
 
 
 class KaleEtAl2015Iran(KaleEtAl2015Turkey):
@@ -355,5 +355,4 @@ class KaleEtAl2015Iran(KaleEtAl2015Turkey):
         'Vref': 750.0,
         'Vcon': 1000.0,
         'c': 2.5,
-        'n': 3.2
-    }
+        'n': 3.2}

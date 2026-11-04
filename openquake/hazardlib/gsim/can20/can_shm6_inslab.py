@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+#
+# Copyright (C) 2014-2026 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) InSlab GMMs.
 The final documentation for the GMMs is being prepared. The GMMs are subject
@@ -51,6 +66,9 @@ from openquake.hazardlib.gsim.boore_2014 import (BooreEtAl2014,
 from scipy.constants import g
 
 
+LOG10 = np.log(10.0)
+
+
 def _compute_mean_ga(C, g, ctx, imt):
     """
     Compute mean according to equation on Table 2, page 2275.
@@ -74,10 +92,10 @@ def _compute_mean_ga(C, g, ctx, imt):
         C['c5'] * hypo_depth)
     # convert from base 10 to base e
     if imt == PGV():
-        mean = np.log(10 ** mean)
+        mean = mean * LOG10
     else:
         # convert from cm/s**2 to g
-        mean = np.log((10 ** mean) * 1e-2 / g)
+        mean = mean * LOG10 + np.log(0.01 / g)
     return mean
 
 
@@ -93,11 +111,11 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
             250 = SC III
             160 = SC IV
             log-log interpolation for intermediate values
-    """    
+    """
     ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
     ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
                            C['C3'], C['C4']])
-    
+
     # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
     # to avoid using np.interp twice.
     fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
@@ -106,7 +124,7 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
     site_term = np.interp(
         np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
         np.flip(ref_values, axis=0))
-    
+
     return site_term
 
 
@@ -375,7 +393,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
             # multiply by site factor to "convert" Japan values to Cascadia
             # values then convert from cm/s**2 to g
-            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            mean[m] = mean[m] + np.log(C_SF['MF'] * 0.01 / g)
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
             # add extrapolation factor if outside SA range (0.05 - 5.0)
@@ -449,7 +467,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                                     self.HYPO_DEPTH, ctx.rrup, ctx.vs30,
                                     # by passing pga_rock > 500 the soil
                                     # amplification is 0
-                                    np.zeros_like(ctx.vs30) + 600,
+                                    np.full_like(ctx.vs30, 600),
                                     PGA())
         pga_rock = 10 ** (pga_rock)
 
@@ -469,20 +487,20 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                 target_imt = imt
                 imt = SA(self.MAX_SA)
                 extrapolate = True
-        
+
             # extracting dictionary of coefficients specific to required
             # intensity measure type.
             C = self.COEFFS_SSLAB[imt]
 
             # compute actual mean and convert from log10 to ln and units from
             # cm/s**2 to g
-            hypo_depth = np.clip(ctx.hypo_depth, 0, 100.) 
+            hypo_depth = np.clip(ctx.hypo_depth, 0, 100.)
             delta = 0.00724 * 10 ** (0.507 * mag)
             R = np.sqrt(ctx.rrup ** 2 + delta ** 2)
 
             s_amp = _compute_soil_amplification(C, ctx, pga_rock, imt)
 
-            mean[m] =  (
+            mean[m] = (
                 # 1st term
                 C['c1'] + C['c2'] * mag +
                 # 2nd term
@@ -494,15 +512,15 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                 # 5th, 6th and 7th terms
                 s_amp)
 
-            mean[m] = np.log((10 ** mean[m]) * 1e-2 / g)
+            mean[m] = mean[m] * LOG10 + np.log(0.01 / g)
 
             if imt.period == 4.0:
                 mean[m] /= 0.550
 
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
             if 's2' in C.dtype.names:  # in the Gupta subclass
-                tau[m] = np.log(10 ** C['s2'])
-                phi[m] = np.log(10 ** C['s1'])
+                tau[m] = C['s2'] * LOG10
+                phi[m] = C['s1'] * LOG10
 
             # add extrapolation factor if outside SA range (0.07 - 9.09)
             if extrapolate:

@@ -69,7 +69,7 @@ def test_model_is_registered_with_calibration_metadata():
     assert AldeaEtAl2022.DEFINED_FOR_REGION == 'Chilean subduction zone'
     assert AldeaEtAl2022.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT is (
         const.IMC.GEOMETRIC_MEAN)
-    assert AldeaEtAl2022.DEFINED_FOR_SA_DAMPING == 5.0
+    assert AldeaEtAl2022.DEFINED_FOR_DAMPING == 5.0
 
 
 def test_covariance_and_factor_are_positive_definite():

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim import boore_2014
 
+
+LOG10 = np.log(10.0)
+
+
 def _compute_mean(C, mag, rrup):
     """
     Compute mean value according to equation 18, page 32.
@@ -52,7 +56,7 @@ def _compute_mean(C, mag, rrup):
             (C['c9'] + C['c10'] * m_ref) * g2)
 
     # convert from log10 to ln and units from cm/s2 to g
-    mean = np.log((10 ** mean) * 1e-2 / g)
+    mean = mean * LOG10 + np.log(0.01 / g)
 
     return mean
 
@@ -107,7 +111,7 @@ class Allen2012(GMPE):
                          self.COEFFS_SHALLOW[imt],
                          self.COEFFS_DEEP[imt])
             mean[m] = _compute_mean(C, ctx.mag, ctx.rrup)
-            sig[m] = np.log(10 ** C['sigma'])
+            sig[m] = C['sigma'] * LOG10
             # standard deviation is converted from log10 to ln
 
     #: Coefficients for shallow events taken from Excel file produced by Trevor
@@ -164,10 +168,10 @@ class Allen2012(GMPE):
 
 class Allen2012_SS14(Allen2012):
     """
-    Allen2012 Model updated to apply the linear and non-linear amplification factors of Sayhan & 
+    Allen2012 Model updated to apply the linear and non-linear amplification factors of Sayhan &
     Stewart (2014) as applied in the Boore et al (2014) NGE-West 2 GMM
     """
-    
+
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
@@ -182,36 +186,40 @@ class Allen2012_SS14(Allen2012):
                          self.COEFFS_SHALLOW[PGA()],
                          self.COEFFS_DEEP[PGA()])
         BEA14_C_PGA = boore_2014.BooreEtAl2014.COEFFS[PGA()]
-        
+
         # get rock PGA - correct from PGA(820 m/s) to PGA(760 m/s)
         pga_rock = _compute_mean(C_PGA, ctx.mag, ctx.rrup)
-        
+
         # make array like ctx.vs30 of 820 m/s
-        sites_820 = 820. * np.ones_like(ctx.vs30)
-        
+        sites_820 = np.full_like(ctx.vs30, 820.)
+
         # use Boore et al (2014) amplification factors
         flin_820_760 = boore_2014._get_linear_site_term(BEA14_C_PGA, sites_820)
-        fnl_820_760 = boore_2014._get_nonlinear_site_term(BEA14_C_PGA, sites_820, np.exp(pga_rock))
-        
+        fnl_820_760 = boore_2014._get_nonlinear_site_term(
+            BEA14_C_PGA, sites_820, np.exp(pga_rock))
+
         # apply correction to get PGA(760 m/s)
         pga_rock_760 = pga_rock - flin_820_760 - fnl_820_760
-        
+
         for m, imt in enumerate(imts):
             C = np.where(ctx.hypo_depth < 10,
                          self.COEFFS_SHALLOW[imt],
                          self.COEFFS_DEEP[imt])
-            
+
             # get amplification model coefficients from Boore et al, 2014
             BEA14_C = boore_2014.BooreEtAl2014.COEFFS[imt]
-            
+
             # correction from 820 m/s to 760 m/s
             flin_820_760 = boore_2014._get_linear_site_term(BEA14_C, sites_820)
-            fnl_820_760 = boore_2014._get_nonlinear_site_term(BEA14_C, sites_820, np.exp(pga_rock))
-            
+            fnl_820_760 = boore_2014._get_nonlinear_site_term(
+                BEA14_C, sites_820, np.exp(pga_rock))
+
             # correction from 760 m/s to target vs30
             flin = boore_2014._get_linear_site_term(BEA14_C, ctx.vs30)
-            fnl = boore_2014._get_nonlinear_site_term(BEA14_C, ctx.vs30, np.exp(pga_rock_760))
-            
-            mean[m] = _compute_mean(C, ctx.mag, ctx.rrup) - flin_820_760 - fnl_820_760 + flin + fnl 
-            
-            sig[m] = np.log(10 ** C['sigma'])
+            fnl = boore_2014._get_nonlinear_site_term(
+                BEA14_C, ctx.vs30, np.exp(pga_rock_760))
+
+            mean[m] = _compute_mean(
+    C, ctx.mag, ctx.rrup) - flin_820_760 - fnl_820_760 + flin + fnl
+
+            sig[m] = C['sigma'] * LOG10

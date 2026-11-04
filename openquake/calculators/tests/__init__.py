@@ -24,6 +24,7 @@ import tempfile
 import unittest
 import builtins
 import sys
+from contextlib import contextmanager
 
 import numpy
 
@@ -31,6 +32,25 @@ from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.baselib import general, parallel, writers
 from openquake.commonlib import datastore, readinput, logs
+from openquake.commonlib.oqvalidation import OqParam
+
+
+@contextmanager
+def no_fastmean():
+    """
+    Force the `fastmean` property of OqParam to False, which is
+    normally computed from the other parameters; this is needed to
+    compare the standard algorithm with the fastmean one.
+
+    >>> with no_fastmean():
+    ...     pass
+    """
+    original = OqParam.fastmean
+    OqParam.fastmean = property(lambda self: False)
+    try:
+        yield
+    finally:
+        OqParam.fastmean = original
 
 OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
 OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')

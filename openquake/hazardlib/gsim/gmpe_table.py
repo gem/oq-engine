@@ -34,6 +34,7 @@ from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.general import round
 
+
 _get_mean = CallableDict()
 FLOAT = (float, np.float32, np.float64)
 

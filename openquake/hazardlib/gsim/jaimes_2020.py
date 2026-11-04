@@ -55,7 +55,7 @@ def _compute_mean(C, g, ctx, imt, imc):
                 C['c4'] * R + C['c5'] * H)
         # For PGA and SA, the values are convert from cm/s**2 to 'g'
         if imt != PGV():
-            mean = np.log(np.exp(mean) * 1e-2 / g)
+            mean = mean + np.log(0.01 / g)
 
     return mean
 
@@ -84,7 +84,7 @@ def _get_stddevs(C, imc):
 
         # Return the values
         stds = np.array([s_t, s_b, s_w])
-    
+
     else:
         # Standard deviation for the 'horizontal or vertical component'
         stds = np.array([C['s_t'], C['s_b'], C['s_w']])
@@ -94,7 +94,7 @@ def _get_stddevs(C, imc):
 
 class JaimesEtAl2020SSlab(GMPE):
     """
-    Implements GMPE developed by Jaimes et al. (2020) for Mexican 
+    Implements GMPE developed by Jaimes et al. (2020) for Mexican
     intermediate-depth intraslab earthquake and published as:
 
     Jaimes M. A., García-Soto A. D. (2020) "Updated ground motion prediction
@@ -103,10 +103,10 @@ class JaimesEtAl2020SSlab(GMPE):
 
     The original formulation predict peak ground acceleration, PGA (cm/s**2),
     peak ground velocity, PGV (cm/s), and 5% damped pseudo-acceleration
-    response spectra, PSA (cm/s**2), for the quadratic mean of the two 
-    horizontal component of ground motion (see the 'Regression Analysis' 
+    response spectra, PSA (cm/s**2), for the quadratic mean of the two
+    horizontal component of ground motion (see the 'Regression Analysis'
     section on page 1304).
-    
+
     The GMPE predicted values for Mexican intraslab events at rock sites
     (NEHRP B site condition).
     """
@@ -117,7 +117,7 @@ class JaimesEtAl2020SSlab(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Supported intensity measure types are peak ground acceleration,
-    #: peak ground velocity and spectral acceleration. See Table 2 in 
+    #: peak ground velocity and spectral acceleration. See Table 2 in
     #: page 1306.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
@@ -238,7 +238,7 @@ class JaimesEtAl2020SSlabVHratio(JaimesEtAl2020SSlab):
     """
     Extend :class:'JaimesEtAl2020SSlab'
 
-    Implements GMPE developed by Jaimes et al. (2020) for Mexican 
+    Implements GMPE developed by Jaimes et al. (2020) for Mexican
     intermediate-depth intraslab earthquake and published as:
 
     Jaimes M. A., García-Soto A. D. (2020) "Updated ground motion prediction
@@ -247,21 +247,22 @@ class JaimesEtAl2020SSlabVHratio(JaimesEtAl2020SSlab):
 
     The original formulation predict peak ground acceleration, PGA (cm/s**2),
     peak ground velocity, PGV (cm/s), and 5% damped pseudo-acceleration
-    response spectra, PSA (cm/s**2), for the V/H ratio (see the 'Regression 
+    response spectra, PSA (cm/s**2), for the V/H ratio (see the 'Regression
     Analysis' section on page 1304).
-    
-    The GMPE predicted values for Mexican intraslab events at rock 
+
+    The GMPE predicted values for Mexican intraslab events at rock
     sites (NEHRP B site condition).
     """
 
     #: Supported intensity measure component is the V/H ratio.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL_TO_HORIZONTAL_RATIO
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.VERTICAL_TO_HORIZONTAL_RATIO)
 
     #: Regression coefficients for V/H ratios, as described in Table 4,
-    #: page 1307. The residuals between-event and within-event of the horizontal 
-    # and vertical components were added to compute the between-event, within-event, 
-    # and total standard deviations of the V/H ratios through the equation: 5b, 5c, 
-    # and 5a (see page 1308).
+    #: page 1307. The residuals between-event and within-event of the
+    #: horizontal and vertical components were added to compute the
+    #: between-event, within-event, and total standard deviations of the V/H
+    #: ratios through the equation: 5b, 5c, and 5a (see page 1308).
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT    c1       c2      c3      s_t   rho_b  rho_w  sh_b  sh_w  sv_b  sv_w

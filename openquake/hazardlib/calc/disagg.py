@@ -43,8 +43,8 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, Oq, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
+from openquake.hazardlib.rmap_maker import get_cmakers
 from openquake.hazardlib.calc.mean_rates import to_rates, to_probs
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
@@ -483,7 +483,8 @@ class Disaggregator(object):
     Internally the attributes .mea and .std are set, with shape (G, M, U),
     for each magnitude bin.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges,
+                 gid_by_rlz=None):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -494,6 +495,7 @@ class Disaggregator(object):
         self.sid = sid = self.sitecol.sids[0]
 
         self.cmaker = cmaker
+        self.gid_by_rlz = gid_by_rlz
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
                           bin_edges[1],  # dist
@@ -569,6 +571,24 @@ class Disaggregator(object):
             return sum(self.weights)
         return 1.
 
+    def _ctx_for_rlz(self, rlz):
+        """Return contexts and mean/std arrays for one realization."""
+        ctx = self.ctx
+        mea, std = self.mea[self.magi], self.std[self.magi]
+        if self.gid_by_rlz and 'gid' in (ctx.dtype.names or ()):
+            gids = self.gid_by_rlz.get(rlz, ())
+            mask = numpy.isin(ctx.gid, gids)
+            ctx, mea, std = ctx[mask], mea[:, :, mask], std[:, :, mask]
+        return ctx, mea, std
+
+    def _mutex_weight_for_rlz(self, rlz):
+        if not self.src_mutex:
+            return 1.
+        ctx, _mea, _std = self._ctx_for_rlz(rlz)
+        weights = dict(zip(self.src_mutex['src_id'],
+                           self.src_mutex['weight']))
+        return sum(weights[s] for s in numpy.unique(ctx.src_id) if s in weights)
+
     def _disagg6D(self, imldic, g, rlz):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
@@ -579,7 +599,10 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
-        mea, std = self.mea[self.magi], self.std[self.magi]
+        ctx, mea, std = self._ctx_for_rlz(rlz)
+        if len(ctx) == 0:
+            return numpy.zeros((self.D, self.Lo, self.La, self.E,
+                                len(imldic), len(next(iter(imldic.values())))))
         gp = self.src_mutex.get('grp_probability', 1.)
         amp = None
         if self.amplifier is not None:
@@ -593,13 +616,13 @@ class Disaggregator(object):
         if not self.src_mutex:
             if amp is not None:
                 poes = _disaggregate_amp(
-                    self.ctx, mea, std, self.cmaker, g, imlog2,
+                    ctx, mea, std, self.cmaker, g, imlog2,
                     self.bin_edges, gp,
                     self.cmaker.oq.infer_occur_rates,
                     amp, self.ampcode,
                     self.mon1, self.mon2, self.mon3)
             else:
-                poes = _disaggregate(self.ctx, mea, std, self.cmaker,
+                poes = _disaggregate(ctx, mea, std, self.cmaker,
                                      g, imlog2, self.bin_edges, self.eps4,
                                      self.epsstar, gp,
                                      self.cmaker.oq.infer_occur_rates,
@@ -607,17 +630,22 @@ class Disaggregator(object):
             return to_rates(poes)
 
         # else average on the src_mutex weights
+        mat = idx_start_stop(ctx.src_id)
+        src_weights = dict(zip(self.src_mutex['src_id'],
+                               self.src_mutex['weight']))
+        weights = [src_weights[s] for s in mat[:, 0] if s in src_weights]
         mats = []
-        for s1, s2 in zip(self.src_mutex['start'], self.src_mutex['stop']):
-            ctx = self.ctx[s1:s2]
-            mea = self.mea[self.magi][:, :, s1:s2]  # shape (G, M, U)
-            std = self.std[self.magi][:, :, s1:s2]  # shape (G, M, U)
-            mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.eps4, self.epsstar, gp,
-                                self.cmaker.oq.infer_occur_rates,
-                                self.mon1, self.mon2, self.mon3)
-            mats.append(mat)
-        poes = numpy.einsum('i,i...', self.weights, mats)
+        for s1, s2 in mat[:, 1:]:
+            subctx = ctx[s1:s2]
+            submea = mea[:, :, s1:s2]  # shape (G, M, U)
+            substd = std[:, :, s1:s2]  # shape (G, M, U)
+            submat = _disaggregate(subctx, submea, substd, self.cmaker, g,
+                                   imlog2, self.bin_edges, self.eps4,
+                                   self.epsstar, gp,
+                                   self.cmaker.oq.infer_occur_rates,
+                                   self.mon1, self.mon2, self.mon3)
+            mats.append(submat)
+        poes = numpy.einsum('i,i...', weights, mats)
         return poes
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
@@ -636,7 +664,7 @@ class Disaggregator(object):
         """
         for magi in range(self.Ma):
             try:
-                mw = self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except FarAwayRupture:
                 continue
             res = {'trti': self.cmaker.trti,
@@ -650,20 +678,26 @@ class Disaggregator(object):
                 arr6D = self._disagg6D(imtls, g, rlz)
                 res[rlz] = to_rates(arr6D) if src_mutex else arr6D
                 if rwdic:  # compute mean rates (mean poes for src_mutex)
+                    mw_rlz = self._mutex_weight_for_rlz(rlz)
                     if 'mean' not in res:
-                        res['mean'] = arr6D * rwdic[rlz] * mw
+                        res['mean'] = arr6D * rwdic[rlz] * mw_rlz
                     else:
-                        res['mean'] += arr6D * rwdic[rlz] * mw
+                        res['mean'] += arr6D * rwdic[rlz] * mw_rlz
             if rwdic and src_mutex:
                 res['mean'] = to_rates(res['mean'])
             yield res
 
-    def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
+    def disagg_mag_dist_eps(self, imldic, weights, src_mutex={}):
         """
         :param imldic: a dictionary imt->iml
+        :param weights: an array of G weights, one per gsim of the cmaker
         :param src_mutex: a dictionary with keys src_id, weight or empty
-        :param rlz_weights: an array with the realization weights
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
+
+        The rates depend on the realization only through the GSIM, hence
+        the loop is over the G gsims and not over the logic tree
+        realizations; the weights are the sums of the realization weights
+        associated to each GSIM, see `FullLogicTree.g_weights`.
         """
         M = len(imldic)
         imtls = {imt: [iml] for imt, iml in imldic.items()}
@@ -673,11 +707,44 @@ class Disaggregator(object):
                 mw = self.init(magi, src_mutex)  # mutex weight or 1
             except FarAwayRupture:
                 continue
-            for rlz, g in self.g_by_rlz.items():
-                mat5 = self._disagg6D(imtls, g, rlz)[..., 0]  # p = 0
+            for g, w in enumerate(weights):
+                if not w:  # GSIM not affecting the source
+                    continue
+                # NB: the realization index is irrelevant without an
+                # amplification logic tree, see self._disagg6D
+                mat5 = self._disagg6D(imtls, g, 0)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
-                out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz] * mw
+                out[magi] += mat5.sum(axis=(1, 2)) * w * mw
         return to_rates(out) if src_mutex else out
+
+    def std_by_dist(self, weights):
+        """
+        Combine the sigmas of the ruptures falling in the same (mag, dist)
+        bin, weighting the GSIMs with the given weights. Since the sigmas
+        are dispersions, the combination is done in the variance domain,
+        i.e. in quadrature.
+
+        :param weights: an array of G weights, one per gsim of the cmaker
+        :returns: an array of shape (Ma, D, M), zero in the bins not
+                  covered by any rupture
+        """
+        M = len(self.cmaker.oq.imtls)  # same M axis as self.std
+        out = numpy.zeros((self.Ma, self.D, M))
+        for magi, std in self.std.items():
+            # self.std[magi] has shape (G, M, U); sum the squared sigmas
+            # over the ruptures falling in the same distance bin
+            idx = numpy.clip(self.dist_idx[magi], 0, self.D - 1)
+            var = numpy.zeros((len(std), self.D, M))  # (G, D, M)
+            for g, sigma in enumerate(std):  # (M, U)
+                numpy.add.at(var[g], idx, (sigma**2).T)
+            counts = numpy.bincount(idx, minlength=self.D)
+            nonzero = counts > 0
+            var = var[:, nonzero] / counts[nonzero][None, :, None]  # G,D,M
+            # the sigmas are dispersions, hence they are combined in the
+            # variance domain, i.e. in quadrature, and not linearly
+            out[magi, nonzero] = numpy.sqrt(
+                numpy.einsum('g,gdm->dm', weights, var))
+        return out
 
     def __repr__(self):
         source_id, sid = self.source_id, self.sid
@@ -699,7 +766,7 @@ def disaggregation(
     scenarios classified in terms of:
 
     - rupture magnitude
-    - Joyner-Boore distance from rupture surface to site
+    - Closest distance to rupture surface
     - longitude and latitude of the surface projection of a rupture's point
       closest to ``site``
     - epsilon: number of standard deviations by which an intensity measure
@@ -817,37 +884,21 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs, Ma, D, M, G):
+def fill_gaps(sig, M):
     """
-    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
-    :returns: an array of shape (Ma, D, M, G)
-    """
-    assert len(disaggs)
-    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
-    cnt = collections.Counter()  # (magi, dsti)
-    for dis in disaggs:
-        for magi in dis['std']:
-            for g, std in enumerate(dis['std'][magi]):
-                for dsti, val in zip(dis['dist_idx'][magi], std.T):
-                    if (magi, dsti) in acc:
-                        acc[magi, dsti][g] += val  # shape M
-                    else:
-                        acc[magi, dsti][g] = val.copy()
-                    cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((Ma, D, M, G))
-    for (magi, dsti), v in acc.items():
-        sig[magi, dsti] = v.T / cnt[magi, dsti]
+    Fill the (mag, dist) bins not covered by any rupture with the value
+    of the first covered bin, since the sigmas are artificially zero there.
 
-    # the sigmas are artificially zero for not covered (magi, disti) bins
-    # in that case we copy the value of the first covered bin
+    :param sig: an array of shape (Ma, D, M)
+    :returns: the filled array
+    """
     # NB: this is tested in test_rtgm
     for m in range(M):
-        for g in range(G):
-            zeros = sig[:, :, m, g] == 0
-            if zeros.any():
-                magi, dsti = numpy.where(~zeros)
-                if len(magi) and len(dsti):
-                    sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+        zeros = sig[:, :, m] == 0
+        if zeros.any():
+            magi, dsti = numpy.where(~zeros)
+            if len(magi) and len(dsti):
+                sig[zeros, m] = sig[magi[0], dsti[0], m]
     return sig
 
 
@@ -861,24 +912,24 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
+def gen_disagg_source(groups, site, edges_shapedic, oq, full_lt):
     """
-    Compute disaggregation for the given source. Assume oq.imtls has a
+    Compute disaggregation for the given sources. Assume oq.imtls has a
     single level for each IMT.
 
-    :param groups: groups containing a single source ID
+    NB: there is no need to reduce the logic tree, since the sources
+    already store the trt_smrs of the logic tree realizations they belong
+    to, i.e. `src.ts_samples['trt_smr']`.
+
+    :param groups: groups containing sources with a single base ID
     :param site: a Site object
-    :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
-    :param monitor: a Monitor instance
-    :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
+    :param full_lt: a FullLogicTree instance
+    :returns: generators of (Disaggregator, src_mutex) pairs, one per group
     """
     sitecol = SiteCollection([site])
-    if not hasattr(reduced_lt, 'trt_rlzs'):
-        reduced_lt.init()
     edges, s = edges_shapedic
-    ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -888,14 +939,25 @@ def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     else:
         src_mutex = {}
     all_trt_smrs = [sg[0].trt_smrs for sg in groups]
-    cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     for group, cmaker in zip(groups, cmakers.to_array()):
         dis = Disaggregator(group, sitecol, cmaker, edges)
-        yield dis, src_mutex, ws
+        yield dis, src_mutex
 
 
-def disagg_source(dis, src_mutex, ws, monitor):
+def disagg_source(dis, src_mutex, monitor):
+    """
+    Compute the rates and the sigmas for a group of sources, weighted by
+    the logic tree realizations of the group (i.e. by the GSIM weights
+    returned by `FullLogicTree.g_weights`).
+
+    :returns: a dictionary with keys source_id, sid, rates (Ma, D, E, M),
+              std (Ma, D, M), weight
+    """
     imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
-    rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-    return dict(source_id=dis.source_id, sid=dis.sid,
-                rates4D=rates4D, std=dis.std, dist_idx=dis.dist_idx)
+    # normalize the weights, i.e. condition on the source being active
+    wei = dis.cmaker.wei / dis.cmaker.wei.sum()
+    rates4D = dis.disagg_mag_dist_eps(imldic, wei, src_mutex)
+    std4D = dis.std_by_dist(wei)
+    return dict(source_id=dis.source_id, sid=dis.sid, rates4D=rates4D,
+                std4D=std4D, weight=dis.cmaker.wei.sum())

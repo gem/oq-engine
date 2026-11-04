@@ -22,8 +22,10 @@ import copy
 import toml
 import scipy
 import numpy as np
+
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string, PGA
+
 
 SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av', 'SD']
 

@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.utils import (
 F32 = numpy.float32
 U32 = numpy.uint32
 MINMAG = 2.5
-MAXMAG = 10.2  # to avoid breaking PAC
+MAXMAG = 11  # upper limit never measured, to keep all magnitudes
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
 
@@ -217,7 +217,7 @@ class IntegrationDistance(dict):
 
         >>> md = IntegrationDistance.new('50')
         >>> md
-        {'default': [(2.5, 50), (10.2, 50)]}
+        {'default': [(2.5, 50), (11, 50)]}
         """
         if value == 'magdist':
             items_by_trt = {'default': [(3, 0), (6, 150), (10, 600)]}
@@ -249,7 +249,7 @@ class IntegrationDistance(dict):
         >>> maxdist = IntegrationDistance.new('200')
         >>> maxdist.cut({"Active Shallow Crust": 5.2, "default": 4.})
         >>> maxdist
-        {'default': [(4.0, 200.0), (10.2, 200)], 'Active Shallow Crust': [(5.2, 200.0), (10.2, 200)]}
+        {'default': [(4.0, 200.0), (11, 200)], 'Active Shallow Crust': [(5.2, 200.0), (11, 200)]}
         """
         if 'default' not in self:
             maxval = max(self.values(),
@@ -294,13 +294,6 @@ class IntegrationDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_dist_bins(self, trt, nbins=51):
-        """
-        :returns: an array of distance bins, from 10m to maxdist
-        """
-        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
-
-
 def split_source(src):
     """
     :param src: a splittable (or not splittable) source
@@ -320,7 +313,9 @@ def split_source(src):
     for i, split in enumerate(splits):
         split.offset = offset
         split.source_id = '%s.%s' % (src.source_id, i)
-        split.sampling = src.sampling
+        split.ts_samples = src.ts_samples
+        if hasattr(src, 'bysrc_unc'):
+            split.bysrc_unc = src.bysrc_unc
         split.grp_id = grp_id
         split.id = src.id
         if has_hdf5:

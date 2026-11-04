@@ -47,10 +47,12 @@ jobs:
           curl -L -O https://github.com/gem/oq-engine/raw/${BRANCH}/install.py
           # Resolve engine-ref to an installable version
           python install.py user --version=${BRANCH} --venv $HOME/gh-venv-${BRANCH}
-      - name: Setup debugging session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 60
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Run demos
         run: |
           source $HOME/gh-venv-${BRANCH}/bin/activate

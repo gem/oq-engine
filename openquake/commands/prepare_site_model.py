@@ -20,7 +20,12 @@ import gzip
 import logging
 import numpy
 from openquake.baselib import performance, writers, hdf5
-from openquake.hazardlib import site, valid
+from openquake.hazardlib import nrml, site, sourceconverter, valid
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    RegularGridLayout)
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.regular_grid import regular_grid
+from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
@@ -84,25 +89,152 @@ def associate(sitecol, vs30fnames, assoc_distance):
                          'warn', ignore={'z1pt0', 'z2pt5'})
 
 
+def _grid(mesh, spacing, regular):
+    """Keep the old geographic discretization unless a regular grid is requested."""
+    if regular:
+        return regular_grid(mesh, spacing)
+    return mesh.get_convex_hull().dilate(spacing).discretize(spacing)
+
+
+def _exposure_sites(exposure_xml, spacing, regular, req_site_params, hdf5):
+    exp = Exposure.read_all(exposure_xml, check_dupl=False)
+    hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
+        exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
+    if not spacing:
+        return assetcol
+    grid = _grid(exp.mesh, spacing, regular)
+    haz_sitecol = site.SiteCollection.from_points(
+        grid.lons, grid.lats, req_site_params=req_site_params)
+    if regular:
+        # CE needs the complete rectangle, including cells without assets.
+        return haz_sitecol
+    logging.info('Associating exposure grid with %d locations to %d '
+                 'exposure sites', len(haz_sitecol), len(exp.mesh))
+    haz_sitecol, discarded = exp.associate(haz_sitecol, spacing * SQRT2)
+    if len(discarded):
+        logging.info('Discarded %d sites with assets '
+                     '[use oq plot_assets]', len(discarded))
+        hdf5['discarded'] = numpy.array(discarded)
+    haz_sitecol.make_complete()
+    return haz_sitecol
+
+
+def _csv_sites(sites_csv, spacing, regular, req_site_params, output):
+    if hasattr(sites_csv, 'lon'):
+        # sites_csv can be a DataFrame when used programmatically
+        lons = sites_csv.lon.to_numpy()
+        lats = sites_csv.lat.to_numpy()
+    else:
+        # sites_csv is a list of filenames
+        lons, lats = [], []
+        for fname in sites_csv:
+            check_fname(fname, 'sites_csv', output)
+            with read(fname) as csv:
+                for line in csv:
+                    if line.startswith('lon,lat'):
+                        continue
+                    lon, lat = line.split(',')[:2]
+                    lons.append(valid.longitude(lon))
+                    lats.append(valid.latitude(lat))
+    haz_sitecol = site.SiteCollection.from_points(
+        lons, lats, req_site_params=req_site_params)
+    if spacing:
+        mesh = _grid(haz_sitecol.mesh, spacing, regular)
+        haz_sitecol = site.SiteCollection.from_points(
+            mesh.lons, mesh.lats, req_site_params=req_site_params)
+    return haz_sitecol
+
+
+def _check_exported_grid(output):
+    """Validate the CSV coordinates that a calculation will actually read."""
+    data = numpy.genfromtxt(output, names=True, delimiter=',',
+                            usecols=('lon', 'lat'))
+    RegularGridLayout.from_sites(Mesh(data['lon'], data['lat']))
+
+
+def _rupture_sites(filename, spacing, maximum_distance, mesh_spacing,
+                   req_site_params):
+    """Read one scenario rupture and use all its finite surface vertices."""
+    filename = str(filename)
+    suffix = os.path.splitext(filename)[1].lower()
+    if suffix in ('.xml', '.nrml'):
+        nodes = nrml.read(filename)
+        if len(nodes) != 1:
+            raise ValueError('Rupture file must contain exactly one rupture')
+        rupture = sourceconverter.RuptureConverter(mesh_spacing).convert_node(
+            nodes[0])
+    elif suffix == '.csv':
+        if len(hdf5.read_csv(filename, {None: str})) != 1:
+            raise ValueError('Rupture CSV must contain exactly one rupture')
+        rupture = get_ruptures(filename)[0]
+    else:
+        raise ValueError('Rupture must be XML/NRML or OpenQuake rupture CSV')
+    if rupture.surface is None:
+        point = rupture.hypocenter
+        lons, lats = numpy.array([point.longitude]), numpy.array(
+            [point.latitude])
+    else:
+        lons = rupture.surface.mesh.lons.ravel()
+        lats = rupture.surface.mesh.lats.ravel()
+        # Curved surface meshes can include holes represented by NaNs.
+        present = ~numpy.isnan(lons) & ~numpy.isnan(lats)
+        lons, lats = lons[present], lats[present]
+    if not len(lons):
+        raise ValueError('Rupture has no finite geometry coordinates')
+    grid = regular_grid(Mesh(lons, lats), spacing, padding=maximum_distance)
+    return site.SiteCollection.from_points(
+        grid.lons, grid.lats, req_site_params=req_site_params)
+
+
+def _validate_inputs(exposure_xml, sites_csv, rupture, regular,
+                     spacing, maximum_distance, mesh_spacing):
+    """Check new modes before opening input files or creating a job."""
+    if rupture:
+        for name, value in [('Maximum distance', maximum_distance),
+                            ('Rupture mesh spacing', mesh_spacing)]:
+            if value is None or not numpy.isfinite(value) or value <= 0:
+                raise ValueError(f'{name} must be finite and positive')
+    elif maximum_distance is not None or mesh_spacing != 1:
+        raise ValueError('Rupture-grid options require --rupture')
+    if regular or rupture:
+        if spacing is None or not numpy.isfinite(spacing) or spacing <= 0:
+            raise ValueError('Regular grids require positive --grid-spacing')
+        if sum((bool(exposure_xml), bool(len(sites_csv)), bool(rupture))) != 1:
+            raise ValueError('Specify exactly one of exposure_xml, sites_csv '
+                             'or rupture')
+
+
 def main(
         vs30_csv,
         z1pt0=False,
         z2pt5=False,
         vs30measured=False,
         sentinel_z=False, # Set to -999 z1pt0 or z2pt5 if True
+        regular_grid=False,
         *,
         exposure_xml=None,
         sites_csv=(),
         grid_spacing: float = 0,
         assoc_distance: float = 5,
-        output='site_model.csv'):
+        output='site_model.csv',
+        rupture=None,
+        maximum_distance: float = None,
+        rupture_mesh_spacing: float = 1):
     """
     Prepare a site_model.csv file from exposure xml files/site csv files,
     vs30 csv files and a grid spacing which can be 0 (meaning no grid).
     For each site the closest vs30 parameter is used. The command can also
     generate (on demand) the additional fields z1pt0, z2pt5 and vs30measured
     which may be needed by your hazard model, depending on the required GSIMs.
+    Use --regular-grid with a positive --grid-spacing for a complete
+    rectangle compatible with circulant embedding.
+    With --rupture, build a regular grid around one XML/NRML or CSV rupture,
+    extending its projected bounds by --maximum-distance (in km) on each
+    side. This defines the site-grid extent, not CE computational padding.
     """
+    _validate_inputs(exposure_xml, sites_csv, rupture, regular_grid,
+                     grid_spacing, maximum_distance, rupture_mesh_spacing)
+    regular_grid = regular_grid or bool(rupture)
     log, hdf5 = datastore.create_job_dstore("prepare site model")
     with hdf5, log:
         req_site_params = {'vs30'}
@@ -117,53 +249,18 @@ def main(
             req_site_params.add('vs30measured')
             fields.append('vs30measured')
         with performance.Monitor(measuremem=True) as mon:
-            if exposure_xml:
-                exp = Exposure.read_all(exposure_xml, check_dupl=False)
-                hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-                    exp.mesh.lons, exp.mesh.lats,
-                    req_site_params=req_site_params)
-                if grid_spacing:
-                    grid = exp.mesh.get_convex_hull().dilate(
-                        grid_spacing).discretize(grid_spacing)
-                    haz_sitecol = site.SiteCollection.from_points(
-                        grid.lons, grid.lats, req_site_params=req_site_params)
-                    logging.info(
-                        'Associating exposure grid with %d locations to %d '
-                        'exposure sites', len(haz_sitecol), len(exp.mesh))
-                    haz_sitecol, discarded = exp.associate(
-                        haz_sitecol, grid_spacing * SQRT2)
-                    if len(discarded):
-                        logging.info('Discarded %d sites with assets '
-                                     '[use oq plot_assets]', len(discarded))
-                        hdf5['discarded'] = numpy.array(discarded)
-                    haz_sitecol.make_complete()
-                else:
-                    haz_sitecol = assetcol
-                    discarded = []
+            if rupture:
+                haz_sitecol = _rupture_sites(
+                    rupture, grid_spacing, maximum_distance,
+                    rupture_mesh_spacing, req_site_params)
+            elif exposure_xml:
+                haz_sitecol = _exposure_sites(
+                    exposure_xml, grid_spacing, regular_grid,
+                    req_site_params, hdf5)
             elif len(sites_csv):
-                if hasattr(sites_csv, 'lon'):
-                    # sites_csv can be a DataFrame when used programmatically
-                    lons = sites_csv.lon.to_numpy()
-                    lats = sites_csv.lat.to_numpy()
-                else:
-                    # sites_csv is a list of filenames
-                    lons, lats = [], []
-                    for fname in sites_csv:
-                        check_fname(fname, 'sites_csv', output)
-                        with read(fname) as csv:
-                            for line in csv:
-                                if line.startswith('lon,lat'):
-                                    continue
-                                lon, lat = line.split(',')[:2]
-                                lons.append(valid.longitude(lon))
-                                lats.append(valid.latitude(lat))
-                haz_sitecol = site.SiteCollection.from_points(
-                    lons, lats, req_site_params=req_site_params)
-                if grid_spacing:
-                    grid = haz_sitecol.mesh.get_convex_hull().dilate(
-                        grid_spacing).discretize(grid_spacing)
-                    haz_sitecol = site.SiteCollection.from_points(
-                        grid.lons, grid.lats, req_site_params=req_site_params)
+                haz_sitecol = _csv_sites(
+                    sites_csv, grid_spacing, regular_grid,
+                    req_site_params, output)
             else:
                 raise RuntimeError('Missing exposures or missing sites')
             associate(haz_sitecol, vs30_csv, assoc_distance)
@@ -184,6 +281,8 @@ def main(
             hdf5['sitecol'] = haz_sitecol
             if output:
                 writers.write_csv(output, haz_sitecol.array[fields])
+                if regular_grid:
+                    _check_exported_grid(output)
         logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
         logging.info(mon)
     return haz_sitecol
@@ -194,8 +293,13 @@ main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
 main.sentinel_z = dict(help='assign dummy -999 to z1pt0/z2pt5', abbrev='-999')
+main.regular_grid = 'build a complete regular grid for circulant embedding'
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
 main.sites_csv = dict(help='sites in CSV format (filenames)', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
 main.assoc_distance = 'sites over this distance are discarded'
 main.output = 'output file'
+main.rupture = 'single XML/NRML or OpenQuake CSV scenario rupture'
+main.maximum_distance = ('extend each side of the projected rupture bounds '
+                         'by this distance in km (not an Rrup cutoff)')
+main.rupture_mesh_spacing = 'rupture mesh spacing in km (default: 1)'

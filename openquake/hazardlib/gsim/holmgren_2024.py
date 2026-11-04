@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2026 GEM Foundation
+# Copyright (C) 2026-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 CONSTS = {
     "Mref": 4.5,
     "Rref": 1.0,
-    "Vref": 760.0,
-}
+    "Vref": 760.0,}
 
 
 def _get_magnitude_scaling_term(C, mag):
@@ -96,9 +95,9 @@ def _get_total_sigma(C, mag):
 class HolmgrenEtAl2024(GMPE):
     """
     Implements the Holmgren et al. (2024) GMM for Southeastern Africa.
-    Holmgren, J. M., Werner, M. J., Goda, K., Villani, M., Silva, V., 
+    Holmgren, J. M., Werner, M. J., Goda, K., Villani, M., Silva, V.,
     & Chindandali, P. (2024). Ranking and developing ground‐motion models
-    for Southeastern Africa. Earthquake Spectra, 40(2), 1552–1576. 
+    for Southeastern Africa. Earthquake Spectra, 40(2), 1552–1576.
     https://doi.org/10.1177/87552930241236765
 
     The model is marked as experimental because no independent verification

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2026 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -62,7 +62,7 @@ def _get_site_scaling_term(C, vs30):
     Returns the site scaling. For ctx with Vs30 > 1200 m/s the site
     amplification for Vs30 = 1200 is used
     """
-    site_amp = C["xi"] * np.log(1200.0) * np.ones(len(vs30))
+    site_amp = np.full(vs30.shape, C["xi"] * np.log(1200.0))
     idx = vs30 < 1200.0
     site_amp[idx] = C["xi"] * np.log(vs30[idx])
     return site_amp
@@ -79,7 +79,7 @@ def _get_stddev(imt, mag):
     periods (T > 3.0) it is assumed to be equal to the case in which
     T = 3.0
     """
-    stddev_mag = np.clip(mag, 5.0, None)
+    stddev_mag = np.maximum(mag, 5.0)
     if imt.string == "PGA" or imt.period < 0.05:
         total_sigma = 1.18 + 0.035 * np.log(0.05) - 0.06 * stddev_mag
     elif imt.period > 3.0:

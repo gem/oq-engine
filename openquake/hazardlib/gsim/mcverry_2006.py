@@ -23,10 +23,14 @@ Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.baselib.general import CallableDict
+
+
+LOG10 = np.log(10.0)
 
 
 def _compute_f4(C, mag, rrup):
@@ -103,7 +107,7 @@ def _compute_mean_on_rock_1(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
     return lnSA_AB
 
 
-@_compute_mean_on_rock.add("sinter")
+@_compute_mean_on_rock.add("sinter", "sinter_sc")
 def _compute_mean_on_rock_2(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
                             f4HW):
     """
@@ -130,65 +134,8 @@ def _compute_mean_on_rock_2(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
     return lnSA_AB
 
 
-@_compute_mean_on_rock.add("slab")
+@_compute_mean_on_rock.add("slab", "slab_sc")
 def _compute_mean_on_rock_3(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
-                            f4HW):
-    """
-    Compute mean value on site class A/B (equation 2 on page 22)
-    """
-    # Define subduction flag (page 23)
-    # SI=1 for subduction interface, 0 otherwise
-    # DS=1 for subduction intraslab, 0 otherwise
-    SI = 0
-    DS = 1
-
-    lnSA_AB = (
-        # line 1 and 2 of equation 2
-        C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
-        (mag - 6) +
-        # line 3
-        C['c13y'] * (10 - mag) ** 3 +
-        # line 4
-        C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
-        # line 5
-        C['c20'] * hypo_depth + C['c24'] * SI +
-        # line 6
-        C['c46'] * rvol * (1 - DS)
-    )
-
-    return lnSA_AB
-
-
-@_compute_mean_on_rock.add("sinter_sc")
-def _compute_mean_on_rock_4(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
-                            f4HW):
-    """
-    Compute mean value on site class A/B (equation 2 on page 22)
-    """
-    # Define subduction flag (page 23)
-    # SI=1 for subduction interface, 0 otherwise
-    # DS=0 for subduction intraslab, 0 otherwise
-    SI = 1
-    DS = 0
-
-    lnSA_AB = (
-        # line 1 and 2 of equation 2
-        C['c11'] + (C['c12y'] + (C['c15'] - C['c17']) * C['c19y']) *
-        (mag - 6) +
-        # line 3
-        C['c13y'] * (10 - mag) ** 3 +
-        # line 4
-        C['c17'] * np.log(rrup + C['c18y'] * np.exp(C['c19y'] * mag)) +
-        # line 5
-        C['c20'] * hypo_depth + C['c24'] * SI +
-        # line 6
-        C['c46'] * rvol * (1 - DS))
-
-    return lnSA_AB
-
-
-@_compute_mean_on_rock.add("slab_sc")
-def _compute_mean_on_rock_5(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
                             f4HW):
     """
     Compute mean value on site class A/B (equation 2 on page 22)
@@ -224,7 +171,8 @@ def _compute_nonlinear_soil_term(C, lnSA_AB, delta_C, delta_D):
         # line 1 equation 4 without first term (lnSA_AB)
         C['c29'] * delta_C +
         # line 2 and 3
-        (C['c30as'] * np.log(np.exp(lnSA_AB) + 0.03) + C['c43']) * delta_D)
+        (C['c30as'] * np.logaddexp(lnSA_AB, np.log(0.03)) + C['c43']) *
+        delta_D)
 
     return lnSA_CD
 
@@ -239,9 +187,9 @@ def _compute_stress_drop_adjustment(in_cshm, SC, mag):
     adj = np.zeros_like(mag)
     scale_fac = 1.5
     fac = np.maximum(mag[in_cshm] - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
-    adj[in_cshm] = np.log(10 ** (np.log(scale_fac) / np.log(2) *
-                                 np.minimum(0.05 + SC['delta'],
-                                            0.05 + SC['delta'] * fac)))
+    adj[in_cshm] = (np.log(scale_fac) / np.log(2) *
+                    np.minimum(0.05 + SC['delta'],
+                               0.05 + SC['delta'] * fac) * LOG10)
     return adj
 
 
@@ -464,8 +412,7 @@ class McVerry2006Asc(GMPE):
             # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
             # need to calculate final lnSA_ABCD from non-log values but
             # return log
-            mean[m] = np.log(np.exp(lnSAp_ABCD) *
-                             (np.exp(lnPGA_ABCD) / np.exp(lnPGAp_ABCD)))
+            mean[m] = lnSAp_ABCD + (lnPGA_ABCD - lnPGAp_ABCD)
 
             # Compute standard deviations
             C_STD = self.COEFFS_STD[imt]
@@ -742,9 +689,8 @@ class McVerry2006Chch(McVerry2006AscSC):
             # Stage 3: Equation 6 SA_ABCD(T). This is lnSA_ABCD
             # need to calculate final lnSA_ABCD from non-log values
             # but return log
-            mean[m] = np.log(np.exp(lnSAp_ABCD) *
-                             (np.exp(lnPGA_ABCD) /
-                              np.exp(lnPGAp_ABCD))) + stress_drop_factor
+            mean[m] = (lnSAp_ABCD + (lnPGA_ABCD - lnPGAp_ABCD) +
+                       stress_drop_factor)
 
             # Compute standard deviations
             C_STD = self.COEFFS_STD[imt]

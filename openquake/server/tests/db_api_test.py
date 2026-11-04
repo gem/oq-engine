@@ -4,16 +4,16 @@ from openquake.baselib import config
 import uuid
 from openquake.commonlib import logs
 from openquake.commonlib.auth import API_KEY
-from openquake.server.tests.views_test import start_uvicorn, stop_uvicorn
+from openquake.server.tests.views_test import start_webui, stop_webui
 
 
 @pytest.fixture(scope='module')
 def api_client():
-    server, thread, client = start_uvicorn()
+    server, thread, client = start_webui()
     try:
         yield client
     finally:
-        stop_uvicorn(server, thread)
+        stop_webui(server, thread)
 
 
 def test_database_api_requires_api_key(api_client):

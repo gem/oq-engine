@@ -35,9 +35,12 @@ IMTS = [PGA(), SA(0.3)]
 
 EPS = 1E-10
 
+TEST_CRS = '+proj=tmerc +lon_0=-123 +k=1 +datum=WGS84 +units=m +no_defs'
+
+
 def geographic_sites(x, y):
-    """Return geographic sites for projected UTM coordinates."""
-    transformer = Transformer.from_crs(32610, 4326, always_xy=True)
+    """Return geographic sites for projected coordinates in TEST_CRS."""
+    transformer = Transformer.from_crs(TEST_CRS, 4326, always_xy=True)
     x = numpy.asarray(x, dtype=float)
     y = numpy.asarray(y, dtype=float)
     if len(x) == 1:
@@ -55,8 +58,8 @@ def grid_sites(shape):
         4_200_000 + rows.ravel() * 1_000)
 
 
-def projected_points(sites):
-    transformer = Transformer.from_crs(4326, 32610, always_xy=True)
+def projected_points(sites, crs):
+    transformer = Transformer.from_crs(4326, crs, always_xy=True)
     x, y = transformer.transform(sites.lons, sites.lats)
     return numpy.column_stack((numpy.asarray(y), numpy.asarray(x))) / 1_000
 
@@ -75,7 +78,7 @@ def test_exact_local_distribution():
     stations = geographic_sites(
         [501_000, 501_300, 501_700],
         [4_201_000, 4_201_200, 4_201_800])
-    layout = RegularGridLayout.from_sites(grid)
+    layout = RegularGridLayout.from_sites(grid, crs=TEST_CRS)
     ce = CirculantEmbeddingFactor.build(
         model, IMTS, layout.grid_shape, layout.spacing,
         ResidualComponent.WITHIN_EVENT)
@@ -94,8 +97,8 @@ def test_exact_local_distribution():
          station_fields.reshape(
              len(IMTS) * len(stations.lons), total_inputs)))
 
-    grid_points = projected_points(grid)
-    station_points = projected_points(stations)
+    grid_points = projected_points(grid, TEST_CRS)
+    station_points = projected_points(stations, TEST_CRS)
     all_points = numpy.concatenate((grid_points, station_points))
     full = model.correlation_block(
         distances(all_points, all_points), IMTS,
@@ -116,7 +119,7 @@ def test_grid_padding_required():
     model = DuNing2021()
     grid = grid_sites((4, 4))
     edge_station = geographic_sites([500_300], [4_200_400])
-    layout = RegularGridLayout.from_sites(grid)
+    layout = RegularGridLayout.from_sites(grid, crs=TEST_CRS)
 
     with pytest.raises(ValueError, match='expand it'):
         LocalKrigingFactor.build(
@@ -133,7 +136,7 @@ def test_input_shapes():
     model = DuNing2021()
     grid = grid_sites((4, 4))
     stations = geographic_sites([501_300], [4_201_200])
-    layout = RegularGridLayout.from_sites(grid)
+    layout = RegularGridLayout.from_sites(grid, crs=TEST_CRS)
     factor = LocalKrigingFactor.build(
         model, IMTS, layout, stations, order=2)
 
