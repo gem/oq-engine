@@ -239,41 +239,60 @@ class SimpleFaultSource(ParametricSeismicSource):
 
     def _hypo_depth_allocation(self, rup_rows, n_rows_total, n_cols_total):
         """
-        Return {first_row: [(dip_frac, rate_fraction), ...]} for a given
-        magnitude: each depth `d` with probability `p_d` is spread over
-        its `N_d` compatible rows and all columns at rate `p_d / (N_d *
-        n_cols_total)`. Empty when no depth fits any row.
+        Allocate the hypo depth distribution over the floating ruptures for
+        a given magnitude. Each depth with probability p_d is spread uniformly
+        over its N_d compatible rows and all columns so the input depth
+        distribution is preserved as a marginal.
+
+        Returns {first_row: [(dip_frac, rate_fraction), ...]}, empty if
+        no depth falls in any floating rupture's depth range.
+
+        If fixedDipFrac is specified in the hypoDepthDist then it is
+        assigned to the corresponding depth instead of a fraction computed
+        using the floating rupture's depth range.
+
+        NOTE: Depths that resolve to the same dip_frac (whether from
+        fixedDipFrac or coincidental computed equality) are collapsed
+        into one pair with their rate fractions summed.
         """
         sin_dip = math.sin(math.radians(self.dip))
         down_dip_delta = self.rupture_mesh_spacing * sin_dip
+        # For each floating row collect compatible (dip_frac, depth_idx)
+        # pairs and count how many rows each depth fits (N_d)
         per_row = {}
         n_rows_per_depth = [0] * len(self.hypo_depth_list)
         for first_row in range(n_rows_total):
+            # Compute top and bottom depth of this floating rupture
             top = self.upper_seismogenic_depth + first_row * down_dip_delta
             bot = (self.upper_seismogenic_depth +
                    (first_row + rup_rows - 1) * down_dip_delta)
-            depth_range = bot - top
+            rup_depth_range = bot - top
+
+            # Keep hypocentres inside given floating rupture's depth range
             entries = []
             for d_idx, (prob, depth, fdf) in enumerate(self.hypo_depth_list):
                 if top <= depth <= bot:
                     # Use fixedDipFrac if provided and otherwise compute from depth
                     dip_frac = (fdf if fdf is not None
-                                else (depth - top) / depth_range
-                                if depth_range > 0 else 0.0)
+                                else (depth - top) / rup_depth_range
+                                if rup_depth_range > 0 else 0.0)
                     entries.append((dip_frac, d_idx))
                     n_rows_per_depth[d_idx] += 1
             if entries:
                 per_row[first_row] = entries
-        # Renormalise over depths that fit at least one row so the total
-        # MFD rate is preserved even if a depth fits no row
+
+        # Renormalise probability over depths that fit at least one row
+        # so the total MFD rate is preserved if a depth fits no row
         total_valid_prob = sum(
             prob for d_idx, (prob, _, _) in enumerate(self.hypo_depth_list)
             if n_rows_per_depth[d_idx] > 0)
         if total_valid_prob == 0:
             return {}
+
+        # For each valid row build the (dip_frac, rate_fraction) list,
+        # collapsing depths that share a dip_frac summing their fractions
         alloc = {}
         for first_row, entries in per_row.items():
-            # Collapse depths with the same dip_frac summing their rate fractions
             by_frac = {}
             for dip_frac, d_idx in entries:
                 prob = self.hypo_depth_list[d_idx][0]
