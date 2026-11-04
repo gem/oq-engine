@@ -828,9 +828,9 @@ class SourceConverter(RuptureConverter):
             try:
                 hypo_depth_list = [
                     (hd['probability'], hd['depth'],
-                     # Optional override of the dip_frac computed per
-                     # floating rupture inside
-                     # `SimpleFaultSource._hypo_depth_allocation`
+                     # Optional override of dip frac computed per
+                     # floating rup inside
+                     # SimpleFaultSource._hypo_depth_allocation
                      float(hd.attrib['fixedDipFrac'])
                      if 'fixedDipFrac' in hd.attrib else None)
                     for hd in node.hypoDepthDist]

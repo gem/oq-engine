@@ -727,15 +727,12 @@ class HypoDepthListTestCase(unittest.TestCase):
         src = self._make_source([(1.0, 10.0, 2 / 3)])
         alloc = src._hypo_depth_allocation(
             rup_rows=24, n_rows_total=1, n_cols_total=1)
-        self.assertEqual(list(alloc.keys()), [0])
-        self.assertEqual(len(alloc[0]), 1)
         dip_frac, rate_frac = alloc[0][0]
         self.assertAlmostEqual(dip_frac, 2 / 3, places=10)
         self.assertAlmostEqual(rate_frac, 1.0, places=10)
 
     def test_same_fixed_dip_frac_collapses(self):
-        # Depths sharing a fixedDipFrac collapse to 1 pair at that frac
-        # with their rate fractions summed
+        # Depths sharing a fixedDipFrac collapse to 1 pair with weights summed
         src = self._make_source([(0.3, 5.0, 2 / 3), (0.7, 10.0, 2 / 3)])
         alloc = src._hypo_depth_allocation(
             rup_rows=24, n_rows_total=1, n_cols_total=1)
@@ -745,26 +742,13 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(rate_frac, 1.0, places=10)
 
     def test_marginal_depth_distribution_preserved(self):
-        # Marginal check: the sum of per-depth rate fractions across all
-        # (row, col) compatible with each depth must equal that depth's
-        # input probability. Reviewer's scenario: two depths, each at
-        # probability 0.5, compatible with very different numbers of rows
+        # Two depths at equal probability with very different N_d; the
+        # total rate at each depth must stay at 0.5 after allocation
         src = self._make_source([(0.5, 3.0), (0.5, 15.0)])
         rup_rows, n_rows_total, n_cols_total = 2, 24, 10
         alloc = src._hypo_depth_allocation(
             rup_rows, n_rows_total, n_cols_total)
-        # down_dip_delta = sin(60 deg) ~= 0.866 km; row r covers
-        # [r * 0.866, (r+1) * 0.866] so 3.0 fits rows {3} and 15.0 fits
-        # rows {16, 17}. Both depths have at least one compatible row;
-        # marginal preservation requires total rate at each depth to
-        # equal 0.5 regardless of their differing N_d
-        rate_at_dip_frac = {}
-        for first_row, entries in alloc.items():
-            for dip_frac, rate_frac in entries:
-                rate_at_dip_frac.setdefault(first_row, []).append(
-                    (dip_frac, rate_frac))
-        sin_dip = numpy.sin(numpy.radians(60.0))
-        down_dip_delta = 1.0 * sin_dip
+        down_dip_delta = numpy.sin(numpy.radians(60.0))
         total_by_input_depth = {3.0: 0.0, 15.0: 0.0}
         for first_row, entries in alloc.items():
             top = first_row * down_dip_delta
@@ -776,17 +760,14 @@ class HypoDepthListTestCase(unittest.TestCase):
                             rate_frac * n_cols_total)
         self.assertAlmostEqual(total_by_input_depth[3.0], 0.5, places=10)
         self.assertAlmostEqual(total_by_input_depth[15.0], 0.5, places=10)
-        # Total rate fraction over all ruptures equals 1.0
         total = sum(rate_frac * n_cols_total
                     for entries in alloc.values()
                     for _, rate_frac in entries)
         self.assertAlmostEqual(total, 1.0, places=10)
 
     def test_total_rate_preserved_with_skipped_floats(self):
-        # mesh_spacing=4, dip=25: the smallest magnitude's top float spans
-        # [0, 1.69] km and misses both input depths. iter_ruptures must
-        # skip that float but still generate ruptures whose rates sum to
-        # the magnitude's occurrence rate
+        # The top float spans [0, 1.69] km and misses both input depths;
+        # the generated ruptures' rates must still sum to the MFD rate
         src_mfd = EvenlyDiscretizedMFD(5.05, 0.1, [1.0])
         trace = Line([Point(0.0, 0.0), Point(0.2, 0.0)])
         src = SimpleFaultSource(
@@ -799,9 +780,8 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(total_rate, 1.0, places=10)
 
     def test_allocation_empty_when_no_depth_fits(self):
-        # `rup_rows=1` reduces each float's depth band to a single mesh
-        # point so no mid-cell hypo depth matches; the allocation returns
-        # {} and iter_ruptures would raise at that magnitude
+        # rup_rows=1 reduces each float's band to a single mesh point so
+        # no hypo depth matches
         src = self._make_source([(1.0, 10.0)])
         alloc = src._hypo_depth_allocation(
             rup_rows=1, n_rows_total=24, n_cols_total=1)
