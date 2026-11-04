@@ -200,11 +200,13 @@ and move it inside `/opt/openquake` once the new installation is finished.
 
 This method adds to `server` installation the possibility to run the engine from a git repository.
 If you are on a Linux machine _and_ you have root permissions you need first to create a user called
-`openquake`:
+`openquake` having sudo permissions.
+On Debian systems, the administrative group is called sudo. On Red Hat systems, it is called wheel:
 ```
 $ sudo useradd -d /home/openquake -m  -s /bin/bash openquake
+$ sudo usermod -aG <sudo|wheel> username
 ```
-then, running as `openquake` user:
+Then, running as `openquake` user:
 
 ```
 $ git clone https://github.com/gem/oq-engine.git
