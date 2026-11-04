@@ -42,11 +42,17 @@ jobs:
         run: |
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
           sudo usermod -aG sudo openquake
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Install OQ with ${{ matrix.python-version }} as user openquake
         run: |
           GIT_REF="${{ inputs.git-ref }}"
           BRANCH="${GIT_REF:-master}"
-          sudo -E -u openquake bash -c "cd ~ && bash --noprofile --norc -e -o pipefail" << EOF
+          sudo -E -u openquake  << EOF
            python3 --version
            "$(which python3)" -V
            pwd
@@ -57,12 +63,6 @@ jobs:
                  break
            fi
           EOF
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
