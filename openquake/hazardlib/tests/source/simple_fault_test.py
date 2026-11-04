@@ -737,6 +737,23 @@ class HypoDepthListTestCase(unittest.TestCase):
         self.assertAlmostEqual(result[0][0], 2 / 3, places=10)
         self.assertAlmostEqual(result[0][1], 1.0, places=10)
 
+    def test_floats_with_no_hypo_depths_skipped(self):
+        # mesh_spacing=4, dip=25 -> down_dip_delta ~= 1.69 km. For M=5.05
+        # rup_rows=2 so the top float spans [0, 1.69] km and cannot host
+        # either 2.5 or 10.5 km; pre-fix this raised ValueError. The float
+        # is now skipped and its share of the magnitude rate is
+        # redistributed across the remaining floats.
+        src_mfd = EvenlyDiscretizedMFD(5.05, 0.1, [1.0])
+        trace = Line([Point(0.0, 0.0), Point(0.2, 0.0)])
+        src = SimpleFaultSource(
+            'test', 'test', TRT.ACTIVE_SHALLOW_CRUST,
+            src_mfd, 4.0, PeerMSR(), 1.0, self.src_tom,
+            0.0, 20.0, trace, 25.0, 90.0,
+            HypoData(depth_list=[(0.5, 2.5), (0.5, 10.5)]))
+        ruptures = list(src.iter_ruptures())
+        total_rate = sum(r.occurrence_rate for r in ruptures)
+        self.assertAlmostEqual(total_rate, 1.0, places=10)
+
     def test_hypo_depth_dist_xml_roundtrip(self):
         # fixedDipFrac is written to XML when set and omitted when None
         node = build_hypo_depth_dist(
