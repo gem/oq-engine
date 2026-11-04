@@ -583,6 +583,8 @@ def longitude(value):
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
         raise ValueError('longitude %s < -180' % lon)
+    elif numpy.isnan(lon):  # would give NaN hypocenters
+        raise ValueError('longitude is NaN')
     return lon
 
 
@@ -601,6 +603,8 @@ def latitude(value):
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
         raise ValueError('latitude %s < -90' % lat)
+    elif numpy.isnan(lat):  # would give NaN hypocenters
+        raise ValueError('latitude is NaN')
     return lat
 
 
@@ -620,7 +624,20 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-depth = float_
+def depth(value):
+    """
+    :param value: input string
+    :returns: a finite float (NaN would give NaN hypocenters)
+
+    >>> depth('nan')
+    Traceback (most recent call last):
+    ...
+    ValueError: depth nan is not finite
+    """
+    dep = float_(value)
+    if not numpy.isfinite(dep):
+        raise ValueError('depth %s is not finite' % dep)
+    return dep
 
 
 def lon_lat(value):
