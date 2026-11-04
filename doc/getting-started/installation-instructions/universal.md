@@ -199,7 +199,12 @@ and move it inside `/opt/openquake` once the new installation is finished.
 ## `devel_server` installation
 
 This method adds to `server` installation the possibility to run the engine from a git repository.
-If you are on a Linux machine _and_ you have root permissions
+If you are on a Linux machine _and_ you have root permissions you need first to create a user called
+`openquake`:
+```
+$ sudo useradd -d /home/openquake -m  -s /bin/bash openquake
+```
+then, running as `openquake` user:
 
 ```
 $ git clone https://github.com/gem/oq-engine.git
