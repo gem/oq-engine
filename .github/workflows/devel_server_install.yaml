@@ -38,8 +38,13 @@ jobs:
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Install OQ Server with ${{ matrix.python-version }}
+      - name: Create openquake user
         run: |
+          sudo useradd -d /home/openquake -m  -s /bin/bash openquake
+      - name: Install OQ with ${{ matrix.python-version }} as user openquake
+        shell: sudo su openquake -c "bash --noprofile --norc -e -o pipefail {0}"
+        run: |
+          whoami #openquake
           if [ -z ${{ inputs.git-ref }} ];
           then
              BRANCH=master
