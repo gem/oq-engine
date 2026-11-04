@@ -50,12 +50,12 @@ jobs:
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
-        - name: Setup upterm session
-          uses: owenthereal/action-upterm@v2
-          if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-          with:
-            ## Shut down the server if unconnected after 45 minutes.
-            wait-timeout-minutes: 45
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
