@@ -1,3 +1,8 @@
+ [Christopher Brooks]
+ * Modified the linear-piecewise magnitude-dependent aspect ratio
+   to permit more than 2 entries + added a unit test checking an
+   expression can be approximately represented using this approach.
+
  [Christopher Brooks, Michele Simionato]
  * GridAdjustedGMPEs differing only by the epsilons now share the
    computation of the backbone's grid-adjusted mean prediction
