@@ -636,7 +636,9 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
         raise ValueError(
             'The core size Gt=%d is too large (the maximum is %d), '
             'you must reduce the logic tree' % (Gt, TWO32))
-    logging.warning('Core size Gt=%d out of R=%d realizations',
+    # NB: Gt is a sum over the TRTs while R is a product, so Gt can be
+    # larger than R, for instance Gt=5 and R=1 in JPA with 5 TRTs
+    logging.warning('Core size Gt=%d for R=%d realizations',
                     Gt, full_lt.get_num_paths())
     if dstore is not None and 'sitecol' in dstore:
         # NB: the sites are read after the sources, so the size in bytes
