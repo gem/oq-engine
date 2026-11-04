@@ -488,8 +488,8 @@ class ClassicalTestCase(CalculatorTestCase):
         # weighted by the renormalised hypo_depth weights so poisson
         # sampling totals match the source's true annual rate
         self.run_calc(case_28.__file__, 'job_event_based.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 89)
-        self.assertEqual(len(self.calc.datastore['events']), 96)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 93)
+        self.assertEqual(len(self.calc.datastore['events']), 100)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
