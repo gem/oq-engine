@@ -134,6 +134,7 @@ def is_server_installation():
         if os.path.isfile(inst_type_file_path):
             with open(inst_type_file_path, 'r') as inst_type_file:
                 inst_type = inst_type_file.read().strip().lower()
+                # both 'devel_server' and 'server' return True
                 return inst_type.split('_')[-1] == 'server'
         else:
             raise FileNotFoundError(

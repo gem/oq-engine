@@ -484,6 +484,8 @@ try:
     # it is defined if it was specified in local_settings.py
     # NOTE: if it is defined in local_settings.py it has priority over the
     #       DJANGO_SECRET_KEY env variable and the ~/.oq_django_secret_key file
+    #       If in local_settings.py SECRET_KEY is defined as an empty string,
+    #       Django raises an ImproperlyConfigured exception.
     SECRET_KEY  # noqa
     logging.info('Using Django SECRET_KEY from local_settings.py')
 except NameError:
