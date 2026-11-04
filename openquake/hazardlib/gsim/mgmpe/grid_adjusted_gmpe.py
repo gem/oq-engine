@@ -15,8 +15,82 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
-:class:`~openquake.hazardlib.mgmpe.GridAdjustedGMPE`
+Module :mod:`openquake.hazardlib.gsim.mgmpe.grid_adjusted_gmpe` implements
+:class:`~openquake.hazardlib.gsim.mgmpe.GridAdjustedGMPE`.
+
+Ray tracing of path adjustments
+------------------------------
+Path terms store an adjustment per kilometre in H3 cells. For each
+site/hypocentre pair, the algorithm samples the great-circle arc on the
+Earth's surface, resolves each sample to a stored cell and sums its values.
+Depth is not used in this path integral. The following sketch uses boxes
+only to illustrate cell membership; actual H3 cells are not rectangular::
+
+    site                                             hypocentre
+      S---o---o---o---o---o---o---o---o---o---o---o---H
+      |       cell A      |     cell B    | no stored cell |
+      |    value a/km     |   value b/km  |    value 0     |
+
+    adjustment = spacing_km * (number_in_A * a + number_in_B * b)
+
+1. Discretise the arc into NPTS=100 equally spaced points, including both
+   endpoints. Coordinates are calculated in float64. Successive angles
+   use sine/cosine angle addition to avoid repeated trigonometric calls.
+   The distance between the first two points gives the spacing in km.
+
+2. Resolve each sample to a cell row with a cached Lookup. When several
+   H3 resolutions are present, the finest stored matching cell wins;
+   if none matches, the sample contributes zero. There is no interpolation
+   between cells. The lookup follows this decision tree::
+
+       sample longitude, latitude
+                   |
+             raster available? ---- no ------------------+
+                   | yes                                |
+          outside raster? -------- yes ---> no cell      |
+                   | no                                 |
+          read pixel's cell row                          |
+                   |                                    |
+          pixel subdivided? ------- yes ---> read subpixel
+                   | no                          |       |
+                   +-----------------------------+       |
+                   |                                    |
+          row ambiguous? --------- yes -----------------+
+                   | no                                 |
+          return row or no cell                H3 finest to coarsest
+                                                        |
+                                               skip masked-out levels
+                                                        |
+                                               first match or no cell
+
+3. Build lookups lazily and share them across terms/IMTs having the same
+   ordered cells. Per-resolution masks mark 0.1-degree boxes that may
+   intersect a stored cell. Cell bounds include a 0.1-degree margin;
+   unsafe bounds (low H3 resolutions or polar cells) disable masking and
+   raster lookup, so resolution uses H3 directly.
+
+   The path raster normally divides each mask box into 5 x 5 pixels
+   (0.02 degrees); its resolution is reduced to respect the base raster
+   pixel limit. A pixel receives a cell row only when its four corners
+   resolve identically, including agreement on no cell. Otherwise it is
+   subdivided into 4 x 4 subpixels. Subpixels use the same corner test;
+   remaining ambiguities fall back to H3 at the sample's coordinates.
+
+   This corner test is an approximation: a cell boundary can enter a
+   pixel or subpixel without changing any corner's resolved row. Such an
+   intersection can be missed. The raster does not guarantee exact cell
+   membership near boundaries; the H3 fallback itself resolves membership
+   without this raster approximation.
+
+4. Accumulate all fields sharing the path grid (mean and optional mean SE)
+   together in float32, in sample order, then multiply by the float64
+   spacing. Every sample, including each endpoint, receives the full
+   spacing weight. This is the existing discrete sum, not a trapezoidal
+   rule or an exact integration of the length inside each cell.
+
+Hypocentre and site terms use one coordinate lookup per context rather
+than tracing a path. They use the masks and H3 fallback without the
+approximate cell raster.
 """
 import json
 import os
