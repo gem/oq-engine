@@ -354,7 +354,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             if self.hypo_depth_list:
                 # Rows whose depth range contains no hypo depth are skipped;
                 # redistribute the magnitude rate across the remaining rows
-                # so the total MFD rate is preserved.
+                # so the total MFD rate is preserved
                 n_valid_rows = sum(
                     1 for r in range(num_rup_along_width)
                     if self._hypo_list_from_depths(r, rup_rows))
@@ -366,10 +366,6 @@ class SimpleFaultSource(ParametricSeismicSource):
                 occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
                 if self.hypo_depth_list:
-                    # Match _iter_ruptures_hypo_depth exactly - per (first_row,
-                    # first_col) yield one rate per (dip_frac, w) pair from
-                    # _hypo_list_from_depths, which filters by the float's
-                    # depth range and collapses entries with equal dip_frac
                     n_cols = len(range(num_rup_along_length)[::step])
                     parts = []
                     for first_row in range(num_rup_along_width)[::step]:
