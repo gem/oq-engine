@@ -316,6 +316,38 @@ class SimpleFaultSource(ParametricSeismicSource):
                     hypocenter, surface, occurrence_rate * hypo[2] * slip[1],
                     self.temporal_occurrence_model, slip[0])
 
+    def _iter_ruptures_hypo_depth(self, surface, mag, mag_occ_rate, entries):
+        """
+        Yield ruptures for a given floating position using the
+        (dip_frac, rate_fraction) entries from _hypo_depth_allocation.
+        """
+        for dip_frac, rate_frac in entries:
+            hypo = surface.get_hypo_location(
+                self.rupture_mesh_spacing, (0.5, dip_frac))
+            yield ParametricProbabilisticRupture(
+                mag, self.rake, self.tectonic_region_type,
+                hypo, surface, mag_occ_rate * rate_frac,
+                self.temporal_occurrence_model)
+
+    def _rates_hypo_depth(self, alloc, num_rup_along_width,
+                          num_rup_along_length, mag_occ_rate, step):
+        """
+        Return the per-rupture rate array for the hypo_depth_list path
+        in the same order that _iter_ruptures emits ruptures, or None
+        if no float survives the step subsampling.
+        """
+        n_cols = len(range(num_rup_along_length)[::step])
+        parts = []
+        for first_row in range(num_rup_along_width)[::step]:
+            entries = alloc.get(first_row)
+            if not entries:
+                continue
+            rates = numpy.array([r for _, r in entries])
+            parts.append(numpy.tile(rates, n_cols))
+        if not parts:
+            return None
+        return numpy.concatenate(parts) * mag_occ_rate
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
@@ -328,8 +360,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         rate of each of those ruptures is the magnitude occurrence rate
         divided by the number of ruptures that can be placed in a fault.
         """
-        step = kwargs.get('step', 1)
-        only_rates = kwargs.get('rates')
+        step, only_rates = kwargs.get('step', 1), kwargs.get('rates')
         n_slip = len(self.slip_list) or 1
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
@@ -358,17 +389,12 @@ class SimpleFaultSource(ParametricSeismicSource):
                 occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
                 if self.hypo_depth_list:
-                    n_cols = len(range(num_rup_along_length)[::step])
-                    parts = []
-                    for first_row in range(num_rup_along_width)[::step]:
-                        entries = alloc.get(first_row)
-                        if not entries:
-                            continue
-                        rates = numpy.array([r for _, r in entries])
-                        parts.append(numpy.tile(rates, n_cols))
-                    if not parts:
+                    rates = self._rates_hypo_depth(
+                        alloc, num_rup_along_width, num_rup_along_length,
+                        mag_occ_rate, step)
+                    if rates is None:
                         continue
-                    yield numpy.concatenate(parts) * mag_occ_rate
+                    yield rates
                 else:
                     n_hypo = len(self.hypo_list) or 1
                     yield numpy.full(
@@ -389,20 +415,12 @@ class SimpleFaultSource(ParametricSeismicSource):
                         for cum in cums)
                     surface.dip, surface.strike = mean_inclination_azimuth(
                         xi, yi, xa, ya, on_surface[first_row])
-
                     if self.hypo_depth_list:
-                        for dip_frac, rate_frac in alloc[first_row]:
-                            hypo = surface.get_hypo_location(
-                                self.rupture_mesh_spacing, (0.5, dip_frac))
-                            yield ParametricProbabilisticRupture(
-                                mag, self.rake, self.tectonic_region_type,
-                                hypo, surface, mag_occ_rate * rate_frac,
-                                self.temporal_occurrence_model)
-
+                        yield from self._iter_ruptures_hypo_depth(
+                            surface, mag, mag_occ_rate, alloc[first_row])
                     elif len(self.hypo_list) and len(self.slip_list):
                         yield from self._iter_ruptures_hypo_slip(
                             surface, occurrence_rate, mag)
-
                     else:
                         # Regular version using surf centroid
                         yield ParametricProbabilisticRupture(
