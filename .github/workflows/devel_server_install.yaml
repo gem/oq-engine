@@ -58,6 +58,7 @@ jobs:
         run: |
           GIT_REF="${{ inputs.git-ref }}"
           BRANCH="${GIT_REF:-master}"
+          echo "Running branch=${BRANCH}"
           cat > /tmp/scripts.sh <<'EOF'
           #!/usr/bin/env bash
           set -euo pipefail
@@ -69,7 +70,7 @@ jobs:
           sudo -H $(which python3) install.py devel_server
           EOF
           chmod +x /tmp/scripts.sh
-          sudo -u openquake bash /tmp/scripts.sh
+          sudo -u openquake BRANCH="$BRANCH" bash /tmp/scripts.sh
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
