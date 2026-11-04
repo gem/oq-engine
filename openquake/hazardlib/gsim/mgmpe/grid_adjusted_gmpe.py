@@ -33,7 +33,7 @@ from numba import types, typeof
 from numba.typed import Dict
 
 from openquake.hazardlib import const
-from openquake.baselib.performance import compile, jittable
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
 from openquake.hazardlib.gsim.base import GMPE, registry
 
@@ -375,6 +375,8 @@ _H3_CELL = ctypes.CFUNCTYPE(
 _LOOKUP = types.Tuple((
     types.float64, types.float64, types.boolean[:, :, :], types.float64,
     types.int32[:, :], types.int32[:, :, :]))
+# Type of the {cell ID: row} dictionaries
+_INDEX = types.DictType(types.uint64, types.int64)
 
 
 # Array of the integer cell IDs of a grid, in the order of the grid
@@ -388,7 +390,7 @@ def _cell_array(grid):
 
 
 # {cell ID: row in cells}
-@jittable
+@compile(_INDEX(types.uint64[:]))
 def _cell_index(cells):
     index = Dict.empty(types.uint64, types.int64)
     for i, cell in enumerate(cells):
@@ -402,7 +404,9 @@ def _cell_index(cells):
 # needed (see _h3_row). The raster covers all the mask boxes, so points
 # outside it are in no cell. This is called for each point and must be
 # cheap, so it takes few arguments and no h3 arguments.
-@jittable
+@compile(types.int64(
+    types.float64, types.float64, types.float64, types.float64,
+    types.float64, types.int32[:, :], types.int32[:, :, :]))
 def _raster_row(lon, lat, lon_origin, lat_origin, step, raster, subrasters):
     if not raster.size:
         return AMBIGUOUS
@@ -426,7 +430,9 @@ def _raster_row(lon, lat, lon_origin, lat_origin, step, raster, subrasters):
 # resolutions disables the filtering for unsafe cell bounds.
 # The Cython function uses Python objects to check for errors and so needs
 # the GIL, which is fine since `compile` does not release it.
-@jittable
+@compile(types.int64(
+    types.float64, types.float64, types.float64, types.float64,
+    types.boolean[:, :, :], types.int64[:], _INDEX, typeof(_H3_CELL)))
 def _h3_row(lon, lat, lon_origin, lat_origin, candidate_mask, h3_res, index,
             cell_func):
     y, x = 0, 0
@@ -452,7 +458,9 @@ def _h3_row(lon, lat, lon_origin, lat_origin, candidate_mask, h3_res, index,
 # otherwise AMBIGUOUS. This is approximate only when a cell boundary enters
 # a pixel without containing any of its corners, which is rare and affects
 # tiny areas for pixels much smaller than the cells.
-@jittable
+@compile(types.int32[:, :](
+    types.float64, types.float64, types.float64, types.int64, types.int64,
+    _LOOKUP, types.int64[:], _INDEX, typeof(_H3_CELL)))
 def _corner_raster(lon0, lat0, step, nlat, nlon, lookup, h3_res, index,
                    cell_func):
     lon_origin, lat_origin, candidate_mask = lookup[:3]
@@ -543,17 +551,18 @@ def _get_lookup(grid_data, grid, raster=True):
 
 
 # Great-circle distance in km, as in geodetic_distance
-@jittable
+@compile('f8(f8, f8, f8, f8)')
 def _distance(lon1, lat1, lon2, lat2):
     lon1, lat1 = np.radians(lon1), np.radians(lat1)
     lon2, lat2 = np.radians(lon2), np.radians(lat2)
     arr = np.sin((lat1 - lat2) / 2.0) ** 2.0
     arr += np.cos(lat1) * np.cos(lat2) * np.sin((lon1 - lon2) / 2.0) ** 2.0
-    return 2 * EARTH_RADIUS * np.arcsin(np.sqrt(arr))
+    # rounding could exceed 1 for antipodal points: avoid NaNs
+    return 2 * EARTH_RADIUS * np.arcsin(np.sqrt(min(arr, 1.)))
 
 
 # Azimuth in degrees from point 1 to point 2, as in geodetic.azimuth
-@jittable
+@compile('f8(f8, f8, f8, f8)')
 def _azimuth(lon1, lat1, lon2, lat2):
     lon1, lat1 = np.radians(lon1), np.radians(lat1)
     lon2, lat2 = np.radians(lon2), np.radians(lat2)
@@ -580,11 +589,10 @@ def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, cells,
     index = _cell_index(cells)
     sums = np.zeros((len(values), len(slons)), np.float32)
     spacing = np.zeros(len(slons))
+    # the endpoints are finite (NaN hypocenters are rejected by the parsers
+    # and NaN sites by SiteCollection.check_nan) and so are the points
     for p in range(len(slons)):
         lon1, lat1, lon2, lat2 = slons[p], slats[p], hlons[p], hlats[p]
-        if not (np.isfinite(lon1) and np.isfinite(lat1) and
-                np.isfinite(lon2) and np.isfinite(lat2)):
-            raise ValueError('Non-finite ray coordinates')
         # see npoints_towards
         dstep = (_distance(lon1, lat1, lon2, lat2) / EARTH_RADIUS) / (
             npts - 1)
@@ -604,6 +612,8 @@ def _trace_paths(slons, slats, hlons, hlats, npts, lookup, h3_res, cells,
                 sin_d, cos_d = (sin_d * cos_step + cos_d * sin_step,
                                 cos_d * cos_step - sin_d * sin_step)
                 sin_lats = sin_lat * cos_d + cos_lat * sin_d * cos_tc
+                # rounding can exceed 1 on paths over a pole: avoid NaNs
+                sin_lats = min(1., max(-1., sin_lats))
                 lat = np.degrees(np.arcsin(sin_lats))
                 dlon = np.arctan2(sin_tc * sin_d * cos_lat,
                                   cos_d - sin_lat * sin_lats)
@@ -653,9 +663,7 @@ def _lookup_rows(lons, lats, lookup, h3_res, cells, cell_func):
     lon_origin, lat_origin, candidate_mask, step, raster, subrasters = lookup
     index = _cell_index(cells)
     rows = np.empty(len(lons), np.int64)
-    for i in range(len(lons)):
-        if not np.isfinite(lons[i]) or not np.isfinite(lats[i]):
-            raise ValueError('Non-finite coordinates')
+    for i in range(len(lons)):  # finite points, as in _trace_paths
         row = _raster_row(lons[i], lats[i], lon_origin, lat_origin, step,
                           raster, subrasters)
         if row == AMBIGUOUS:
