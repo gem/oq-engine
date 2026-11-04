@@ -479,7 +479,6 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(case_28.__file__, 'job.ini',
                           source_model_logic_tree_file=(
                               'source_model_logic_tree_depth_error.xml'))
-
         self.assertIn('hypo_depth_list 25.0 km is outside the '
                       'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
 
