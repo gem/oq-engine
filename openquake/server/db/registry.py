@@ -5,7 +5,8 @@ from openquake.server.db import actions
 
 _ACTION_NAMES = (
     'check_outdated', 'has_job_table', 'reset_is_running', 'keep',
-    'set_status', 'create_job', 'import_job', 'delete_uncompleted_calculations',
+    'set_status', 'set_aborted', 'create_job', 'import_job',
+    'delete_uncompleted_calculations',
     'get_job', 'get_jobs', 'get_uncompleted_jobs', 'get_running_jobs',
     'get_weight', 'list_calculations', 'list_outputs', 'get_outputs',
     'create_outputs', 'finish', 'del_calc', 'log', 'get_log',

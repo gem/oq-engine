@@ -65,16 +65,9 @@ class ImpactPage(EnginePage):
                 f'{sorted(data)}')
 
     def run_impact_calc(self):
-        with self.page.expect_response(
-                lambda response: response.url.endswith(
-                    '/v1/calc/impact_run'),
-                timeout=USGS_REQUEST_TIMEOUT) as response_info:
-            self.page.locator("#submit_impact_calc").click()
-        response = response_info.value
-        if not response.ok:
-            raise AssertionError(
-                f'Impact calculation submission failed '
-                f'({response.status}): {response.text()}')
+        self._submit_calculation(
+            self.page.locator('#submit_impact_calc'), '/v1/calc/impact_run',
+            timeout=USGS_REQUEST_TIMEOUT)
 
     def set_time_of_the_event(self, value):
         selector = self.page.locator('select#time_event')
