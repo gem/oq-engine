@@ -118,7 +118,7 @@ class RmapMaker(object):
         cm = self.cmaker
         allctxs = []
         ctxlen = 0
-        totlen = 0
+        source_nctxs = []
         t0 = time.time()
         sids = self.srcfilter.sitecol.sids
         # using memory here, limited by pmap_max_mb
@@ -126,24 +126,25 @@ class RmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims),
             not self.cluster).fill(self.cluster)
         for src in self.sources:
+            nctxs = 0
             for ctx in self.gen_ctxs(src):
                 ctxlen += len(ctx)
-                totlen += len(ctx)
+                nctxs += len(ctx)
                 allctxs.append(ctx)
                 if ctxlen > self.maxsize:
                     ctxt = concat(allctxs)  # at most a few dozens of MB
                     cm.update(pnemap, ctxt)
                     allctxs.clear()
                     ctxlen = 0
+            source_nctxs.append(nctxs)
         if allctxs:
             # all sources have the same tom by construction
             cm.update(pnemap, concat(allctxs))
             allctxs.clear()
 
         dt = (time.time() - t0) / len(self.sources)
-        factor = totlen / sum(src.nctxs for src in self.sources)
-        for src in self.sources:
-            self.update_source_data(src, cm.task_no, dt, src.nctxs * factor)
+        for src, nctxs in zip(self.sources, source_nctxs):
+            self.update_source_data(src, cm.task_no, dt, nctxs)
         return pnemap
 
     def _make_src_mutex(self):
