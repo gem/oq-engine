@@ -924,7 +924,7 @@ def check_mfd_variants(smdict, fname):
         # log only the first 3 sources, then an ellipsis marker
         shown = lines[:3] + ['  ...'] if len(lines) > 3 else lines
         logging.warning(
-            '%s:\n%d source(s) appear in different source model files with '
+            '%s:\n%d source(s) appear multiple times with '
             'the same geometry and different MFDs,\nso each copy is '
             'computed separately. Keep a single copy in one file and move '
             'the MFDs in the logic tree,\nwith a branchSet with '
