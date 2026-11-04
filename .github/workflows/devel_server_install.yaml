@@ -51,7 +51,9 @@ jobs:
           else
              BRANCH=${{ inputs.git-ref }}
           fi
-          sudo -H "$(which python3)" install.py --version $BRANCH devel_server
+          git clone -b $BRANCH oq-engine
+          cd oq-engine
+          sudo -H "$(which python3)" install.py devel_server
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
