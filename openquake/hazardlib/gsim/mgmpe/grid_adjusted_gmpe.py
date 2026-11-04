@@ -21,14 +21,21 @@ Module :mod:`openquake.hazardlib.mgmpe.grid_adjusted_gmpe` implements
 import json
 import os
 import hashlib
+import ctypes
 from contextlib import nullcontext
 from functools import lru_cache
 import h5py
 import h3
+from h3.api import basic_int as h3_int
+from h3._cy import latlng as h3_latlng
 import numpy as np
+from numba import types, typeof
+from numba.typed import Dict
 
 from openquake.hazardlib import const
-from openquake.hazardlib.geo.geodetic import npoints_between, distance
+from openquake.baselib.general import gen_slices
+from openquake.baselib.performance import compile
+from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
@@ -74,11 +81,12 @@ def build_raytrace_grid(cell_ids, mean_vals):
     """
     Build the H3 cell-id lookup for one path-based term/IMT.
 
-    Returns {cell_id: per_km_adj_value}. Raytracing resolves each sample
-    point to a stored cell via h3.latlng_to_cell with finest-to-coarsest
-    fallback (see raytrace_path_adj).
+    Returns {integer_cell_id: per_km_adj_value}, avoiding string conversion
+    at each sample. Raytracing resolves each sample point to a stored cell
+    with finest-to-coarsest fallback (see raytrace_path_adj).
     """
-    return dict(zip(cell_ids, mean_vals))
+    return {h3.str_to_int(cell) if isinstance(cell, str) else cell: value
+            for cell, value in zip(cell_ids, mean_vals)}
 
 
 def load_residual_grids(hdf5_path):
@@ -104,7 +112,8 @@ def load_residual_grids(hdf5_path):
       per-cell SE on the mean for path-based terms. Populated only when
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
-    * raytrace_masks: {(term, imt_str): (lon0, lat0, mask)} - per h3
+    * raytrace_masks: {(term, imt_str): (lon_origin, lat_origin, mask)}
+      - per h3
       resolution, the lat/lon boxes where the path points may hit a cell
       of raytrace_grids; used to skip the lookups which would miss. It
       starts empty and is filled for the terms/IMTs actually used.
@@ -277,6 +286,8 @@ def raytrace_path_adj(grid, hypo_lons, hypo_lats, site_lons, site_lats,
 
 # Number of points used to discretise each path
 NPTS = 100
+# Bound the temporary arrays used when discretising paths in batches.
+PATH_BLOCKSIZE = 1000
 
 # Margin in degrees around the vertices of a cell and step in degrees of
 # the masks; for cells of resolution >= MASK_MIN_RES and latitudes within
@@ -286,21 +297,23 @@ MASK_MARGIN = 0.1
 MASK_STEP = 0.1
 MASK_MIN_RES = 2
 MASK_MAX_LAT = 80.
+MAX_GRID_CELLS = 1 << 31
 
 
 # For each h3 resolution, a lat/lon raster flagging the boxes which may
 # contain points of a stored cell of that resolution, i.e. the boxes
 # overlapping the bounding box of the cell vertices enlarged by the margin.
 # Points in a box not flagged cannot be in a stored cell, so their h3
-# lookups would miss and can be skipped; returns (lon0, lat0, mask), with
-# mask None if the margin is not guaranteed to be enough
+# lookups would miss and can be skipped; returns the mask origins and raster,
+# with candidate_mask None if the margin is not guaranteed to be enough
 def _build_masks(grid, h3_res):
     boxes = []  # (resolution index, lat1, lat2, lon1, lon2)
     for cell in grid:
-        res = h3.get_resolution(cell)
+        cell = h3.str_to_int(cell) if isinstance(cell, str) else cell
+        res = h3_int.get_resolution(cell)
         if res not in h3_res:  # never looked up
             continue
-        bound = np.array(h3.cell_to_boundary(cell))
+        bound = np.array(h3_int.cell_to_boundary(cell))
         lats, lons = bound[:, 0], bound[:, 1]
         if res < MASK_MIN_RES or np.abs(lats).max() > MASK_MAX_LAT:
             return 0., 0., None
@@ -312,32 +325,95 @@ def _build_masks(grid, h3_res):
     if not boxes:
         return 0., 0., np.zeros((len(h3_res), 0, 0), bool)
     arr = np.array(boxes)
-    lat0, lon0 = arr[:, 1].min(), arr[:, 3].min()
-    nlat = int(np.floor((arr[:, 2].max() - lat0) / MASK_STEP)) + 1
-    nlon = int(np.floor((arr[:, 4].max() - lon0) / MASK_STEP)) + 1
+    lat_origin, lon_origin = arr[:, 1].min(), arr[:, 3].min()
+    nlat = int(np.floor((arr[:, 2].max() - lat_origin) / MASK_STEP)) + 1
+    nlon = int(np.floor((arr[:, 4].max() - lon_origin) / MASK_STEP)) + 1
     # With the current step, margin and latitude limit, at most about
     # 93 MB per term/IMT: 16 resolutions * 1603 * 3603 one-byte bools.
     # The rectangle includes empty areas between stored cells.
-    mask = np.zeros((len(h3_res), nlat, nlon), bool)
+    candidate_mask = np.zeros((len(h3_res), nlat, nlon), bool)
     for r, lat1, lat2, lon1, lon2 in boxes:
-        i1, i2 = np.floor((np.array([lat1, lat2]) - lat0) / MASK_STEP)
-        j1, j2 = np.floor((np.array([lon1, lon2]) - lon0) / MASK_STEP)
-        mask[int(r), int(i1):int(i2) + 1, int(j1):int(j2) + 1] = True
-    return lon0, lat0, mask
+        i1, i2 = np.floor(
+            (np.array([lat1, lat2]) - lat_origin) / MASK_STEP)
+        j1, j2 = np.floor(
+            (np.array([lon1, lon2]) - lon_origin) / MASK_STEP)
+        candidate_mask[int(r), int(i1):int(i2) + 1,
+                       int(j1):int(j2) + 1] = True
+    return lon_origin, lat_origin, candidate_mask
 
 
-# Boolean array of shape (nres, len(lats)), True for the points which may
-# be in a stored cell of the given resolution
-def _candidates(masks, lats, lons, nres):
-    lon0, lat0, mask = masks
-    if mask is None:  # no filtering
-        return np.ones((nres, len(lats)), bool)
-    i = np.floor((lats - lat0) / MASK_STEP).astype(int)
-    j = np.floor((lons - lon0) / MASK_STEP).astype(int)
-    ok = (i >= 0) & (i < mask.shape[1]) & (j >= 0) & (j < mask.shape[2])
-    out = np.zeros((len(mask), len(lats)), bool)
-    out[:, ok] = mask[:, i[ok], j[ok]]
+# The C symbol latLngToCell is linked statically in the h3 extensions and
+# is exported only by ELF/Mach-O builds, not by the MSVC ones on Windows.
+# The portable way is the Cython C API: the capsule exported by h3._cy.latlng
+# points to the C implementation of the cpdef function latlng_to_cell
+# (degrees, resolution, skip_dispatch flag), which returns 1 on error.
+# Pass the callable to Numba as an argument, so the compiled cache does not
+# embed a process-specific function address.
+_capsule_name = ctypes.PYFUNCTYPE(ctypes.c_char_p, ctypes.py_object)(
+    ('PyCapsule_GetName', ctypes.pythonapi))
+_capsule_pointer = ctypes.PYFUNCTYPE(
+    ctypes.c_void_p, ctypes.py_object, ctypes.c_char_p)(
+    ('PyCapsule_GetPointer', ctypes.pythonapi))
+_capsule = h3_latlng.__pyx_capi__['latlng_to_cell']
+_H3_CELL = ctypes.CFUNCTYPE(
+    ctypes.c_uint64, ctypes.c_double, ctypes.c_double, ctypes.c_int,
+    ctypes.c_int)(_capsule_pointer(_capsule, _capsule_name(_capsule)))
+
+
+# Resolve samples finest-to-coarsest, visiting only masked candidates.
+# A mask with zero resolutions disables filtering for unsafe cell bounds.
+# The Cython function uses Python objects to check for errors and so needs
+# the GIL, which is fine since `compile` does not release it.
+@compile(types.int32[:, :](
+    types.float64[:, :], types.float64[:, :], types.int64[:],
+    types.Tuple((types.float64, types.float64, types.boolean[:, :, :])),
+    types.uint64[:], typeof(_H3_CELL)))
+def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
+    lon_origin, lat_origin, candidate_mask = masks
+    index = Dict.empty(types.uint64, types.int64)
+    for i, cell in enumerate(cells):
+        index[cell] = i
+    out = np.full(lons.shape, -1, np.int32)
+    for res in h3_res:
+        if res < 0 or res > 15:
+            raise ValueError('Invalid H3 resolution')
+    for i in range(len(lons)):
+        for k in range(lons.shape[1]):
+            lon, lat = lons[i, k], lats[i, k]
+            # Validate before converting coordinates into raster indices.
+            if not np.isfinite(lon) or not np.isfinite(lat):
+                raise ValueError('Non-finite ray coordinates')
+            y, x = 0, 0
+            if len(candidate_mask):
+                y = int(np.floor((lat - lat_origin) / MASK_STEP))
+                x = int(np.floor((lon - lon_origin) / MASK_STEP))
+                if (y < 0 or y >= candidate_mask.shape[1] or
+                        x < 0 or x >= candidate_mask.shape[2]):
+                    continue
+            # Flag the (resolution, point) candidates worth an H3 lookup.
+            for r in range(len(h3_res) - 1, -1, -1):
+                if (len(candidate_mask) and
+                        not candidate_mask[r, y, x]):
+                    continue
+                cell = cell_func(lat, lon, h3_res[r], 1)
+                if cell == 1:  # not a valid H3 index: the error value
+                    raise ValueError('H3 cell lookup failed')
+                row = index.get(cell, -1)
+                if row >= 0:
+                    out[i, k] = row
+                    break
     return out
+
+
+# Accumulate float32 grid values in sample order, as in the original loop.
+@compile('(i4[:, :], f4[:])')
+def _path_sums(rows, values):
+    sums = np.zeros(len(rows), values.dtype)
+    for i in range(len(rows)):
+        for row in rows[i]:
+            if row >= 0:  # -1 means no matching cell
+                sums[i] += values[row]
+    return sums
 
 
 # Resolve all fields on the same path grid with one raytrace per path.
@@ -350,50 +426,45 @@ def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
     n_paths = len(hypo_lons)
     ra_per_path = {key: np.zeros(n_paths) for key in grids}
     reference_grid = grids["mean"]
+    # Also accept string cell IDs from callers outside the engine.
+    if reference_grid and isinstance(next(iter(reference_grid)), str):
+        grids = {key: build_raytrace_grid(grid, grid.values())
+                 for key, grid in grids.items()}
+        reference_grid = grids["mean"]
+    num_cells = len(reference_grid)
+    if num_cells > MAX_GRID_CELLS:
+        raise ValueError(
+            f'Path adjustment grid has {num_cells:,} cells; '
+            f'int32 row indices support at most {MAX_GRID_CELLS:,}')
     if masks is None:
         masks = _build_masks(reference_grid, h3_res)
-    lons = np.zeros((n_paths, NPTS))
-    lats = np.zeros((n_paths, NPTS))
-    spacing = np.zeros(n_paths)
-
-    for idx_path in range(n_paths): # Iterate over the paths
-
-        # Discretise the line
-        lons[idx_path], lats[idx_path], _ = npoints_between(
-            site_lons[idx_path], site_lats[idx_path], 0.,
-            hypo_lons[idx_path], hypo_lats[idx_path], 0., NPTS)
-
+    lon_origin, lat_origin, candidate_mask = masks
+    if candidate_mask is None:  # no filtering
+        candidate_mask = np.empty((0, 0, 0), bool)
+        masks = (lon_origin, lat_origin, candidate_mask)
+    cells = np.array(list(reference_grid), np.uint64)
+    fields = {key: np.array([grid[cell] for cell in reference_grid],
+                            dtype=np.float32)
+              for key, grid in grids.items()}
+    h3_res = np.array(h3_res, np.int64)
+    for slc in gen_slices(0, n_paths, PATH_BLOCKSIZE):
+        # Discretise the lines in batches, keeping the original endpoints.
+        lons, lats, _ = npoints_between(
+            site_lons[slc], site_lats[slc], 0.,
+            hypo_lons[slc], hypo_lats[slc], 0., NPTS)
         # Distance between consecutive discretised points along the path
-        spacing[idx_path] = distance(
-            lons[idx_path, 0], lats[idx_path, 0], 0.,
-            lons[idx_path, 1], lats[idx_path, 1], 0.)
-
-    # Flag the (resolution, path, point) triples worth a lookup
-    cand = _candidates(masks, lats.ravel(), lons.ravel(),
-                       len(h3_res)).reshape(len(h3_res), n_paths, NPTS)
-    fine_to_coarse = range(len(h3_res) - 1, -1, -1)
-
-    # Get the cumulative correction based on distance traversed per
-    # grid cell and the associated distance-based adjustment terms.
-    # Each sample point resolves to one stored cell via finest-to-
-    # coarsest h3 fallback; points with no stored cell contribute zero
-    for idx_path in np.flatnonzero(cand.any(axis=(0, 2))):
-        adj_sum = dict.fromkeys(grids, 0.0)
-        pcand = cand[:, idx_path]
-        for k in np.flatnonzero(pcand.any(axis=0)):
-            for r in fine_to_coarse:
-                if not pcand[r, k]:
-                    continue
-                cell = h3.latlng_to_cell(
-                    lats[idx_path, k], lons[idx_path, k], h3_res[r])
-                if cell in reference_grid:
-                    for key, grid in grids.items():
-                        adj_sum[key] += grid[cell]
-                    break
-
+        spacing = geodetic_distance(
+            lons[:, 0], lats[:, 0], lons[:, 1], lats[:, 1], dtype=float)
+        # Get the cumulative correction based on distance traversed per
+        # grid cell and the associated distance-based adjustment terms.
+        # Each sample point resolves to one stored cell via finest-to-
+        # coarsest h3 fallback; points with no stored cell contribute zero
+        rows = _trace_cells(lons, lats, h3_res, masks, cells, _H3_CELL)
         # Store the total cumulative adjustment for the term
-        for key in grids:
-            ra_per_path[key][idx_path] = adj_sum[key] * spacing[idx_path]
+        for key, field in fields.items():
+            # rows has one cell-row index per path sample (-1 means no hit);
+            # field contains this adjustment value for each row in cells.
+            ra_per_path[key][slc] = _path_sums(rows, field) * spacing
 
     return ra_per_path
 
@@ -717,9 +788,9 @@ class GridAdjustedGMPE(GMPE):
         self.set_parameters()
 
         # Load grid-based corrections from the hdf5; they are shared with
-        # the other instances reading the same file and are not pickled
-        self.grid_hdf5_file = os.path.abspath(grid_hdf5_file)
-        self.grid_data = get_residual_grids(self.grid_hdf5_file)
+        # the other instances reading the same file. Like GMPETable, keep
+        # the loaded data when pickling: extracted files may be gone.
+        self.grid_data = get_residual_grids(grid_hdf5_file)
 
         # Per-ray path cap (in natural-log units).
         # None = no cap; compute() clips the per-branch total after lookup.
@@ -775,17 +846,6 @@ class GridAdjustedGMPE(GMPE):
                     "Adjustments to tau and/or phi have been specified "
                     "but the underlying GSIM does not support "
                     "random-effects residuals.")
-
-    def __getstate__(self):
-        # the grids are big: they are not sent to the workers, which
-        # read them from the file (once per process)
-        state = self.__dict__.copy()
-        del state["grid_data"]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.grid_data = get_residual_grids(self.grid_hdf5_file)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
