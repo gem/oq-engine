@@ -29,7 +29,7 @@ import h3
 from h3.api import basic_int as h3_int
 from h3._cy import latlng as h3_latlng
 import numpy as np
-from numba import njit, types, typeof
+from numba import types, typeof
 from numba.typed import Dict
 
 from openquake.hazardlib import const
@@ -362,12 +362,12 @@ _H3_CELL = ctypes.CFUNCTYPE(
 
 # Resolve samples finest-to-coarsest, visiting only masked candidates.
 # A mask with zero resolutions disables filtering for unsafe cell bounds.
-# Not compiled with nogil=True (unlike `compile`), since the Cython function
-# uses Python objects to check for errors and so needs the GIL.
-@njit(types.int32[:, :](
+# The Cython function uses Python objects to check for errors and so needs
+# the GIL, which is fine since `compile` does not release it.
+@compile(types.int32[:, :](
     types.float64[:, :], types.float64[:, :], types.int64[:],
     types.Tuple((types.float64, types.float64, types.boolean[:, :, :])),
-    types.uint64[:], typeof(_H3_CELL)), error_model='numpy', cache=True)
+    types.uint64[:], typeof(_H3_CELL)))
 def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
     lon_origin, lat_origin, candidate_mask = masks
     index = Dict.empty(types.uint64, types.int64)
