@@ -61,10 +61,10 @@ jobs:
           rm -rf oq-engine
           git clone -b "$BRANCH" https://github.com/gem/oq-engine.git
           cd oq-engine
-          sudo -H $(which python3) install.py devel_server
+          sudo -H $PY_TO_USE install.py devel_server
           EOF
           chmod +x /tmp/scripts.sh
-          sudo -i -u openquake HOME=/home/openquake BRANCH="$BRANCH" bash /tmp/scripts.sh
+          sudo -i -u openquake HOME=/home/openquake BRANCH="$BRANCH" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
       - name: Setup upterm session
         uses: owenthereal/action-upterm@v2
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
@@ -109,7 +109,7 @@ jobs:
            source /opt/openquake/venv/bin/activate
            cd /home/openquake/oq-engine/openquake/server
            python3 manage.py migrate
-           python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
+           python3 manage.py createuser level_1_user testuser1@test.com --level 1 --password level_1_password --no-email
            '
            # START WEBUI
            sudo systemctl start openquake-webui
@@ -121,7 +121,7 @@ jobs:
            done
            echo -n "TEST DJANGO LOGIN "
            LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-           YOUR_USER='openquake'
+           YOUR_USER='level_1_user'
            YOUR_PASS='level_1_password'
            COOKIES=cookies.txt
            CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
@@ -148,9 +148,9 @@ jobs:
              echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
              exit 1
            fi
-           '
            echo " Run a calc using https"
            /opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
+           # use v1/calc/run as endpoint with zip file
            sleep 5
            status_code=$($CURL_BIN -w "%{http_code}"\
                -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
@@ -159,3 +159,4 @@ jobs:
              echo "Unable to visualize outputs"
              exit 1
            fi
+           '
