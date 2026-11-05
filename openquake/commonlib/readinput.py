@@ -88,12 +88,20 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
+# True if word occurs in path not surrounded by letters or digits; NB: \b
+# cannot be used, since the underscore is a word character and job_NAF.ini
+# or job_Cabo_Verde.ini would not match
+def _word_in(word, path):
+    rx = rf'(?<![A-Za-z0-9]){re.escape(word)}(?![A-Za-z0-9])'
+    return re.search(rx, path) is not None
+
+
 def model_in(word, path):
     """
     :returns: True if the 3-character mosaic code word occurs in path
     """
     assert len(word) == 3, word
-    return re.search(rf'\b{word}\b', path) is not None
+    return _word_in(word, path)
 
 
 def get_country_or_model(job_ini):
@@ -101,9 +109,11 @@ def get_country_or_model(job_ini):
     If the path to job_ini contains a recognized country, returns the
     country code or the mosaic code, else the empty string.
     """
-    for name, cc in country2code.items():
-        if re.search(rf'\b{re.escape(name)}\b', job_ini):
-            return cc
+    # the longest names first, otherwise Congo would match
+    # Democratic_Republic_of_the_Congo
+    for name in sorted(country2code, key=len, reverse=True):
+        if _word_in(name, job_ini):
+            return country2code[name]
     for model in MODELS:
         if model_in(model, job_ini):
             return model

@@ -844,6 +844,17 @@ class GetCountryOrModelTestCase(unittest.TestCase):
         self.assertEqual(
             get_country_or_model('/x/American_Samoa/job.ini'), 'ASM')
 
+    def test_underscore(self):
+        # the Africa jobs in the global risk model
+        self.assertEqual(get_country_or_model('/x/Jobs/job_NAF.ini'), 'NAF')
+        self.assertEqual(
+            get_country_or_model('/x/Jobs/job_Cabo_Verde.ini'), 'CPV')
+        self.assertEqual(get_country_or_model('/x/job_Congo.ini'), 'COG')
+        self.assertEqual(get_country_or_model(
+            '/x/job_Democratic_Republic_of_the_Congo.ini'), 'COD')
+        self.assertEqual(get_country_or_model('/x/job_Niger.ini'), 'NER')
+        self.assertEqual(get_country_or_model('/x/job_Nigeria.ini'), 'NGA')
+
     def test_not_a_whole_word(self):
         # 'OIN' is a substring of 'POINT' but not a whole word
         self.assertEqual(get_country_or_model('/x/POINT/job.ini'), '')
