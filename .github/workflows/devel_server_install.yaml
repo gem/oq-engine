@@ -38,6 +38,12 @@ jobs:
       - name: Clone Repository (Master)
         uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Clone Repository (Custom Ref)
         uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
@@ -152,12 +158,6 @@ jobs:
              exit 1
            fi
            '
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Run calculation with non openquake users from command line
         run: |
            set -o pipefail
