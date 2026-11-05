@@ -65,12 +65,6 @@ jobs:
           EOF
           chmod +x /tmp/scripts.sh
           sudo -i -u openquake HOME=/home/openquake BRANCH="$BRANCH" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Actualize 'default' templates for email notifications
         run: |
           sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
@@ -137,10 +131,8 @@ jobs:
              exit 1
            fi
            # use v1/calc/run as endpoint with zip file
-           sleep 5
-           #status_code=$($CURL_BIN -w "%{http_code}"\
-           #    -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-           #    -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
+           #$CURL_BIN -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+           #    -X POST -F http://127.0.0.1:8800/engine/1/outputs
            #if [ $status_code != "200" ]; then
            #  echo "Unable to visualize outputs"
            #  exit 1
@@ -158,10 +150,16 @@ jobs:
              exit 1
            fi
            '
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Run calculation with non openquake users from command line
         run: |
            set -o pipefail
            oq --version
            oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
-           echo "Display the log of the last job"
-           oq engine --show-log -1
+           echo "Display the Outputs of the last job"
+           oq engine --list-outputs 1
