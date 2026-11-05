@@ -48,12 +48,6 @@ jobs:
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
           sudo usermod -aG sudo openquake
           echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Install OQ with ${{ matrix.python-version }} as user openquake
         run: |
           GIT_REF="${{ inputs.git-ref }}"
@@ -61,8 +55,10 @@ jobs:
           echo "Running branch=${BRANCH}"
           cat > /tmp/scripts.sh <<'EOF'
           #!/usr/bin/env bash
+          MPLCONFIGDIR=/home/openquake/.matplot
+          mkdir -p $MPLCONFIGDIR
           set -euo pipefail
-          echo "Running as $(whoami) in $(pwd), branch=${BRANCH:-<unset>}"
+          echo "Running as $(whoami) in $(pwd), branch=${BRANCH}"
           cd /home/openquake
           rm -rf oq-engine
           git clone -b "$BRANCH" https://github.com/gem/oq-engine.git
@@ -70,7 +66,13 @@ jobs:
           sudo -H $(which python3) install.py devel_server
           EOF
           chmod +x /tmp/scripts.sh
-          sudo -u openquake HOME=/home/openquake BRANCH="$BRANCH" bash /tmp/scripts.sh
+          sudo -i -u openquake MPLCONFIGDIR=/home/openquake/.matplot HOME=/home/openquake BRANCH="$BRANCH" bash /tmp/scripts.sh
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
       - name: Actualize 'default' templates for email notifications
         run: |
           cd ./oq-engine/oq-engine/
