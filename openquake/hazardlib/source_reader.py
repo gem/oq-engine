@@ -367,7 +367,8 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Found different sources with same ID %s',
                      general.shortlist(found))
     smlt = oq.inputs.get('source_model_logic_tree', oq.inputs['job_ini'])
-    check_same_sources(smdict, smlt)
+    if oq.strict:
+        check_same_sources(smdict, smlt)
     if found:
         check_mfd_variants(smdict, smlt)
 
@@ -867,7 +868,12 @@ def check_same_sources(smdict, fname):
         # NB: in oq check_input the models must be fixed, so it is an error
         if os.environ.get('OQ_CHECK_INPUT'):
             raise InvalidFile(msg)
-        logging.warning(msg)
+        # Keep normal calculation logs readable when many sources are found.
+        shown = lines[:3] + ['  ...'] if len(lines) > 3 else lines
+        logging.warning(
+            '%s:\n%d sources appear in different source models with '
+            'different IDs, use the same ID for each of them:\n%s',
+            fname, len(errors), '\n'.join(shown))
 
 
 # uncertainty types to suggest in check_mfd_variants, by MFD class

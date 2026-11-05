@@ -1,23 +1,30 @@
 Release notes (dev)
 ===================
 
-```{warning}
-The `[dbserver]` section of `openquake.cfg` does not exist anymore.
-Starting from version 3.27 its keys live in the `[server]` section:
+Version 3.27 is the largest release ever in terms of new capabilities,
+performance improvements and bug fixes, involving over 400 pull
+requests.
 
-- `host`, `receiver_host` and `receiver_ports` keep their names;
-- `file` has been renamed `dbfile`;
-- the `port` key has been removed;
-- the `oq dbserver` command and the DbServer daemon have been removed.
+The complete set of changes is listed in the changelog:
 
-Versions up to 3.26, including the LTS release 3.23, still use the
-`[dbserver]` section with the `file` key, so the configuration files
-must be updated when upgrading.
-```
+https://github.com/gem/oq-engine/blob/engine-3.27/debian/changelog
 
-Version 3.27 adds new capabilities for hazard, risk, and infrastructure
-calculations, alongside substantial performance improvements. The complete
-list of changes is in the [changelog](https://github.com/gem/oq-engine/blob/master/debian/changelog).
+A summary is given below.
+Users who do not need the latest features and models may want to stay with the LTS
+release, currently at version 3.23.5.
+
+# IT
+
+This is first release making heavy use of the newest AI tools
+(i.e. Codex, Claude and others) in the engine codebase. As a
+consequence we identified and fixed substantially more bugs than
+usual. We also used AI to implement new features (notably the porting
+of the Probabilistic Fault Displacement code by Yen Shin Chen) and to
+improve our optimizations (notably the ps_grid_spacing approximation).
+We also used it in purely IT work, like the removal the DbServer
+service, which is now included in the WebUI service (that is only
+relevant for server installations, see
+https://docs.openquake.org/oq-engine/manual/engine-3.27/getting-started/installation-instructions/server.html).
 
 # Hazard
 
@@ -30,7 +37,7 @@ The approximation can also be used with `disagg_by_src` for calculations
 with few sites.
 
 The experimental `collapse_precision` approximation reduces the number of
-contexts evaluated for fault and Poissonian sources. Sources with equivalent
+contexts evaluated for Poissonian sources. Sources with equivalent
 ground-motion requirements can share collapsed contexts. A fixed global
 grid is now used to collapse point sources, so distant padding sources do
 not change the results for nearby sources.
@@ -38,9 +45,7 @@ not change the results for nearby sources.
 Classical calculations use less memory for nonparametric sources with
 gridded ruptures, which are stored as arrays. Reading large source models,
 building contexts, evaluating PoEs, and distributing tasks have also been
-optimized. In the performance demo, `get_poes` decreased from 1,324 to
-899 seconds. The area-source discretization in preclassical calculations is
-up to 4.8 times faster.
+optimized. The area-source discretization is much faster.
 
 Source uncertainties are now applied in the workers, one set of
 realizations at a time, for classical and event-based calculations. In
@@ -79,40 +84,37 @@ measures.
 
 The `oq info correlation` command lists the available correlation models.
 
+## PFD calculator
+
+The engine now includes a probabilistic fault-displacement calculator
+with 35 primary and secondary rupture and displacement models. Its
+logic tree supports uncertainty across the selected models.  An
+example of usage is in demos/hazard/DisplacementPSHA while the
+documentation is in
+https://docs.openquake.org/oq-engine/manual/engine-3.27/user-guide/advanced/probabilistic-fault-displacement.html
+It should be considered experimental for the moment.
+
 # Risk
 
-The engine now includes a probabilistic fault-displacement calculator with
-35 primary and secondary rupture and displacement models. Its logic tree
-supports uncertainty across the selected models.
-
-Connectivity calculations support infrastructure interdependencies through
-a postprocessor. They can combine asset-level outputs from parent and child
-calculations.
+Connectivity calculations now support infrastructure interdependencies.
+The feature is experimental and not documented yet, but there is an
+example under openquake/qa_tests_data/infrastructure_risk/interdependencies.
 
 Scenario damage calculations can treat tsunami as an independent peril.
 
-When `time_event` is not specified, scenario risk calculations can compute
+When `time_event` is not specified, scenario risk calculations now compute
 occupant and injured losses for day, night, and transit, according to the
-time periods available in the exposure. The impact interface and reports
-show the selected time of day. Country impact reports can span multiple
-pages and include the rupture and epicenter when available.
+time periods available in the exposure.
 
-Impact defaults for `maximum_distance` and `truncation_level` can be chosen
-from the rupture magnitude. Level 1 users can also set `maximum_distance`
-up to 500 km.
+The engine now supports regular UTM site grids prepared from exposure, site CSV
+files, or scenario ruptures: this is crucial for circulant-embedding calculations.
 
-The engine supports regular UTM site grids prepared from exposure, site CSV
-files, or scenario ruptures for circulant-embedding calculations.
+# hazardlib
 
 The `horiz_comp_to` job parameter converts horizontal components to targets
 such as geometric mean, RotD50, and RotD100. The former
 `horiz_comp_to_geom_mean` boolean remains supported for backwards
 compatibility.
-
-The impact API can provide authorized users with provenance information
-about the scientific model repositories used to build the global exposure.
-The WebUI calculation list is paginated, and extracted HTML tables can be
-sorted by column.
 
 # Bug fixes
 
@@ -159,9 +161,7 @@ and exceeding `avg_losses_max` with `collect_rlzs=false` now raises the
 required error.
 
 Classical risk handles assets of different taxonomies at the same site
-without misplacing their loss curves or average losses. The
-`oq extract agg_losses` exporter works for aggregation by ID and reports
-the correct site tags.
+without misplacing their loss curves or average losses.
 
 The global SES `gmf_data` exporter now handles filtered events and writes
 the correct event IDs; global SES rupture IDs are unique across models.
@@ -176,22 +176,27 @@ zero hazard. `oq show rlz` now pairs branches with their uncertainty types.
 Event-based rupture extraction now reads each rupture's tectonic region type
 from its own source group.
 
-The CanadaSHM6 hard-rock correction uses the actual Vs30 values. Fixes to
-the ACME 2019 models correct total sigma and interpolation, and
-CampbellBozorgnia models now apply the epistemic adjustment and basin terms
-correctly. CampbellBozorgnia2019 CAV values are returned in g-sec.
+The CanadaSHM6 hard-rock correction now uses the actual Vs30 values.
+Before it was incorrectly giving always the same correction, the
+one for vs30 < 1100 m/s.
 
-## Other
+We fixed the ACME 2019 models correct total sigma and interpolation.
 
-Exports and inspection commands for multi-model calculations now handle
-each model's realizations and logic-tree views. The `oq compare uhs`
-command compares matching IMTs. The `too many potential logic tree paths`
-message now explains when `use_rates` can help.
+CampbellBozorgnia models now apply the epistemic adjustment and
+basin terms correctly. Thanks to Mohsen Kohrangi for the report.
 
-# Other changes
+CampbellBozorgnia2019 CAV values are now returned in g-sec and not in m/s
+(thanks to Ozan Bilal and Kyle Smith for the report).
+
+# oq commands
+
+There were minor fixes in the `oq compare` commands, as well in the
+`oq show rlz`, `oq show branches`, `oq show branchsets`, `oq show
+sm_rlzs` commands, that now also works for multi-model calculations,
+such as global SES calculations.
+
+The `oq extract agg_losses` exporter works for aggregation by ID and reports
+the correct site tags.
 
 `oq engine --param` now accepts space-separated `name=value` pairs, matching
-`oq run --param`.
-
-The complete release changes, including additional optimizations and
-internal updates, are listed in the changelog linked above.
+`oq run --param`, while command-separated pairs are not accepted anymore.
