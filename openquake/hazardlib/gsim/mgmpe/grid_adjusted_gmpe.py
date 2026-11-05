@@ -204,8 +204,8 @@ def load_residual_grids(hdf5_path):
 
 # {SHA256 content digest: grid_data}, shared by GridAdjustedGMPE instances
 # reading identical files, including copies extracted from saved logic trees.
-# Values contain the correction grids, sigma scalars, term metadata and
-# lazily filled raytrace masks. For the SAM job, two files occupy about
+# Values contain the correction grids, term metadata and lazily filled
+# raytrace masks. For the SAM job, two files occupy about
 # 8 MB after loading, or 20 MB with masks for all 26 IMTs. These sizes are
 # per process; the cache has no size limit and retains distinct file contents
 # until the process exits, so larger grids or more files can use much more.

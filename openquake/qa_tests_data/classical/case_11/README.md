@@ -13,19 +13,13 @@ varying density h3 grid cells.
 The hdf5 containing the corrections used in this simple test case is called
 `grid_adjustments.hdf5`.
 
-If the user inspects the hdf5 file, you will notice that in the case of
-`dL2L` and `adj_per_km`, we have specified a scalar sigma adjustment for
-each IMT (as an attribute in the associated groups), whereas for `dS2S`
-we have specified a per-cell adjustment  (additional dataset in the group
-itself). This option is to provide flexibility to the user. 
-
 ## A Visualisation of the Grid in the HDF5
 
 ![Grid adjustments overview](grid_adjustments_overview.png)
 
-The figure shows the 3 mean adjustments for PGA (note that because for
-`dS2S` we have specified a per-cell reduction to phi that a similar grid
-exists for this GMM sigma correction too in the hdf5):
+The figure shows the 3 mean adjustments for PGA. Per-cell `{term}_sig`
+reduction datasets also exist for each of the 3 terms in the hdf5 (not
+shown in the figure):
 
 | Panel  | Content                                                                                                  |
 | ------ | -------------------------------------------------------------------------------------------------------- |
