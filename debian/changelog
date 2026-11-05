@@ -1,4 +1,8 @@
  [Christopher Brooks]
+ * Fix the filtering of the hypocentral depth distribution in simple faults
+   so the weights per depth are not distorted by the floating of ruptures. The
+   impact on the BCHydro calculations is very small. Unit tests expanded to
+   check that intended behaviour is better observed.
  * Modified the linear-piecewise magnitude-dependent aspect ratio
    to permit more than 2 entries + added a unit test checking an
    expression can be approximately represented using this approach.
