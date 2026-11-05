@@ -59,7 +59,6 @@ def load_sigma_for_term(grp, term, imt_str, location,
     if location == "path":
         # Store sig^2 so the raytrace sum directly gives per-record variance
         # Σ_c dist(r, c) · sig_c^2; compute_central takes sqrt at the end.
-        # See the class docstring for the per-km Gaussian process model.
         raytrace_sig_grids.setdefault(term, {})
         raytrace_sig_grids[term][imt_str] = build_raytrace_grid(
             cell_ids, sig_vals ** 2)
