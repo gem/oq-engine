@@ -955,6 +955,21 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
+# rebuild the GSIMs with a VS30_RANGE (i.e. Allen 2022) with
+# vs30_strict=False; setting the attribute on the instance is not enough,
+# since it is lost when the logic tree is stored (via the TOML repr) and
+# read back, for instance by the risk calculations using a SES file
+def _relax_vs30(gsim_lt):
+    new = {}
+    for gsims in gsim_lt.values.values():
+        for i, gsim in enumerate(gsims):
+            if hasattr(gsim, 'VS30_RANGE') and gsim.vs30_strict:
+                kw = dict(gsim.kwargs, vs30_strict=False)
+                new[id(gsim)] = gsims[i] = gsim.__class__(**kw)
+    for br in gsim_lt.branches:
+        br.gsim = new.get(id(br.gsim), br.gsim)
+
+
 def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
@@ -980,12 +995,11 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
+    if not oqparam.strict:
+        _relax_vs30(gsim_lt)
     spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
-            if not oqparam.strict and hasattr(gsim, 'VS30_RANGE'):
-                # remove the vs30 range constraint on Allen 2022
-                gsim.vs30_strict = False
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
             if spatial_model and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
