@@ -295,6 +295,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_workflow_params(self):
         ini = pathlib.Path(case_4a.__file__).parent / 'job_hazard.ini'
+        # TOML strings interpret backslashes in Windows paths as escapes.
+        ini = ini.as_posix()
         # strict is overridable
         wf_toml = gettemp(f'[workflow]\ndescription = "wf"\n\n'
                           f'[Job]\nini = "{ini}"\nstrict = false\n',
