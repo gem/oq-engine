@@ -139,9 +139,10 @@ jobs:
            fi
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
-           $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
+           $CURL_BIN --fail  -o /dev/null -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
            # Waiting for the job to complete
            while [ "$(eval "$CURL_BIN" --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/status | jq -r '.status')" != "complete" ]; do
+             echo "+++++++++++++++++++++++++++++++++"
              echo "Still waiting the job to complete"
              sleep 5 # wait for 5 seconds before check again
            done
