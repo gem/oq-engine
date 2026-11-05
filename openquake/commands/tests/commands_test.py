@@ -37,7 +37,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.tests.flake8_test import check_newlines
-from openquake.hazardlib import tests
+from openquake.hazardlib import tests, InvalidFile
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
@@ -292,6 +292,23 @@ class RunShowExportTestCase(unittest.TestCase):
         ses_toml = os.path.join(ses_dir, 'ses.toml')
         [wf] = read_many(ses_toml, dict(description='test_workflow'))
         self.assertEqual(wf.checkout, {'EUR': 'master', 'MIE': 'master'})
+
+    def test_workflow_params(self):
+        ini = pathlib.Path(case_4a.__file__).parent / 'job_hazard.ini'
+        # strict is overridable
+        wf_toml = gettemp(f'[workflow]\ndescription = "wf"\n\n'
+                          f'[Job]\nini = "{ini}"\nstrict = false\n',
+                          suffix='.toml')
+        [wf] = read_many(wf_toml, {})
+        self.assertEqual(wf.inis[0]['strict'], 'False')
+        # a non-overridable parameter raises an error
+        wf_toml = gettemp(f'[workflow]\ndescription = "wf"\n\n'
+                          f'[Job]\nini = "{ini}"\nvs30_strict = false\n',
+                          suffix='.toml')
+        with self.assertRaises(InvalidFile) as ctx:
+            read_many(wf_toml, {})
+        self.assertIn('[Job] contains parameters that cannot be '
+                      'overridden: vs30_strict', str(ctx.exception))
 
     def test_workflow_run(self):
         base = pathlib.Path(case_4a.__file__).parent
