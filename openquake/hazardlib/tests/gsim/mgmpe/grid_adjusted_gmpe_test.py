@@ -19,7 +19,7 @@ import pickle
 import shutil
 import tempfile
 import unittest
-from unittest import mock, skipIf
+from unittest import mock
 from pathlib import Path
 import h5py
 import numpy as np
