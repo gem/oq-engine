@@ -492,6 +492,15 @@ def is_fraction(string):
     return 0 < f < 1
 
 
+def is_fake_hc(oq):
+    """
+    :returns: True if the hazard_calculation_id is the fake one set by
+              `oq check_input` for risk jobs (see get_oqparam)
+    """
+    hc = oq.hazard_calculation_id
+    return isinstance(hc, str) and hc.endswith('<fake>.ini')
+
+
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
