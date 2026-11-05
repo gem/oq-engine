@@ -1,5 +1,5 @@
 ---
-name: Devel Server Installation of OQ 
+name: Devel Server Installation of OQ
 on:
   workflow_dispatch:
     inputs:
@@ -80,7 +80,7 @@ jobs:
            sudo chown -R openquake /var/log/oq-engine/
            sudo runuser -l openquake -c '
            /opt/openquake/venv/bin/oq engine --upgrade-db
-           oq --version 
+           oq --version
            #
            echo "Add settings for login and logging on webui before to start"
            cd /home/openquake/oq-engine/openquake/server
@@ -130,9 +130,11 @@ jobs:
              echo "Unable to login"
              exit 1
            fi
-           # use v1/calc/run as endpoint with zip file
-           #$CURL_BIN -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-           #    -X POST -F http://127.0.0.1:8800/engine/1/outputs
+           # zip area source demo into job.zip
+           zip job.zip ~/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
+           $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1/v1/calc/run
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results
            #if [ $status_code != "200" ]; then
            #  echo "Unable to visualize outputs"
            #  exit 1
