@@ -139,11 +139,16 @@ jobs:
            fi
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
-           sleep 3600
            $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
-           sleep 10
-           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list
-           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results
+           # Waiting for the job to complete
+           while [ "$(eval "$CURL_BIN" --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/status | jq -r '.status')" != "complete" ]; do
+             echo "Still waiting the job to complete"
+             sleep 5 # wait for 5 seconds before check again
+           done
+           echo "Show list of calc and results"
+           echo "+++++++++++++++++++++++++++++"
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list | jq
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results | jq
            #if [ $status_code != "200" ]; then
            #  echo "Unable to visualize outputs"
            #  exit 1
