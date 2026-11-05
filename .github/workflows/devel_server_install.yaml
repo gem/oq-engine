@@ -38,12 +38,6 @@ jobs:
       - name: Clone Repository (Master)
         uses: actions/checkout@v6
         if: github.event.inputs.git-ref == ''
-      - name: Setup upterm session
-        uses: owenthereal/action-upterm@v2
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        with:
-          ## Shut down the server if unconnected after 45 minutes.
-          wait-timeout-minutes: 45
       - name: Clone Repository (Custom Ref)
         uses: actions/checkout@v6
         if: github.event.inputs.git-ref != ''
@@ -77,6 +71,13 @@ jobs:
           cp -- "$file" "${file%.default.tmpl}"
           done
           '
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
+          detached: true
       - name: WebUI and calculation with Auth
         run: |
            set -o pipefail
@@ -138,6 +139,7 @@ jobs:
            fi
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
+           sleep 3600
            $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1/v1/calc/run
            $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list
            $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results
