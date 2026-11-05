@@ -25,7 +25,7 @@ import numpy
 import pandas
 from io import BytesIO
 
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.hazardlib import (
     InvalidFile, site_amplification, gsim_lt, source_reader)
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
@@ -886,3 +886,21 @@ class PotentialPathsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_full_lt(quantile_hazard_curves='0.1,0.9')
         self.assertIn('or set use_rates=true', str(ctx.exception))
+
+
+class RelaxVs30TestCase(unittest.TestCase):
+    # with strict=false vs30_strict=False must survive the storage of the
+    # logic tree, otherwise the risk calculations reading the ruptures from
+    # a SES file would raise an error in the workers
+    def test_roundtrip(self):
+        glt = gsim_lt.GsimLogicTree.from_('[Allen2022]')
+        readinput._relax_vs30(glt)
+        [gsim] = glt.values['*']
+        self.assertFalse(gsim.vs30_strict)
+        self.assertIs(glt.branches[0].gsim, gsim)
+        fname = general.gettemp(suffix='.hdf5')
+        with hdf5.File(fname, 'w') as f:
+            f['gsim_lt'] = glt
+        with hdf5.File(fname, 'r') as f:
+            [gsim] = f['gsim_lt'].values['*']
+        self.assertFalse(gsim.vs30_strict)
