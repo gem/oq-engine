@@ -79,8 +79,6 @@ jobs:
           '
       - name: WebUI and calculation with Auth
         run: |
-           echo "Need to setup after remediation of devel_server"
-           exit 0
            set -o pipefail
            sudo systemctl stop openquake-webui
            source /opt/openquake/venv/bin/activate
