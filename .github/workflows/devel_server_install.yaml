@@ -161,4 +161,7 @@ jobs:
       - name: Run calculation with non openquake users from command line
         run: |
            set -o pipefail
-           /opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
+           oq --version
+           oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
+           echo "Display the log of the last job"
+           oq engine --show-log -1
