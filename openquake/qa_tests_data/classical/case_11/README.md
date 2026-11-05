@@ -17,9 +17,7 @@ If the user inspects the hdf5 file, you will notice that in the case of
 `dL2L` and `adj_per_km`, we have specified a scalar sigma adjustment for
 each IMT (as an attribute in the associated groups), whereas for `dS2S`
 we have specified a per-cell adjustment  (additional dataset in the group
-itself). This option is to provide flexibility to the user. For path-based
-adjustments, currently the use of a per-cell adjustment is not supported
-(an error will be raised by `GridAdjustedGMPE`).
+itself). This option is to provide flexibility to the user. 
 
 ## A Visualisation of the Grid in the HDF5
 
@@ -29,10 +27,10 @@ The figure shows the 3 mean adjustments for PGA (note that because for
 `dS2S` we have specified a per-cell reduction to phi that a similar grid
 exists for this GMM sigma correction too in the hdf5):
 
-| Panel  | Content                                                                         |
-| ------ | ------------------------------------------------------------------------------- |
-| left   | `dL2L`-based mean ground-motion correction per h3 cell (hypocentre lookup)    |
-| centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup)          |
+| Panel  | Content                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| left   | `dL2L`-based mean ground-motion correction per h3 cell (hypocentre lookup)                             |
+| centre | `dS2S`-based mean ground-motion correction per h3 cell (site lookup)                                   |
 | right  | `adj_per_km` which is path-based mean ground-motion correction (natural log units per km) (raytracing) |
 
 Red star = hypocentre; green triangles = sites in the site model.

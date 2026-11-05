@@ -39,42 +39,37 @@ from openquake.hazardlib.geo.geodetic import npoints_between, geodetic_distance
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-def load_sigma_for_term(grp, term, imt_str, location, sig_action,
-                        cell_ids, grids, sig_scalars):
+def load_sigma_for_term(grp, term, imt_str, location,
+                        cell_ids, grids, raytrace_sig_grids):
     """
-    Load the sigma adjustment for one term/IMT group into
-    grids[imt_str][term]["sig"] (per-cell) OR sig_scalars (scalar).
+    Load the per-cell sigma adjustment dataset for one term/IMT group
+    into grids[imt_str][term]["sig"] (hypo/site) or
+    raytrace_sig_grids[term][imt_str] (path, pre-squared).
     """
     sig_key = f"{term}_sig"
-    has_sig_attr = sig_key in grp.attrs
-    has_sig_dataset = sig_key in grp
-    if has_sig_attr and has_sig_dataset:
-        # Raise an error if requesting both scalar and per-cell
+    if sig_key not in grp:
         raise ValueError(
-            f"Both scalar adjustment and per-cell dataset '{sig_key}' "
-            f"found for term '{term}', IMT '{imt_str}'. Provide only one.")
-    if not has_sig_attr and not has_sig_dataset:
-        # Raise an error if not specifiy scalar or per cell
-        # but requested a sigma adjustment
-        raise ValueError(
-            f"sig_adjustment '{sig_action}' requested for term '{term}' "
-            f"but '{sig_key}' is missing for '{imt_str}'")
-    if has_sig_dataset and location == "path":
-        # Raise an error if requesting per-cell sigma
-        # adjustment with a path-based term
-        raise ValueError(
-            f"Per-cell sigma is not currently supported for "
-            f"path-based terms (term '{term}'). Use a "
-            f"scalar adjustment instead.")
-    sig_vals = grp[sig_key][:] if has_sig_dataset else grp.attrs[sig_key]
+            f"sig_adjustment requested for term '{term}' but per-cell "
+            f"dataset '{sig_key}' is missing for '{imt_str}'")
+    sig_vals = grp[sig_key][:]
     if np.any(sig_vals < 0):
         raise ValueError(
             f"Negative _sig value found for term "
             f"'{term}' and IMT '{imt_str}'")
-    if has_sig_dataset:
-        grids[imt_str][term]["sig"] = dict(zip(cell_ids, sig_vals))
+    if location == "path":
+        # Per-km GP interpretation: each kilometer of ray through
+        # cell c contributes an independent random shift of std
+        # sig_c. Per-record path variance is
+        # Σ_c dist(r, c) · sig_c^2, aggregated along the ray via
+        # the same 100-sample Riemann sum used for mean / mean_se
+        # (see _raytrace_path_adjs). Store sig^2 pre-squared so the
+        # hot path accumulates per-km variance directly and
+        # compute_central only takes sqrt at the per-record end.
+        raytrace_sig_grids.setdefault(term, {})
+        raytrace_sig_grids[term][imt_str] = build_raytrace_grid(
+            cell_ids, sig_vals ** 2)
     else:
-        sig_scalars[imt_str][term] = sig_vals
+        grids[imt_str][term]["sig"] = dict(zip(cell_ids, sig_vals))
 
 
 def build_raytrace_grid(cell_ids, mean_vals):
@@ -98,11 +93,10 @@ def load_residual_grids(hdf5_path):
                         "sig":     {cell_id: float},
                         "mean_se": {cell_id: float}}, ...}}
       for hypo/site-based terms only. The "sig" key is present only when
-      sig_adjustment is not "none" and the sigma is given as a per-cell
-      dataset named "{term}_sig". The "mean_se" key is present only when
-      the HDF5 includes a per-cell dataset "{term}_mean_se" (used by the
-      epsilons kwarg of GridAdjustedGMPE). Per-cell sigma is not supported
-      for path-based terms.
+      sig_adjustment is not "none" (per-cell dataset "{term}_sig"). The
+      "mean_se" key is present only when the HDF5 includes a per-cell
+      dataset "{term}_mean_se" (used by the epsilons kwarg of
+      GridAdjustedGMPE).
 
     * raytrace_grids: {term: {imt_str: {cell_id: val}, ...}} - H3 cell-id
       lookups for path-based terms (used in raytracing), stored per term
@@ -112,18 +106,19 @@ def load_residual_grids(hdf5_path):
       per-cell SE on the mean for path-based terms. Populated only when
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
+    * raytrace_sig_grids: same structure as raytrace_grids but holding
+      the per-cell sig^2 for path-based terms (stored pre-squared so the
+      raytrace accumulator sums per-km variance directly). Per-record
+      path std is sqrt(Σ_c dist(r, c) · sig_c^2) under the per-km Gaussian process
+      interpretation - each kilometer of ray through cell c contributes
+      an independent random shift of std sig_c. Populated only when the
+      HDF5 includes a per-cell "{term}_sig" dataset for a path-based term.
+
     * raytrace_masks: {(term, imt_str): (lon_origin, lat_origin, mask)}
       - per h3
       resolution, the lat/lon boxes where the path points may hit a cell
       of raytrace_grids; used to skip the lookups which would miss. It
       starts empty and is filled for the terms/IMTs actually used.
-
-    * sig_scalars: {imt_str: {term: float}} - one sigma adjustment scalar
-      per term per IMT. Populated when sig_adjustment is not "none" and the
-      sigma is given as a scalar adjustment (group attribute "{term}_sig").
-
-      NOTE: sig_scalars and grids[imt][term]["sig"] are mutually exclusive
-      for each term/IMT - the presence of both raises an error.
 
     * h3_res: sorted (coarsest to finest) list of h3 resolutions, derived
       automatically from the cell IDs in the grids.
@@ -135,10 +130,8 @@ def load_residual_grids(hdf5_path):
 
       - sig_adjustment (optional, default "none"): the action to apply
         to the GMM sigma component - "sub", "add", "replace", or "none".
-        When not "none", a sigma value must be provided in the HDF5 for
-        each IMT group as either a scalar group attribute "{term}_sig" or
-        a per-cell dataset of the same name (see above). Per-cell sigma
-        lookup is not supported currently for path-based terms.
+        When not "none", a per-cell dataset "{term}_sig" must be provided
+        in each IMT group (see above).
 
       - sig_comp_modified (required when sig_adjustment is not "none"):
         which sigma component to modify - "tau", "phi", or "sig".
@@ -149,7 +142,7 @@ def load_residual_grids(hdf5_path):
     grids = {}
     raytrace_grids = {}
     raytrace_se_grids = {}
-    sig_scalars = {}
+    raytrace_sig_grids = {}
     resolutions = set()
     with h5py.File(hdf5_path, "r") as hf:
         res_terms = json.loads(hf.attrs["res_terms"])
@@ -158,12 +151,10 @@ def load_residual_grids(hdf5_path):
             sig_action = res_terms[term].get("sig_adjustment", "none")
             for imt_str in hf[term]: # e.g. SA(0.5)
 
-                # Ensure per-IMT dicts exist in both stores so term entries
-                # can be added below; either may stay empty for a given IMT
-                # (e.g., grids for path-only IMTs, sig_scalars when no scalar
-                # sigma applies)
+                # Ensure the per-IMT grids dict exists so term entries
+                # can be added below; may stay empty for a given IMT if
+                # only path-based terms are present.
                 grids.setdefault(imt_str, {})
-                sig_scalars.setdefault(imt_str, {})
 
                 # Get group and the mean adj values
                 grp = hf[term][imt_str]
@@ -188,7 +179,7 @@ def load_residual_grids(hdf5_path):
                 if sig_action != "none":
                     load_sigma_for_term(
                         grp, term, imt_str, location,
-                        sig_action, cell_ids, grids, sig_scalars)
+                        cell_ids, grids, raytrace_sig_grids)
 
                 # Optional per-cell SE on the mean, only used when a
                 # non-zero epsilon is set for the term
@@ -210,8 +201,8 @@ def load_residual_grids(hdf5_path):
     return {"grids": grids,
             "raytrace_grids": raytrace_grids,
             "raytrace_se_grids": raytrace_se_grids,
+            "raytrace_sig_grids": raytrace_sig_grids,
             "raytrace_masks": {}, # Filled on first use by _resolve_adjs
-            "sig_scalars": sig_scalars,
             "h3_res": sorted(resolutions), # Coarsest to finest h3 res
             "res_terms": res_terms}
 
@@ -514,10 +505,7 @@ def grid_lookup(grids, lats, lons, h3_res):
 
 def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
     """
-    Apply the resolved per-cell or scalar sigma adjustment to its component.
-
-    NOTE: Only one of grids[imt][term]["sig"]/sig_scalars can be populated
-    per term/IMT - this is enforced when loading the grid cells.
+    Apply the resolved per-cell sigma adjustment to its component.
     """
     # Get the component to modify: tau, phi or total sigma
     sig_comp = cfg["sig_comp_modified"]
@@ -548,6 +536,12 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
         if se_grid is not None:
             grids["mean_se"] = se_grid
+        # Per-cell path sig^2 (pre-squared at load time) accumulates to
+        # Σ_c dist(r, c) · sig_c^2 per record via the same Riemann sum
+        # used for mean / mean_se; compute_central takes sqrt after.
+        sig_sq_grid = grid_data["raytrace_sig_grids"].get(term, {}).get(imt)
+        if sig_sq_grid is not None:
+            grids["sig_sq"] = sig_sq_grid
         cache = grid_data.setdefault("raytrace_masks", {})
         if (term, imt) not in cache:
             cache[term, imt] = _build_masks(grid, grid_data["h3_res"])
@@ -622,11 +616,13 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
             mean[m] += mean_adj
             sig_action = cfg.get("sig_adjustment", "none")
             if sig_action != "none":
-                # Resolve sigma values - per-cell grid or scalar.
-                # Per-cell values share the mean lookup; otherwise
-                # use the scalar
-                scalars = grid_data["sig_scalars"].get(str(imt), {})
-                sig_vals = adjs.get("sig", scalars.get(term))
+                # Resolve per-cell sigma. Hypo/site shares the mean
+                # lookup; path comes from the ray aggregation as sig^2
+                # per record (take sqrt to get per-record std).
+                if "sig_sq" in adjs:
+                    sig_vals = np.sqrt(np.maximum(0.0, adjs["sig_sq"]))
+                else:
+                    sig_vals = adjs["sig"]
                 adjust_sigma(sig_vals, cfg, sig_action,
                              sig[m], tau[m], phi[m])
     return resolved
@@ -686,18 +682,14 @@ class GridAdjustedGMPE(GMPE):
                  attenuation rate per km per intersected grid cell)
 
       * sig_adjustment (optional, default "none"): Whether to adjust the
-        corresponding GMM sigma component. When not "none", one of the
-        following must be present in each IMT group for that term:
-
-        * A scalar adjustment (group attribute "{term}_sig") - one value
-          applied uniformly across all hypocentres or sites.
-
-        * A dataset named "{term}_sig" - one value per h3 cell, looked up
-          spatially in the same way as the mean adjustment (hypo or site
-          location; not supported yet for path-based terms).
-
-        NOTE: Providing both a scalar adjustment and a cell-by-cell adjustment
-        raises an error - you must select exactly 1 for each sigma correction.
+        corresponding GMM sigma component. When not "none", a per-cell
+        dataset named "{term}_sig" must be present in each IMT group
+        for that term. For hypo / site terms the dataset is looked up
+        spatially the same way as the mean. For path terms, aggregated
+        along the ray as sqrt(Σ_c dist(r, c) · sig_c^2) per record
+        (per-km Gaussian process: each km of ray through cell c contributes an
+        independent random shift of std sig_c; std scales as
+        sqrt(ray-length)).
 
         Adjustment actions:
 
