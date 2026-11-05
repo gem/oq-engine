@@ -237,74 +237,70 @@ class SimpleFaultSource(ParametricSeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
-    def _hypo_list_from_depths(self, first_row, rup_rows):
+    def _hypo_depth_allocation(self, rup_rows, n_rows_total, n_cols_total):
         """
-        Convert the hypo depth distribution to (dip_frac, weight) pairs
-        for a given floating rupture.
+        Allocate the hypo depth distribution over the floating ruptures for
+        a given magnitude. Each depth with probability p_d is spread uniformly
+        over its N_d compatible rows and all columns so the input depth
+        distribution is preserved as a marginal.
 
-        Depths outside [rup_top_depth, rup_bot_depth] are discarded and
-        the remaining weights are renormalised to sum to 1. 
+        Returns {first_row: [(dip_frac, rate_fraction), ...]}, empty if
+        no depth falls in any floating rupture's depth range.
 
         If fixedDipFrac is specified in the hypoDepthDist then it is
         assigned to the corresponding depth instead of a fraction computed
         using the floating rupture's depth range.
 
         NOTE: Depths that resolve to the same dip_frac (whether from
-        fixedDipFrac or coincidental computed equality) are collapsed into
-        one pair with their weights summed.
-
-        NOTE: An error is raised if none of the hypo depths are within the
-        depth range of a given floating rup.
+        fixedDipFrac or coincidental computed equality) are collapsed
+        into one pair with their rate fractions summed.
         """
-        # Compute top and bottom depth of this floating rupture
         sin_dip = math.sin(math.radians(self.dip))
         down_dip_delta = self.rupture_mesh_spacing * sin_dip
-        top_depth = (
-            self.upper_seismogenic_depth +
-            first_row * down_dip_delta)
-        bot_depth = (
-            self.upper_seismogenic_depth +
-            (first_row + rup_rows - 1) * down_dip_delta)
-        rup_depth_range = bot_depth - top_depth
+        # For each floating row collect compatible (dip_frac, depth_idx)
+        # pairs and count how many rows each depth fits (N_d)
+        per_row = {}
+        n_rows_per_depth = [0] * len(self.hypo_depth_list)
+        for first_row in range(n_rows_total):
+            # Compute top and bottom depth of this floating rupture
+            top = self.upper_seismogenic_depth + first_row * down_dip_delta
+            bot = (self.upper_seismogenic_depth +
+                   (first_row + rup_rows - 1) * down_dip_delta)
+            rup_depth_range = bot - top
 
-        # Keep hypocentres inside given floating rupture's depth range
-        weight_by_frac = {}
-        for prob, depth, fdf in self.hypo_depth_list:
-            if top_depth <= depth <= bot_depth:
-                # Use fixedDipFrac if provided and otherwise compute from depth
-                dip_frac = (fdf if fdf is not None
-                            else (depth - top_depth) / rup_depth_range)
-                # Collapse depths with the same fraction summing their weights
-                weight_by_frac[dip_frac] = (
-                    weight_by_frac.get(dip_frac, 0.0) + prob)
+            # Keep hypocentres inside given floating rupture's depth range
+            entries = []
+            for d_idx, (prob, depth, fdf) in enumerate(self.hypo_depth_list):
+                if top <= depth <= bot:
+                    # Use fixedDipFrac if provided and otherwise compute from depth
+                    dip_frac = (fdf if fdf is not None
+                                else (depth - top) / rup_depth_range
+                                if rup_depth_range > 0 else 0.0)
+                    entries.append((dip_frac, d_idx))
+                    n_rows_per_depth[d_idx] += 1
+            if entries:
+                per_row[first_row] = entries
 
-        if not weight_by_frac:
-            raise ValueError(
-                f'No hypo_depth_list depths fall in depth range of floated '
-                f'rupture [{top_depth:.2f}, {bot_depth:.2f}] km')
+        # Renormalise probability over depths that fit at least one row
+        # so the total MFD rate is preserved if a depth fits no row
+        total_valid_prob = sum(
+            prob for d_idx, (prob, _, _) in enumerate(self.hypo_depth_list)
+            if n_rows_per_depth[d_idx] > 0)
+        if total_valid_prob == 0:
+            return {}
 
-        total = sum(weight_by_frac.values())
-
-        return [(frac, w / total) for frac, w in weight_by_frac.items()]
-
-    def _iter_ruptures_hypo_depth(self, surface, occurrence_rate, mag,
-                                   first_row, rup_rows):
-        """
-        Yield ruptures for given floating position on fault surface using
-        the absolute depth distribution in hypo_depth_list.
-        """
-        # Iter over the depths in the hypo depth dist
-        for dip_frac, w in self._hypo_list_from_depths(first_row, rup_rows):
-
-            # Use the down-dip fraction to get the hypo on given floating rup
-            hypo = surface.get_hypo_location(
-                self.rupture_mesh_spacing, (0.5, dip_frac))
-            
-            # Make the rup
-            yield ParametricProbabilisticRupture(
-                mag, self.rake, self.tectonic_region_type,
-                hypo, surface, occurrence_rate * w,
-                self.temporal_occurrence_model)
+        # For each valid row build the (dip_frac, rate_fraction) list,
+        # collapsing depths that share a dip_frac summing their fractions
+        alloc = {}
+        for first_row, entries in per_row.items():
+            by_frac = {}
+            for dip_frac, d_idx in entries:
+                prob = self.hypo_depth_list[d_idx][0]
+                rate_frac = ((prob / total_valid_prob) /
+                             (n_rows_per_depth[d_idx] * n_cols_total))
+                by_frac[dip_frac] = by_frac.get(dip_frac, 0.0) + rate_frac
+            alloc[first_row] = list(by_frac.items())
+        return alloc
 
     def _iter_ruptures_hypo_slip(self, surface, occurrence_rate, mag):
         """
@@ -319,6 +315,52 @@ class SimpleFaultSource(ParametricSeismicSource):
                     mag, self.rake, self.tectonic_region_type,
                     hypocenter, surface, occurrence_rate * hypo[2] * slip[1],
                     self.temporal_occurrence_model, slip[0])
+
+    def _hypo_depth_allocation_or_raise(self, mag, rup_rows,
+                                        n_rows_total, n_cols_total):
+        """
+        Call _hypo_depth_allocation and raise a diagnostic ValueError
+        if no depth fits any floating rupture at the given magnitude.
+        """
+        alloc = self._hypo_depth_allocation(
+            rup_rows, n_rows_total, n_cols_total)
+        if not alloc:
+            raise ValueError(
+                f'No hypo_depth_list depth fits any floating '
+                f'rupture at M={mag:.2f} on source {self.source_id}')
+        return alloc
+
+    def _iter_ruptures_hypo_depth(self, surface, mag, mag_occ_rate, entries):
+        """
+        Yield ruptures for a given floating position using the
+        (dip_frac, rate_fraction) entries from _hypo_depth_allocation.
+        """
+        for dip_frac, rate_frac in entries:
+            hypo = surface.get_hypo_location(
+                self.rupture_mesh_spacing, (0.5, dip_frac))
+            yield ParametricProbabilisticRupture(
+                mag, self.rake, self.tectonic_region_type,
+                hypo, surface, mag_occ_rate * rate_frac,
+                self.temporal_occurrence_model)
+
+    def _rates_hypo_depth(self, alloc, num_rup_along_width,
+                          num_rup_along_length, mag_occ_rate, step):
+        """
+        Return the per-rupture rate array for the hypo_depth_list path
+        in the same order that _iter_ruptures emits ruptures, or None
+        if no float survives the step subsampling.
+        """
+        n_cols = len(range(num_rup_along_length)[::step])
+        parts = []
+        for first_row in range(num_rup_along_width)[::step]:
+            entries = alloc.get(first_row)
+            if not entries:
+                continue
+            rates = numpy.array([r for _, r in entries])
+            parts.append(numpy.tile(rates, n_cols))
+        if not parts:
+            return None
+        return numpy.concatenate(parts) * mag_occ_rate
 
     def iter_ruptures(self, **kwargs):
         """
@@ -351,28 +393,27 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
-            occurrence_rate = mag_occ_rate / float(num_rup)
+            if self.hypo_depth_list:
+                alloc = self._hypo_depth_allocation_or_raise(
+                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
+            else:
+                occurrence_rate = mag_occ_rate / float(num_rup)
             if only_rates:
                 if self.hypo_depth_list:
-                    # Match _iter_ruptures_hypo_depth exactly - per (first_row,
-                    # first_col) yield one rate per (dip_frac, w) pair from
-                    # _hypo_list_from_depths, which filters by the float's
-                    # depth range and collapses entries with equal dip_frac
-                    n_cols = len(range(num_rup_along_length)[::step])
-                    parts = []
-                    for first_row in range(num_rup_along_width)[::step]:
-                        weights = numpy.array(
-                            [w for _, w in self._hypo_list_from_depths(
-                                first_row, rup_rows)]
-                                )
-                        parts.append(numpy.tile(weights, n_cols))
-                    yield numpy.concatenate(parts) * occurrence_rate
+                    rates = self._rates_hypo_depth(
+                        alloc, num_rup_along_width, num_rup_along_length,
+                        mag_occ_rate, step)
+                    if rates is None:
+                        continue
+                    yield rates
                 else:
                     n_hypo = len(self.hypo_list) or 1
                     yield numpy.full(
                         num_rup * n_hypo * n_slip, occurrence_rate)
                 continue
             for first_row in range(num_rup_along_width)[::step]:
+                if self.hypo_depth_list and first_row not in alloc:
+                    continue
                 for first_col in range(num_rup_along_length)[::step]:
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
@@ -385,15 +426,12 @@ class SimpleFaultSource(ParametricSeismicSource):
                         for cum in cums)
                     surface.dip, surface.strike = mean_inclination_azimuth(
                         xi, yi, xa, ya, on_surface[first_row])
-
                     if self.hypo_depth_list:
                         yield from self._iter_ruptures_hypo_depth(
-                            surface, occurrence_rate, mag, first_row, rup_rows)
-                        
+                            surface, mag, mag_occ_rate, alloc[first_row])
                     elif len(self.hypo_list) and len(self.slip_list):
                         yield from self._iter_ruptures_hypo_slip(
                             surface, occurrence_rate, mag)
-                        
                     else:
                         # Regular version using surf centroid
                         yield ParametricProbabilisticRupture(
@@ -444,14 +482,9 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             if self.hypo_depth_list:
-                # _hypo_list_from_depths filters by each float's depth range
-                # and collapses entries with equal dip_frac (e.g. when the
-                # fixedDipFrac is constant over the depth entries), so the
-                # real per-float count depends on first_row
-                n_hypo_total = sum(
-                    len(self._hypo_list_from_depths(first_row, rup_rows))
-                    for first_row in range(num_rup_along_width)
-                    )
+                alloc = self._hypo_depth_allocation_or_raise(
+                    mag, rup_rows, num_rup_along_width, num_rup_along_length)
+                n_hypo_total = sum(len(entries) for entries in alloc.values())
                 self._nr.append(num_rup_along_length * n_hypo_total * n_slip)
             else:
                 n_hypo = len(self.hypo_list) or 1
