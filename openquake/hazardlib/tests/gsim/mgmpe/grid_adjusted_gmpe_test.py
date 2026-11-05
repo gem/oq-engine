@@ -39,8 +39,8 @@ aae = np.testing.assert_array_almost_equal
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 # Test file uses replacement adjustment method on tau (per-cell dL2L_sig,
 # IMT-varying) and subtract adjustment method on phi (per-cell dS2S_sig
-# + per-cell adj_per_km_sig aggregated along the ray under per-km Gaussian process,
-# both IMT-varying), with h3 resolutions of 2, 3, 4
+# + per-cell adj_per_km_sig summed along the ray with distance-squared
+# weights, both IMT-varying), with h3 resolutions of 2, 3, 4
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
 # Test inputs
@@ -192,22 +192,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
         mea, sig, tau, phi = self._get_mean_stds(IMTS)
         gd = load_residual_grids(GRID_HDF5)
         for m in range(len(IMTS)):
-            # Per-record path sig^2 via the per-km Gaussian process aggregation:
-            # raytrace_sig_grids stores sig^2 pre-squared, so passing it
-            # through raytrace_path_adj gives Σ_c dist(r, c) · sig_c^2
-            # per record directly.
-            path_sig_sq = raytrace_path_adj(
-                gd["raytrace_sig_grids"]["adj_per_km"][IMTS[m]],
+            # Per-record path sig^2 = Σ_c dist(r, c)^2 · sig_c^2. Pass
+            # the pre-squared sig^2 grid under key "sig_sq" so the
+            # raytrace sums it with distance-squared weights instead of
+            # distance weights.
+            path_sig_sq = mod._raytrace_path_adjs(
+                {"mean": gd["raytrace_grids"]["adj_per_km"][IMTS[m]],
+                 "sig_sq": gd["raytrace_sig_grids"]["adj_per_km"][IMTS[m]]},
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
-                LONS, LATS, gd["h3_res"])
+                LONS, LATS, gd["h3_res"])["sig_sq"]
             path_sig = np.sqrt(np.maximum(0.0, path_sig_sq))
             aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
                 decimal=DP)
             # dL2L uses "replace" with per-cell sig; hypo at origin -> cell 0
             aae(tau[GRID, m],
                 np.full(len(LATS), DL2L_SIG_PER_CELL[m][0]), decimal=DP)
-            # phi: subtract per-cell dS2S sigma (site-varying) and per-record
-            # per-km Gaussian process path sig in quadrature
+            # phi: subtract per-cell dS2S sigma (site-varying) and the
+            # per-record path sig in quadrature
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_SIG_PER_CELL[m] ** 2
                         - path_sig ** 2), decimal=DP)
@@ -247,13 +248,12 @@ class GridAdjustedGMPETest(unittest.TestCase):
             [np.zeros(len(LATS)), np.zeros(len(LONS)), LATS, LONS],
             names="hypo_lat,hypo_lon,lat,lon")
         for m, imt in enumerate(IMTS):
-            # Per-record path sig^2 via the per-km Gaussian process aggregation; hypo at
-            # origin, so the raytrace primitive gives the expected sig_sq
-            # directly from the pre-squared per-cell grid.
-            path_sig_sq = raytrace_path_adj(
-                gd["raytrace_sig_grids"]["adj_per_km"][imt],
+            # Per-record path sig^2 = Σ_c dist(r, c)^2 · sig_c^2
+            path_sig_sq = mod._raytrace_path_adjs(
+                {"mean": gd["raytrace_grids"]["adj_per_km"][imt],
+                 "sig_sq": gd["raytrace_sig_grids"]["adj_per_km"][imt]},
                 np.zeros(len(LONS)), np.zeros(len(LATS)),
-                LONS, LATS, gd["h3_res"])
+                LONS, LATS, gd["h3_res"])["sig_sq"]
             expected = {
                 "dL2L": {
                     "mean": np.full(len(LATS), DL2L_MEAN_PER_CELL[m][0]),

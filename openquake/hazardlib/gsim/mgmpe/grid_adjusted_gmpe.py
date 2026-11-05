@@ -57,8 +57,6 @@ def load_sigma_for_term(grp, term, imt_str, location,
             f"Negative _sig value found for term "
             f"'{term}' and IMT '{imt_str}'")
     if location == "path":
-        # Store sig^2 so the raytrace sum directly gives per-record variance
-        # Σ_c dist(r, c) · sig_c^2; compute_central takes sqrt at the end.
         raytrace_sig_grids.setdefault(term, {})
         raytrace_sig_grids[term][imt_str] = build_raytrace_grid(
             cell_ids, sig_vals ** 2)
@@ -101,12 +99,13 @@ def load_residual_grids(hdf5_path):
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
     * raytrace_sig_grids: same structure as raytrace_grids but holding
-      the per-cell sig^2 for path-based terms (stored squared so the
-      raytrace sum gives per-record variance directly). Per-record path std
-      is sqrt(Σ_c dist(r, c) · sig_c^2), the per-km Gaussian process model
-      with each kilometre of ray through cell c contributing an independent
-      random shift of std sig_c. Populated only when the HDF5 includes a
-      per-cell "{term}_sig" dataset for a path-based term.
+      the per-cell sig^2 for path-based terms (stored squared for
+      convenience). The per-record path std is
+      sqrt(Σ_c dist(r, c)^2 · sig_c^2): each cell contributes its own
+      sig_c independently, and each cell's contribution scales with the
+      square of the distance the ray spends in that cell. Populated
+      only when the HDF5 includes a per-cell "{term}_sig" dataset for
+      a path-based term.
 
     * raytrace_masks: {(term, imt_str): (lon_origin, lat_origin, mask)}
       - per h3
@@ -211,10 +210,12 @@ def load_residual_grids(hdf5_path):
 _GRID_CACHE = {}
 
 
-# Avoid hashing the same file for every branch. The stat signature
-# invalidates the digest when a file changes; only small metadata is cached.
 @lru_cache(maxsize=128)
 def _grid_digest(path, stamp):
+    """
+    Avoid hashing the same file for every branch. The stat signature
+    invalidates the digest when a file changes; only small metadata is cached.
+    """
     with open(path, 'rb') as f:
         return hashlib.file_digest(f, 'sha256').digest()
 
@@ -285,13 +286,15 @@ MASK_MAX_LAT = 80.
 MAX_GRID_CELLS = 1 << 31
 
 
-# For each h3 resolution, a lat/lon raster flagging the boxes which may
-# contain points of a stored cell of that resolution, i.e. the boxes
-# overlapping the bounding box of the cell vertices enlarged by the margin.
-# Points in a box not flagged cannot be in a stored cell, so their h3
-# lookups would miss and can be skipped; returns the mask origins and raster,
-# with candidate_mask None if the margin is not guaranteed to be enough
 def _build_masks(grid, h3_res):
+    """
+    For each h3 resolution, a lat/lon raster flagging the boxes which may
+    contain points of a stored cell of that resolution, i.e. the boxes
+    overlapping the bounding box of the cell vertices enlarged by the margin.
+    Points in a box not flagged cannot be in a stored cell, so their h3
+    lookups would miss and can be skipped; returns the mask origins and raster,
+    with candidate_mask None if the margin is not guaranteed to be enough
+    """
     boxes = []  # (resolution index, lat1, lat2, lon1, lon2)
     for cell in grid:
         cell = h3.str_to_int(cell) if isinstance(cell, str) else cell
@@ -345,15 +348,17 @@ _H3_CELL = ctypes.CFUNCTYPE(
     ctypes.c_int)(_capsule_pointer(_capsule, _capsule_name(_capsule)))
 
 
-# Resolve samples finest-to-coarsest, visiting only masked candidates.
-# A mask with zero resolutions disables filtering for unsafe cell bounds.
-# The Cython function uses Python objects to check for errors and so needs
-# the GIL, which is fine since `compile` does not release it.
 @compile(types.int32[:, :](
     types.float64[:, :], types.float64[:, :], types.int64[:],
     types.Tuple((types.float64, types.float64, types.boolean[:, :, :])),
     types.uint64[:], typeof(_H3_CELL)))
 def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
+    """
+    Resolve samples finest-to-coarsest, visiting only masked candidates.
+    A mask with zero resolutions disables filtering for unsafe cell bounds.
+    The Cython function uses Python objects to check for errors and so needs
+    the GIL, which is fine since `compile` does not release it.
+    """
     lon_origin, lat_origin, candidate_mask = masks
     index = Dict.empty(types.uint64, types.int64)
     for i, cell in enumerate(cells):
@@ -390,9 +395,11 @@ def _trace_cells(lons, lats, h3_res, masks, cells, cell_func):
     return out
 
 
-# Accumulate float32 grid values in sample order, as in the original loop.
 @compile('(i4[:, :], f4[:])')
 def _path_sums(rows, values):
+    """
+    Accumulate float32 grid values in sample order, as in the original loop.
+    """
     sums = np.zeros(len(rows), values.dtype)
     for i in range(len(rows)):
         for row in rows[i]:
@@ -401,13 +408,40 @@ def _path_sums(rows, values):
     return sums
 
 
-# Resolve all fields on the same path grid with one raytrace per path.
-# The h3 lookups are performed only for the points which may be in a
-# stored cell, according to the masks (see _build_masks), since the
-# other lookups would miss: the result is the same.
+@compile('(i4[:, :], f4[:])')
+def _path_sums_sq(rows, values):
+    """
+    For each path, count how many samples landed in each cell (n_c),
+    then sum n_c^2 · values[c] over the cells that were hit. When the
+    caller multiplies by spacing^2 this gives the per-record path
+    variance Σ_c dist(r, c)^2 · sig_c^2 (distance through each cell
+    squared, weighted by that cell's sig^2). One pass to count, one
+    pass to sum (the sum pass zeroes counts as it goes, so the count
+    vector starts clean for the next path).
+    """
+    n_paths = len(rows)
+    n_cells = len(values)
+    sums = np.zeros(n_paths, values.dtype)
+    counts = np.zeros(n_cells, np.int32)
+    for i in range(n_paths):
+        for row in rows[i]:
+            if row >= 0:
+                counts[row] += 1
+        for row in rows[i]:
+            if row >= 0 and counts[row] > 0:
+                sums[i] += counts[row] * counts[row] * values[row]
+                counts[row] = 0
+    return sums
+
+
 def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
                         h3_res, masks=None):
-    # Set some stores
+    """
+    Resolve all fields on the same path grid with one raytrace per path.
+    The h3 lookups are performed only for the points which may be in a
+    stored cell, according to the masks (see _build_masks), since the
+    other lookups would miss: the result is the same.
+    """
     n_paths = len(hypo_lons)
     ra_per_path = {key: np.zeros(n_paths) for key in grids}
     reference_grid = grids["mean"]
@@ -445,11 +479,11 @@ def _raytrace_path_adjs(grids, hypo_lons, hypo_lats, site_lons, site_lats,
         # Each sample point resolves to one stored cell via finest-to-
         # coarsest h3 fallback; points with no stored cell contribute zero
         rows = _trace_cells(lons, lats, h3_res, masks, cells, _H3_CELL)
-        # Store the total cumulative adjustment for the term
         for key, field in fields.items():
-            # rows has one cell-row index per path sample (-1 means no hit);
-            # field contains this adjustment value for each row in cells.
-            ra_per_path[key][slc] = _path_sums(rows, field) * spacing
+            if key == "sig_sq":
+                ra_per_path[key][slc] = _path_sums_sq(rows, field) * spacing ** 2
+            else:
+                ra_per_path[key][slc] = _path_sums(rows, field) * spacing
 
     return ra_per_path
 
@@ -505,11 +539,16 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
     sig_comp = cfg["sig_comp_modified"]
     component = {"tau": tau, "phi": phi}.get(sig_comp, sig)
 
-    # Adjust the selected component with the required action
+    # Adjust the selected component with the required action. For "sub",
+    # cap sig_vals so it can't exceed the backbone component - otherwise
+    # at records where the reduction would overshoot we'd be taking the
+    # sqrt of a negative number and getting NaN.
     if sig_action == "replace":
         component[:] = sig_vals
     else:
         sign = -1 if sig_action == "sub" else 1
+        if sign < 0:
+            sig_vals = np.minimum(sig_vals, component)
         component[:] = np.sqrt(component ** 2 + sign * sig_vals ** 2)
 
     # Recompute total sigma after adjusting tau or phi
@@ -517,12 +556,14 @@ def adjust_sigma(sig_vals, cfg, sig_action, sig, tau, phi):
         sig[:] = np.sqrt(tau ** 2 + phi ** 2)
 
 
-# Resolve central mean, optional SE and per-cell sigma in one spatial search.
 def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
-    # Path-based terms are stored in the raytrace grids. Mean / SE
-    # are both returned uncapped here; the path_cap (if set) is applied
-    # to the per-branch total (central + eps*SE) in compute()
+    """
+    Resolve central mean, optional SE and per-cell sigma in one spatial search.
+    """
     if cfg["location"] == "path":
+        # Path-based terms are stored in the raytrace grids. Mean / SE
+        # are both returned uncapped here; the path_cap (if set) is applied
+        # to the per-branch total (central + eps*SE) in compute()
         grid = grid_data["raytrace_grids"].get(term, {}).get(imt)
         if grid is None:
             return {}
@@ -530,7 +571,6 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
         if se_grid is not None:
             grids["mean_se"] = se_grid
-        # Path sig^2 is summed along the ray the same way as mean / mean_se
         sig_sq_grid = grid_data["raytrace_sig_grids"].get(term, {}).get(imt)
         if sig_sq_grid is not None:
             grids["sig_sq"] = sig_sq_grid
@@ -676,10 +716,12 @@ class GridAdjustedGMPE(GMPE):
         corresponding GMM sigma component. When not "none", a per-cell
         dataset named "{term}_sig" must be present in each IMT group
         for that term. Hypo and site terms look up the per-cell sig the
-        same way as the mean. Path terms aggregate the per-cell sig
-        along the ray as sqrt(Σ_c dist(r, c) · sig_c^2) per record,
-        treating each kilometre of ray through cell c as an independent
-        random shift of std sig_c (per-km Gaussian process model).
+        same way as the mean. Path terms sum each cell's sig^2 along
+        the ray weighted by the distance through the cell squared,
+        then take sqrt: per-record sig is sqrt(Σ_c dist(r, c)^2 · sig_c^2).
+        For "sub" adjustment, the per-record sig is clipped to the
+        backbone component so it can never over-reduce the sigma on a
+        very long ray.
 
         Adjustment actions:
 
