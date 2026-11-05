@@ -140,7 +140,8 @@ jobs:
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
            sleep 3600
-           $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1/v1/calc/run
+           $CURL_BIN --fail -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
+           sleep 10
            $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list
            $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results
            #if [ $status_code != "200" ]; then
