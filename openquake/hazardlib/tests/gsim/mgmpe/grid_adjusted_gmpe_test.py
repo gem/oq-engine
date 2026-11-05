@@ -415,7 +415,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cmaker.get_mean_stds([self._make_ctx(cmaker)]), expected)
 
     ### SHARING OF THE CENTRAL PART TESTS ###
-    @skipIf(sys.platform == 'win32', 'the cache is not working(?)')
     def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while
         # the original instance retains its loaded grid
