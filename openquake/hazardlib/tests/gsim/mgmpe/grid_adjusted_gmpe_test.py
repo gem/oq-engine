@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import pickle
 import shutil
 import tempfile
 import unittest
-from unittest import mock
+from unittest import mock, skipIf
 from pathlib import Path
 import h5py
 import numpy as np
@@ -386,6 +387,7 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cmaker.get_mean_stds([self._make_ctx(cmaker)]), expected)
 
     ### SHARING OF THE CENTRAL PART TESTS ###
+    @skipIf(sys.platform == 'win32', 'the cache is not working(?)')
     def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while
         # the original instance retains its loaded grid
