@@ -66,10 +66,11 @@ OVERRIDABLE_PARAMS = (
     'postrisk_func',
     'postrisk_args',
     'return_periods',
-    'rupture_mesh_spacing'
+    'rupture_mesh_spacing',
     'ses_seed',
     'sites',
-    'siteid')
+    'siteid',
+    'strict')
 
 
 def save_workflow(workflow_hdf5, workflow_toml):
@@ -140,6 +141,8 @@ class _Workflow:
                     s['func']  # each success dictionary must contain a func
                 self.fix_paths(self.success)
                 continue
+            if k.endswith('_skip'):
+                continue
 
             assert k[0].isupper(), k
             assert isinstance(dic, dict), dic
@@ -165,10 +168,21 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
-        assert len(self.inis), self
+        if not len(self.inis):
+            raise InvalidFile(
+                f'{self.workflow_toml}: no runnable jobs; '
+                'all job names end in _skip')
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
+            # the other parameters would be silently ignored
+            unknown = set(dic) - set(OVERRIDABLE_PARAMS)
+            if unknown:
+                raise InvalidFile(
+                    f'{self.workflow_toml}: [{self.names[i]}] contains '
+                    f'parameters that cannot be overridden: '
+                    f'{", ".join(sorted(unknown))}; the overridable ones '
+                    f'are {", ".join(OVERRIDABLE_PARAMS)}')
             for param in OVERRIDABLE_PARAMS:
                 val = dic.get(param, self.defaults.get(param))
                 if val is not None:

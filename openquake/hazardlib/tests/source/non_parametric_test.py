@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import pickle
 import unittest
 import numpy
 
@@ -110,3 +111,75 @@ class NankaiTest(unittest.TestCase):
         west, south, east, north = src.get_bounding_box(0.0)
         expected = [131.772, 31.336, 138.606, 35.43]
         numpy.testing.assert_almost_equal(expected, [west, south, east, north])
+
+    def test_compact_pickle(self):
+        # gridded ruptures are pickled as arrays with float32 meshes
+        fname = os.path.join(DATA, 'nankai', 'nankai.xml')
+        sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
+        src = nrml.to_python(fname, sc)[0][0]
+        new = pickle.loads(pickle.dumps(src))
+        self.assertIn('_arrays', vars(new))
+        self.assertEqual(new.count_ruptures(), src.count_ruptures())
+        self.assertEqual(new.get_min_max_mag(), src.get_min_max_mag())
+        numpy.testing.assert_allclose(
+            new.get_bounding_box(10.), src.get_bounding_box(10.),
+            rtol=0, atol=1e-5)
+        for (r1, p1), (r2, p2) in zip(src.data, new.data):
+            self.assertEqual((r1.mag, r1.rake), (r2.mag, r2.rake))
+            self.assertEqual(vars(r1.hypocenter), vars(r2.hypocenter))
+            numpy.testing.assert_array_equal(
+                r1.surface.mesh.array.astype(numpy.float32),
+                r2.surface.mesh.array)
+            self.assertEqual(r2.surface.mesh.array.dtype, numpy.float32)
+            self.assertEqual(type(r1), type(r2))
+            self.assertEqual(vars(r1).keys(), vars(r2).keys())
+            self.assertEqual(p1.data, p2.data)
+
+        # splitting the arrays gives the same blocks as splitting the data
+        src.data = src.data * 250
+        new = pickle.loads(pickle.dumps(src))
+        self.assertEqual(new.get_mags(), src.get_mags())
+        numpy.testing.assert_allclose(
+            new.get_bounding_box(10.), src.get_bounding_box(10.),
+            rtol=0, atol=1e-5)
+        blocks1, blocks2 = list(src), list(new)
+        self.assertEqual([b.source_id for b in blocks1],
+                         [b.source_id for b in blocks2])
+        for b1, b2 in zip(blocks1, blocks2):
+            self.assertIn('_arrays', vars(b2))
+            self.assertEqual(b1.count_ruptures(), b2.count_ruptures())
+            self.assertEqual(b1._num_ruptures, b2._num_ruptures)
+            self.assertEqual(b1.data.weight, b2.data.weight)
+            for (r1, _), (r2, _) in zip(b1.data, b2.data):
+                numpy.testing.assert_array_equal(
+                    r1.surface.mesh.array.astype(numpy.float32),
+                    r2.surface.mesh.array)
+                self.assertEqual(r1.weight, r2.weight)
+
+        # ruptures with planar surfaces are pickled as they are
+        src, _ = make_non_parametric_source()
+        self.assertNotIn('_arrays', vars(pickle.loads(pickle.dumps(src))))
+
+    def test_gridded_dict(self):
+        # HDF5 and compact pickles share the same rupture conversion.
+        fname = os.path.join(DATA, 'nankai', 'nankai.xml')
+        sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
+        src = nrml.to_python(fname, sc)[0][0]
+        compact = pickle.loads(pickle.dumps(src))
+        expected = src.todict()
+        actual = compact.todict()
+        self.assertEqual(set(actual), set(expected))
+        for key in expected:
+            numpy.testing.assert_array_equal(actual[key], expected[key])
+            self.assertEqual(actual[key].dtype, expected[key].dtype)
+        self.assertEqual(actual['hypocenter'].dtype, numpy.float32)
+        self.assertEqual(actual['slice'].dtype, numpy.uint32)
+
+        # Importing the HDF5 arrays preserves rupture weights as well.
+        weights = numpy.arange(src.count_ruptures(), dtype=float)
+        restored = NonParametricSeismicSource(
+            src.source_id, src.name, src.tectonic_region_type, [])
+        restored.fromdict(actual, weights)
+        numpy.testing.assert_array_equal(restored.rup_weights, weights)
+        for key, value in restored.todict().items():
+            numpy.testing.assert_array_equal(value, expected[key])

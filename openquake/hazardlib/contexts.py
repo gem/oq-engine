@@ -30,7 +30,8 @@ from openquake.baselib.general import (
     getsizeof)
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
-from openquake.hazardlib.const import IMC, StdDev
+from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
+from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
@@ -55,8 +56,6 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
-azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())
 MEA = 0
 STD = 1
 EPS = 1E-3
@@ -815,6 +814,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.gra_mon = monitor('ray tracing', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
@@ -1533,6 +1533,11 @@ class ContextMaker(object):
         :param ctx: a context array
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
+        if self.collapse_precision and not rup_mutex and not self.cluster:
+            groups = self._gsim_groups()
+            if len(groups) > 1:
+                self._update_by_group(pmap, ctx, groups)
+                return
         for poes, mea, sig, tau, ctxt in self.gen_poes(ctx):
             # ctxt contains an unique magnitude
             if rup_mutex:
@@ -1543,6 +1548,35 @@ class ContextMaker(object):
                     pmap.array[sidx] *= 1. - poe
             else:
                 pmap.update_indep(poes, ctxt, self.tom.time_span)
+
+    def _gsim_groups(self):
+        # group the gsims requiring the same rupture parameters and
+        # distances; returns a list of triples (gidxs, rparams, dparams)
+        groups = {}
+        for g, gsim in enumerate(self.gsims):
+            key = (frozenset(gsim.REQUIRES_RUPTURE_PARAMETERS),
+                   frozenset(gsim.REQUIRES_DISTANCES))
+            groups.setdefault(key, []).append(g)
+        return [(gidxs, key[0], key[1]) for key, gidxs in groups.items()]
+
+    def _update_by_group(self, pmap, ctx, groups):
+        # collapse the contexts once per group of gsims, using only the
+        # parameters required by the group, so that the groups requiring
+        # fewer parameters collapse more; then the poes of each group are
+        # computed in a vectorized way and update the columns of the group
+        G = len(self.gsims)
+        after0 = self.cfactor[0]  # incremented by gen_poes for each group
+        after = 0.  # average number of contexts per gsim after collapsing
+        for gidxs, rparams, dparams in groups:
+            cctx = collapse_ctx(ctx, rparams, dparams, self.collapse_precision)
+            after += len(cctx) * len(gidxs) / G
+            cm = self.copy(gsims=[self.gsims[g] for g in gidxs])
+            for poes, _mea, _sig, _tau, ctxt in cm.gen_poes(cctx):
+                for k, g in enumerate(gidxs):
+                    pmap.update_indep(poes[:, :, k:k+1], ctxt,
+                                      self.tom.time_span, gslc=slice(g, g+1))
+        self.cfactor[0] = after0 + after
+        self.cfactor[1] += len(ctx) - after  # removed by collapsing
 
     # called by gen_poes and by the GmfComputer
     def get_mean_stds(self, ctxs, split_by_mag=True):
@@ -1566,6 +1600,7 @@ class ContextMaker(object):
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         out = numpy.empty((4, G, M, N))
+        central = {}  # central part shared by sibling GridAdjustedGMPEs
         for g, gsim in enumerate(self.gsims):
             if gsim.conditional and not gsim.from_mgmpe:
                 url = ('https://docs.openquake.org/oq-engine/master/manual/'
@@ -1573,7 +1608,38 @@ class ContextMaker(object):
                 raise NotImplementedError(
                     f'{gsim} was not instantiated with a '
                     f'ModifiableGMPE, please read {url}')
-            out[:, g] = self.get_4MN(recarrays, gsim)
+            key = getattr(gsim, 'central_key', None)
+            if key is None:
+                out[:, g] = self.get_4MN(recarrays, gsim)
+                continue
+            if key not in central:
+                central[key] = self._get_central(recarrays, gsim)
+            out[:, g] = self._add_epsilons(central[key], gsim)
+        return out
+
+    # compute the part of a GridAdjustedGMPE independent from the
+    # epsilons, i.e. the backbone and the grid lookups (the expensive part)
+    def _get_central(self, ctxs, gsim):
+        N = sum(len(ctx) for ctx in ctxs)
+        out = numpy.zeros((4, len(self.imts), N))
+        resolved = []
+        start = 0
+        for ctx in ctxs:
+            slc = slice(start, start + len(ctx))
+            res = gag.compute_central(
+                gsim, ctx, self.imts, *out[:, :, slc], gra_mon=self.gra_mon)
+            resolved.append((slc, res))
+            start = slc.stop
+        return out, resolved
+
+    # add the epsilon shifts of a GridAdjustedGMPE to the central part
+    def _add_epsilons(self, central, gsim):
+        out, resolved = central
+        out = out.copy()
+        gsim.adj = []
+        for slc, res in resolved:
+            gag.apply_epsilons(gsim, res, self.imts, out[0, :, slc])
+        self._check_conv(out, gsim)
         return out
 
     def get_4MN(self, ctxs, gsim):
@@ -1592,13 +1658,17 @@ class ContextMaker(object):
             if adj is not None:
                 gsim.adj.append(adj)
             start = slc.stop
-        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
-            raise ValueError('Total StdDev is zero for %s' % gsim)
         if gsim.adj:
             gsim.adj = numpy.concatenate(gsim.adj)
-        if self.conv:  # apply horizontal component conversion
-            self.apply_horiz_comp_conv(out, gsim)
+        self._check_conv(out, gsim)
         return out
+
+    # check the stddevs and apply the horizontal component conversion
+    def _check_conv(self, out, gsim):
+        if self.truncation_level not in (0, 1E-9, 99.) and (out[1] == 0.).any():
+            raise ValueError('Total StdDev is zero for %s' % gsim)
+        if self.conv:
+            self.apply_horiz_comp_conv(out, gsim)
 
     # not used right now
     def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,
@@ -1664,11 +1734,12 @@ class ContextMaker(object):
         # its nctxs suggests. The number of pairs is the relevant
         # quantity, discounted by PAIR_COST
         pairs = src.num_ruptures * src.nsites * srcfilter.multiplier
-        # NB: reducing the weight of the pointlike sources, e.g. with a
-        # factor .333, would break test_alaska in oq-risk-tests
+        # generating the contexts of pointlike sources is fast
+        fac = .333 if src.code in b'pPAM' else 1  # heuristic
         # the GSIMs of the group are evaluated on all the surviving
         # contexts, so their number multiplies the cost of the contexts
-        return (src.nctxs * len(self.gsims) + pairs / PAIR_COST) / N
+        return (fac * src.nctxs * len(self.gsims) +
+                pairs / PAIR_COST) / N
 
     def set_weight(self, sources, srcfilter):
         """

@@ -521,9 +521,11 @@ def jittable(func):
 
 def compile(sigstr):
     """
-    Compile a function Ahead-Of-Time using the given signature string
+    Compile a function Ahead-Of-Time using the given signature string.
+    The GIL is not released, since the engine parallelizes with processes;
+    this allows calling C functions requiring the GIL (i.e. Cython ones)
     """
-    return numba.njit(sigstr, error_model='numpy', cache=True, nogil=True)
+    return numba.njit(sigstr, error_model='numpy', cache=True)
 
 
 # used when reading _rates/sid

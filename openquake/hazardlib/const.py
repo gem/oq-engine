@@ -107,3 +107,8 @@ class IMC(Enum):
     PEAK_SRSS_HORIZONTAL = 'Peak square root of sum of squares of horizontals'
     #: A vertical-to-horizontal spectral ratio
     VERTICAL_TO_HORIZONTAL_RATIO = 'Vertical-to-Horizontal Ratio'
+
+
+#: Distance parameters known to the GSIMs and the ContextMaker
+KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
+azimuthcp rvolc clon_clat clon clat rtor x_l'''.split())

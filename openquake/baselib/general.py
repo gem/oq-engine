@@ -1479,18 +1479,17 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = numpy.random.default_rng(seed)
     if isinstance(objects, pandas.DataFrame):
-        df = pandas.DataFrame({
-            col: random_filter(objects[col], reduction_factor, seed)
-            for col in objects.columns})
-        return df
+        # a single mask for all the columns: drawing the random numbers one
+        # by one for each column was extremely slow for large exposures;
+        # NB: rnd.random(n) gives the same numbers as n calls to rnd.random()
+        mask = rnd.random(len(objects)) <= reduction_factor
+        return objects[mask].reset_index(drop=True)
     elif isinstance(objects, numpy.ndarray):
         mask = rnd.random(objects.shape) < reduction_factor
         return objects[mask]
-    out = []
-    for obj in objects:
-        if rnd.random() <= reduction_factor:
-            out.append(obj)
-    return out
+    objects = list(objects)
+    mask = rnd.random(len(objects)) <= reduction_factor
+    return [obj for obj, ok in zip(objects, mask) if ok]
 
 
 def random_choice(array, num_samples, offset=0, seed=42):
