@@ -57,14 +57,9 @@ def load_sigma_for_term(grp, term, imt_str, location,
             f"Negative _sig value found for term "
             f"'{term}' and IMT '{imt_str}'")
     if location == "path":
-        # Per-km GP interpretation: each kilometer of ray through
-        # cell c contributes an independent random shift of std
-        # sig_c. Per-record path variance is
-        # Σ_c dist(r, c) · sig_c^2, aggregated along the ray via
-        # the same 100-sample Riemann sum used for mean / mean_se
-        # (see _raytrace_path_adjs). Store sig^2 pre-squared so the
-        # hot path accumulates per-km variance directly and
-        # compute_central only takes sqrt at the per-record end.
+        # Store sig^2 so the raytrace sum directly gives per-record variance
+        # Σ_c dist(r, c) · sig_c^2; compute_central takes sqrt at the end.
+        # See the class docstring for the per-km Gaussian process model.
         raytrace_sig_grids.setdefault(term, {})
         raytrace_sig_grids[term][imt_str] = build_raytrace_grid(
             cell_ids, sig_vals ** 2)
@@ -107,12 +102,12 @@ def load_residual_grids(hdf5_path):
       the HDF5 includes a per-cell "{term}_mean_se" dataset.
 
     * raytrace_sig_grids: same structure as raytrace_grids but holding
-      the per-cell sig^2 for path-based terms (stored pre-squared so the
-      raytrace accumulator sums per-km variance directly). Per-record
-      path std is sqrt(Σ_c dist(r, c) · sig_c^2) under the per-km Gaussian process
-      interpretation - each kilometer of ray through cell c contributes
-      an independent random shift of std sig_c. Populated only when the
-      HDF5 includes a per-cell "{term}_sig" dataset for a path-based term.
+      the per-cell sig^2 for path-based terms (stored squared so the
+      raytrace sum gives per-record variance directly). Per-record path std
+      is sqrt(Σ_c dist(r, c) · sig_c^2), the per-km Gaussian process model
+      with each kilometre of ray through cell c contributing an independent
+      random shift of std sig_c. Populated only when the HDF5 includes a
+      per-cell "{term}_sig" dataset for a path-based term.
 
     * raytrace_masks: {(term, imt_str): (lon_origin, lat_origin, mask)}
       - per h3
@@ -536,9 +531,7 @@ def _resolve_adjs(grid_data, cfg, term, imt, ctx, gra_mon=nullcontext()):
         se_grid = grid_data["raytrace_se_grids"].get(term, {}).get(imt)
         if se_grid is not None:
             grids["mean_se"] = se_grid
-        # Per-cell path sig^2 (pre-squared at load time) accumulates to
-        # Σ_c dist(r, c) · sig_c^2 per record via the same Riemann sum
-        # used for mean / mean_se; compute_central takes sqrt after.
+        # Path sig^2 is summed along the ray the same way as mean / mean_se
         sig_sq_grid = grid_data["raytrace_sig_grids"].get(term, {}).get(imt)
         if sig_sq_grid is not None:
             grids["sig_sq"] = sig_sq_grid
@@ -616,9 +609,8 @@ def compute_central(gsim, ctx, imts, mean, sig, tau, phi,
             mean[m] += mean_adj
             sig_action = cfg.get("sig_adjustment", "none")
             if sig_action != "none":
-                # Resolve per-cell sigma. Hypo/site shares the mean
-                # lookup; path comes from the ray aggregation as sig^2
-                # per record (take sqrt to get per-record std).
+                # Path terms give sig^2 per record from the ray sum;
+                # hypo/site terms give sig directly from the cell lookup
                 if "sig_sq" in adjs:
                     sig_vals = np.sqrt(np.maximum(0.0, adjs["sig_sq"]))
                 else:
@@ -684,12 +676,11 @@ class GridAdjustedGMPE(GMPE):
       * sig_adjustment (optional, default "none"): Whether to adjust the
         corresponding GMM sigma component. When not "none", a per-cell
         dataset named "{term}_sig" must be present in each IMT group
-        for that term. For hypo / site terms the dataset is looked up
-        spatially the same way as the mean. For path terms, aggregated
-        along the ray as sqrt(Σ_c dist(r, c) · sig_c^2) per record
-        (per-km Gaussian process: each km of ray through cell c contributes an
-        independent random shift of std sig_c; std scales as
-        sqrt(ray-length)).
+        for that term. Hypo and site terms look up the per-cell sig the
+        same way as the mean. Path terms aggregate the per-cell sig
+        along the ray as sqrt(Σ_c dist(r, c) · sig_c^2) per record,
+        treating each kilometre of ray through cell c as an independent
+        random shift of std sig_c (per-km Gaussian process model).
 
         Adjustment actions:
 
