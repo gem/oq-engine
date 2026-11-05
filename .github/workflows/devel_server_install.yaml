@@ -1,5 +1,5 @@
 ---
-name: Devel Server Installation of OQ on RH OS
+name: Devel Server Installation of OQ
 on:
   workflow_dispatch:
     inputs:
@@ -7,173 +7,170 @@ on:
         description: Git Ref Branch
         default: master
         required: true
+      debug_enabled:
+        type: boolean
+        description: "Run the build with upterm debugging enabled"
+        required: false
+        default: false
   schedule:
     - cron: "05 15 * * *"
+  push:
+    branches:
 
 jobs:
-  test_ui:
-    name: Test on RH based (fedora container) ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+  Test_WebUI:
+    name: Test WebUI ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["python3.11", "python3.12", "python3.13"]
-    container:
-      image: fedora:44
-      options: --privileged
+        os: [ubuntu-24.04]
+        python-version: ["3.11", "3.12", "3.13"]
+        # engine-ref values, if manual run do not use the matrix
+        # engine-ref: ["master", "engine-3.26"]
+        # engine-ref: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master","engine-3.26"]') }}
+        engine-ref: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master"]') }}
     steps:
-    - name: Clone Repository (Master)
-      uses: actions/checkout@v6
-      if: github.event.inputs.git-ref == ''
-    - name: Clone Repository (Custom Ref)
-      uses: actions/checkout@v6
-      if: github.event.inputs.git-ref != ''
-      with:
-        ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }} and install OQ
-      run: |
-        set -x
-        if [ -z ${{ github.event.inputs.git-ref }} ];
-        then
-           BRANCH=master
-        else
-           BRANCH=${{ github.event.inputs.git-ref }}
-        fi
-        # Update system and install utilities
-        dnf update -y
-        dnf install -y ${{ matrix.python-version }}
-        dnf install -y git git-lfs nc procps sudo
-        # define it
-        mypython=${{ matrix.python-version }}
-        #run it
-        eval '$mypython -c "import sys; print(sys.version)"'
-        #
-        # Add PIP to $mypython
-        eval '$mypython -m ensurepip --upgrade'
-        export PIP_DEFAULT_TIMEOUT=100
-        #
-        echo "branch to test: ${BRANCH}"
-        cd /__w/oq-engine/oq-engine/
-        eval '$mypython install.py --version $BRANCH devel_server'
-        if [[ $EXIT_CODE -ne 0 ]]; then
-                break
-        fi
-    - name: Actualize 'default' templates for email notifications
-      run: |
-        cd /__w/oq-engine/oq-engine/
-        for file in openquake/server/templates/registration/*.default.tmpl; do
-            cp -- "$file" "${file%.default.tmpl}"
-        done
-    - name: WebUI and calculation with Auth
-      run: |
-         set -o pipefail
-         source /opt/openquake/venv/bin/activate
-         mkdir -p /var/log/oq-engine/
-         chown -R openquake /var/log/oq-engine/
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
-         oq --version
-         #
-         echo "Add settings for login and logging on webui before to start"
-         cd /__w/oq-engine/oq-engine/
-         cd openquake/server
-         cat > local_settings.py << EOF
-         APPLICATION_MODE = "RESTRICTED"
-         EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-         EMAIL_HOST = 'smtp.gmail.com'
-         EMAIL_PORT = 587
-         EMAIL_USE_TLS = True
-         EMAIL_HOST_USER = 'admin@reply.com'
-         EMAIL_HOST_PASSWORD = 'polhjuih@'
-         EMAIL_SUPPORT = 'noreply@reply.com'
-         WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
-         EOF
-         echo "DISPLAY content of local_settings"
-         cat local_settings.py
-         # Perform migration after setup local_settings
-         cd /__w/oq-engine/oq-engine/openquake/engine/
-         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
-         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email'
-         # Run help on manage.py
-         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py help'
-         # START WEBUI
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
-         echo "Waiting WEBUI up on port 8800...."
-         echo "Test WebUI with curl before to test django"
-         while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
-           echo "Still waiting WEBUI account login up on port 8800...."
-           sleep 5 # wait for 5 seconds before check again
-         done
-         echo -n "TEST DJANGO LOGIN "
-         LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-         YOUR_USER='openquake'
-         YOUR_PASS='level_1_password'
-         COOKIES=cookies.txt
-         CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
-         echo -n "Django Auth: get csrftoken ..."
-         $CURL_BIN $LOGIN_URL -o /dev/null
-         DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
-         echo " perform login ..."
-         status_code=$($CURL_BIN -w "%{http_code}"\
-             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -X POST $LOGIN_URL -o /dev/null)
-         if [ $status_code != "302" ]; then
-           echo "Unable to login"
-           exit 1
-         fi
-         echo "--------------------"
-         echo "display log of webui"
-         echo "--------------------"
-         cat /var/log/oq-engine/webui-access.log
-         if [ -s /var/log/oq-engine/webui-access.log ]; then
-           # The file is not-empty.
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Clone Repository (Master)
+        uses: actions/checkout@v6
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v6
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
+      - name: Create openquake user
+        run: |
+          sudo useradd -d /home/openquake -m  -s /bin/bash openquake
+          sudo usermod -aG sudo openquake
+          echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
+      - name: Install OQ with ${{ matrix.python-version }} as user openquake
+        run: |
+          GIT_REF="${{ inputs.git-ref }}"
+          BRANCH="${GIT_REF:-master}"
+          echo "Running branch=${BRANCH}"
+          cat > /tmp/scripts.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "Running as $(whoami) in $(pwd), branch=${BRANCH}"
+          cd /home/openquake
+          rm -rf oq-engine
+          git clone -b "$BRANCH" https://github.com/gem/oq-engine.git
+          cd oq-engine
+          sudo -H $PY_TO_USE install.py devel_server
+          EOF
+          chmod +x /tmp/scripts.sh
+          sudo -i -u openquake HOME=/home/openquake BRANCH="$BRANCH" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
+      - name: Actualize 'default' templates for email notifications
+        run: |
+          sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
+          cp -- "$file" "${file%.default.tmpl}"
+          done
+          '
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        with:
+          ## Shut down the server if unconnected after 45 minutes.
+          wait-timeout-minutes: 45
+          detached: true
+      - name: WebUI and calculation with Auth
+        run: |
+           set -o pipefail
+           sudo systemctl stop openquake-webui
+           source /opt/openquake/venv/bin/activate
+           sudo mkdir -p /var/log/oq-engine/
+           sudo chown -R openquake /var/log/oq-engine/
+           sudo runuser -l openquake -c '
+           /opt/openquake/venv/bin/oq engine --upgrade-db
+           oq --version
+           #
+           echo "Add settings for login and logging on webui before to start"
+           cd /home/openquake/oq-engine/openquake/server
+           cat > local_settings.py << EOF
+           APPLICATION_MODE = "RESTRICTED"
+           EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+           EMAIL_HOST = "smtp.gmail.com"
+           EMAIL_PORT = 587
+           EMAIL_USE_TLS = True
+           EMAIL_HOST_USER = "admin@reply.com"
+           EMAIL_HOST_PASSWORD = "polhjuih@"
+           EMAIL_SUPPORT = "noreply@reply.com"
+           WEBUI_ACCESS_LOG_DIR = "/var/log/oq-engine"
+           EOF
+           echo "DISPLAY content of local_settings"
+           cat local_settings.py
+           '
+           # Perform migration after setup local_settings
+           sudo runuser -l openquake -c '
+           source /opt/openquake/venv/bin/activate
+           cd /home/openquake/oq-engine/openquake/server
+           python3 manage.py migrate
+           python3 manage.py createuser level_1_user testuser1@test.com --level 1 --password level_1_password --no-email
+           '
+           # START WEBUI
+           sudo systemctl start openquake-webui
+           echo "Waiting WEBUI up on port 8800...."
+           echo "Test WebUI with curl before to test django"
+           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+             echo "Still waiting WEBUI account login up on port 8800...."
+             sleep 5 # wait for 5 seconds before check again
+           done
+           echo -n "TEST DJANGO LOGIN "
+           LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+           YOUR_USER='level_1_user'
+           YOUR_PASS='level_1_password'
+           COOKIES=cookies.txt
+           CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+           echo -n "Django Auth: get csrftoken ..."
+           $CURL_BIN $LOGIN_URL -o /dev/null
+           DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+           echo " perform login ..."
+           status_code=$($CURL_BIN -w "%{http_code}"\
+               -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+               -X POST $LOGIN_URL -o /dev/null)
+           if [ $status_code != "302" ]; then
+             echo "Unable to login"
+             exit 1
+           fi
+           # zip area source demo into job.zip
+           zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
+           $CURL_BIN --fail  -o /dev/null -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
+           # Waiting for the job to complete
+           while [ "$(eval "$CURL_BIN" --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/status | jq -r '.status')" != "complete" ]; do
+             echo "+++++++++++++++++++++++++++++++++"
+             echo "Still waiting the job to complete"
+             sleep 5 # wait for 5 seconds before check again
+           done
+           echo "Show list of calc and results"
+           echo "+++++++++++++++++++++++++++++"
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list | jq
+           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results | jq
+           #if [ $status_code != "200" ]; then
+           #  echo "Unable to visualize outputs"
+           #  exit 1
+           #fi
+           echo "--------------------"
+           echo "display log of webui"
+           echo "--------------------"
+           sudo runuser -l openquake -c '
            cat /var/log/oq-engine/webui-access.log
-         else
-           echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
-           exit 1
-         fi
-         echo " Run a calc using https"
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
-         sleep 5
-         status_code=$($CURL_BIN -w "%{http_code}"\
-             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
-         if [ $status_code != "200" ]; then
-           echo "Unable to visualize outputs"
-           exit 1
-         fi
-
-    - name: WebUI on PUBLIC
-      run: |
-         set -o pipefail
-         source /opt/openquake/venv/bin/activate
-         echo "Restart WebUI without authentication"
-         runuser -l openquake -c 'pkill oq-webui'
-         sleep 5
-         runuser -l openquake -c 'OQ_APPLICATION_MODE=PUBLIC /opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
-         echo "Waiting WEBUI up on port 8800...."
-         while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/engine/)" != "200" ]]; do
-           echo "Still waiting WEBUI on port 8800...."
-           sleep 5 # wait for 5 seconds before check again
-         done
-         echo -n "Test Standalone Tools pages (without authentication)"
-         read status_code redirect_url <<<"$(
-           curl -s -o /dev/null -w "%{http_code} %{redirect_url}" http://127.0.0.1:8800/
-         )"
-         if [ "$status_code" != "301" ] || [ "$redirect_url" != "http://127.0.0.1:8800/engine/" ]; then
-           echo "Unexpected redirect: status=$status_code redirect=$redirect_url"
-           echo "Should redirect to http://127.0.0.1:8800/engine/"
-           exit 1
-         fi
-         status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/taxonomy/)
-         if [ $status_code != "200" ]; then
-           echo "Unable access the taxonomy standalone app"
-           exit 1
-         fi
-         status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/ipt/)
-         if [ $status_code != "200" ]; then
-           echo "Unable to access the ipt standalone app"
-           exit 1
-         fi
-         echo " Run a calc using https"
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
+           if [ -s /var/log/oq-engine/webui-access.log ]; then
+             # The file is not-empty.
+             cat /var/log/oq-engine/webui-access.log
+           else
+             echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
+             exit 1
+           fi
+           '
+      - name: Run calculation with non openquake users from command line
+        run: |
+           set -o pipefail
+           oq --version
+           oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
+           echo "Display the Outputs of the last job"
+           oq engine --list-outputs 1
