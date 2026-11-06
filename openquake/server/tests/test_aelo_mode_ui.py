@@ -18,6 +18,7 @@
 
 # NB: run these tests with OQ_APPLICATION_MODE=AELO,
 import pytest
+from openquake.server.tests.pages.login_page import LoginPage
 from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.aelo_page import AeloPage
 from playwright.sync_api import expect
@@ -56,3 +57,20 @@ def test_cookie_bar(page, live_server, essential_cookie_groups,
 def test_cookies_info_page(page, live_server, essential_cookie_groups,
                            application_mode):
     CookieBar(page, live_server.url).check_cookies_info_page()
+
+
+@pytest.mark.parametrize("user", [1], indirect=True)
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_login_logout(page, live_server, user, test_credentials,
+                      application_mode):
+    # log in and out by clicking on the buttons of the web interface
+    LoginPage(page, live_server.url).check_login_and_logout(
+        test_credentials['username'], test_credentials['password'])
+
+
+@pytest.mark.parametrize("user", [1], indirect=True)
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_login_wrong_password(page, live_server, user, test_credentials,
+                              application_mode):
+    LoginPage(page, live_server.url).check_wrong_password(
+        test_credentials['username'])
