@@ -103,6 +103,7 @@ def main(
         upgrade_db=False,
         db_version=False,
         what_if_I_upgrade=False,
+        list_calculations=False,
         list_hazard_calculations=False,
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
@@ -192,6 +193,10 @@ def main(
         run_jobs(jobs, nodes=nodes, sbatch=True,
                  precalc=False if multi else not hazard_calculation_id)
 
+    # all calculations
+    elif list_calculations:
+        for line in logs.dbcmd('list_calculations', None, user_name):
+            safeprint(line)
     # hazard
     elif list_hazard_calculations:
         for line in logs.dbcmd(
@@ -251,10 +256,12 @@ main.upgrade_db = 'Upgrade the openquake database'
 main.db_version = 'Show the current version of the openquake database'
 main.what_if_I_upgrade = (
     'Show what will happen to the openquake database if you upgrade')
+main.list_calculations = dict(
+    abbrev='--lc', help='List all calculations information')
 main.list_hazard_calculations = dict(
-    abbrev='--lhc', help='List hazard calculation information')
+    abbrev='--lhc', help='List hazard calculations information')
 main.list_risk_calculations = dict(
-    abbrev='--lrc', help='List risk calculation information')
+    abbrev='--lrc', help='List risk calculations information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
 main.multi = 'Run multiple job.inis (usually scenarios) in parallel'

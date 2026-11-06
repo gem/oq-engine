@@ -38,10 +38,12 @@ The result is the following::
 	  -w, --what-if-I-upgrade
 	                        Show what will happen to the openquake database if you
 	                        upgrade
+	  --list-calculations, --lc
+	                        List all calculations information
 	  --list-hazard-calculations, --lhc
-	                        List hazard calculation information
+	                        List hazard calculations information
 	  --list-risk-calculations, --lrc
-	                        List risk calculation information
+	                        List risk calculations information
 	  --delete-uncompleted-calculations, --duc
 	                        Delete all the uncompleted calculations
 	  -m, --multi           Run multiple job.inis (usually scenarios) in parallel

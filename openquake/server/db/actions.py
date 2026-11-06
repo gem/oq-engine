@@ -275,12 +275,16 @@ def list_calculations(db, job_type, user_name):
     Yield a summary of past calculations.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :param job_type: 'hazard' or 'risk'
+    :param job_type: 'hazard', 'risk' or None (meaning all calculations)
     :param user_name: an user name
     """
-    jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              "AND job_type=?x AND status != 'deleted' ORDER BY start_time"
-              % JOB_TYPE, user_name, job_type)
+    if job_type is None:
+        jobs = db("SELECT * FROM job WHERE user_name=?x "
+                  "AND status != 'deleted' ORDER BY start_time", user_name)
+    else:
+        jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
+                  "AND job_type=?x AND status != 'deleted' "
+                  "ORDER BY start_time" % JOB_TYPE, user_name, job_type)
     out = []
     if len(jobs) == 0:
         out.append('None')
