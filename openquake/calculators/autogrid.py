@@ -241,17 +241,22 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
     if not groups:
         return None
-    return _select_candidate(
+    return select_candidate(
         groups, cmakers, sites, oq, spacings, distances, h5)
 
 
-# run the calibration tasks for the given keys (ps_grid_spacing,
-# pointsource_distance), the heaviest first, and return the rates by key;
-# the distances for the same spacing are computed in the same task,
-# sharing the contexts, so that trying all the distances costs little
-# more than one; the reference is the most expensive part, so it is split
-# in more blocks to avoid slow tasks
-def _run(keys, groups, sites, cmakers, h5):
+def run_calibration(keys, groups, sites, cmakers, h5):
+    """
+    Run the calibration tasks for the given keys (ps_grid_spacing,
+    pointsource_distance), the heaviest first.
+
+    The distances for the same spacing are computed in the same task,
+    sharing the contexts, so that trying all the distances costs little
+    more than one; the reference is the most expensive part, so it is
+    split in more blocks to avoid slow tasks.
+
+    :returns: a dictionary key -> AccumDict(rates, weight)
+    """
     num_tasks = parallel.num_cores * 2
     args = []
     for psgs in sorted({psgs for psgs, _psd in keys}):
@@ -264,8 +269,14 @@ def _run(keys, groups, sites, cmakers, h5):
     return parallel.Starmap(calibration, args, h5=h5).reduce()
 
 
-# compare candidates on the prepared sample and return the best parameters
-def _select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
+def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
+    """
+    Compare the candidates on the prepared sample of sites and return the
+    best parameters; the candidates are stored in the datastore as
+    `calibration`, if h5 is given.
+
+    :returns: a pair (ps_grid_spacing, pointsource_distance)
+    """
     imtls = next(iter(cmakers.values())).imtls
     logging.info('Calibrating ps_grid_spacing among %s and '
                  'pointsource_distance among %s on %d sites with one GMPE '
@@ -280,7 +291,7 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
     for i, psgs in enumerate(sorted(spacings, reverse=True)):
         # the reference is computed in the first round
         keys = [(psgs, psd) for psd in distances] + [REFERENCE] * (i == 0)
-        results = _run(keys, groups, sites, cmakers, h5)
+        results = run_calibration(keys, groups, sites, cmakers, h5)
         if i == 0:
             ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
         rows.extend(_get_rows(results, ref, imtls, oq))
