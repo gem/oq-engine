@@ -34,11 +34,13 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.rupture import \
     get_planar, NonParametricProbabilisticRupture as NPPR
-from openquake.hazardlib.geo import Line, Point
+from openquake.hazardlib.geo import Line, Point, Polygon
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.source import PointSource
-from openquake.hazardlib.mfd import ArbitraryMFD
+from openquake.hazardlib.source import PointSource, AreaSource
+from openquake.hazardlib.source.point import grid_point_sources
+from openquake.hazardlib.calc.filters import split_source
+from openquake.hazardlib.mfd import ArbitraryMFD, TruncatedGRMFD
 from openquake.hazardlib.scalerel import WC1994, PointMSR
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
@@ -511,3 +513,41 @@ class CollapseCtxTestCase(unittest.TestCase):
         self.assertEqual(len(out), 2)
         numpy.testing.assert_array_equal(out.width, [widths[0], widths[2]])
         numpy.testing.assert_allclose(out.occurrence_rate, [.04, .02])
+
+
+# the rows of a context array sorted, to compare arrays built in a
+# different order
+def _sorted_rows(ctx):
+    fields = ['sids', 'mag', 'rrup', 'rjb', 'occurrence_rate']
+    idx = numpy.lexsort([ctx[f] for f in reversed(fields)])
+    return [ctx[f][idx] for f in fields]
+
+
+class FromSrcsPsdistsTestCase(unittest.TestCase):
+    def test(self):
+        # the contexts built at once for several pointsource distances
+        # must be the same as the contexts built for each distance
+        src = AreaSource(
+            'area', 'area', '*', TruncatedGRMFD(5., 7.5, .25, 3., 1.), 2.,
+            WC1994(), 1.5, PoissonTOM(1.), 0., 20.,
+            PMF([(.5, NodalPlane(0., 90., 0.)),
+                 (.5, NodalPlane(90., 45., 90.))]),
+            PMF([(.5, 5.), (.5, 10.)]),
+            Polygon([Point(0., 0.), Point(0., 1.), Point(1., 1.),
+                     Point(1., 0.)]), 10.)
+        srcs = grid_point_sources(list(split_source(src)), 25.)
+        self.assertTrue(any(s.code == b'p' for s in srcs))  # collapsed
+        sites = SiteCollection([Site(Point(lon, lat))
+                                for lon in numpy.linspace(-1., 2., 7)
+                                for lat in numpy.linspace(-1., 2., 7)])
+        cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 200.), (8., 200.)]})
+        psds = [15., 25., 50., 100.]
+        ctxs = cmaker.from_srcs(srcs, sites, psds)
+        nctxs = [len(ctxs[psd]) for psd in psds]
+        self.assertEqual(nctxs, sorted(set(nctxs)))  # strictly growing
+        for psd in psds:
+            exp = cmaker.copy(pointsource_distance=psd).from_srcs(srcs, sites)
+            for got, ex in zip(_sorted_rows(ctxs[psd]), _sorted_rows(exp)):
+                numpy.testing.assert_array_equal(got, ex)

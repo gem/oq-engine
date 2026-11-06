@@ -695,6 +695,9 @@ class ClassicalTestCase(CalculatorTestCase):
         oq = self.calc.datastore['oqparam']
         self.assertEqual(oq.ps_grid_spacing, 50.)
         self.assertEqual(oq.pointsource_distance['default'], 15.)
+        # 50 km is within the tolerance, so only its 4 distances are tried
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')
