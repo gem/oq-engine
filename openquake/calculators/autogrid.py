@@ -26,7 +26,7 @@ spread over the region (with a single GMPE per group, two IMTs and a
 maximum distance cut to MAXDIST), both for a reference setting (no
 gridding and pointsource_distance = 100 km) and for a set of candidate
 pairs (ps_grid_spacing, pointsource_distance); the cheapest candidate with
-a 99th percentile of the relative error on the hazard maps below a
+a 99th percentile of the absolute error on the hazard maps below a
 tolerance is chosen or, if there is none, the cheapest candidate with an
 error close to the smallest one.
 """
@@ -54,8 +54,7 @@ PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
 REFERENCE = (0., 100.)
-TOLERANCE = .05  # on the 99th percentile of the relative error
-MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
+TOLERANCE = .01  # on the 99th percentile of the absolute error (in g)
 # the calibration uses only the IMTs with the periods closest to these:
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
@@ -291,21 +290,20 @@ def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
     if best.p99_err > TOLERANCE:
         logging.warning(
             'With ps_grid_spacing=%s and pointsource_distance=%s the 99th '
-            'percentile of the relative error on the hazard maps is %.1f%%',
-            best.ps_grid_spacing, best.pointsource_distance,
-            100 * best.p99_err)
+            'percentile of the absolute error on the hazard maps is %.4f g',
+            best.ps_grid_spacing, best.pointsource_distance, best.p99_err)
     return best.ps_grid_spacing, best.pointsource_distance
 
 
-# log the candidates, with the errors as percentages
+# log the candidates, with the errors in g
 def _log_rows(rows, nsites):
-    lines = ['%5.0f %5.0f %11.0f %10.2f %9.2f' % (
+    lines = ['%5.0f %5.0f %11.0f %10.4f %9.4f' % (
         row.ps_grid_spacing, row.pointsource_distance,
-        row.weight, 100 * row.mean_err, 100 * row.p99_err) for row in rows]
-    logging.info('Calibration on %d sites (relative error on the hazard '
-                 'maps for sites above %s g)\n'
-                 ' psgs   psd      weight  mean_err%%  p99_err%%'
-                 '\n%s', nsites, MIN_HMAP, '\n'.join(lines))
+        row.weight, row.mean_err, row.p99_err) for row in rows]
+    logging.info('Calibration on %d sites (absolute error on the hazard '
+                 'maps, in g)\n'
+                 ' psgs   psd      weight   mean_err    p99_err'
+                 '\n%s', nsites, '\n'.join(lines))
 
 
 def get_hmaps(rates, imtls, oq):
@@ -320,15 +318,13 @@ def get_hmaps(rates, imtls, oq):
 
 
 # yield a Candidate with spacing, distance, weight, mean_err and p99_err,
-# where mean_err and p99_err refer to the relative error on the hazard maps
+# where mean_err and p99_err refer to the absolute error (in g) on the
+# hazard maps
 def _get_rows(results, ref, imtls, oq):
-    ok = ref > MIN_HMAP
     # sorted, so that the choice among equal weights does not depend on
     # the order in which the tasks finish
     for key, result in sorted(results.items()):
         hmaps = get_hmaps(result['rates'], imtls, oq)
-        # if no hazard map is relevant any candidate is good
-        errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
-                else numpy.zeros(1))
+        errs = numpy.abs(hmaps - ref)
         yield Candidate(*key, result['weight'],
                         errs.mean(), numpy.percentile(errs, 99))

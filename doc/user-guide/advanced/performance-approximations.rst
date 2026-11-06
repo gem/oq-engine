@@ -64,27 +64,25 @@ The calibration works as follows (in engine v3.27, it may change in the future):
   exact, but too expensive for large maximum distances);
 - the candidates are the grid spacings 50, 25 and 15 km, each one with the ``pointsource_distance`` values 15, 25 and
   50 km (if the ``pointsource_distance`` is set in the job.ini, only that value is tried);
-- a candidate is acceptable if the 99th percentile of the relative error on the hazard maps, for the sites where the
-  hazard is above 0.01 g, is at most 5%;
+- a candidate is acceptable if the 99th percentile of the absolute error on the hazard maps is at most 0.01 g;
 - the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the full
   calculation; if no candidate is acceptable, the most precise one is chosen.
 
 For the ``job_vs30.ini`` file of the ``performance.zip`` archive (engine version 3.27) the calibration log is the
 following, and the calibration takes a few seconds on 16 cores::
 
-	 psgs   psd      time      weight  mean_err%  p99_err%
-	   50    15       5.1      294562       1.35      7.15
-	   15    15      10.7      478083       0.17      1.91
-	   25    15       6.8      317373       0.45      3.39
-	   50    25       5.3      338005       1.19      7.15
-	   50    50       6.2      490575       0.89      7.19
-	Using ps_grid_spacing=25.0, pointsource_distance=15.0
+	 psgs   psd      weight   mean_err    p99_err
+	   50    15      294562     0.0001     0.0013
+	   50    25      338005     0.0000     0.0012
+	   50    50      490575     0.0000     0.0007
+	   50    75      680618     0.0000     0.0007
+	Using ps_grid_spacing=50.0, pointsource_distance=15.0
 
-Here the 15 km grid with a ``pointsource_distance`` of 15 km and the 25 km grid with a ``pointsource_distance`` of
-15 km are both acceptable, and the second one has the smallest weight, so it is chosen. The 50 km grid is not
-acceptable for any ``pointsource_distance``.
+The errors are absolute, in g. The grid spacings are tried from the largest to the smallest, and the search stops at
+the first one with a candidate within the tolerance, so the 25 and 15 km grids are not tried here: the 50 km grid
+with a ``pointsource_distance`` of 15 km is acceptable and has the smallest weight, so it is chosen.
 
-Once the values are known, run the full calculation with them, for instance ``oq run job.ini -p ps_grid_spacing=25
+Once the values are known, run the full calculation with them, for instance ``oq run job.ini -p ps_grid_spacing=50
 pointsource_distance=15``. The precision can be checked with ``oq compare hcurves`` and ``oq compare uhs``, and the
 performance with ``oq show performance``.
 
