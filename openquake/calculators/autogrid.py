@@ -112,7 +112,9 @@ def _multipoint_radius(src, maxdist):
     point = next(iter(src))
     radii = {}
     for i, mfd in enumerate(src.mfd):
-        mag, rate = mfd.get_annual_occurrence_rates()[-1]
+        # ignoring the zero rates, as in get_annual_occurrence_rates
+        mag, rate = [(m, r) for m, r in mfd.get_annual_occurrence_rates()
+                     if r > 0][-1]
         rar = get(src.rupture_aspect_ratio, i)
         if (mag, rar) not in radii:
             point.rupture_aspect_ratio = rar
@@ -303,7 +305,9 @@ def get_hmaps(rates, imtls, oq):
 # where mean_err and p99_err refer to the relative error on the hazard maps
 def _get_rows(results, ref, imtls, oq):
     ok = ref > MIN_HMAP
-    for key, result in results.items():
+    # sorted, so that the choice among equal weights does not depend on
+    # the order in which the tasks finish
+    for key, result in sorted(results.items()):
         hmaps = get_hmaps(result['rates'], imtls, oq)
         # if no hazard map is relevant any candidate is good
         errs = (numpy.abs(hmaps[ok] - ref[ok]) / ref[ok] if ok.any()
