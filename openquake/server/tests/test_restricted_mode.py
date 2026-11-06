@@ -25,6 +25,7 @@ import random
 import tempfile
 from unittest import mock, skipIf
 import django
+from django.urls import reverse
 from datetime import datetime, timedelta
 from openquake.baselib import config
 from openquake.commands import db as cmd_db
@@ -88,6 +89,27 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         response = self.c.get('/v1/authentication/status')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authentication_required': True})
+
+    def test_logout(self):
+        # use the in-process client, which skips the CSRF checks
+        client = django.test.Client()
+        self.assertTrue(client.login(username=self.user0.username,
+                                     password=self.password0))
+        logout_url = reverse('logout')
+        # the header must contain a POST form to log out, since
+        # Django >= 5.0 does not accept GET requests to log out
+        resp = client.get(reverse('index'), follow=True)
+        self.assertContains(
+            resp, f'method="post" action="{logout_url}"')
+        resp = client.get(logout_url)
+        self.assertEqual(resp.status_code, 405)
+        resp = client.post(logout_url)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp['Location'].endswith('/accounts/login/'))
+        # the session was closed: the engine page asks to log in again
+        resp = client.get(reverse('index'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp['Location'])
 
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',
