@@ -211,11 +211,10 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     Determine ps_grid_spacing and pointsource_distance by comparing the
     hazard maps of the point sources on a sample of sites with the
-    reference ones. All the grid spacings are tried, each one with the
-    distances from the smallest (the cheapest) up to the first within
-    the tolerance; the candidate within the tolerance with the smallest
-    weight is chosen. NB: the largest spacing is not always the
-    cheapest, since big cells make more sites close to the sources.
+    reference ones. All the pairs (grid spacing, distance) are tried and
+    the candidate within the tolerance with the smallest weight is chosen.
+    NB: the largest spacing is not always the cheapest, since big cells
+    make more sites close to the sources.
 
     If ps_grid_spacing is a fixed value, only the pointsource_distance
     is calibrated, keeping that spacing.
@@ -254,8 +253,6 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
                  'pointsource_distance among %s on %d sites with one GMPE '
                  'per group', spacings, distances, len(sites))
     num_tasks = parallel.num_cores * 2
-    ref = None
-    rows = []  # candidates with time, weight, mean_err and p99_err
     # NB: the reference has no gridding also with a fixed spacing, since
     # the errors due to the gridding and to the pointsource_distance can
     # compensate (in SAM the error with respect to a gridded reference is
@@ -264,38 +261,22 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
     blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks * (
         4 if psgs == REFERENCE[0] else 1))
         for psgs in [REFERENCE[0]] + spacings}
-    # with a fixed spacing all the distances are tried in a single round,
-    # to send the blocks and wait for the slowest task only once; with
-    # ps_grid_spacing=auto the distances are tried from the smallest,
-    # stopping when all the spacings have a candidate within tolerance;
-    # the choice is the same, since the weight grows with the distance
-    rounds = [[psd] for psd in distances] if oq.auto_grid else [distances]
-    pending = spacings  # spacings without a candidate within tolerance
-    for psds in rounds:
-        logging.info('Trying ps_grid_spacing=%s with pointsource_distance=%s',
-                     pending, psds)
-        # the reference rates are computed in the first round
-        keys = [(psgs, psd) for psd in psds for psgs in pending] + (
-            [REFERENCE] * (ref is None))
-        # the keys with the same spacing are computed in the same task,
-        # sharing the contexts
-        bypsgs = AccumDict(accum=[])
-        for key in sorted(keys):
-            bypsgs[key[0]].append(key)
-        # run the calibration tasks in parallel, the heaviest first
-        args = [(blk, sites, cmakers[blk[0].grp_id], ks)
-                for psgs, ks in bypsgs.items() for blk in blocks[psgs]]
-        weights = [blk.weight * len(ks) for blk, _, _, ks in args]
-        args = parallel.heaviest_first(args, weights)
-        results = parallel.Starmap(calibration, args, h5=h5).reduce()
-        if ref is None:
-            ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
-        new = list(_get_rows(results, ref, imtls, oq))
-        rows.extend(new)
-        pending = [row.ps_grid_spacing for row in new
-                   if row.p99_err > TOLERANCE]
-        if not pending:
-            break
+    # all the candidates are computed in a single round, sending the blocks
+    # and waiting for the slowest task only once; the distances for the
+    # same spacing are computed in the same task, sharing the contexts,
+    # so that trying all the distances costs little more than one
+    bypsgs = AccumDict(accum=[])
+    for key in sorted([(psgs, psd) for psgs in spacings
+                       for psd in distances] + [REFERENCE]):
+        bypsgs[key[0]].append(key)
+    # run the calibration tasks in parallel, the heaviest first
+    args = [(blk, sites, cmakers[blk[0].grp_id], ks)
+            for psgs, ks in bypsgs.items() for blk in blocks[psgs]]
+    weights = [blk.weight * len(ks) for blk, _, _, ks in args]
+    args = parallel.heaviest_first(args, weights)
+    results = parallel.Starmap(calibration, args, h5=h5).reduce()
+    ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
+    rows = list(_get_rows(results, ref, imtls, oq))
     _log_rows(rows, len(sites))
     good = [row for row in rows if row.p99_err <= TOLERANCE]
     if not good:  # the candidates close to the most precise one
