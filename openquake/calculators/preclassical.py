@@ -432,7 +432,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
-        elif oq.auto_grid:
+        elif oq.auto_grid or (oq.ps_grid_spacing and not oq.psd_given):
+            # with a fixed ps_grid_spacing only pointsource_distance
+            # is calibrated, see autogrid.calibrate
             self.calibrate_grid(sites)
 
         # the core size Gt, i.e. the number of columns of the global
@@ -483,7 +485,9 @@ class PreClassicalCalculator(base.HazardCalculator):
     def calibrate_grid(self, sites):
         """
         Determine ps_grid_spacing and pointsource_distance on a sample
-        of sites, since the user set ps_grid_spacing=auto
+        of sites, since the user set ps_grid_spacing=auto or a fixed
+        ps_grid_spacing without pointsource_distance (only the latter
+        is then calibrated)
         """
         oq = self.oqparam
         cmakers = self.cmakers.to_array()

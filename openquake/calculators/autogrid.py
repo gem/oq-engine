@@ -172,9 +172,14 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     weight is chosen. NB: the largest spacing is not always the
     cheapest, since big cells make more sites close to the sources.
 
+    If ps_grid_spacing is a fixed value, only the pointsource_distance
+    is calibrated, keeping that spacing.
+
     :returns: (ps_grid_spacing, pointsource_distance) or None if there
               are no point sources
     """
+    # NB: with a fixed spacing the candidates are only the distances
+    spacings = GRID_SPACINGS if oq.auto_grid else [oq.ps_grid_spacing]
     sgs = {sg.sources[0].grp_id: sg for sg in csm.src_groups
            if not sg.atomic and any(src.code in b'AMP' for src in sg)}
     if not sgs:
@@ -200,24 +205,24 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
     if not groups:
         return None
-    return _select_candidate(groups, cmakers, sites, oq, h5)
+    return _select_candidate(groups, cmakers, sites, oq, spacings, h5)
 
 
 # compare candidates on the prepared sample and return the best parameters
-def _select_candidate(groups, cmakers, sites, oq, h5):
+def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
     imtls = next(iter(cmakers.values())).imtls
     distances = ([oq.pointsource_distance['default']] if oq.psd_given
                  else PS_DISTANCES)
     logging.info('Calibrating ps_grid_spacing among %s and '
                  'pointsource_distance among %s on %d sites with one GMPE '
-                 'per group', GRID_SPACINGS, distances, len(sites))
+                 'per group', spacings, distances, len(sites))
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # candidates with time, weight, mean_err and p99_err
     # NB: the reference has ps_grid_spacing=0, i.e. no gridding
     blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
-              for psgs in [REFERENCE[0]] + GRID_SPACINGS}
-    pending = GRID_SPACINGS  # spacings without a candidate within tolerance
+              for psgs in [REFERENCE[0]] + spacings}
+    pending = spacings  # spacings without a candidate within tolerance
     for psd in distances:
         logging.info('Trying ps_grid_spacing=%s with pointsource_distance=%s',
                      pending, psd)
