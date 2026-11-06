@@ -40,7 +40,6 @@ from openquake.baselib.general import (
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
-from openquake.hazardlib.source.multi_point import get
 from openquake.hazardlib.calc.filters import split_source, magdepdist
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.geo.mesh import Mesh
@@ -108,31 +107,15 @@ def calibration(srcs, sites, cmaker, keys, monitor):
 def _get_margin(sg, maxdist):
     radius = 0.
     for src in sg:
-        if src.code == b'M' and not src.bysrc_unc:
-            radius = max(radius, _multipoint_radius(src, maxdist))
-        elif src.code == b'A' and not src.bysrc_unc:
-            radius = max(radius, next(iter(src)).max_radius(maxdist))
+        if src.code in b'AM' and not src.bysrc_unc:
+            points = [next(iter(src))] if src.code == b'A' else src
         elif src.code == b'P':
-            radius = max(radius, src.max_radius(maxdist))
+            points = [src]
+        else:
+            continue
+        for point in points:
+            radius = max(radius, point.max_radius(maxdist))
     return DIAGONAL + radius
-
-
-# the points of a multipoint source differ only by MFD and aspect ratio,
-# so the radius is computed once for each pair (maximum magnitude, aspect
-# ratio), without building a PointSource for each point (slow)
-def _multipoint_radius(src, maxdist):
-    point = next(iter(src))
-    radii = {}
-    for i, mfd in enumerate(src.mfd):
-        # ignoring the zero rates, as in get_annual_occurrence_rates
-        mag, rate = [(m, r) for m, r in mfd.get_annual_occurrence_rates()
-                     if r > 0][-1]
-        rar = get(src.rupture_aspect_ratio, i)
-        if (mag, rar) not in radii:
-            point.rupture_aspect_ratio = rar
-            radii[mag, rar] = point.max_radius(
-                maxdist, point._get_rupture_projection_radii([(rate, mag)]))
-    return max(radii.values())
 
 
 # split the area and multipoint sources in point sources, keeping only
