@@ -26,9 +26,10 @@ spread over the region (with a single GMPE per group, two IMTs and a
 maximum distance cut to MAXDIST), both for a reference setting (no
 gridding and pointsource_distance = 100 km) and for a set of candidate
 pairs (ps_grid_spacing, pointsource_distance); the cheapest candidate with
-a 99th percentile of the absolute error on the hazard maps below a
-tolerance is chosen or, if there is none, the cheapest candidate with an
-error close to the smallest one.
+a 99th percentile of the error on the hazard maps, normalized by
+ATOL + RTOL * |reference| (as in numpy.testing.assert_allclose), below 1
+is chosen or, if there is none, the cheapest candidate with an error close
+to the smallest one.
 """
 import logging
 from collections import namedtuple
@@ -46,7 +47,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
 
 Candidate = namedtuple('Candidate',
-    'ps_grid_spacing pointsource_distance weight mean_err p99_err')
+    'ps_grid_spacing pointsource_distance weight mean_err p99_err p99_norm')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
 PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
@@ -54,7 +55,10 @@ PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
 REFERENCE = (0., 100.)
-TOLERANCE = .01  # on the 99th percentile of the absolute error (in g)
+# the errors on the hazard maps are close when |h - r| <= ATOL + RTOL * |r|,
+# as in numpy.testing.assert_allclose(h, r, rtol=RTOL, atol=ATOL)
+ATOL = .01  # absolute tolerance on the hazard maps (in g)
+RTOL = .01  # relative tolerance on the hazard maps
 # the calibration uses only the IMTs with the periods closest to these:
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
@@ -106,7 +110,9 @@ def calibration(srcs, sites, cmaker, keys, monitor):
 def _get_margin(sg, maxdist):
     radius = 0.
     for src in sg:
-        if src.code in b'AM' and not src.bysrc_unc:
+        # NB: the sources with bysrc_unc are included too, since their
+        # uncertainties do not change the geometry of the points
+        if src.code in b'AM':
             points = [next(iter(src))] if src.code == b'A' else src
         elif src.code == b'P':
             points = [src]
@@ -127,7 +133,8 @@ def _get_points(sg, sites, maxdist):
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
-        if src.code in b'AM' and not src.bysrc_unc:
+        # NB: the sources with bysrc_unc are included too (see _get_margin)
+        if src.code in b'AM':
             mesh = (src.mesh if src.code == b'M' else
                     src.polygon.discretize(src.area_discretization))
             if sites.count_close(Mesh(mesh.lons, mesh.lats), dist).any():
@@ -277,33 +284,36 @@ def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
         if i == 0:
             ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
         rows.extend(_get_rows(results, ref, imtls, oq))
-        if any(row.p99_err <= TOLERANCE for row in rows):
+        if any(row.p99_norm <= 1. for row in rows):
             break
     _log_rows(rows, len(sites))
     if h5:  # store the candidates, see `oq show calibration`
         h5.create_df('calibration', pandas.DataFrame(rows), nsites=len(sites))
-    good = [row for row in rows if row.p99_err <= TOLERANCE]
+    good = [row for row in rows if row.p99_norm <= 1.]
     if not good:  # the candidates close to the most precise one
-        minerr = min(row.p99_err for row in rows)
-        good = [row for row in rows if row.p99_err <= minerr * (1 + CLOSE)]
+        minerr = min(row.p99_norm for row in rows)
+        good = [row for row in rows if row.p99_norm <= minerr * (1 + CLOSE)]
     best = min(good, key=lambda row: row.weight)  # the cheapest
-    if best.p99_err > TOLERANCE:
+    if best.p99_norm > 1.:
         logging.warning(
             'With ps_grid_spacing=%s and pointsource_distance=%s the 99th '
-            'percentile of the absolute error on the hazard maps is %.4f g',
-            best.ps_grid_spacing, best.pointsource_distance, best.p99_err)
+            'percentile of the error on the hazard maps is %.4f g, which '
+            'exceeds ATOL + RTOL * |reference| (normalized p99 %.4f > 1)',
+            best.ps_grid_spacing, best.pointsource_distance, best.p99_err,
+            best.p99_norm)
     return best.ps_grid_spacing, best.pointsource_distance
 
 
-# log the candidates, with the errors in g
+# log the candidates, with the errors in g (the normalized p99 is the
+# one used to choose the candidate)
 def _log_rows(rows, nsites):
-    lines = ['%5.0f %5.0f %11.0f %10.4f %9.4f' % (
+    lines = ['%5.0f %5.0f %11.0f %10.4f %9.4f %9.4f' % (
         row.ps_grid_spacing, row.pointsource_distance,
-        row.weight, row.mean_err, row.p99_err) for row in rows]
-    logging.info('Calibration on %d sites (absolute error on the hazard '
-                 'maps, in g)\n'
-                 ' psgs   psd      weight   mean_err    p99_err'
-                 '\n%s', nsites, '\n'.join(lines))
+        row.weight, row.mean_err, row.p99_err, row.p99_norm)
+        for row in rows]
+    logging.info('Calibration on %d sites (errors on the hazard maps, in g)'
+                 '\n psgs   psd      weight   mean_err    p99_err  '
+                 'p99_norm\n%s', nsites, '\n'.join(lines))
 
 
 def get_hmaps(rates, imtls, oq):
@@ -317,14 +327,17 @@ def get_hmaps(rates, imtls, oq):
     return compute_hmaps(curves, imtls, oq.poes or [.002105])
 
 
-# yield a Candidate with spacing, distance, weight, mean_err and p99_err,
-# where mean_err and p99_err refer to the absolute error (in g) on the
-# hazard maps
+# yield a Candidate with spacing, distance, weight, mean_err, p99_err and
+# p99_norm, where mean_err and p99_err are the absolute errors (in g) on
+# the hazard maps and p99_norm is the 99th percentile of the error divided
+# by ATOL + RTOL * |reference|, so that a value is close when it is <= 1
 def _get_rows(results, ref, imtls, oq):
     # sorted, so that the choice among equal weights does not depend on
     # the order in which the tasks finish
     for key, result in sorted(results.items()):
         hmaps = get_hmaps(result['rates'], imtls, oq)
         errs = numpy.abs(hmaps - ref)
-        yield Candidate(*key, result['weight'],
-                        errs.mean(), numpy.percentile(errs, 99))
+        norm = errs / (ATOL + RTOL * numpy.abs(ref))
+        yield Candidate(*key, result['weight'], errs.mean(),
+                        numpy.percentile(errs, 99),
+                        numpy.percentile(norm, 99))
