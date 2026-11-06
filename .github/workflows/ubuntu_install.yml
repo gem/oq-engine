@@ -15,7 +15,7 @@ on:
 
 jobs:
   install_and_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}

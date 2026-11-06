@@ -51,6 +51,7 @@ jobs:
         with:
           ## Shut down the server if unconnected after 45 minutes.
           wait-timeout-minutes: 45
+          detached: true
       - name: Run demos
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
@@ -84,3 +85,23 @@ jobs:
           sleep 1
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
           sleep 1
+
+          echo -n "Test Standalone Tools pages (without authentication)"
+          read status_code redirect_url <<<"$(
+           curl -s -o /dev/null -w "%{http_code} %{redirect_url}" http://127.0.0.1:8800/
+          )"
+          if [ "$status_code" != "301" ] || [ "$redirect_url" != "http://127.0.0.1:8800/engine/" ]; then
+           echo "Unexpected redirect: status=$status_code redirect=$redirect_url"
+           echo "Should redirect to http://127.0.0.1:8800/engine/"
+           exit 1
+          fi
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/taxonomy/)
+          if [ $status_code != "200" ]; then
+           echo "Unable access the taxonomy standalone app"
+           exit 1
+          fi
+          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/ipt/)
+          if [ $status_code != "200" ]; then
+           echo "Unable to access the ipt standalone app"
+           exit 1
+          fi
