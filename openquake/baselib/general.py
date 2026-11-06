@@ -647,7 +647,8 @@ def engine_version():
                 # git config --global --add safe.directory <dir>
                 gitcmd = exc.output.splitlines()[-1]
                 subprocess.run(gitcmd.split(), cwd=os.path.dirname(git_path))
-            # trapping everything on purpose; git may not be installed
+        except OSError:
+            pass  # git may not be installed or not in the PATH
         else:
             gh = "-git" + decode(gh) if gh else ''
 

@@ -43,6 +43,8 @@ for key in DISPLAY_NAME:
 def oq():
     faulthandler.enable()
     logging.basicConfig(level=logging.INFO, handlers=[])
+    # used by `oq --version`, includes the git hash if possible
+    commands.__version__ = general.engine_version()
     sap.run(commands, prog='oq')
 
 
