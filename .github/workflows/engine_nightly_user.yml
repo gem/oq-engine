@@ -51,6 +51,7 @@ jobs:
         with:
           ## Shut down the server if unconnected after 45 minutes.
           wait-timeout-minutes: 45
+          detached: true
       - name: Run demos
         run: |
           source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
