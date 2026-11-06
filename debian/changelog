@@ -9,8 +9,9 @@
 
  [Christopher Brooks, Michele Simionato]
  * GridAdjustedGMPEs differing only by the epsilons now share the
-   computation of the backbone's grid-adjusted mean prediction
- 
+   computation of the backbone's grid-adjusted mean prediction;
+   optimized significantly the ray tracing algorithm (> 10x speedup)
+
  [Michele Simionato]
   * GridAdjustedGMPEs reading the same file now share the raytrace grids,
     saving memory and preserving sharing when sent to the workers
