@@ -1716,7 +1716,7 @@ class ContextMaker(object):
         elif src.code in b'pP':  # no subsampling
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            step = 20 if src.num_ruptures >= 400 else 4
+            step = 5  # a sparser sampling misses the close ruptures
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones
