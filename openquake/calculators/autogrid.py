@@ -66,8 +66,10 @@ MIN_NSITES = 100  # minimum size of the sample of sites
 DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
 
 
-def calibration(srcs, sites, cmaker, key, monitor):
+def calibration(srcs, sites, cmaker, keys, monitor):
     """
+    :param keys: pairs (ps_grid_spacing, pointsource_distance) with the
+                 same spacing, sorted by distance
     :returns: a dictionary key -> AccumDict(rates, time, weight), with
               rates of shape (N, L), for Starmap.reduce
 
@@ -77,14 +79,21 @@ def calibration(srcs, sites, cmaker, key, monitor):
     """
     t0 = time.time()
     cmaker.init_monitoring(monitor)
-    ctx = cmaker.from_srcs(srcs, sites)  # sets src.nsites
-    rates = numpy.zeros((len(sites), cmaker.imtls.size))
-    if len(ctx):
-        rmap = cmaker.get_rmap(ctx)
-        rates[rmap.sids] = rmap.array[:, :, 0]  # there is a single gsim
+    psds = [psd for _psgs, psd in keys]
+    # the contexts for the different distances are built at once, sharing
+    # the ruptures, which is much faster
+    ctxs = cmaker.from_srcs(srcs, sites, psds)  # sets src.nsites
     pairs = sum(src.num_ruptures * src.nsites for src in srcs)
-    return {key: AccumDict(dict(rates=rates, time=time.time() - t0,
-                               weight=len(ctx) + pairs / PAIR_COST))}
+    dt = (time.time() - t0) / len(keys)  # the contexts are shared
+    out = {}
+    for key, psd in zip(keys, psds):
+        rates = numpy.zeros((len(sites), cmaker.imtls.size))
+        if len(ctxs[psd]):
+            rmap = cmaker.get_rmap(ctxs[psd])
+            rates[rmap.sids] = rmap.array[:, :, 0]  # there is a single gsim
+        out[key] = AccumDict(dict(rates=rates, time=dt,
+                                  weight=len(ctxs[psd]) + pairs / PAIR_COST))
+    return out
 
 
 # the points farther than the maximum distance plus the margin from all
@@ -256,11 +265,15 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
         # the reference rates are computed in the first round
         keys = [(psgs, psd) for psd in psds for psgs in pending] + (
             [reference] * (ref is None))
+        # the keys with the same spacing are computed in the same task,
+        # sharing the contexts (with a fixed spacing the reference too)
+        bypsgs = AccumDict(accum=[])
+        for key in sorted(keys):
+            bypsgs[key[0]].append(key)
         # run the calibration tasks in parallel, the heaviest first
-        args = [(blk, sites, cmakers[blk[0].grp_id].copy(
-            pointsource_distance=psd), (psgs, psd))
-            for psgs, psd in keys for blk in blocks[psgs]]
-        weights = [blk.weight for blk, *_ in args]
+        args = [(blk, sites, cmakers[blk[0].grp_id], ks)
+                for psgs, ks in bypsgs.items() for blk in blocks[psgs]]
+        weights = [blk.weight * len(ks) for blk, _, _, ks in args]
         args = parallel.heaviest_first(args, weights)
         results = parallel.Starmap(calibration, args, h5=h5).reduce()
         if ref is None:
