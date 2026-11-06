@@ -81,6 +81,9 @@ jobs:
       - name: WebUI and calculation with Auth
         run: |
            set -o pipefail
+           set -a
+           source /etc/openquake/django_secret.env
+           set +a
            sudo systemctl stop openquake-webui
            source /opt/openquake/venv/bin/activate
            sudo mkdir -p /var/log/oq-engine/
