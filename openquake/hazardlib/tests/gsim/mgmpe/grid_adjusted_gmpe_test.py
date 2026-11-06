@@ -14,12 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import pickle
 import shutil
 import tempfile
 import unittest
-from unittest import mock, skipIf
+from unittest import mock
 from pathlib import Path
 import h5py
 import numpy as np
@@ -38,9 +37,10 @@ from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 aae = np.testing.assert_array_almost_equal
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-# Test file uses replacement adjustment method on tau (scalar, IMT-varying)
-# and subtract adjustment method on phi (per-cell dS2S + scalar adj_per_km,
-# both IMT-varying), with h3 resolutions of 2, 3, 4
+# Test file uses replacement adjustment method on tau (per-cell dL2L_sig,
+# IMT-varying) and subtract adjustment method on phi (per-cell dS2S_sig
+# + per-cell adj_per_km_sig summed along the ray with distance-squared
+# weights, both IMT-varying), with h3 resolutions of 2, 3, 4
 GRID_HDF5 = os.path.join(DATA_DIR, "test_grid_adjustments.hdf5")
 
 # Test inputs
@@ -63,8 +63,12 @@ DS2S_MEAN_PER_CELL = [
     np.array([-0.06, -0.09, -0.12, -0.15]),  # SA(1.0)
 ]
 
-# Scalar dL2L sigma per IMT
-DL2L_SIG = [0.04, 0.03, 0.02]  # PGA, SA(0.5), SA(1.0)
+# Per-cell dL2L sigma array per IMT
+DL2L_SIG_PER_CELL = [
+    np.array([0.04, 0.05, 0.06, 0.07], dtype=np.float32),  # PGA
+    np.array([0.03, 0.04, 0.05, 0.06], dtype=np.float32),  # SA(0.5)
+    np.array([0.02, 0.03, 0.04, 0.05], dtype=np.float32),  # SA(1.0)
+]
 
 # Per-cell dS2S sigma array per IMT
 DS2S_SIG_PER_CELL = [
@@ -73,8 +77,12 @@ DS2S_SIG_PER_CELL = [
     np.array([0.03, 0.04, 0.05, 0.06]),  # SA(1.0)
 ]
 
-# Scalar adj_per_km sigma per IMT
-ATT_SIG = [0.00112, 0.00148, 0.00158]  # PGA, SA(0.5), SA(1.0)
+# Per-cell adj_per_km sigma array per IMT (non-uniform, in log units per km)
+ATT_SIG_PER_CELL = [
+    np.array([0.001,  0.0015, 0.002,  0.0025], dtype=np.float32),  # PGA
+    np.array([0.0012, 0.0018, 0.0024, 0.003],  dtype=np.float32),  # SA(0.5)
+    np.array([0.001,  0.002,  0.003,  0.004],  dtype=np.float32),  # SA(1.0)
+]
 
 EXPECTED_PATH_ADJ = [
     np.array([0., 1.15658587, 2.2321576, 1.21456404]),  # PGA
@@ -182,17 +190,28 @@ class GridAdjustedGMPETest(unittest.TestCase):
     def test_mean_and_sigma(self):
         # Check expected values
         mea, sig, tau, phi = self._get_mean_stds(IMTS)
+        gd = load_residual_grids(GRID_HDF5)
         for m in range(len(IMTS)):
+            # Per-record path sig^2 = Σ_c dist(r, c)^2 · sig_c^2. Pass
+            # the pre-squared sig^2 grid under key "sig_sq" so the
+            # raytrace sums it with distance-squared weights instead of
+            # distance weights.
+            path_sig_sq = mod._raytrace_path_adjs(
+                {"mean": gd["raytrace_grids"]["adj_per_km"][IMTS[m]],
+                 "sig_sq": gd["raytrace_sig_grids"]["adj_per_km"][IMTS[m]]},
+                np.zeros(len(LONS)), np.zeros(len(LATS)),
+                LONS, LATS, gd["h3_res"])["sig_sq"]
+            path_sig = np.sqrt(np.maximum(0.0, path_sig_sq))
             aae(mea[GRID, m] - mea[BASE, m], EXPECTED_MEAN_DIFFS[m],
                 decimal=DP)
-            # dL2L uses "replace" with scalar, IMT-specific sigma
+            # dL2L uses "replace" with per-cell sig; hypo at origin -> cell 0
             aae(tau[GRID, m],
-                np.full(len(LATS), DL2L_SIG[m]), decimal=DP)
-            # phi: subtract per-cell dS2S sigma (site-varying) and scalar
-            # adj_per_km sigma, both IMT-specific
+                np.full(len(LATS), DL2L_SIG_PER_CELL[m][0]), decimal=DP)
+            # phi: subtract per-cell dS2S sigma (site-varying) and the
+            # per-record path sig in quadrature
             aae(phi[GRID, m],
                 np.sqrt(phi[BASE, m] ** 2 - DS2S_SIG_PER_CELL[m] ** 2
-                        - ATT_SIG[m] ** 2), decimal=DP)
+                        - path_sig ** 2), decimal=DP)
             aae(sig[GRID, m],
                 np.sqrt(tau[GRID, m] ** 2 + phi[GRID, m] ** 2), decimal=DP)
 
@@ -229,15 +248,23 @@ class GridAdjustedGMPETest(unittest.TestCase):
             [np.zeros(len(LATS)), np.zeros(len(LONS)), LATS, LONS],
             names="hypo_lat,hypo_lon,lat,lon")
         for m, imt in enumerate(IMTS):
+            # Per-record path sig^2 = Σ_c dist(r, c)^2 · sig_c^2
+            path_sig_sq = mod._raytrace_path_adjs(
+                {"mean": gd["raytrace_grids"]["adj_per_km"][imt],
+                 "sig_sq": gd["raytrace_sig_grids"]["adj_per_km"][imt]},
+                np.zeros(len(LONS)), np.zeros(len(LATS)),
+                LONS, LATS, gd["h3_res"])["sig_sq"]
             expected = {
                 "dL2L": {
                     "mean": np.full(len(LATS), DL2L_MEAN_PER_CELL[m][0]),
-                    "mean_se": np.full(len(LATS), DL2L_SE_PER_CELL[m][0])},
+                    "mean_se": np.full(len(LATS), DL2L_SE_PER_CELL[m][0]),
+                    "sig": np.full(len(LATS), DL2L_SIG_PER_CELL[m][0])},
                 "dS2S": {"mean": DS2S_MEAN_PER_CELL[m],
                          "mean_se": DS2S_SE_PER_CELL[m],
                          "sig": DS2S_SIG_PER_CELL[m]},
                 "adj_per_km": {"mean": EXPECTED_PATH_ADJ[m],
-                               "mean_se": EXPECTED_PATH_SE_ADJ[m]}}
+                               "mean_se": EXPECTED_PATH_SE_ADJ[m],
+                               "sig_sq": path_sig_sq}}
             for term, values in expected.items():
                 adjs = mod._resolve_adjs(
                     gd, gd["res_terms"][term], term, imt, ctx)
@@ -387,7 +414,6 @@ class GridAdjustedGMPETest(unittest.TestCase):
             cmaker.get_mean_stds([self._make_ctx(cmaker)]), expected)
 
     ### SHARING OF THE CENTRAL PART TESTS ###
-    @skipIf(sys.platform == 'win32', 'the cache is not working(?)')
     def test_grid_replacement(self):
         # A new instance must use the updated HDF5 at the same path, while
         # the original instance retains its loaded grid
