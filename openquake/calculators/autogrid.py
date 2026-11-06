@@ -37,6 +37,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
+from openquake.hazardlib.source.multi_point import get
 from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.geo.mesh import Mesh
@@ -95,15 +96,29 @@ def calibration(srcs, sites, cmaker, key, monitor):
 def _get_margin(sg, maxdist):
     radius = 0.
     for src in sg:
-        if src.code in b'AM' and not src.bysrc_unc:
-            points = [next(iter(src))] if src.code == b'A' else src
+        if src.code == b'M' and not src.bysrc_unc:
+            radius = max(radius, _multipoint_radius(src, maxdist))
+        elif src.code == b'A' and not src.bysrc_unc:
+            radius = max(radius, next(iter(src)).max_radius(maxdist))
         elif src.code == b'P':
-            points = [src]
-        else:
-            continue
-        for point in points:
-            radius = max(radius, point.max_radius(maxdist))
+            radius = max(radius, src.max_radius(maxdist))
     return DIAGONAL + radius
+
+
+# the points of a multipoint source differ only by MFD and aspect ratio,
+# so the radius is computed once for each pair (maximum magnitude, aspect
+# ratio), without building a PointSource for each point (slow)
+def _multipoint_radius(src, maxdist):
+    point = next(iter(src))
+    radii = {}
+    for i, mfd in enumerate(src.mfd):
+        mag, rate = mfd.get_annual_occurrence_rates()[-1]
+        rar = get(src.rupture_aspect_ratio, i)
+        if (mag, rar) not in radii:
+            point.rupture_aspect_ratio = rar
+            radii[mag, rar] = point.max_radius(
+                maxdist, point._get_rupture_projection_radii([(rate, mag)]))
+    return max(radii.values())
 
 
 # split the area and multipoint sources in point sources, keeping only
@@ -219,15 +234,26 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # candidates with time, weight, mean_err and p99_err
-    # NB: the reference has ps_grid_spacing=0, i.e. no gridding
+    # NB: with ps_grid_spacing=auto the reference has no gridding; with a
+    # fixed spacing only the pointsource_distance is calibrated, so the
+    # reference keeps the gridding, which is much cheaper
+    reference = (REFERENCE if oq.auto_grid
+                 else (spacings[0], REFERENCE[1]))
     blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
-              for psgs in [REFERENCE[0]] + spacings}
+              for psgs in dict.fromkeys([reference[0]] + spacings)}
+    # with a fixed spacing all the distances are tried in a single round,
+    # to send the blocks and wait for the slowest task only once; with
+    # ps_grid_spacing=auto the distances are tried from the smallest,
+    # stopping when all the spacings have a candidate within tolerance;
+    # the choice is the same, since the weight grows with the distance
+    rounds = [[psd] for psd in distances] if oq.auto_grid else [distances]
     pending = spacings  # spacings without a candidate within tolerance
-    for psd in distances:
+    for psds in rounds:
         logging.info('Trying ps_grid_spacing=%s with pointsource_distance=%s',
-                     pending, psd)
+                     pending, psds)
         # the reference rates are computed in the first round
-        keys = [(psgs, psd) for psgs in pending] + [REFERENCE] * (ref is None)
+        keys = [(psgs, psd) for psd in psds for psgs in pending] + (
+            [reference] * (ref is None))
         # run the calibration tasks in parallel, the heaviest first
         args = [(blk, sites, cmakers[blk[0].grp_id].copy(
             pointsource_distance=psd), (psgs, psd))
@@ -236,7 +262,7 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
         args = parallel.heaviest_first(args, weights)
         results = parallel.Starmap(calibration, args, h5=h5).reduce()
         if ref is None:
-            result = results.pop(REFERENCE)
+            result = results.pop(reference)
             ref = get_hmaps(result['rates'], imtls, oq)
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)

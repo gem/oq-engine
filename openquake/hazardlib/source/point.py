@@ -58,9 +58,13 @@ def calc_average(pointsources):
                rupture_aspect_ratio=[], hypo_dip_frac=[])
     trt = pointsources[0].tectonic_region_type
     multiple = len(pointsources) > 1
+    rates = {}  # the points of an area source share the same MFD object
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        rate = sum(r for m, r in src.get_annual_occurrence_rates())
+        key = (id(src.mfd), getattr(src, 'scaling_rate', 1))
+        if key not in rates:
+            rates[key] = sum(r for m, r in src.get_annual_occurrence_rates())
+        rate = rates[key]
         factor = rate if multiple else 1.
         ws, ds = zip(*src.nodal_plane_distribution.data)
         acc['strike'].extend([np.strike for np in ds])
