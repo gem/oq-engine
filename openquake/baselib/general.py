@@ -636,16 +636,20 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            with sighandler("SIGCHLD", signal.SIG_DFL), \
-                 open(os.devnull, 'w') as devnull:
-                gh = subprocess.check_output(
-                    ['git', 'rev-parse', '--short', 'HEAD'],
-                    stderr=devnull, cwd=os.path.dirname(git_path)).strip()
-                gh = "-git" + decode(gh) if gh else ''
-        except Exception:
-            pass
-            # trapping everything on purpose; git may not be installed or it
-            # may not work properly
+            gh = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(git_path),
+                stderr=subprocess.STDOUT,
+                text=True
+            ).strip()
+        except subprocess.CalledProcessError as exc:
+            if exc.output.startswith("fatal: detected dubious ownership"):
+                # git config --global --add safe.directory <dir>
+                gitcmd = exc.output.splitlines()[-1]
+                subprocess.run(gitcmd.split(), cwd=os.path.dirname(git_path))
+            # trapping everything on purpose; git may not be installed
+        else:
+            gh = "-git" + decode(gh) if gh else ''
 
     return __version__ + gh
 

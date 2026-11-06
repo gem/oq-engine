@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Internal: fixed `oq --version` in devel_server installations by calling
+    automatically `git config --global --add safe.directory`
+
  [Christopher Brooks]
  * Fix the filtering of the hypocentral depth distribution in simple faults
    so the weights per depth are not distorted by the floating of ruptures. The
