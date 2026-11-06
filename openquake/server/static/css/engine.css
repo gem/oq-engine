@@ -125,6 +125,30 @@ h2 {
     text-decoration: underline;
 }
 
+/* the logout button must look like the other links in the header */
+.navbar .nav > li.user > form.logout-form {
+    display: inline;
+    margin: 0;
+}
+
+.navbar .nav > li.user .logout-btn {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: #fff;
+    font: inherit;
+    font-size: 16px;
+    line-height: inherit;
+    text-shadow: none;
+    cursor: pointer;
+}
+
+.navbar .nav > li.user .logout-btn:hover,
+.navbar .nav > li.user .logout-btn:focus {
+    text-decoration: underline;
+}
+
 nav.main-nav {
     margin: 0;
 }

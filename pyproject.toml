@@ -29,7 +29,7 @@ dependencies = [
     "scipy~=1.17",
     "pandas~=2.2",
     "h5py>=3.13",
-    "django>=4.2, <5",
+    "django~=5.2.0",
     "psutil",
     "requests",
     "pyzmq~=26.0.3; python_version <= '3.11'",
@@ -42,7 +42,7 @@ dependencies = [
     "toml~=0.10.2",
     "numba~=0.67",
     "alpha_shapes~=1.1.0",
-    "django_cors_headers~=4.3.1",
+    "django_cors_headers~=4.9.0",
     "django_cookie_consent~=1.0.0",
 
     # geopackages
