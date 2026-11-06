@@ -18,6 +18,7 @@
 
 # NB: run these tests with OQ_APPLICATION_MODE=AELO,
 import pytest
+from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.aelo_page import AeloPage
 from playwright.sync_api import expect
 
@@ -42,3 +43,16 @@ def test_aelo_run_job(application_mode, authenticated_page, user):
     job_id = page.get_job_id_from_new_job()
     page.abort_job(job_id)
     page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_cookie_bar(page, live_server, essential_cookie_groups,
+                    application_mode):
+    # a new visitor accepts the essential cookies from the cookie bar
+    CookieBar(page, live_server.url).check_accept_essential_cookies()
+
+
+@pytest.mark.parametrize("application_mode", ["AELO"], indirect=True)
+def test_cookies_info_page(page, live_server, essential_cookie_groups,
+                           application_mode):
+    CookieBar(page, live_server.url).check_cookies_info_page()

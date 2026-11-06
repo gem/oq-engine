@@ -18,6 +18,7 @@
 
 # NB: run these tests with OQ_APPLICATION_MODE=IMPACT,
 import pytest
+from openquake.server.tests.pages.cookie_bar import CookieBar
 from openquake.server.tests.pages.impact_page import (
     ImpactPageLevel0, ImpactPageLevel1, ImpactPageLevel2)
 from playwright.sync_api import expect
@@ -297,3 +298,16 @@ def test_impact_ui_level_2_provide_rupture_params(
             page.abort_job(job_id)
         if should_remove_job:
             page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_cookie_bar(page, live_server, essential_cookie_groups,
+                    application_mode):
+    # a new visitor accepts the essential cookies from the cookie bar
+    CookieBar(page, live_server.url).check_accept_essential_cookies()
+
+
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+def test_cookies_info_page(page, live_server, essential_cookie_groups,
+                           application_mode):
+    CookieBar(page, live_server.url).check_cookies_info_page()
