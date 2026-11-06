@@ -17,15 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
 Calibration of ps_grid_spacing and pointsource_distance, performed in
-preclassical when the user sets ``ps_grid_spacing = auto``.
+preclassical when the user sets ``ps_grid_spacing = auto``, or only of the
+pointsource_distance when the user sets a ps_grid_spacing without a
+pointsource_distance.
 
 The rates of the point sources are computed on a sample of sites evenly
-spread over the region (with a single GMPE per group and two IMTs),
-both for a reference setting (no gridding and pointsource_distance =
-100 km) and for a set of candidate pairs
-(ps_grid_spacing, pointsource_distance); the cheapest candidate with a
-99th percentile of the relative error on the hazard maps below a
-tolerance is chosen.
+spread over the region (with a single GMPE per group, two IMTs and a
+maximum distance cut to MAXDIST), both for a reference setting (no
+gridding and pointsource_distance = 100 km) and for a set of candidate
+pairs (ps_grid_spacing, pointsource_distance); the cheapest candidate with
+a 99th percentile of the relative error on the hazard maps below a
+tolerance is chosen or, if there is none, the cheapest candidate with an
+error close to the smallest one.
 """
 import time
 import logging
@@ -38,7 +41,7 @@ from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.multi_point import get
-from openquake.hazardlib.calc.filters import split_source
+from openquake.hazardlib.calc.filters import split_source, magdepdist
 from openquake.hazardlib.contexts import PAIR_COST
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.site import SiteCollection
@@ -47,7 +50,7 @@ Candidate = namedtuple('Candidate',
     'ps_grid_spacing pointsource_distance time weight mean_err p99_err')
 
 GRID_SPACINGS = [50., 25., 15.]  # candidate values in km
-PS_DISTANCES = [15., 25., 50.]  # candidate values in km
+PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
 # reference (ps_grid_spacing, pointsource_distance): no gridding and
 # pointsource_distance = 100 km; using 1000 km would be exact but too
 # expensive with large maximum distances (e.g. in AUS)
@@ -58,9 +61,11 @@ MIN_HMAP = .01  # ignore the hazard maps below this value (in g)
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
-NSITES = 300  # size of the sample of sites, if maximum_distance <= MAXDIST
-MAXDIST = 300.  # in km, used to reduce the sample for large distances
-MIN_NSITES = 100  # minimum size of the sample of sites
+NSITES = 300  # size of the sample of sites
+MAXDIST = 300.  # in km, maximum distance used in the calibration
+# when no candidate is within the tolerance, the candidates with an error
+# up to 10% larger than the smallest one are considered equivalent
+CLOSE = .1
 # the points of a cell are within a diagonal from the location of the
 # collapsed point source, which is inside the cell
 DIAGONAL = numpy.sqrt(2) * max(GRID_SPACINGS)
@@ -188,6 +193,20 @@ def _calib_imts(oq):
     return [imt for imt in oq.imtls if imt in chosen]
 
 
+# ContextMaker with a single GMPE, the given IMTs and one level every
+# LEVEL_STEP: the error of the gridding is geometric and does not depend
+# much on the GMPE, while the cost of the calibration is proportional to
+# the number of GMPEs, IMTs and levels; the maximum distance is cut to
+# MAXDIST, since the cost of each site grows with the area within the
+# maximum distance, while the far sources are far for all the candidates
+# and the reference, so they hardly contribute to the errors
+def _calib_cmaker(cmaker, imts):
+    md = cmaker.maximum_distance
+    return cmaker.restrict(imts, LEVEL_STEP).copy(
+        gsims=dict(list(cmaker.gsims.items())[:1]),
+        maximum_distance=magdepdist(zip(md.x, numpy.minimum(md.y, MAXDIST))))
+
+
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     Determine ps_grid_spacing and pointsource_distance by comparing the
@@ -210,21 +229,13 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
            if not sg.atomic and any(src.code in b'AMP' for src in sg)}
     if not sgs:
         return None
-    # ContextMakers with a single GMPE, the IMTs of _calib_imts and one
-    # level every LEVEL_STEP: the error of the gridding is geometric and
-    # does not depend much on the GMPE, while the cost of the calibration
-    # is proportional to the number of GMPEs, IMTs and levels
     imts = _calib_imts(oq)
-    cmakers = {grp_id: cmakers[grp_id].restrict(imts, LEVEL_STEP).copy(
-        gsims=dict(list(cmakers[grp_id].gsims.items())[:1])) for grp_id in sgs}
+    cmakers = {grp_id: _calib_cmaker(cmakers[grp_id], imts)
+               for grp_id in sgs}
     maxdist = {grp_id: cmakers[grp_id].maximum_distance.y[-1]
                for grp_id in sgs}
-    # the cost of each site grows with the area within the maximum
-    # distance, so the size of the sample is reduced for large distances
-    ratio = min(1., (MAXDIST / max(maxdist.values())) ** 2)
     # a complete SiteCollection, so that the tasks receive only the sample
-    sites = SiteCollection.from_(
-        sitecol.reduce(max(MIN_NSITES, int(NSITES * ratio))).array)
+    sites = SiteCollection.from_(sitecol.reduce(NSITES).array)
     sites.make_complete()
     groups = {grp_id: _get_points(sg, sites, maxdist[grp_id])
               for grp_id, sg in sgs.items()}
@@ -245,13 +256,14 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
     num_tasks = parallel.num_cores * 2
     ref = None
     rows = []  # candidates with time, weight, mean_err and p99_err
-    # NB: with ps_grid_spacing=auto the reference has no gridding; with a
-    # fixed spacing only the pointsource_distance is calibrated, so the
-    # reference keeps the gridding, which is much cheaper
-    reference = (REFERENCE if oq.auto_grid
-                 else (spacings[0], REFERENCE[1]))
-    blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks)
-              for psgs in dict.fromkeys([reference[0]] + spacings)}
+    # NB: the reference has no gridding also with a fixed spacing, since
+    # the errors due to the gridding and to the pointsource_distance can
+    # compensate (in SAM the error with respect to a gridded reference is
+    # larger than the total error); the reference is the most expensive
+    # part, so it is split in more blocks to avoid slow tasks
+    blocks = {psgs: _get_blocks(groups, sites, cmakers, psgs, num_tasks * (
+        4 if psgs == REFERENCE[0] else 1))
+        for psgs in [REFERENCE[0]] + spacings}
     # with a fixed spacing all the distances are tried in a single round,
     # to send the blocks and wait for the slowest task only once; with
     # ps_grid_spacing=auto the distances are tried from the smallest,
@@ -264,9 +276,9 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
                      pending, psds)
         # the reference rates are computed in the first round
         keys = [(psgs, psd) for psd in psds for psgs in pending] + (
-            [reference] * (ref is None))
+            [REFERENCE] * (ref is None))
         # the keys with the same spacing are computed in the same task,
-        # sharing the contexts (with a fixed spacing the reference too)
+        # sharing the contexts
         bypsgs = AccumDict(accum=[])
         for key in sorted(keys):
             bypsgs[key[0]].append(key)
@@ -277,30 +289,37 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, h5):
         args = parallel.heaviest_first(args, weights)
         results = parallel.Starmap(calibration, args, h5=h5).reduce()
         if ref is None:
-            result = results.pop(reference)
-            ref = get_hmaps(result['rates'], imtls, oq)
+            ref = get_hmaps(results.pop(REFERENCE)['rates'], imtls, oq)
         new = list(_get_rows(results, ref, imtls, oq))
         rows.extend(new)
         pending = [row.ps_grid_spacing for row in new
                    if row.p99_err > TOLERANCE]
         if not pending:
             break
-    # the errors are shown as percentages
+    _log_rows(rows, len(sites))
+    good = [row for row in rows if row.p99_err <= TOLERANCE]
+    if not good:  # the candidates close to the most precise one
+        minerr = min(row.p99_err for row in rows)
+        good = [row for row in rows if row.p99_err <= minerr * (1 + CLOSE)]
+    best = min(good, key=lambda row: row.weight)  # the cheapest
+    if best.p99_err > TOLERANCE:
+        logging.warning(
+            'With ps_grid_spacing=%s and pointsource_distance=%s the 99th '
+            'percentile of the relative error on the hazard maps is %.1f%%',
+            best.ps_grid_spacing, best.pointsource_distance,
+            100 * best.p99_err)
+    return best.ps_grid_spacing, best.pointsource_distance
+
+
+# log the candidates, with the errors as percentages
+def _log_rows(rows, nsites):
     lines = ['%5.0f %5.0f %9.1f %11.0f %10.2f %9.2f' % (
         row.ps_grid_spacing, row.pointsource_distance, row.time,
-        row.weight, 100 * row.mean_err, 100 * row.p99_err)
-        for row in rows]
+        row.weight, 100 * row.mean_err, 100 * row.p99_err) for row in rows]
     logging.info('Calibration on %d sites (relative error on the hazard '
                  'maps for sites above %s g)\n'
                  ' psgs   psd      time      weight  mean_err%%  p99_err%%'
-                 '\n%s',
-                 len(sites), MIN_HMAP, '\n'.join(lines))
-    good = [row for row in rows if row.p99_err <= TOLERANCE]
-    if good:  # the candidate within the tolerance with the smallest weight
-        best = min(good, key=lambda row: row.weight)
-    else:
-        best = min(rows, key=lambda row: row.p99_err)  # the most precise
-    return best.ps_grid_spacing, best.pointsource_distance
+                 '\n%s', nsites, MIN_HMAP, '\n'.join(lines))
 
 
 def get_hmaps(rates, imtls, oq):
