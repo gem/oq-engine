@@ -33,6 +33,7 @@ error close to the smallest one.
 import logging
 from collections import namedtuple
 import numpy
+import pandas
 from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, WeightedSequence, block_splitter)
@@ -286,6 +287,8 @@ def _select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
         if any(row.p99_err <= TOLERANCE for row in rows):
             break
     _log_rows(rows, len(sites))
+    if h5:  # store the candidates, see `oq show calibration`
+        h5.create_df('calibration', pandas.DataFrame(rows), nsites=len(sites))
     good = [row for row in rows if row.p99_err <= TOLERANCE]
     if not good:  # the candidates close to the most precise one
         minerr = min(row.p99_err for row in rows)
