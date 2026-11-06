@@ -2060,9 +2060,19 @@ class Deduplicate(Sequence):
     Deduplicate lists containing duplicated objects
     """
     def __init__(self, objects, check_one=False):
+        # pickle only the distinct objects by identity, since typically
+        # many of them are the same instance (pickling is the slow part)
+        ids = {}
+        idx = numpy.array([ids.setdefault(id(obj), len(ids))
+                           for obj in objects], int)
+        distinct = list({id(obj): obj for obj in objects}.values())
         pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-                   for obj in objects]
-        uni, self.inv = numpy.unique(pickles, return_inverse=True)
+                   for obj in distinct]
+        if len(pickles) == 1:  # fast lane, numpy.unique is slow
+            uni, inv = pickles, numpy.zeros(1, int)
+        else:
+            uni, inv = numpy.unique(pickles, return_inverse=True)
+        self.inv = inv[idx]
         self.uni = [pickle.loads(pik) for pik in uni]
         if check_one:
             assert len(self.uni) == 1, self.uni
