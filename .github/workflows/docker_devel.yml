@@ -17,7 +17,7 @@ on:
 jobs:
   docker:
     name: Build image and push after successfull calculation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DOCKER_USERNAME: ${{ secrets.docker_username }}
       DOCKER_PASSWORD: ${{ secrets.docker_password }}
