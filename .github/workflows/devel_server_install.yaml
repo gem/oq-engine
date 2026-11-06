@@ -81,9 +81,6 @@ jobs:
       - name: WebUI and calculation with Auth
         run: |
            set -o pipefail
-           set -a
-           source /etc/openquake/django_secret.env
-           set +a
            sudo systemctl stop openquake-webui
            source /opt/openquake/venv/bin/activate
            sudo mkdir -p /var/log/oq-engine/
@@ -109,7 +106,12 @@ jobs:
            cat local_settings.py
            '
            # Perform migration after setup local_settings
+           # the secret file is readable only by the openquake user and
+           # runuser -l resets the environment
            sudo runuser -l openquake -c '
+           set -a
+           source /etc/openquake/django_secret.env
+           set +a
            source /opt/openquake/venv/bin/activate
            cd /home/openquake/oq-engine/openquake/server
            python3 manage.py migrate
