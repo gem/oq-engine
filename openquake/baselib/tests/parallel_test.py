@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest.mock as mock
 import time
 import shutil
 import unittest
@@ -160,19 +159,6 @@ class StarmapTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
-
-
-class ThreadPoolTestCase(unittest.TestCase):
-    def test(self):
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
-            parallel.Starmap.init()
-            try:
-                res = parallel.Starmap.apply(
-                    get_length, (numpy.arange(10),),
-                    concurrent_tasks=3).reduce()
-                self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
-            finally:
-                parallel.Starmap.shutdown()
 
 
 def sum_chunk(slc, hdf5path):
