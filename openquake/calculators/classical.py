@@ -1251,7 +1251,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.N > self.oqparam.max_sites_disagg):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
-            info = info[info['num_ctxs'] > 0]
+            # NB: the estimates are computed on a sample of the sites (see
+            # preclassical._get_srcfilter), so they are unreliable for the
+            # sources with few contexts, like the ones reaching a single
+            # site at the edge of the maximum distance; such sources are
+            # negligible and are not checked
+            info = info[info['num_ctxs'] > 1E-4 * info['num_ctxs'].sum()]
             bad = (info['est_ctxs'] < info['num_ctxs']) & (
                 delta(info['est_ctxs'], info['num_ctxs']) > .5)
             if bad.any():
