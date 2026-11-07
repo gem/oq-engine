@@ -280,7 +280,7 @@ def oq_distribute(task=None):
     return dist
 
 
-def init_worker(title='oq-worker'):
+def init_worker(title):
     """
     Used to initialize the process pools. Calls setproctitle (if
     available) with the given title and sets the flag Starmap.on, so that
