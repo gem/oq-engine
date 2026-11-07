@@ -296,6 +296,54 @@ def export_hmaps_stats_csv(ekey, dstore):
     return sorted(fnames)
 
 
+def workflow_hmaps_array(dstore, key):
+    """
+    :param dstore: datastore of a workflow
+    :param key: a mean hazard map dataset, e.g. 'hazard_map-mean-475y'
+    :returns: a structured array with one row per point and the model name,
+              the calc_id, the coordinates and one column per IMT, sorted
+              by model, lon and lat
+    """
+    grp = dstore.hdf5[key]
+    imts = [name for name in grp if name not in ('calc', 'lat', 'lon')]
+    # the model names are 3 letters long, see the workflow datastore
+    dt = [('model', 'U3'), ('calc_id', numpy.int64),
+          ('lon', numpy.float32), ('lat', numpy.float32)]
+    dt.extend((imt, numpy.float32) for imt in imts)
+    arr = numpy.zeros(len(grp['lon']), dt)
+    models = numpy.array([x.decode() if isinstance(x, bytes) else x
+                          for x in grp['calc'][()]])
+    # the names and the ids of the child calculations are in one-to-one
+    # correspondence in the workflow table, so each model gets its id
+    wf = dstore.hdf5['workflow']
+    arr['model'] = models
+    for name, calc_id in zip(wf['name'][()], wf['calc_id'][()]):
+        name = name.decode() if isinstance(name, bytes) else name
+        arr['calc_id'][models == name] = calc_id
+    arr['lon'] = grp['lon'][()]
+    arr['lat'] = grp['lat'][()]
+    for imt in imts:
+        arr[imt] = grp[imt][()]
+    # lexsort uses the last key as the primary one
+    return arr[numpy.lexsort((arr['lat'], arr['lon'], arr['model']))]
+
+
+@export.add(('hazard_map-mean-475y', 'csv'), ('hazard_map-mean-2475y', 'csv'))
+def export_workflow_hmaps_csv(ekey, dstore):
+    """
+    Exports the mean hazard maps of a workflow, one .csv file per dataset,
+    with one row per point and the model name in the first column
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    key, fmt = ekey
+    arr = workflow_hmaps_array(dstore, key)
+    fname = dstore.build_fname('hazard_map', key[len('hazard_map-'):], fmt)
+    writers.write_csv(fname, arr, comment=dstore.metadata)
+    return [fname]
+
+
 UHS = collections.namedtuple('UHS', 'imls location')
 
 
