@@ -1354,44 +1354,67 @@ def _fill(delta, coo):
 
 
 def _get_intersections(edges, lines, proj):
+    # Computes the intersections between a polyline (an edge) and a set of
+    # lines (the new profiles) in the projected space.
+    #
+    # :param edges:
+    #   An array of shape Nx3 with the longitude, latitude and depth of the
+    #   vertexes of the edge
+    # :param lines:
+    #   A list of [slope, intercept] pairs describing the lines y = a*x + b.
+    #   When the slope is >= VERY_BIG the line is vertical and the second
+    #   value is its abscissa.
+    # :param proj:
+    #   An instance of
+    #   :class:`openquake.hazardlib.geo.utils.OrthographicProjection`
+    # :returns:
+    #   An array with the coordinates of the intersections and the smallest
+    #   index of the lines intersected
     pnts = []
     idxs = []
-    for i_vtx in range(len(edges) - 1):
+    eps = 1e-9
+    xp, yp = proj(edges[:, 0], edges[:, 1])
+    num_seg = len(edges) - 1
+    for i_vtx in range(num_seg):
 
-        xp, yp = proj(edges[i_vtx:i_vtx + 2, 0], edges[i_vtx:i_vtx + 2, 1])
-        slope, intercept, _, _, _ = stats.linregress(xp, yp)
+        # Each segment is P(t) = P0 + t * (P1 - P0) with 0 <= t <= 1. This
+        # works for segments of any orientation (e.g. N-S or E-W)
+        x0, y0, z0 = xp[i_vtx], yp[i_vtx], edges[i_vtx, 2]
+        dx = xp[i_vtx + 1] - x0
+        dy = yp[i_vtx + 1] - y0
+        dz = edges[i_vtx + 1, 2] - z0
 
         for i_line, line in enumerate(lines):
 
-            # Intersection between edge and profile
             if line[0] >= VERY_BIG:
-                xi = line[1]
-                yi = xi * slope + intercept
+                # Vertical line x = c
+                den = dx
+                num = line[1] - x0
             else:
-                xi = (intercept - line[1]) / (line[0] - slope)
-                yi = xi * slope + intercept
+                # Line y = a * x + b
+                den = dy - line[0] * dx
+                num = line[0] * x0 + line[1] - y0
 
-            # Check if intercept is along the segment
-            if (xi > np.min([xp]) and xi < np.max([xp]) and
-                    yi > np.min([yp]) and yi < np.max([yp])):
+            # The segment and the line are parallel
+            if abs(den) < VERY_SMALL:
+                continue
+
+            # Keep the intersection if it is along the segment. An
+            # intersection at a vertex shared by two segments is counted
+            # only once
+            tpar = num / den
+            last = i_vtx == num_seg - 1
+            if -eps <= tpar < (1. + eps if last else 1. - eps):
+                xi = x0 + tpar * dx
+                yi = y0 + tpar * dy
                 xg, yg = proj(np.array([xi]), np.array([yi]), reverse=True)
-                zi = _get_point_depth([xp[0], yp[0], edges[i_vtx, 2]],
-                                      [xp[1], yp[1], edges[i_vtx + 1, 2]],
-                                      xi)
-                pnts.append([xg[0], yg[0], zi])
+                pnts.append([xg[0], yg[0], z0 + tpar * dz])
                 idxs.append(i_line)
 
+    if len(idxs) == 0:
+        raise ValueError('The edge does not intersect any of the profiles '
+                         'already built. Cannot create the mesh.')
     return np.array(pnts), min(idxs)
-
-
-def _line3d(pnt1, pnt2):
-    return [pnt2[0] - pnt1[0], pnt2[1] - pnt1[1], pnt2[2] - pnt1[2]]
-
-
-def _get_point_depth(pnt1, pnt2, xco):
-    vect = _line3d(pnt1, pnt2)
-    ratio = (xco - pnt1[0]) / vect[0]
-    return vect[2] * ratio + pnt1[2]
 
 
 def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
@@ -1455,26 +1478,18 @@ def fix_mesh(msh: npt.ArrayLike) -> np.ndarray:
         A revised :class:`numpy.ndarray` instance with the coordinates of
         the mesh. The shape of this array num_rows x num_cols x 3
     """
-    for i in range(msh.shape[0]):
-        ru = i + 1
-        rl = i - 1
-
-        for j in range(msh.shape[1]):
-            cu = j + 1
-            cl = j - 1
-
-            trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
-            tru = (False if cu > msh.shape[1] - 1 else
-                   np.isfinite(msh[i, cu, 0]))
-            tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
-            tcu = (False if ru > msh.shape[0] - 1 else
-                   np.isfinite(msh[ru, j, 0]))
-
-            check_row = trl or tru
-            check_col = tcl or tcu
-
-            if not (check_row and check_col):
-                msh[i, j, :] = np.nan
+    # A node is kept only if it is a vertex of at least one cell with four
+    # finite vertexes. Removing the other nodes does not affect any complete
+    # cell, hence a single pass is enough and the result does not depend on
+    # the order in which nodes are processed.
+    fin = np.all(np.isfinite(msh), axis=2)
+    cell = fin[:-1, :-1] & fin[:-1, 1:] & fin[1:, :-1] & fin[1:, 1:]
+    keep = np.zeros_like(fin)
+    keep[:-1, :-1] |= cell
+    keep[:-1, 1:] |= cell
+    keep[1:, :-1] |= cell
+    keep[1:, 1:] |= cell
+    msh[~keep] = np.nan
     return msh
 
 
@@ -1498,12 +1513,15 @@ def profiles_depth_alignment(pro1, pro2):
     coo1 = pro1.coo
     coo2 = pro2.coo
 
-    # Compute the shift with the minimum difference
+    # Compute the shift with the minimum difference. We use the mean
+    # difference since the length of the overlap decreases as the shift
+    # increases (a sum would favour larger shifts). Profiles too short to
+    # test any shift are not shifted.
     mindff = 1e20
-    minidx = None
+    minidx = 0
     for i1 in range(0, len(coo1) - minwdt):
         lle = np.min([len(coo1[i1:, 2]), len(coo2[:, 2])])
-        dff = np.sum(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
+        dff = np.mean(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
         if mindff > dff:
             minidx = i1
             mindff = dff

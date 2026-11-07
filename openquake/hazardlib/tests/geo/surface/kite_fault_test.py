@@ -1299,3 +1299,98 @@ class KiteAuxiliaryFunctionsTest(unittest.TestCase):
         edg = np.array([[0, 0, 0], [0.01, 0, 0], [0.5, 0, 0], [0.51, 0, 0]])
         with self.assertRaises(ValueError):
             _check_sampling(edg, proj)
+
+
+class KiteMeshBuildingTest(unittest.TestCase):
+    """
+    Regression tests for the functions used to build the mesh of a kite
+    surface from profiles
+    """
+
+    def setUp(self):
+        from openquake.hazardlib.geo.utils import OrthographicProjection
+        self.proj = OrthographicProjection(-1, 1, 1, -1)
+
+    def _line_x(self, lon):
+        # A vertical line (in the projected space) through longitude `lon`
+        from openquake.hazardlib.geo.surface.kite_fault import VERY_BIG
+        xx, _ = self.proj(np.array([lon]), np.array([0.0]))
+        return [VERY_BIG, xx[0]]
+
+    def test_intersection_north_south_edge(self):
+        # A N-S edge crossing an E-W line. This used to fail in linregress
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _get_intersections)
+        _, yy = self.proj(np.array([0.0]), np.array([0.0]))
+        edge = np.array([[0., -0.1, 5.], [0., 0.1, 7.]])
+        pnts, idx = _get_intersections(edge, [[0.0, yy[0]]], self.proj)
+        self.assertEqual(idx, 0)
+        aae(pnts, [[0., 0., 6.]], decimal=6)
+
+    def test_intersection_at_vertex(self):
+        # The line crosses the edge exactly at a vertex shared by two
+        # segments: the intersection must be found once
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _get_intersections)
+        edge = np.array([[-0.1, -0.1, 5.], [0., 0., 6.], [0.1, 0.1, 7.]])
+        pnts, idx = _get_intersections(edge, [self._line_x(0.0)], self.proj)
+        self.assertEqual(idx, 0)
+        aae(pnts, [[0., 0., 6.]], decimal=6)
+
+    def test_intersection_oblique_and_index(self):
+        # Two lines, the edge crosses only the second one
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _get_intersections)
+        edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
+        lines = [self._line_x(0.5), self._line_x(0.05)]
+        pnts, idx = _get_intersections(edge, lines, self.proj)
+        self.assertEqual(idx, 1)
+        aae(pnts[:, 2], [6.5], decimal=3)
+
+    def test_intersection_none(self):
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _get_intersections)
+        edge = np.array([[-0.1, -0.1, 5.], [0.1, 0.1, 7.]])
+        with self.assertRaises(ValueError):
+            _get_intersections(edge, [self._line_x(0.5)], self.proj)
+
+    def test_fix_mesh_incomplete_cell(self):
+        # No cell has four finite vertexes: all the nodes must be removed
+        from openquake.hazardlib.geo.surface.kite_fault import fix_mesh
+        msh = np.ones((2, 2, 3))
+        msh[1, 1] = np.nan
+        out = fix_mesh(msh)
+        self.assertFalse(np.isfinite(out).any())
+
+    def test_fix_mesh_keeps_complete_cells(self):
+        # Nodes of complete cells are kept, isolated ones are removed
+        from openquake.hazardlib.geo.surface.kite_fault import fix_mesh
+        nan = np.nan
+        fin = np.array([[1, 1, 1, nan],
+                        [1, 1, 1, 1],
+                        [nan, nan, 1, 1],
+                        [nan, 1, nan, 1]])
+        msh = np.stack([fin, fin, fin], axis=2)
+        out = fix_mesh(msh.copy())
+        expected = np.array([[1, 1, 1, 0],
+                             [1, 1, 1, 1],
+                             [0, 0, 1, 1],
+                             [0, 0, 0, 0]], dtype=bool)
+        np.testing.assert_array_equal(np.isfinite(out[:, :, 0]), expected)
+
+    def test_depth_alignment_short_profile(self):
+        # Profiles too short to test any shift used to return None
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            profiles_depth_alignment)
+        pro1 = Line([Point(0, 0, 0), Point(0, 0.01, 1)])
+        pro2 = Line([Point(1, 0, 0), Point(1, 0.01, 1), Point(1, 0.02, 2)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 0)
+
+    def test_depth_alignment_shift(self):
+        # The second profile starts at the depth of the third point of the
+        # first one
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            profiles_depth_alignment)
+        pro1 = Line([Point(0, 0.01 * i, 2. * i) for i in range(8)])
+        pro2 = Line([Point(1, 0.01 * i, 4. + 2. * i) for i in range(8)])
+        self.assertEqual(profiles_depth_alignment(pro1, pro2), 2)
