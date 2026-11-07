@@ -129,7 +129,8 @@ def _get_margin(sg, maxdist):
 # point sources of the composite source model are not modified; a source
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
-def _get_points(sg, sites, maxdist):
+def prepare_points(sg, sites, maxdist, monitor):
+    """Return the calibration points of a source group."""
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
@@ -146,23 +147,30 @@ def _get_points(sg, sites, maxdist):
             [(p.location.x, p.location.y) for p in points], sort=False)
         close = sites.count_close(mesh, dist)
         points = [p for p, c in zip(points, close) if c]
-    return points
+    return {sg.sources[0].grp_id: points}
+
+
+def prepare_pairs(points, sites, maxdist, psgs, monitor):
+    """Grid a group's points and estimate the task weights."""
+    grp_id = points[0].grp_id
+    srcs = grid_point_sources(points, psgs)
+    mesh = Mesh.from_coords(
+        [(src.location.x, src.location.y) for src in srcs], sort=False)
+    nsites = sites.count_close(mesh, maxdist)
+    return {grp_id: [(src, src.num_ruptures * (n + 1))
+                     for src, n in zip(srcs, nsites)]}
 
 
 # split the sources of the groups, gridded with the given spacing, in
 # WeightedSequences of sources; the blocks are balanced by number
 # of ruptures times number of sites within the maximum distance from the
 # location of the source
-def _get_blocks(groups, sites, cmakers, psgs, num_tasks):
-    pairs = []  # (src, weight), grouped by grp_id
-    for grp_id, points in groups.items():
-        srcs = grid_point_sources(points, psgs)
-        mesh = Mesh.from_coords(
-            [(src.location.x, src.location.y) for src in srcs], sort=False)
-        nsites = sites.count_close(
-            mesh, cmakers[grp_id].maximum_distance.y[-1])
-        pairs.extend((src, src.num_ruptures * (n + 1))
-                     for src, n in zip(srcs, nsites))
+def _get_blocks(groups, sites, cmakers, psgs, num_tasks, h5=None):
+    args = [(points, sites, cmakers[grp_id].maximum_distance.y[-1], psgs)
+            for grp_id, points in groups.items()]
+    bygroup = parallel.Starmap(prepare_pairs, args, h5=h5).reduce()
+    # Keep the original group order, independently of task completion.
+    pairs = [pair for grp_id in groups for pair in bygroup[grp_id]]
     maxweight = sum(w for _, w in pairs) / num_tasks
     return [WeightedSequence(blk) for blk in block_splitter(
         pairs, maxweight, lambda p: p[1], lambda p: p[0].grp_id)]
@@ -225,9 +233,9 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     # a complete SiteCollection, so that the tasks receive only the sample
     sites = SiteCollection.from_(sitecol.reduce(NSITES).array)
     sites.make_complete()
-    groups = {grp_id: _get_points(sg, sites, maxdist[grp_id])
-              for grp_id, sg in sgs.items()}
-    groups = {grp_id: pts for grp_id, pts in groups.items() if pts}
+    args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
+    prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
+    groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
     if not groups:
         return None
     return select_candidate(
@@ -251,7 +259,7 @@ def run_calibration(keys, groups, sites, cmakers, h5):
     for psgs in sorted({psgs for psgs, _psd in keys}):
         ks = sorted(key for key in keys if key[0] == psgs)
         ntasks = num_tasks * (4 if psgs == REFERENCE[0] else 1)
-        for blk in _get_blocks(groups, sites, cmakers, psgs, ntasks):
+        for blk in _get_blocks(groups, sites, cmakers, psgs, ntasks, h5):
             args.append((blk, sites, cmakers[blk[0].grp_id], ks))
     weights = [blk.weight * len(ks) for blk, _, _, ks in args]
     args = parallel.heaviest_first(args, weights)
