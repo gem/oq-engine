@@ -21,9 +21,9 @@ Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 """
 
 import copy
+import logging
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
 from scipy import stats
 from shapely import make_valid
 from shapely.geometry import Polygon
@@ -57,17 +57,21 @@ class KiteSurface(BaseSurface):
 
     def __init__(self, mesh, profiles=None, sec_id=''):
         self.mesh = mesh
+        self.sec_id = sec_id
 
         # Clean the mesh
         success = self._clean()
         if not success:
-            msg = f"Error while initialising section (id: {sec_id})"
+            msg = (f"Error while initialising section (id: {sec_id}): the "
+                   "mesh does not contain any finite node")
             raise ValueError(msg)
 
         # Save profiles
         self.profiles = profiles
-        assert 1 not in self.mesh.shape, (
-            "Mesh must have at least 2 nodes along strike and dip.")
+        if 1 in self.mesh.shape:
+            raise ValueError(
+                f"Section (id: {sec_id}): the mesh must have at least 2 "
+                f"nodes along strike and dip; shape is {self.mesh.shape}")
 
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
@@ -76,19 +80,32 @@ class KiteSurface(BaseSurface):
 
     def _clean(self):
         """
-        Removes from the mesh the rows and columns containing just NaNs
+        Sets to NaN the nodes with at least one undefined coordinate and
+        removes from the mesh the rows and columns containing just NaNs
         """
+        # A node is valid only if all its coordinates are finite. Nodes
+        # with e.g. a finite longitude but an undefined depth would
+        # otherwise propagate NaNs in all the calculations
+        lons = self.mesh.lons
+        lats = self.mesh.lats
+        deps = self.mesh.depths
+        bad = ~(np.isfinite(lons) & np.isfinite(lats) & np.isfinite(deps))
+        if bad.any():
+            # Copy (keeping the dtype) to avoid modifying the input arrays
+            lons, lats, deps = lons.copy(), lats.copy(), deps.copy()
+            lons[bad] = lats[bad] = deps[bad] = np.nan
+
         # Identify rows that are NOT completely filled with NaNs
-        valid_rows = ~np.all(np.isnan(self.mesh.lons), axis=1)
+        valid_rows = ~np.all(np.isnan(lons), axis=1)
 
         # Early exit if all rows are dropped (size would be 0)
         if not np.any(valid_rows):
             return False
 
         # Slice the rows
-        lons = self.mesh.lons[valid_rows, :]
-        lats = self.mesh.lats[valid_rows, :]
-        deps = self.mesh.depths[valid_rows, :]
+        lons = lons[valid_rows, :]
+        lats = lats[valid_rows, :]
+        deps = deps[valid_rows, :]
 
         # Identify columns that are NOT completely filled with NaNs
         valid_cols = ~np.all(np.isnan(lons), axis=0)
@@ -110,9 +127,20 @@ class KiteSurface(BaseSurface):
         """
         A single element list containing a kiteSurface node
         """
-        # TODO if the object is created without profiles we must extract them
-        # from the mesh
-        return kite_surface_node(self.profiles)
+        profiles = self.profiles
+        if profiles is None:
+            # The surface was created directly from a mesh (e.g. with
+            # `geom_to_kite`): use its columns as profiles
+            profiles = []
+            for icol in range(self.mesh.lons.shape[1]):
+                ok = np.isfinite(self.mesh.lons[:, icol])
+                if ok.sum() < 2:
+                    continue
+                profiles.append([
+                    Point(lo, la, de) for lo, la, de in zip(
+                        self.mesh.lons[ok, icol], self.mesh.lats[ok, icol],
+                        self.mesh.depths[ok, icol])])
+        return kite_surface_node(profiles)
 
     def get_surface_boundaries(self):
         return self._get_external_boundary()
@@ -129,6 +157,10 @@ class KiteSurface(BaseSurface):
 
         One important note here. The kite fault surface uses a rectangular
         mesh to describe the geometry of the rupture; some nodes can be NaN.
+        Only the columns whose first finite node is in the first or second
+        row are used: columns starting deeper are on the lateral edges of the
+        surface (e.g. when profiles are aligned at depth or the surface
+        narrows at the top) and are deliberately not part of the trace.
 
         :returns:
             Two :class:`numpy.ndarray` instances with the longitudes and
@@ -169,6 +201,19 @@ class KiteSurface(BaseSurface):
             Two :class:`numpy.ndarray` instances containing longitudes and
             latitudes, respectively
         """
+        # The boundary is used by Rjb, `surface_projection` and
+        # `get_surface_boundaries`, possibly many times for the same surface
+        # (e.g. in multi-fault sources). It is cached together with the mesh
+        # it was computed from, so that a new mesh invalidates it.
+        cache = getattr(self, '_boundary_cache', None)
+        if cache is None or cache[0] is not self.mesh:
+            cache = (self.mesh, self._compute_external_boundary())
+            self._boundary_cache = cache
+        lo, la = cache[1]
+        return lo.copy(), la.copy()
+
+    def _compute_external_boundary(self):
+        # See `_get_external_boundary`
         if self.is_vertical():
 
             # The surface projection of a vertical surface is its trace. We
@@ -854,6 +899,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
 
     # Adjust the sorting
     _edges_fix_sorting(msh)
+    _warn_if_edges_cross(msh)
 
     # Fix the orientation of the mesh
     msh = _fix_right_hand(msh)
@@ -864,7 +910,26 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     return msh
 
 
+def _warn_if_edges_cross(msh):
+    # Edges (i.e. rows of the mesh) are expected to deepen monotonically
+    # going down the mesh. Crossing edges (a fold in the surface) cannot be
+    # fixed by reordering rows, so they are reported
+    for irow in range(msh.shape[0] - 1):
+        ok = np.isfinite(msh[irow, :, 2]) & np.isfinite(msh[irow + 1, :, 2])
+        if np.any(msh[irow + 1, ok, 2] < msh[irow, ok, 2]):
+            logging.warning(
+                'Kite mesh: edges %d and %d cross each other (the depth '
+                'does not increase monotonically down the mesh)',
+                irow, irow + 1)
+            return True
+    return False
+
+
 def _edges_fix_sorting(msh):
+    # Swaps rows (edges) when, for any column, a lower row is shallower
+    # than an upper one. This is a heuristic: it fixes rows that are simply
+    # out of order but cannot fix edges crossing each other, which are
+    # reported by `_warn_if_edges_cross`
     for i_row_u in range(0, msh.shape[0] - 1):
         for i_row_l in range(i_row_u, msh.shape[0] - 1):
             i_cols = np.logical_and(np.isfinite(msh[i_row_u, :, 2]),
@@ -894,7 +959,9 @@ def _edges_sort_by_mean_depth(msh):
 
 
 def _dbg_plot_mesh(mesh):
-
+    # Debugging only: matplotlib is imported here to avoid importing it
+    # (slow, and possibly unavailable on headless workers) with the module
+    import matplotlib.pyplot as plt
     from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
         set_axes_equal)
 
@@ -917,9 +984,7 @@ def _fix_right_hand(msh):
     #
 
     # Compute the average azimuth for the top edge of the surface
-    tmp = msh[0, :, 0]
-    idx = np.isfinite(tmp)
-    top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
+    top_azi = _top_edge_azimuth(msh)
 
     # Compute the strike of the surface
     coo = msh.reshape(-1, 3)
@@ -929,22 +994,43 @@ def _fix_right_hand(msh):
     strike = grdd.get_strike()
 
     # Check if we need to flip the grid
-    if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
+    dff = np.abs(_angles_diff(strike, top_azi))
+    if not dff < 60:
 
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.flip(msh, axis=1)
 
-        # Compute the average azimuth for the top edge of the surface
-        tmp = nmsh[0, :, 0]
-        idx = np.isfinite(tmp)
-        top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
-
         # Check again the average azimuth for the top edge of the surface
-        msg = "The mesh still does not comply with the right hand rule"
-        assert np.abs(_angles_diff(strike, top.azimuth)) < 60, msg
+        ndff = np.abs(_angles_diff(strike, _top_edge_azimuth(nmsh)))
+        if not ndff < 60:
+            # Neither orientation is close to the strike of the best-fit
+            # plane (e.g. very irregular surfaces): keep the closest one
+            logging.warning(
+                'Kite mesh: the azimuth of the top edge differs from the '
+                'strike (%.1f) by more than 60 degrees in both orientations',
+                strike)
+            return nmsh if ndff < dff else msh
         return nmsh
 
     return msh
+
+
+def _top_edge_azimuth(msh):
+    # Average azimuth of the top edge of the mesh. When the first row
+    # contains less than two finite nodes we use the first finite node of
+    # each column
+    idx = np.isfinite(msh[0, :, 0])
+    if idx.sum() >= 2:
+        coo = msh[0, idx, :]
+    else:
+        fin = np.isfinite(msh[:, :, 0])
+        icol = np.nonzero(fin.any(axis=0))[0]
+        irow = fin[:, icol].argmax(axis=0)
+        coo = msh[irow, icol, :]
+    if len(coo) < 2:
+        raise ValueError('Cannot define the top edge of the mesh: less '
+                         'than two columns with finite nodes')
+    return Line([Point(c[0], c[1]) for c in coo]).azimuth
 
 
 def _angles_diff(ang_a, ang_b):
@@ -1016,19 +1102,25 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     if np.max(lengths) - np.min(lengths) > profile_sd * 0.1:
         ref_idx = np.argmax(lengths)
 
-
     # Check that in each profile the points are equally spaced
-    for pro in rprofiles:
+    for i_pro, pro in enumerate(rprofiles):
         pnts = pro.coo
 
-        # Check that the profile is not crossing the IDL and compute the
-        # distance between consecutive points along the profile
-        assert np.all(pnts[:, 0] <= 180) & np.all(pnts[:, 0] >= -180)
+        # Check that the longitudes are valid and compute the distance
+        # between consecutive points along the profile
+        if np.any(pnts[:, 0] > 180) or np.any(pnts[:, 0] < -180):
+            raise ValueError(
+                f'Profile {i_pro}: longitudes must be in [-180, 180]')
         dst = distance(pnts[:-1, 0], pnts[:-1, 1], pnts[:-1, 2],
                        pnts[1:, 0], pnts[1:, 1], pnts[1:, 2])
 
-        # Check that all the distances are within a given tolerance
-        np.testing.assert_allclose(dst, profile_sd, rtol=1.)
+        # Check that all the distances are within a given tolerance (the
+        # same used before i.e. between 0 and twice the sampling distance)
+        if np.any(np.abs(dst - profile_sd) > profile_sd):
+            raise ValueError(
+                f'Profile {i_pro}: after resampling, the distance between '
+                f'consecutive points ranges from {dst.min():.3f} to '
+                f'{dst.max():.3f} km; expected about {profile_sd} km')
 
     # Find the delta needed to align profiles if requested
     shift = np.zeros((len(rprofiles)))
@@ -1242,6 +1334,7 @@ def _check_sampling(edg, proj):
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
               num=False, hold=False):
     # This is a plotting function used for debugging
+    import matplotlib.pyplot as plt
 
     ax = plt.figure().add_subplot(projection='3d')
 

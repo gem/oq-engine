@@ -1394,3 +1394,105 @@ class KiteMeshBuildingTest(unittest.TestCase):
         pro1 = Line([Point(0, 0.01 * i, 2. * i) for i in range(8)])
         pro2 = Line([Point(1, 0.01 * i, 4. + 2. * i) for i in range(8)])
         self.assertEqual(profiles_depth_alignment(pro1, pro2), 2)
+
+
+class KiteSurfaceValidationTest(unittest.TestCase):
+    """
+    Regression tests for input validation and for surfaces created
+    directly from a mesh
+    """
+
+    def _arc(self, deg=90., inward=True, nrow=5, ncol=25):
+        # Mesh with a trace shaped as an arc of circle, dipping towards or
+        # away from the centre of the circle
+        t = np.radians(np.linspace(0, deg, ncol))
+        rows = []
+        for i in range(nrow):
+            rad = 0.5 - 0.05 * i if inward else 0.5 + 0.05 * i
+            rows.append(np.c_[rad * np.cos(t), rad * np.sin(t),
+                              np.full(ncol, 3. * i)])
+        return np.array(rows)
+
+    def test_surface_nodes_without_profiles(self):
+        # Surfaces created from a mesh (e.g. with geom_to_kite) used to
+        # raise a TypeError
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = self._arc()
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        node = sfc.surface_nodes
+        self.assertEqual(node.tag, 'kiteSurface')
+        self.assertEqual(len(node), sfc.mesh.shape[1])
+        # Each profile contains the 5 nodes of a column (x 3 coordinates)
+        pos = node[0][0][0]  # profile -> gml:LineString -> gml:posList
+        self.assertEqual(len(pos.text), 15)
+
+    def test_clean_nodes_with_undefined_coordinates(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = self._arc(ncol=5)
+        deps = msh[..., 2].copy()
+        deps[2, 2] = np.nan
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1], deps))
+        bad = ~np.isfinite(sfc.mesh.depths)
+        self.assertEqual(bad.sum(), 1)
+        self.assertTrue(np.isnan(sfc.mesh.lons[bad]).all())
+        self.assertTrue(np.isnan(sfc.mesh.lats[bad]).all())
+        # The input arrays are not modified
+        self.assertTrue(np.isfinite(msh[..., 0]).all())
+
+    def test_single_row_mesh(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = self._arc()[:1]
+        with self.assertRaises(ValueError):
+            KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                        msh[..., 2]), sec_id='abc')
+
+    def test_fix_right_hand_single_node_in_first_row(self):
+        # The first row contains a single finite node. This used to raise
+        # an error when building the line of the top edge
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _fix_right_hand)
+        for inward in [True, False]:
+            msh = self._arc(180., inward)
+            msh[0, 1:, :] = np.nan
+            out = _fix_right_hand(msh.copy())
+            # An arc running counterclockwise and dipping towards its
+            # centre dips to the left: it must be flipped
+            flipped = np.isnan(out[0, 0, 0])
+            self.assertEqual(flipped, inward)
+
+    def test_fix_right_hand_fallback(self):
+        # When neither orientation of the top edge is within 60 degrees of
+        # the strike, the closest one is kept instead of failing
+        from unittest import mock
+        from openquake.hazardlib.geo.surface import kite_fault as kf
+        msh = self._arc(30.)
+        with mock.patch.object(kf.GriddedSurface, 'get_strike',
+                               return_value=75.):
+            with self.assertLogs(level='WARNING'):
+                out = kf._fix_right_hand(msh.copy())
+        self.assertEqual(out.shape, msh.shape)
+
+    def test_warn_if_edges_cross(self):
+        from openquake.hazardlib.geo.surface.kite_fault import (
+            _warn_if_edges_cross)
+        msh = self._arc(ncol=4)
+        self.assertFalse(_warn_if_edges_cross(msh))
+        msh[1, 2, 2] = -1.
+        with self.assertLogs(level='WARNING'):
+            self.assertTrue(_warn_if_edges_cross(msh))
+
+    def test_boundary_cache(self):
+        from openquake.hazardlib.geo.mesh import RectangularMesh
+        msh = self._arc()
+        sfc = KiteSurface(RectangularMesh(msh[..., 0], msh[..., 1],
+                                          msh[..., 2]))
+        lo1, la1 = sfc._get_external_boundary()
+        lo1[:] = 0.  # modifying the output must not alter the cache
+        lo2, _ = sfc._get_external_boundary()
+        self.assertFalse(np.all(lo2 == 0.))
+        # A new mesh invalidates the cache
+        old = sfc.mesh
+        sfc.mesh = RectangularMesh(old.lons + 1., old.lats, old.depths)
+        lo3, _ = sfc._get_external_boundary()
+        aae(lo3, lo2 + 1., decimal=6)
