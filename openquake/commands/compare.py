@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import sys
 import collections
 import numpy
@@ -26,6 +25,7 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
+from openquake.calculators.export.hazard import workflow_hmaps_array
 
 aac = numpy.testing.assert_allclose
 F64 = numpy.float64
@@ -572,12 +572,8 @@ def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
     Examples: `oq compare workflow expected_hmaps 19714`
               `oq compare workflow expected_hmaps`
     """
-    # imported here to avoid a circular import
-    from openquake.calculators.export.hazard import workflow_hmaps_array
     if calc_id == -1:
-        with open(os.path.expanduser('~/.last-workflow')) as f:
-            last = f.read().strip().split('\n')[-1]  # the datastore path
-        calc_id = int(re.search(r'calc_(\d+)\.hdf5$', last).group(1))
+        calc_id = datastore.last_workflow_id()
     dstore = datastore.read(calc_id)
     err = 0
     for fname in sorted(os.listdir(expected_dir)):
@@ -599,6 +595,8 @@ def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
             continue
         masks = {}  # column -> boolean array of the rows with differences
         for col in arr.dtype.names:
+            if col == 'calc_id':  # an identifier, changing at every run
+                continue
             if arr[col].dtype.kind == 'U':  # the model names
                 masks[col] = arr[col] != exp[col].to_numpy().astype(str)
             else:

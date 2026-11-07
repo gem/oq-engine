@@ -83,6 +83,15 @@ def _read(calc_id, datadir, mode, haz_id=None):
     return DataStore(path, ppath, mode)
 
 
+def last_workflow_id():
+    """
+    :returns: the ID of the last workflow, as recorded in ~/.last-workflow
+    """
+    with open(os.path.expanduser('~/.last-workflow')) as f:
+        last = f.read().strip().split('\n')[-1]  # the datastore path
+    return int(re.search(r'calc_(\d+)\.hdf5$', last).group(1))
+
+
 def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
     """
     :param calc_id: calculation ID or filename
