@@ -25,6 +25,7 @@ import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
 from scipy import stats
+from shapely import make_valid
 from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
@@ -35,8 +36,7 @@ from openquake.hazardlib.geo.line import _resample, Line
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.geodetic import (
-    npoints_towards, distance, azimuth)
+from openquake.hazardlib.geo.geodetic import distance, azimuth
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
@@ -171,30 +171,41 @@ class KiteSurface(BaseSurface):
         """
         if self.is_vertical():
 
-            lo = []
-            la = []
-            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, 0])))
-            slo = self.mesh.lons[idx, 0]
-            sla = self.mesh.lats[idx, 0]
-            idx = np.min(np.where(np.isfinite(self.mesh.lons[:, -1])))
-            elo = self.mesh.lons[idx, -1]
-            ela = self.mesh.lats[idx, -1]
-            strike = azimuth(slo, sla, elo, ela)
-
-            npt = npoints_towards
+            # The surface projection of a vertical surface is its trace. We
+            # follow the whole trace (not only its end points, which would
+            # ignore its curvature) and give it a small width
             dlt = 0.1
-            tmp = npt(slo, sla, 0.0, strike - 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(slo, sla, 0.0, strike + 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike + 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike - 90, dlt, 0, 2)
-            lo.append(tmp[0][1])
-            la.append(tmp[1][1])
+            chk = np.isfinite(self.mesh.lons)
+            irow = chk.argmax(axis=0)
+            icol = np.arange(self.mesh.lons.shape[1])
+            tlo = self.mesh.lons[irow, icol]
+            tla = self.mesh.lats[irow, icol]
+            proj = geo_utils.OrthographicProjection.from_(tlo, tla)
+            txx, tyy = proj(tlo, tla)
+            # Remove repeated points
+            keep = np.r_[True, np.hypot(np.diff(txx), np.diff(tyy)) > 0]
+            txx, tyy = txx[keep], tyy[keep]
+            if len(txx) < 2:
+                raise ValueError('The trace of a vertical surface must have '
+                                 'at least two distinct points')
+            # Unit normals of the segments and, at each vertex of the trace,
+            # the normalised mean of the normals of the adjacent segments
+            dxy = np.c_[np.diff(txx), np.diff(tyy)]
+            nrm = np.c_[-dxy[:, 1], dxy[:, 0]]
+            nrm /= np.linalg.norm(nrm, axis=1)[:, None]
+            vnr = np.concatenate([nrm[:1], nrm[:-1] + nrm[1:], nrm[-1:]])
+            vln = np.linalg.norm(vnr, axis=1)
+            bad = vln < SMALL  # the trace reverses its direction
+            vnr[bad] = np.concatenate([nrm[:1], nrm])[bad]
+            vnr /= np.linalg.norm(vnr, axis=1)[:, None]
+            pts = np.c_[txx, tyy]
+            lft = pts + dlt * vnr
+            rgt = pts - dlt * vnr
+            # The ring starts with the two points offset from the first
+            # point of the trace, then it follows the right side of the
+            # trace forward and the left side backward
+            ring = np.concatenate([lft[:1], rgt, lft[:0:-1]])
+            lo, la = proj(ring[:, 0], ring[:, 1], reverse=True)
 
         else:
 
@@ -253,50 +264,56 @@ class KiteSurface(BaseSurface):
         """
 
         blo, bla = self._get_external_boundary()
-        distances = geodetic.min_geodetic_distance(
-            (blo, bla), (mesh.lons, mesh.lats))
+        lons = np.asarray(mesh.lons).ravel()
+        lats = np.asarray(mesh.lats).ravel()
+        distances = geodetic.min_geodetic_distance((blo, bla), (lons, lats))
 
-        idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
+        # The distance to the closest vertex of the boundary is only an upper
+        # bound of the distance to the polygon. A point within 40 km of the
+        # polygon (or inside it) is at most `thr` km from the closest vertex,
+        # where `thr` accounts for the length of the boundary segments and
+        # for the size of the polygon (points inside a large polygon can be
+        # far from all its vertexes).
+        seg = geodetic.geodetic_distance(blo, bla, np.roll(blo, -1),
+                                         np.roll(bla, -1))
+        rad = np.max(geodetic.geodetic_distance(blo[0], bla[0], blo, bla))
+        thr = 40. + 0.5 * np.max(seg) + rad
+        idxs = (distances < thr).nonzero()[0]
         if len(idxs) < 1:
             # no point is close enough, return distances as they are
-            return distances
+            return distances.reshape(np.shape(mesh.lons))
 
         # Get the projection
         proj = geo_utils.OrthographicProjection.from_(blo, bla)
 
         # Mesh projected coordinates
-        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+        mesh_xx, mesh_yy = proj(lons[idxs], lats[idxs])
 
-        # Create the shapely Polygon using projected coordinates
+        # Create the shapely Polygon using projected coordinates. The
+        # boundary of irregular surfaces can self-intersect, hence we make
+        # the polygon valid
         xp, yp = proj(blo, bla)
-        polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
+        polygon = Polygon(np.c_[xp, yp])
+        if not polygon.is_valid:
+            polygon = make_valid(polygon)
 
         # Calculate the distances
         distances[idxs] = geo_utils.point_to_polygon_distance(
             polygon, mesh_xx, mesh_yy)
 
-        return distances
+        return distances.reshape(np.shape(mesh.lons))
 
     def _fix_right_hand(self):
         """
         This method fixes the mesh used to represent the grid surface so
         that it complies with the right hand rule.
         """
-        found = False
-        irow = 0
-        icol = 0
-        while not found:
-            if np.all(np.isfinite(self.mesh.lons[irow:irow + 2,
-                                                 icol:icol + 2])):
-                found = True
-            else:
-                icol += 1
-                if (icol + 1) >= self.mesh.lons.shape[1]:
-                    irow += 1
-                    icol = 1
-                    if (irow + 1) >= self.mesh.lons.shape[0]:
-                        break
+        # Find the first cell with four finite vertexes
+        fin = np.isfinite(self.mesh.lons)
+        cells = fin[:-1, :-1] & fin[:-1, 1:] & fin[1:, :-1] & fin[1:, 1:]
+        found = cells.any()
         if found:
+            irow, icol = np.argwhere(cells)[0]
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
                                  self.mesh.lons[irow, icol + 1],
@@ -306,7 +323,9 @@ class KiteSurface(BaseSurface):
                               self.mesh.lons[irow + 1, icol],
                               self.mesh.lats[irow + 1, icol])
 
-            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
+            # The dip direction should be at strike + 90. If it is at
+            # strike - 90 the mesh must be flipped
+            if abs(_angles_diff(azi_strike - 90, azi_dip)) < 40:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -399,11 +418,15 @@ class KiteSurface(BaseSurface):
         """
         if self.strike is None:
             idx = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
+            if len(idx) < 2:
+                raise ValueError('Cannot compute the strike: the first row '
+                                 'of the mesh has less than two finite nodes')
             azi = azimuth(self.mesh.lons[0, idx[:-1]],
                           self.mesh.lats[0, idx[:-1]],
                           self.mesh.lons[0, idx[1:]],
                           self.mesh.lats[0, idx[1:]])
-            self.strike = np.mean((azi + 0.001) % 360)
+            # Azimuths are averaged as angles i.e. 359 and 1 give 0, not 180
+            self.strike = _circular_mean(azi)
         return self.strike
 
     def get_top_edge_depth(self):
@@ -414,8 +437,10 @@ class KiteSurface(BaseSurface):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        ok = np.isfinite(self.mesh.lons[0, :])
-        return np.amin(self.mesh.depths[0, ok])
+        # The shallowest node is not necessarily in the first row since this
+        # can contain NaNs
+        ok = np.isfinite(self.mesh.lons)
+        return np.amin(self.mesh.depths[ok])
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
@@ -472,8 +497,12 @@ class KiteSurface(BaseSurface):
         mesh = self.mesh
         irow = int(np.round(mesh.shape[0] / 2))
         icol = int(np.round(mesh.shape[1] / 2))
-        return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
-                     mesh.depths[irow, icol])
+        if np.isfinite(mesh.lons[irow, icol]):
+            return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
+                         mesh.depths[irow, icol])
+        # The central node is not defined, use the finite node closest to
+        # the centroid of the surface
+        return self.get_middle_point()
 
     def get_middle_point(self):
         """
@@ -565,13 +594,12 @@ class KiteSurface(BaseSurface):
         dd[idx] = distance(lo0[idx], la0[idx], de0[idx],
                            lo1[idx], la1[idx], de1[idx])
 
-        # Compute the area of the upper left triangles in each cell
-        s = (dx[:-1, :] + dy[:, :-1] + dd) * 0.5
-        upp = (s * (s - dx[:-1, :]) * (s - dy[:, :-1]) * (s - dd))**0.5
-
-        # Compute the area of the lower right triangles in each cell
-        s = (dx[1:, :] + dy[:, 1:] + dd) * 0.5
-        low = (s * (s - dx[1:, :]) * (s - dy[:, 1:]) * (s - dd))**0.5
+        # The diagonal `dd` connects the upper-left and the lower-right
+        # vertexes of each cell. It splits the cell into an upper-right
+        # triangle (top side, right side, diagonal) and a lower-left triangle
+        # (left side, bottom side, diagonal)
+        upp = _heron(dx[:-1, :], dy[:, 1:], dd)
+        low = _heron(dx[1:, :], dy[:, :-1], dd)
 
         # Compute the area of each cell
         area = np.full_like(dd, np.nan)
@@ -589,6 +617,23 @@ class KiteSurface(BaseSurface):
         else:
             idx = ''
         return '<%s%s>' % (self.__class__.__name__, idx)
+
+
+def _heron(a, b, c):
+    # Area of triangles with sides `a`, `b` and `c` (Heron's formula). The
+    # product is clipped at zero so that rounding errors on degenerate
+    # triangles do not produce NaNs. NaN sides still give a NaN area.
+    s = (a + b + c) * 0.5
+    prod = s * (s - a) * (s - b) * (s - c)
+    return np.sqrt(np.where(np.isfinite(prod), np.maximum(prod, 0.), np.nan))
+
+
+def _circular_mean(angles, weights=None):
+    # Mean of angles in decimal degrees, in the range [0, 360)
+    rad = np.radians(angles)
+    sin = np.average(np.sin(rad), weights=weights)
+    cos = np.average(np.cos(rad), weights=weights)
+    return np.degrees(np.arctan2(sin, cos)) % 360
 
 
 def geom_to_kite(geom):
@@ -912,27 +957,27 @@ def _align_profiles(prfr: list, prfl: list):
     # Check that the two sets contain profiles with the same length
     lenr = len(prfr[0])
     lenl = len(prfl[0])
-    assert np.all(np.array([len(pr) for pr in prfr]) - lenr) == 0.0
-    assert np.all(np.array([len(pr) for pr in prfl]) - lenl) == 0.0
+    if not (all(len(pr) == lenr for pr in prfr) and
+            all(len(pr) == lenl for pr in prfl)):
+        raise ValueError('Profiles in each set must have the same length')
 
-    # Find the alignment between left and right
-    delta = 0
+    # Find the alignment between left and right i.e. the number of NaN
+    # points to add at the top of the profiles in the set whose reference
+    # profile starts deeper
     if prfr[0][0][2] <= prfl[0][0][2]:
         # Initial depth of the right profile shallower
-        for i_dep, dep in enumerate(prfr[0][:][2]):
-            if np.abs(dep - prfl[0][0][2]) < SMALL:
-                delta = i_dep
-                break
-            for i_pro, pro in enumerate(prfl):
-                prfl[i_pro] = _fill(delta, pro)
+        shallow, deep = prfr, prfl
     else:
         # Initial depth of the left profile shallower
-        for i_dep, dep in enumerate(prfl[0][:][2]):
-            if np.abs(dep - prfr[0][0][2]) < SMALL:
-                delta = i_dep
-                break
-            for i_pro, pro in enumerate(prfr):
-                prfr[i_pro] = _fill(delta, pro)
+        shallow, deep = prfl, prfr
+    delta = 0
+    for i_dep, dep in enumerate(np.array(shallow[0])[:, 2]):
+        if np.abs(dep - deep[0][0][2]) < SMALL:
+            delta = i_dep
+            break
+    if delta > 0:
+        for i_pro, pro in enumerate(deep):
+            deep[i_pro] = _fill(delta, pro)
 
     # Pad at the end to get the same length
     delta = len(prfl[0]) - len(prfr[0])
@@ -1172,34 +1217,26 @@ def _check_sampling(edg, proj):
     #   An instance of
     #   :class:`openquake.hazardlib.geo.geo_utils.OrthographicProjection`
 
-    # Find continuos parts
-    idxs = []
-    first = None
-    last = None
-
-    for i_e, e in enumerate(edg):
-        if first is None and np.isfinite(e[0]):
-            first = i_e
-        elif first is not None and np.isfinite(e[0]):
-            last = i_e
-        elif first is not None and last is not None and not np.isfinite(e[0]):
-            if last - first > 0:
-                idxs.append([first, last])
-            first = None
-            last = None
+    # Find the continuous parts i.e. runs of consecutive finite points
+    # (the start index is inclusive, the end index is exclusive)
+    fin = np.isfinite(edg[:, 0]).astype(int)
+    chg = np.diff(np.concatenate([[0], fin, [0]]))
+    starts = np.nonzero(chg == 1)[0]
+    ends = np.nonzero(chg == -1)[0]
 
     # Check the sampled edges
-    for idx in idxs:
-        edg = edg[idx[0]:idx[1]].T
-        if edg.shape[1] == 0:
+    for i_start, i_end in zip(starts, ends):
+        if i_end - i_start < 3:
+            # Less than two segments, nothing to compare
             continue
-        xp, yp = proj(edg[0], edg[1])
-        dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
-                np.diff(edg[2])**2)
-        dsts = np.array([dsts[0]] + dsts.tolist())
-        dsts = dsts[~np.isnan(edg[2])]
-
-        np.testing.assert_allclose(dsts, dsts[0], rtol=2e-2)
+        sub = edg[i_start:i_end].T
+        xp, yp = proj(sub[0], sub[1])
+        dsts = (np.diff(xp)**2 + np.diff(yp)**2 + np.diff(sub[2])**2)**0.5
+        if not np.allclose(dsts, dsts[0], rtol=2e-2):
+            raise ValueError(
+                'The sampling along an edge of the mesh is not constant: '
+                f'segment lengths range from {dsts.min():.3f} to '
+                f'{dsts.max():.3f} km')
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
