@@ -296,16 +296,14 @@ def export_hmaps_stats_csv(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hazard_map-mean-475y', 'csv'), ('hazard_map-mean-2475y', 'csv'))
-def export_workflow_hmaps_csv(ekey, dstore):
+def workflow_hmaps_array(dstore, key):
     """
-    Exports the mean hazard maps of a workflow, one .csv file per dataset,
-    with one row per point and the model name in the first column
-
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
+    :param dstore: datastore of a workflow
+    :param key: a mean hazard map dataset, e.g. 'hazard_map-mean-475y'
+    :returns: a structured array with one row per point and the model name,
+              the calc_id, the coordinates and one column per IMT, sorted
+              by model, lon and lat
     """
-    key, fmt = ekey
     grp = dstore.hdf5[key]
     imts = [name for name in grp if name not in ('calc', 'lat', 'lon')]
     # the model names are 3 letters long, see the workflow datastore
@@ -326,6 +324,21 @@ def export_workflow_hmaps_csv(ekey, dstore):
     arr['lat'] = grp['lat'][()]
     for imt in imts:
         arr[imt] = grp[imt][()]
+    # lexsort uses the last key as the primary one
+    return arr[numpy.lexsort((arr['lat'], arr['lon'], arr['model']))]
+
+
+@export.add(('hazard_map-mean-475y', 'csv'), ('hazard_map-mean-2475y', 'csv'))
+def export_workflow_hmaps_csv(ekey, dstore):
+    """
+    Exports the mean hazard maps of a workflow, one .csv file per dataset,
+    with one row per point and the model name in the first column
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    key, fmt = ekey
+    arr = workflow_hmaps_array(dstore, key)
     fname = dstore.build_fname('hazard_map', key[len('hazard_map-'):], fmt)
     writers.write_csv(fname, arr, comment=dstore.metadata)
     return [fname]
