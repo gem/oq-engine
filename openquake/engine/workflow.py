@@ -23,6 +23,7 @@ import ast
 import copy
 import logging
 import os
+from datetime import datetime
 import re
 import sys
 import time
@@ -331,6 +332,8 @@ def prepare_workflow(params, workflow_toml, pdb, kfilter):
         if new:
             descr = workflows[0].description
             dstore = datastore.read(workflow_id, 'w')
+            # the date is used by the exporters, see datastore.metadata
+            dstore['/'].attrs['date'] = datetime.now().isoformat()[:19]
             wf_df = pandas.DataFrame(
                 dict(name=names,
                      calc_id=[0] * n,
