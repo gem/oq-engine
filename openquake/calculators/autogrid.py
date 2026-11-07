@@ -199,6 +199,7 @@ def _calib_cmaker(cmaker, imts):
     md = cmaker.maximum_distance
     return cmaker.restrict(imts, LEVEL_STEP).copy(
         gsims=dict(list(cmaker.gsims.items())[:1]),
+        batch_point_sources=True,
         maximum_distance=magdepdist(zip(md.x, numpy.minimum(md.y, MAXDIST))))
 
 

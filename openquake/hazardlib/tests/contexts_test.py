@@ -440,6 +440,17 @@ class EstimateNctxsTestCase(unittest.TestCase):
         self.assertEqual(contexts.estimate_nctxs(
             self.cmaker, [self.src], sites), 6)
 
+    def test_single_rupture(self):
+        # One rupture per magnitude gives the same count at every psdist,
+        # both with separate close/far sites and with few-sites handling.
+        self.src.hypocenter_distribution = PMF([(1., 5.)])
+        for max_sites in [0, 10]:
+            for psdist in [0., 10., 1000.]:
+                self.cmaker.max_sites_disagg = max_sites
+                self.cmaker.pointsource_distance = psdist
+                self.assertEqual(contexts.estimate_nctxs(
+                    self.cmaker, [self.src], self.sites), 6)
+
     def test_magnitude_distance_boundary(self):
         # A site exactly at maximum_distance is counted by the estimate,
         # although it generates no contexts: the estimate is approximate.
@@ -524,6 +535,27 @@ def _sorted_rows(ctx):
 
 
 class FromSrcsPsdistsTestCase(unittest.TestCase):
+    def test_batch_magnitudes(self):
+        # Batching must preserve magnitude-dependent filtering and the
+        # original context rows, including the few-sites rupture IDs.
+        src = PointSource(
+            'ps', 'pointsource', '*',
+            ArbitraryMFD([4., 5., 6., 7.], [.1] * 4), 1., WC1994(), 1.5,
+            tom, 0., 20., Point(0., 0.),
+            PMF([(1., NodalPlane(0., 45., 90.))]), PMF([(1., 5.)]))
+        sites = SiteCollection([Site(Point(lon, 0.))
+                                for lon in [0., .1, .4, 1.]])
+        cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 25.), (6., 100.)]})
+        for max_sites in [0, 10]:
+            cmaker.max_sites_disagg = max_sites
+            expected = cmaker.from_srcs([src], sites, [15., 100.])
+            batched = cmaker.copy(batch_point_sources=True)
+            actual = batched.from_srcs([src], sites, [15., 100.])
+            for psd in expected:
+                numpy.testing.assert_array_equal(actual[psd], expected[psd])
+
     def test(self):
         # the contexts built at once for several pointsource distances
         # must be the same as the contexts built for each distance
