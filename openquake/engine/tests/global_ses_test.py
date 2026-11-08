@@ -103,7 +103,7 @@ def test_one_site():
         path('job1.ini'), hazard_calculation_id='rups.hdf5')
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 14
+    assert len(df) == 133
     assert df.index.max() < 1
 
     # test multi-model rupture exporter
@@ -124,8 +124,10 @@ def test_export_gmf_data_csv():
     # sigma_epsilon event IDs must match the stored ones, not be remapped
     sig_eps = calc.datastore['gmf_data/sigma_epsilon'][()]
     df = pandas.read_csv(sig_eps_csv, comment='#')
-    ae(df['event_id'].to_numpy(), numpy.sort(sig_eps['eid']))
     gmf_df = pandas.read_csv(fname, comment='#')
+    # only the events with GMFs are exported
+    ok = numpy.isin(sig_eps['eid'], gmf_df['event_id'])
+    ae(df['event_id'].to_numpy(), numpy.sort(sig_eps['eid'][ok]))
     assert set(df['event_id']) <= set(gmf_df['event_id'])
 
 
@@ -181,7 +183,7 @@ def test_sites():  # 5 sites
     #    numpy.array([b'A', b'B', b'C', b'D', b'E']))
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 68
+    assert len(df) == 277
     assert df.index.max() < 5
 
 
@@ -192,12 +194,12 @@ def test_site_model():  # 5 sites
     ae(calc.sitecol.sids, [0, 1, 2, 3, 4])
     last_job = calc.datastore.calc_id
     df = calc.datastore.read_df('gmf_data', 'sid')
-    assert len(df) == 65
+    assert len(df) == 284
     assert df.index.max() < 5
     rdf = calc.datastore.read_df('filtered_ruptures', 'id')
-    assert len(rdf) == 15870
+    assert len(rdf) == 15581
     edf = calc.datastore.read_df('relevant_events', 'id')
-    assert len(edf) == 16587
+    assert len(edf) == 16278
     rel_rups = rdf[numpy.isin(rdf.index, edf.rup_id)]
     assert len(rel_rups) == len(rdf)
 
