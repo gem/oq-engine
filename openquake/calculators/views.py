@@ -41,7 +41,7 @@ from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.rmap_maker import read_cmakers
 from openquake.hazardlib.source_group import read_csm
-from openquake.commonlib import util
+from openquake.commonlib import util, datastore, logs
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
@@ -645,6 +645,36 @@ def view_performance(token, dstore):
     Display performance information
     """
     return performance_view(dstore)
+
+
+@view.add('workflow_info')
+def view_workflow_info(token, dstore):
+    """
+    Display, for each model of a workflow, the calc_id, the size of the
+    datastore in MB and the runtimes in seconds (total, classical,
+    preclassical and calibration), ordered by decreasing total runtime
+    """
+    wf = dstore.hdf5['workflow']
+    names = [decode(x) for x in wf['name'][()]]
+    dt = [('model', 'U3'), ('calc_id', numpy.int64),
+          ('size_mb', numpy.float64), ('total', numpy.float64),
+          ('classical', numpy.float64), ('preclassical', numpy.float64),
+          ('calibration', numpy.float64)]
+    rows = []
+    for name, calc_id, size in zip(names, wf['calc_id'][()],
+                                   wf['size_mb'][()]):
+        calc_id = int(calc_id)
+        perf = datastore.read(calc_id)['performance_data'][:]
+        times = collections.defaultdict(float)
+        for op, sec in zip(perf['operation'], perf['time_sec']):
+            times[decode(op)] += sec
+        [stats] = logs.dbcmd('get_job_stats', calc_id)
+        rows.append((name, calc_id, size, stats.duration,
+                     times['ClassicalCalculator.run'],
+                     times['PreClassicalCalculator.run'],
+                     times['calibrating ps_grid_spacing']))
+    arr = numpy.array(rows, dt)
+    return arr[numpy.argsort(arr['total'])[::-1]]
 
 
 def stats(name, array, *extras):
