@@ -631,13 +631,15 @@ def oq_path(inst):
 
 def upgrade_db(inst, oqreal):
     """
-    Create or upgrade the database.
+    Create or upgrade the database, then run the postinstall commands of the
+    standalone applications; return their errors.
     """
     if inst in (server, devel_server):
         subprocess.run(
             ['sudo', '-u', 'openquake', oqreal, "engine", "--upgrade-db"])
     else:  # create/upgrade the db in the default location
         subprocess.run([oqreal, "engine", "--upgrade-db"])
+    return postinstall_standalone(inst)
 
 
 def create_symlink(inst, oqreal):
@@ -756,11 +758,9 @@ def install(inst, version, from_fork, noupgrade):
     oqreal = oq_path(inst)
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
-    upgrade_db(inst, oqreal)
+    errors += upgrade_db(inst, oqreal)
 
     create_services(inst)
-
-    errors += postinstall_standalone(inst)
 
     create_symlink(inst, oqreal)
     activation_message(inst)
