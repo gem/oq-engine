@@ -906,8 +906,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.cmdict['Default'])
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
-        # [2] contexts before collapse_precision for the gridding baseline
-        self.cfactor = numpy.zeros(3)
+        # [2] contexts before collapse_precision for the gridding baseline,
+        # [3] contexts saved by the source variants optimization
+        self.cfactor = numpy.zeros(4)
         self.dparam_mb = 0
         self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -1012,19 +1013,25 @@ class ClassicalCalculator(base.HazardCalculator):
     def store_grid(self):
         """
         Store in the nctxs dataset the contexts after collapse_precision
-        in the 'collapsed' field and the contexts of the gridded point sources
-        before collapse_precision in the 'gridded' field, see contexts.py.
-        If collapse_precision or ps_grid_spacing is set and there is no
-        estimate in the 'exact' field, the 'exact' field is set to the
-        contexts before collapse_precision, counted for all source types.
+        in the 'collapsed' field, the contexts of the gridded point sources
+        before collapse_precision in the 'gridded' field and the contexts
+        without the source variants optimization in the 'separate' field,
+        see contexts.py. If collapse_precision or ps_grid_spacing is set and
+        there is no estimate in the 'exact' field, the 'exact' field is set
+        to the contexts before collapse_precision, counted for all source
+        types.
         """
-        after, removed, gridded = self.cfactor
+        after, removed, gridded, saved = self.cfactor
+        est = numpy.zeros(1, preclassical.CTX_EST)
         if 'nctxs' in self.datastore:
-            est = self.datastore['nctxs'][()]
-        else:
-            est = numpy.zeros(1, preclassical.CTX_EST)
+            # NB: the dataset can lack some fields, if it was stored by
+            # an older version of the engine
+            old = self.datastore['nctxs'][()]
+            for name in old.dtype.names:
+                est[name] = old[name]
         est['gridded'] = int(gridded)
         est['collapsed'] = int(after)
+        est['separate'] = int(after + saved)
         oq = self.oqparam
         if ((oq.collapse_precision or oq.ps_grid_spacing)
                 and est['exact'][0] == 0):
@@ -1036,8 +1043,9 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the overall context reduction, including point-source gridding
         and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
+        Log the reduction due to the source variants optimization, if any.
         """
-        after, removed, gridded = self.cfactor
+        after, removed, gridded, saved = self.cfactor
         before = after + removed
         collapse = before / after  # reduction by collapse_precision
         # NB: the estimates are zero when not computed, see CTX_EST
@@ -1074,6 +1082,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 'collapse_precision removed only %.1f%% of contexts; '
                 'collapse_precision should be turned off',
                 100 * removed / before)
+        if saved:  # see the 'separate' field of the nctxs dataset
+            logging.info('The source variants optimization reduced the '
+                         'contexts from {:_d} to {:_d}, a factor {:.2f}'
+                         .format(int(after + saved), int(after),
+                                 (after + saved) / after))
 
     def _pre_execute(self):
         oq = self.oqparam

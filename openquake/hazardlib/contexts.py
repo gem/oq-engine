@@ -869,8 +869,11 @@ class ContextMaker(object):
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         # [0] contexts after collapsing, [1] removed by collapse_precision,
-        # [2] contexts before collapse_precision for the gridding baseline
-        self.cfactor = numpy.zeros(3)
+        # [2] contexts before collapse_precision for the gridding baseline,
+        # [3] contexts saved by the source variants optimization, i.e. the
+        # extra contexts the variants would generate if computed separately
+        # (see rmap_maker._update_chunk)
+        self.cfactor = numpy.zeros(4)
 
     def copy(self, **kw):
         """
