@@ -130,7 +130,18 @@ def _get_margin(sg, maxdist):
 # with a single point is not split by split_source, so it is not gridded
 # by the engine and it is ignored, since it gives no gridding error
 def prepare_points(sg, sites, maxdist, monitor):
-    """Return the calibration points of a source group."""
+    """
+    Return the calibration points of a source group, i.e. its point
+    sources (including the ones obtained by splitting the area and
+    multipoint sources) within the maximum distance plus a margin (see
+    _get_margin) from at least one site of the sample.
+
+    :param sg: a source group
+    :param sites: the sample of sites used in the calibration
+    :param maxdist: the maximum distance of the group, in km
+    :param monitor: a Monitor instance
+    :returns: a dictionary grp_id -> list of point sources
+    """
     dist = maxdist + _get_margin(sg, maxdist)
     points = []
     for src in sg:
