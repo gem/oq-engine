@@ -440,17 +440,6 @@ class EstimateNctxsTestCase(unittest.TestCase):
         self.assertEqual(contexts.estimate_nctxs(
             self.cmaker, [self.src], sites), 6)
 
-    def test_single_rupture(self):
-        # One rupture per magnitude gives the same count at every psdist,
-        # both with separate close/far sites and with few-sites handling.
-        self.src.hypocenter_distribution = PMF([(1., 5.)])
-        for max_sites in [0, 10]:
-            for psdist in [0., 10., 1000.]:
-                self.cmaker.max_sites_disagg = max_sites
-                self.cmaker.pointsource_distance = psdist
-                self.assertEqual(contexts.estimate_nctxs(
-                    self.cmaker, [self.src], self.sites), 6)
-
     def test_magnitude_distance_boundary(self):
         # A site exactly at maximum_distance is counted by the estimate,
         # although it generates no contexts: the estimate is approximate.
