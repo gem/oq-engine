@@ -150,8 +150,19 @@ def prepare_points(sg, sites, maxdist, monitor):
     return {sg.sources[0].grp_id: points}
 
 
-def prepare_pairs(points, sites, maxdist, psgs, monitor):
-    """Grid a group's points and estimate the task weights."""
+def grid_and_weight(points, sites, maxdist, psgs, monitor):
+    """
+    Grid the point sources of a group and weight the gridded sources, to
+    balance the calibration tasks (see _get_blocks).
+
+    :param points: the point sources of a group, with the same grp_id
+    :param sites: the sample of sites used in the calibration
+    :param maxdist: the maximum distance of the group, in km
+    :param psgs: the ps_grid_spacing in km (0 means no gridding)
+    :param monitor: a Monitor instance
+    :returns: a dictionary grp_id -> list of pairs (source, weight), with
+        weight = number of ruptures * (number of sites within maxdist + 1)
+    """
     grp_id = points[0].grp_id
     srcs = grid_point_sources(points, psgs)
     mesh = Mesh.from_coords(
@@ -168,7 +179,7 @@ def prepare_pairs(points, sites, maxdist, psgs, monitor):
 def _get_blocks(groups, sites, cmakers, psgs, num_tasks, h5=None):
     args = [(points, sites, cmakers[grp_id].maximum_distance.y[-1], psgs)
             for grp_id, points in groups.items()]
-    bygroup = parallel.Starmap(prepare_pairs, args, h5=h5).reduce()
+    bygroup = parallel.Starmap(grid_and_weight, args, h5=h5).reduce()
     # Keep the original group order, independently of task completion.
     pairs = [pair for grp_id in groups for pair in bygroup[grp_id]]
     maxweight = sum(w for _, w in pairs) / num_tasks
