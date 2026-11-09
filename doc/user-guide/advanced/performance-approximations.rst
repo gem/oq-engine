@@ -64,8 +64,8 @@ The calibration works as follows (in engine v3.27, it may change in the future):
   exact, but too expensive for large maximum distances);
 - the candidates are the grid spacings 50, 25 and 15 km, each one with the ``pointsource_distance`` values 15, 25, 50
   and 75 km (if the ``pointsource_distance`` is set in the job.ini, only that value is tried);
-- the errors are normalized by ``0.01 + 0.01 * |reference|``, as in ``numpy.testing.assert_allclose`` with
-  ``atol=0.01`` and ``rtol=0.01``, and a candidate is acceptable if the 99th percentile of the normalized error on
+- the errors are normalized by ``0.002 + 0.01 * |reference|``, as in ``numpy.testing.assert_allclose`` with
+  ``atol=0.002`` and ``rtol=0.01``, and a candidate is acceptable if the 99th percentile of the normalized error on
   the hazard maps is at most 1, i.e. the hazard maps are close within these tolerances;
 - the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the full
   calculation; if no candidate is acceptable, the candidates with a normalized error within 10% of the smallest one

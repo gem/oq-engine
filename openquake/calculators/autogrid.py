@@ -57,7 +57,7 @@ PS_DISTANCES = [15., 25., 50., 75.]  # candidate values in km
 REFERENCE = (0., 100.)
 # the errors on the hazard maps are close when |h - r| <= ATOL + RTOL * |r|,
 # as in numpy.testing.assert_allclose(h, r, rtol=RTOL, atol=ATOL)
-ATOL = .01  # absolute tolerance on the hazard maps (in g)
+ATOL = .002  # absolute tolerance on the hazard maps (in g)
 RTOL = .01  # relative tolerance on the hazard maps
 # the calibration uses only the IMTs with the periods closest to these:
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
