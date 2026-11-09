@@ -26,6 +26,7 @@ import psutil
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi
 from openquake.commonlib.auth import API_KEY
+from openquake.server import standalone
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
@@ -127,6 +128,9 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     actions.upgrade_db(dbapi.db)
+    errors = standalone.postinstall(sys.executable)
+    if errors:
+        sys.exit('\n'.join(errors))
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

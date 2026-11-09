@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import getpass
 from openquake.baselib import config
 from openquake.commonlib import logs
@@ -28,28 +27,29 @@ def main(yes=False):
     """
     Remove all the datastores and the database of the current user
     """
+    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
+    if not os.path.isfile(dbpath):
+        print('%s does not exist, nothing to reset' % dbpath)
+        return
+
     ok = yes or confirm('Do you really want to destroy all your data? (y/n) ')
     if not ok:
         return
 
-    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
-    if not os.path.isfile(dbpath):
-        sys.exit('%s does not exist' % dbpath)
-    else:
-        user = getpass.getuser()
-        for calc_id in logs.dbcmd('get_calc_ids', user):
-            purge_one(calc_id, user, force=True)
-        if os.access(dbpath, os.W_OK):   # single user mode
-            purge_all(user)  # calculations in oqdata not in the db
-            # remove the database
-            os.remove(dbpath)
-            print('Removed %s' % dbpath)
-            # remove also files left over by PRAGMA journal_mode = WAL
-            for suffix in ('-wal', '-shm'):
-                leftover = dbpath + suffix
-                if os.path.exists(leftover):
-                    os.remove(leftover)
-                    print('Removed %s' % leftover)
+    user = getpass.getuser()
+    for calc_id in logs.dbcmd('get_calc_ids', user):
+        purge_one(calc_id, user, force=True)
+    if os.access(dbpath, os.W_OK):   # single user mode
+        purge_all(user)  # calculations in oqdata not in the db
+        # remove the database
+        os.remove(dbpath)
+        print('Removed %s' % dbpath)
+        # remove also files left over by PRAGMA journal_mode = WAL
+        for suffix in ('-wal', '-shm'):
+            leftover = dbpath + suffix
+            if os.path.exists(leftover):
+                os.remove(leftover)
+                print('Removed %s' % leftover)
 
 
 main.yes = 'confirmation'

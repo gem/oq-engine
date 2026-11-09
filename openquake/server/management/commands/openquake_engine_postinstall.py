@@ -18,10 +18,80 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # import subprocess
+import json
+import os
+from importlib.metadata import version
+
 from django.apps import apps as django_apps
 from django.core.management import call_command, get_commands
 import sys
 from django.core.management.base import BaseCommand
+from openquake.commonlib.logs import get_datadir
+
+
+def _taxonomy_postinstall_state():
+    # Track both packages so added standard records are synced on upgrades.
+    signature = ':'.join((version('django-gem-taxonomy'),
+                          version('openquake-gem-taxonomy-data')))
+    marker = os.path.join(get_datadir(), '.django_gem_taxonomy_version')
+    return marker, signature
+
+
+def _sync_taxonomy():
+    # Add missing standard records without resetting customized database rows.
+    # These packages are optional and may not be installed in every setup.
+    from django_gem_taxonomy.models import Attribute, AtomsGroup, Atom, Param
+    from openquake import gem_taxonomy_data
+
+    data_file = os.path.join(os.path.dirname(gem_taxonomy_data.__file__),
+                             'data', 'taxonomy4.0_standard.json')
+    with open(data_file) as f:
+        data = json.load(f)
+
+    attrs = {}
+    for item in data['Attribute']:
+        attrs[item['name']], _ = Attribute.objects.get_or_create(
+            name=item['name'], defaults={
+                'prog': item['prog'], 'title': item['title']})
+
+    groups = {}
+    for item in data['AtomsGroup']:
+        groups[item['name']], _ = AtomsGroup.objects.get_or_create(
+            name=item['name'], defaults={
+                'prog': item['prog'], 'title': item['title'],
+                'attr': attrs[item['group']]})
+
+    atoms = {}
+    atoms['_ARG'], _ = Atom.objects.get_or_create(
+        name='_ARG', defaults={
+            'prog': 0,
+            'title': '',
+            'desc': ('Virtual atom dependency to prevent arguments-only '
+                     'atoms from being visualized as unconstrained atoms'),
+            'args': None, 'params': None,
+            'type': json.dumps({'name': 'virtual'}),
+            'group': None, 'attr': None})
+    for item in data['Atom']:
+        name = item['name']
+        args = json.loads(item['args']) if item['args'] else None
+        params = json.loads(item['params']) if item['params'] else None
+        atom_type = data['AtomType'].get(name, json.dumps({}))
+        atoms[name], _ = Atom.objects.get_or_create(name=name, defaults={
+            'prog': item['prog'], 'title': item['title'],
+            'desc': item['desc'], 'args': args, 'params': params,
+            'type': atom_type, 'group': groups[item['group']],
+            'attr': attrs[item['attr']]})
+
+    for name, dependencies in data['AtomsDeps'].items():
+        atoms[name].deps.add(*(atoms[dep] for dep in dependencies))
+    for name, denied in data['AtomsDeny'].items():
+        atoms[name].deny.add(*(atoms[atom] for atom in denied))
+    for atom_name, parameters in data['Param'].items():
+        for item in parameters:
+            Param.objects.get_or_create(
+                atom=atoms[atom_name], name=item['name'], defaults={
+                    'title': item['title'], 'desc': item['desc'],
+                    'prog': item['prog']})
 
 
 class Command(BaseCommand):
@@ -55,5 +125,26 @@ class Command(BaseCommand):
                         options['django_app'],))
                 )
             sys.exit(0)
+
+        marker = None
+        if options['django_app'] == 'django_gem_taxonomy':
+            attr_model = django_apps.get_model(
+                'django_gem_taxonomy', 'Attribute')
+            marker, signature = _taxonomy_postinstall_state()
+            if os.path.exists(marker):
+                with open(marker) as f:
+                    same_version = f.read().strip() == signature
+                if same_version and attr_model.objects.exists():
+                    self.stdout.write(
+                        'Taxonomy data already synced, skipping.')
+                    return
+
+        if marker:
+            _sync_taxonomy()
+            os.makedirs(os.path.dirname(marker), exist_ok=True)
+            with open(marker + '.tmp', 'w') as f:
+                f.write(signature)
+            os.replace(marker + '.tmp', marker)
+            return
 
         call_command(postinstall_cmd)

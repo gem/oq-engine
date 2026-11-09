@@ -174,13 +174,22 @@ We recommend to keep the file openquake.cfg in the $HOME folder to avoid losing 
 
 If you are on a Linux machine _and_ you have root permissions, the
 recommended installation method is `server`. In this case, the engine
-will work with multiple users and a system V service will be
-automatically installed and started: `openquake-webui`.
+will work with multiple users. When systemd is available, the installer
+creates and starts the `openquake-webui` service. On systems without
+systemd, start the WebUI manually as the `openquake` user:
 
 ```
 $ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ sudo -H python3.11 install.py server
 ```
+
+```
+$ sudo -u openquake /opt/openquake/venv/bin/oq webui start -s
+```
+
+The first WebUI startup applies database migrations and synchronizes the
+optional standalone application data. New standard taxonomy records are
+added without replacing existing records.
 
 The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
