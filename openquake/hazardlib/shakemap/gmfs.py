@@ -469,15 +469,15 @@ def _condition_within(shakemap, imts, within, conditional_phi):
         shakemap['lon'], shakemap['lat']]), axis=0,
         return_index=True, return_inverse=True)
     U, D = len(points), numpy.unique(stations['imt'], return_counts=True)[1]
-    # the dense posterior covariance and the (U, D) station correction
-    required = 80 * U ** 2 + 8 * U * D.max() + 48 * D.max() ** 2
+    # the dense posterior covariance and the (U, D) station correction;
+    # the peak, in the eigendecomposition, is about 3 (U, U) matrices,
+    # measured at 26 bytes per pair for 6000 points, plus a margin
+    required = 32 * U ** 2 + 8 * U * D.max() + 48 * D.max() ** 2
     if required > _correlation_budget():
         raise ValueError(
             f'The ShakeMap posterior covariance of {U} points requires '
             f'about {humansize(required)}, more than the correlated_gmf_gb '
             'of openquake.cfg; request fewer sites')
-    dist = None
-    model = loth_baker_2013.ShakeMapLothBaker2013()
     for i, im in enumerate(imts):
         sta = stations[stations['imt'] == str(im).encode()]
         if not len(sta):
@@ -486,13 +486,39 @@ def _condition_within(shakemap, imts, within, conditional_phi):
         K = station_conditioning(
             points[:, 0], points[:, 1],
             loth_baker_2013._correlation_period(im), prior_phi, sta)
-        if dist is None:
-            dist = geo.geodetic.distance_matrix(points[:, 0], points[:, 1])
-        correlation = model.correlation_block(dist, [im])
+        # the distances are recomputed for each IMT, since computing them
+        # is cheap compared to the eigendecomposition and keeping them
+        # would require an additional (U, U) matrix
+        correlation = _single_imt_correlation(points, im)
         posterior = posterior_within_residuals(
             within[i, first], correlation, prior_phi, K, phi[i, first])
+        del correlation  # overwritten by posterior_within_residuals
         result[i] = posterior[inverse]
     return result
+
+
+def _single_imt_correlation(points, im):
+    # ShakeMapLothBaker2013().correlation_block(dist, [im]) of the (U, 2)
+    # points, with the same floating point operations, but overwriting
+    # the distance matrix, so that the peak memory is two (U, U) matrices
+    # instead of about six; the float32 distances are converted to float64
+    # as in correlation_block
+    dist = geo.geodetic.distance_matrix(
+        points[:, 0], points[:, 1]).astype(numpy.float64)
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    b1, b2, b3 = (b.item() for b in model.coregionalization([im]))
+    same_site = dist == 0
+    corr = numpy.multiply(dist, -3)
+    corr /= loth_baker_2013.SHORT_RANGE
+    numpy.exp(corr, out=corr)
+    corr *= b1
+    dist *= -3
+    dist /= loth_baker_2013.LONG_RANGE
+    numpy.exp(dist, out=dist)
+    dist *= b2
+    corr += dist
+    corr[same_site] += b3
+    return corr
 
 
 def _warn_xml_approximation(shakemap, correlated, spatial_model):

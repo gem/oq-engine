@@ -1,6 +1,7 @@
 # Helpers for reconstructing the posterior covariance of a ShakeMap.
 import logging
 import numpy
+import scipy.linalg
 from scipy.linalg import solve_triangular
 
 from openquake.hazardlib import geo, imt
@@ -52,15 +53,27 @@ def get_metadata(array, key):
     return (array.dtype.metadata or {}).get(key)
 
 
-def psd_factor(matrix):
+def psd_factor(matrix, overwrite=False):
     # Return F such that F @ F.T is the positive semidefinite matrix.
     # Only numerical negative eigenvalues may be clipped: silently fixing
     # an indefinite covariance would change the requested distribution.
-    vals, vecs = numpy.linalg.eigh(matrix)
+    if overwrite:
+        # destroy the C-ordered matrix and store the eigenvectors in its
+        # memory, with the LAPACK workspace (about one matrix) as the only
+        # extra memory, while numpy.linalg.eigh needs about three more:
+        # the transpose is the same matrix in Fortran order, lower=True
+        # reads the same triangle and 'evd' is the same LAPACK driver as
+        # numpy.linalg.eigh, which is as fast and agrees within 1E-13
+        vals, vecs = scipy.linalg.eigh(
+            matrix.T, lower=True, overwrite_a=True, check_finite=False,
+            driver='evd')
+    else:
+        vals, vecs = numpy.linalg.eigh(matrix)
     if vals.size and vals.min() < -1E-6 * max(1., abs(vals).max()):
         raise ValueError('The ShakeMap covariance is not '
                          'positive semidefinite')
-    return vecs * numpy.sqrt(numpy.clip(vals, 0, None))
+    vecs *= numpy.sqrt(numpy.clip(vals, 0, None))
+    return vecs
 
 
 def _point_correlation(points, other=None):
@@ -123,9 +136,15 @@ def posterior_within_residuals(prior, correlation, phi, K, conditional_phi):
     covariance. Applying these linear transformations to a shared joint
     prior gives a positive semidefinite approximation to cross-IMT posterior
     dependence; ShakeMap does not supply those joint posterior blocks.
+    To save memory, the correlation matrix is overwritten.
     """
-    prior_factor = numpy.linalg.cholesky(correlation)
-    covariance = phi[:, None] * correlation * phi - K @ K.T
+    white = solve_triangular(
+        numpy.linalg.cholesky(correlation), prior, lower=True)
+    # phi[:, None] * correlation * phi - K @ K.T, in place
+    covariance = correlation
+    covariance *= phi[:, None]
+    covariance *= phi
+    covariance -= K @ K.T
     # The saved marginal sigmas are authoritative; small differences arise
     # from the float32 coordinates and sigmas of the ShakeMap products.
     variance = conditional_phi ** 2
@@ -142,11 +161,11 @@ def posterior_within_residuals(prior, correlation, phi, K, conditional_phi):
             'The station conditioning reproduces the ShakeMap conditional '
             'within-event variance only within %.1E', rel)
     numpy.fill_diagonal(covariance, variance)
-    factor = psd_factor(covariance)
+    factor = psd_factor(covariance, overwrite=True)
     norm = numpy.sqrt((factor ** 2).sum(axis=1))
     factor *= numpy.divide(conditional_phi, norm,
                            out=numpy.zeros_like(norm), where=norm > 0)[:, None]
-    return factor @ solve_triangular(prior_factor, prior, lower=True)
+    return factor @ white
 
 
 def conditional_within_residuals(Z, R_YY, R_YD, R_DD, phi_Y, phi_D,
