@@ -39,6 +39,7 @@ def _taxonomy_postinstall_state():
 
 def _sync_taxonomy():
     # Add missing standard records without resetting customized database rows.
+    # These packages are optional and may not be installed in every setup.
     from django_gem_taxonomy.models import Attribute, AtomsGroup, Atom, Param
     from openquake import gem_taxonomy_data
 
