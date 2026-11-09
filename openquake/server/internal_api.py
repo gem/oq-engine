@@ -716,7 +716,7 @@ def v0_impact_get_rupture_data(request):
     return impact_get_rupture_data(_form(request))
 
 
-@internal_view('GET', auth=False)
+@internal_view('GET', 'HEAD', auth=False)
 def v0_calc_log_size(request, calc_id):
     """Return the number of log lines for a calculation."""
     return calc_log_size(int(calc_id))

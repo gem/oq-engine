@@ -32,6 +32,12 @@ from openquake.server.utils import check_webserver_running
 commands = ['start', 'status', 'stop']
 
 
+# the health check uses an internal endpoint that is always served with
+# status 200, even when the WebUI is disabled (WEBUI = False)
+def _health_url(hostport):
+    return 'http://' + hostport + '/v0/calc/0/log/size'
+
+
 def _find_webui_process(hostport):
     """Find the process listening on the requested port."""
     _host, port = hostport.rsplit(':', 1)
@@ -47,8 +53,8 @@ def _find_webui_process(hostport):
 
 def _status(hostport):
     """Print whether the WebUI responds on the requested address."""
-    url = 'http://' + hostport
-    running = check_webserver_running(url, max_retries=1, warn=False)
+    running = check_webserver_running(
+        _health_url(hostport), max_retries=1, warn=False)
     print('running' if running else 'stopped')
     return running
 
@@ -71,7 +77,8 @@ def _stop(hostport):
 def runserver(hostport=None, skip_browser=False):
     """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
-    if check_webserver_running(url, max_retries=1, warn=False):
+    health = _health_url(hostport)
+    if check_webserver_running(health, max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         return
@@ -82,7 +89,7 @@ def runserver(hostport=None, skip_browser=False):
     args.append('--noreload')
     args.append(hostport)
     process = subprocess.Popen(args)
-    if not skip_browser and check_webserver_running(url):
+    if not skip_browser and check_webserver_running(health):
         webbrowser.open(url)
     try:
         process.wait()
