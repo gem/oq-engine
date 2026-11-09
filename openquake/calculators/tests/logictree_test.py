@@ -345,9 +345,12 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
         # the cfactor counts the contexts once, also for the MFD variants
-        # computed together by make_results (it was 225 = 9 x 25)
+        # computed together by make_results (it was 225 = 9 x 25); the 9
+        # variants of a depth are computed together, since their magnitudes
+        # are nested, so there are 6 + 9 contexts, the ones of the variants
+        # with maxMag 7.6 at the two depths
         nctxs = self.calc.datastore.read_df('source_data').nctxs.sum()
-        self.assertEqual(nctxs, 25)
+        self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
 
     def test_gids_numbering(self):

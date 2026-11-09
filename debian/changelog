@@ -287,9 +287,11 @@
     range of the model to avoid the singularity at Vs30=150.
 
   [Michele Simionato]
-  * Geometry-preserving uncertainties are now optimized in classical calculations
-    with few sites: contexts, means, stddevs and poes are computed only once
-    per realization set
+  * Geometry-preserving uncertainties are now optimized in classical
+    calculations: contexts, means, stddevs and poes are computed only once
+    for the MFD variants of a source, also when their magnitudes are nested
+    (for instance with maxMagGRAbsolute); in the LogicTreeCase2ClassicalPSHA
+    demo the contexts go from 22,422 (engine 3.26) to 2,935
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
