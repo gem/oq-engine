@@ -21,12 +21,13 @@ from django.urls import re_path, include
 from openquake.server import views
 
 # the v1 routes are included at the root of the server URLs, so that
-# the WEBUI_PATHPREFIX (if any) applies to them as well
+# the WEBUI_PATHPREFIX (if any) applies to them as well.
+# No v1 route is served when the WebUI is disabled (WEBUI = False)
 urlpatterns = []
 
 # the validation and the defaults are served also in TOOLS_ONLY mode
 # when the webui is enabled
-if settings.WEBUI or settings.APPLICATION_MODE != 'TOOLS_ONLY':
+if settings.WEBUI:
     urlpatterns += [
         re_path(r'^v1/valid/', views.validate_nrml),
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
@@ -34,7 +35,7 @@ if settings.WEBUI or settings.APPLICATION_MODE != 'TOOLS_ONLY':
                 name="ini_defaults"),
     ]
 
-if settings.APPLICATION_MODE != 'TOOLS_ONLY':
+if settings.WEBUI and settings.APPLICATION_MODE != 'TOOLS_ONLY':
     urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
         re_path(r'^v1/authentication/status$',

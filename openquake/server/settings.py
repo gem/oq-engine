@@ -254,7 +254,7 @@ DISABLE_VERSION_WARNING = False
 USE_REVERSE_PROXY = False
 
 # Expose the WebUI interface, otherwise only the REST API will be available
-WEBUI = False
+WEBUI = True
 
 MAX_AELO_SITE_NAME_LEN = 256
 
