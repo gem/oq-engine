@@ -63,6 +63,7 @@ RTOL = .01  # relative tolerance on the hazard maps
 # the largest errors are at 0.2 s in SAM and at 1.0 s in Tonga
 PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
+MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
 NSITES = 300  # size of the sample of sites
 MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
@@ -85,6 +86,17 @@ def calibration(srcs, sites, cmaker, keys, monitor):
     sample, it ranks correctly the cost of the full calculation
     """
     cmaker.init_monitoring(monitor)
+    out = AccumDict()
+    # Keep the batched magnitudes and shared distances, but release the
+    # contexts between source batches instead of retaining the whole task.
+    for block in block_splitter(
+            srcs, MAX_PAIRS, lambda src: src.num_ruptures * len(sites)):
+        out += _calibrate_batch(block, sites, cmaker, keys)
+    return out
+
+
+# Build and consume the contexts of one bounded batch of point sources.
+def _calibrate_batch(srcs, sites, cmaker, keys):
     psds = [psd for _psgs, psd in keys]
     # the contexts for the different distances are built at once, sharing
     # the ruptures, which is much faster
@@ -190,7 +202,14 @@ def grid_and_weight(points, sites, maxdist, psgs, monitor):
 def _get_blocks(groups, sites, cmakers, psgs, num_tasks, h5=None):
     args = [(points, sites, cmakers[grp_id].maximum_distance.y[-1], psgs)
             for grp_id, points in groups.items()]
-    bygroup = parallel.Starmap(grid_and_weight, args, h5=h5).reduce()
+    if psgs:
+        bygroup = parallel.Starmap(grid_and_weight, args, h5=h5).reduce()
+    else:
+        # No gridding: only vectorized site counts are needed. Reuse the
+        # points instead of pickling and duplicating every source object.
+        bygroup = {}
+        for arg in args:
+            bygroup.update(grid_and_weight(*arg, monitor=None))
     # Keep the original group order, independently of task completion.
     pairs = [pair for grp_id in groups for pair in bygroup[grp_id]]
     maxweight = sum(w for _, w in pairs) / num_tasks

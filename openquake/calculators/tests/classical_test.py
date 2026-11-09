@@ -687,9 +687,11 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
+        # Force separate source batches and check their accumulated rates.
         self.run_calc(case_43.__file__, 'job.ini',
                       calculation_mode='preclassical', concurrent_tasks='4')
         oq = self.calc.datastore['oqparam']
