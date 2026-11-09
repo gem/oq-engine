@@ -1688,14 +1688,21 @@ def _hdf_json(h5, key):
 
 
 def _hdf_grid(h5, conf):
-    # Return lon_max, lat_max, xres, yres of the grid of the arrays. The
+    # Return lon_min, lat_max, xres, yres of the grid of the arrays. The
     # arrays store their own grid, which can be coarser than the configured
     # resolution when ShakeMap limits the number of points: the configured
     # extent and resolution are used only if the grid is not stored.
+    # As in esi-shakelib (GeoDict.createDictFromBox), the grid starts at
+    # the west and north edges: the stored xmax and ymin are the requested
+    # bounds, which differ from the last grid points when the extent is not
+    # a multiple of the spacing (by 0.005 degrees for us6000t7zp)
     attrs = h5['arrays/vs30'].attrs
-    if all(key in attrs for key in ('xmax', 'ymax', 'dx', 'dy')):
-        return (float(attrs['xmax']), float(attrs['ymax']),
-                float(attrs['dx']), float(attrs['dy']))
+    if all(key in attrs for key in ('xmin', 'xmax', 'ymax', 'dx', 'dy')):
+        xmin, xmax = float(attrs['xmin']), float(attrs['xmax'])
+        if xmin > xmax:  # crossing the antimeridian, as in esi-shakelib
+            xmin -= 360
+        return xmin, float(attrs['ymax']), float(attrs['dx']), float(
+            attrs['dy'])
     extent = list(map(float, conf['extent']['bounds']['extent']))
     if -999 in extent or not numpy.isfinite(extent).all():
         map_info = _hdf_json(h5, 'dictionaries/info.json')[
@@ -1706,7 +1713,7 @@ def _hdf_grid(h5, conf):
             float(map_info['max']['longitude']),
             float(map_info['max']['latitude'])]
     prediction = conf['interp']['prediction_location']
-    return (extent[2], extent[3], float(prediction['xres']),
+    return (extent[0], extent[3], float(prediction['xres']),
             float(prediction['yres']))
 
 
@@ -1783,7 +1790,7 @@ def get_array_shake_result_hdf(fname):
     url = path2url(fname)
     with h5py.File(io.BytesIO(_download_url(url)), 'r') as h5:
         conf = _hdf_json(h5, 'dictionaries/config')
-        lon_max, lat_max, xres, yres = _hdf_grid(h5, conf)
+        lon_min, lat_max, xres, yres = _hdf_grid(h5, conf)
         component = conf['interp'].get(
             'component', 'GREATER_OF_TWO_HORIZONTAL')
         imt_groups = h5[f'arrays/imts/{component}']
@@ -1812,7 +1819,7 @@ def get_array_shake_result_hdf(fname):
                                for imt in imts))
             dtlist.append(('CL', [(imt, F32, (width,)) for imt in imts]))
         array = numpy.zeros(ny * nx, dtlist)
-        lons = lon_max - (nx - 1 - numpy.arange(nx)) * xres
+        lons = lon_min + numpy.arange(nx) * xres
         lats = lat_max - numpy.arange(ny) * yres
         array['lon'] = numpy.tile(lons, ny)
         array['lat'] = numpy.repeat(lats, nx)

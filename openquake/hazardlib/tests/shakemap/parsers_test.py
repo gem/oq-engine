@@ -116,6 +116,29 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertNotIn('phi', array.dtype.names)
         self.assertNotIn('CL', array.dtype.names)
 
+    def test_shake_result_hdf_grid_from_west_north(self):
+        # the stored xmax and ymin are the requested bounds: when the extent
+        # is not a multiple of the spacing, as for us6000t7zp, the grid
+        # starts at xmin and ymax, as in grid.xml and esi-shakelib
+        config = {'extent': {'bounds': {'extent': [-999.] * 4}},
+                  'interp': {'prediction_location': {}}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, 'shake_result.hdf')
+            with h5py.File(fname, 'w') as h5:
+                h5['dictionaries/config'] = json.dumps(config)
+                h5['arrays/vs30'] = numpy.full((2, 3), 400.)
+                h5['arrays/vs30'].attrs.update(
+                    xmin=10., xmax=12.5, ymin=19.6, ymax=21., dx=1., dy=1.)
+                group = h5.require_group(
+                    'arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA')
+                group['mean'] = numpy.zeros((2, 3))
+                group['std'] = numpy.ones((2, 3))
+            array = get_array(kind='shake_result_hdf', fname=fname)
+        numpy.testing.assert_array_equal(
+            array['lon'], [10, 11, 12, 10, 11, 12])
+        numpy.testing.assert_array_equal(
+            array['lat'], [21, 21, 21, 20, 20, 20])
+
     def test_shake_result_hdf_between_event_factor(self):
         # CL = C @ chol(Sigma_HH_YD), padded to the largest number of
         # between-event terms, so that CL @ CL.T = C @ Sigma_HH_YD @ C.T
