@@ -56,4 +56,12 @@ class Command(BaseCommand):
                 )
             sys.exit(0)
 
+        if options['django_app'] == 'django_gem_taxonomy':
+            attr_model = django_apps.get_model(
+                'django_gem_taxonomy', 'Attribute')
+            if attr_model.objects.exists():
+                self.stdout.write(
+                    'Taxonomy data already exists, skipping postinstall.')
+                return
+
         call_command(postinstall_cmd)
