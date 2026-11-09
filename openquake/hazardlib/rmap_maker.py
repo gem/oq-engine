@@ -273,8 +273,9 @@ def _mag_ratios(base, dic):
 def mag_support(sources):
     # :param sources: a list of sources, as in a group
     # :returns: a hashable key with the magnitudes of each source; the
-    #     variants with the same key can be computed together by make_results
-    #     since they have the same magnitudes, see _mag_ratios
+    #     variants with magnitudes contained in the ones of the base can be
+    #     computed together by make_results, see _mag_ratios and
+    #     classical._split_by_mags
     return tuple(tuple(sorted(dic)) for dic in _rates_by_mag(sources))
 
 
@@ -320,11 +321,12 @@ def make_results(groups, cmakers, sites):
             'filtered away by the uncertainties' % (nsrcs, len(sources)))
     # ratios[v][s] = dictionary mag -> ratio for source s of variant v
     # e.g. logictree/case_18/job_bis: the 9 variants of a depth (3 abGR x
-    # 3 maxMagGR) are split by classical._split_by_mags in 6 variants with
-    # magnitudes 5.5, 6.5 (maxMag 7.0 and 7.3) and 3 with magnitudes 5.5,
-    # 6.5, 7.5 (maxMag 7.6); in the first call the base is variant 0, with
-    # rate 0.115893 at M 5.5, and variant 2 has rate 0.284605, i.e. ratio
-    # 2.4558; since the variants have the same magnitudes, no ratio is 0
+    # 3 maxMagGR) are computed together, since the magnitudes 5.5, 6.5 of
+    # the 6 variants with maxMag 7.0 and 7.3 are contained in the
+    # magnitudes 5.5, 6.5, 7.5 of the 3 variants with maxMag 7.6 (see
+    # classical._split_by_mags); in the first call the base is variant 2,
+    # with rate 0.115893 at M 5.5, variant 3 has rate 0.284605, i.e. ratio
+    # 2.4558, and variant 0 has no M 7.5, i.e. ratio 0 at M 7.5
     ratios = [[_mag_ratios(rates[b][s], rates[v][s])
                for s in range(len(sources))]
               for v in range(len(groups))]
@@ -334,8 +336,9 @@ def make_results(groups, cmakers, sites):
                         True).fill(False) for _ in groups]
     rmaker.source_data = AccumDict(accum=[])
     rups = [[] for _ in groups]  # the rup_data of each variant
-    # e.g. logictree/case_18/job_bis: 4 ruptures for each of the 6
-    # variants with magnitudes 5.5, 6.5 at a depth, see _scale_rups
+    # e.g. logictree/case_18/job_bis: at the first depth the base has 6
+    # ruptures (magnitudes 5.5, 6.5, 7.5) and the 6 variants with
+    # magnitudes 5.5, 6.5 keep 4 of them, see _scale_rups
     t0 = time.time()
     cfactor0 = cm.cfactor.copy()  # see RmapMaker.make
     nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
@@ -458,6 +461,11 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
         cm.cfactor[0] += len(ctxt)  # as in gen_poes
+        # contexts saved by computing them once: a variant computed alone
+        # would generate the contexts of the sources containing the
+        # magnitude, i.e. the ones with a positive ratio
+        nvariants = (R > 0).sum(axis=0)  # number of variants per source
+        cm.cfactor[3] += nvariants @ numpy.bincount(si, minlength=S) - count
         if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
             _update_linear(cm, pnemaps, R, ctxt, si, itime)
             continue

@@ -345,10 +345,23 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hazard_curve-mean_bis.csv', fname)
 
         # the cfactor counts the contexts once, also for the MFD variants
-        # computed together by make_results (it was 225 = 9 x 25)
+        # computed together by make_results (it was 225 = 9 x 25); the 9
+        # variants of a depth are computed together, since their magnitudes
+        # are nested, so there are 6 + 9 contexts, the ones of the variants
+        # with maxMag 7.6 at the two depths
         nctxs = self.calc.datastore.read_df('source_data').nctxs.sum()
-        self.assertEqual(nctxs, 25)
+        self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
+
+        # without the source variants optimization each variant would
+        # generate its contexts: at the first depth 4 for the 6 variants
+        # with magnitudes 5.5, 6.5 and 6 for the 3 variants with maxMag 7.6,
+        # i.e. 42, and at the second depth 6 x 6 + 3 x 9 = 63
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 15)
+        self.assertEqual(est['separate'], 105)
+        tbl = view('context_reduction', self.calc.datastore)
+        self.assertIn('| variants factor | 7.00', tbl)
 
     def test_gids_numbering(self):
         # the gids of the cmakers must be numbered as the core list, the

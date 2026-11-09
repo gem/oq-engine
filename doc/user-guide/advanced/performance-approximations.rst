@@ -4,8 +4,9 @@ Performance Approximations
 ==========================
 
 The engine implements a few approximations to speed up the classical calculations: the point source gridding,
-the ``pointsource_distance`` approximation, the choice of the ``ps_grid_spacing`` and the ``collapse_precision``
-approximation. This page describes them, shows how to measure their effect and gives a worked example.
+the ``pointsource_distance`` approximation, the choice of the ``ps_grid_spacing``, the ``collapse_precision``
+approximation, plus the source variants optimization, which does not change the results. This page describes them,
+shows how to measure their effect and gives a worked example.
 
 .. _point-source-gridding:
 
@@ -64,8 +65,8 @@ The calibration works as follows (in engine v3.27, it may change in the future):
   exact, but too expensive for large maximum distances);
 - the candidates are the grid spacings 50, 25 and 15 km, each one with the ``pointsource_distance`` values 15, 25, 50
   and 75 km (if the ``pointsource_distance`` is set in the job.ini, only that value is tried);
-- the errors are normalized by ``0.01 + 0.01 * |reference|``, as in ``numpy.testing.assert_allclose`` with
-  ``atol=0.01`` and ``rtol=0.01``, and a candidate is acceptable if the 99th percentile of the normalized error on
+- the errors are normalized by ``0.002 + 0.01 * |reference|``, as in ``numpy.testing.assert_allclose`` with
+  ``atol=0.002`` and ``rtol=0.01``, and a candidate is acceptable if the 99th percentile of the normalized error on
   the hazard maps is at most 1, i.e. the hazard maps are close within these tolerances;
 - the acceptable candidate with the smallest weight is chosen, where the weight is the estimated cost of the full
   calculation; if no candidate is acceptable, the candidates with a normalized error within 10% of the smallest one
@@ -98,17 +99,20 @@ following fields, which are useful to understand how much the approximations red
   calculation is not gridded, it is the estimate with the ``pointsource_distance`` of the calculation instead, which is
   the reduction logged by the engine;
 - ``gridded``: the number of contexts of the gridded point sources before ``collapse_precision``;
-- ``collapsed``: the number of contexts after ``collapse_precision``, shown only if ``collapse_precision`` is nonzero.
+- ``collapsed``: the number of contexts after ``collapse_precision``, shown only if ``collapse_precision`` is nonzero;
+- ``separate``: the number of contexts without the source variants optimization (see :ref:`source-variants`), i.e. if
+  the variants of the sources were computed separately; it is equal to ``collapsed`` when the optimization is not used.
 
 If ``ps_grid_spacing`` or ``collapse_precision`` is set, the ``exact`` field is the number of contexts before
 ``collapse_precision``, counted for all the source types, when no estimate was computed. The ``exact``, ``psd100`` and
-``gridded`` fields are zero when they have not been computed.
+``gridded`` fields are zero when they have not been computed. The fields can be displayed with
+``oq show context_reduction <calc_id>``, which also displays the reduction factor of the source variants optimization.
 
 For the ``job_vs30.ini`` file of the ``performance.zip`` archive, run with ``ps_grid_spacing=25``,
 ``pointsource_distance=15`` and ``collapse_precision=.03`` (engine version 3.27), the ``nctxs`` dataset contains::
 
-	exact      psd100     gridded    collapsed
-	990383445  296658391  48062426   44781744
+	exact      psd100     gridded    collapsed  separate
+	990383445  296658391  48062426   44781744   44781744
 
 Here ``psd100`` is computed with a ``pointsource_distance`` of 100 km, and the
 gridding reduces the contexts by a factor of 990383445 / 48062426 = 20.61, the value logged as "estimated reduction
@@ -119,8 +123,8 @@ For the same file run with ``ps_grid_spacing=auto`` and no ``collapse_precision`
 ``ae768378a5``), the calibration chooses ``ps_grid_spacing=50`` and ``pointsource_distance=15``, and the ``nctxs``
 dataset contains::
 
-	exact      psd100     gridded    collapsed
-	993298176  297900530  43815054   43815054
+	exact      psd100     gridded    collapsed  separate
+	993298176  297900530  43815054   43815054   43815054
 
 Since ``collapse_precision`` is zero, ``collapsed`` is equal to ``gridded``. The gridding reduces the contexts by a
 factor of 993298176 / 43815054 = 22.67, which is the value logged as::
@@ -130,8 +134,8 @@ factor of 993298176 / 43815054 = 22.67, which is the value logged as::
 With ``collapse_precision=0.03`` added (same ``ps_grid_spacing=auto`` run, same calibration), the ``nctxs`` dataset
 contains::
 
-	exact      psd100     gridded    collapsed
-	993298176  297900530  43815054   27488651
+	exact      psd100     gridded    collapsed  separate
+	993298176  297900530  43815054   27488651   27488651
 
 The collapse reduces the contexts from 43815054 to 27488651, a factor of 43815054 / 27488651 = 1.59, so that the
 total reduction is 993298176 / 27488651 = 36.13, logged as::
@@ -354,3 +358,104 @@ Note that the efficiency of the collapse of the ruptures and of the ``pointsourc
 much on the version of the engine: the numbers above are valid for the engine version 3.27 and they will change in
 other versions, as well as they will depend on the hardware. They are meant to show how to read the logs, not
 as a benchmark.
+
+.. _source-variants:
+
+Source variants optimization
+----------------------------
+
+When the source model logic tree contains uncertainties on the sources, every source has several *variants*, one for
+each combination of the branches applied to it. If the uncertainties only change the magnitude-frequency
+distribution of the source, and not its geometry, the variants have the same ruptures with different occurrence
+rates, so the contexts (and the distances) can be computed only once and shared by all the variants: the number
+of contexts can be reduced by up to the number of variants, and the calculation can become much faster.
+
+Since version 3.27 the engine applies this optimization automatically to the variants of a source satisfying the
+following conditions:
+
+- the sources are Poissonian, i.e. not mutually exclusive, not in a cluster and with a Poisson temporal occurrence
+  model;
+- the uncertainties are geometry-preserving, i.e. ``abGRAbsolute``, ``abMaxMagAbsolute``, ``bGRAbsolute``,
+  ``bGRRelative``, ``bACAbsolute``, ``bACRelative``, ``maxMagGRAbsolute``, ``maxMagGRRelative``,
+  ``maxMagGRRelativeNoMoBalance``, ``maxMagAndDeltaMagACRelative``, ``maxMagAndDeltaMagACRelativeNoMoBalance``,
+  ``incrementalMFDAbsolute``, ``truncatedGRFromSlipAbsolute``, ``recurSet``, ``recurRow`` or ``rateSplit``; the
+  geometry-changing uncertainties (for instance ``setLowerSeismDepthAbsolute``) split the variants in groups with
+  the same geometry, and the optimization is applied within each group;
+- the magnitudes of each variant are contained in the magnitudes of the variant with the most magnitudes (the
+  *base*), as it happens for instance for the ``maxMagGRAbsolute`` variants of a truncated Gutenberg-Richter
+  distribution; the variants with other magnitudes are grouped separately.
+
+The contexts are computed for the base variant and the probabilities of exceedance are computed once for each
+magnitude. Since the rates are linear in the occurrence rates of Poissonian ruptures, the contributions
+``occurrence_rate * poe`` of the ruptures of each source are summed once, and every variant gets the sum multiplied
+by the ratio between its occurrence rate and the occurrence rate of the base at that magnitude (zero for the
+magnitudes missing in the variant, for instance the ones above its maximum magnitude). Unlike the approximations
+in this page, the optimization does not change the results, apart from floating-point rounding.
+
+At the end of the classical phase the engine logs the reduction of the contexts due to the optimization, i.e. the
+ratio between the contexts that the variants would generate if computed separately and the contexts actually
+computed, which are stored in the ``separate`` and ``collapsed`` fields of the ``nctxs`` dataset; they can be
+displayed with ``oq show context_reduction <calc_id>``.
+
+Notice that the optimization applies only to the variants generated by the logic tree: if the same source appears
+in several source model files with different magnitude-frequency distributions, each copy is computed separately
+and the engine logs a warning suggesting to keep a single copy and to move the distributions in the logic tree,
+for instance with an ``incrementalMFDAbsolute`` uncertainty.
+
+As an example, consider the ``LogicTreeCase2ClassicalPSHA`` demo (see :ref:`Case2 demo <logic-tree-case2>`), where
+the sources ``first`` and ``second`` have 9 variants each, given by 3 ``abGRAbsolute`` and 3 ``maxMagGRAbsolute``
+branches. The following comparison runs the demo with ``OQ_DISTRIBUTE=no`` on the same machine with engine 3.26.2,
+where every variant is computed separately, and with the master branch (version 3.27), where the uncertainties are
+applied in the workers (see :ref:`classical-internals`) and the optimization is used. The timings are from a single
+run of each version::
+
+	                                        engine 3.26.2    master
+	ClassicalCalculator.run (s)                     5.69      0.90
+	number of contexts                            22,422     2,935
+	number of ruptures                            35,916     4,461
+	calls to get_distances (classical phase)      14,496     1,620
+	total wall-clock time (s)                      39.3       3.3
+
+The difference is visible in the ``source_info`` dataset: engine 3.26.2 stores 18 entries, i.e. 9 copies of each
+source with a semicolon suffix (``first;0``, ..., ``first;8``), one for each combination of the ``abGRAbsolute``
+and ``maxMagGRAbsolute`` branches applied to the source, while master stores 2 entries, one for each source, since
+the uncertainties are applied in the workers.
+
+The hazard curves and the hazard maps of the two runs are the same within the tolerance of ``oq compare``
+(``atol=0.001``, ``rtol=0%``). The classical phase is 6.3 times faster and the number of contexts is reduced by a
+factor of 7.6 (the contexts were counted directly in both engines, and the counts match the logged ``cfactor``);
+in master the reduction is logged as::
+
+	The source variants optimization reduced the contexts from 22_422 to 2_935, a factor 7.64
+
+and ``oq show context_reduction`` displays::
+
+	| field           | contexts |
+	|-----------------+----------|
+	| exact           | 0        |
+	| psd100          | 0        |
+	| gridded         | 0        |
+	| collapsed       | 2_935    |
+	| separate        | 22_422   |
+	| variants factor | 7.64     |
+
+The reduction factor is explained as follows:
+
+- engine 3.26.2 computes the contexts of all the 9 copies of each source;
+- master computes the 9 variants of a source together (see ``make_results``): both ``abGRAbsolute`` and
+  ``maxMagGRAbsolute`` keep the geometry, so the contexts are computed only once, for the variant with the most
+  magnitudes, and the occurrence rates are rescaled for each variant, with a zero rate for the magnitudes above the
+  maximum magnitude of the variant.
+
+The reduction is less than 9 because of ``maxMagGRAbsolute``: in engine 3.26.2 the copies with a smaller maximum
+magnitude have fewer contexts, since the ruptures above their maximum magnitude are cut out, while master computes
+the contexts of the largest maximum magnitude. For the area source ``first`` (maximum magnitude 7.0, 7.3 or 7.6)
+the copies have 1,672, 2,064 and 2,530 contexts, each repeated 3 times, i.e. 18,798 contexts against 2,530 in
+master, a factor of 7.4. For the fault source ``second`` (maximum magnitude 7.5, 7.8 or 8.0) the ruptures above
+magnitude 7.5 cover the whole fault, so there are few of them and the cut is small: 3,624 contexts against 405, a
+factor of 8.9.
+
+The distances are computed only for the fault source ``second``, since the point sources use a faster path. The demo
+has a single site and ``get_distances`` is called 4 times per rupture, so the calls in the classical phase are
+reduced by the same factor of 8.9 as the contexts of ``second``. Engine 3.26.2 makes 1,716 more calls in the
+preclassical phase, to estimate the weight of the sources.
