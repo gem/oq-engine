@@ -72,8 +72,10 @@ def assert_close(tbl, fname, atol=1E-5, rtol=1E-4):
             f.write(txt)
         with open(fname) as f:
             expected = f.read()
+        # NB: the computed value goes first, so that numpy reports it as
+        # ACTUAL and the expected one as DESIRED
         for exp, got in zip(_data2rows(expected), _data2rows(txt)):
-            aac(exp, got, rtol, atol)
+            aac(got, exp, rtol, atol)
 
 
 def check(ini, hc_id=None, exports='', what='', prefix='',
