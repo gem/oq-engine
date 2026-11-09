@@ -29,7 +29,7 @@ def main(workflow_toml, hard=False):
             repo_dir = os.path.abspath(
                 os.path.join(wf.workflow_dir, repo))
             if hard:
-                git(repo_dir, ['fetch', '--tags'])
+                git(repo_dir, ['fetch', '--tags', '--force'])
                 git(repo_dir, ['clean', '-f'])
                 # a tag has no origin/<tag> counterpart, so reset to the tag
                 if tag in git(repo_dir, ['tag', '--list']).split():

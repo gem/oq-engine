@@ -8,6 +8,7 @@ class EnginePage:
     def __init__(self, page):
         self.page = page
         self.calculation_table = page.locator('#calculation_table')
+        self.new_job_id = None
 
     def _click_clear_of_backdrop(self, locator, timeout=30_000):
         # Guard against a stale/fading .modal-backdrop from a prior
@@ -29,16 +30,37 @@ class EnginePage:
                 str(job_id), exact=True))
 
     def get_job_id_from_new_job(self):
-        # the newest job is the first row: a fast job may already be
-        # complete when the page is checked, so accept both states
-        job_rows = self.page.locator("tr").filter(
-            has_text=re.compile("executing|complete"))
-        expect(job_rows.first).to_be_visible(timeout=50_000)
-        return job_rows.first.locator("td").first.inner_text().strip()
+        """Identify the submitted job independently of its current status."""
+        assert self.new_job_id is not None, 'No job submission was captured'
+        expect(self.get_job_row(self.new_job_id)).to_be_visible(
+            timeout=50_000)
+        return self.new_job_id
+
+    def _submit_calculation(self, button, endpoint, timeout=50_000):
+        # Register before clicking: fast responses and short jobs must not
+        # be missed. Never infer identity from a transient table status.
+        self.new_job_id = None
+        with self.page.expect_response(
+                lambda response: response.url.endswith(endpoint)
+                and response.request.method == 'POST',
+                timeout=timeout) as response_info:
+            button.click()
+        response = response_info.value
+        assert response.ok, (
+            f'Calculation submission failed ({response.status}): '
+            f'{response.text()}')
+        data = response.json()
+        if endpoint.endswith('/impact_run'):
+            # IMPACT returns a mapping from calculation IDs to job details.
+            assert len(data) == 1, f'Expected one submitted job: {data}'
+            [data] = data.values()
+        assert data.get('job_id'), f'Submission returned no job_id: {data}'
+        self.new_job_id = str(data['job_id'])
 
     def wait_for_job_completion(self, job_id):
         job_row = self.get_job_row(job_id)
-        expect(job_row).to_contain_text("complete", timeout=120_000)
+        expect(job_row.locator('.calc-status')).to_have_text(
+            'complete', timeout=120_000)
 
     def _confirm_action(self, action):
         # Wait for the custom modal before querying its dynamically labelled
@@ -51,10 +73,23 @@ class EnginePage:
 
     def abort_job(self, job_id):
         job_row = self.get_job_row(job_id)
-        expect(job_row.get_by_text("executing")).to_be_visible(
+        status = job_row.locator('.calc-status')
+        abort_link = job_row.get_by_role("link", name="Abort", exact=True)
+        terminal_status = status.filter(
+            has_text=re.compile(r'complete|failed'))
+        # Polls may skip executing altogether. A completed job needs no abort;
+        # an unexpected failure must still fail the test.
+        expect(abort_link.or_(terminal_status).first).to_be_visible(
             timeout=80_000)
-        self._click_clear_of_backdrop(
-            job_row.get_by_role("link", name="Abort"), timeout=20_000)
+        if terminal_status.is_visible():
+            expect(terminal_status).to_have_text('complete')
+            return
+        try:
+            self._click_clear_of_backdrop(abort_link, timeout=10_000)
+        except PlaywrightTimeoutError:
+            # Completion can also remove the link while click is retrying.
+            expect(status).to_have_text('complete')
+            return
         self._confirm_action("abort")
         # short jobs may finish before the abort reaches the server, which
         # then refuses it: both outcomes are valid, so check the row state
@@ -64,11 +99,15 @@ class EnginePage:
         was_aborted = aborted.is_visible()
         self.page.get_by_role("button", name="Close").click(timeout=20_000)
         if was_aborted:
-            expect(job_row.get_by_text("failed")).to_be_visible(
+            # The notification acknowledges signal delivery. The worker can
+            # still complete, or record MasterKilled from SIGINT as failed.
+            # After requesting interruption, status alone cannot distinguish
+            # an abort-induced failure from an unrelated calculation failure.
+            expect(status).to_contain_text(
+                re.compile(r'\b(complete|failed)\b'),
                 timeout=20_000)
         else:
-            expect(job_row.get_by_text("complete")).to_be_visible(
-                timeout=20_000)
+            expect(status).to_have_text('complete', timeout=20_000)
 
     def remove_job(self, job_id):
         job_row = self.get_job_row(job_id)

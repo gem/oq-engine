@@ -188,19 +188,28 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, dstore=None,
     return result
 
 
-_full_lt_cache = {}  # (dstore filename, ilabel) -> initialized FullLogicTree
+# (dstore filename, ilabel, init) -> FullLogicTree
+_full_lt_cache = {}
 
 
-def read_full_lt(dstore, ilabel=None):
+def read_full_lt(dstore, ilabel=None, init=True):
     """
     :param dstore: a DataStore instance, possibly closed
     :param ilabel: the index of the site label (see site_labels), or None
+    :param init: if False, the realizations are not built
     :returns: the FullLogicTree stored in the datastore, initialized only
         once per process, since the init is not cheap for large LTs;
         with a site label, the gsim logic tree is the one of the label,
         so that the gweights are the right ones (see read_gid_dic)
+
+    NB: without init the FullLogicTree has only the source model
+    realizations, which is enough for get_bset_values; the init is
+    expensive for large logic trees (4.7 GB and 2 minutes for the 7_864_320
+    realizations of CND) and must not be performed in each worker
     """
-    key = (dstore.filename, ilabel or 0)
+    if not init:
+        ilabel = None  # the source model realizations do not depend on it
+    key = (dstore.filename, ilabel or 0, init)
     try:
         return _full_lt_cache[key]
     except KeyError:
@@ -209,7 +218,9 @@ def read_full_lt(dstore, ilabel=None):
         for k in [k for k in _full_lt_cache if k[0] != dstore.filename]:
             del _full_lt_cache[k]
         with dstore:
-            full_lt = dstore['full_lt'].init()
+            full_lt = dstore['full_lt']
+            if init:
+                full_lt.init()
             if ilabel:
                 # the labels are ordered as the cmdict, i.e. Default first;
                 # tested in classical/case_06_disagg_by_src
@@ -334,12 +345,15 @@ def geometry_key(srcs, bvals):
 def _split_by_mags(pairs):
     """
     :param pairs: a list of (cmaker, group) pairs with the same geometry
-    :returns: a list of lists of pairs, with the same magnitudes in each
-        list; the MFD variants with the magnitude grid anchored to the
-        maximum magnitude (see width_of_mfd_bin) have different magnitudes,
-        and make_results requires them to be a subset of the base ones
+    :returns: a list of lists of pairs, such that in each list the
+        magnitudes of every source are a subset of the magnitudes of the
+        same source in the pair with the most magnitudes, i.e. the base
+        used by make_results; for instance the maxMagGRAbsolute variants
+        of a TruncatedGRMFD have nested magnitudes and stay together, while
+        the variants with magnitudes missing in the base (see _mag_ratios)
+        go in different lists
     """
-    parts = {}
+    supports = []
     for cm, sg in pairs:
         # sources without MFD (e.g. nonparametric), see _rates_by_mag
         # NB: the pairs are kept together, then _make_results fails
@@ -347,8 +361,25 @@ def _split_by_mags(pairs):
         if not all(hasattr(src, 'get_annual_occurrence_rates')
                    for src in sg):
             return [pairs]
-        parts.setdefault(mag_support(sg), []).append((cm, sg))
-    return list(parts.values())
+        supports.append([set(mags) for mags in mag_support(sg)])
+    # the pairs with the most magnitudes come first, so that the first
+    # pair of each part is its base and the others are added to the first
+    # part containing their magnitudes for every source
+    order = sorted(range(len(pairs)),
+                   key=lambda i: -sum(len(mags) for mags in supports[i]))
+    parts = []  # pairs (base support, indices of the pairs)
+    for i in order:
+        sup = supports[i]
+        for bsup, idxs in parts:
+            if len(bsup) == len(sup) and all(
+                    mags <= bmags for mags, bmags in zip(sup, bsup)):
+                idxs.append(i)
+                break
+        else:
+            parts.append((sup, [i]))
+    # keep the original order of the pairs, for reproducibility
+    return [[pairs[i] for i in sorted(idxs)]
+            for _, idxs in sorted(parts, key=lambda p: min(p[1]))]
 
 
 def _make_results(pairs, sites, remove_zeros, as_rmap):
@@ -463,17 +494,16 @@ def bysrc_results(grps, sites, cmaker, gid_dic, full_lt, remove_zeros,
         slow = []
         # for case_25 (one site, so few=True) each pair is a source
         # restricted to one set of realizations (one gid).
-        # The fast pairs are the ones whose geometry key is shared with
-        # at least one other pair, computed together by _make_results in
-        # groups of 2-4; the slow pairs have a unique geometry key and
-        # are computed one at a time by baseclassical.
-        # Area sources (CollapsedPointSource, alt*-bkg): 20 fast, 3 slow
-        # (alt2-NVA-AB-bkg, alt2-NVA-bkg, alt3-NVA-AB-bkg: 1 slow each).
-        # Fault sources (SimpleFaultSource): 24 fast, 27 slow; they can
-        # fall on either side depending on the other pairs in the group.
+        # The fast pairs are the ones sharing the geometry key with at
+        # least one other pair, with magnitudes contained in the ones of
+        # the base (see _split_by_mags), computed together by _make_results
+        # in groups of 2-6; the other pairs are slow and are computed one
+        # at a time by baseclassical.
+        # Area sources (split in PointSources, *-bkg): 21 fast, 1 slow
+        # (alt3-NVA-AB-bkg). Fault sources (SimpleFaultSource): 36 fast.
         for pairs in bykey.values():
-            # make_results needs the same magnitudes in all the variants,
-            # which the MFD bin width does not guarantee (see _split_by_mags)
+            # make_results needs the magnitudes of every variant to be a
+            # subset of the magnitudes of the base (see _split_by_mags)
             for part in _split_by_mags(pairs):
                 dics = _make_results(part, sites, remove_zeros, as_rmap) \
                     if len(part) > 1 else None
@@ -514,9 +544,17 @@ def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
     # NB: the tilegetter is trivial unless there are site labels;
     # the gweights depend on the label, see get_rates and
     # classical/case_06_disagg_by_src
-    full_lt = read_full_lt(dstore, cmaker.ilabel)
-    return (grps, tilegetter(sitecol, cmaker.ilabel),
-            read_gid_dic(dstore, full_lt), full_lt)
+    gid_dic = getattr(cmaker, 'gid_dic', None)
+    if gid_dic is None:
+        full_lt = read_full_lt(dstore, cmaker.ilabel)
+        gid_dic = read_gid_dic(dstore, full_lt)
+    else:
+        # the gid_dic was computed in the master (see set_gid_dic), so
+        # the realizations are not needed and are not built: with
+        # 160 cores and the 7_864_320 realizations of CND that would
+        # require 160 x 4.7 GB, i.e. the machine would go out of memory
+        full_lt = read_full_lt(dstore, init=False)
+    return grps, tilegetter(sitecol, cmaker.ilabel), gid_dic, full_lt
 
 
 def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
@@ -846,6 +884,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
+        self.full_lt_by_label = full_lt_by_label  # used in set_gid_dic
         trt_smrs = self.datastore['trt_smrs'][:]
         # NB: the gids of the cmakers must be numbered as in the core list,
         # the one used by read_gid_dic in the master and in the workers
@@ -1074,11 +1113,36 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.sitecol.sids, self.oqparam.imtls.size, gids[grp_id])
         return self.rmap[grp_id]
 
+    def set_gid_dic(self, ds):
+        """
+        Compute the gid_dic of each site label once, in the master, and
+        attach it to the cmakers sent to the tasks, so that the workers
+        do not need to build the realizations (see read_task_input)
+
+        :param ds: the datastore read by the tasks
+        :returns: the gid_dic of the Default label
+        """
+        # NB: this is needed for CND, which has 7_864_320 LtRealizations:
+        # building them in each worker requires 4.7 GB per process, i.e.
+        # the machine goes out of memory with 160 workers
+        dics = [read_gid_dic(ds, full_lt)
+                for full_lt in self.full_lt_by_label.values()]
+        # the labels are ordered as the cmdict, i.e. Default first
+        for gid_dic, cmakers in zip(dics, self.cmdict.values()):
+            for cmaker in cmakers:
+                cmaker.gid_dic = gid_dic
+        return dics[0]
+
     def _execute(self, ds):
         oq = self.oqparam
         allargs = []
         weights = []  # estimated weight of each task
         self.rmap = {}
+        # the rates are attributed to the sets of realizations with the
+        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
+        # dataset read by the tasks, which can be the parent calculation
+        # (as in case_36)
+        gid_dic = self.set_gid_dic(ds)
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks)
@@ -1088,11 +1152,6 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
-        # the rates are attributed to the sets of realizations with the
-        # same uncertainties, see read_gid_dic; NB: this is read on ds, the
-        # dataset read by the tasks, which can be the parent calculation
-        # (as in case_36)
-        gid_dic = read_gid_dic(ds, self.full_lt)
         gids = group_gids(self.csm.src_groups, gid_dic)
         for cmaker, tilegetters, grp_keys, atomic, grp_weights in data:
             num_blocks += sum('-' in key for key in grp_keys)
@@ -1211,7 +1270,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.N > self.oqparam.max_sites_disagg):
             fields = ['source_id', 'grp_id', 'code', 'est_ctxs', 'num_ctxs']
             info = self.datastore['source_info'][:][fields]
-            info = info[info['num_ctxs'] > 0]
+            # NB: the estimates are computed on a sample of the sites (see
+            # preclassical._get_srcfilter), so they are unreliable for the
+            # sources with few contexts, like the ones reaching a single
+            # site at the edge of the maximum distance; such sources are
+            # negligible and are not checked
+            info = info[info['num_ctxs'] > 1E-4 * info['num_ctxs'].sum()]
             bad = (info['est_ctxs'] < info['num_ctxs']) & (
                 delta(info['est_ctxs'], info['num_ctxs']) > .5)
             if bad.any():

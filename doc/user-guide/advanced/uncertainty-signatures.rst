@@ -64,7 +64,7 @@ branches, which give the following number of source model paths::
 The total number of realizations must be multipled by 4 since there are 2 tectonic region
 types with 2 GSIMs each. The check gives::
 
-    Core size Gt=36 out of R=324 realizations
+    Core size Gt=36 for R=324 realizations
     Global RateMap of 2.67 KB for 1 sites and 19 levels
     ...
     Uncertainty signatures of calc_172129
@@ -141,7 +141,7 @@ The signatures are printed by the check command::
     ...
     Building 12 realizations
     ...
-    Core size Gt=10 out of R=12 realizations
+    Core size Gt=10 for R=12 realizations
     Global RateMap of 400 B for 1 sites and 10 levels
     ...
     Uncertainty signatures of calc_172128

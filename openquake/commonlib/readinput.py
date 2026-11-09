@@ -88,12 +88,20 @@ U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 
+# True if word occurs in path not surrounded by letters or digits; NB: \b
+# cannot be used, since the underscore is a word character and job_NAF.ini
+# or job_Cabo_Verde.ini would not match
+def _word_in(word, path):
+    rx = rf'(?<![A-Za-z0-9]){re.escape(word)}(?![A-Za-z0-9])'
+    return re.search(rx, path) is not None
+
+
 def model_in(word, path):
     """
     :returns: True if the 3-character mosaic code word occurs in path
     """
     assert len(word) == 3, word
-    return re.search(rf'\b{word}\b', path) is not None
+    return _word_in(word, path)
 
 
 def get_country_or_model(job_ini):
@@ -101,9 +109,11 @@ def get_country_or_model(job_ini):
     If the path to job_ini contains a recognized country, returns the
     country code or the mosaic code, else the empty string.
     """
-    for name, cc in country2code.items():
-        if re.search(rf'\b{re.escape(name)}\b', job_ini):
-            return cc
+    # the longest names first, otherwise Congo would match
+    # Democratic_Republic_of_the_Congo
+    for name in sorted(country2code, key=len, reverse=True):
+        if _word_in(name, job_ini):
+            return country2code[name]
     for model in MODELS:
         if model_in(model, job_ini):
             return model
@@ -490,6 +500,15 @@ def is_fraction(string):
     except (ValueError, TypeError):
         return
     return 0 < f < 1
+
+
+def is_fake_hc(oq):
+    """
+    :returns: True if the hazard_calculation_id is the fake one set by
+              `oq check_input` for risk jobs (see get_oqparam)
+    """
+    hc = oq.hazard_calculation_id
+    return isinstance(hc, str) and hc.endswith('<fake>.ini')
 
 
 def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
@@ -936,6 +955,21 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
+# rebuild the GSIMs with a VS30_RANGE (i.e. Allen 2022) with
+# vs30_strict=False; setting the attribute on the instance is not enough,
+# since it is lost when the logic tree is stored (via the TOML repr) and
+# read back, for instance by the risk calculations using a SES file
+def _relax_vs30(gsim_lt):
+    new = {}
+    for gsims in gsim_lt.values.values():
+        for i, gsim in enumerate(gsims):
+            if hasattr(gsim, 'VS30_RANGE') and gsim.vs30_strict:
+                kw = dict(gsim.kwargs, vs30_strict=False)
+                new[id(gsim)] = gsims[i] = gsim.__class__(**kw)
+    for br in gsim_lt.branches:
+        br.gsim = new.get(id(br.gsim), br.gsim)
+
+
 def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
@@ -961,6 +995,8 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
+    if not oqparam.strict:
+        _relax_vs30(gsim_lt)
     spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
@@ -2120,7 +2156,7 @@ def read_mosaic_df(mosaic_dir=''):
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
     logging.info(f'Reading {mosaic_boundaries_file}')
     df = read_geometries(mosaic_boundaries_file, 'name')
-    codes = set(df.code.unique())
+    codes = {ALIASES.get(c, c) for c in df.code.unique()}
     extra = codes - set(MODELS)
     if extra:
         logging.warning(f'{mosaic_boundaries_file} '

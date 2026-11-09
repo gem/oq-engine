@@ -106,6 +106,20 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
+def set_aborted(db, job_id):
+    """
+    Mark the job aborted only if it is still submitted or executing.
+
+    Check and update in one SQL statement so a worker finishing between the
+    abort request and this update keeps its final status. Return 1 if updated,
+    or 0 if the job no longer has an eligible status or does not exist.
+    """
+    cursor = db("UPDATE job SET status='aborted', is_running=0 "
+                "WHERE id=?x AND status IN ('submitted', 'executing')",
+                job_id)
+    return cursor.rowcount
+
+
 def create_job(db, datadir, calculation_mode='to be set',
                description='just created', user_name=None,
                hc_id=None, host=None, workflow_id=None):

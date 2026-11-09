@@ -11,7 +11,7 @@ jobs:
   # tests below.  A gate job (instead of on.pull_request.paths) is used so the
   # required check is always reported, even when the tests are skipped.
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       install: ${{ steps.diff.outputs.install }}
     steps:

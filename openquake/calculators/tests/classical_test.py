@@ -479,17 +479,16 @@ class ClassicalTestCase(CalculatorTestCase):
             self.run_calc(case_28.__file__, 'job.ini',
                           source_model_logic_tree_file=(
                               'source_model_logic_tree_depth_error.xml'))
-
         self.assertIn('hypo_depth_list 25.0 km is outside the '
                       'seismogenic zone [0.0, 20.0] km', str(ctx.exception))
 
         # Event-based on the same source goes through simple_fault
         # iter_ruptures(rates=True), where per-rupture rates must be
-        # weighted by the renormalised hypo_depth weights so poisson
-        # sampling totals match the source's true annual rate
+        # weighted by the depth-first allocation so poisson sampling
+        # totals match the source's true annual rate
         self.run_calc(case_28.__file__, 'job_event_based.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 89)
-        self.assertEqual(len(self.calc.datastore['events']), 96)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 93)
+        self.assertEqual(len(self.calc.datastore['events']), 100)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
@@ -696,6 +695,9 @@ class ClassicalTestCase(CalculatorTestCase):
         oq = self.calc.datastore['oqparam']
         self.assertEqual(oq.ps_grid_spacing, 50.)
         self.assertEqual(oq.pointsource_distance['default'], 15.)
+        # 50 km is within the tolerance, so only its 4 distances are tried
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_43.__file__, 'job.ini',
                       hazard_calculation_id=hc_id, concurrent_tasks='4')

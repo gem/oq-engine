@@ -80,12 +80,6 @@ available at the moment:
 `OQ_DISTRIBUTE` set tp "zmq"
    use the zmq concurrency mechanism (experimental)
 
-There is also an `OQ_DISTRIBUTE` = "threadpool"; however the
-performance of using threads instead of processes is normally bad for the
-kind of applications we are interested in (CPU-dominated, which large
-tasks such that the time to spawn a new process is negligible with
-respect to the time to perform the task), so it is not recommended.
-
 If you are using a pool, is always a good idea to cleanup resources at the end
 with
 
@@ -194,11 +188,11 @@ import logging
 import operator
 import tempfile
 import traceback
+import warnings
 import collections
 from unittest import mock
 import multiprocessing.shared_memory as shmem
-from concurrent.futures import (ProcessPoolExecutor, ThreadPoolExecutor,
-                                as_completed)
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import psutil
 import numpy
 
@@ -258,7 +252,7 @@ def no_submit(self, func, args, monitor):
     safely_call(func, args, self.task_no, monitor, InprocSocket(self.inproc))
 
 
-@submit.add('processpool', 'threadpool')
+@submit.add('processpool')
 def processpool_submit(self, func, args, monitor):
     return self.pool.submit(
         safely_call, func, args, self.task_no, monitor)
@@ -281,16 +275,21 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'slurm'):
+    if dist not in ('no', 'processpool', 'zmq', 'slurm'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
 
-def init_worker():
+def init_worker(title):
     """
-    Used to initialize the process pool. Calls setproctitle (if available)
-    and sets the flag Starmap.on, so that it is possible to determine if
-    the current code is begin run in parallel or not.
+    Used to initialize the process pools. Calls setproctitle (if
+    available) with the given title and sets the flag Starmap.on, so that
+    it is possible to determine if the current code is being run in
+    parallel or not. It also silences the DeprecationWarnings and
+    UserWarnings, which the GSIM classes raise at instantiation and which
+    are already shown by the master process.
+
+    :param title: the process title to set (if setproctitle is available)
     """
     # SIGINT not passed to the workers to reduce traceback
     try:
@@ -303,8 +302,10 @@ def init_worker():
     except ImportError:
         pass
     else:
-        setproctitle('oq-worker')
+        setproctitle(title)
     Starmap.on = True
+    warnings.filterwarnings('ignore', category=DeprecationWarning)
+    warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class Pickled(object):
@@ -783,12 +784,10 @@ class Starmap(object):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             cls.pool = ProcessPoolExecutor(
-                num_cores, mp_context, init_worker)
+                num_cores, mp_context, init_worker, ('oq-worker',))
             # we use spawn to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-        elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = ThreadPoolExecutor(num_cores, initializer=init_worker)
 
         if num_cores > tot_cores:
             logging.warning(f'{num_cores=} but {tot_cores=}')
@@ -932,7 +931,7 @@ class Starmap(object):
             if self.distribute == 'slurm':
                 self.init_slurm()
         dist = 'no' if self.num_tasks == 1 else self.distribute
-        if dist not in ('no', 'threadpool'):
+        if dist != 'no':
             pickled = isinstance(args[0], Pickled)
             if not pickled:
                 assert not isinstance(args[-1], Monitor)  # sanity check

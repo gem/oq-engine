@@ -25,7 +25,7 @@ import numpy
 import pandas
 from io import BytesIO
 
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.hazardlib import (
     InvalidFile, site_amplification, gsim_lt, source_reader)
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
@@ -844,6 +844,17 @@ class GetCountryOrModelTestCase(unittest.TestCase):
         self.assertEqual(
             get_country_or_model('/x/American_Samoa/job.ini'), 'ASM')
 
+    def test_underscore(self):
+        # the Africa jobs in the global risk model
+        self.assertEqual(get_country_or_model('/x/Jobs/job_NAF.ini'), 'NAF')
+        self.assertEqual(
+            get_country_or_model('/x/Jobs/job_Cabo_Verde.ini'), 'CPV')
+        self.assertEqual(get_country_or_model('/x/job_Congo.ini'), 'COG')
+        self.assertEqual(get_country_or_model(
+            '/x/job_Democratic_Republic_of_the_Congo.ini'), 'COD')
+        self.assertEqual(get_country_or_model('/x/job_Niger.ini'), 'NER')
+        self.assertEqual(get_country_or_model('/x/job_Nigeria.ini'), 'NGA')
+
     def test_not_a_whole_word(self):
         # 'OIN' is a substring of 'POINT' but not a whole word
         self.assertEqual(get_country_or_model('/x/POINT/job.ini'), '')
@@ -875,3 +886,21 @@ class PotentialPathsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.get_full_lt(quantile_hazard_curves='0.1,0.9')
         self.assertIn('or set use_rates=true', str(ctx.exception))
+
+
+class RelaxVs30TestCase(unittest.TestCase):
+    # with strict=false vs30_strict=False must survive the storage of the
+    # logic tree, otherwise the risk calculations reading the ruptures from
+    # a SES file would raise an error in the workers
+    def test_roundtrip(self):
+        glt = gsim_lt.GsimLogicTree.from_('[Allen2022]')
+        readinput._relax_vs30(glt)
+        [gsim] = glt.values['*']
+        self.assertFalse(gsim.vs30_strict)
+        self.assertIs(glt.branches[0].gsim, gsim)
+        fname = general.gettemp(suffix='.hdf5')
+        with hdf5.File(fname, 'w') as f:
+            f['gsim_lt'] = glt
+        with hdf5.File(fname, 'r') as f:
+            [gsim] = f['gsim_lt'].values['*']
+        self.assertFalse(gsim.vs30_strict)

@@ -173,8 +173,11 @@ collapse_precision:
   with the same rupture parameters (dip, strike and rake rounded to one
   decimal place) and with distances equal within the given
   relative precision (on log(1 + d)) are merged by summing their
-  occurrence rates. The far away sites benefit the most, since many
-  ruptures are at similar distances from them.
+  occurrence rates. The gsims requiring the same rupture parameters and
+  distances are grouped, and the contexts are collapsed once per group
+  using only the parameters required by the group, so the gsims requiring
+  fewer parameters collapse more. The far away sites benefit the most,
+  since many ruptures are at similar distances from them.
   Example: *collapse_precision = 0.02*.
   Default: 0, meaning no collapsing
 
@@ -727,10 +730,11 @@ prefer_global_site_params:
   INTERNAL. Automatically set by the engine.
 
 ps_grid_spacing:
-  Used in classical calculations to grid the point sources. Requires the
-  *pointsource_distance* to be set too. If set to *auto*, the engine
-  determines ps_grid_spacing (and pointsource_distance, if not set)
-  by comparing the hazard on a sample of sites with the exact one.
+  Used in classical calculations to grid the point sources. If the
+  *pointsource_distance* is not set, it is calibrated by comparing the
+  hazard on a sample of sites with a reference calculation. If set to
+  *auto*, the engine determines ps_grid_spacing (and pointsource_distance,
+  if not set) in the same way.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
@@ -1568,8 +1572,6 @@ class OqParam(valid.ParamSet):
         self.auto_grid = self.ps_grid_spacing == 'auto'
         if self.auto_grid:  # set in preclassical, see autogrid.calibrate
             self.ps_grid_spacing = 0.
-        elif self.ps_grid_spacing and not self.psd_given:
-            self.pointsource_distance = dict(default=25)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):

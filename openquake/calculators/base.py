@@ -398,11 +398,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if oq.impact:
                     self._copy_model_provenance()
+                if os.environ.get('OQ_CHECK_INPUT'):
+                    # do not execute the calculation; risk jobs have a
+                    # fake parent, so only read the inputs (including
+                    # the site model and the check_sites checks)
+                    if oq.job_type == 'risk':
+                        self.read_inputs()
+                    elif pre_execute:
+                        self.pre_execute()
+                    return {}
                 if pre_execute:
                     self.pre_execute()
-                if os.environ.get('OQ_CHECK_INPUT'):
-                    # do not execute the calculation
-                    return {}
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
@@ -2037,7 +2043,7 @@ def read_parent_sitecol(oq, dstore):
     """
     :returns: the hazard site collection in the parent calculation
     """
-    if oq.hazard_calculation_id == '<fake>.ini':  # set by oq check_input
+    if readinput.is_fake_hc(oq):  # set by oq check_input
         return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:

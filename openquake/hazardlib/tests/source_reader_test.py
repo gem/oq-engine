@@ -17,9 +17,11 @@
 # pylint: disable=missing-docstring
 
 import os
+import types
 import unittest
 import numpy
 from openquake.hazardlib import nrml
+from openquake.hazardlib.source_group import SourceGroup
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 from openquake.hazardlib.source.multi_point import MultiPointSource
@@ -28,7 +30,8 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
-from openquake.hazardlib.source_reader import splitMF
+from openquake.hazardlib.source_reader import (
+    splitMF, add_bangs, check_mfd_variants, content_hash)
 
 
 def make_mps():
@@ -98,3 +101,38 @@ class StrideTestCase(unittest.TestCase):
         fname = os.path.join(QA, 'classical/case_27/source_model.xml')
         conv = SourceConverter(50., 1., 1., 1., 10.)
         self.check(fname, conv)
+
+
+def make_smodel(branch, rates):
+    # a source model with a single MultiPointSource with the given rates
+    src = make_mps()
+    src.mfd = MultiMFD('incrementalMFD', size=3, min_mag=[4.5],
+                       bin_width=[1.0], occurRates=rates)
+    src.checksum = content_hash(src)
+    grp = SourceGroup('Active Shallow Crust', [src])
+    return types.SimpleNamespace(branch=branch, src_groups=[grp])
+
+
+class MFDVariantsTestCase(unittest.TestCase):
+    # the same source in 3 files, two of them with the same MFD
+    def test_variants(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]]),
+                  'c.xml': make_smodel('b3', [[0.1], [0.2], [0.3]])}
+        self.assertEqual(add_bangs(smdict), ['mp1'])
+        with self.assertLogs(level='WARNING') as cm:
+            found = check_mfd_variants(smdict, 'ssmLT.xml')
+        self.assertEqual(found, ['mp1'])
+        self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
+                      cm.output[0])
+
+    # different geometries are not MFD variants
+    def test_no_variants(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]])}
+        smdict['b.xml'].src_groups[0][0].upper_seismogenic_depth = 5.
+        for smodel in smdict.values():
+            src = smodel.src_groups[0][0]
+            src.checksum = content_hash(src)
+        add_bangs(smdict)
+        self.assertEqual(check_mfd_variants(smdict, 'ssmLT.xml'), [])

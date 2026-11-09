@@ -25,5 +25,6 @@ the techniques to reduce an impossible calculation to a feasible one.
    vector-valued-psha
    probabilistic-fault-displacement
    special-features
+   performance-approximations
    useful-oq-commands
    working-with-the-dstore

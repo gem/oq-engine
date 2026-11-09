@@ -446,25 +446,26 @@ class MapArray(object):
         arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update_indep(self, poes, ctxt, itime, rates=None):
+    def update_indep(self, poes, ctxt, itime, rates=None, gslc=slice(None)):
         """
-        Update probabilities for independent ruptures
+        Update probabilities for independent ruptures; if `gslc` is given,
+        only the gsims in that slice are updated
         """
         if rates is None:
             rates = ctxt.occurrence_rate
         self._update_indep_arrays(poes, rates, ctxt.probs_occur,
-                                  ctxt.sids, itime)
+                                  ctxt.sids, itime, gslc)
 
-    def _update_indep_arrays(self, poes, rates, probs_occur, sids, itime):
+    def _update_indep_arrays(self, poes, rates, probs_occur, sids, itime,
+                             gslc=slice(None)):
         # like update_indep, but taking the plain arrays of the fields
         # (faster, since numpy record field access is slow)
         sidxs = self.sidx[sids]
+        arr = self.array[:, :, gslc]  # a view
         if self.rates:
-            update_pmap_r(self.array, poes, rates, probs_occur,
-                          sidxs, itime)
+            update_pmap_r(arr, poes, rates, probs_occur, sidxs, itime)
         else:
-            update_pmap_i(self.array, poes, rates, probs_occur,
-                          sidxs, itime)
+            update_pmap_i(arr, poes, rates, probs_occur, sidxs, itime)
 
     def update_mutex(self, poes, ctxt, itime, mutex_weight):
         """

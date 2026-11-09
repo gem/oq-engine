@@ -34,9 +34,11 @@ scratch database, never the engine database in ~/oqdata.
 After a refactoring run `ruff check` and openquake/baselib/tests/flake8_test.py;
 make sure they do not fail.
 
-# notes
+# tips
 
 The performance of a machine can be assessed with the command
 `oq engine --run https://downloads.openquake.org/jobs/performance.zip`.
 On a laptop with an Intel Ultra/Ryzen 7 (or a modern Mac)
 it should take less than 10 minutes.
+
+When writing throwaway scripts, don't forget the `if __name__ == '__main__'` guard.

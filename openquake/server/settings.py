@@ -23,8 +23,12 @@ import getpass
 import tempfile
 import logging
 
-from openquake.baselib import config
-from openquake.commonlib import datastore, auth
+from django.core.exceptions import ImproperlyConfigured
+from openquake.baselib import config, is_server_installation
+from openquake.baselib.general import engine_version
+from openquake.commonlib import datastore
+from openquake.server.utils import get_or_create_django_secret_key
+
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
@@ -51,7 +55,8 @@ INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
-DEBUG = True
+# Normally do not show debug pages in a server installation
+DEBUG = not is_server_installation()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
@@ -128,8 +133,6 @@ LANGUAGE_CODE = 'en-us'
 # to load the internationalization machinery.
 USE_I18N = True
 
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = auth.API_KEY
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -289,19 +292,29 @@ if STANDALONE and WEBUI:
 
 if not TEST:
     try:
-        # Try to load a local_settings.py from the current folder; this is useful
-        # when packages are used. A custom local_settings.py can be placed in
-        # /usr/share/openquake/engine, avoiding changes inside the python package
+        # Try to load a local_settings.py from the current folder; this is
+        # useful when packages are used. A custom local_settings.py can be
+        # placed in /usr/share/openquake/engine, avoiding changes inside the
+        # python package
         from local_settings import *  # noqa
     except ImportError:
-        # If no local_settings.py is availble in the current folder let's try to
-        # load it from openquake/server/local_settings.py
+        # If no local_settings.py is availble in the current folder let's try
+        # to load it from openquake/server/local_settings.py
         try:
             from openquake.server.local_settings import *  # noqa
         except ImportError:
             # If a local_setting.py does not exist
             # settings in this file only will be used
             pass
+
+# In a devel_server installation we might want to set DEBUG = True
+if is_server_installation() and DEBUG:
+    if 'git' in engine_version():  # devel_server
+        logging.warning(
+            'DEBUG is True. Please check if this is intentional!')
+    else:
+        raise ImproperlyConfigured(
+            'DEBUG = True is not allowed in a server installation:')
 
 # Local defaults must not affect the test suite. In particular, a configured
 # IMPACT_DEFAULT_USGS_ID can overwrite the ID selected by a UI test.
@@ -466,3 +479,14 @@ if LOCKDOWN:
 for app in OQP_INSTALLED_APPS:
     if app not in INSTALLED_APPS:
         INSTALLED_APPS += (app,)
+
+try:
+    # it is defined if it was specified in local_settings.py
+    # NOTE: if it is defined in local_settings.py it has priority over the
+    #       DJANGO_SECRET_KEY env variable and the ~/.oq_django_secret_key file
+    #       If in local_settings.py SECRET_KEY is defined as an empty string,
+    #       Django raises an ImproperlyConfigured exception.
+    SECRET_KEY  # noqa
+    logging.info('Using Django SECRET_KEY from local_settings.py')
+except NameError:
+    SECRET_KEY = get_or_create_django_secret_key()
