@@ -18,10 +18,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # import subprocess
+import os
+from importlib.metadata import version
+
 from django.apps import apps as django_apps
 from django.core.management import call_command, get_commands
 import sys
 from django.core.management.base import BaseCommand
+from openquake.commonlib.logs import get_datadir
+
+
+def _taxonomy_postinstall_state():
+    # Track both the loader and its data package so new data is loaded once.
+    signature = ':'.join((version('django-gem-taxonomy'),
+                          version('openquake-gem-taxonomy-data')))
+    marker = os.path.join(get_datadir(), '.django_gem_taxonomy_version')
+    return marker, signature
 
 
 class Command(BaseCommand):
@@ -56,12 +68,22 @@ class Command(BaseCommand):
                 )
             sys.exit(0)
 
+        marker = None
         if options['django_app'] == 'django_gem_taxonomy':
             attr_model = django_apps.get_model(
                 'django_gem_taxonomy', 'Attribute')
-            if attr_model.objects.exists():
-                self.stdout.write(
-                    'Taxonomy data already exists, skipping postinstall.')
-                return
+            marker, signature = _taxonomy_postinstall_state()
+            if os.path.exists(marker):
+                with open(marker) as f:
+                    same_version = f.read().strip() == signature
+                if same_version and attr_model.objects.exists():
+                    self.stdout.write(
+                        'Taxonomy postinstall already applied, skipping.')
+                    return
 
         call_command(postinstall_cmd)
+        if marker:
+            os.makedirs(os.path.dirname(marker), exist_ok=True)
+            with open(marker + '.tmp', 'w') as f:
+                f.write(signature)
+            os.replace(marker + '.tmp', marker)
