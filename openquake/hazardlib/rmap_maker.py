@@ -461,6 +461,11 @@ def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
         R = numpy.array([[r.get(float(mag), 0.) for r in rv]
                          for rv in ratios])
         cm.cfactor[0] += len(ctxt)  # as in gen_poes
+        # contexts saved by computing them once: a variant computed alone
+        # would generate the contexts of the sources containing the
+        # magnitude, i.e. the ones with a positive ratio
+        nvariants = (R > 0).sum(axis=0)  # number of variants per source
+        cm.cfactor[3] += nvariants @ numpy.bincount(si, minlength=S) - count
         if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
             _update_linear(cm, pnemaps, R, ctxt, si, itime)
             continue
