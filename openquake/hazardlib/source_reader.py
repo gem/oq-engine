@@ -34,7 +34,7 @@ from openquake.hazardlib.source_group import (
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import (
-    apply_uncertainties, check_correlated, get_bset_value,
+    apply_uncertainties, check_correlated, source_ids, get_bset_value,
     restrict_ts_samples)
 from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
@@ -489,14 +489,20 @@ def collect_sources(full_lt, rlz_groups):
         realization of the source
     """
     dic = {}
+    correlated = {}  # ordinal -> (bset_values, source IDs of the rlz)
     for rlz, grp in rlz_groups:
         trti = full_lt.trti.get(grp.trt, 0)
         trt_smr = trti * TWO24 + rlz.ordinal
         bset_values = full_lt.get_bset_values(rlz.ordinal)
         # NB: the uncertainties are applied later, in the workers, on
         # groups split by weight, so the correlated branchsets are checked
-        # here, where the groups are still whole
-        check_correlated(bset_values, grp)
+        # here, where the groups are still whole; the sources of a
+        # correlated branchset can be in different groups of the
+        # realization, so they are checked at the end
+        if any(bset.correlated for bset, _ in bset_values):
+            srcids = correlated.setdefault(
+                rlz.ordinal, (bset_values, set()))[1]
+            srcids.update(source_ids(grp))
         # NB: the sources are collected by id(grp), since the group objects
         # are shared by all the realizations selecting the same source model
         # file (see gen_groups); the groups built from them are then merged
@@ -508,6 +514,8 @@ def collect_sources(full_lt, rlz_groups):
             sig = unc_signature(bset_values, src)
             pairs = srcs.setdefault(id(src), (src, []))[1]
             pairs.append((trt_smr, rlz.samples, sig))
+    for bset_values, srcids in correlated.values():
+        check_correlated(bset_values, srcids)
     return dic
 
 
@@ -879,6 +887,7 @@ def check_same_sources(smdict, fname):
 # uncertainty types to suggest in check_mfd_variants, by MFD class
 MFD_UNCERTAINTY = {
     'EvenlyDiscretizedMFD': 'incrementalMFDAbsolute',
+    'MultiMFD': 'multiMFDAbsolute',
     'TruncatedGRMFD': 'abGRAbsolute, bGRAbsolute or maxMagGRAbsolute'}
 
 

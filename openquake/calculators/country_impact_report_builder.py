@@ -802,12 +802,11 @@ class CountryImpactReportBuilder:
         # items displayed in the first page of the report
         metrics = [(meta["label"], self._metric_explanation(lt))
                    for lt, meta in LOSS_METADATA.items()]
-        # NOTE: the summary table uses the residents as exposed value
-        # also for the fatalities (see _build_summary_table)
-        exposed = [
-            (meta["label"], EXPOSED_VALUE_EXPLANATION[
-                "residents" if lt == "occupants" else lt])
-            for lt, meta in LOSS_METADATA.items()]
+        # NOTE: the fatalities are described with the occupants, even if
+        # the summary table uses the residents as exposed value also for
+        # the fatalities (see _build_summary_table)
+        exposed = [(meta["label"], EXPOSED_VALUE_EXPLANATION[lt])
+                   for lt, meta in LOSS_METADATA.items()]
         # statistic displayed in the maps, plus the ones in the table
         keys = {"Median": "q50", "Mean": "lossmea"}[self.loss_metric]
         keys = {keys, "q50"} if self.no_uncertainty else {

@@ -353,6 +353,16 @@ hazard_uhs-std.csv
         self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
 
+        # without the source variants optimization each variant would
+        # generate its contexts: at the first depth 4 for the 6 variants
+        # with magnitudes 5.5, 6.5 and 6 for the 3 variants with maxMag 7.6,
+        # i.e. 42, and at the second depth 6 x 6 + 3 x 9 = 63
+        est = self.calc.datastore['nctxs'][0]
+        self.assertEqual(est['collapsed'], 15)
+        self.assertEqual(est['separate'], 105)
+        tbl = view('context_reduction', self.calc.datastore)
+        self.assertIn('| variants factor | 7.00', tbl)
+
     def test_gids_numbering(self):
         # the gids of the cmakers must be numbered as the core list, the
         # one used by read_gid_dic in the master, otherwise the rates are
@@ -628,6 +638,22 @@ hazard_uhs-std.csv
         aw = extract(self.calc.datastore, 'realizations')
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
+
+    def test_case_28_multimfd(self):
+        # multiMFDAbsolute is equivalent to abGRAbsolute when the MFDs of
+        # all the points of the MultiPointSource are the same, also in
+        # combination with the relative uncertainties
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_ab.xml')
+        expected = self.calc.datastore['hcurves-stats'][:, 0]
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_multimfd.xml')
+        got = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(got, expected, rtol=1e-6)
+        # the uncertainties are not trivial
+        self.assertGreater(len(self.calc.datastore['full_lt'].rlzs), 4)
 
     def test_case_28_bis(self):
         # missing z1pt0

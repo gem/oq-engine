@@ -814,5 +814,7 @@ window.initImpactForm = function() {
         $(this).css("background-color", "white");
     });
     refresh_spatial_correlation_options();
+    // NB: this also enables the approach radios, which are disabled in the
+    // template so that they cannot be changed before the handlers are bound
     set_shakemap_version_selector();
 }

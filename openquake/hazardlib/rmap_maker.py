@@ -270,6 +270,20 @@ def _mag_ratios(base, dic):
             if rate > 0}
 
 
+def _discard_filtered(mag_ratios, groups, srcfilter):
+    # Set to zero the ratios of the sources discarded by the source filter
+    # in a variant. The filter depends on the maximum magnitude of the
+    # source (see RmapMaker.gen_ctxs), so a source close to the maximum
+    # distance can be discarded in a variant with a small maximum magnitude
+    # and kept in the base: without this the variant would get the
+    # ruptures of the base contexts that it would not generate if computed
+    # alone, and the hazard would depend on the variants computed together
+    for v, grp in enumerate(groups):
+        for s, src in enumerate(grp):
+            if src.code != b'F' and srcfilter.get_close_sites(src) is None:
+                mag_ratios[v][s] = dict.fromkeys(mag_ratios[v][s], 0.)
+
+
 def mag_support(sources):
     # :param sources: a list of sources, as in a group
     # :returns: a hashable key with the magnitudes of each source; the
@@ -319,7 +333,7 @@ def make_results(groups, cmakers, sites):
         raise FilteredAway(
             'the variants have %s sources, expected %d: some sources were '
             'filtered away by the uncertainties' % (nsrcs, len(sources)))
-    # ratios[v][s] = dictionary mag -> ratio for source s of variant v
+    # mag_ratios[v][s] = dictionary mag -> ratio for source s of variant v
     # e.g. logictree/case_18/job_bis: the 9 variants of a depth (3 abGR x
     # 3 maxMagGR) are computed together, since the magnitudes 5.5, 6.5 of
     # the 6 variants with maxMag 7.0 and 7.3 are contained in the
@@ -327,9 +341,10 @@ def make_results(groups, cmakers, sites):
     # classical._split_by_mags); in the first call the base is variant 2,
     # with rate 0.115893 at M 5.5, variant 3 has rate 0.284605, i.e. ratio
     # 2.4558, and variant 0 has no M 7.5, i.e. ratio 0 at M 7.5
-    ratios = [[_mag_ratios(rates[b][s], rates[v][s])
-               for s in range(len(sources))]
-              for v in range(len(groups))]
+    mag_ratios = [[_mag_ratios(rates[b][s], rates[v][s])
+                   for s in range(len(sources))]
+                  for v in range(len(groups))]
+    _discard_filtered(mag_ratios, groups, rmaker.srcfilter)
     sids = rmaker.srcfilter.sitecol.sids
     cm = rmaker.cmaker
     pnemaps = [MapArray(sids, cm.imtls.size, len(cm.gsims),
@@ -341,7 +356,7 @@ def make_results(groups, cmakers, sites):
     # magnitudes 5.5, 6.5 keep 4 of them, see _scale_rups
     t0 = time.time()
     cfactor0 = cm.cfactor.copy()  # see RmapMaker.make
-    nctxs = _process_sources(rmaker, ratios, pnemaps, rups)
+    nctxs = _process_sources(rmaker, mag_ratios, pnemaps, rups)
     cfactor = cm.cfactor - cfactor0
     dt = (time.time() - t0) / len(sources)
     # the source data are recorded only for the first variant, the
@@ -365,15 +380,15 @@ def make_results(groups, cmakers, sites):
     return out
 
 
-def _process_sources(rmaker, ratios, pnemaps, rups):
+def _process_sources(rmaker, mag_ratios, pnemaps, rups):
     # Feed the probability maps of the variants with the contexts of all the
     # sources, see make_results. The contexts are concatenated in chunks, as
     # in _make_src_indep, otherwise gen_poes is called on tiny arrays and the
     # mean_stds are computed many more times; the chunks are processed by
-    # _update_chunk, which computes the GMPEs once per magnitude and chunk.
+    # update_variants, which computes the GMPEs once per magnitude and chunk.
     #
     # :param rmaker: a RmapMaker instance for the base variant
-    # :param ratios: ratios[v][s] as in make_results
+    # :param mag_ratios: mag_ratios[v][s] as in make_results
     # :param pnemaps: a list of V MapArrays, one per variant, to update
     # :param rups: a list of V lists, the rup_data of each variant, to extend
     # :returns: the number of contexts of each source
@@ -389,33 +404,34 @@ def _process_sources(rmaker, ratios, pnemaps, rups):
         # the ruptures of each variant, kept only with few sites as in gen_ctxs
         if cm.oq.keep_rupdata and rmaker.fewsites:
             for v, rup in enumerate(rups):
-                rup.extend(_scale_rups(ctxs, ratios[v][s]))
+                rup.extend(_scale_rups(ctxs, mag_ratios[v][s]))
         for ctx in ctxs:
             chunk.append(ctx)
             sidxs.append(numpy.full(len(ctx), s))
             nrows += len(ctx)
         if nrows > rmaker.maxsize:
-            _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+            update_variants(cm, pnemaps, mag_ratios, tspan, chunk, sidxs)
             chunk, sidxs, nrows = [], [], 0
     if chunk:
-        _update_chunk(cm, pnemaps, ratios, tspan, chunk, sidxs)
+        update_variants(cm, pnemaps, mag_ratios, tspan, chunk, sidxs)
     return nctxs
 
 
-# maximum number of floats of the contributions by source, see _update_linear
+# maximum number of floats of the contributions by source, see _update_poisson
 MAX_LINEAR = 2 ** 24
 
 
 # NB: this is crucial for the performance of the BCHydro calculation
-def _update_linear(cm, pnemaps, R, ctxt, si, itime):
+def _update_poisson(cm, pnemaps, mag_factors, ctxt, si, itime):
     # Update the probability maps of the variants with the contexts of a
     # single magnitude, for Poisson ruptures only. The rate of a row is
-    # occ_rate * R[v, s], and update_pmap_r adds rate * poe * itime to the
-    # map, so the contributions of each source are summed once, and each
-    # variant gets the sum of its contributions weighted by R[v, s]
+    # occ_rate * mag_factors[v, s], and update_pmap_r adds rate * poe *
+    # itime to the map, so the contributions of each source are summed
+    # once, and each variant gets the sum of its contributions weighted by
+    # mag_factors[v, s]
     pmap = pnemaps[0]
     N, L, G = pmap.array.shape
-    contribs = numpy.zeros((N, L, len(R[0]), G))  # N, L, S, G
+    contribs = numpy.zeros((N, L, len(mag_factors[0]), G))  # N, L, S, G
     for poes, _, _, _, slc in cm._gen_poes(ctxt):
         c = ctxt[slc]
         sidxs = pmap.sidx[c.sids]
@@ -423,58 +439,71 @@ def _update_linear(cm, pnemaps, R, ctxt, si, itime):
         contrib = poes.astype(F64) * (c.occurrence_rate * itime)[:, None, None]
         numpy.add.at(contribs, (sidxs, slice(None), si[slc]), contrib)
     for v, pnemap in enumerate(pnemaps):
-        pnemap.array += R[v] @ contribs
+        pnemap.array += mag_factors[v] @ contribs
 
 
-def _update_chunk(cm, pnemaps, ratios, tspan, ctxs, sidxs):
-    # Update the probability maps of the variants with the contexts of
-    # several sources, computing the PoEs once per magnitude (see
-    # make_results)
-    #
-    # :param cm: a ContextMaker instance
-    # :param pnemaps: a list of V MapArrays, one per variant
-    # :param ratios: ratios[v][s] is the dictionary mag -> ratio for the
-    #     source s of the variant v, see _mag_ratios
-    # :param tspan: the time span of the temporal occurrence model
-    # :param ctxs: a list of context arrays of the sources
-    # :param sidxs: a list of arrays with the source index of each row
-    ctx = concat(ctxs)
-    sidx = numpy.concatenate(sidxs)
-    ctx.mag = numpy.round(ctx.mag, 3)
-    # sorting by magnitude (stable, so the order within each magnitude is
-    # preserved) allows to process each magnitude as a contiguous slice
-    order = numpy.argsort(ctx.mag, kind='stable')
-    ctx = ctx[order]
-    sidx = sidx[order]
-    umags, starts, counts = numpy.unique(
-        ctx.mag, return_index=True, return_counts=True)
-    itime = tspan
-    # the rates are linear in the ratios only for Poisson ruptures, see
-    # _update_linear; the probability mode is not linear in the rates
-    linear = pnemaps[0].rates and not any(
-        len(probs) for probs in ctx.probs_occur)
-    S = len(ratios[0])
-    for mag, start, count in zip(umags, starts, counts):
-        ctxt = ctx[start:start+count]
-        si = sidx[start:start+count]
-        # R[v, s] is the rate ratio of the source s in the variant v
-        R = numpy.array([[r.get(float(mag), 0.) for r in rv]
-                         for rv in ratios])
-        cm.cfactor[0] += len(ctxt)  # as in gen_poes
-        if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
-            _update_linear(cm, pnemaps, R, ctxt, si, itime)
-            continue
-        for poes, _, _, _, slc in cm._gen_poes(ctxt):
-            c = ctxt[slc]
-            # read the record fields once for all the variants
-            sids = c.sids
-            probs_occur = c.probs_occur
-            occ_rate = c.occurrence_rate
-            poes = poes.astype(F64)
-            for v, pnemap in enumerate(pnemaps):
-                rates_v = occ_rate * R[v, si[slc]]
-                pnemap._update_indep_arrays(poes, rates_v, probs_occur,
-                                            sids, itime)
+def update_variants(cm, pnemaps, mag_ratios, tspan, ctxs, sidxs):
+    """
+    Update the probability maps of the variants with the contexts of
+    several sources, computing the PoEs once per magnitude (see
+    make_results)
+
+    :param cm: a ContextMaker instance
+    :param pnemaps: a list of V MapArrays, one per variant
+    :param mag_ratios: mag_ratios[v][s] is the dictionary mag -> ratio
+        for the source s of the variant v, see _mag_ratios
+    :param tspan: the time span of the temporal occurrence model
+    :param ctxs: a list of context arrays of the sources
+    :param sidxs: a list of arrays with the source index of each row
+    """
+    with cm.upd_mon:
+        ctx = concat(ctxs)
+        sidx = numpy.concatenate(sidxs)
+        ctx.mag = numpy.round(ctx.mag, 3)
+        # sorting by magnitude (stable, so the order within each magnitude is
+        # preserved) allows to process each magnitude as a contiguous slice
+        order = numpy.argsort(ctx.mag, kind='stable')
+        ctx = ctx[order]
+        sidx = sidx[order]
+        umags, starts, counts = numpy.unique(
+            ctx.mag, return_index=True, return_counts=True)
+        itime = tspan
+        # the rates are linear in the mag_ratios only for Poisson ruptures, see
+        # _update_poisson; the probability mode is not linear in the rates
+        linear = pnemaps[0].rates and not any(
+            len(probs) for probs in ctx.probs_occur)
+        S = len(mag_ratios[0])
+        for mag, start, count in zip(umags, starts, counts):
+            ctxt = ctx[start:start+count]
+            si = sidx[start:start+count]
+            # mag_factors is an array of shape (V, S) for the magnitude mag:
+            # mag_factors[v, s] is the rate ratio of the source s in the
+            # variant v
+            mag_factors = numpy.array([[r.get(float(mag), 0.) for r in rv]
+                                       for rv in mag_ratios])
+            cm.cfactor[0] += len(ctxt)  # as in gen_poes
+            # contexts saved by computing them once: a variant computed alone
+            # would generate the contexts of the sources containing the
+            # magnitude, i.e. the ones with a positive ratio
+            # number of variants per source
+            nvariants = (mag_factors > 0).sum(axis=0)
+            nctxs = numpy.bincount(si, minlength=S)  # contexts per source
+            cm.cfactor[3] += nvariants @ nctxs - count
+            if linear and S * pnemaps[0].array.size <= MAX_LINEAR:
+                _update_poisson(cm, pnemaps, mag_factors, ctxt, si, itime)
+                continue
+            for poes, _, _, _, slc in cm._gen_poes(ctxt):
+                c = ctxt[slc]
+                # read the record fields once for all the variants
+                sids = c.sids
+                probs_occur = c.probs_occur
+                occ_rate = c.occurrence_rate
+                poes = poes.astype(F64)
+                for v, pnemap in enumerate(pnemaps):
+                    rates_v = occ_rate * mag_factors[v, si[slc]]
+                    pnemap._update_indep_arrays(poes, rates_v, probs_occur,
+                                                sids, itime)
+
 
 
 def _scale_rups(rupdata, ratio):

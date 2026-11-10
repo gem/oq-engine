@@ -647,6 +647,25 @@ def view_performance(token, dstore):
     return performance_view(dstore)
 
 
+@view.add('context_reduction')
+def view_context_reduction(token, dstore):
+    """
+    Display the number of contexts stored in the nctxs dataset (zero
+    when not computed, see preclassical.CTX_EST) and the reduction factor
+    due to the source variants optimization, i.e. the ratio between the
+    contexts without the optimization ('separate') and the contexts
+    actually computed ('collapsed')
+    """
+    est = dstore['nctxs'][0]
+    rows = [[name, '{:_d}'.format(int(est[name]))]
+            for name in est.dtype.names]
+    names = est.dtype.names
+    if 'separate' in names and est['collapsed'] and est['separate']:
+        factor = est['separate'] / est['collapsed']
+        rows.append(['variants factor', '%.2f' % factor])
+    return text_table(rows, ['field', 'contexts'], ext='org')
+
+
 @view.add('workflow_info')
 def view_workflow_info(token, dstore):
     """
