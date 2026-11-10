@@ -129,7 +129,15 @@ def incMFD(utype, node, filename):
 def multiMFD(utype, node, filename):
     # the parameters (kind, size, kwargs) of a MultiMFD replacing the MFDs
     # of all the points of a multiPointSource; a missing bin_width is
-    # taken from the source when the uncertainty is applied
+    # taken from the source when the uncertainty is applied. For instance
+    #   <multiMFD kind="truncGutenbergRichterMFD" size="2">
+    #     <a_val>1.1E-03 1.2E-03</a_val> <b_val>8.0E-01</b_val>
+    #     <max_mag>6.93</max_mag> <min_mag>5.5</min_mag>
+    #   </multiMFD>
+    # gives kind='truncGutenbergRichterMFD', size=2 and kwargs={'min_mag':
+    # [5.5], 'max_mag': [6.93], 'a_val': [0.0011, 0.0012], 'b_val': [0.8]};
+    # an array of length 1 is shared by all the points, an array of length
+    # size has one value per point
     try:
         mmfd = MultiMFD.from_node(node.multiMFD, numpy.nan)
     except Exception as exc:
