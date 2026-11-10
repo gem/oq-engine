@@ -109,8 +109,6 @@ attribute of the ``logicTreeBranchSet`` element, described in
   value is a pair ``a b``.
 - ``abMaxMagAbsolute``: replaces ``a``, ``b`` and the maximum magnitude;
   the value is ``a b max_mag``.
-- ``abMinMaxMagAbsolute``: replaces ``a``, ``b``, the minimum and the
-  maximum magnitude; the value is ``a b min_mag max_mag``.
 - ``bGRAbsolute``: replaces the Gutenberg-Richter ``b`` (a float).
 - ``bGRRelative``: adds a delta to the Gutenberg-Richter ``b`` (a float).
 - ``bACAbsolute``: replaces the ``b`` of the Anderson-Coppersmith MFD (a
@@ -118,6 +116,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
 - ``bACRelative``: adds a delta to the ``b`` of the Anderson-Coppersmith
   MFD (a float).
 - ``maxMagGRAbsolute``: replaces the Gutenberg-Richter maximum magnitude
+  (a float).
+- ``minMagGRAbsolute``: replaces the Gutenberg-Richter minimum magnitude
   (a float).
 - ``maxMagGRRelative``: adds a delta to the Gutenberg-Richter maximum
   magnitude (a float).

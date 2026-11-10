@@ -245,23 +245,20 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
                              a_val=1, b_val=1)
         self.assert_mfd_error(mfd.modify, 'set_ab', {'a_val': 0, 'b_val': 0})
 
-    def test_set_ab_min_max_mag(self):
-        mfd = TruncatedGRMFD(min_mag=5.9, max_mag=7.7, bin_width=0.1,
-                             a_val=1, b_val=1.3)
-        mfd.modify('set_ab_min_max_mag', {
-            'a_val': -4.2, 'b_val': 1.45, 'min_mag': 6.1, 'max_mag': 7.1})
-        self.assertEqual(mfd.a_val, -4.2)
-        self.assertEqual(mfd.b_val, 1.45)
+    def test_set_min_mag(self):
+        mfd = TruncatedGRMFD(min_mag=5.9, max_mag=7.1, bin_width=0.1,
+                             a_val=-1.5, b_val=0.9)
+        mfd.modify('set_min_mag', {'value': 6.1})
         self.assertEqual(mfd.min_mag, 6.1)
-        self.assertEqual(mfd.max_mag, 7.1)
-        # the rates are the ones of a MFD built with the new parameters
-        expected = TruncatedGRMFD(6.1, 7.1, 0.1, -4.2, 1.45)
+        # a and b are not touched
+        self.assertEqual((mfd.a_val, mfd.b_val), (-1.5, 0.9))
+        # the rates are the ones of a MFD built with the new minimum
+        expected = TruncatedGRMFD(6.1, 7.1, 0.1, -1.5, 0.9)
         self.assertEqual(list(mfd.get_annual_occurrence_rates()),
                          list(expected.get_annual_occurrence_rates()))
 
-    def test_set_ab_min_max_mag_check_constraints(self):
+    def test_set_min_mag_check_constraints(self):
         mfd = TruncatedGRMFD(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                              a_val=1, b_val=1)
         # the minimum magnitude must be lower than the maximum one
-        self.assert_mfd_error(mfd.modify, 'set_ab_min_max_mag', {
-            'a_val': 1, 'b_val': 1, 'min_mag': 7.5, 'max_mag': 7.0})
+        self.assert_mfd_error(mfd.modify, 'set_min_mag', {'value': 7.5})
