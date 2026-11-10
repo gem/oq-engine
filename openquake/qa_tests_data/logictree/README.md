@@ -32,6 +32,7 @@
 | case_23_strided | Correlated uncertainties, striding disabled                                |
 | case_28         | Test collapse_gsim_logic_tree                                              |
 | case_28_bis     | Test missing z1pt0                                                         |
+| case_28_multimfd | Test multiMFDAbsolute on a multiPointSource                               |
 | case_25         | BC Hydro NVA SSC LT source model LT                                        |
 | case_26         | 3-branch amp LT with classical for full enumeration and sampling           |
 | case_27         | 3-branch amp LT with disagg for full enumeration and sampling              |

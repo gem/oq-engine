@@ -30,6 +30,7 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
+from openquake.hazardlib.lt import apply_uncertainty
 from openquake.hazardlib.source_reader import (
     splitMF, add_bangs, check_mfd_variants, content_hash)
 
@@ -114,16 +115,17 @@ def make_smodel(branch, rates):
 
 
 class MFDVariantsTestCase(unittest.TestCase):
-    # the same source in 3 files, two of them with the same MFD;
-    # MultiMFD variants cannot be moved in the logic tree, so no warning
+    # the same source in 3 files, two of them with the same MFD
     def test_variants(self):
         smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
                   'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]]),
                   'c.xml': make_smodel('b3', [[0.1], [0.2], [0.3]])}
         self.assertEqual(add_bangs(smdict), ['mp1'])
-        with self.assertNoLogs(level='WARNING'):
+        with self.assertLogs(level='WARNING') as cm:
             found = check_mfd_variants(smdict, 'ssmLT.xml')
-        self.assertEqual(found, [])
+        self.assertEqual(found, ['mp1'])
+        self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
+                      cm.output[0])
 
     # different geometries are not MFD variants
     def test_no_variants(self):
@@ -135,3 +137,21 @@ class MFDVariantsTestCase(unittest.TestCase):
             src.checksum = content_hash(src)
         add_bangs(smdict)
         self.assertEqual(check_mfd_variants(smdict, 'ssmLT.xml'), [])
+
+
+class MultiMFDAbsoluteTestCase(unittest.TestCase):
+    # the uncertainty replacing the MFDs of all the points of a
+    # multiPointSource, used to move MultiMFD variants into the logic tree
+    def test_apply(self):
+        src = make_mps()
+        value = ('incrementalMFD', 3, dict(
+            min_mag=[4.5], bin_width=[1.0], occurRates=[[.2], [.3], [.4]]))
+        apply_uncertainty('multiMFDAbsolute', src, value)
+        rates = list(src.mfd.get_annual_occurrence_rates())
+        self.assertEqual(rates, [(4.5, .2), (4.5, .3), (4.5, .4)])
+
+    def test_wrong_size(self):
+        value = ('incrementalMFD', 2, dict(
+            min_mag=[4.5], bin_width=[1.0], occurRates=[[.2], [.3]]))
+        with self.assertRaises(ValueError):
+            apply_uncertainty('multiMFDAbsolute', make_mps(), value)

@@ -639,6 +639,22 @@ hazard_uhs-std.csv
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
 
+    def test_case_28_multimfd(self):
+        # multiMFDAbsolute is equivalent to abGRAbsolute when the MFDs of
+        # all the points of the MultiPointSource are the same, also in
+        # combination with the relative uncertainties
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_ab.xml')
+        expected = self.calc.datastore['hcurves-stats'][:, 0]
+        self.run_calc(case_28.__file__, 'job.ini',
+                      source_model_logic_tree_file=
+                      'source_model_logic_tree_multimfd.xml')
+        got = self.calc.datastore['hcurves-stats'][:, 0]
+        aac(got, expected, rtol=1e-6)
+        # the uncertainties are not trivial
+        self.assertGreater(len(self.calc.datastore['full_lt'].rlzs), 4)
+
     def test_case_28_bis(self):
         # missing z1pt0
         with self.assertRaises(InvalidFile) as ctx:

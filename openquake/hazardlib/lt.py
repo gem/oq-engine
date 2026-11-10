@@ -30,6 +30,7 @@ from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
+from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 
 NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel']
@@ -122,6 +123,29 @@ def incMFD(utype, node, filename):
     min_mag, bin_width = (node.incrementalMFD["minMag"],
                           node.incrementalMFD["binWidth"])
     return min_mag,  bin_width, ~node.incrementalMFD.occurRates
+
+
+@parse_uncertainty.add('multiMFDAbsolute')
+def multiMFD(utype, node, filename):
+    # the parameters (kind, size, kwargs) of a MultiMFD replacing the MFDs
+    # of all the points of a multiPointSource; a missing bin_width is
+    # taken from the source when the uncertainty is applied. For instance
+    #   <multiMFD kind="truncGutenbergRichterMFD" size="2">
+    #     <a_val>1.1E-03 1.2E-03</a_val> <b_val>8.0E-01</b_val>
+    #     <max_mag>6.93</max_mag> <min_mag>5.5</min_mag>
+    #   </multiMFD>
+    # gives kind='truncGutenbergRichterMFD', size=2 and kwargs={'min_mag':
+    # [5.5], 'max_mag': [6.93], 'a_val': [0.0011, 0.0012], 'b_val': [0.8]};
+    # an array of length 1 is shared by all the points, an array of length
+    # size has one value per point
+    try:
+        mmfd = MultiMFD.from_node(node.multiMFD, numpy.nan)
+    except Exception as exc:
+        raise LogicTreeError(node, filename, f'{utype}: {exc}')
+    kwargs = dict(mmfd.kwargs)
+    if numpy.isnan(kwargs['bin_width'][0]):
+        del kwargs['bin_width']
+    return mmfd.kind, mmfd.size, kwargs
 
 
 @parse_uncertainty.add('truncatedGRFromSlipAbsolute')
@@ -483,6 +507,16 @@ def _maxmagGR_absolute(utype, source, value):
     _modify_mfd(source, 'set_max_mag', dict(value=value))
 
 
+@apply_uncertainty.add('multiMFDAbsolute')
+def _multiMFD_absolute(utype, source, value):
+    kind, size, kwargs = value
+    if size != len(source.mfd):
+        raise ValueError(f'{utype}: {source.source_id} has {len(source.mfd)}'
+                         f' points, got a MultiMFD of size {size}')
+    source.mfd = MultiMFD(kind, size, source.mfd.width_of_mfd_bin,
+                          **dict(kwargs))
+
+
 @apply_uncertainty.add('incrementalMFDAbsolute')
 def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
@@ -584,7 +618,8 @@ GEOMETRY_PRESERVING = frozenset([
     'bGRRelative', 'bACRelative', 'maxMagGRRelative',
     'maxMagGRRelativeNoMoBalance', 'maxMagAndDeltaMagACRelative',
     'maxMagAndDeltaMagACRelativeNoMoBalance', 'maxMagGRAbsolute',
-    'incrementalMFDAbsolute', 'truncatedGRFromSlipAbsolute',
+    'incrementalMFDAbsolute', 'multiMFDAbsolute',
+    'truncatedGRFromSlipAbsolute',
     'recurSet', 'recurRow', 'rateSplit', 'dummy'])
 
 
@@ -640,18 +675,29 @@ def get_bset_values(lt_path, source_model_lt):
     return bset_values
 
 
-def check_correlated(bset_values, src_group):
+def source_ids(sources):
     """
-    Check that the sources of the correlated branchsets are in the group.
-    The sources are also looked up by basename, since they can be fragments
-    of the sources in the logic tree (i.e. 'area1.0' for 'area1')
+    :returns: the IDs and the basenames of the given sources, as written
+              in the logic tree (i.e. without the branch, see lt_source_id)
     """
-    srcs = set(src.source_id for src in src_group)
-    bnames = set(valid.basename(src) for src in src_group)
+    ids = {lt_source_id(src) for src in sources}
+    return ids | {valid.basename(srcid) for srcid in ids}
+
+
+def check_correlated(bset_values, srcids):
+    """
+    Check that the sources of the correlated branchsets are in the given
+    set of source IDs, i.e. in the sources of the realization. The sources
+    are also looked up by basename, since they can be fragments of the
+    sources in the logic tree (i.e. 'area1.0' for 'area1')
+
+    :param bset_values: a list of pairs (branchset, value)
+    :param srcids: a set of source IDs and basenames, see source_ids
+    """
     for bset, value in bset_values:
         if bset.correlated:
             for source_id in value:
-                if source_id not in srcs and source_id not in bnames:
+                if source_id not in srcids:
                     raise NameError(
                         f'The source {source_id} in {bset.uncertainty_type} is'
                         ' missing, maybe you mispelled the name?')
@@ -699,7 +745,7 @@ def apply_uncertainties(bset_values, src_group, check=True):
     sg = copy.copy(src_group)
     sg.sources = []
     if check:
-        check_correlated(bset_values, src_group)
+        check_correlated(bset_values, source_ids(src_group))
     for source in src_group:
         # NB: the correlated branchsets are resolved here, once per
         # branchset and source
@@ -912,6 +958,9 @@ class BranchSet(object):
             of floats, one pair for one GR MFD in a target source.
         incrementalMFDAbsolute
             Replaces an evenly discretized MFD with the values provided
+        multiMFDAbsolute
+            Replaces the MultiMFD of a multiPointSource (i.e. the MFDs of
+            all its points) with the multiMFD provided
         simpleFaultDipRelative
             Increases or decreases the angle of fault dip from that given
             in the original source model
