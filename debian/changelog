@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
+    magnitude of a truncated Gutenberg-Richter MFD
   * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
     points of a multiPointSource, and fixed the source variants optimization
     to discard in each variant the sources filtered by the maximum distance
