@@ -28,12 +28,14 @@ from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
     import DuNing2021
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    loth_baker_2013 import LothBaker2013
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     monteiro_et_al_2026 import MonteiroEtAl2026
 from openquake.hazardlib.imt import PGA, SA
 
 
 IMTS = [PGA(), SA(0.3)]
-MODELS = [DuNing2021, MonteiroEtAl2026]
+MODELS = [DuNing2021, MonteiroEtAl2026, LothBaker2013]
 
 
 EPS = 1E-10
@@ -75,6 +77,7 @@ def test_exact_covariance(model_cls, shape):
     # deterministically, without a Monte Carlo tolerance. The second grid
     # also exercises an odd FFT-efficient embedding dimension.
     model = model_cls()
+    assert model.SUPPORTS_CIRCULANT_EMBEDDING
     spacing = (2.0, 3.0)
     factor = CirculantEmbeddingFactor.build(
         model, IMTS, shape, spacing,
@@ -83,6 +86,38 @@ def test_exact_covariance(model_cls, shape):
     actual = applied @ applied.T
     expected = dense_covariance(model, IMTS, shape, spacing)
     numpy.testing.assert_allclose(actual, expected, atol=EPS)
+
+
+def test_loth_baker_covariance():
+    # Include both interpolated periods used in typical four-IMT jobs.
+    model = LothBaker2013()
+    imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
+    shape = (3, 4)
+    factor = CirculantEmbeddingFactor.build(model, imts, shape, 1.0)
+    applied = factor.apply(numpy.eye(factor.input_size))
+    expected = dense_covariance(model, imts, shape, (1.0, 1.0))
+    numpy.testing.assert_allclose(
+        applied @ applied.T, expected, rtol=0, atol=EPS)
+
+
+def test_loth_baker_periods():
+    # All nine tabulated periods require a larger periodic embedding.
+    # Recover covariance lags from its spectrum, avoiding a large identity
+    # matrix whose size would grow with the number of independent inputs.
+    model = LothBaker2013()
+    imts = [SA(period) for period in (
+        0.01, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 7.5, 10.0)]
+    factor = CirculantEmbeddingFactor.build(model, imts, (32, 48), 1.0)
+    assert factor.embedding_multiplier > 1
+    root = factor.spectral_root
+    spectrum = root @ root.swapaxes(-1, -2).conj()
+    covariance = numpy.fft.irfft2(
+        spectrum, s=factor.embedded_shape, axes=(0, 1))
+    for row, column in [(0, 0), (0, 1), (1, 0), (31, 47)]:
+        distance = numpy.array([[numpy.hypot(row, column)]])
+        expected = model.correlation_block(distance, imts)
+        numpy.testing.assert_allclose(
+            covariance[row, column], expected, rtol=0, atol=EPS)
 
 
 def test_spatial_covariance():
