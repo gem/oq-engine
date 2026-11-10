@@ -257,6 +257,23 @@ def get_effective_rlzs(rlzs):
 Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
+def branch_id(branch, strict=False):
+    """
+    :param branch: a logicTreeBranch node or a branch ID string
+    :param strict: if True, raise an error for invalid IDs
+    :returns: the branch ID, validated by valid.branch_id; if it is invalid
+              and strict is False the spaces are replaced by underscores,
+              since applyToBranches is a list of IDs separated by spaces
+    """
+    brid = branch if isinstance(branch, str) else branch['branchID']
+    try:
+        return valid.branch_id(brid)
+    except ValueError:
+        if strict:
+            raise
+        return re.sub(r'\s', '_', brid.strip())
+
+
 def collect_info(smltpath, branchID=''):
     """
     Given a path to a source model logic tree, collect all of the
@@ -283,7 +300,7 @@ def collect_info(smltpath, branchID=''):
                 applytosources[bset.get('applyToBranches')].extend(srcs)
             if bset['uncertaintyType'] in 'sourceModel extendModel':
                 for br in bset:
-                    if branchID and branchID != br['branchID']:
+                    if branchID and branch_id(branchID) != branch_id(br):
                         continue
                     with context(smltpath, br):
                         fnames = abs_paths(
@@ -501,15 +518,20 @@ class SourceModelLogicTree(object):
 
     def __init__(self, filename, seed=0, num_samples=0,
                  sampling_method='early_weights', test_mode=False,
-                 branchID='', source_id=''):
+                 branchID='', source_id='', strict=False):
         self.filename = filename
+        # if not strict, the invalid branch IDs are accepted, replacing
+        # the spaces with underscores (see branch_id)
+        self.strict = strict
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
         self.seed = int(seed)
         self.num_samples = num_samples
         self.sampling_method = sampling_method
         self.test_mode = test_mode
-        self.branchID = branchID  # used to read only one sourceModel branch
+        # used to read only one sourceModel branch
+        self.branchID = branch_id(branchID) if branchID else ''
+
         self.source_id = source_id
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
@@ -779,32 +801,37 @@ class SourceModelLogicTree(object):
                         if (fname.endswith(('.xml', '.nrml'))
                                 and not self.test_mode):
                             self.collect_source_model_data(
-                                branchnode['branchID'], fname)
+                                branch_id(branchnode), fname)
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.branchID and self.branchID != branchnode['branchID']:
+                if self.branchID and self.branchID != branch_id(branchnode):
                     value = ''  # reduce all branches except branchID
-            branch_id = branchnode.attrib.get('branchID')
-            if branch_id in self.branches:
+            try:
+                br_id = branch_id(branchnode, self.strict)
+            except ValueError as exc:
+                raise LogicTreeError(branchnode, self.filename,
+                                     f'{exc} (set strict=false to replace '
+                                     'the spaces with underscores)')
+            if br_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
-                    "branchID '%s' is not unique" % branch_id)
+                    "branchID '%s' is not unique" % br_id)
             if value == '':
                 # empty branches are generated on purpose by the branchID
                 # reduction and by SourceModelLogicTree.prune, but they can
                 # also be present in the input files, see case_04
-                zero_id = branch_id
+                zero_id = br_id
                 zeros.append(weight)
             else:
-                branch = Branch(branch_id, value, weight, bs_id)
-                self.branches[branch_id] = branch
+                branch = Branch(br_id, value, weight, bs_id)
+                self.branches[br_id] = branch
                 branchset.branches.append(branch)
-            self.shortener[branch_id] = keyno(branch_id, bsno, brno, BASE183)
+            self.shortener[br_id] = keyno(br_id, bsno, brno, BASE183)
             weights.append(weight)
         if zeros:
             branch = Branch(zero_id, '', sum(zeros), bs_id)
-            self.branches[branch_id] = branch
+            self.branches[br_id] = branch
             branchset.branches.append(branch)
 
         check_branchset_weights(branchset_node, self.filename, bs_id, weights)
@@ -1039,6 +1066,7 @@ class SourceModelLogicTree(object):
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         vars(self).update(attrs)
         self.test_mode = False
+        self.strict = False  # the branch IDs were already validated
         bsets = []
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
