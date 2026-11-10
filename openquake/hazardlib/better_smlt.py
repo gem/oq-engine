@@ -27,8 +27,8 @@ each copy a chain of single-branch correlated branchsets
 (applyToSources="*"), one for each kind of MFD, restoring the original
 MFDs in the branch:
 
-- truncGutenbergRichterMFD -> abMaxMagAbsolute "a b maxMag" (the copies
-  must have the same minMag)
+- truncGutenbergRichterMFD -> abMaxMagAbsolute "a b maxMag", followed by
+  minMagGRAbsolute "minMag" if the copies have different minMag
 - incrementalMFD -> incrementalMFDAbsolute
 - multiMFD -> multiMFDAbsolute (the copies must have the same number of
   points)
@@ -54,6 +54,7 @@ paths): the annual occurrence rates of all the sources must be the same.
 Use it with `oq check_input --better-smlt job.ini`.
 """
 import os
+import copy
 import re
 import tempfile
 import textwrap
@@ -68,6 +69,7 @@ MFD_TAGS = {'truncGutenbergRichterMFD', 'incrementalMFD', 'multiMFD',
             'arbitraryMFD', 'YoungsCoppersmithMFD',
             'taperedGutenbergRichterMFD'}
 UTYPE = {'truncGutenbergRichterMFD': 'abMaxMagAbsolute',
+         'minMag': 'minMagGRAbsolute',
          'incrementalMFD': 'incrementalMFDAbsolute',
          'multiMFD': 'multiMFDAbsolute'}
 SM_TYPES = ('sourceModel', 'extendModel')
@@ -284,9 +286,6 @@ def find_variants(bykey):
             skipped.append((src, 'fragment of a source (colon convention)'))
         elif len(kinds) > 1 or kinds - set(UTYPE):
             skipped.append((src, f'MFD types {sorted(map(str, kinds))}'))
-        elif kinds == {'truncGutenbergRichterMFD'} and len(
-                {cp.params[3] for cp in copies}) > 1:
-            skipped.append((src, 'different minMag'))
         elif kinds == {'multiMFD'} and len(
                 {cp.params[:2] for cp in copies}) > 1:
             skipped.append((src, 'different kind or number of points'))
@@ -309,8 +308,9 @@ def _new_body(body, base):
         return (body[:m.start()] +
                 _multi(m.group(1) or '', base.params, ind) + body[m.end():])
     elif base.kind == 'truncGutenbergRichterMFD':
-        a, b, mmax, _ = base.params
-        for name, val in (('aValue', a), ('bValue', b), ('maxMag', mmax)):
+        a, b, mmax, mmin = base.params
+        for name, val in (('aValue', a), ('bValue', b), ('maxMag', mmax),
+                          ('minMag', mmin)):
             body = re.sub(r'\b%s="[^"]*"' % name, f'{name}="{val}"', body,
                           count=1)
     else:
@@ -361,6 +361,8 @@ def _value(prefix, cp, indent=''):
     p = prefix
     if cp.kind == 'truncGutenbergRichterMFD':
         return '%s %s %s' % cp.params[:3]
+    elif cp.kind == 'minMag':  # pseudo-kind, see _link_copies
+        return cp.params[3]
     elif cp.kind == 'multiMFD':
         ind = indent + ' ' * 4
         return f'\n{ind}' + _multi(p, cp.params, ind) + f'\n{indent}'
@@ -408,6 +410,20 @@ def _replace_files(bset_text, branch_id, renames):
     return bset_text[:m.start(1)] + body + bset_text[m.end(1):]
 
 
+def _link_copies(base, cp):
+    # the copies to be written in the links to restore the MFD of cp; a
+    # truncated GR needs a link for a, b, maxMag if they are different from
+    # the base ones and a link for minMag (pseudo-kind) if it is different
+    if cp.kind != 'truncGutenbergRichterMFD':
+        return [cp]
+    out = [cp] if cp.params[:3] != base.params[:3] else []
+    if cp.params[3] != base.params[3]:
+        mcp = copy.copy(cp)
+        mcp.kind = 'minMag'
+        out.append(mcp)
+    return out
+
+
 def _links(variants, carriers):
     # the copies with a MFD different from the base, by carrier branch
     links = {}  # (bset ordinal, branch ID) -> [(source ID, copy)]
@@ -416,7 +432,8 @@ def _links(variants, carriers):
         for cp in copies:
             if cp.params != base.params:
                 for key in carriers[cp.fname]:
-                    links.setdefault(key, []).append((cp.id, cp))
+                    for lcp in _link_copies(base, cp):
+                        links.setdefault(key, []).append((cp.id, lcp))
     return links
 
 
