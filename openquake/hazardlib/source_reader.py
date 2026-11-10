@@ -837,13 +837,39 @@ def add_bangs(smdict):
     return found
 
 
+def _mfd_variants_ids(pairs):
+    # the sources in pairs [(smfile, src)] with the same geometry,
+    # different IDs and MFDs and a single copy in each file, as lists of
+    # IDs[file]; the original IDs are used, without the bangs
+    bygeom = general.AccumDict(accum=[])
+    for smfile, src in pairs:
+        bygeom[content_hash(src, NOT_CONTENT | {'mfd'})].append(
+            (smfile, src))
+    out = []
+    for same in bygeom.values():
+        ids = {basename(src).split('!')[0] for _, src in same}
+        # NB: with more copies in the same file the sources are different
+        # (they cannot get the same ID), only their rates would add up
+        if (len({smfile for smfile, _ in same}) == len(same) > 1 and
+                len(ids) > 1 and
+                len({checksum(src) for _, src in same}) > 1):
+            out.append(sorted({'%s[%s]' % (
+                basename(src).split('!')[0], os.path.basename(smfile))
+                for smfile, src in same}))
+    return out
+
+
 def check_same_sources(smdict, fname):
     """
     Log a warning if the same source (i.e. a source with the same content)
     appears in different source models with different IDs: then the engine
     cannot recognize the copies as the same source, i.e. it cannot reduce
     them (see reduce_sources), and the source is computed once per source
-    model.
+    model. It is an error in `oq check_input`. A different warning is
+    logged if the sources have the same geometry but different MFDs and
+    different IDs: they could be computed together if they had the same
+    ID and the MFDs were uncertainties of the logic tree, see
+    check_mfd_variants.
 
     :param smdict: a dictionary source model file -> SourceModel
     :param fname: the source model logic tree file, used in the warning
@@ -860,10 +886,11 @@ def check_same_sources(smdict, fname):
             for src in sgroup:
                 bykey[src.code, src.tectonic_region_type].append(
                     (smfile, src))
-    errors = []
+    errors, variants = [], []
     for pairs in bykey.values():
         if len({smfile for smfile, _ in pairs}) < 2:
             continue
+        variants.extend(_mfd_variants_ids(pairs))
         byhash = general.AccumDict(accum=[])
         for smfile, src in pairs:
             byhash[checksum(src)].append((smfile, src))
@@ -876,6 +903,17 @@ def check_same_sources(smdict, fname):
                 errors.append(sorted({'%s[%s]' % (
                     basename(src).split('!')[0], os.path.basename(smfile))
                     for smfile, src in same}))
+    if variants:
+        shown = ['  ' + general.shortlist(v) for v in variants[:3]]
+        logging.warning(
+            '%s:\n%d sources appear in different source models with '
+            'different IDs, the same geometry and different MFDs, so each '
+            'copy is computed separately. They are likely variants of a '
+            'base source: if so, give them the same ID and move the MFDs '
+            'in the logic tree (see the warning about MFD variants; '
+            '`oq check_input --better-smlt` does not change sources with '
+            'different IDs):\n%s%s', fname, len(variants), '\n'.join(shown),
+            '\n  ...' if len(variants) > 3 else '')
     if errors:
         lines = ['  ' + general.shortlist(err) for err in errors]
         msg = ('%s:\n%d sources appear in different source models with '
@@ -959,7 +997,9 @@ def check_mfd_variants(smdict, fname):
             'the MFDs in the logic tree,\nwith a branchSet with '
             'applyToSources="<source ID>" (and applyToBranches if needed) '
             'containing one branch\nper MFD; then the contexts are computed '
-            'once for all the MFDs, which can be much faster:\n%s',
+            'once for all the MFDs, which can be much faster. You can '
+            'do it automatically with\n`oq check_input job.ini '
+            '--better-smlt`\nThe sources are:\n%s',
             fname, len(lines), '\n'.join(shown))
     return [line.split(':')[0].strip() for line in lines]
 

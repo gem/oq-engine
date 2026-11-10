@@ -34,6 +34,9 @@ class BetterSmltTestCase(unittest.TestCase):
     def test_case_7(self):
         with tempfile.TemporaryDirectory() as tmp:
             dname = shutil.copytree(CASE7, os.path.join(tmp, 'case_7'))
+            # an existing job.zip is overwritten
+            with open(os.path.join(dname, 'job.zip'), 'w') as f:
+                f.write('old')
             self.assertTrue(better_smlt.main(os.path.join(dname, 'job.ini')))
             # job.zip contains a job with the converted logic tree, saved
             # with the name of the original one, and the rewritten sources

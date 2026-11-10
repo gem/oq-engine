@@ -32,7 +32,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import apply_uncertainty
 from openquake.hazardlib.source_reader import (
-    splitMF, add_bangs, check_mfd_variants, content_hash,
+    splitMF, add_bangs, check_mfd_variants, check_same_sources,
+    content_hash,
     source_with_ts_sets, reduce_sources)
 
 
@@ -127,6 +128,7 @@ class MFDVariantsTestCase(unittest.TestCase):
         self.assertEqual(found, ['mp1'])
         self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
                       cm.output[0])
+        self.assertIn('oq check_input job.ini --better-smlt', cm.output[0])
 
     # different geometries are not MFD variants
     def test_no_variants(self):
@@ -138,6 +140,37 @@ class MFDVariantsTestCase(unittest.TestCase):
             src.checksum = content_hash(src)
         add_bangs(smdict)
         self.assertEqual(check_mfd_variants(smdict, 'ssmLT.xml'), [])
+
+
+class DifferentIDsTestCase(unittest.TestCase):
+    # the same geometry with different IDs and different MFDs in two
+    # files: the copies cannot be merged, but a warning is logged
+    def test_different_ids_and_mfds(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]])}
+        src = smdict['b.xml'].src_groups[0][0]
+        src.source_id = 'mp2'
+        src.checksum = content_hash(src)
+        with self.assertLogs(level='WARNING') as cm:
+            check_same_sources(smdict, 'ssmLT.xml')
+        self.assertIn('1 sources appear in different source models with '
+                      'different IDs, the same geometry and different MFDs',
+                      cm.output[0])
+        self.assertIn('likely variants of a base source', cm.output[0])
+        self.assertIn('mp1[a.xml]', cm.output[0])
+        self.assertIn('mp2[b.xml]', cm.output[0])
+
+    # with the same MFD it is the check_input error, not this warning
+    def test_different_ids_same_mfd(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.1], [0.2], [0.3]])}
+        src = smdict['b.xml'].src_groups[0][0]
+        src.source_id = 'mp2'
+        src.checksum = content_hash(src)
+        with self.assertLogs(level='WARNING') as cm:
+            check_same_sources(smdict, 'ssmLT.xml')
+        self.assertEqual(len(cm.output), 1)
+        self.assertNotIn('different MFDs', cm.output[0])
 
 
 class ReduceSourcesTestCase(unittest.TestCase):

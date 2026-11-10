@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added a warning for sources with different IDs, the same geometry and
+    different MFDs, which are likely variants of a base source, and
+    `oq check_input --better-smlt` now generates a job.zip
   * Added an option `oq check_input --better-smlt` to reduce sources with
     the same geometry
   * Added a new uncertainty `minMagGRAbsolute` to replace the minimum

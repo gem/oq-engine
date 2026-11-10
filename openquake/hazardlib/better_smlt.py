@@ -23,12 +23,15 @@ source model files with different MFDs (see the warning emitted by
 source_reader.check_mfd_variants); then each copy is computed separately.
 This module rewrites the copies so that they all have the same (base)
 MFD, which makes them identical, and adds after the branchset loading
-each copy a chain of single-branch correlated branchsets
-(applyToSources="*"), one for each kind of MFD, restoring the original
-MFDs in the branch:
+each copy a chain of single-branch branchsets restoring the original MFDs
+in the branch, one for each kind of MFD (and for each of the uncertainties
+below). A branchset with a single source uses applyToSources="<source ID>",
+otherwise it is a correlated branchset (applyToSources="*") with a
+<correlated> element for each source:
 
-- truncGutenbergRichterMFD -> abMaxMagAbsolute "a b maxMag", followed by
-  minMagGRAbsolute "minMag" if the copies have different minMag
+- truncGutenbergRichterMFD -> abMaxMagAbsolute "a b maxMag", if they are
+  different, followed by minMagGRAbsolute "minMag", if the minMag are
+  different
 - incrementalMFD -> incrementalMFDAbsolute
 - multiMFD -> multiMFDAbsolute (the copies must have the same number of
   points)
@@ -36,24 +39,29 @@ MFDs in the branch:
 The identical copies are then merged by the engine (see reduce_sources)
 and the contexts are computed once for all the MFDs. The references to a
 modified branch in the applyToBranches of the following branchsets are
-replaced by the last branch of its chain. A source is skipped if a
-branchset modifying it comes before the branchset loading it, since the
-absolute MFD must be applied first. Sources sharing an ID in a file and
-fragments of sources (colon convention, except in mutex groups) are
-renamed, since applyToSources could not select them; branch IDs with
-spaces are renamed too, since applyToBranches could not refer to them.
+replaced by the last branch of its chain. A branch without variants gets
+an identity link (setting the MFD of a source to itself), so that every
+branch has a chain. A source is skipped if a branchset modifying it comes
+before the branchset loading it, since the absolute MFD must be applied
+first. Sources sharing an ID in a file and fragments of sources (colon
+convention, except in mutex groups) are renamed, since applyToSources
+could not select them; branch IDs with spaces are renamed too, since
+applyToBranches could not refer to them. Sources with different IDs are
+not converted (they are not recognized as copies of the same source).
 
-The rewritten source model files are stored in the folder `_fixed` next to
-the logic tree (which must not exist) and the converted logic tree is
-written next to the original one, with the suffix _mfd; the input files
-are never modified. If the converted logic tree is equivalent to the
-original one, the folder `_fixed` is completed into a copy of the job with
-the original file names, which is zipped in job.zip; then the folder
-`_fixed` and the converted logic tree are removed.
-The converted logic tree is always checked: the original and the
-converted logic tree are compared by applying the uncertainties with the
-engine in each realization (with full enumeration of the source model
-paths): the annual occurrence rates of all the sources must be the same.
+The input files are never modified. The rewritten source model files are
+stored in the folder `_fixed` next to the logic tree (the folder must not
+exist) and the converted logic tree is written next to the original one,
+with the suffix _mfd. The converted logic tree is always checked: the
+original and the converted logic tree are compared by applying the
+uncertainties with the engine in each realization (with full enumeration
+of the source model paths): the annual occurrence rates of all the sources
+must be the same. If the check is successful and the logic tree is in the
+folder of the job.ini, the folder `_fixed` is completed into a copy of the
+job with the original file names, which is zipped in job.zip (replacing
+an existing one) with oqzip.zip_job; then the folder `_fixed` and the
+converted logic tree are removed. If the check fails, they are left there
+to be inspected.
 
 Use it with `oq check_input --better-smlt job.ini`.
 """
