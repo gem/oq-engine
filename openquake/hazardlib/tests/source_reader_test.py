@@ -114,17 +114,16 @@ def make_smodel(branch, rates):
 
 
 class MFDVariantsTestCase(unittest.TestCase):
-    # the same source in 3 files, two of them with the same MFD
+    # the same source in 3 files, two of them with the same MFD;
+    # MultiMFD variants cannot be moved in the logic tree, so no warning
     def test_variants(self):
         smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
                   'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]]),
                   'c.xml': make_smodel('b3', [[0.1], [0.2], [0.3]])}
         self.assertEqual(add_bangs(smdict), ['mp1'])
-        with self.assertLogs(level='WARNING') as cm:
+        with self.assertNoLogs(level='WARNING'):
             found = check_mfd_variants(smdict, 'ssmLT.xml')
-        self.assertEqual(found, ['mp1'])
-        self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
-                      cm.output[0])
+        self.assertEqual(found, [])
 
     # different geometries are not MFD variants
     def test_no_variants(self):

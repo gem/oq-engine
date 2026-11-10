@@ -905,7 +905,13 @@ def check_mfd_variants(smdict, fname):
     for smfile, smodel in smdict.items():
         for sgroup in smodel.src_groups:
             for src in sgroup:
-                if '!' in src.source_id and hasattr(src, 'mfd'):
+                # NB: a MultiMFD (multiPointSource with per-point MFDs)
+                # is skipped, since its modifications are applied to all
+                # the points with the same parameters, so the suggested
+                # logic tree uncertainties would change the model
+                mfd = getattr(src, 'mfd', None)
+                if '!' in src.source_id and (
+                        type(mfd).__name__ in MFD_UNCERTAINTY):
                     byid[basename(src).split('!')[0]].append((smfile, src))
     lines = []
     for srcid, pairs in byid.items():
