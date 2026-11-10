@@ -696,7 +696,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='preclassical', concurrent_tasks='4')
         oq = self.calc.datastore['oqparam']
         self.assertEqual(oq.ps_grid_spacing, 50.)
-        self.assertEqual(oq.pointsource_distance['default'], 15.)
+        self.assertEqual(oq.pointsource_distance['default'], 50.)
         # 50 km is within the tolerance, so only its 4 distances are tried
         calib = self.calc.datastore.read_df('calibration')
         self.assertEqual(len(calib), 4)

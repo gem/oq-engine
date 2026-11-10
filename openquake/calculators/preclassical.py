@@ -437,8 +437,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
         elif oq.auto_grid or (oq.ps_grid_spacing and not oq.psd_given):
             # with a fixed ps_grid_spacing only pointsource_distance
-            # is calibrated, see autogrid.calibrate
-            self.calibrate_grid(sites)
+            # is calibrated, see autogrid.calibrate; with few sites
+            # the calibration is skipped and the defaults are kept
+            if self.few_sites:
+                logging.info('Few sites: skipping the calibration of '
+                             'ps_grid_spacing and pointsource_distance')
+            else:
+                self.calibrate_grid(sites)
 
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
