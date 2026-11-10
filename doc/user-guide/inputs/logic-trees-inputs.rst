@@ -117,6 +117,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
   MFD (a float).
 - ``maxMagGRAbsolute``: replaces the Gutenberg-Richter maximum magnitude
   (a float).
+- ``minMagGRAbsolute``: replaces the Gutenberg-Richter minimum magnitude
+  (a float).
 - ``maxMagGRRelative``: adds a delta to the Gutenberg-Richter maximum
   magnitude (a float).
 - ``maxMagGRRelativeNoMoBalance``: as ``maxMagGRRelative``, without
@@ -129,6 +131,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
 - ``incrementalMFDAbsolute``: replaces the incremental MFD of a single
   source (an ``incrementalMFD`` node with minimum magnitude, bin width and
   rates).
+- ``multiMFDAbsolute``: replaces the MFDs of all the points of a
+  multiPointSource (a ``multiMFD`` node).
 - ``truncatedGRFromSlipAbsolute``: builds a truncated Gutenberg-Richter
   MFD from a slip rate.
 - ``setMSRAbsolute``: replaces the magnitude scaling relationship.

@@ -507,6 +507,11 @@ def _maxmagGR_absolute(utype, source, value):
     _modify_mfd(source, 'set_max_mag', dict(value=value))
 
 
+@apply_uncertainty.add('minMagGRAbsolute')
+def _minmagGR_absolute(utype, source, value):
+    _modify_mfd(source, 'set_min_mag', dict(value=value))
+
+
 @apply_uncertainty.add('multiMFDAbsolute')
 def _multiMFD_absolute(utype, source, value):
     kind, size, kwargs = value
@@ -618,7 +623,7 @@ GEOMETRY_PRESERVING = frozenset([
     'bGRRelative', 'bACRelative', 'maxMagGRRelative',
     'maxMagGRRelativeNoMoBalance', 'maxMagAndDeltaMagACRelative',
     'maxMagAndDeltaMagACRelativeNoMoBalance', 'maxMagGRAbsolute',
-    'incrementalMFDAbsolute', 'multiMFDAbsolute',
+    'minMagGRAbsolute', 'incrementalMFDAbsolute', 'multiMFDAbsolute',
     'truncatedGRFromSlipAbsolute',
     'recurSet', 'recurRow', 'rateSplit', 'dummy'])
 
@@ -941,6 +946,9 @@ class BranchSet(object):
             Values to replace GR maximum magnitude. Values expected to be
             lists of floats separated by space, one float for each GR MFD
             in a target source in order of appearance.
+        minMagGRAbsolute
+            Values to replace GR minimum magnitude. Value should be
+            interpretable as float.
         abGRAbsolute
             Values to replace "a" and "b" values of GR MFD. Lists of pairs
             of floats, one pair for one GR MFD in a target source.

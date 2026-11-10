@@ -376,9 +376,9 @@ following conditions:
 - the sources are Poissonian, i.e. not mutually exclusive, not in a cluster and with a Poisson temporal occurrence
   model;
 - the uncertainties are geometry-preserving, i.e. ``abGRAbsolute``, ``abMaxMagAbsolute``, ``bGRAbsolute``,
-  ``bGRRelative``, ``bACAbsolute``, ``bACRelative``, ``maxMagGRAbsolute``, ``maxMagGRRelative``,
+  ``bGRRelative``, ``bACAbsolute``, ``bACRelative``, ``maxMagGRAbsolute``, ``minMagGRAbsolute``, ``maxMagGRRelative``,
   ``maxMagGRRelativeNoMoBalance``, ``maxMagAndDeltaMagACRelative``, ``maxMagAndDeltaMagACRelativeNoMoBalance``,
-  ``incrementalMFDAbsolute``, ``truncatedGRFromSlipAbsolute``, ``recurSet``, ``recurRow`` or ``rateSplit``; the
+  ``incrementalMFDAbsolute``, ``multiMFDAbsolute``, ``truncatedGRFromSlipAbsolute``, ``recurSet``, ``recurRow`` or ``rateSplit``; the
   geometry-changing uncertainties (for instance ``setLowerSeismDepthAbsolute``) split the variants in groups with
   the same geometry, and the optimization is applied within each group;
 - the magnitudes of each variant are contained in the magnitudes of the variant with the most magnitudes (the
