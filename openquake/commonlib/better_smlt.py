@@ -543,7 +543,8 @@ def _write_files(smlt_dir, copies, renamed, variants):
                 new = copy.deepcopy(bases[fname][pos].mfd)
                 new.tail = old.tail
                 el[list(el).index(old)] = new
-        renames[fname] = str(Path(MFD_DIR) / fname)
+        # use forward slashes, also on Windows, in the logic tree
+        renames[fname] = f'{MFD_DIR}/{fname}'
         path = smlt_dir / renames[fname]
         path.parent.mkdir(parents=True, exist_ok=True)
         _write_xml(root, path)
