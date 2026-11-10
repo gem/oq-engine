@@ -101,9 +101,13 @@ def test_loth_baker_covariance():
 
 
 def test_loth_baker_periods():
-    # All nine tabulated periods require a larger periodic embedding.
-    # Recover covariance lags from its spectrum, avoiding a large identity
-    # matrix whose size would grow with the number of independent inputs.
+    # With all nine tabulated periods on this 1 km grid, the initial
+    # periodic extension has negative eigenvalues and must be enlarged.
+    # Multiplying each spectral root by its conjugate transpose recovers
+    # the covariance spectrum; an inverse FFT gives the covariance blocks
+    # at grid offsets. Check the same site, adjacent cells and opposite
+    # corners against the model, without the large identity matrix needed
+    # to apply the factor to every independent input basis vector.
     model = LothBaker2013()
     imts = [SA(period) for period in (
         0.01, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 7.5, 10.0)]
