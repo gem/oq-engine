@@ -110,11 +110,10 @@ class Command(BaseCommand):
                 break
 
         if not found:
-            self.stdout.write(
-                self.style.ERROR(
-                    "No django app '%s' found." % (options['django_app'],))
-                )
-            sys.exit(1)
+            self.stdout.write(self.style.WARNING(
+                "Django app '%s' is not installed, skipped." %
+                options['django_app']))
+            return
 
         postinstall_cmd = options['django_app'] + '_postinstall'
         django_cmds = get_commands()
