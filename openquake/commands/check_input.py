@@ -19,7 +19,7 @@ import os
 import logging
 from unittest import mock
 
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, better_smlt as bsmlt
 from openquake.commonlib import datastore
 from openquake.calculators import views
 from openquake.risklib import read_nrml  # noqa
@@ -27,10 +27,20 @@ from openquake.risklib.asset import Exposure
 from openquake.engine import engine, workflow
 
 
-def main(fnames):
+def main(fnames, better_smlt=False):
     """
     Check the validity of job.ini files, job.zip files and .xml files.
+    With --better-smlt, convert the MFD variants of the source model
+    logic trees of the job.ini files into uncertainties and check the
+    converted logic trees (see openquake.hazardlib.better_smlt).
     """
+    if better_smlt:
+        bad = [fname for fname in fnames if fname.endswith('.ini')
+               and not bsmlt.main(fname)]
+        if bad:
+            raise RuntimeError('The converted logic trees of %s are not '
+                               'equivalent to the original ones' % bad)
+        return
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     inis = []
@@ -64,3 +74,4 @@ def main(fnames):
             workflow.run_workflow(toml, {})
 
 main.fnames = dict(help='File names to check', nargs='+')
+main.better_smlt = 'convert the MFD variants of the source model logic tree'

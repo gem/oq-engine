@@ -544,6 +544,10 @@ def source_with_ts_sets(src, pairs, sigrows):
     new_src = copy.copy(src)
     new_src.ts_samples = numpy.array(
         sorted(arrays), ts_samples_dt)  # sorted by trt_smr
+    # the signature and the smallest trt_smr of each value of ts, needed
+    # to merge the identical copies of the source, see reduce_sources
+    new_src.sigts = {(tsdict[sig] if multi else 0): (sig, tsdict[sig])
+                     for sig in sigdict}
     # flag the sources which will be modified in the workers: they must
     # not be split in the preclassical, since the splitting destroys the
     # geometry (and the MFD of the fault sources)
@@ -601,6 +605,8 @@ def build_groups(full_lt, rlz_groups, oq, dstore=None):
         logging.info('reduce_sources was called %d times', red_sources)
     out.extend(atomic)
     for grp in out:
+        for src in grp:  # sigts is not needed after the reduction
+            vars(src).pop('sigts', None)
         splitMF(grp.sources, oq.disagg_by_src)
     add_semicolons(out)  # else sources with the same id are lost
     store_unc_signatures(out, sigrows, full_lt, oq, dstore)
@@ -763,7 +769,7 @@ def store_data(oq, smdict, csm, dstore):
 
 # attributes which are not part of the content of a source
 NOT_CONTENT = {'source_id', 'name', 'ts_samples', 'branch',
-               'width_of_mfd_bin', 'checksum'}
+               'width_of_mfd_bin', 'checksum', 'sigts', 'bysrc_unc'}
 
 
 def content_hash(src, exclude=NOT_CONTENT):
@@ -915,7 +921,9 @@ def check_mfd_variants(smdict, fname):
         for sgroup in smodel.src_groups:
             for src in sgroup:
                 if '!' in src.source_id and hasattr(src, 'mfd'):
-                    byid[basename(src).split('!')[0]].append((smfile, src))
+                    # NB: the fragments 'ID:1', 'ID:2', ... of a split
+                    # source are different sources, not MFD variants
+                    byid[src.source_id.split('!')[0]].append((smfile, src))
     lines = []
     for srcid, pairs in byid.items():
         # group the copies by content without the MFD, i.e. by geometry
@@ -924,6 +932,10 @@ def check_mfd_variants(smdict, fname):
             bygeom[content_hash(src, NOT_CONTENT | {'mfd'})].append(
                 (smfile, src))
         for same in bygeom.values():
+            # the copies must be in different files: the fragments of a
+            # source split in the same file are not MFD variants
+            if len({smfile for smfile, _ in same}) < 2:
+                continue
             # the copies with the same MFD were already reduced
             mfds = {checksum(src) for _, src in same}
             if len(mfds) < 2:
@@ -1030,9 +1042,11 @@ def gen_groups(full_lt, smdict, rlz):
     if rlz.ordinal % 100 == 0:
         logging.info('Building source groups for rlz'
                      f'#{rlz.ordinal}: {"_".join(rlz.lt_path)}')
-    while (bset_values and
-           bset_values[0][0].uncertainty_type == 'extendModel'):
-        (_bset, value), *bset_values = bset_values
+    # NB: the extendModel branchsets are added wherever they are in the
+    # path, since the modifications (e.g. MFD chains) can precede them
+    for _bset, value in bset_values:
+        if _bset.uncertainty_type != 'extendModel':
+            continue
         extra, extra_ids = _groups_ids(smlt_dir, smdict, value.split())
         common = source_ids & extra_ids
         if common:
@@ -1084,10 +1098,36 @@ def reduce_sources(sources_with_same_id):
             # NB: each copy can have many realizations, since they are
             # collected before the reduction (see collect_sources), so
             # the realizations of all the copies must be kept
-            src.ts_samples = numpy.sort(numpy.concatenate(
-                [s.ts_samples for s in srcs]), order='trt_smr')
+            src.ts_samples = numpy.sort(
+                _merge_ts_samples(srcs), order='trt_smr')
+            # the merged source is modified if any copy is modified
+            if any(getattr(s, 'bysrc_unc', False) for s in srcs):
+                src.bysrc_unc = True
         out.append(src)
     return out
+
+
+def _merge_ts_samples(srcs):
+    # concatenate the ts_samples of identical copies of a source in
+    # different files, recomputing the field ts as if the copies were a
+    # single source (see source_with_ts_sets): a copy with a single
+    # signature has ts=0, so copies with different signatures (i.e. with
+    # uncertainties depending on the branch, like the MFD chains) would
+    # be merged in a single set of realizations otherwise
+    if not all(hasattr(src, 'sigts') for src in srcs):  # in hazardlib
+        return numpy.concatenate([src.ts_samples for src in srcs])
+    minimum = {}  # signature -> smallest trt_smr
+    for src in srcs:
+        for sig, mint in src.sigts.values():
+            minimum[sig] = min(minimum.get(sig, mint), mint)
+    multi = len(minimum) > 1
+    arrays = []
+    for src in srcs:
+        arr = src.ts_samples.copy()
+        arr['ts'] = [minimum[src.sigts[ts][0]] if multi else 0
+                     for ts in arr['ts']]
+        arrays.append(arr)
+    return numpy.concatenate(arrays)
 
 
 def split_by_tom(sources):

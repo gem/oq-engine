@@ -32,7 +32,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import apply_uncertainty
 from openquake.hazardlib.source_reader import (
-    splitMF, add_bangs, check_mfd_variants, content_hash)
+    splitMF, add_bangs, check_mfd_variants, content_hash,
+    source_with_ts_sets, reduce_sources)
 
 
 def make_mps():
@@ -137,6 +138,36 @@ class MFDVariantsTestCase(unittest.TestCase):
             src.checksum = content_hash(src)
         add_bangs(smdict)
         self.assertEqual(check_mfd_variants(smdict, 'ssmLT.xml'), [])
+
+
+class ReduceSourcesTestCase(unittest.TestCase):
+    # identical copies of a source in two files, as produced by moving
+    # the MFD variants in the logic tree: each copy has a single
+    # signature, so its field ts is 0 before the reduction
+    def reduce(self, sig1, sig2):
+        src = make_mps()
+        rows = []
+        copy1 = source_with_ts_sets(src, [(0, 1, sig1), (1, 1, sig1)], rows)
+        copy2 = source_with_ts_sets(src, [(2, 1, sig2), (3, 1, sig2)], rows)
+        [red] = reduce_sources([copy1, copy2])
+        self.bysrc_unc = red.bysrc_unc
+        return red.get_ts_sets()
+
+    def test_different_signatures(self):
+        # the sets of realizations with different uncertainties are kept
+        sets = self.reduce((('bs1', '1'),), (('bs1', '2'),))
+        self.assertEqual(sets, ((0, 1), (2, 3)))
+
+    def test_same_signature(self):
+        # the copies with the same uncertainties share a single set
+        sets = self.reduce((('bs1', '1'),), (('bs1', '1'),))
+        self.assertEqual(sets, ((0, 1, 2, 3),))
+
+    def test_one_copy_without_uncertainties(self):
+        # the copies are merged even if only one of them is modified
+        sets = self.reduce((), (('bs1', '1'),))
+        self.assertEqual(sets, ((0, 1), (2, 3)))
+        self.assertTrue(self.bysrc_unc)
 
 
 class MultiMFDAbsoluteTestCase(unittest.TestCase):

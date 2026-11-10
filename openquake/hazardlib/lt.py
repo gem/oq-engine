@@ -625,19 +625,6 @@ GEOMETRY_PRESERVING = frozenset([
 
 # ######################### apply_uncertainties ########################### #
 
-def lt_source_id(source):
-    """
-    :param source: a source instance
-    :returns: the source ID as written in the logic tree
-
-    NB: sources with the same ID but different content in different
-    source models get the branch ID appended after a "!" (see
-    source_reader.add_bangs), i.e. 'src!b1' for 'src'; the "!" cannot
-    appear in the original IDs, so everything after it is removed
-    """
-    return source.source_id.split('!')[0]
-
-
 def get_bset_value(bset, value, source):
     """
     :param bset: a BranchSet instance
@@ -652,7 +639,7 @@ def get_bset_value(bset, value, source):
     applied after the splitting of the sources, as done by classical
     """
     if bset.correlated:
-        src_id = lt_source_id(source)
+        src_id = valid.corename(source, '!')
         if src_id in value:
             return True, value[src_id]
         bname = valid.basename(src_id)
@@ -668,19 +655,20 @@ def get_bset_values(lt_path, source_model_lt):
         be applied to the sources, i.e. excluding the extendModel
         branchsets, which add sources and are handled in gen_groups
     """
-    bset_values = source_model_lt.bset_values(lt_path)
-    while (bset_values and
-           bset_values[0][0].uncertainty_type == 'extendModel'):
-        bset_values = bset_values[1:]
-    return bset_values
+    # NB: the extendModel and dummy branchsets are skipped wherever they
+    # are, since a modification can precede them (see the MFD chains of
+    # mosaic models)
+    return [(bset, value)
+            for bset, value in source_model_lt.bset_values(lt_path)
+            if bset.uncertainty_type not in ('extendModel', 'dummy')]
 
 
 def source_ids(sources):
     """
     :returns: the IDs and the basenames of the given sources, as written
-              in the logic tree (i.e. without the branch, see lt_source_id)
+              in the logic tree (i.e. without the branch, see corename)
     """
-    ids = {lt_source_id(src) for src in sources}
+    ids = {valid.corename(src, '!') for src in sources}
     return ids | {valid.basename(srcid) for srcid in ids}
 
 
@@ -1106,7 +1094,7 @@ class BranchSet(object):
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSources':
-                if source and lt_source_id(source) not in value:
+                if source and valid.corename(source, '!') not in value:
                     return False
             elif key == 'applyToBranches':
                 pass

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an option `oq check_input --better-smlt` to reduce sources with
+    the same geometry
   * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
     points of a multiPointSource, and fixed the source variants optimization
     to discard in each variant the sources filtered by the maximum distance
