@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
+    points of a multiPointSource, and fixed the source variants optimization
+    to discard in each variant the sources filtered by the maximum distance
   * The classical calculator now logs the reduction of the contexts due to
     the source variants optimization, stored in the new `separate` field of
     the `nctxs` dataset and displayed by `oq show context_reduction`
