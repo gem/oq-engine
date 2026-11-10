@@ -49,19 +49,34 @@ could not select them; branch IDs with spaces are renamed too, since
 applyToBranches could not refer to them. Sources with different IDs are
 not converted (they are not recognized as copies of the same source).
 
-The input files are never modified. The rewritten source model files are
-stored in the folder `_fixed` next to the logic tree (the folder must not
-exist) and the converted logic tree is written next to the original one,
-with the suffix _mfd. The converted logic tree is always checked: the
-original and the converted logic tree are compared by applying the
-uncertainties with the engine in each realization (with full enumeration
-of the source model paths): the annual occurrence rates of all the sources
-must be the same. If the check is successful and the logic tree is in the
-folder of the job.ini, the folder `_fixed` is completed into a copy of the
-job with the original file names, which is zipped in job.zip (replacing
-an existing one) with oqzip.zip_job; then the folder `_fixed` and the
-converted logic tree are removed. If the check fails, they are left there
-to be inspected.
+The input files are never modified. The result is a file job.zip, in the
+folder of the job.ini, with a copy of the job using the converted logic
+tree, with the original file names (it replaces an existing job.zip). It
+is built in 3 steps:
+
+1. the rewritten source model files are stored in the folder `_fixed`
+   next to the logic tree (the folder must not exist) and the converted
+   logic tree is written next to the original one, with the suffix _mfd;
+2. the converted logic tree is always checked: the original and the
+   converted logic tree are compared by applying the uncertainties with
+   the engine in each realization (with full enumeration of the source
+   model paths): the annual occurrence rates of all the sources must be
+   the same;
+3. if the check is successful and the logic tree is in the folder of the
+   job.ini, the folder `_fixed` is completed into a copy of the job with
+   the original file names, which is zipped with oqzip.zip_job; then the
+   folder `_fixed` and the converted logic tree are removed. If the check
+   fails, they are left there to be inspected and there is no job.zip.
+
+NB: the equivalence concerns the rates of the sources, not the numerical
+approximations of the calculation. With ps_grid_spacing the point sources
+are collapsed into averages weighted by their rates (see calc_average in
+source/point.py), so the hazard of the converted job can differ slightly
+from the original one: in KOR with ps_grid_spacing=50 the hazard curves
+differ by up to 1% at the lowest intensity levels, while without
+ps_grid_spacing the difference is at the level of the numerical noise
+(about 1E-5, like the difference between two runs of the original job with
+a different number of tasks).
 
 Use it with `oq check_input --better-smlt job.ini`.
 """
@@ -901,8 +916,8 @@ def make_zip(job_ini, smlt, out):
     # the converted logic tree refers to the rewritten files as _fixed/<file>
     text = Path(out).read_text(encoding='utf-8')
     for rel in rewritten:
-        text = re.sub(r'(?<![^\s>])%s(?![^\s<])' % re.escape(MFD_DIR + '/' + rel),
-                      rel, text)
+        old = re.escape(MFD_DIR + '/' + rel)
+        text = re.sub(r'(?<![^\s>])%s(?![^\s<])' % old, rel, text)
     (pkg / smlt.name).write_text(text, encoding='utf-8')
     shutil.copy(job_ini, pkg / job_ini.name)
     # do not validate to avoid permissions errors on the export_dir
