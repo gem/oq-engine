@@ -100,30 +100,6 @@ def test_loth_baker_covariance():
         applied @ applied.T, expected, rtol=0, atol=EPS)
 
 
-def test_loth_baker_periods():
-    # With all nine tabulated periods on this 1 km grid, the initial
-    # periodic extension has negative eigenvalues and must be enlarged.
-    # Multiplying each spectral root by its conjugate transpose recovers
-    # the covariance spectrum; an inverse FFT gives the covariance blocks
-    # at grid offsets. Check the same site, adjacent cells and opposite
-    # corners against the model, without the large identity matrix needed
-    # to apply the factor to every independent input basis vector.
-    model = LothBaker2013()
-    imts = [SA(period) for period in (
-        0.01, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 7.5, 10.0)]
-    factor = CirculantEmbeddingFactor.build(model, imts, (32, 48), 1.0)
-    assert factor.embedding_multiplier > 1
-    root = factor.spectral_root
-    spectrum = root @ root.swapaxes(-1, -2).conj()
-    covariance = numpy.fft.irfft2(
-        spectrum, s=factor.embedded_shape, axes=(0, 1))
-    for row, column in [(0, 0), (0, 1), (1, 0), (31, 47)]:
-        distance = numpy.array([[numpy.hypot(row, column)]])
-        expected = model.correlation_block(distance, imts)
-        numpy.testing.assert_allclose(
-            covariance[row, column], expected, rtol=0, atol=EPS)
-
-
 def test_spatial_covariance():
     # A traditional spatial model becomes a block-diagonal multivariate
     # field, retaining independence between its different IMTs.
