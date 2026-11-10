@@ -867,7 +867,7 @@ class ContextMaker(object):
         # considered (the ruptures beyond the integration time included)
         self.ctx_mon = monitor('building contexts', measuremem=False)
         # the updates of the probability maps of the variants, see
-        # rmap_maker._update_chunk
+        # rmap_maker.update_variants
         self.upd_mon = monitor('updating pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -875,7 +875,7 @@ class ContextMaker(object):
         # [2] contexts before collapse_precision for the gridding baseline,
         # [3] contexts saved by the source variants optimization, i.e. the
         # extra contexts the variants would generate if computed separately
-        # (see rmap_maker._update_chunk)
+        # (see rmap_maker.update_variants)
         self.cfactor = numpy.zeros(4)
 
     def copy(self, **kw):
