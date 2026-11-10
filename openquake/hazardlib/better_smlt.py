@@ -43,9 +43,13 @@ fragments of sources (colon convention, except in mutex groups) are
 renamed, since applyToSources could not select them; branch IDs with
 spaces are renamed too, since applyToBranches could not refer to them.
 
-The rewritten source model files are stored in the folder `mfd` next to
-the logic tree and the converted logic tree is written next to the
-original one, with the suffix _mfd; the input files are never modified.
+The rewritten source model files are stored in the folder `_fixed` next to
+the logic tree (which must not exist) and the converted logic tree is
+written next to the original one, with the suffix _mfd; the input files
+are never modified. If the converted logic tree is equivalent to the
+original one, the folder `_fixed` is completed into a copy of the job with
+the original file names, which is zipped in job.zip; then the folder
+`_fixed` and the converted logic tree are removed.
 The converted logic tree is always checked: the original and the
 converted logic tree are compared by applying the uncertainties with the
 engine in each realization (with full enumeration of the source model
@@ -56,6 +60,7 @@ Use it with `oq check_input --better-smlt job.ini`.
 import os
 import copy
 import re
+import shutil
 import tempfile
 import textwrap
 import hashlib
@@ -72,6 +77,7 @@ UTYPE = {'truncGutenbergRichterMFD': 'abMaxMagAbsolute',
          'minMag': 'minMagGRAbsolute',
          'incrementalMFD': 'incrementalMFDAbsolute',
          'multiMFD': 'multiMFDAbsolute'}
+MFD_DIR = '_fixed'  # folder with the rewritten source models
 SM_TYPES = ('sourceModel', 'extendModel')
 BRANCH_ID_RE = re.compile(r'^[\w\:\#_\-\.]+$')  # as in valid.branch_id
 BSET_RE = re.compile(r'<((?:\w+:)?)logicTreeBranchSet\b.*?'
@@ -380,16 +386,24 @@ def _link(prefix, bsid, parent, pairs, branch_id, indent, level=False):
         bset = _link(prefix, bsid, parent, pairs, branch_id, indent)
         return (f'\n{ind}<{p}logicTreeBranchingLevel branchingLevelID='
                 f'"{bsid}">{bset}\n{ind}</{p}logicTreeBranchingLevel>')
-    cind = ind + ' ' * 12  # indentation of the correlated elements
-    rows = ''.join(f'\n{cind}<{p}correlated src="{src_id}">'
-                   f'{_value(p, cp, cind)}</{p}correlated>'
-                   for src_id, cp in pairs)
+    atts = f'applyToBranches="{parent}" applyToSources="*"'
+    if len(pairs) == 1:
+        # a single source: no need for a correlated element
+        [(src_id, cp)] = pairs
+        atts = f'applyToBranches="{parent}" applyToSources="{src_id}"'
+        rows = _value(p, cp, ind + ' ' * 8)
+    else:
+        cind = ind + ' ' * 12  # indentation of the correlated elements
+        rows = ''.join(f'\n{cind}<{p}correlated src="{src_id}">'
+                       f'{_value(p, cp, cind)}</{p}correlated>'
+                       for src_id, cp in pairs)
+        rows += f'\n{ind}        '
     return (f'\n{ind}<{p}logicTreeBranchSet branchSetID="{bsid}" '
             f'uncertaintyType="{UTYPE[pairs[0][1].kind]}"\n{ind}    '
-            f'applyToBranches="{parent}" applyToSources="*">\n'
+            f'{atts}>\n'
             f'{ind}    <{p}logicTreeBranch branchID="{branch_id}">\n'
-            f'{ind}        <{p}uncertaintyModel>{rows}\n'
-            f'{ind}        </{p}uncertaintyModel>\n'
+            f'{ind}        <{p}uncertaintyModel>{rows}'
+            f'</{p}uncertaintyModel>\n'
             f'{ind}        <{p}uncertaintyWeight>1.0'
             f'</{p}uncertaintyWeight>\n'
             f'{ind}    </{p}logicTreeBranch>\n'
@@ -619,7 +633,7 @@ def _write_files(smlt_dir, copies, renamed, variants):
         if fname not in texts:
             texts[fname] = (smlt_dir / fname).read_text(encoding='utf-8')
         texts[fname] = _set_mfds(texts[fname], dic)
-    renames = {fname: str(Path('mfd') / fname) for fname in texts}
+    renames = {fname: str(Path(MFD_DIR) / fname) for fname in texts}
     for fname, txt in texts.items():
         path = smlt_dir / renames[fname]
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -694,7 +708,8 @@ def convert(smlt, out):
     """
     Convert the MFD variants of a source model logic tree, writing the
     new logic tree in `out` and the new source model files in the folder
-    `mfd` (nothing is written if there is nothing to convert)
+    `_fixed`, which must not exist (nothing is written if there is nothing
+    to convert)
 
     :param smlt: path to the source model logic tree
     :param out: path to the converted logic tree, in the same folder
@@ -706,6 +721,9 @@ def convert(smlt, out):
     if smlt.parent.resolve() != out.parent.resolve():
         raise ValueError('The output must be in the folder of the input')
     smlt_dir = smlt.parent
+    if (smlt_dir / MFD_DIR).exists():
+        raise FileExistsError(f'{smlt_dir / MFD_DIR} exists already: '
+                              'remove it or rename it')
     text, bsets = read_tree(smlt)
     brnames = rename_branches(bsets)
     (carriers, copies, renamed, variants, links, identity,
@@ -727,7 +745,7 @@ def convert(smlt, out):
     logging.warning('%s: %d source(s) converted, %d skipped, %d file(s) '
                     'rewritten in %s, %d branchset(s) added', out,
                     len(variants), len(skipped), len(renames),
-                    smlt_dir / 'mfd', len(added))
+                    smlt_dir / MFD_DIR, len(added))
     return set(added), renamed, brnames
 
 
@@ -847,9 +865,62 @@ def check(job_ini, out, added, renamed, smlt, brnames):
     return not bad
 
 
+def make_zip(job_ini, smlt, out):
+    """
+    Complete the folder `_fixed`, which contains the rewritten source models,
+    into a copy of the job where all the files have the original names:
+    the converted logic tree is saved with the name of the original one
+    and the other files of the job are linked (or copied) there; then zip
+    it in the file job.zip, in the folder of the job and remove the folder
+    `_fixed` and the converted logic tree. It works only if the logic tree is
+    in the same folder of the job.ini, else nothing is removed.
+
+    :param job_ini: path to the original job.ini file
+    :param smlt: path to the original logic tree
+    :param out: path to the converted logic tree
+    :returns: the path to the zip file, or None
+    """
+    from openquake.commonlib import oqzip, oqvalidation, readinput
+    job_ini, smlt = Path(job_ini).resolve(), Path(smlt).resolve()
+    jobdir = job_ini.parent
+    if smlt.parent != jobdir:
+        logging.warning('%s is not in the folder of %s: no job.zip',
+                        smlt, job_ini)
+        return
+    pkg = jobdir / MFD_DIR
+    rewritten = [f.relative_to(pkg).as_posix()
+                 for f in sorted(pkg.rglob('*')) if f.is_file()]
+    # the converted logic tree refers to the rewritten files as _fixed/<file>
+    text = Path(out).read_text(encoding='utf-8')
+    for rel in rewritten:
+        text = re.sub(r'(?<![^\s>])%s(?![^\s<])' % re.escape(MFD_DIR + '/' + rel),
+                      rel, text)
+    (pkg / smlt.name).write_text(text, encoding='utf-8')
+    shutil.copy(job_ini, pkg / job_ini.name)
+    # do not validate to avoid permissions errors on the export_dir
+    oq = oqvalidation.OqParam(**readinput.get_params(str(job_ini)))
+    for f in readinput.get_input_files(oq):
+        dest = pkg / Path(f).resolve().relative_to(jobdir)
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.link(f, dest)
+            except OSError:  # different file systems
+                shutil.copy2(f, dest)
+    archive = jobdir / 'job.zip'
+    archive.unlink(missing_ok=True)  # zip_job refuses to overwrite
+    oqzip.zip_job(str(pkg / job_ini.name), str(archive), log=logging.debug)
+    logging.warning('Wrote %s', archive)
+    shutil.rmtree(pkg)
+    Path(out).unlink()
+    return archive
+
+
 def main(job_ini):
     """
-    Convert the source model logic tree of the given job and check it.
+    Convert the source model logic tree of the given job and check it;
+    if the check is successful, write a job.zip file with the job using
+    the converted logic tree (with the original file names).
 
     :param job_ini: path to a job.ini file
     :returns: True if the converted logic tree is equivalent to the
@@ -868,6 +939,9 @@ def main(job_ini):
     if not added:  # nothing converted, nothing to check
         return True
     try:
-        return check(job_ini, out, added, renamed, smlt, brnames)
+        ok = check(job_ini, out, added, renamed, smlt, brnames)
     finally:
         (job_ini.parent / '_check_gmmLT.xml').unlink(missing_ok=True)
+    if ok:
+        make_zip(job_ini, smlt, out)
+    return ok

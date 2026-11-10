@@ -19,6 +19,7 @@ import os
 import shutil
 import tempfile
 import unittest
+import zipfile
 import xml.etree.ElementTree as ET
 from openquake.hazardlib import better_smlt
 from openquake.qa_tests_data.event_based import case_7
@@ -34,11 +35,31 @@ class BetterSmltTestCase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dname = shutil.copytree(CASE7, os.path.join(tmp, 'case_7'))
             self.assertTrue(better_smlt.main(os.path.join(dname, 'job.ini')))
-            smlt = os.path.join(dname, 'source_model_logic_tree_mfd.xml')
-            with open(smlt) as f:
-                text = f.read()
-            self.assertIn('applyToSources="*"', text)
-            self.assertIn(os.path.join('mfd', 'source_model2.xml'), text)
+            # job.zip contains a job with the converted logic tree, saved
+            # with the name of the original one, and the rewritten sources
+            with zipfile.ZipFile(os.path.join(dname, 'job.zip')) as z:
+                names = z.namelist()
+                ini = z.read('job.ini').decode()
+                new = z.read('source_model_logic_tree.xml').decode()
+            self.assertIn('source_model_logic_tree.xml', ini)
+            # a single source: no correlated element is needed
+            self.assertIn('applyToSources="1"', new)
+            self.assertNotIn('correlated', new)
+            self.assertIn('source_model2.xml', names)
+            self.assertNotIn('_fixed/', new)
+            self.assertNotIn('source_model_logic_tree_mfd.xml', names)
+            # the folder _fixed and the converted logic tree are removed
+            self.assertFalse(os.path.exists(os.path.join(dname, '_fixed')))
+            self.assertFalse(os.path.exists(os.path.join(
+                dname, 'source_model_logic_tree_mfd.xml')))
+
+    def test_existing_folder(self):
+        # a pre-existing folder _fixed is never overwritten
+        with tempfile.TemporaryDirectory() as tmp:
+            dname = shutil.copytree(CASE7, os.path.join(tmp, 'case_7'))
+            os.mkdir(os.path.join(dname, '_fixed'))
+            with self.assertRaises(FileExistsError):
+                better_smlt.main(os.path.join(dname, 'job.ini'))
 
 
 class MultiWriterTestCase(unittest.TestCase):

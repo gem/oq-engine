@@ -544,8 +544,10 @@ def source_with_ts_sets(src, pairs, sigrows):
     new_src = copy.copy(src)
     new_src.ts_samples = numpy.array(
         sorted(arrays), ts_samples_dt)  # sorted by trt_smr
-    # the signature and the smallest trt_smr of each value of ts, needed
-    # to merge the identical copies of the source, see reduce_sources
+    # sigts maps each value of the field ts to a pair (signature, smallest
+    # trt_smr of the realizations with that signature); it is needed to
+    # merge the identical copies of the source, see reduce_sources and
+    # _merge_ts_samples
     new_src.sigts = {(tsdict[sig] if multi else 0): (sig, tsdict[sig])
                      for sig in sigdict}
     # flag the sources which will be modified in the workers: they must
