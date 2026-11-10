@@ -224,7 +224,7 @@ STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
     # {"pkg": "oq-platform-standalone", "name": None,
     #  "ver": "~=2.16.4"},
-    {"pkg": "https://github.com/gem/oq-platform-ipt/archive/refs/heads/django52.zip",
+    {"pkg": "https://github.com/gem/oq-platform-standalone/archive/refs/heads/django52.zip",
      "name": None,
      "ver": ""},
     # Django apps to install
