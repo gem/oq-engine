@@ -60,8 +60,8 @@ class TruncatedGRMFD(BaseMFD):
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
     MODIFICATIONS = {'increment_max_mag', 'set_max_mag', 'increment_b',
-                     'set_ab', 'set_ab_max_mag', 'set_bGR',
-                     'increment_max_mag_no_mo_balance'}
+                     'set_ab', 'set_ab_max_mag', 'set_ab_min_max_mag',
+                     'set_bGR', 'increment_max_mag_no_mo_balance'}
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
@@ -302,6 +302,27 @@ class TruncatedGRMFD(BaseMFD):
         """
         self.b_val = b_val
         self.a_val = a_val
+        self.max_mag = max_mag
+
+    def modify_set_ab_min_max_mag(self, a_val, b_val, min_mag, max_mag):
+        """
+        Apply absolute ``a`` and ``b`` values modification, plus min_mag
+        and max_mag modification.
+
+        :param a_val:
+            A float value to use as a new ``a_val``.
+        :param b_val:
+            A float value to use as a new ``b_val``.
+        :param min_mag:
+            A float value to assign to ``min_mag``.
+        :param max_mag:
+            A float value to assign to ``max_mag``.
+
+        No recalculation of other Gutenberg-Richter parameters is done.
+        """
+        self.b_val = b_val
+        self.a_val = a_val
+        self.min_mag = min_mag
         self.max_mag = max_mag
 
     @classmethod

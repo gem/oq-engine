@@ -22,11 +22,14 @@ import difflib
 import unittest
 import collections
 import numpy
+from types import SimpleNamespace
 from openquake.baselib.general import DictArray, gettemp
+from openquake.baselib.node import Node
 from openquake.hazardlib import (
     nrml, lt, sourceconverter, calc, site, valid, contexts)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.mfd import TruncatedGRMFD
 
 CDIR = os.path.dirname(__file__)
 ae = numpy.testing.assert_equal
@@ -677,3 +680,28 @@ class LogicFixesTestCase(unittest.TestCase):
         for mod_src in mod_sg.sources:
             self.assertEqual(mod_src.mfd.max_mag, 6.5)
 
+
+
+class AbMinMaxMagAbsoluteTestCase(unittest.TestCase):
+    # the uncertainty replacing a, b and the magnitude range of a truncated
+    # Gutenberg-Richter MFD, used to move the MFD variants with different
+    # minimum magnitudes into the logic tree
+    def test_parse(self):
+        node = Node('uncertaintyModel', text='-1.5 0.9 5.9 7.1')
+        value = lt.parse_uncertainty('abMinMaxMagAbsolute', node, 'lt.xml')
+        self.assertEqual(value, (-1.5, 0.9, 5.9, 7.1))
+
+    def test_parse_error(self):
+        # the minimum magnitude is missing
+        node = Node('uncertaintyModel', text='-1.5 0.9 7.1')
+        with self.assertRaises(lt.LogicTreeError) as ctx:
+            lt.parse_uncertainty('abMinMaxMagAbsolute', node, 'lt.xml')
+        self.assertIn('expected four floats', str(ctx.exception))
+
+    def test_apply(self):
+        mfd = TruncatedGRMFD(5.9, 7.7, 0.1, -1.0, 0.8)
+        src = SimpleNamespace(source_id='src', mfd=mfd)
+        lt.apply_uncertainty('abMinMaxMagAbsolute', src, (-1.5, 0.9, 6.1, 7.1))
+        expected = TruncatedGRMFD(6.1, 7.1, 0.1, -1.5, 0.9)
+        self.assertEqual(list(src.mfd.get_annual_occurrence_rates()),
+                         list(expected.get_annual_occurrence_rates()))

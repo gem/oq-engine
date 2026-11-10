@@ -118,6 +118,16 @@ def abMMax(utype, node, filename):
             node, filename, 'expected a triple of floats separated by space')
 
 
+@parse_uncertainty.add('abMinMaxMagAbsolute')
+def abMinMMax(utype, node, filename):
+    try:
+        [a, b, mmin, mmax] = node.text.split()
+        return float(a), float(b), float(mmin), float(mmax)
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected four floats separated by space')
+
+
 @parse_uncertainty.add('incrementalMFDAbsolute')
 def incMFD(utype, node, filename):
     min_mag, bin_width = (node.incrementalMFD["minMag"],
@@ -454,6 +464,13 @@ def _abMMax_absolute(utype, source, value):
     _modify_mfd(source, 'set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
 
 
+@apply_uncertainty.add('abMinMaxMagAbsolute')
+def _abMinMMax_absolute(utype, source, value):
+    a, b, mmin, mmax = value
+    _modify_mfd(source, 'set_ab_min_max_mag',
+                dict(a_val=a, b_val=b, min_mag=mmin, max_mag=mmax))
+
+
 @apply_uncertainty.add('bGRAbsolute')
 def _bGR_absolute(utype, source, value):
     b_val = float(value)
@@ -614,7 +631,8 @@ def _dummy(utype, source, value):
 # of the ruptures; the others (and the unknown ones) are geometry-changing,
 # see classical.geometry_key.
 GEOMETRY_PRESERVING = frozenset([
-    'abGRAbsolute', 'abMaxMagAbsolute', 'bGRAbsolute', 'bACAbsolute',
+    'abGRAbsolute', 'abMaxMagAbsolute', 'abMinMaxMagAbsolute',
+    'bGRAbsolute', 'bACAbsolute',
     'bGRRelative', 'bACRelative', 'maxMagGRRelative',
     'maxMagGRRelativeNoMoBalance', 'maxMagAndDeltaMagACRelative',
     'maxMagAndDeltaMagACRelativeNoMoBalance', 'maxMagGRAbsolute',
@@ -956,6 +974,9 @@ class BranchSet(object):
         abGRAbsolute
             Values to replace "a" and "b" values of GR MFD. Lists of pairs
             of floats, one pair for one GR MFD in a target source.
+        abMinMaxMagAbsolute
+            Values to replace "a", "b", the minimum and the maximum
+            magnitude of the GR MFD. Four floats separated by space.
         incrementalMFDAbsolute
             Replaces an evenly discretized MFD with the values provided
         multiMFDAbsolute

@@ -109,6 +109,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
   value is a pair ``a b``.
 - ``abMaxMagAbsolute``: replaces ``a``, ``b`` and the maximum magnitude;
   the value is ``a b max_mag``.
+- ``abMinMaxMagAbsolute``: replaces ``a``, ``b``, the minimum and the
+  maximum magnitude; the value is ``a b min_mag max_mag``.
 - ``bGRAbsolute``: replaces the Gutenberg-Richter ``b`` (a float).
 - ``bGRRelative``: adds a delta to the Gutenberg-Richter ``b`` (a float).
 - ``bACAbsolute``: replaces the ``b`` of the Anderson-Coppersmith MFD (a
@@ -129,6 +131,8 @@ attribute of the ``logicTreeBranchSet`` element, described in
 - ``incrementalMFDAbsolute``: replaces the incremental MFD of a single
   source (an ``incrementalMFD`` node with minimum magnitude, bin width and
   rates).
+- ``multiMFDAbsolute``: replaces the MFDs of all the points of a
+  multiPointSource (a ``multiMFD`` node).
 - ``truncatedGRFromSlipAbsolute``: builds a truncated Gutenberg-Richter
   MFD from a slip rate.
 - ``setMSRAbsolute``: replaces the magnitude scaling relationship.
