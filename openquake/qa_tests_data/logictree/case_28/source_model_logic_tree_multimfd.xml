@@ -9,6 +9,10 @@ xmlns="http://openquake.org/xmlns/nrml/0.5">
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
   </logicTreeBranchSet>
+  <!-- NB: this branchset is correlated (applyToSources="*") on purpose,
+       to check that the sources of a correlated branchset are looked up in
+       the whole realization and not in a single source group: source 21 is
+       in a different group than source 22 -->
   <logicTreeBranchSet uncertaintyType="multiMFDAbsolute" applyToSources="*"
                       branchSetID="mfd">
     <logicTreeBranch branchID="mfd1">
