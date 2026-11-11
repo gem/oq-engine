@@ -18,12 +18,12 @@
 """
 This is the dependency tower:
 
-level 9            commands
-level 8            server
-level 7            engine
-level 6            calculators
-level 5            commonlib
-level 4            risklib
+level 8            commands
+level 7            server
+level 6            engine
+level 5            calculators
+level 4            commonlib
+level 3            risklib
 level 2            hazardlib, sep
 level 1            baselib
 """

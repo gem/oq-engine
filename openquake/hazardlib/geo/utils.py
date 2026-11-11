@@ -27,8 +27,6 @@ import collections
 
 import numpy
 import numba
-from matplotlib.patches import PathPatch
-from matplotlib.path import Path
 try:
     from h3 import latlng_to_cell
 except ImportError:  # old version
@@ -89,6 +87,10 @@ def PolygonPatch(polygon, **kwargs):
       >> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
       >> axis.add_patch(patch)
     """
+    # Costly so specify in-function imports
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+
     # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
     if not hasattr(polygon, 'geom_type'):
         polygon = geometry.shape(polygon)

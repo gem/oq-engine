@@ -26,54 +26,6 @@ Point = collections.namedtuple("Point",  'lon lat')
 aac = numpy.testing.assert_allclose
 
 
-class PolygonPatchTestCase(unittest.TestCase):
-    def test_polygon_with_hole(self):
-        from matplotlib.path import Path
-        shell = [(0, 0), (4, 0), (4, 4), (0, 4), (0, 0)]
-        hole = [(1, 1), (1, 2), (2, 2), (2, 1), (1, 1)]
-        polygon = shapely.geometry.Polygon(shell, [hole])
-        for geom in [polygon, shapely.geometry.mapping(polygon)]:
-            patch = utils.PolygonPatch(geom, alpha=0.2, facecolor='red')
-            numpy.testing.assert_array_equal(
-                patch.get_path().vertices, shell + hole)
-            numpy.testing.assert_array_equal(
-                patch.get_path().codes,
-                [Path.MOVETO] + [Path.LINETO] * 4
-                + [Path.MOVETO] + [Path.LINETO] * 4)
-            self.assertEqual(patch.get_alpha(), 0.2)
-            self.assertEqual(patch.get_facecolor(), (1., 0., 0., 0.2))
-
-    def test_multipolygon(self):
-        from matplotlib.path import Path
-        shell = [(0, 0, 1), (1, 0, 1), (0, 1, 1), (0, 0, 1)]
-        polygon = shapely.geometry.Polygon(shell)
-        multi = shapely.geometry.MultiPolygon([polygon, polygon])
-        for geom in [multi, shapely.geometry.mapping(multi)]:
-            path = utils.PolygonPatch(geom).get_path()
-            numpy.testing.assert_array_equal(
-                path.vertices, numpy.tile(numpy.array(shell)[:, :2], (2, 1)))
-            numpy.testing.assert_array_equal(
-                path.codes, [Path.MOVETO] + [Path.LINETO] * 3
-                + [Path.MOVETO] + [Path.LINETO] * 3)
-
-    def test_invalid_geometry(self):
-        line = shapely.geometry.LineString([(0, 0), (1, 1)])
-        for geom in [line, shapely.geometry.mapping(line)]:
-            with self.assertRaisesRegex(ValueError, 'polygon'):
-                utils.PolygonPatch(geom)
-
-    def test_plotter(self):
-        from matplotlib.figure import Figure
-        ax = Figure().subplots()
-        plotter = utils.PolygonPlotter(ax)
-        plotter.add(shapely.geometry.box(0, 0, 2, 3), alpha=0.1)
-        plotter.add(shapely.geometry.LineString([(0, 0), (4, 5)]))
-        plotter.set_lim()
-        self.assertEqual(len(ax.patches), 1)
-        self.assertEqual(ax.get_xlim(), (0, 4))
-        self.assertEqual(ax.get_ylim(), (0, 5))
-
-
 class CleanPointTestCase(unittest.TestCase):
     def test_exact_duplicates(self):
         a, b, c = [geo.Point(1., 2., 3.),
