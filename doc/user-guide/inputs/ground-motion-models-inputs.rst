@@ -252,7 +252,7 @@ but it is much simpler to use. An example is:
    with_betw_ratio = 1.5
 
 Period-dependent site corrections
---------------------------------
+---------------------------------
 
 The ``apply_swiss_site_specific_amplification_sa`` modifier applies supplied
 site corrections to a GMPE with between-event uncertainty. For example,
