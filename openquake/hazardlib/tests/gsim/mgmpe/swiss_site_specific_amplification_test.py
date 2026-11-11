@@ -23,6 +23,8 @@ from types import SimpleNamespace
 import numpy as np
 
 from openquake.baselib import InvalidFile
+# Only the CSV integration case needs the engine's input layer.
+from openquake.commonlib import readinput
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -258,8 +260,6 @@ class SwissSiteSpecificSiteInputTestCase(unittest.TestCase):
         return filename
 
     def load_sites(self, filename, required):
-        # Only the CSV integration case needs the engine's input layer.
-        from openquake.commonlib import readinput
         oq = SimpleNamespace(
             req_site_params=required, impact=False, override_vs30=False,
             site_labels={}, inputs={'site_model': [filename]})
