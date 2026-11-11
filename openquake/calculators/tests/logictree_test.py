@@ -581,6 +581,15 @@ hazard_uhs-std.csv
             for fname, actual in zip(expected, got):
                 self.assertEqualFiles('expected/%s' % fname, actual)
 
+        # With more samples than amplification branches, sample ordinals
+        # cannot be used as indices into the amplification functions.
+        self.run_calc(case_26.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        names = self.calc.amplifier.names
+        expected = [names.index(r.extra_rlz.lt_path[0])
+                    for r in self.calc.full_lt.get_realizations()]
+        ae(self.calc.amplifier.rlz_ampl_ord, expected)
+
     def test_case_27(self):
         # 3-branch amp LT, disaggregation, full enum + sampling
         hcurves_full_enum = None

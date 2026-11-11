@@ -25,18 +25,17 @@ overridden by each class::
 
     AbstractLogicTree
     │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
-    │   sample
+    │   sample, to_node, to_nrml
     ├── BranchSetLogicTree
     │   │   root_branchset, set_num_paths, get_num_paths, get_realizations,
-    │   │   sample, get_all_paths, to_node, to_nrml, h5attrs, __toh5__,
-    │   │   __fromh5__
+    │   │   sample, get_all_paths, to_node, h5attrs, __toh5__, __fromh5__
     │   ├── CompositeLogicTree
     │   │       sample_paths, apply_all
     │   ├── SourceModelLogicTree
     │   │       set_num_paths, decompose, reduce, prune, bset_values, h5attrs,
     │   │       __fromh5__
     │   └── ExtraLogicTree
-    │       │   get_realizations, sample, shortener
+    │       │   get_realizations, shortener
     │       ├── PFDLogicTree
     │       │       selections_for, check_r_sigma_conflict
     │       └── AmplificationLogicTree
@@ -47,6 +46,14 @@ overridden by each class::
     │       __fromh5__
     └── FullLogicTree
             get_realizations, get_num_paths, sample, __toh5__, __fromh5__
+
+NRML export is optional: AbstractLogicTree.to_nrml calls to_node, which
+BranchSetLogicTree and GsimLogicTree implement. FullLogicTree combines
+separate trees and inherits the default to_node raising NotImplementedError.
+The uncertainty_to_node helper serializes MFD values and correlated mappings.
+The gsim_lt.read_branchsets helper reads editable branchsets without
+validating branch IDs or loading source files, retaining nested uncertainty
+XML.
 
 The classes are defined in the modules lt, logictree, gsim_lt, pfd_lt and
 amp_lt of openquake.hazardlib.
@@ -65,7 +72,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, BASE183
-from openquake.baselib.node import Node
+from openquake.baselib.node import Node, striptag
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -371,6 +378,40 @@ def pfd_r_sigma(utype, node, filename):
             node, filename,
             'value must be a non-negative finite float (km), got %r' % raw)
     return value
+
+
+def uncertainty_to_node(utype, value, correlated=False):
+    """
+    Serialize a text value, parsed MFD uncertainty or correlated mapping.
+    Unparsed uncertaintyModel or MFD nodes are also accepted, so editing a
+    tree does not require parsing and reconstructing unrelated geometries.
+    """
+    if isinstance(value, Node):
+        if striptag(value.tag) == 'uncertaintyModel':
+            return value
+        return Node('uncertaintyModel', nodes=[value])
+    if correlated:
+        nodes = []
+        for srcid, val in value.items():
+            node = copy.copy(uncertainty_to_node(utype, val))
+            node.tag = 'correlated'
+            node.attrib = dict(node.attrib, src=srcid)
+            nodes.append(node)
+        return Node('uncertaintyModel', nodes=nodes)
+    if utype == 'incrementalMFDAbsolute':
+        min_mag, bin_width, rates = value
+        mfd = Node('incrementalMFD', dict(minMag=min_mag, binWidth=bin_width),
+                   nodes=[Node('occurRates', text=rates)])
+        return Node('uncertaintyModel', nodes=[mfd])
+    if utype == 'multiMFDAbsolute':
+        from openquake.hazardlib.sourcewriter import build_multi_mfd
+        kind, size, kwargs = value
+        mfd = build_multi_mfd(MultiMFD(kind, size, **kwargs))
+        # An omitted bin width is inherited from the source, not written NaN.
+        mfd.nodes = [n for n in mfd if striptag(n.tag) != 'bin_width' or
+                     'bin_width' in kwargs]
+        return Node('uncertaintyModel', nodes=[mfd])
+    return Node('uncertaintyModel', text=value)
 
 
 # validations
@@ -918,7 +959,9 @@ class Branch(object):
     :param value:
         The actual uncertainty parameter value. A text node contents
         of ``<uncertaintyModel />`` child node. Type depends
-        on the branchset's uncertainty type.
+        on the branchset's uncertainty type. For serialization, an unparsed
+        ``uncertaintyModel`` or MFD Node can retain nested XML. Correlated
+        uncertainties use a dictionary of source IDs to uncertainty values.
     :param weight:
         float value of weight assigned to the branch. A text node contents
         of ``<uncertaintyWeight />`` child node.
@@ -950,9 +993,10 @@ class Branch(object):
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
 
-    def to_node(self):
+    def to_node(self, uncertainty_type=None, correlated=False):
         attrib = dict(branchID=self.branch_id)
-        nodes = [Node('uncertaintyModel', {}, self.value),
+        model = uncertainty_to_node(uncertainty_type, self.value, correlated)
+        nodes = [model,
                  Node('uncertaintyWeight', {}, self.weight)]
         return Node('logicTreeBranch', attrib, None, nodes)
 
@@ -1242,8 +1286,6 @@ def fmtlist(lst):
     return '%s..%s' % (lst[0],lst[-1])
 
 
-# NB: this function cannot be used with monster logic trees like the one for
-# South Africa (ZAF), since the stack will explode; the engine uses a trick
 def count_paths(branches):
     """
     :param branches: a list of branches or a logic tree
@@ -1251,16 +1293,21 @@ def count_paths(branches):
     """
     if hasattr(branches, 'branchsets'):  # a LogicTree
         branches = branches.branchsets[0].branches
-    count = 0
-    stack = list(branches)
+    # Count shared subtrees once, without recursion or expanding complete
+    # paths: trees like South Africa (ZAF) can have enormous path counts.
+    counts = {None: 1}  # a terminal branch has one path
+    stack = [(br.bset, False) for br in branches]
     while stack:
-        br = stack.pop()
-        if br.bset is None:
-            count += 1
+        bset, visited = stack.pop()
+        if bset in counts:
+            continue
+        if visited:
+            counts[bset] = sum(counts[br.bset] for br in bset.branches)
         else:
-            # push sub-branches onto the stack to process next
-            stack.extend(br.bset.branches)
-    return count
+            # Push sub-branches first, then add their cached counts.
+            stack.append((bset, True))
+            stack.extend((br.bset, False) for br in bset.branches)
+    return sum(counts[br.bset] for br in branches)
 
 
 dummy_counter = itertools.count(1)
@@ -1277,14 +1324,17 @@ def dummy_branchset(branch_id):
     return bset
 
 
-def print_tree(bob, prefix="", is_last=True):
+def print_tree(bob, prefix="", is_last=True, _seen=None):
     """
     Recursively prints a tree structure using ASCII art.
 
     :param bob: a tree, a branchset or a branch
     :param prefix: The visual padding/lines accumulated from parent levels.
     :param is_last: Boolean indicating if this node is the last child
+    :param _seen: internal mapping of branchsets already expanded
     """
+    if _seen is None:
+        _seen = {}
     if hasattr(bob, 'branchsets'):  # a tree
         bob = bob.branchsets[0]
     try:
@@ -1303,18 +1353,24 @@ def print_tree(bob, prefix="", is_last=True):
    
     # Recursively print all branches
     if hasattr(bob, 'bset') and bob.bset:
-        branches = bob.bset.branches
+        bset = bob.bset
     elif hasattr(bob, 'branches'):
-        branches = bob.branches
+        bset = bob
     else:
-        branches = []
+        return
+    # Shared subtrees are expanded once; later links name the first parent.
+    if bset in _seen:
+        print(f'{new_prefix}└── children of {_seen[bset]} (shared)')
+        return
+    _seen[bset] = id
+    branches = bset.branches
     if len(branches) > 3:
         br1 = copy.copy(branches[1])
         br1.branch_id = '...'
         branches = [branches[0], br1, branches[-1]]
     count = len(branches)
     for i, branch in enumerate(branches, 1):
-        print_tree(branch, new_prefix, is_last=(i == count))
+        print_tree(branch, new_prefix, is_last=(i == count), _seen=_seen)
 
 
 class Realization(object):
@@ -1439,7 +1495,8 @@ class AbstractLogicTree(abc.ABC):
     Common interface of the logic trees. The subclasses must define
     get_num_paths, get_realizations and the serialization methods
     __toh5__ and __fromh5__; sample can be overridden, by default it
-    samples the realizations by weight.
+    samples the realizations by weight. Subclasses supporting NRML export
+    override to_node and inherit to_nrml.
     """
     @abc.abstractmethod
     def get_num_paths(self):
@@ -1466,6 +1523,19 @@ class AbstractLogicTree(abc.ABC):
         Restore the logic tree from the data and the attributes returned
         by __toh5__ and stored in the datastore
         """
+
+    def to_node(self):
+        """Return an XML node, when this tree supports NRML export."""
+        raise NotImplementedError(
+            f'{type(self).__name__} does not support NRML export')
+
+    def to_nrml(self, fmt='%.7E'):
+        """
+        Converts the logic tree into a string in NRML format.
+
+        :param fmt: format for floating-point values
+        """
+        return nrml.to_string(self.to_node(), fmt)
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -1644,6 +1714,18 @@ class BranchSetLogicTree(AbstractLogicTree):
         """
         return self.num_samples if self.num_samples else self.num_paths
 
+    def _realization(self, branches, weight, ordinal):
+        # Build a realization from the branches selected along a path.
+        value = [br.value for br in branches]
+        return Realization(value, weight, ordinal, smlt_path(branches))
+
+    def _full_realizations(self):
+        # Enumerate in branch traversal order, independently of num_samples.
+        # Subclasses customize their values via _realization.
+        return [self._realization(branches, weight, ordinal)
+                for ordinal, (weight, branches) in enumerate(
+                    self.root_branchset.enumerate_paths())]
+
     def get_realizations(self):
         """
         :returns: the list of the realizations, sampled if num_samples is
@@ -1654,10 +1736,7 @@ class BranchSetLogicTree(AbstractLogicTree):
         if self.num_samples:
             return self.sample(
                 self.num_samples, self.seed, self.sampling_method)
-        rlzs = []
-        for weight, branches in self.branchsets[0].enumerate_paths():
-            value = [br.value for br in branches]
-            rlzs.append(Realization(value, weight, 0, smlt_path(branches)))
+        rlzs = self._full_realizations()
         rlzs.sort(key=operator.attrgetter('pid'))
         for r, rlz in enumerate(rlzs):
             rlz.ordinal = r
@@ -1667,7 +1746,9 @@ class BranchSetLogicTree(AbstractLogicTree):
         """
         Sample the logic tree branchset by branchset. Notice that the weight
         is homogeneous with early sampling, since it is accounted for in
-        the sampling procedure.
+        the sampling procedure. Late sampling uses importance weights p/q,
+        correcting for uniform choices at each visited branchset. These
+        weights are unnormalized; FullLogicTree normalizes combined weights.
 
         :param n: number of samples
         :param seed: random seed
@@ -1678,15 +1759,19 @@ class BranchSetLogicTree(AbstractLogicTree):
         rlzs = []
         for ordinal, branches in enumerate(
                 self.branchsets[0].sample(probs, sampling_method)):
-            value = [br.value for br in branches]
             if sampling_method.startswith('early_'):
                 weight = 1. / n  # already accounted
             elif sampling_method.startswith('late_'):
-                weight = numpy.prod([br.weight for br in branches])
+                # Uniform branch choices give q(path) = product(1 / size).
+                # Conditional paths can visit different branchset sizes.
+                bsets = [self.root_branchset] + [
+                    br.bset for br in branches[:-1]]
+                weight = numpy.prod([
+                    1. if bs.collapsed else br.weight * len(bs.branches)
+                    for bs, br in zip(bsets, branches)])
             else:
                 raise NotImplementedError(sampling_method)
-            rlzs.append(Realization(value, weight, ordinal,
-                                    smlt_path(branches)))
+            rlzs.append(self._realization(branches, weight, ordinal))
         return rlzs
 
     def get_all_paths(self):
@@ -1715,37 +1800,31 @@ class BranchSetLogicTree(AbstractLogicTree):
             attrib.update((key, val) for key, val in bset.filters.items()
                           if val)
             n = Node('logicTreeBranchSet', attrib, None,
-                     [br.to_node() for br in bset.branches])
+                     [br.to_node(bset.uncertainty_type, bset.correlated)
+                      for br in bset.branches])
             out.nodes.append(n)
         return out
-
-    def to_nrml(self):
-        """
-        Converts the logic tree into a string in NRML format
-        """
-        return nrml.to_string(self.to_node())
 
 
 class ExtraLogicTree(BranchSetLogicTree):
     """
     Logic tree which can be the extra logic tree of a FullLogicTree, like
     PFDLogicTree and AmplificationLogicTree: the realizations are the end
-    branches, with value and path given by the branch IDs, and they are
-    sampled by weight, not branchset by branchset
+    branches, with value and path given by the branch IDs. Sampling is
+    inherited from BranchSetLogicTree and walks branchsets without
+    enumerating complete paths. Late sampling chooses uniformly at each
+    branchset, so conditional paths need not have equal selection chances.
+    get_realizations always enumerates the tree; FullLogicTree controls
+    when to request samples instead.
     """
-    sample = AbstractLogicTree.sample
+    def _realization(self, branches, weight, ordinal):
+        # Extra-tree values identify the path, excluding dummy branches.
+        chosen = tuple(br.branch_id for br in branches if not br.is_dummy())
+        return Realization('~'.join(chosen), weight, ordinal, chosen)
 
     def get_realizations(self):
-        """
-        :returns: the end branches as Realization objects
-        """
-        rlzs = []
-        for ordinal, (weight, branches) in enumerate(
-                self.root_branchset.enumerate_paths()):
-            chosen = [br.branch_id for br in branches if not br.is_dummy()]
-            rlzs.append(Realization(
-                '~'.join(chosen), weight, ordinal, tuple(chosen)))
-        return rlzs
+        """Return all end branches in traversal order, without sampling."""
+        return self._full_realizations()
 
     @property
     def shortener(self):
@@ -1753,8 +1832,8 @@ class ExtraLogicTree(BranchSetLogicTree):
         :returns: dict realization path -> two-char abbreviation, matching
             the format of the source model and GSIM shorteners
         """
-        return {'~'.join(rlz.lt_path): BASE183[i] + '0'
-                for i, rlz in enumerate(self.get_realizations())}
+        return {rlz.pid: BASE183[rlz.ordinal] + '0'
+                for rlz in self._full_realizations()}
 
 
 class CompositeLogicTree(BranchSetLogicTree):

@@ -18,6 +18,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 import numpy
 import pandas as pd
 
@@ -256,6 +257,16 @@ class GetRealizationsWithAmpLTTest(unittest.TestCase):
         full_lt = self._build_lt(num_samples=0)
         for r in full_lt.rlzs:
             self.assertEqual(r['branch_path'].count('~'), 2)
+
+    def test_rlz_path_is_independent_of_value(self):
+        full_lt = self._build_lt()
+        expected = full_lt.rlzs
+        extra = full_lt.extra_lt.get_realizations()
+        for rlz in extra:
+            rlz.value = ['payload', rlz.ordinal]
+        with mock.patch.object(full_lt.extra_lt, 'get_realizations',
+                               return_value=extra):
+            numpy.testing.assert_array_equal(full_lt.rlzs, expected)
 
     def test_early_weights_sampling_produces_uniform_weights(self):
         # early_weights: num_samples rlzs each with weight 1/num_samples

@@ -884,8 +884,10 @@ class PotentialPathsTestCase(unittest.TestCase):
         self.assertIn('use_rates=true is not enough', str(ctx.exception))
 
     def test_quantiles_without_use_rates(self):
-        with self.assertRaises(ValueError) as ctx:
-            self.get_full_lt(quantile_hazard_curves='0.1,0.9')
+        with mock.patch.object(readinput.logictree, 'FullLogicTree',
+                               side_effect=AssertionError('enumeration')):
+            with self.assertRaises(ValueError) as ctx:
+                self.get_full_lt(quantile_hazard_curves='0.1,0.9')
         self.assertIn('or set use_rates=true', str(ctx.exception))
 
 
