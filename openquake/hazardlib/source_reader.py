@@ -28,7 +28,7 @@ import numpy
 
 from openquake.baselib import parallel, performance, general, hdf5
 from openquake.hazardlib import (
-    geo, nrml, source, sourceconverter, InvalidFile, calc)
+    geo, nrml, source, sourceconverter, valid, InvalidFile, calc)
 from openquake.hazardlib.source_group import (
     CompositeSourceModel, SourceGroup, get_unique)
 from openquake.hazardlib.source.multi_fault import save_and_split
@@ -399,13 +399,26 @@ def get_bset_values(full_lt, sources):
         ones of its first realization
 
     NB: only the uncertainties relevant for the given sources are
-        returned, since the logic tree can be huge and the dictionary is
-        sent to the workers
+        returned, i.e. the ones of their realizations, without the
+        branchsets applied to other sources, since the logic tree can be
+        huge and the dictionary is sent to the workers
     """
     ordinals = {trt_smrs[0] % TWO24 for src in sources
                 for trt_smrs in src.get_ts_sets()}
-    return {ordinal: full_lt.get_bset_values(ordinal)
+    ids = source_ids(sources)
+    return {ordinal: [(bset, value) for bset, value in
+                      full_lt.get_bset_values(ordinal)
+                      if _may_apply(bset, value, ids)]
             for ordinal in sorted(ordinals)}
+
+
+def _may_apply(bset, value, ids):
+    # False if the branchset certainly does not apply to the sources with
+    # the given IDs and basenames (see source_ids and get_bset_value)
+    if bset.correlated:
+        return not ids.isdisjoint(value)
+    ats = bset.filters.get('applyToSources')
+    return not ats or not ids.isdisjoint(ats)
 
 
 def modified_groups(sources, bset_values):
@@ -930,11 +943,16 @@ def check_same_sources(smdict, fname):
             fname, len(errors), '\n'.join(shown))
 
 
-# uncertainty types to suggest in check_mfd_variants, by MFD class
+# uncertainty types for the MFD variants, by NRML tag: suggested by
+# check_mfd_variants and used by commonlib.better_smlt to convert them
 MFD_UNCERTAINTY = {
-    'EvenlyDiscretizedMFD': 'incrementalMFDAbsolute',
-    'MultiMFD': 'multiMFDAbsolute',
-    'TruncatedGRMFD': 'abGRAbsolute, bGRAbsolute or maxMagGRAbsolute'}
+    'incrementalMFD': 'incrementalMFDAbsolute',
+    'multiMFD': 'multiMFDAbsolute',
+    'truncGutenbergRichterMFD': 'abMaxMagAbsolute'}
+# NRML tags of the MFD classes
+MFD_TAG = {'EvenlyDiscretizedMFD': 'incrementalMFD',
+           'MultiMFD': 'multiMFD',
+           'TruncatedGRMFD': 'truncGutenbergRichterMFD'}
 
 
 def check_mfd_variants(smdict, fname):
@@ -984,7 +1002,8 @@ def check_mfd_variants(smdict, fname):
             # NB: the branches are not listed, since a file can be shared
             # by several branches but src.branch contains only one of them
             files = sorted({os.path.basename(smfile) for smfile, _ in same})
-            utype = MFD_UNCERTAINTY.get(mfd, 'an MFD uncertainty')
+            utype = MFD_UNCERTAINTY.get(MFD_TAG.get(mfd),
+                                        'an MFD uncertainty')
             lines.append('  %s: %d %s variants in %s, use %s' % (
                 srcid, len(mfds), mfd, ' '.join(files), utype))
     if lines:
@@ -1105,11 +1124,13 @@ def gen_groups(full_lt, smdict, rlz):
             _add_ts_samples(src, rlz, trti)
         yield src_group
 
-    # check applyToSources
+    # check applyToSources, ignoring the branch added by add_bangs to the
+    # sources with the same ID and a different content, like filter_source
     sm_branch = rlz.lt_path[0]
     src_id = full_lt.source_model_lt.info.applytosources[sm_branch]
+    core_ids = {valid.corename(srcid, '!') for srcid in source_ids}
     for srcid in src_id:
-        if srcid not in source_ids:
+        if srcid not in core_ids:
             if full_lt.source_model_lt.branchID:
                 continue
             raise ValueError(
