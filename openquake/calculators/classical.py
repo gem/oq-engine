@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps)
+    RateMap, MapArray, rates_dt, check_hmaps, to_rates)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -63,8 +63,9 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
-    # NB: this is faster if num_chunks is not too large
+def _store(rates, num_chunks, h5, mon=None, counts=None, gzip=GZIP):
+    # NB: this is faster if num_chunks is not too large;
+    # if the counts per chunk are given, the rates are already sorted by chunk
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
@@ -78,17 +79,18 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         offset = len(h5['_rates/sid'])
     else:
         offset = 0
+    order = slice(None)  # no copy
     if isinstance(mon, U32) or num_chunks == 1:  # single chunk
         chunk = mon if isinstance(mon, U32) else 0
-        order = slice(None)
         idx_start_stop = [(chunk, offset, offset + len(rates))]
     else:
-        # sort the rows by chunk, keeping the order inside each chunk;
-        # this is a lot more memory-efficient than masking chunk by chunk
-        chunks = rates['sid'] % num_chunks
-        order = numpy.argsort(chunks, kind='stable')
-        counts = numpy.bincount(chunks, minlength=num_chunks)
-        del chunks
+        if counts is None:
+            # sort the rows by chunk, keeping the order inside each chunk;
+            # this is a lot more memory-efficient than masking each chunk
+            chunks = rates['sid'] % num_chunks
+            order = numpy.argsort(chunks, kind='stable')
+            counts = numpy.bincount(chunks, minlength=num_chunks)
+            del chunks
         stops = offset + numpy.cumsum(counts)
         idx_start_stop = [(c, stop - n, stop) for c, (n, stop)
                           in enumerate(zip(counts, stops)) if n]
@@ -141,18 +143,25 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     """
     # collecting the arrays is essential for performance, i.e. I measured
     # a 200x speedup in the NVA calculation of BCHydro; the big array is
-    # preallocated and filled one gid at a time, to save memory;
+    # preallocated and filled chunk by chunk, so that the rows are already
+    # sorted by chunk and _store does not need to copy them;
     # rmap.gdic maps gid -> column index in rmap.array (shape N, L, G)
-    sizes = [numpy.count_nonzero(rmap.array[:, :, j] > 0)
-             for j in rmap.gdic.values()]
-    big = numpy.empty(sum(sizes), rates_dt)
+    big = numpy.empty(numpy.count_nonzero(rmap.array), rates_dt)
+    counts = numpy.zeros(num_chunks, int)  # number of rows per chunk
+    chunks = rmap.sids % num_chunks
     start = 0
-    for g, size in zip(rmap.gdic, sizes):
-        big[start:start + size] = rmap.to_array(g)
-        start += size
+    for c in range(num_chunks):
+        mask = chunks == c
+        array, sids = rmap.array[mask], rmap.sids[mask]
+        for g, j in rmap.gdic.items():
+            arr = to_rates(array, sids, g, j, rmap.level0)
+            big[start:start + len(arr)] = arr
+            start += len(arr)
+            counts[c] += len(arr)
+    assert start == len(big), 'there are negative or NaN rates'
     # release the dense array, since the task arguments keep rmap alive
     rmap.array = None
-    _store(big, num_chunks, h5, mon)
+    _store(big, num_chunks, h5, mon, counts)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -1235,9 +1244,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if size_mb > 100:
             # tested in performance.zip
             L1 = oq.imtls.size // len(oq.imtls)
-            # restart the pool, since the workers keep the memory allocated
-            # by the classical tasks (~1.5 GB per core for EUR)
-            parallel.Starmap.shutdown()
             with self.datastore.reopen('r'):  # read-only while saving
                 savemap = parallel.Starmap(
                     save_rates, h5=self.datastore, perf='memory',
