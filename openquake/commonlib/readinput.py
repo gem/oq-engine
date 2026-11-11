@@ -1104,10 +1104,11 @@ def get_source_model_lt(oqparam):
 AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
 
 
-def _get_amp_lt_parser(oqparam):
+def _read_amp_lt(oqparam):
     """
-    If oqparam.inputs['ampl_logic_tree'] is set, parse the amp-LT XML,
-    cache the tree on oqparam._amp_lt, and return it. Otherwise return None.
+    If oqparam.inputs['ampl_logic_tree'] is set, read the amp-LT XML
+    (without amplifiers), cache the tree on oqparam._amp_lt, and return
+    it. Otherwise return None.
     """
     if getattr(oqparam, '_amp_lt', None) is not None:
         # Guard for if already parsed on a previous call
@@ -1126,7 +1127,7 @@ def _get_amp_lt_parser(oqparam):
             '%s: amplification logic tree is only supported with'
             ' amplification_method="convolution", got %r'
             % (fname, oqparam.amplification_method))
-    tree = amp_lt.AmplificationLogicTreeParser(fname)
+    tree = amp_lt.AmplificationLogicTree.from_xml(fname)
     oqparam._amp_lt = tree
     return tree
 
@@ -1137,14 +1138,14 @@ def get_amp_lt(oqparam):
         built from the ``ampl_logic_tree_file`` branch CSVs, or None if
         the input is not set
     """
-    tree = _get_amp_lt_parser(oqparam)
+    tree = _read_amp_lt(oqparam)
     if tree is None:
         return None
     dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
     amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
                   for df in dframes]
     return amp_lt.AmplificationLogicTree(
-        tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
+        tree.names, tree.weights, dframes=dframes, amplifiers=amplifiers,
         filenames=tree.filenames, tree_filename=tree.filename,
         branchset_id=tree.branchset_id)
 
@@ -2012,7 +2013,7 @@ def get_input_files(oqparam):
             fnames.add(fname)
         elif key == 'ampl_logic_tree':
             fnames.add(fname)
-            tree = _get_amp_lt_parser(oqparam)
+            tree = _read_amp_lt(oqparam)
             if tree is not None:
                 fnames.update(tree.filenames)
         elif key == 'source_model':

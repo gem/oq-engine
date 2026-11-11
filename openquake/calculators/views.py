@@ -1561,9 +1561,7 @@ def _rlz_rows(full_lt, rlz_id):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
-    if hasattr(xlt, 'branchset_id'):  # ampl_logic_tree
-        tbl.append((xlt.branchset_id, rlz.extra_rlz.value))
-    elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
+    if xlt:  # amplification or PFD logic tree
         for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
             tbl.append((bset.id, path))
     return tbl

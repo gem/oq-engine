@@ -35,7 +35,6 @@ paths is ``count_paths(root_branchset.branches)``.  The
 """
 from dataclasses import dataclass
 
-from openquake.baselib.general import BASE183
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
 from openquake.hazardlib.gsim_lt import bsnodes
@@ -104,7 +103,7 @@ def _choice(utype, branch_id, value, weight):
     return slot, PfdModelChoice(class_name, params, branch_id, weight)
 
 
-class PFDLogicTree(lt.BranchSetLogicTree):
+class PFDLogicTree(lt.ExtraLogicTree):
     """
     Reader and realization enumerator for PFD-style logic trees.
 
@@ -135,25 +134,6 @@ class PFDLogicTree(lt.BranchSetLogicTree):
         # affect the global number of paths
         self.set_num_paths()
 
-    # the realizations are the end branches, see get_realizations, and
-    # they are sampled by weight, not branchset by branchset
-    __iter__ = lt.AbstractLogicTree.__iter__
-    sample = lt.AbstractLogicTree.sample
-
-    def get_realizations(self):
-        """
-        :returns: the end branches as generic
-            :class:`openquake.hazardlib.lt.Realization` objects (used by
-            :class:`openquake.hazardlib.logictree.FullLogicTree`)
-        """
-        rlzs = []
-        for ordinal, (weight, branches) in enumerate(
-                self.root_branchset.enumerate_paths()):
-            chosen = [br.branch_id for br in branches if not br.is_dummy()]
-            rlzs.append(lt.Realization(
-                '~'.join(chosen), weight, ordinal, tuple(chosen)))
-        return rlzs
-
     def selections_for(self, lt_path, source_id, style):
         """
         :param lt_path: tuple of end-branch IDs (a realization path)
@@ -177,15 +157,6 @@ class PFDLogicTree(lt.BranchSetLogicTree):
                 bs.uncertainty_type, br.branch_id, br.value, br.weight)
             selections[slot] = choice
         return selections
-
-    @property
-    def shortener(self):
-        """
-        :returns: dict end-branch path -> two-char abbreviation, matching
-            the amplification shortener format
-        """
-        return {'~'.join(r.lt_path): BASE183[i] + '0'
-                for i, r in enumerate(self.get_realizations())}
 
     def _parse(self):
         branchsets = []

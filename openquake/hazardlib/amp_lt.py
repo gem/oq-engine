@@ -23,27 +23,41 @@ per-branch amplification CSV files with weights summing to 1
 import os
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import BASE183, decode
+from openquake.baselib.general import BASE183
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.hazardlib.lt import Realization, AbstractLogicTree
+from openquake.hazardlib.lt import Branch, BranchSet, ExtraLogicTree
+from openquake.hazardlib.logictree import check_branchset_weights
+
+UTYPE = 'amplificationModel'
 
 
-F32 = numpy.float32
-
-# amp-LT branch record: name, weight, per-branch CSV filename
-amp_lt_dt = numpy.dtype([
-    ('name', hdf5.vstr),
-    ('weight', F32),
-    ('filename', hdf5.vstr),
-])
-
-
-class AmplificationLogicTreeParser(object):
+class AmplificationLogicTree(ExtraLogicTree):
     """
-    Parser for an amplification-function logic tree NRML XML
+    Site amplification for one or more branches: a logic tree with a
+    single branchset of type amplificationModel, whose branches are the
+    amplification CSV files (a single branch for a plain CSV file)
     """
-    filename = ''
+    def __init__(self, names, weights, dframes=None, amplifiers=None,
+                 filenames=None, tree_filename='', branchset_id='bs_ampl',
+                 rlz_ampl_ord=None):
+        assert names, 'At least one branch is required'
+        filenames = list(filenames) if filenames else list(names)
+        bset = BranchSet(UTYPE)
+        bset.id = branchset_id
+        bset.branches = [
+            Branch(name, fname, float(weight), branchset_id)
+            for name, fname, weight in zip(names, filenames, weights)]
+        self.branchsets = [bset]
+        self.bsetdict = {branchset_id: {'uncertaintyType': UTYPE}}
+        self.filename = tree_filename
+        self.set_num_paths()
+        # dframes and amplifiers are None after a HDF5 restore; readinput
+        # rebuilds them from the per-branch CSVs on demand
+        self.dframes = list(dframes) if dframes is not None else None
+        self.amplifiers = tuple(amplifiers) if amplifiers is not None else None
+        # rlz_ampl_ord[r] gives the branch index used by realization r;
+        # None for the single-branch case
+        self.rlz_ampl_ord = rlz_ampl_ord
 
     @classmethod
     def is_amp_lt(cls, filename):
@@ -57,111 +71,70 @@ class AmplificationLogicTreeParser(object):
             return False
         for child in root.logicTree:
             if (child.tag.endswith('logicTreeBranchSet') and
-                    child.attrib.get('uncertaintyType') == 'amplificationModel'):
+                    child.attrib.get('uncertaintyType') == UTYPE):
                 return True
         return False
 
-    def __init__(self, filename, base_path=None):
-        self.filename = filename
-        self.base_path = base_path or os.path.dirname(filename)
-        self.branches = [] # List of (branchID, filename, weight)
-        self.branchset_id = ''
-        self._parse()
-
-    def _parse(self):
-        root = nrml.read(self.filename)
+    @classmethod
+    def from_xml(cls, filename):
+        """
+        :param filename: an XML file with a single amplificationModel
+            branchset, whose branches refer to CSV files relative to it
+        :returns: an AmplificationLogicTree without amplifiers
+        """
+        root = nrml.read(filename)
         if not hasattr(root, 'logicTree'):
-            raise InvalidFile(
-                '%s: missing <logicTree> element' % self.filename)
-        ltree = root.logicTree
-        bsets = [c for c in ltree if c.tag.endswith('logicTreeBranchSet')]
+            raise InvalidFile('%s: missing <logicTree> element' % filename)
+        bsets = [c for c in root.logicTree
+                 if c.tag.endswith('logicTreeBranchSet')]
         if not bsets:
             raise InvalidFile(
-                '%s: no amplificationModel branchset found' % self.filename)
+                '%s: no amplificationModel branchset found' % filename)
         if len(bsets) > 1:
             raise InvalidFile(
-                '%s: only one <logicTreeBranchSet> is supported'
-                % self.filename)
+                '%s: only one <logicTreeBranchSet> is supported' % filename)
         [bset] = bsets
         utype = bset.attrib.get('uncertaintyType')
-        if utype != 'amplificationModel':
+        if utype != UTYPE:
             raise InvalidFile(
                 '%s: only uncertaintyType="amplificationModel" is supported '
-                'in an amplification logic tree, got %r'
-                % (self.filename, utype))
-        self.branchset_id = bset.attrib.get('branchSetID', 'bs_ampl')
+                'in an amplification logic tree, got %r' % (filename, utype))
+        bsid = bset.attrib.get('branchSetID', 'bs_ampl')
+        dirname = os.path.dirname(filename)
+        names, fnames, weights = [], [], []
         for br in bset:
-            brid = br.attrib.get('branchID', '')
-            rel = br.uncertaintyModel.text.strip()
-            weight = float(br.uncertaintyWeight.text)
-            fname = os.path.normpath(os.path.join(self.base_path, rel))
-            self.branches.append((brid, fname, weight))
-        brids = [b for b, _, _ in self.branches]
-        if len(set(brids)) != len(brids):
-            dups = sorted({b for b in brids if brids.count(b) > 1})
+            names.append(br.attrib.get('branchID', ''))
+            fnames.append(os.path.normpath(os.path.join(
+                dirname, br.uncertaintyModel.text.strip())))
+            weights.append(float(br.uncertaintyWeight.text))
+        dups = sorted({name for name in names if names.count(name) > 1})
+        if dups:
             raise InvalidFile(
                 '%s: duplicate branchID(s) in amplification logic tree: %s'
-                % (self.filename, dups))
-        # Keeps the amp leg of the composite path a single BASE183 char
-        if len(self.branches) > len(BASE183):
-            raise InvalidFile(
-                '%s: too many branches (%d > %d)'
-                % (self.filename, len(self.branches), len(BASE183)))
-        wsum = sum(w for _, _, w in self.branches)
-        if abs(wsum - 1.) > 1e-5:
-            raise InvalidFile(
-                '%s: amplificationModel branch weights sum to %s, expected 1.0'
-                % (self.filename, wsum))
+                % (filename, dups))
+        # keeps the amp leg of the composite path a single BASE183 char
+        if len(names) > len(BASE183):
+            raise InvalidFile('%s: too many branches (%d > %d)' % (
+                filename, len(names), len(BASE183)))
+        check_branchset_weights(bset, filename, bsid, weights)
+        return cls(names, weights, filenames=fnames, tree_filename=filename,
+                   branchset_id=bsid)
 
     @property
-    def filenames(self):
-        return [f for _, f, _ in self.branches]
+    def branchset_id(self):
+        return self.root_branchset.id
+
+    @property
+    def names(self):
+        return [br.branch_id for br in self.root_branchset.branches]
 
     @property
     def weights(self):
-        return numpy.array([w for _, _, w in self.branches])
+        return numpy.array([br.weight for br in self.root_branchset.branches])
 
     @property
-    def branch_ids(self):
-        return [b for b, _, _ in self.branches]
-
-    def get_num_paths(self):
-        return len(self.branches)
-
-    def __repr__(self):
-        return '<AmplificationLogicTreeParser %s, %d branches>' % (
-            os.path.basename(self.filename), len(self.branches))
-
-
-class AmplificationLogicTree(AbstractLogicTree):
-    """
-    Site amplification for one or more branches (single CSV or amp-LT)
-    """
-    def __init__(self, names, weights, dframes=None, amplifiers=None,
-                 filenames=None, tree_filename='', branchset_id='bs_ampl',
-                 rlz_ampl_ord=None):
-        assert names, 'At least one branch is required'
-        self.names = list(names)
-        self.weights = numpy.asarray(weights, F32)
-        # dframes and amplifiers are None after a HDF5 restore; readinput
-        # rebuilds them from the per-branch CSVs on demand
-        self.dframes = list(dframes) if dframes is not None else None
-        self.amplifiers = tuple(amplifiers) if amplifiers is not None else None
-        self.filenames = list(filenames) if filenames else list(self.names)
-        self.filename = tree_filename
-        self.branchset_id = branchset_id
-        # rlz_ampl_ord[r] gives the branch index used by realization r;
-        # None for the single-branch case
-        self.rlz_ampl_ord = rlz_ampl_ord
-
-    def __bool__(self):
-        return True
-
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return len(self.names)
+    def filenames(self):
+        return [br.value for br in self.root_branchset.branches]
 
     @property
     def amplevels(self):
@@ -184,40 +157,11 @@ class AmplificationLogicTree(AbstractLogicTree):
                 ampl_code, hcurve[:, r:r+1])
             for r in range(R)])
 
-    def get_realizations(self):
-        """
-        :returns: a list of :class:`Realization` objects, one per branch
-        """
-        return [Realization(value=name, weight=float(w), ordinal=i,
-                            lt_path=(name,), samples=1)
-                for i, (name, w) in enumerate(zip(self.names, self.weights))]
-
-    @property
-    def shortener(self):
-        """
-        :returns: dict of branchID -> two-char abbreviation, matching the SSC
-            and GSIM shortener format
-        """
-        return {name: BASE183[i] + '0' for i, name in enumerate(self.names)}
-
-    def __toh5__(self):
-        arr = numpy.array(
-            list(zip(self.names, self.weights, self.filenames)), amp_lt_dt)
-        return arr, dict(tree_filename=self.filename,
-                         branchset_id=self.branchset_id)
-
     def __fromh5__(self, array, attrs):
-        self.names = [decode(r['name']) for r in array]
-        self.weights = numpy.array([r['weight'] for r in array], F32)
-        self.filenames = [decode(r['filename']) for r in array]
-        self.dframes = None
-        self.amplifiers = None
-        self.rlz_ampl_ord = None
-        self.filename = attrs.get('tree_filename', '')
-        self.branchset_id = attrs.get('branchset_id', 'bs_ampl')
+        super().__fromh5__(array, attrs)
+        # the amplifiers are rebuilt from the CSV files by readinput
+        self.dframes = self.amplifiers = self.rlz_ampl_ord = None
 
     def __repr__(self):
         return '<AmplificationLogicTree %d branches weights=%s>' % (
             self.get_num_paths(), self.weights.tolist())
-
-

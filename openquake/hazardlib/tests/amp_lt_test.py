@@ -22,8 +22,8 @@ import numpy
 import pandas as pd
 
 from openquake.baselib import InvalidFile, hdf5
-from openquake.hazardlib.amp_lt import (
-    AmplificationLogicTree, AmplificationLogicTreeParser)
+from openquake.hazardlib.amp_lt import AmplificationLogicTree
+from openquake.hazardlib.lt import LogicTreeError
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.logictree import SourceModelLogicTree, FullLogicTree
 
@@ -109,20 +109,20 @@ def _write(text):
     return path
 
 
-class AmplificationLogicTreeParserTest(unittest.TestCase):
+class AmplificationLogicTreeFromXmlTest(unittest.TestCase):
 
     def _assert_rejects(self, xml, error_tail):
-        # Helper that writes xml to a temp file with AmplificationLogicTreeParser
-        # expected to raise InvalidFile with msg of "<temp_path>: <error_tail>"
+        # Helper that writes xml to a temp file, expected to be rejected by
+        # from_xml with an InvalidFile with msg of "<temp_path>: <error_tail>"
         path = _write(xml)
         with self.assertRaises(InvalidFile) as ctx:
-            AmplificationLogicTreeParser(path)
+            AmplificationLogicTree.from_xml(path)
         self.assertEqual(str(ctx.exception), '%s: %s' % (path, error_tail))
 
     def test_parses_flat_layout(self):
         # Two branches with weights summing to 1.0
-        flat = AmplificationLogicTreeParser(_write(FLAT_XML))
-        self.assertEqual(flat.branch_ids, ['low', 'high'])
+        flat = AmplificationLogicTree.from_xml(_write(FLAT_XML))
+        self.assertEqual(flat.names, ['low', 'high'])
         numpy.testing.assert_allclose(flat.weights, [0.4, 0.6])
 
     def test_rejects_wrong_uncertainty_type(self):
@@ -132,9 +132,10 @@ class AmplificationLogicTreeParserTest(unittest.TestCase):
             " in an amplification logic tree, got 'gmpeModel'")
 
     def test_rejects_weights_not_summing_to_one(self):
-        self._assert_rejects(
-            BAD_WEIGHT_XML,
-            'amplificationModel branch weights sum to 1.1, expected 1.0')
+        # the same check of the other logic trees
+        with self.assertRaises(LogicTreeError) as ctx:
+            AmplificationLogicTree.from_xml(_write(BAD_WEIGHT_XML))
+        self.assertIn('weights sum up to 1.1, not 1', str(ctx.exception))
 
     def test_rejects_duplicate_branch_ids(self):
         self._assert_rejects(
@@ -148,11 +149,12 @@ class AmplificationLogicTreeParserTest(unittest.TestCase):
 
     def test_is_amp_lt_true(self):
         # Should load fine as valid amp LT
-        self.assertTrue(AmplificationLogicTreeParser.is_amp_lt(_write(FLAT_XML)))
+        self.assertTrue(AmplificationLogicTree.is_amp_lt(_write(FLAT_XML)))
 
     def test_is_amp_lt_false(self):
         # Should be rejected as valid amp LT
-        self.assertFalse(AmplificationLogicTreeParser.is_amp_lt(_write(WRONG_UTYPE_XML)))     
+        self.assertFalse(
+            AmplificationLogicTree.is_amp_lt(_write(WRONG_UTYPE_XML)))
 
 
 class AmplificationLogicTreeTest(unittest.TestCase):

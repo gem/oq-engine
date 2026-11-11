@@ -38,7 +38,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 
 NOAPPLY_UNCERTAINTIES = [
-    'sourceModel', 'extendModel', 'gmpeModel']
+    'sourceModel', 'extendModel', 'gmpeModel', 'amplificationModel']
 
 
 class LogicTreeError(Exception):
@@ -1705,6 +1705,38 @@ class BranchSetLogicTree(AbstractLogicTree):
         Converts the logic tree into a string in NRML format
         """
         return nrml.to_string(self.to_node())
+
+
+class ExtraLogicTree(BranchSetLogicTree):
+    """
+    Logic tree which can be the extra logic tree of a FullLogicTree, like
+    PFDLogicTree and AmplificationLogicTree: the realizations are the end
+    branches, with value and path given by the branch IDs, and they are
+    sampled by weight, not branchset by branchset
+    """
+    __iter__ = AbstractLogicTree.__iter__
+    sample = AbstractLogicTree.sample
+
+    def get_realizations(self):
+        """
+        :returns: the end branches as Realization objects
+        """
+        rlzs = []
+        for ordinal, (weight, branches) in enumerate(
+                self.root_branchset.enumerate_paths()):
+            chosen = [br.branch_id for br in branches if not br.is_dummy()]
+            rlzs.append(Realization(
+                '~'.join(chosen), weight, ordinal, tuple(chosen)))
+        return rlzs
+
+    @property
+    def shortener(self):
+        """
+        :returns: dict realization path -> two-char abbreviation, matching
+            the format of the source model and GSIM shorteners
+        """
+        return {'~'.join(rlz.lt_path): BASE183[i] + '0'
+                for i, rlz in enumerate(self.get_realizations())}
 
 
 class CompositeLogicTree(BranchSetLogicTree):
