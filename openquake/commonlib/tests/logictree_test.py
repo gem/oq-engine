@@ -2204,11 +2204,30 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         paths = ['b1_b21', 'b1_b22', 'b1_b23', 'b1_b23',
                  'b2_.', 'b2_.', 'b2_.', 'b2_.', 'b3_.', 'b3_.']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.01428537, 0.03094343, 0.08171773, 0.08171773, 0.17585239,
-                   0.17585239, 0.17585239, 0.17585239, 0.0439631, 0.0439631]
+        # The three root branches are sampled uniformly. The b1 subtree
+        # has six children, giving q=1/18 there and q=1/3 for b2 and b3.
+        # Repeated samples retain individual p/q weights after expansion.
+        weights = numpy.array([.064988 * 18, .14077 * 18,
+                               .185878 * 18, .185878 * 18] +
+                              [.2 * 3] * 4 + [.1 * 3] * 2)
+        weights /= weights.sum()
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight[-1] for rlz in rlzs])
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.116706)
+        expected = numpy.dot(weights, [1.] * 4 + [1.2] * 4 + [1.3] * 2) / 10
+        numpy.testing.assert_almost_equal(self.mean(rlzs), expected)
+
+    def test_late_sampling_matches_enumeration(self):
+        fname_ini = os.path.join(
+            DATADIR, 'source_specific_uncertainty', 'job.ini')
+        full_lt = readinput.get_full_lt(readinput.get_oqparam(fname_ini))
+        exact = sum(self.value['_'.join(r.sm_lt_path)] * r.weight[-1]
+                    for r in full_lt.get_realizations())
+        for method in ('late_weights', 'late_latin'):
+            with self.subTest(method=method):
+                rlzs = full_lt.sample(10000, 42, method)
+                mean = sum(self.value['_'.join(r.sm_lt_path)] * r.weight[-1]
+                           for r in rlzs)
+                self.assertAlmostEqual(mean, exact, delta=.005)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch

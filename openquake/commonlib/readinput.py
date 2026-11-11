@@ -1177,20 +1177,15 @@ def get_full_lt(oqparam):
         extra_lt = get_pfd_lt(oqparam)
     else:
         extra_lt = get_amp_lt(oqparam)
-    full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
-    p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+    p = source_model_lt.num_paths * gsim_lt.get_num_paths()
 
+    # Check the limits before FullLogicTree can enumerate the population.
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
                 and 'event' not in oqparam.calculation_mode):
             raise ValueError('Use full enumeration since there are only '
                              '{:_d} realizations'.format(p))
-        unique = numpy.unique(full_lt.rlzs['branch_path'])
-        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
-                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
-                                     len(unique)))
     elif ('classical' in oqparam.calculation_mode
           and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
@@ -1206,6 +1201,13 @@ def get_full_lt(oqparam):
                 'There are too many potential logic tree paths (%d): '
                 'raise `max_potential_paths`, use sampling instead of '
                 'full enumeration, %s' % (p, rates))
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
+    if oqparam.number_of_logic_tree_samples:
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt

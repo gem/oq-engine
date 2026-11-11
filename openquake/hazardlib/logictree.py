@@ -1261,7 +1261,10 @@ class FullLogicTree(AbstractLogicTree):
                 num_samples, self.seed + 2, self.sampling_method
                 ) if extra_lt else [None] * num_samples)
             for k, (gsim_rlz, extra_rlz) in enumerate(zip(gsim_rlzs, extra_rlzs)):
-                w = sm_rlzs[k].weight * gsim_rlz.weight
+                # get_effective_rlzs sums weights of repeated samples;
+                # expansion must recover the weight of each original draw.
+                sm = sm_rlzs[k]
+                w = sm.weight / sm.samples * gsim_rlz.weight
                 if extra_rlz is not None:
                     w = w * extra_rlz.weight
                 rlzs[k] = LtRealization(
@@ -1395,7 +1398,7 @@ class FullLogicTree(AbstractLogicTree):
             gs_p = shorten(r.gsim_rlz.lt_path, sh2, 'gslt')
             if sh3 is not None and r.extra_rlz is not None:
                 # Site amp LT present
-                al_p = sh3[r.extra_rlz.value]
+                al_p = sh3[r.extra_rlz.pid]
                 path = '%s~%s~%s' % (sm_p, gs_p, al_p)
             else:
                 path = '%s~%s' % (sm_p, gs_p)

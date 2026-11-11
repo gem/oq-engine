@@ -72,6 +72,28 @@ def bsnodes(fname, branchinglevel):
                          branchinglevel)
 
 
+def read_branchsets(filename):
+    """
+    Read editable branchsets in document order, retaining raw branch IDs
+    and nested uncertainty models. Branchsets are not attached or checked
+    against source files; callers can repair IDs before validating a tree.
+    """
+    filename = str(filename)
+    bsets = []
+    for level in nrml.read(filename).logicTree:
+        for node in bsnodes(filename, level):
+            bs = lt.BranchSet(node['uncertaintyType'],
+                              lt.parse_filters(node.attrib), len(bsets))
+            bs.id = node['branchSetID']
+            for br in node:
+                model = br.uncertaintyModel
+                value = model if model.nodes else model.text
+                bs.branches.append(lt.Branch(
+                    br['branchID'], value, ~br.uncertaintyWeight, bs.id))
+            bsets.append(bs)
+    return bsets
+
+
 class ImtWeight(object):
     """
     A composite weight by IMTs extracted from the gsim_logic_tree_file

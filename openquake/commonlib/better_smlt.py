@@ -33,7 +33,8 @@ For the other branchsets this module rewrites the copies so that they all
 have the same (base) MFD, which makes them identical, and adds after the
 branchset loading each copy a chain of single-branch branchsets restoring
 the original MFDs in the branch, one for each kind of MFD (and for each of
-the uncertainties below). A branchset with a single source uses applyToSources="<source ID>",
+the uncertainties below). A branchset with a single source uses
+applyToSources="<source ID>",
 otherwise it is a correlated branchset (applyToSources="*") with a
 <correlated> element for each source:
 
@@ -102,9 +103,9 @@ from pathlib import Path
 from collections import Counter
 from contextlib import closing
 from openquake.baselib.general import duplicated, groupby
-from openquake.baselib.node import striptag
+from openquake.baselib.node import node_from_elem, striptag
 from openquake.baselib.parallel import Starmap
-from openquake.hazardlib import valid, logictree
+from openquake.hazardlib import valid, logictree, lt, gsim_lt
 from openquake.hazardlib.logictree import SourceModelLogicTree, branch_id
 from openquake.hazardlib.source_reader import (
     modified_groups, get_bset_values, TWO24, MFD_UNCERTAINTY)
@@ -147,37 +148,10 @@ def _write_xml(root, path):
     ET.ElementTree(root).write(path, encoding='utf-8', xml_declaration=True)
 
 
-class BranchSet:
-    def __init__(self, ordinal, el, parents):
-        self.ordinal = ordinal
-        self.el = el
-        self.in_level = striptag(parents[el].tag) == 'logicTreeBranchingLevel'
-        self.container = parents[el] if self.in_level else el
-        self.parent = parents[self.container]
-        self.id = el.attrib['branchSetID']
-        self.utype = el.attrib['uncertaintyType']
-        self.atb = el.attrib.get('applyToBranches', '').split()
-        self.ats = el.attrib.get('applyToSources', '').split()
-        self.branches = []
-        for br in el.findall('{*}logicTreeBranch'):
-            um = br.find('{*}uncertaintyModel')
-            # Comments split a file list between text and child tails.
-            value = (um.text or '') + ''.join(c.tail or '' for c in um)
-            self.branches.append((br.attrib['branchID'], value.strip()))
-
-    def files(self, branch_id):
-        # the source model files of a branch, as written in the tree
-        return (dict(self.branches)[branch_id].split()
-                if self.utype in SM_TYPES else [])
-
-
-def read_tree(smlt):
-    # the branchsets in document order, with their insertion points
-    root = _read_xml(smlt)
-    parents = {c: p for p in root.iter() for c in p}
-    bsets = [BranchSet(i, el, parents) for i, el in enumerate(
-        root.findall('.//{*}logicTreeBranchSet'))]
-    return root, bsets
+def _files(bs, branch):
+    # the source model files of a branch, as written in the tree
+    return (branch.value.split()
+            if bs.uncertainty_type in SM_TYPES else [])
 
 
 def _canonical(el):
@@ -309,9 +283,10 @@ def _skip_reason(copies, bsets, carriers, renamed):
     # the absolute MFD must be applied before the other uncertainties
     old = renamed.get(src, src)
     first = min(o for cp in copies for o, _ in carriers[cp.fname])
-    before = [bs.id for bs in bsets[:first] if bs.utype not in SM_TYPES
-              and (not bs.ats or '*' in bs.ats or old in bs.ats or
-                   old.split(':')[0] in bs.ats)]
+    before = [bs.id for bs in bsets[:first]
+              if bs.uncertainty_type not in SM_TYPES and
+              set(bs.filters.get('applyToSources') or ['*']) &
+              {'*', old, old.split(':')[0]}]
     if before:
         return f'modified before by {before}'
     return None
@@ -334,54 +309,34 @@ def find_variants(copies, bsets, carriers, renamed):
     return variants, skipped
 
 
-def _sub(parent, tag, **attrs):
-    # create a child in the same namespace as its parent
-    namespace = parent.tag.rpartition('}')[0] + '}' if \
-        parent.tag.startswith('{') else ''
-    return ET.SubElement(parent, namespace + tag, attrs)
-
-
-def _set_value(node, cp):
-    # write the absolute uncertainty using the original MFD element
+def _mfd_value(cp):
+    # GR uncertainties are numeric values; other MFDs retain their XML.
     if cp.kind == 'truncGutenbergRichterMFD':
-        node.text = ' '.join(cp.params[:3])
-    elif cp.kind == 'minMag':  # pseudo-kind, see _link_copies
-        node.text = cp.params[3]
-    else:
-        # Source files can use a different NRML version from the logic tree.
-        mfd = _sub(node, striptag(cp.mfd.tag), **cp.mfd.attrib)
-        for child in cp.mfd:
-            _sub(mfd, striptag(child.tag), **child.attrib).text = child.text
+        return cp.params[:3]
+    if cp.kind == 'minMag':  # pseudo-kind, see _link_copies
+        return cp.params[3]
+    return node_from_elem(cp.mfd)
 
 
-def _mfd_bset(tag, bsid, parent, branches):
+def _mfd_bset(bsid, parent, branches):
     # a branchset applied to the parent branch, setting the MFDs of the same
     # sources in each branch (ID, weight, [(source ID, copy)]), all copies
     # of the same kind; one source needs no correlated element
     pairs0 = branches[0][2]
-    node = ET.Element(tag, branchSetID=bsid,
-                      uncertaintyType=UTYPE[pairs0[0][1].kind],
-                      applyToBranches=parent, applyToSources=(
-                          pairs0[0][0] if len(pairs0) == 1 else '*'))
+    bs = lt.BranchSet(UTYPE[pairs0[0][1].kind], dict(
+        applyToBranches=[parent], applyToSources=(
+            [pairs0[0][0]] if len(pairs0) == 1 else ['*'])))
+    bs.id = bsid
     for br_id, weight, pairs in branches:
-        branch = _sub(node, 'logicTreeBranch', branchID=br_id)
-        model = _sub(branch, 'uncertaintyModel')
-        for srcid, cp in pairs:
-            _set_value(model if len(pairs) == 1 else
-                       _sub(model, 'correlated', src=srcid), cp)
-        _sub(branch, 'uncertaintyWeight').text = weight
-    return node
+        values = {srcid: _mfd_value(cp) for srcid, cp in pairs}
+        value = values if bs.correlated else next(iter(values.values()))
+        bs.branches.append(lt.Branch(br_id, value, weight, bsid))
+    return bs
 
 
 def _link(bs, parent, pairs, new_id):
     # a single-branch link
-    bsid = f'{bs.id}_{new_id}'
-    node = _mfd_bset(bs.el.tag, bsid, parent, [(new_id, '1.0', pairs)])
-    if bs.in_level:  # NRML 0.4: one branchset per branching level
-        level = ET.Element(bs.container.tag, branchingLevelID=bsid)
-        level.append(node)
-        return level
-    return node
+    return _mfd_bset(f'{bs.id}_{new_id}', parent, [(new_id, 1., pairs)])
 
 
 def _link_copies(base, cp):
@@ -459,21 +414,25 @@ def complete_chains(variants, bsets, carriers, renamed, copies):
         identity, bad = {}, {}  # bset ordinal -> reason
         for ordinal in sorted({o for o, _ in links}):
             bs = bsets[ordinal]
-            if any(b.utype not in SM_TYPES and (not b.ats or '*' in b.ats)
+            if any(b.uncertainty_type not in SM_TYPES and
+                   '*' in (b.filters.get('applyToSources') or ['*'])
                    for b in bsets[:ordinal]):
                 bad[ordinal] = 'all the sources are modified before it'
                 continue
-            if any(not BRANCH_ID_RE.match(br) for br, _ in bs.branches):
+            if any(not BRANCH_ID_RE.match(br.branch_id)
+                   for br in bs.branches):
                 # applyToBranches cannot refer to IDs with spaces or commas
                 bad[ordinal] = 'invalid branch IDs for applyToBranches'
                 continue
             # the sources modified before the link cannot be used
-            avoid = unsafe | {src for b in bsets[:ordinal] for src in b.ats}
-            for br_id, _ in bs.branches:
+            avoid = unsafe | {src for b in bsets[:ordinal]
+                              for src in b.filters.get('applyToSources', [])}
+            for branch in bs.branches:
+                br_id = branch.branch_id
                 if (ordinal, br_id) in links:
                     continue
-                files = bs.files(br_id)
-                if bs.utype == 'extendModel':
+                files = _files(bs, branch)
+                if bs.uncertainty_type == 'extendModel':
                     files = files + [f for f in allfiles if f not in files]
                 cp = _identity(byfile, files, avoid)
                 if cp is None:
@@ -510,10 +469,11 @@ def rename_branches(bsets):
 
     :returns: a dictionary new branch ID -> old branch ID
     """
-    used = {br for bs in bsets for br, _ in bs.branches}
+    used = {br.branch_id for bs in bsets for br in bs.branches}
     brnames = {}
     for bs in bsets:
-        for i, (br_id, value) in enumerate(bs.branches):
+        for br in bs.branches:
+            br_id = br.branch_id
             if BRANCH_ID_RE.match(br_id):
                 continue
             new = re.sub(r'[^\w\:\#\-\.]', '_', br_id)
@@ -521,7 +481,7 @@ def rename_branches(bsets):
                 new += '_'
             used.add(new)
             brnames[new] = br_id
-            bs.branches[i] = (new, value)
+            br.branch_id = new
     return brnames
 
 
@@ -531,8 +491,9 @@ def _read_variants(smlt_dir, bsets):
     # branchsets to collapse, then the chains for the other branchsets
     carriers = {}  # file -> [(bset ordinal, branch ID)]
     for bs in bsets:
-        for br_id, _ in bs.branches:
-            for fname in bs.files(br_id):
+        for branch in bs.branches:
+            br_id = branch.branch_id
+            for fname in _files(bs, branch):
                 carriers.setdefault(fname, []).append((bs.ordinal, br_id))
     copies = read_copies(smlt_dir, carriers)
     renamed = rename_duplicates(copies)
@@ -593,10 +554,10 @@ def _mfd_rows(bs, byfile, variants, renamed):
     # sources in the same order, differing only in the MFDs of converted
     # copies: each branch sets the MFDs of its own copies, for all the kinds
     # needed by any branch; None if the branchset cannot be collapsed
-    if bs.utype not in SM_TYPES or bs.in_level or len(bs.branches) < 2:
+    if bs.uncertainty_type not in SM_TYPES or len(bs.branches) < 2:
         return None
-    rows = [[cp for f in bs.files(br) for cp in byfile.get(f, [])]
-            for br, _ in bs.branches]
+    rows = [[cp for f in _files(bs, br) for cp in byfile.get(f, [])]
+            for br in bs.branches]
     sig = [cp.key for cp in rows[0]]
     if not sig or any([cp.key for cp in row] != sig for row in rows[1:]):
         return None
@@ -632,39 +593,31 @@ def _new_id(name, used):
     return name
 
 
-def _collapse(bsets, rows, used):
-    """
-    Replace each branchset whose branches load copies of the same sources,
-    differing only in the MFDs, with a single branch loading the files of
-    the first branch, followed by a branchset with the original branches
-    and weights setting the MFDs; the further kinds of MFD (i.e. minMag)
-    are set by single-branch links below each branch. Then the files of
-    the other branches are not needed anymore.
-
-    :param rows: bset ordinal -> MFD links of each branch (see _mfd_rows)
-    :param used: the branch IDs already used
-    :returns: the added branch IDs and the ends of the chains
-    """
+def _collapse(bsets, rows, used, after):
+    # Replace each branchset whose branches load copies of the same sources,
+    # differing only in the MFDs, with a single branch loading the files of
+    # the first branch, followed by a branchset with the original branches
+    # and weights setting the MFDs; the further kinds of MFD (i.e. minMag)
+    # are set by single-branch links below each branch. Then the files of
+    # the other branches are not needed anymore.
+    # rows maps bset ordinal to MFD links of each branch (see _mfd_rows).
+    # used contains the branch IDs already used; after collects insertions.
+    # Return the added branch IDs and the ends of the chains.
     added, chain_end = [], {}
     for bs in bsets:
         if bs.ordinal not in rows:
             continue
-        brels = bs.el.findall('{*}logicTreeBranch')
-        weights = [br.find('{*}uncertaintyWeight').text.strip()
-                   for br in brels]
-        br_ids = [br for br, _ in bs.branches]
+        weights = [br.weight for br in bs.branches]
+        br_ids = [br.branch_id for br in bs.branches]
         base_id = _new_id(f'{br_ids[0]}_base', used)
-        for br in brels[1:]:
-            bs.el.remove(br)
-        brels[0].find('{*}uncertaintyWeight').text = '1.0'
-        bs.branches = [(base_id, bs.branches[0][1])]
+        bs.branches = [lt.Branch(base_id, bs.branches[0].value, 1., bs.id)]
         added.append(base_id)
         bykind = [groupby(row, key=lambda pair: pair[1].kind)
                   for row in rows[bs.ordinal]]
         kinds = sorted(bykind[0])
-        nodes = [_mfd_bset(bs.el.tag, _new_id(f'{bs.id}_mfd', used), base_id,
-                           [(br, w, bk[kinds[0]])
-                            for br, w, bk in zip(br_ids, weights, bykind)])]
+        nodes = [_mfd_bset(_new_id(f'{bs.id}_mfd', used), base_id,
+                          [(br, w, bk[kinds[0]])
+                           for br, w, bk in zip(br_ids, weights, bykind)])]
         for br, bk in zip(br_ids, bykind):
             parent = br
             for n, kind in enumerate(kinds[1:], 2):
@@ -674,18 +627,18 @@ def _collapse(bsets, rows, used):
                 parent = link_id
             if parent != br:
                 chain_end[br] = parent
-        pos = list(bs.parent).index(bs.container) + 1
-        bs.parent[pos:pos] = nodes
+        after[bs.ordinal] = nodes
     return added, chain_end
 
 
-def _build_chains(bsets, links, identity, used):
-    # insert chains after the modified branchsets (or their NRML 0.4
-    # levels); return the added branch IDs and the ends of the chains
+def _build_chains(bsets, links, identity, used, after):
+    # insert chains after the modified branchsets; return the added branch
+    # IDs and the ends of the chains
     chain_end, added = {}, []
     for bs in bsets:
         chains = []
-        for br_id, _ in bs.branches:
+        for branch in bs.branches:
+            br_id = branch.branch_id
             parent = br_id
             pairs = links.get((bs.ordinal, br_id)) or identity.get(
                 (bs.ordinal, br_id), [])
@@ -699,8 +652,7 @@ def _build_chains(bsets, links, identity, used):
                 parent = new_id
             if parent != br_id:
                 chain_end[br_id] = parent
-        pos = list(bs.parent).index(bs.container) + 1
-        bs.parent[pos:pos] = chains
+        after.setdefault(bs.ordinal, []).extend(chains)
     return added, chain_end
 
 
@@ -708,20 +660,13 @@ def _rewrite_tree(bsets, renamed, chain_end):
     # update only the original branchsets: newly inserted links already
     # refer to their immediate parents and must not be redirected
     for bs in bsets:
-        for (br_id, _), br in zip(bs.branches,
-                                  bs.el.findall('{*}logicTreeBranch')):
-            br.set('branchID', br_id)
-            if bs.utype in SM_TYPES:
-                model = br.find('{*}uncertaintyModel')
-                model.text = ' '.join(bs.files(br_id))
-                for child in model:
-                    child.tail = None  # filenames are now all in model.text
-        if bs.ats:
-            bs.el.set('applyToSources', ' '.join(
-                new for src in bs.ats for new in _expand(src, renamed)))
-        if bs.atb:
-            bs.el.set('applyToBranches', ' '.join(
-                chain_end.get(br, br) for br in bs.atb))
+        if bs.filters.get('applyToSources'):
+            bs.filters['applyToSources'] = [
+                new for src in bs.filters['applyToSources']
+                for new in _expand(src, renamed)]
+        if bs.filters.get('applyToBranches'):
+            bs.filters['applyToBranches'] = [
+                chain_end.get(br, br) for br in bs.filters['applyToBranches']]
 
 
 def convert(smlt, outdir):
@@ -739,7 +684,7 @@ def convert(smlt, outdir):
     """
     smlt, outdir = Path(smlt), Path(outdir)
     smlt_dir = smlt.parent
-    root, bsets = read_tree(smlt)
+    bsets = gsim_lt.read_branchsets(smlt)
     brnames = rename_branches(bsets)
     (copies, renamed, variants, rows, links, identity,
      skipped) = _read_variants(smlt_dir, bsets)
@@ -750,17 +695,21 @@ def convert(smlt, outdir):
                         smlt, len(skipped))
         return set(), {}, {}
     outdir.mkdir(parents=True, exist_ok=True)
-    used = {br for bs in bsets for br, _ in bs.branches}
-    added, chain_end = _collapse(bsets, rows, used)
-    added2, chain_end2 = _build_chains(bsets, links, identity, used)
+    used = {br.branch_id for bs in bsets for br in bs.branches}
+    after = {}
+    added, chain_end = _collapse(bsets, rows, used, after)
+    added2, chain_end2 = _build_chains(bsets, links, identity, used, after)
     added += added2
     chain_end.update(chain_end2)
-    referenced = {f for bs in bsets for br, _ in bs.branches
-                  for f in bs.files(br)}
+    referenced = {f for bs in bsets for br in bs.branches
+                  for f in _files(bs, br)}
     nfiles = _write_files(smlt_dir, outdir, copies, renamed, variants,
                           referenced)
     _rewrite_tree(bsets, renamed, chain_end)
-    _write_xml(root, outdir / smlt.name)
+    tree = lt.BranchSetLogicTree()
+    tree.branchsets = [node for bs in bsets
+                       for node in [bs] + after.get(bs.ordinal, [])]
+    (outdir / smlt.name).write_text(tree.to_nrml('%.16E'), encoding='utf-8')
     for new, old in renamed.items():
         logging.info('Renamed source %s -> %s', old, new)
     for new, old in brnames.items():
@@ -875,16 +824,15 @@ def _rates(job_ini, kw, renamed, detail=None):
 
 def _trivial_gsim_lt(smlt, path):
     # one GMPE per TRT: enumerate only the source model paths
-    root = ET.Element('nrml', xmlns='http://openquake.org/xmlns/nrml/0.5')
-    tree = _sub(root, 'logicTree', logicTreeID='lt1')
+    tree = lt.BranchSetLogicTree()
+    tree.branchsets = []
     trts = sorted(SourceModelLogicTree(str(smlt)).tectonic_region_types)
     for i, trt in enumerate(trts):
-        bs = _sub(tree, 'logicTreeBranchSet', branchSetID=f'bs{i}',
-                  uncertaintyType='gmpeModel', applyToTectonicRegionType=trt)
-        br = _sub(bs, 'logicTreeBranch', branchID=f'b{i}')
-        _sub(br, 'uncertaintyModel').text = 'BooreAtkinson2008'
-        _sub(br, 'uncertaintyWeight').text = '1.0'
-    _write_xml(root, path)
+        bs = lt.BranchSet('gmpeModel', dict(applyToTectonicRegionType=trt), i)
+        bs.id = f'bs{i}'
+        bs.branches = [lt.Branch(f'b{i}', 'BooreAtkinson2008', 1., bs.id)]
+        tree.branchsets.append(bs)
+    path.write_text(tree.to_nrml(), encoding='utf-8')
 
 
 def check(job_ini, conv_ini, added, renamed, smlt, brnames):
@@ -960,10 +908,10 @@ def make_zip(job_ini, smlt, convdir, archive):
         if path not in old:
             src[path] = path
     src[os.path.normpath(smlt)] = convdir / smlt.name
-    _, bsets = read_tree(convdir / smlt.name)
+    bsets = gsim_lt.read_branchsets(convdir / smlt.name)
     for bs in bsets:
-        for br, _ in bs.branches:
-            for f in bs.files(br):
+        for br in bs.branches:
+            for f in _files(bs, br):
                 path = os.path.normpath(smlt.parent / f)
                 new = convdir / f
                 src[path] = new if new.exists() else path
