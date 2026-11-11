@@ -85,9 +85,9 @@ def test_conversion_paths(tmp_path, version, kind):
     <n:logicTree logicTreeID="lt1">
     {level if version == '0.4' else ''}
     <n:logicTreeBranchSet branchSetID="bs1" uncertaintyType="sourceModel">
-    <!-- preserve the model comment -->
+    <!-- a model comment -->
     <n:logicTreeBranch branchID="b1">
-      <n:uncertaintyModel><!-- keep file list -->base.xml</n:uncertaintyModel>
+      <n:uncertaintyModel><!-- a file list comment -->base.xml</n:uncertaintyModel>
       <n:uncertaintyWeight>0.3</n:uncertaintyWeight></n:logicTreeBranch>
     <n:logicTreeBranch branchID="b 2">
       <n:uncertaintyModel>variant.xml</n:uncertaintyModel>
@@ -114,9 +114,10 @@ def test_conversion_paths(tmp_path, version, kind):
     assert better_smlt.main(tmp_path / 'job.ini')
     with zipfile.ZipFile(tmp_path / 'job.zip') as archive:
         text = archive.read('source_model_logic_tree.xml').decode()
-    assert '<correlated ' in text
-    assert 'preserve the model comment' in text
     root = ET.fromstring(text)
+    assert root.tag == '{http://openquake.org/xmlns/nrml/0.5}nrml'
+    assert root.find('.//{*}logicTreeBranchingLevel') is None
+    assert root.findall('.//{*}correlated')
     assert {el.tag.split('}')[0] for el in root.iter()} == {
         root.tag.split('}')[0]}
     branches = root.findall('.//{*}logicTreeBranch')
@@ -156,10 +157,62 @@ class BetterSmltTestCase(unittest.TestCase):
             # a single source: no correlated element is needed
             self.assertIn('applyToSources="1"', new)
             self.assertNotIn('correlated', new)
-            self.assertIn('source_model2.xml', names)
+            # NRML 0.4 is flattened too: the MFD branches share one file.
+            self.assertNotIn('source_model2.xml', names)
             # nothing else is written in the folder of the job
             self.assertEqual(sorted(os.listdir(dname)),
                              sorted(set(os.listdir(CASE7)) | {'job.zip'}))
+
+
+def test_existing_nested_uncertainty(tmp_path):
+    # Existing correlated MFD uncertainties survive serialization and are
+    # redirected below the new MFD links, preserving the original rates.
+    _source_models(tmp_path, 'incremental')
+    shutil.copy(Path(CASE7) / 'job.ini', tmp_path)
+    shutil.copy(Path(CASE7) / 'gmpe_logic_tree.xml', tmp_path)
+    tree = '''<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt">
+    <logicTreeBranchSet branchSetID="sm" uncertaintyType="sourceModel">
+      <logicTreeBranch branchID="base">
+        <uncertaintyModel>base.xml</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight></logicTreeBranch>
+      <logicTreeBranch branchID="variant">
+        <uncertaintyModel>variant.xml</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight></logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="later" applyToBranches="variant"
+      uncertaintyType="incrementalMFDAbsolute" applyToSources="*">
+      <logicTreeBranch branchID="changed">
+        <uncertaintyModel><correlated src="1">
+          <incrementalMFD minMag="5" binWidth="0.1">
+            <occurRates>0.123456789012345 2 1</occurRates>
+          </incrementalMFD></correlated></uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight></logicTreeBranch>
+    </logicTreeBranchSet>
+    </logicTree></nrml>'''
+    (tmp_path / 'source_model_logic_tree.xml').write_text(tree)
+    assert better_smlt.main(tmp_path / 'job.ini')
+    with zipfile.ZipFile(tmp_path / 'job.zip') as archive:
+        root = ET.fromstring(archive.read('source_model_logic_tree.xml'))
+    later = root.find('.//{*}logicTreeBranchSet[@branchSetID="later"]')
+    assert later.find('.//{*}correlated').get('src') == '1'
+    rates = later.find('.//{*}occurRates').text.split()
+    assert list(map(float, rates)) == [0.123456789012345, 2., 1.]
+
+
+def test_no_variants(tmp_path):
+    # A no-op preserves all input files and any existing output archives.
+    shutil.copytree(CASE7, tmp_path, dirs_exist_ok=True)
+    shutil.copyfile(tmp_path / 'source_model1.xml',
+                    tmp_path / 'source_model2.xml')
+    for name in ('job.zip', 'job_mfd.zip'):
+        (tmp_path / name).write_bytes(b'existing archive')
+    before = {f.relative_to(tmp_path): f.read_bytes()
+              for f in tmp_path.rglob('*') if f.is_file()}
+    assert better_smlt.main(tmp_path / 'job.ini')
+    after = {f.relative_to(tmp_path): f.read_bytes()
+             for f in tmp_path.rglob('*') if f.is_file()}
+    assert after == before
 
 
 class MultiWriterTestCase(unittest.TestCase):
