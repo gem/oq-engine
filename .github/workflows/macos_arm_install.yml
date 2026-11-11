@@ -143,7 +143,7 @@ jobs:
           # but here we also want to check that the webui starts without errors
           oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z localhost 8800; do
+          while ! nc -z 127.0.0.1 8800; do
            sleep 5 # wait for 5 seconds before check again
           done
           echo "Test webui and tools Web pages"

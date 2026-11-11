@@ -66,7 +66,7 @@ def ssh_args(host_cores):
         # can be set in CI to emulate a bug in ssh_args
         raise RuntimeError('Testing a bug in ssh_args')
     for host, port, cores in host_cores:
-        if host == '127.0.0.1':  # localhost
+        if host == '127.0.0.1':  # 127.0.0.1
             yield host, port, cores, [sys.executable]
         else:
             yield host, port, cores, [
@@ -101,7 +101,7 @@ class WorkerMaster(object):
     def start(self):
         """
         Start multiple workerpools on remote servers via ssh and/or a single
-        workerpool on localhost.
+        workerpool on 127.0.0.1.
         """
         starting = []
         for host, port, cores, args in ssh_args(self.host_cores):

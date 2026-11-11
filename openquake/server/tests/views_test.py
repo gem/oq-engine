@@ -167,7 +167,7 @@ class EngineServerTestCase(django.test.TransactionTestCase):
         elif any(kind in resp.headers.get('Content-Type', '')
                  for kind in ('json', 'text/')):
             assert resp.content, (
-                'No content from http://localhost:8800/v1/calc/%s' % path)
+                'No content from http://127.0.0.1:8800/v1/calc/%s' % path)
             js = resp.content.decode('utf8')
         else:
             return json.loads(bytes(loadnpz([resp.content])['json']))

@@ -876,7 +876,7 @@ class Starmap(object):
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.server.receiver_ports
         if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
-            self.return_ip = '127.0.0.1'  # zmq returns data to localhost
+            self.return_ip = '127.0.0.1'  # zmq returns data to 127.0.0.1
         else:  # zmq returns data to the receiver_host
             self.return_ip = get_return_ip(config.server.receiver_host)
             logging.debug(f'{self.return_ip=}')

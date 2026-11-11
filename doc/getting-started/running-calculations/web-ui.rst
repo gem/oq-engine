@@ -41,7 +41,7 @@ In a terminal type::
 Using the OpenQuake engine WebUI
 --------------------------------
 
-Open the browser and load the http://localhost:8800/engine page
+Open the browser and load the http://127.0.0.1:8800/engine page
 
 .. image:: _images/webui/webui-main.gif
 

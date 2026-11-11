@@ -115,7 +115,7 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          headers={'X-API-Key': API_KEY})
         if hasattr(resp, 'content'):
             assert resp.content, (
-                'No content from http://localhost:8800/v1/calc/%s (params: %s)'
+                'No content from http://127.0.0.1:8800/v1/calc/%s (params: %s)'
                 % (path, data))
             js = resp.content.decode('utf8')
         else:

@@ -29,7 +29,7 @@ except ImportError:
 from openquake.baselib import sap
 
 
-def viewlog(calc_id, host='localhost', port=8000):
+def viewlog(calc_id, host='127.0.0.1', port=8000):
     """
     Extract the log of the given calculation ID from the WebUI
     """

@@ -110,7 +110,7 @@ class server:
     ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
     CONFIG = f"""[server]
-    host = localhost
+    host = 127.0.0.1
     dbfile = {DBPATH}
     [directory]
     """

@@ -56,7 +56,7 @@ def main(calc_id):
             f'Imported {calc_id}',
             getpass.getuser(),
             None,
-            'localhost')
+            '127.0.0.1')
     ds_calc = os.path.join(datadir, f'calc_{calc_id}.hdf5')
     ds_new = os.path.join(datadir, f'calc_{new_id}.hdf5')
     if remote:

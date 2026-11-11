@@ -1302,9 +1302,9 @@ def main(what,
     if prefix == 'disagg' and 'poe_id=' not in rest:
         what += '&poe_id=0'
     if local:
-        xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
+        xs = [WebExtractor(calc_id, 'http://127.0.0.1:8800', '')]
         for other_id in others:
-            xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
+            xs.append(WebExtractor(other_id), 'http://127.0.0.1:8800', '')
     elif webapi:
         xs = [WebExtractor(calc_id)]
         for other_id in others:

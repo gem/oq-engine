@@ -36,7 +36,7 @@ def main(what,
         if local:
             if calc_id == -1:
                 calc_id = logs.dbcmd('get_job', calc_id).id
-            aw = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
+            aw = WebExtractor(calc_id, 'http://127.0.0.1:8800', '').get(what)
         elif webapi:
             aw = WebExtractor(calc_id).get(what)
         else:

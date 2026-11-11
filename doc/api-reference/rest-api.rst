@@ -28,7 +28,7 @@ Response::
 	  "calculation_mode": "classical",
 	  "is_running": true,
 	  "owner: "michele",
-	  "url": "http://localhost:8800/v1/calc/1",
+	  "url": "http://127.0.0.1:8800/v1/calc/1",
 	  "abortable": true,
 	  "size_mb": 2.34},
 	 {"description": "Event based calculation",
@@ -37,7 +37,7 @@ Response::
 	  "calculation_mode": "event_based",
 	  "is_running": false,
 	  "owner: "armando",
-	  "url": "http://localhost:8800/v1/calc/2",
+	  "url": "http://127.0.0.1:8800/v1/calc/2",
 	  "abortable": false,
 	  "size_mb": 12.34},
 	 {"description": "ScenarioRisk calculation",
@@ -46,7 +46,7 @@ Response::
 	  "calculation_mode": "scenario_risk",
 	  "is_running": false,
 	  "owner: "armando",
-	  "url": "http://localhost:8800/v1/calc/3",
+	  "url": "http://127.0.0.1:8800/v1/calc/3",
 	  "abortable": false,
 	  "parent_id": null,
 	  "size_mb": 1.23}
@@ -84,7 +84,7 @@ Response::
 	  "is_running": true,
 	  "owner: "michele",
 	  "parent_id": "42",
-	  "url": "http://localhost:8800/v1/calc/1"}
+	  "url": "http://127.0.0.1:8800/v1/calc/1"}
 
 *********************
 GET /v1/calc/:calc_id
@@ -376,9 +376,9 @@ Response::
 
 	{"status": "created",
 	 "job_id": 1,
-	 "outputs_uri": "http://localhost:8800/v1/calc/1/results",
-	 "log_uri": "http://localhost:8800/v1/calc/1/log/0:",
-	 "traceback_uri": "http://localhost:8800/v1/calc/1/traceback"}
+	 "outputs_uri": "http://127.0.0.1:8800/v1/calc/1/results",
+	 "log_uri": "http://127.0.0.1:8800/v1/calc/1/log/0:",
+	 "traceback_uri": "http://127.0.0.1:8800/v1/calc/1/traceback"}
 
 	`outputs_uri` can be used later to retrieve calculation results, after the job is complete.
 	`log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.

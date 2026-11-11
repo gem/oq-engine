@@ -78,7 +78,7 @@ jobs:
           # START WEBUI
           oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z localhost 8800; do
+          while ! nc -z 127.0.0.1 8800; do
             sleep 7 # wait for 1/10 of the second before check again
           done
           echo "Test WebUI with curl "

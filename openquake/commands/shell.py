@@ -63,7 +63,7 @@ class OpenQuake(object):
 
     def ex(self, calc_id, what):
         """Extract data from a local engine server"""
-        ex = WebExtractor(calc_id, 'http://localhost:8800', '', '')
+        ex = WebExtractor(calc_id, 'http://127.0.0.1:8800', '', '')
         try:
             return ex.get(what)
         finally:

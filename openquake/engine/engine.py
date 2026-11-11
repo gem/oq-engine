@@ -203,7 +203,7 @@ def run_calc(log, mulfactor=2):
         try:
             hostname = socket.gethostname()
         except Exception:  # gaierror
-            hostname = 'localhost'
+            hostname = '127.0.0.1'
         logging.warning('%s@%s running %s --hc=%s',
                         USER, hostname, calc.oqparam.inputs['job_ini'],
                         calc.oqparam.hazard_calculation_id)

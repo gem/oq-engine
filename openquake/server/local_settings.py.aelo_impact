@@ -10,7 +10,7 @@ import os
 # - For 'server' and 'devel_server' installations, follow the installation documentation.
 
 APPLICATION_MODE = <'AELO'|'IMPACT'>
-ALLOWED_HOSTS = (<domain_name_of_the_server>, 'localhost', '127.0.0.1')
+ALLOWED_HOSTS = (<domain_name_of_the_server>, '127.0.0.1')
 DISABLE_VERSION_WARNING = True
 
 IMPACT_DEFAULT_USGS_ID = ''
@@ -30,7 +30,7 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 # WEBUI = False
 
 # WEBUI config uncomment and set properly if needed
-# WEBUIURL = 'http://localhost:8800/'
+# WEBUIURL = 'http://127.0.0.1:8800/'
 
 # By default this setting links to the latest engine user manual
 # The following example points to the latest AELO user manual:
@@ -54,7 +54,7 @@ EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
 # NOTE: the following variable is needed to send pasword reset emails
 #       using the createnormaluser Django command.
 #       It should be the same specified in /etc/nginx/conf.d/webui.conf
-SERVER_NAME = <localhost>
+SERVER_NAME = <127.0.0.1>
 
 # Set to True if using NGINX or some other reverse proxy
 # Externally visible url and port number is different from Django visible

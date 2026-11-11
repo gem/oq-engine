@@ -127,7 +127,7 @@ def oq_server_context_processor(request):
     webui_host = request.get_host()
     context['oq_engine_server_url'] = (
         '//' + (webui_host if webui_host else request.META.get(
-            'HTTP_HOST', 'localhost:8800')) + settings.WEBUI_PATHPREFIX)
+            'HTTP_HOST', '127.0.0.1:8800')) + settings.WEBUI_PATHPREFIX)
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
@@ -159,7 +159,7 @@ def oq_server_context_processor(request):
     return context
 
 
-def check_webserver_running(url="http://localhost:8800", max_retries=30,
+def check_webserver_running(url="http://127.0.0.1:8800", max_retries=30,
                             warn=True):
     """
     Returns True if a given URL is responding within a given timeout.
