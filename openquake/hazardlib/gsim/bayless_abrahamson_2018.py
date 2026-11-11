@@ -214,7 +214,8 @@ def _get_mean_linear(C, ctx):
 
 
 def _get_mean(self, C, ctx, imt):
-    if imt.frequency >= 24.:
+    # Extrapolate from the last valid coefficient row, rounded to 24 Hz.
+    if imt.frequency >= 23.988321:
         im = EAS(23.988321)
         C = self.COEFFS[im]
         t1 = np.exp(_get_mean_linear(C, ctx))
