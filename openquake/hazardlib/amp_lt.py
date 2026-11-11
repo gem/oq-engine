@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import BASE183, decode
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.hazardlib.lt import Realization, random, sample
+from openquake.hazardlib.lt import Realization, AbstractLogicTree
 
 
 F32 = numpy.float32
@@ -133,7 +133,7 @@ class AmplificationLogicTreeParser(object):
             os.path.basename(self.filename), len(self.branches))
 
 
-class AmplificationLogicTree(object):
+class AmplificationLogicTree(AbstractLogicTree):
     """
     Site amplification for one or more branches (single CSV or amp-LT)
     """
@@ -191,14 +191,6 @@ class AmplificationLogicTree(object):
         return [Realization(value=name, weight=float(w), ordinal=i,
                             lt_path=(name,), samples=1)
                 for i, (name, w) in enumerate(zip(self.names, self.weights))]
-
-    def sample(self, n, seed, sampling_method='early_weights'):
-        """
-        Monte-Carlo sample n branches with probability = branch weight;
-        returns :class:`Realization` objects (branches may repeat or be absent)
-        """
-        probs = random(n, seed, sampling_method)
-        return sample(self.get_realizations(), probs, sampling_method)
 
     @property
     def shortener(self):

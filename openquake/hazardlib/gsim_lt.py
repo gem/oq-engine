@@ -180,7 +180,7 @@ class IMTWeigher:
         return weights[:, i]
 
 
-class GsimLogicTree(object):
+class GsimLogicTree(lt.AbstractLogicTree):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
     tuples with attributes `value`, `weight` and `lt_path`, where

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import abc
 import copy
 import math
 import pickle
@@ -1302,6 +1303,50 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+class AbstractLogicTree(abc.ABC):
+    """
+    Common interface of the logic trees. The subclasses must define
+    get_num_paths and at least one of __iter__ and get_realizations,
+    since each one is implemented in terms of the other; sample can be
+    overridden, by default it samples the realizations by weight.
+    """
+    def __init_subclass__(cls, **kw):
+        super().__init_subclass__(**kw)
+        if (cls.__iter__ is AbstractLogicTree.__iter__ and
+                cls.get_realizations is AbstractLogicTree.get_realizations):
+            raise TypeError(f'{cls.__name__} must define __iter__ or '
+                            'get_realizations')
+
+    @abc.abstractmethod
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+
+    def __iter__(self):
+        """
+        Yield the realizations of the logic tree
+        """
+        return iter(self.get_realizations())
+
+    def get_realizations(self):
+        """
+        :returns: the list of the realizations of the logic tree
+        """
+        return list(self)
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        :param n: number of samples
+        :param seed: random seed
+        :param sampling_method: by default 'early_weights'
+        :returns: n realizations sampled with probability equal to their
+                  weight (they may repeat or be absent)
+        """
+        probs = random(n, seed, sampling_method)
+        return sample(self.get_realizations(), probs, sampling_method)
+
+
 def set_short_id(branches, short_ids):
     for branch, short_id in zip(branches, short_ids):
         branch.short_id = short_id
@@ -1386,7 +1431,90 @@ def smlt_path(branches):
     return tuple(path)
 
 
-class CompositeLogicTree(object):
+class BranchSetLogicTree(AbstractLogicTree):
+    """
+    Logic tree made of branchsets, each one attached to branches of the
+    previous ones (see attach_branches). The subclasses must set the
+    attribute `branchsets` and call set_num_paths (or set `num_paths`);
+    they can set `num_samples`, `seed` and `sampling_method`.
+    """
+    num_samples = 0
+    seed = 42
+    sampling_method = 'early_weights'
+
+    def set_num_paths(self):
+        """
+        Set the attribute num_paths, i.e. the number of end branches
+        """
+        self.num_paths = (count_paths(self.branchsets[0].branches)
+                          if self.branchsets else 0)
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else self.num_paths
+
+    def __iter__(self):
+        """
+        Yield Realization tuples. Notice that the weight is homogeneous when
+        sampling is enabled, since it is accounted for in the sampling
+        procedure.
+        """
+        if self.num_samples:
+            # random sampling of the logic tree
+            yield from self.sample(
+                self.num_samples, self.seed, self.sampling_method)
+        else:  # full enumeration
+            rlzs = []
+            for weight, branches in self.branchsets[0].enumerate_paths():
+                value = [br.value for br in branches]
+                rlz = Realization(value, weight, 0, smlt_path(branches))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        Sample the logic tree branchset by branchset. Notice that the weight
+        is homogeneous with early sampling, since it is accounted for in
+        the sampling procedure.
+
+        :param n: number of samples
+        :param seed: random seed
+        :param sampling_method: by default 'early_weights'
+        :returns: n Realization objects
+        """
+        probs = random((n, len(self.branchsets)), seed, sampling_method)
+        rlzs = []
+        for ordinal, branches in enumerate(
+                self.branchsets[0].sample(probs, sampling_method)):
+            value = [br.value for br in branches]
+            if sampling_method.startswith('early_'):
+                weight = 1. / n  # already accounted
+            elif sampling_method.startswith('late_'):
+                weight = numpy.prod([br.weight for br in branches])
+            else:
+                raise NotImplementedError(sampling_method)
+            rlzs.append(Realization(value, weight, ordinal,
+                                    smlt_path(branches)))
+        return rlzs
+
+    def get_all_paths(self):
+        """
+        :returns: the paths of the logic tree as strings, padded with dots
+        """
+        out = []
+        nb = len(self.branchsets)
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            lt_path = ''.join(br.id for br in branches)
+            out.append(lt_path.ljust(nb, '.'))
+        return out
+
+
+class CompositeLogicTree(BranchSetLogicTree):
     """
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
@@ -1402,54 +1530,7 @@ class CompositeLogicTree(object):
             bset.check_duplicates()
             bset.check_weights()
         attach_branches(self, override=True)
-
-    def __iter__(self):
-        """
-        Yield Realization tuples. Notice that the weight is homogeneous when
-        sampling is enabled, since it is accounted for in the sampling
-        procedure.
-        """
-        if self.num_samples:
-            # random sampling of the logic tree
-            probs = random((self.num_samples, len(self.branchsets)),
-                           self.seed, self.sampling_method)
-            ordinal = 0
-            for branches in self.branchsets[0].sample(
-                    probs, self.sampling_method):
-                value = [br.value for br in branches]
-                if self.sampling_method.startswith('early_'):
-                    weight = 1. / self.num_samples  # already accounted
-                elif self.sampling_method.startswith('late_'):
-                    weight = numpy.prod([br.weight for br in branches])
-                else:
-                    raise NotImplementedError(self.sampling_method)
-                yield Realization(value, weight, ordinal, smlt_path(branches))
-                ordinal += 1
-        else:  # full enumeration
-            rlzs = []
-            for weight, branches in self.branchsets[0].enumerate_paths():
-                value = [br.value for br in branches]
-                rlz = Realization(value, weight, 0, smlt_path(branches))
-                rlzs.append(rlz)
-            rlzs.sort(key=operator.attrgetter('pid'))
-            for r, rlz in enumerate(rlzs):
-                rlz.ordinal = r
-                yield rlz
-
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else count_paths(
-            self.branchsets[0].branches)
-
-    def get_all_paths(self):
-        out = []
-        nb = len(self.branchsets)
-        for weight, branches in self.branchsets[0].enumerate_paths():
-            lt_path = ''.join(br.id for br in branches)
-            out.append(lt_path.ljust(nb, '.'))
-        return out
+        self.set_num_paths()
 
     def sample_paths(self, num_samples, seed=42,
                      sampling_method='early_weights'):

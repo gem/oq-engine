@@ -49,7 +49,8 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    LogicTreeError, parse_uncertainty, attach_branches, get_bset_values)
+    AbstractLogicTree, BranchSetLogicTree, LogicTreeError, parse_uncertainty,
+    attach_branches, get_bset_values)
 
 
 U16 = numpy.uint16
@@ -464,7 +465,7 @@ def reduce_full(full_lt, rlz_clusters):
     return result
 
 
-class SourceModelLogicTree(object):
+class SourceModelLogicTree(BranchSetLogicTree):
     """
     Source model logic tree parser.
 
@@ -841,14 +842,6 @@ class SourceModelLogicTree(object):
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
 
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else self.num_paths
-
-    __iter__ = CompositeLogicTree.__iter__
-
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
         Converts "applyToSources" and "applyToBranches" filters by
@@ -999,7 +992,7 @@ class SourceModelLogicTree(object):
     def decompose(self):
         """
         If the logic tree is source specific, returns a dictionary
-        source ID -> SourceLogicTree instance
+        source ID -> SourceSpecificLogicTree instance
         """
         assert self.is_source_specific
         bsets = collections.defaultdict(list)
@@ -1011,12 +1004,13 @@ class SourceModelLogicTree(object):
                 bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
         root = self.branchsets[0]
         if len(root) > 1:
-            out = {None: SourceLogicTree(None, [root], self.bsetdict[root.id])}
+            out = {None: SourceSpecificLogicTree(
+                None, [root], self.bsetdict[root.id])}
         else:
             out = {}
-        # src_id -> SourceLogicTree
+        # src_id -> SourceSpecificLogicTree
         for src_id in bsets:
-            out[src_id] = SourceLogicTree(
+            out[src_id] = SourceSpecificLogicTree(
                 src_id, bsets[src_id], bsetdict[src_id])
         return out
 
@@ -1179,7 +1173,7 @@ def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
 # NB: the logic tree is reduced by SourceModelLogicTree.reduce *before*
 # building the sources, so that each source stores the trt_smrs of the
 # logic tree realizations it belongs to (see src.ts_samples)
-class FullLogicTree(object):
+class FullLogicTree(AbstractLogicTree):
     """
     The full logic tree as composition of
 
@@ -1359,6 +1353,14 @@ class FullLogicTree(object):
             return self.num_samples
         return len(self.sm_rlzs) * self.gsim_lt.get_num_paths() * self.xR
 
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        Not implemented: the full logic tree is sampled through its
+        components, according to the num_samples of the source model
+        logic tree, see get_realizations
+        """
+        raise NotImplementedError('FullLogicTree cannot be sampled directly')
+
     def get_realizations(self):
         """
         :returns: the complete list of LtRealizations
@@ -1532,7 +1534,7 @@ class FullLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 
-class SourceLogicTree(object):
+class SourceSpecificLogicTree(BranchSetLogicTree):
     """
     Source specific logic tree (full enumeration)
     """
@@ -1549,12 +1551,6 @@ class SourceLogicTree(object):
             parent.branches = branches
             self.num_paths *= len(branches)
         self.branchsets = branchsets
-        self.num_samples = 0
-
-    __iter__ = SourceModelLogicTree.__iter__
-
-    def get_num_paths(self):
-        return self.num_paths
 
     def __repr__(self):
         return '<SSLT:%s %s>' % (self.source_id, self.branchsets)

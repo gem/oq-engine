@@ -106,7 +106,7 @@ def _choice(utype, branch_id, value, weight):
     return slot, PfdModelChoice(class_name, params, branch_id, weight)
 
 
-class PFDLogicTree(object):
+class PFDLogicTree(lt.BranchSetLogicTree):
     """
     Reader and realization enumerator for PFD-style logic trees.
 
@@ -133,22 +133,14 @@ class PFDLogicTree(object):
         if self.root_branchset is not None:
             # attach the child branchsets to the branches via applyToBranches
             lt.attach_branches(self)
+        # NB: applyToSources and applyToStyle are per source and do not
+        # affect the global number of paths
         self.set_num_paths()
 
-    def set_num_paths(self):
-        """
-        Count the end branches of the PFD logic tree with the shared
-        :func:`openquake.hazardlib.lt.count_paths`.  ``applyToSources`` and
-        ``applyToStyle`` are per source and do not affect the global count.
-        """
-        self.num_paths = (lt.count_paths(self.root_branchset.branches)
-                          if self.root_branchset is not None else 0)
-
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else self.num_paths
+    # the realizations are the end branches, see get_realizations, and
+    # they are sampled by weight, not branchset by branchset
+    __iter__ = lt.AbstractLogicTree.__iter__
+    sample = lt.AbstractLogicTree.sample
 
     def get_realizations(self):
         """
@@ -196,13 +188,6 @@ class PFDLogicTree(object):
         """
         return {'~'.join(r.lt_path): BASE183[i] + '0'
                 for i, r in enumerate(self.get_realizations())}
-
-    def sample(self, n, seed, sampling_method='early_weights'):
-        """
-        :returns: n generic realizations sampled from the PFD branches
-        """
-        probs = lt.random(n, seed, sampling_method)
-        return lt.sample(self.get_realizations(), probs, sampling_method)
 
     def _parse(self):
         branchsets = []
