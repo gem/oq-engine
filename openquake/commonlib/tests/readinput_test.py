@@ -749,7 +749,7 @@ class LogicTreeTestCase(unittest.TestCase):
         oq = readinput.get_oqparam(job_ini)
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
-        paths = [rlz.lt_path for rlz in lt]
+        paths = [rlz.lt_path for rlz in lt.get_realizations()]
         expected = [('SM1', '.', 'gA0', 'gA1'),
                     ('SM1', '.', 'gA0', 'gB1'),
                     ('SM1', '.', 'gB0', 'gA1'),

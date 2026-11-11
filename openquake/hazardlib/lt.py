@@ -15,7 +15,44 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Branches, branchsets, uncertainties and the base classes of the logic
+trees. All the logic trees implement the interface of AbstractLogicTree;
+the logic trees made of branchsets derive from BranchSetLogicTree and the
+logic trees which can be the extra logic tree of a FullLogicTree derive
+from ExtraLogicTree. Here is the hierarchy, with the methods defined or
+overridden by each class::
 
+    AbstractLogicTree
+    │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
+    │   sample
+    ├── BranchSetLogicTree
+    │   │   root_branchset, set_num_paths, get_num_paths, get_realizations,
+    │   │   sample, get_all_paths, to_node, to_nrml, h5attrs, __toh5__,
+    │   │   __fromh5__
+    │   ├── CompositeLogicTree
+    │   │       sample_paths, apply_all
+    │   ├── SourceModelLogicTree
+    │   │       set_num_paths, decompose, reduce, prune, bset_values, h5attrs,
+    │   │       __fromh5__
+    │   ├── SourceSpecificLogicTree
+    │   └── ExtraLogicTree
+    │       │   get_realizations, sample, shortener
+    │       ├── PFDLogicTree
+    │       │       selections_for, check_r_sigma_conflict
+    │       └── AmplificationLogicTree
+    │               from_xml, is_amp_lt, names, weights, filenames,
+    │               branchset_id, amplify, check, __fromh5__
+    ├── GsimLogicTree
+    │       get_realizations, sample, get_num_paths, to_node, __toh5__,
+    │       __fromh5__
+    └── FullLogicTree
+            get_realizations, get_num_paths, sample → NotImplementedError,
+            __toh5__, __fromh5__
+
+The classes are defined in the modules lt, logictree, gsim_lt, pfd_lt and
+amp_lt of openquake.hazardlib.
+"""
 import abc
 import ast
 import copy
@@ -1402,22 +1439,20 @@ def h5_to_branches(array):
 class AbstractLogicTree(abc.ABC):
     """
     Common interface of the logic trees. The subclasses must define
-    get_num_paths, the serialization methods __toh5__ and __fromh5__ and
-    at least one of __iter__ and get_realizations, since each one is
-    implemented in terms of the other; sample can be overridden, by
-    default it samples the realizations by weight.
+    get_num_paths, get_realizations and the serialization methods
+    __toh5__ and __fromh5__; sample can be overridden, by default it
+    samples the realizations by weight.
     """
-    def __init_subclass__(cls, **kw):
-        super().__init_subclass__(**kw)
-        if (cls.__iter__ is AbstractLogicTree.__iter__ and
-                cls.get_realizations is AbstractLogicTree.get_realizations):
-            raise TypeError(f'{cls.__name__} must define __iter__ or '
-                            'get_realizations')
-
     @abc.abstractmethod
     def get_num_paths(self):
         """
         :returns: the number of paths in the logic tree
+        """
+
+    @abc.abstractmethod
+    def get_realizations(self):
+        """
+        :returns: the list of the realizations of the logic tree
         """
 
     @abc.abstractmethod
@@ -1433,18 +1468,6 @@ class AbstractLogicTree(abc.ABC):
         Restore the logic tree from the data and the attributes returned
         by __toh5__ and stored in the datastore
         """
-
-    def __iter__(self):
-        """
-        Yield the realizations of the logic tree
-        """
-        return iter(self.get_realizations())
-
-    def get_realizations(self):
-        """
-        :returns: the list of the realizations of the logic tree
-        """
-        return list(self)
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -1623,26 +1646,24 @@ class BranchSetLogicTree(AbstractLogicTree):
         """
         return self.num_samples if self.num_samples else self.num_paths
 
-    def __iter__(self):
+    def get_realizations(self):
         """
-        Yield Realization tuples. Notice that the weight is homogeneous when
-        sampling is enabled, since it is accounted for in the sampling
-        procedure.
+        :returns: the list of the realizations, sampled if num_samples is
+            set, otherwise all of them; notice that the weight is homogeneous
+            with early sampling, since it is accounted for in the sampling
+            procedure
         """
         if self.num_samples:
-            # random sampling of the logic tree
-            yield from self.sample(
+            return self.sample(
                 self.num_samples, self.seed, self.sampling_method)
-        else:  # full enumeration
-            rlzs = []
-            for weight, branches in self.branchsets[0].enumerate_paths():
-                value = [br.value for br in branches]
-                rlz = Realization(value, weight, 0, smlt_path(branches))
-                rlzs.append(rlz)
-            rlzs.sort(key=operator.attrgetter('pid'))
-            for r, rlz in enumerate(rlzs):
-                rlz.ordinal = r
-                yield rlz
+        rlzs = []
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            value = [br.value for br in branches]
+            rlzs.append(Realization(value, weight, 0, smlt_path(branches)))
+        rlzs.sort(key=operator.attrgetter('pid'))
+        for r, rlz in enumerate(rlzs):
+            rlz.ordinal = r
+        return rlzs
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -1714,7 +1735,6 @@ class ExtraLogicTree(BranchSetLogicTree):
     branches, with value and path given by the branch IDs, and they are
     sampled by weight, not branchset by branchset
     """
-    __iter__ = AbstractLogicTree.__iter__
     sample = AbstractLogicTree.sample
 
     def get_realizations(self):
@@ -1780,7 +1800,7 @@ class CompositeLogicTree(BranchSetLogicTree):
         srcs = []
         bs0 = self.branchsets[0]
         n = len(self.branchsets)
-        for rlz in self:
+        for rlz in self.get_realizations():
             if len(rlz.lt_path) != n:
                 raise ValueError("The branch IDs must be one-character long")
             bset_values = bs0.get_bset_values(rlz.lt_path)

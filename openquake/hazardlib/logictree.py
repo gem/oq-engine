@@ -17,11 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Logic tree parser, verifier and processor. See specs at
-https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
-
-A logic tree object must be iterable and yielding realizations, i.e. objects
-with attributes `value`, `weight`, `lt_path` and `ordinal`.
+Source model logic tree parser, verifier and processor, and the full logic
+tree combining the source model, GSIM and extra logic trees. The common
+interface of the logic trees and their hierarchy are documented in
+:mod:`openquake.hazardlib.lt`.
 """
 
 import os
@@ -175,16 +174,17 @@ def unique(objects, key=None):
 
 
 @functools.lru_cache()
-def get_effective_rlzs(rlzs):
+def get_effective_rlzs(ltree):
     """
     Group together realizations with the same path
     and yield the first representative of each group.
 
-    :param rlzs: a list of Realization instances with a .pid property
+    :param ltree: a logic tree, used as key of the cache
     """
     effective = []
     ordinal = 0
-    for group in groupby(rlzs, operator.attrgetter('pid')).values():
+    for group in groupby(ltree.get_realizations(),
+                         operator.attrgetter('pid')).values():
         rlz = group[0]
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
@@ -1090,10 +1090,9 @@ class FullLogicTree(AbstractLogicTree):
             self.sm_rlzs = get_effective_rlzs(self.source_model_lt)
         else:  # full enumeration
             samples = self.gsim_lt.get_num_paths() * self.xR
-            self.sm_rlzs = []
-            for sm_rlz in self.source_model_lt:
+            self.sm_rlzs = self.source_model_lt.get_realizations()
+            for sm_rlz in self.sm_rlzs:
                 sm_rlz.samples = samples
-                self.sm_rlzs.append(sm_rlz)
         self.Re = len(self.sm_rlzs)
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
@@ -1262,7 +1261,7 @@ class FullLogicTree(AbstractLogicTree):
                     rlz.weight[:] = 1. / num_samples
         else:  # full enumeration
             extra_rlzs = extra_lt.get_realizations() if extra_lt else [None]
-            gsim_rlzs = list(self.gsim_lt)
+            gsim_rlzs = self.gsim_lt.get_realizations()
             ws = numpy.array([gsim_rlz.weight for gsim_rlz in gsim_rlzs])
             rlzs = numpy.empty(
                 len(ws) * len(self.sm_rlzs) * len(extra_rlzs), object)
