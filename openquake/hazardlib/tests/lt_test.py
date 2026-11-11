@@ -711,14 +711,12 @@ class AbstractLogicTreeTestCase(unittest.TestCase):
     # the common interface of the logic trees, see lt.AbstractLogicTree
 
     def test_subclasses(self):
-        for cls in (logictree.SourceModelLogicTree,
-                    logictree.SourceSpecificLogicTree, logictree.FullLogicTree,
+        for cls in (logictree.SourceModelLogicTree, logictree.FullLogicTree,
                     lt.CompositeLogicTree, gsim_lt.GsimLogicTree,
                     amp_lt.AmplificationLogicTree, pfd_lt.PFDLogicTree):
             self.assertTrue(issubclass(cls, lt.AbstractLogicTree), cls)
         # the logic trees made of branchsets
-        for cls in (logictree.SourceModelLogicTree,
-                    logictree.SourceSpecificLogicTree, lt.CompositeLogicTree,
+        for cls in (logictree.SourceModelLogicTree, lt.CompositeLogicTree,
                     pfd_lt.PFDLogicTree):
             self.assertTrue(issubclass(cls, lt.BranchSetLogicTree), cls)
 

@@ -928,26 +928,22 @@ class SourceModelLogicTree(BranchSetLogicTree):
     def decompose(self):
         """
         If the logic tree is source specific, returns a dictionary
-        source ID -> SourceSpecificLogicTree instance
+        source ID -> CompositeLogicTree instance with the branchsets
+        applied to the source; the key None (if present) corresponds to the
+        root branchset, i.e. the source models, applied to all the sources
         """
         assert self.is_source_specific
         bsets = collections.defaultdict(list)
-        bsetdict = collections.defaultdict(dict)
         for bset in self.branchsets[1:]:
             if bset.filters['applyToSources']:
                 [src_id] = bset.filters['applyToSources']
                 bsets[src_id].append(bset)
-                bsetdict[src_id][bset.id] = self.bsetdict[bset.id]
         root = self.branchsets[0]
+        out = {}
         if len(root) > 1:
-            out = {None: SourceSpecificLogicTree(
-                None, [root], self.bsetdict[root.id])}
-        else:
-            out = {}
-        # src_id -> SourceSpecificLogicTree
+            out[None] = CompositeLogicTree(copy_chain([root]))
         for src_id in bsets:
-            out[src_id] = SourceSpecificLogicTree(
-                src_id, bsets[src_id], bsetdict[src_id])
+            out[src_id] = CompositeLogicTree(copy_chain(bsets[src_id]))
         return out
 
     # SourceModelLogicTree
@@ -1401,29 +1397,19 @@ class FullLogicTree(AbstractLogicTree):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(summary))
 
 
-class SourceSpecificLogicTree(BranchSetLogicTree):
+def copy_chain(branchsets):
     """
-    Source specific logic tree (full enumeration), see
-    SourceModelLogicTree.decompose.
-
-    NB: it is not stored in the datastore, since the serialization
-    inherited from BranchSetLogicTree requires a filename
+    :returns: copies of the branchsets and of their branches, where each
+        branch of a branchset points to the copy of the next branchset, so
+        that the copies can be used in a new logic tree without changing the
+        original one (see SourceModelLogicTree.decompose)
     """
-    def __init__(self, source_id, branchsets, bsetdict):
-        self.source_id = source_id
-        self.bsetdict = bsetdict
-        branchsets = [copy.copy(bset) for bset in branchsets]
-        self.num_paths = 1
-        for child, parent in zip(branchsets[1:] + [None], branchsets):
-            branches = [copy.copy(br) for br in parent.branches]
-            for br in branches:
-                br.bset = child
-            parent.branches = branches
-            self.num_paths *= len(branches)
-        self.branchsets = branchsets
-
-    def __repr__(self):
-        return '<SSLT:%s %s>' % (self.source_id, self.branchsets)
+    bsets = [copy.copy(bset) for bset in branchsets]
+    for child, parent in zip(bsets[1:] + [None], bsets):
+        parent.branches = [copy.copy(br) for br in parent.branches]
+        for br in parent.branches:
+            br.bset = child
+    return bsets
 
 
 def compose(source_model_lt, gsim_lt):

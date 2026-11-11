@@ -35,7 +35,6 @@ overridden by each class::
     │   ├── SourceModelLogicTree
     │   │       set_num_paths, decompose, reduce, prune, bset_values, h5attrs,
     │   │       __fromh5__
-    │   ├── SourceSpecificLogicTree
     │   └── ExtraLogicTree
     │       │   get_realizations, sample, shortener
     │       ├── PFDLogicTree
