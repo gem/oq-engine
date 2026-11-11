@@ -8,9 +8,9 @@
     * Added missing span-20 LOWESS smoothing after flattening the non-linear
       site term on the native frequency grid, matching the MATLAB script.
     * Fixed off-grid predictions by interpolating completed log EAS and
-      standard deviations against log frequency, matching MATLAB. Previously,
-      coefficients were interpolated before evaluation and the non-linear
-      term was interpolated against linear frequency.
+      standard deviations against log frequency, matching the MATLAB script.
+      Previously, coefficients were interpolated before evaluation and the
+      non-linear term was interpolated against linear frequency.
 
  [Anirudh Rao]
   * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
