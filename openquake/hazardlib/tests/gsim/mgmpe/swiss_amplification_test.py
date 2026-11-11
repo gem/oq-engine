@@ -72,6 +72,56 @@ def new_context(cmaker, periods):
     return ctx
 
 
+class SwissAmplificationTestCase(unittest.TestCase):
+    """
+    Tests the implementation of a correction factor for intensity
+    """
+    def get_ctx(self, cmaker):
+        ctx = cmaker.new_ctx(4)
+        ctx.mag = 6.0
+        ctx.hypo_depth = 10.
+        ctx.amplfactor = [-1.0, 1.5, 0.00, -1.99]
+        ctx.ch_ampl03 = [-0.2, 0.4, 0.6, 0]
+        ctx.ch_phis2s03 = [0.3, 0.4, 0.5, 0.2]
+        ctx.ch_phiss03 = [0.2, 0.1, 0.3, 0.4]
+        ctx.rhypo = ctx.rrup = ctx.repi = np.array([1., 10., 30., 70.])
+        return ctx
+
+    def test(self):
+        for gmpe_name in ['ECOS2009', 'BindiEtAl2011RepiFixedH',
+                          'BaumontEtAl2018High2210IAVGDC30n7',
+                          'FaccioliCauzzi2006']:
+
+            gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe, apply_swiss_amplification={})
+            cmaker = simple_cmaker([gmm, gmpe], ['MMI'])
+            ctx = self.get_ctx(cmaker)
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
+            exp_mean = mea[1] + np.array([-1.00, 1.50, 0, -1.99])
+
+            # Check the computed mean + amplification
+            np.testing.assert_almost_equal(mea[0], exp_mean)
+
+        for gmpe_name in ['EdwardsFah2013Alpine10Bars',
+                          'EdwardsFah2013Foreland60Bars',
+                          'ChiouYoungs2008SWISS01']:
+
+            gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe, apply_swiss_amplification_sa={})
+            cmaker = simple_cmaker([gmm, gmpe], ['SA(0.3)'])
+            ctx = self.get_ctx(cmaker)
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
+            exp_mean = mea[1] + np.array([-0.2, 0.4, 0.6, 0])
+            exp_stdev = np.sqrt(np.array([0.3, 0.4, 0.5, 0.2])**2 +
+                                np.array([0.2, 0.1, 0.3, 0.4])**2)
+
+            # Check the computed mean + amplification
+            np.testing.assert_array_almost_equal(mea[0], exp_mean)
+
+            # Check the computed intra-event stdev
+            np.testing.assert_array_almost_equal(phi[0], [exp_stdev])
+
+
 class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
     def test_independent_reference(self):
         # Hand-worked Pythagorean cases, independent of the implementation:
