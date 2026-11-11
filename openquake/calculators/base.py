@@ -1295,8 +1295,10 @@ class HazardCalculator(BaseCalculator):
             # self.full_lt is set after _set_amplifier, so refetch here
             full_lt = getattr(self, 'full_lt', None) or (
                 readinput.get_full_lt(oq))
+            # Sample ordinals identify draws; branch IDs select amplifiers.
+            ampl_ord = {name: i for i, name in enumerate(amp_lt.names)}
             amp_lt.rlz_ampl_ord = numpy.array(
-                [r.extra_rlz.ordinal
+                [ampl_ord[r.extra_rlz.lt_path[0]]
                  for r in full_lt.get_realizations()], numpy.uint32)
             self.amplifier = amp_lt
         elif 'amplification' in oq.inputs:

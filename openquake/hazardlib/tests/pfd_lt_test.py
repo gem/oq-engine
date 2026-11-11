@@ -18,11 +18,12 @@
 
 """Tests for the PFD logic tree in :mod:`openquake.hazardlib.pfd_lt`."""
 import collections
+from unittest import mock
 
 import pytest
 
 from openquake.baselib.node import Node
-from openquake.hazardlib import lt
+from openquake.hazardlib import lt, logictree
 from openquake.hazardlib.pfd_lt import PFDLogicTree
 from openquake.hazardlib.lt import LogicTreeError
 
@@ -206,6 +207,7 @@ def test_get_num_paths(tmp_path):
 def test_get_num_paths_with_sampling(tmp_path):
     tree = PFDLogicTree(write(tmp_path, *full_chain()), num_samples=5)
     assert tree.get_num_paths() == 5
+    assert len(tree.get_realizations()) == 1
     assert len(tree.sample(5, seed=7)) == 5
 
 
@@ -341,19 +343,50 @@ def test_sampling_deterministic(tmp_path):
     assert a != c
 
 
-def test_sampling_respects_apply_to_branches(tmp_path):
+@pytest.mark.parametrize('method', [
+    'early_weights', 'early_latin', 'late_weights', 'late_latin'])
+def test_sampling_respects_apply_to_branches(tmp_path, method):
     path = write(
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
-            ("B1a", "MossRoss2011PrimarySR", 0.5),
-            ("B1b", "Takao2013PrimarySR", 0.5)]),
+            ("B1a", "MossRoss2011PrimarySR", 0.7),
+            ("B1b", "Takao2013PrimarySR", 0.3)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
-            ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
+            ("B2a", "MossRoss2011PrimaryFD", 0.25),
+            ("B2b", "Youngs2003PrimaryFD", 0.75)], applyToBranches="B1a"))
     tree = PFDLogicTree(path)
-    pairs = rlz_selections(tree, tree.sample(50, seed=1), "src1", "normal")
+    n = 2000
+    # Conditional sampling must walk only selected branches, without first
+    # enumerating the population, and must omit dummy IDs from extra paths.
+    with mock.patch.object(tree, 'get_realizations',
+                           side_effect=AssertionError):
+        rlzs = tree.sample(n, seed=1, sampling_method=method)
+    weights = {('B1a', 'B2a'): .175, ('B1a', 'B2b'): .525, ('B1b',): .3}
+    proposals = {('B1a', 'B2a'): .25, ('B1a', 'B2b'): .25, ('B1b',): .5}
+    for i, rlz in enumerate(rlzs):
+        assert rlz.ordinal == i
+        assert rlz.value == '~'.join(rlz.lt_path)
+        expected = (1. / n if method.startswith('early') else
+                    weights[rlz.lt_path] / proposals[rlz.lt_path])
+        assert rlz.weight == pytest.approx(expected)
+    # Late sampling chooses uniformly at each branchset, including the root
+    # whose two branches have different numbers of complete paths below them.
+    frequency = sum(r.lt_path[0] == 'B1a' for r in rlzs) / n
+    assert frequency == pytest.approx(
+        .7 if method.startswith('early') else .5, abs=.04)
+    weighted = sum(r.weight for r in rlzs if r.lt_path[0] == 'B1a')
+    assert weighted / sum(r.weight for r in rlzs) == pytest.approx(.7, abs=.04)
+    pairs = rlz_selections(tree, rlzs, "src1", "normal")
     for _, sel in pairs:
         sr = sel["primary_surf_rup"].branch_id
         assert ("primary_surf_displ" in sel) == (sr == "B1a")
+    full = logictree.FullLogicTree.fake()
+    full.extra_lt = tree
+    combined = full.sample(n, seed=1, sampling_method=method)
+    for path, weight in weights.items():
+        got = sum(r.weight[-1] for r in combined
+                  if r.extra_rlz.lt_path == path)
+        assert got == pytest.approx(weight, abs=.04)
 
 
 def test_sampling_h5_roundtrip(tmp_path):

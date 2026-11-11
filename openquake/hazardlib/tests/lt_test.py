@@ -20,6 +20,7 @@ import os
 import filecmp
 import difflib
 import unittest
+from unittest import mock
 import collections
 import numpy
 from types import SimpleNamespace
@@ -842,3 +843,33 @@ class AbstractLogicTreeTestCase(unittest.TestCase):
         clt.num_samples = 10
         self.assertEqual([rlz.lt_path for rlz in clt.get_realizations()],
                          [rlz.lt_path for rlz in rlzs])
+
+    def test_extra_sample_large_tree(self):
+        # Forty binary branchsets represent over a trillion paths. Build
+        # the shared graph directly, without enumerating complete paths.
+        tree = lt.ExtraLogicTree()
+        tree.branchsets = []
+        previous = []
+        for ordinal in range(40):
+            bs = lt.BranchSet('maxMagGRRelative', ordinal=ordinal)
+            bs.branches = [lt.Branch(f'b{ordinal}_{i}', i, .5)
+                           for i in range(2)]
+            for branch in previous:
+                branch.bset = bs
+            previous = bs.branches
+            tree.branchsets.append(bs)
+        tree.set_num_paths()
+        self.assertEqual(tree.num_paths, 2 ** 40)
+        with mock.patch.object(tree.root_branchset, 'enumerate_paths',
+                               side_effect=AssertionError):
+            rlzs = tree.sample(7, seed=42)
+        self.assertEqual(len(rlzs), 7)
+        self.assertEqual([r.ordinal for r in rlzs], list(range(7)))
+        self.assertTrue(all(len(r.lt_path) == 40 for r in rlzs))
+        self.assertTrue(all(r.value == r.pid for r in rlzs))
+        self.assertEqual({r.weight for r in rlzs}, {1. / 7})
+        with mock.patch('builtins.print') as output:
+            lt.print_tree(tree)
+        self.assertLess(output.call_count, 200)
+        self.assertTrue(any('shared' in str(call)
+                            for call in output.call_args_list))
