@@ -72,24 +72,6 @@ class PfdModelChoice:
     weight: float
 
 
-@dataclass
-class PFDBranch:
-    """
-    A fully-enumerated PFD realization for one source.
-
-    ``selections`` maps each slot name (the four model slots plus, when
-    present, ``calc_r_sigma``) to a :class:`PfdModelChoice`.
-    """
-    source_id: str
-    style: str
-    weight: float
-    selections: dict
-
-    @property
-    def slots(self):
-        return tuple(sorted(self.selections))
-
-
 def _choice(utype, branch_id, value, weight):
     """
     :returns: ``(slot, PfdModelChoice)`` for an ``lt.Branch`` value
@@ -215,89 +197,19 @@ class PFDLogicTree(lt.ExtraLogicTree):
             return False
         return True
 
-    def enumerate(self, sources):
-        """
-        Enumerate the PFD realizations for the given sources.
-
-        :param sources: iterable of ``(source_id, style)`` pairs, style one
-            of 'normal' / 'reverse' / 'strike-slip' (used by applyToStyle)
-        :returns: one :class:`PFDBranch` per (source, realization).  With
-            ``num_samples`` the realizations are Monte-Carlo sampled, else
-            all the branch combinations are enumerated with their product
-            weight.
-        """
-        sources = list(sources)
-        if self.num_samples:
-            return self._sample(sources)
-        return self._enumerate(sources)
-
-    def _sample(self, sources):
-        # Monte-Carlo sampling, one realization per draw.  The branch sets
-        # are walked in document order so applyToBranches filtering sees the
-        # branch IDs chosen for the same draw.  Following the engine
-        # convention, early_* weights are homogeneous (1/num_samples) and
-        # late_* weights are the product of the sampled branch weights.
-        realizations = []
-        n_bsets = len(self.branchsets)
-        for i, (source_id, style) in enumerate(sources):
-            probs = lt.random((self.num_samples, n_bsets), self.seed + i,
-                              self.sampling_method)
-            for s in range(self.num_samples):
-                selections = {}
-                chosen_ids = set()
-                late_weight = 1.0
-                for b, bs in enumerate(self.branchsets):
-                    if not self._applies(bs, source_id, style, chosen_ids):
-                        continue
-                    [br] = lt.sample(bs.branches, [float(probs[s, b])],
-                                     self.sampling_method)
-                    slot, choice = _choice(
-                        bs.uncertainty_type, br.branch_id, br.value, br.weight)
-                    selections[slot] = choice
-                    chosen_ids.add(br.branch_id)
-                    late_weight *= br.weight
-                if self.sampling_method.startswith('early'):
-                    weight = 1.0 / self.num_samples
-                else:
-                    weight = late_weight
-                realizations.append(PFDBranch(
-                    source_id, style, weight, selections))
-        return realizations
-
-    def _enumerate(self, sources):
-        realizations = []
-        for source_id, style in sources:
-            partials = [({}, set(), 1.0)]
-            for bs in self.branchsets:
-                nxt = []
-                for selections, chosen_ids, weight in partials:
-                    if not self._applies(bs, source_id, style, chosen_ids):
-                        nxt.append((selections, chosen_ids, weight))
-                        continue
-                    for br in bs.branches:
-                        slot, choice = _choice(
-                            bs.uncertainty_type, br.branch_id, br.value,
-                            br.weight)
-                        new_sel = dict(selections)
-                        new_sel[slot] = choice
-                        nxt.append((new_sel, chosen_ids | {br.branch_id},
-                                    weight * br.weight))
-                partials = nxt
-            for selections, _ids, weight in partials:
-                realizations.append(PFDBranch(
-                    source_id, style, weight, selections))
-        return realizations
-
-    def check_r_sigma_conflict(self, r_sigma_km, realizations):
+    def check_r_sigma_conflict(self, r_sigma_km):
         """
         Reject a scalar ``[calculation] r_sigma_km`` combined with an
-        ``fdhaCalcRSigma`` logic-tree branch: the two would fight over the
-        same parameter.  Either pin it in the job.ini or vary it in the
+        ``fdhaCalcRSigma`` logic-tree branchset: the two would fight over
+        the same parameter.  Either pin it in the job.ini or vary it in the
         logic tree, not both.
+
+        :param r_sigma_km: the r_sigma_km in the job.ini, or None if missing
         """
         if r_sigma_km is None:
             return
-        if any(CALC_R_SIGMA_SLOT in eb.selections for eb in realizations):
+        if any(CALC_SLOTS_BY_UTYPE.get(bs.uncertainty_type) ==
+               CALC_R_SIGMA_SLOT for bs in self.branchsets):
             raise lt.LogicTreeError(
                 None, self.filename,
                 'r_sigma_km is set both as a scalar [calculation] parameter '

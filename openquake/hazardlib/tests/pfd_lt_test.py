@@ -90,6 +90,22 @@ def full_chain():
     )
 
 
+def rlz_selections(tree, rlzs, source_id, style):
+    """
+    :returns: the (weight, selections) of each realization for the given
+        source, as computed by the displacement calculator
+    """
+    return [(rlz.weight, tree.selections_for(rlz.lt_path, source_id, style))
+            for rlz in rlzs]
+
+
+def selections(tree, source_id, style):
+    """
+    :returns: the (weight, selections) of each realization of the tree
+    """
+    return rlz_selections(tree, tree.get_realizations(), source_id, style)
+
+
 # --------------------------------------------------------------------------
 # parameter parsing
 # --------------------------------------------------------------------------
@@ -125,7 +141,7 @@ def test_parse_r_sigma_rejects(text):
 
 
 # --------------------------------------------------------------------------
-# reading and enumeration
+# reading, realizations and selections
 # --------------------------------------------------------------------------
 def test_unknown_utype_rejected(tmp_path):
     path = write(tmp_path, branchset(
@@ -143,22 +159,20 @@ def test_weights_must_sum_to_one(tmp_path):
         PFDLogicTree(path)
 
 
-def test_enumerate_single_chain(tmp_path):
-    lt = PFDLogicTree(write(tmp_path, *full_chain()))
-    [eb] = lt.enumerate([("src1", "reverse")])
-    assert eb.source_id == "src1"
-    assert eb.style == "reverse"
-    assert eb.weight == 1.0
-    assert eb.slots == ("primary_surf_displ", "primary_surf_rup",
-                        "secondary_surf_displ", "secondary_surf_rup")
-    assert eb.selections["primary_surf_rup"].class_name == "Youngs2003PrimarySR"
-    assert eb.selections["primary_surf_displ"].params == {
+def test_single_chain(tmp_path):
+    tree = PFDLogicTree(write(tmp_path, *full_chain()))
+    [(weight, sel)] = selections(tree, "src1", "reverse")
+    assert weight == 1.0
+    assert sorted(sel) == ["primary_surf_displ", "primary_surf_rup",
+                           "secondary_surf_displ", "secondary_surf_rup"]
+    assert sel["primary_surf_rup"].class_name == "Youngs2003PrimarySR"
+    assert sel["primary_surf_displ"].params == {
         "style": "normal", "norm_disp_type": "AD"}
-    assert eb.selections["secondary_surf_rup"].params == {
+    assert sel["secondary_surf_rup"].params == {
         "version": 3, "style": "all"}
 
 
-def test_enumerate_two_branches_and_weights(tmp_path):
+def test_two_branches_and_weights(tmp_path):
     path = write(
         tmp_path,
         branchset("bs1", "fdhaPrimarySRModel", [
@@ -167,10 +181,10 @@ def test_enumerate_two_branches_and_weights(tmp_path):
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)],
             applyToBranches="B1a B1b"))
-    branches = PFDLogicTree(path).enumerate([("src1", "strike-slip")])
-    assert [b.selections["primary_surf_rup"].branch_id for b in branches] == [
+    pairs = selections(PFDLogicTree(path), "src1", "strike-slip")
+    assert [sel["primary_surf_rup"].branch_id for _, sel in pairs] == [
         "B1a", "B1b"]
-    assert [b.weight for b in branches] == [0.7, 0.3]
+    assert [weight for weight, _ in pairs] == [0.7, 0.3]
 
 
 def test_get_num_paths(tmp_path):
@@ -183,16 +197,16 @@ def test_get_num_paths(tmp_path):
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)],
             applyToBranches="B1a B1b"))
-    lt = PFDLogicTree(path)
-    assert lt.get_num_paths() == 2
-    rlzs = lt.get_realizations()
+    tree = PFDLogicTree(path)
+    assert tree.get_num_paths() == 2
+    rlzs = tree.get_realizations()
     assert [r.weight for r in rlzs] == [0.7, 0.3]
 
 
 def test_get_num_paths_with_sampling(tmp_path):
-    lt = PFDLogicTree(write(tmp_path, *full_chain()), num_samples=5)
-    assert lt.get_num_paths() == 5
-    assert len(lt.sample(5, seed=7)) == 5
+    tree = PFDLogicTree(write(tmp_path, *full_chain()), num_samples=5)
+    assert tree.get_num_paths() == 5
+    assert len(tree.sample(5, seed=7)) == 5
 
 
 def test_apply_to_branches_filter(tmp_path):
@@ -204,29 +218,28 @@ def test_apply_to_branches_filter(tmp_path):
         # applies only under B1a: the B1b branch must not carry a FD selection
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
-    by_id = {b.selections["primary_surf_rup"].branch_id: b
-             for b in PFDLogicTree(path).enumerate(
-                 [("src1", "strike-slip")])}
-    assert "primary_surf_displ" in by_id["B1a"].selections
-    assert "primary_surf_displ" not in by_id["B1b"].selections
+    by_id = {sel["primary_surf_rup"].branch_id: sel for _, sel in
+             selections(PFDLogicTree(path), "src1", "strike-slip")}
+    assert "primary_surf_displ" in by_id["B1a"]
+    assert "primary_surf_displ" not in by_id["B1b"]
 
 
 def test_apply_to_style_filter(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
         applyToStyle="reverse"))
-    lt = PFDLogicTree(path)
-    assert lt.enumerate([("src1", "reverse")])[0].selections
-    assert lt.enumerate([("src1", "normal")])[0].selections == {}
+    tree = PFDLogicTree(path)
+    assert selections(tree, "src1", "reverse")[0][1]
+    assert selections(tree, "src1", "normal")[0][1] == {}
 
 
 def test_apply_to_sources_filter(tmp_path):
     path = write(tmp_path, branchset(
         "bs1", "fdhaPrimarySRModel", [("B1", "Moss2013PrimarySR", 1.0)],
         applyToSources="src1"))
-    branches = PFDLogicTree(path).enumerate(
-        [("src1", "normal"), ("src2", "normal")])
-    assert branches[0].selections and branches[1].selections == {}
+    tree = PFDLogicTree(path)
+    assert selections(tree, "src1", "normal")[0][1]
+    assert selections(tree, "src2", "normal")[0][1] == {}
 
 
 def test_calc_r_sigma_branch(tmp_path):
@@ -236,23 +249,25 @@ def test_calc_r_sigma_branch(tmp_path):
             ("B1", "MossRoss2011PrimarySR", 1.0)]),
         branchset("bs_sigma", "fdhaCalcRSigma", [
             ("SIG0", "0", 0.4), ("SIG2", "2", 0.6)]))
-    branches = PFDLogicTree(path).enumerate([("src1", "normal")])
-    assert [b.weight for b in branches] == [0.4, 0.6]
-    assert branches[0].selections["calc_r_sigma"].params == {"r_sigma_km": 0.0}
-    assert branches[1].selections["calc_r_sigma"].params == {"r_sigma_km": 2.0}
+    pairs = selections(PFDLogicTree(path), "src1", "normal")
+    assert [weight for weight, _ in pairs] == [0.4, 0.6]
+    assert pairs[0][1]["calc_r_sigma"].params == {"r_sigma_km": 0.0}
+    assert pairs[1][1]["calc_r_sigma"].params == {"r_sigma_km": 2.0}
 
 
 def test_check_r_sigma_conflict(tmp_path):
-    lt = PFDLogicTree(write(tmp_path, *full_chain()))
-    branches = lt.enumerate([("src1", "normal")])
-    lt.check_r_sigma_conflict(None, branches)  # no scalar -> fine
+    tree = PFDLogicTree(write(tmp_path, *full_chain()))
+    tree.check_r_sigma_conflict(None)  # no scalar -> fine
+    tree.check_r_sigma_conflict(1.0)  # no fdhaCalcRSigma branchset -> fine
 
     path2 = write(tmp_path, *full_chain(), branchset(
         "bs_sigma", "fdhaCalcRSigma", [("SIG", "1", 1.0)]))
-    lt2 = PFDLogicTree(path2)
-    branches2 = lt2.enumerate([("src1", "normal")])
-    with pytest.raises(LogicTreeError, match="both"):
-        lt2.check_r_sigma_conflict(1.0, branches2)
+    tree2 = PFDLogicTree(path2)
+    tree2.check_r_sigma_conflict(None)  # r_sigma_km not in the job.ini
+    for r_sigma_km in (1.0, 0.0):  # also an explicit zero is a conflict
+        with pytest.raises(LogicTreeError, match="both"):
+            tree2.check_r_sigma_conflict(r_sigma_km)
+
 
 def test_h5_roundtrip(tmp_path):
     """__toh5__/__fromh5__ preserve branches, filters and calc parameters."""
@@ -267,18 +282,13 @@ def test_h5_roundtrip(tmp_path):
             applyToBranches="B1"),
         branchset("bs_sigma", "fdhaCalcRSigma", [
             ("SIG0", "0", 0.4), ("SIG2", "2", 0.6)]))
-    lt = PFDLogicTree(path)
-    array, attrs = lt.__toh5__()
-    lt2 = object.__new__(PFDLogicTree)
-    lt2.__fromh5__(array, attrs)
+    tree = PFDLogicTree(path)
+    array, attrs = tree.__toh5__()
+    tree2 = object.__new__(PFDLogicTree)
+    tree2.__fromh5__(array, attrs)
     for source in [("src1", "reverse"), ("src1", "normal"),
                    ("src2", "reverse")]:
-        r1 = lt.enumerate([source])
-        r2 = lt2.enumerate([source])
-        assert [(r.source_id, r.style, r.weight, r.slots, r.selections)
-                for r in r1] == \
-               [(r.source_id, r.style, r.weight, r.slots, r.selections)
-                for r in r2]
+        assert selections(tree, *source) == selections(tree2, *source)
 
 
 def write_wrapped(tmp_path, *branchsets):
@@ -300,36 +310,35 @@ def test_branching_level_accepted(tmp_path):
     """The legacy <logicTreeBranchingLevel> wrapper is accepted via bsnodes."""
     direct = PFDLogicTree(write(tmp_path, *full_chain()))
     wrapped = PFDLogicTree(write_wrapped(tmp_path, *full_chain()))
-    r1 = direct.enumerate([("src1", "reverse")])
-    r2 = wrapped.enumerate([("src1", "reverse")])
-    assert [(r.weight, r.selections, r.slots) for r in r1] == \
-           [(r.weight, r.selections, r.slots) for r in r2]
+    assert (selections(direct, "src1", "reverse") ==
+            selections(wrapped, "src1", "reverse"))
 
 
-def test_sampling_counts_and_weights(tmp_path):
+# --------------------------------------------------------------------------
+# sampling, as done by FullLogicTree (the weights are set by FullLogicTree)
+# --------------------------------------------------------------------------
+def test_sampling_counts(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
         ("B1b", "Takao2013PrimarySR", 0.3)]))
     n = 2000
-    branches = PFDLogicTree(
-        path, seed=42, num_samples=n).enumerate([("src1", "normal")])
-    assert len(branches) == n
-    assert all(abs(b.weight - 1.0 / n) < 1e-12 for b in branches)
-    counts = collections.Counter(
-        b.selections["primary_surf_rup"].branch_id for b in branches)
-    assert set(counts) == {"B1a", "B1b"}
-    assert 0.6 < counts["B1a"] / n < 0.8  # weight 0.7
+    rlzs = PFDLogicTree(path).sample(n, seed=42)
+    assert len(rlzs) == n
+    counts = collections.Counter(rlz.lt_path for rlz in rlzs)
+    assert set(counts) == {("B1a",), ("B1b",)}
+    assert 0.6 < counts["B1a", ] / n < 0.8  # weight 0.7
 
 
 def test_sampling_deterministic(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
         ("B1b", "Takao2013PrimarySR", 0.3)]))
-    a = PFDLogicTree(path, seed=7, num_samples=50).enumerate([("s", "normal")])
-    b = PFDLogicTree(path, seed=7, num_samples=50).enumerate([("s", "normal")])
-    c = PFDLogicTree(path, seed=8, num_samples=50).enumerate([("s", "normal")])
-    assert [r.selections for r in a] == [r.selections for r in b]
-    assert [r.selections for r in a] != [r.selections for r in c]
+    tree = PFDLogicTree(path)
+    a = [rlz.lt_path for rlz in tree.sample(50, seed=7)]
+    b = [rlz.lt_path for rlz in tree.sample(50, seed=7)]
+    c = [rlz.lt_path for rlz in tree.sample(50, seed=8)]
+    assert a == b
+    assert a != c
 
 
 def test_sampling_respects_apply_to_branches(tmp_path):
@@ -340,22 +349,23 @@ def test_sampling_respects_apply_to_branches(tmp_path):
             ("B1b", "Takao2013PrimarySR", 0.5)]),
         branchset("bs2", "fdhaPrimaryFDModel", [
             ("B2", "MossRoss2011PrimaryFD", 1.0)], applyToBranches="B1a"))
-    for r in PFDLogicTree(path, seed=1, num_samples=50).enumerate(
-            [("src1", "normal")]):
-        sr = r.selections["primary_surf_rup"].branch_id
-        assert ("primary_surf_displ" in r.selections) == (sr == "B1a")
+    tree = PFDLogicTree(path)
+    pairs = rlz_selections(tree, tree.sample(50, seed=1), "src1", "normal")
+    for _, sel in pairs:
+        sr = sel["primary_surf_rup"].branch_id
+        assert ("primary_surf_displ" in sel) == (sr == "B1a")
 
 
 def test_sampling_h5_roundtrip(tmp_path):
     path = write(tmp_path, branchset("bs1", "fdhaPrimarySRModel", [
         ("B1a", "MossRoss2011PrimarySR", 0.7),
         ("B1b", "Takao2013PrimarySR", 0.3)]))
-    lt1 = PFDLogicTree(path, seed=5, num_samples=20,
-                       sampling_method='late_weights')
-    array, attrs = lt1.__toh5__()
-    lt2 = object.__new__(PFDLogicTree)
-    lt2.__fromh5__(array, attrs)
-    assert (lt2.seed, lt2.num_samples, lt2.sampling_method) == (
+    tree1 = PFDLogicTree(path, seed=5, num_samples=20,
+                         sampling_method='late_weights')
+    array, attrs = tree1.__toh5__()
+    tree2 = object.__new__(PFDLogicTree)
+    tree2.__fromh5__(array, attrs)
+    assert (tree2.seed, tree2.num_samples, tree2.sampling_method) == (
         5, 20, 'late_weights')
-    assert [r.selections for r in lt1.enumerate([("s", "normal")])] == \
-           [r.selections for r in lt2.enumerate([("s", "normal")])]
+    assert ([rlz.lt_path for rlz in tree1.sample(20, tree1.seed)] ==
+            [rlz.lt_path for rlz in tree2.sample(20, tree2.seed)])

@@ -28,6 +28,7 @@ from io import BytesIO
 from openquake.baselib import general, hdf5
 from openquake.hazardlib import (
     InvalidFile, site_amplification, gsim_lt, source_reader)
+from openquake.hazardlib.lt import LogicTreeError
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.risklib import asset
@@ -904,3 +905,40 @@ class RelaxVs30TestCase(unittest.TestCase):
         with hdf5.File(fname, 'r') as f:
             [gsim] = f['gsim_lt'].values['*']
         self.assertFalse(gsim.vs30_strict)
+
+
+PFD_LT = '''<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt">
+    <logicTreeBranchSet branchSetID="bs1" uncertaintyType="fdhaPrimarySRModel">
+      <logicTreeBranch branchID="B1">
+        <uncertaintyModel>MossRoss2011PrimarySR</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet branchSetID="bs2" uncertaintyType="fdhaCalcRSigma">
+      <logicTreeBranch branchID="SIG">
+        <uncertaintyModel>1</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>'''
+
+
+class GetPfdLtTestCase(unittest.TestCase):
+    # a scalar r_sigma_km in the job.ini is rejected if the PFD logic tree
+    # has an fdhaCalcRSigma branchset
+    def test_r_sigma_conflict(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, 'pfd_lt.xml'), 'w') as f:
+                f.write(PFD_LT)
+            oq = SimpleNamespace(
+                inputs={'pfd_logic_tree': 'pfd_lt.xml', 'job_ini': 'job.ini'},
+                base_path=tmp, random_seed=42, number_of_logic_tree_samples=0,
+                sampling_method='early_weights')
+            readinput.get_pfd_lt(oq)  # r_sigma_km is not in the job.ini
+            oq.r_sigma_km = 1.0
+            with self.assertRaises(LogicTreeError) as ctx:
+                readinput.get_pfd_lt(oq)
+            self.assertIn('fdhaCalcRSigma', str(ctx.exception))

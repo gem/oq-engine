@@ -1036,10 +1036,13 @@ def get_pfd_lt(oqparam):
                           % oqparam.inputs['job_ini'])
     fname = os.path.join(
         oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
-    return pfd_lt.PFDLogicTree(
+    tree = pfd_lt.PFDLogicTree(
         fname, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples,
         sampling_method=oqparam.sampling_method)
+    # r_sigma_km is in vars(oqparam) only if set in the job.ini
+    tree.check_r_sigma_conflict(vars(oqparam).get('r_sigma_km'))
+    return tree
 
 
 def get_rupture(oqparam):
