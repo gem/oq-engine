@@ -28,7 +28,6 @@ import re
 import copy
 import time
 import logging
-import functools
 from xml.sax.saxutils import unescape
 import itertools
 import collections
@@ -173,7 +172,6 @@ def unique(objects, key=None):
     return objects
 
 
-@functools.lru_cache()
 def get_effective_rlzs(ltree):
     """
     Group together realizations with the same path
