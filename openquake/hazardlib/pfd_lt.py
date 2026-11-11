@@ -33,15 +33,13 @@ paths is ``count_paths(root_branchset.branches)``.  The
 ``<uncertaintyModel>`` values are parsed by
 :data:`openquake.hazardlib.lt.parse_uncertainty`.
 """
-import json
 from dataclasses import dataclass
 
 from openquake.baselib.general import BASE183
 from openquake.baselib.node import context
 from openquake.hazardlib import lt, nrml
 from openquake.hazardlib.gsim_lt import bsnodes
-from openquake.hazardlib.logictree import (
-    branches_to_h5, check_branchset_weights, h5_to_branches)
+from openquake.hazardlib.logictree import check_branchset_weights
 
 
 PFD_SLOTS_BY_UTYPE = {
@@ -128,9 +126,9 @@ class PFDLogicTree(lt.BranchSetLogicTree):
         self.num_samples = num_samples
         self.sampling_method = sampling_method
         self._ltnode = nrml.read(fname).logicTree
+        self.bsetdict = {}  # branchset ID -> attributes, see _parse
         self.branchsets = self._parse()
-        self.root_branchset = self.branchsets[0] if self.branchsets else None
-        if self.root_branchset is not None:
+        if self.branchsets:
             # attach the child branchsets to the branches via applyToBranches
             lt.attach_branches(self)
         # NB: applyToSources and applyToStyle are per source and do not
@@ -202,14 +200,13 @@ class PFDLogicTree(lt.BranchSetLogicTree):
                         branchset, self.filename,
                         'unknown PFD uncertaintyType %r; expected one of %s'
                         % (utype, sorted(PFD_UNCERTAINTY_TYPES)))
-                filters = {}
-                for key in ('applyToSources', 'applyToBranches'):
-                    if key in branchset.attrib:
-                        filters[key] = branchset[key].split()
-                if 'applyToStyle' in branchset.attrib:
-                    filters['applyToStyle'] = branchset['applyToStyle']
+                filters = lt.parse_filters(branchset.attrib)
                 bset = lt.BranchSet(utype, filters, ordinal=len(branchsets))
                 bset.id = branchset.get('branchSetID', '')
+                # the attributes are stored in the datastore, see __toh5__
+                self.bsetdict[bset.id] = {
+                    key: val for key, val in branchset.attrib.items()
+                    if key != 'branchSetID'}
                 raw_branches = []
                 for branch in branchset:
                     with context(self.filename, branch):
@@ -229,9 +226,8 @@ class PFDLogicTree(lt.BranchSetLogicTree):
                     None, self.filename, bset.id,
                     [raw for _bid, _value, raw in raw_branches])
                 for bid, value, raw_weight in raw_branches:
-                    br = lt.Branch(bid, value, float(raw_weight), bset.id)
-                    br.uncertainty_type = utype
-                    bset.branches.append(br)
+                    bset.branches.append(
+                        lt.Branch(bid, value, float(raw_weight), bset.id))
                 branchsets.append(bset)
         return branchsets
 
@@ -320,61 +316,6 @@ class PFDLogicTree(lt.BranchSetLogicTree):
                 realizations.append(PFDBranch(
                     source_id, style, weight, selections))
         return realizations
-
-    def __toh5__(self):
-        """
-        Serialize with the shared :func:`branches_to_h5` helper (the same
-        layout used by
-        :class:`openquake.hazardlib.logictree.SourceModelLogicTree`).
-        """
-        bsetdict = {
-            bs.id: dict(
-                uncertaintyType=bs.uncertainty_type,
-                applyToSources=bs.filters.get('applyToSources'),
-                applyToBranches=bs.filters.get('applyToBranches'),
-                applyToStyle=bs.filters.get('applyToStyle'))
-            for bs in self.branchsets}
-        branches = [(bs.id, br.branch_id, bs.uncertainty_type,
-                     br.value, br.weight)
-                    for bs in self.branchsets for br in bs.branches]
-        array, attrs = branches_to_h5(branches, bsetdict)
-        attrs['filename'] = self.filename
-        attrs['seed'] = self.seed
-        attrs['num_samples'] = self.num_samples
-        attrs['sampling_method'] = self.sampling_method
-        return array, attrs
-
-    def __fromh5__(self, array, attrs):
-        """
-        Restore a PFD logic tree serialized by :meth:`__toh5__`.
-        """
-        self.filename = attrs['filename']
-        self.seed = int(attrs['seed'])
-        self.num_samples = int(attrs['num_samples'])
-        self.sampling_method = str(attrs['sampling_method'])
-        self.bsetdict = json.loads(attrs['bsetdict'])
-        utypes, rows = h5_to_branches(array)
-        branchsets = []
-        for bsno, (bsid, grows) in enumerate(rows.items()):
-            dic = self.bsetdict[bsid]
-            filters = {}
-            for key in ('applyToSources', 'applyToBranches'):
-                if dic.get(key) is not None:
-                    filters[key] = list(dic[key])
-            if dic.get('applyToStyle') is not None:
-                filters['applyToStyle'] = dic['applyToStyle']
-            bset = lt.BranchSet(utypes[bsid], filters, ordinal=bsno)
-            bset.id = bsid
-            for bid, value, weight in grows:
-                br = lt.Branch(bid, value, weight, bsid)
-                br.uncertainty_type = utypes[bsid]
-                bset.branches.append(br)
-            branchsets.append(bset)
-        self.branchsets = branchsets
-        self.root_branchset = branchsets[0] if branchsets else None
-        if self.root_branchset is not None:
-            lt.attach_branches(self)
-        self.set_num_paths()
 
     def check_r_sigma_conflict(self, r_sigma_km, realizations):
         """

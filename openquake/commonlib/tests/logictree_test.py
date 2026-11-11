@@ -73,6 +73,24 @@ class SmltTestCase(unittest.TestCase):
         self.assertEqual(sorted(rlz.lt_path for rlz in new),
                          sorted(rlz.lt_path for rlz in smlt))
 
+    def test_branchID_serialization(self):
+        # with smlt_branch=b2 the branch b1 becomes an empty branch; the
+        # branch b2 was overwritten by it in the dictionary of the branches
+        # and was lost in the datastore
+        from openquake.qa_tests_data.logictree import case_01
+        fname = os.path.join(os.path.dirname(case_01.__file__),
+                             'source_model_logic_tree.xml')
+        smlt = logictree.SourceModelLogicTree(fname, branchID='b2')
+        self.assertEqual(smlt.branches['b2'].value, 'source_model_2.xml')
+        self.assertEqual(smlt.branches['b1'].value, '')
+        array, attrs = smlt.__toh5__()
+        new = object.__new__(logictree.SourceModelLogicTree)
+        new.__fromh5__(array, attrs)
+        self.assertEqual(
+            [(br.branch_id, br.value, br.weight) for br in
+             new.root_branchset.branches],
+            [('b2', 'source_model_2.xml', .6), ('b1', '', .4)])
+
 
 class CompositeLtTestCase(unittest.TestCase):
     def test(self):

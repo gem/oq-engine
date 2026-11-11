@@ -36,6 +36,7 @@ from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
     duplicated, BASE183, group_array, AccumDict)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
+from openquake.hazardlib.lt import fix_bytes
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
@@ -69,15 +70,6 @@ def bsnodes(fname, branchinglevel):
     else:
         raise ValueError('Expected BranchingLevel/BranchSet, got %s' %
                          branchinglevel)
-
-
-def fix_bytes(record):
-    # convert a record with bytes fields into a dictionary of strings
-    dic = {}
-    for n in record.dtype.names:
-        v = record[n]
-        dic[n] = v.decode('utf-8') if isinstance(v, bytes) else v
-    return dic
 
 
 class ImtWeight(object):

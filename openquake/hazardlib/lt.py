@@ -17,14 +17,18 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import abc
+import ast
 import copy
+import json
 import math
+import base64
 import pickle
 import itertools
 import operator
 import toml
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, BASE183
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
@@ -1303,6 +1307,98 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+# ############################ serialization ############################# #
+
+branch_dt = numpy.dtype([
+    ('branchset', hdf5.vstr),
+    ('branch', hdf5.vstr),
+    ('utype', hdf5.vstr),
+    ('uvalue', hdf5.vstr),
+    ('weight', float),
+])
+
+# the filters whose value is a list of IDs
+LIST_FILTERS = ('applyToSources', 'applyToBranches')
+
+
+def fix_bytes(record):
+    # convert a record with bytes fields into a dictionary of strings
+    dic = {}
+    for n in record.dtype.names:
+        v = record[n]
+        dic[n] = v.decode('utf-8') if isinstance(v, bytes) else v
+    return dic
+
+
+def parse_filters(attrs, sort=False):
+    """
+    :param attrs: the attributes of a branchset, as read from the XML file
+        or from the datastore (where the lists of IDs can be JSON lists)
+    :param sort: if True, sort the lists of IDs
+    :returns: the filters, i.e. the attributes starting with "applyTo",
+        with the lists of IDs split
+    """
+    filters = {}
+    for key, val in attrs.items():
+        if not key.startswith('applyTo') or val is None:
+            continue
+        if key in LIST_FILTERS:
+            ids = val.split() if isinstance(val, str) else list(val)
+            val = sorted(ids) if sort else ids
+        filters[key] = val
+    return filters
+
+
+def branches_to_h5(branches, bsetdict):
+    """
+    Build the ``(branch_dt array, attrs)`` pair shared by the logic-tree
+    classes, so their ``__toh5__`` methods do not duplicate the layout.
+
+    :param branches:
+        iterable of ``(branchset_id, branch_id, uncertainty_type, value,
+        weight)``
+    :param bsetdict:
+        mapping ``branchset_id -> attribute dict``
+    """
+    tbl = [(bsid, bid, utype, repr(value), float(weight))
+           for bsid, bid, utype, value, weight in branches]
+    # NB: the string column above contains repr(value), which is not
+    # reversible, so the parsed values (i.e. the objects returned by
+    # parse_uncertainty) are pickled in an attribute; this is required
+    # by the readers applying the uncertainties from the datastore,
+    # i.e. the classical workers
+    parsed = base64.b64encode(pickle.dumps(
+        {(bsid, bid): value
+         for bsid, bid, _ut, value, _w in branches},
+        protocol=pickle.HIGHEST_PROTOCOL)).decode('ascii')
+    attrs = dict(bsetdict=json.dumps(bsetdict), parsed_values=parsed)
+    return numpy.array(tbl, branch_dt), attrs
+
+
+def h5_to_branches(array):
+    """
+    Decode a ``branch_dt`` array into the shared ``(utypes, rows)`` form.
+
+    :returns:
+        ``utypes`` maps ``branchset_id -> uncertainty_type`` and ``rows``
+        maps ``branchset_id -> [(branch_id, value, weight), ...]`` in file
+        order
+    """
+    utypes = {}
+    rows = {}
+    for rec in array:
+        rec = fix_bytes(rec)
+        bsid = rec['branchset']
+        utypes[bsid] = rec['utype']
+        try:
+            value = ast.literal_eval(rec['uvalue'])
+        except (SyntaxError, ValueError):
+            value = rec['uvalue']  # not really deserializable :-(
+        rows.setdefault(bsid, []).append(
+            (rec['branch'], value, float(rec['weight'])))
+    return utypes, rows
+
+
 class AbstractLogicTree(abc.ABC):
     """
     Common interface of the logic trees. The subclasses must define
@@ -1436,11 +1532,68 @@ class BranchSetLogicTree(AbstractLogicTree):
     Logic tree made of branchsets, each one attached to branches of the
     previous ones (see attach_branches). The subclasses must set the
     attribute `branchsets` and call set_num_paths (or set `num_paths`);
-    they can set `num_samples`, `seed` and `sampling_method`.
+    they can set `num_samples`, `seed` and `sampling_method`. To be stored
+    in the datastore, the branchsets must have an `id` and the subclasses
+    must set `filename` and the dictionary `bsetdict` branchset ID ->
+    attributes of the branchset (including the filters).
     """
     num_samples = 0
     seed = 42
     sampling_method = 'early_weights'
+
+    @property
+    def root_branchset(self):
+        """
+        The first branchset, or None if there are no branchsets
+        """
+        return self.branchsets[0] if self.branchsets else None
+
+    def h5attrs(self):
+        """
+        :returns: the attributes of the logic tree stored by __toh5__;
+                  the subclasses can extend them
+        """
+        return dict(filename=self.filename, seed=self.seed,
+                    num_samples=self.num_samples,
+                    sampling_method=self.sampling_method,
+                    num_paths=self.num_paths)
+
+    def __toh5__(self):
+        branches = [(bset.id, br.branch_id, bset.uncertainty_type,
+                     br.value, br.weight)
+                    for bset in self.branchsets for br in bset.branches]
+        array, attrs = branches_to_h5(branches, self.bsetdict)
+        attrs.update(self.h5attrs())
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        self.filename = attrs['filename']
+        # NB: converting the seed into an integer is needed on Windows
+        self.seed = int(attrs['seed'])
+        self.num_samples = int(attrs['num_samples'])
+        self.sampling_method = str(attrs['sampling_method'])
+        self.bsetdict = json.loads(attrs['bsetdict'])
+        # restore the parsed values, which cannot be recovered from the
+        # repr strings (see branches_to_h5); NB: datastores generated by
+        # older versions of the engine do not have the attribute
+        parsed = attrs.get('parsed_values')
+        values = pickle.loads(base64.b64decode(parsed)) if parsed else {}
+        utypes, rows = h5_to_branches(array)
+        self.branchsets = []
+        for ordinal, (bsid, brows) in enumerate(rows.items()):
+            filters = parse_filters(self.bsetdict[bsid], sort=True)
+            bset = BranchSet(utypes[bsid], filters, ordinal)
+            bset.id = bsid
+            for brid, value, weight in brows:
+                bset.branches.append(Branch(
+                    brid, values.get((bsid, brid), value), weight, bsid))
+            self.branchsets.append(bset)
+        if self.branchsets:
+            attach_branches(self, override=True)
+        if 'num_paths' in attrs:  # missing in old PFD datastores
+            self.num_paths = int(attrs['num_paths'])
+        else:
+            self.set_num_paths()
 
     def set_num_paths(self):
         """
