@@ -1,6 +1,6 @@
  [Christopher Brooks]
  * For Bayless and Abrahamson 2018 GMM:
-    * Fixed high-frequency total sigma values near 10,000 Hz by replacing
+    * Fixed high-frequency total sigma values near 10,000 nat log by replacing
       placeholder c1a coefficients with zero and corrected the test result
       labels so sigma comparisons are no longer silently skipped.
     * Fixed nan mean predictions between 23.988321 and 24 Hz by starting
