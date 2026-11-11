@@ -157,20 +157,9 @@ class BetterSmltTestCase(unittest.TestCase):
             self.assertIn('applyToSources="1"', new)
             self.assertNotIn('correlated', new)
             self.assertIn('source_model2.xml', names)
-            self.assertNotIn('_fixed/', new)
-            self.assertNotIn('source_model_logic_tree_mfd.xml', names)
-            # the folder _fixed and the converted logic tree are removed
-            self.assertFalse(os.path.exists(os.path.join(dname, '_fixed')))
-            self.assertFalse(os.path.exists(os.path.join(
-                dname, 'source_model_logic_tree_mfd.xml')))
-
-    def test_existing_folder(self):
-        # a pre-existing folder _fixed is never overwritten
-        with tempfile.TemporaryDirectory() as tmp:
-            dname = shutil.copytree(CASE7, os.path.join(tmp, 'case_7'))
-            os.mkdir(os.path.join(dname, '_fixed'))
-            with self.assertRaises(FileExistsError):
-                better_smlt.main(os.path.join(dname, 'job.ini'))
+            # nothing else is written in the folder of the job
+            self.assertEqual(sorted(os.listdir(dname)),
+                             sorted(set(os.listdir(CASE7)) | {'job.zip'}))
 
 
 class MultiWriterTestCase(unittest.TestCase):
@@ -187,7 +176,8 @@ class MultiWriterTestCase(unittest.TestCase):
             path = Path(tmp) / 'multi.xml'
             better_smlt._write_xml(root, path)
             text = path.read_text()
-        self.assertLessEqual(max(map(len, text.splitlines())), 79)
+        lengths = list(map(len, text.splitlines()))
+        self.assertLessEqual(max(lengths), better_smlt.LINE_WIDTH)
         self.assertGreater(len(text.splitlines()), 20)
         # the element is parsed back to the same arrays
         root = ET.fromstring(text)
@@ -233,10 +223,13 @@ class SourceWriterTestCase(unittest.TestCase):
                     with tempfile.TemporaryDirectory() as tmp:
                         path = Path(tmp)
                         (path / 'sources.xml').write_text(text)
-                        renames = better_smlt._write_files(
-                            path, original, {'renamed': '0', 'combined': '2'},
-                            [[base, original[1]], [base, original[2]]])
-                        result = (path / renames['sources.xml']).read_text()
+                        nfiles = better_smlt._write_files(
+                            path, path / 'out', original,
+                            {'renamed': '0', 'combined': '2'},
+                            [[base, original[1]], [base, original[2]]],
+                            {'sources.xml'})
+                        self.assertEqual(nfiles, 1)
+                        result = (path / 'out/sources.xml').read_text()
                     root = ET.fromstring(result)
                     self.assertEqual([el.attrib['id'] for el in root],
                                      ['renamed', '1', 'combined', '3'])

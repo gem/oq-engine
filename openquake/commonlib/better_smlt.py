@@ -21,11 +21,19 @@ Move the MFD variants of a source model logic tree into the logic tree.
 A source with the same ID and the same geometry can appear in several
 source model files with different MFDs (see the warning emitted by
 source_reader.check_mfd_variants); then each copy is computed separately.
-This module rewrites the copies so that they all have the same (base)
-MFD, which makes them identical, and adds after the branchset loading
-each copy a chain of single-branch branchsets restoring the original MFDs
-in the branch, one for each kind of MFD (and for each of the uncertainties
-below). A branchset with a single source uses applyToSources="<source ID>",
+A branchset whose branches load copies of the same sources differing only
+in the MFDs is collapsed into a single branch loading the files of its
+first branch, followed by a branchset with the original branches and
+weights setting the MFDs: then the source model files of the other
+branches are not needed anymore (with 100 variants the source model
+files are 100 times smaller). Two branches with the same MFDs would be
+duplicated, so such a branchset is not collapsed.
+
+For the other branchsets this module rewrites the copies so that they all
+have the same (base) MFD, which makes them identical, and adds after the
+branchset loading each copy a chain of single-branch branchsets restoring
+the original MFDs in the branch, one for each kind of MFD (and for each of
+the uncertainties below). A branchset with a single source uses applyToSources="<source ID>",
 otherwise it is a correlated branchset (applyToSources="*") with a
 <correlated> element for each source:
 
@@ -43,7 +51,9 @@ replaced by the last branch of its chain. A branch without variants gets
 an identity link (setting the MFD of a source to itself), so that every
 branch has a chain. A source is skipped if a branchset modifying it comes
 before the branchset loading it, since the absolute MFD must be applied
-first. Sources sharing an ID in a file and fragments of sources (colon
+first. The copies of a source are recognized by their ID and geometry,
+compared ignoring the formatting of the XML. Sources sharing an ID in a
+file and fragments of sources (colon
 convention, except in mutex groups) are renamed, since applyToSources
 could not select them; branch IDs with spaces are renamed too, since
 applyToBranches could not refer to them. Sources with different IDs are
@@ -54,19 +64,17 @@ folder of the job.ini, with a copy of the job using the converted logic
 tree, with the original file names (it replaces an existing job.zip). It
 is built in 3 steps:
 
-1. the rewritten source model files are stored in the folder `_fixed`
-   next to the logic tree (the folder must not exist) and the converted
-   logic tree is written next to the original one, with the suffix _mfd;
-2. the converted logic tree is always checked: the original and the
-   converted logic tree are compared by applying the uncertainties with
-   the engine in each realization (with full enumeration of the source
-   model paths): the annual occurrence rates of all the sources must be
-   the same;
-3. if the check is successful and the logic tree is in the folder of the
-   job.ini, the folder `_fixed` is completed into a copy of the job with
-   the original file names, which is zipped with oqzip.zip_job; then the
-   folder `_fixed` and the converted logic tree are removed. If the check
-   fails, they are left there to be inspected and there is no job.zip.
+1. the converted logic tree and the rewritten source model files are
+   written in a temporary folder;
+2. the job is zipped with them in place of the original files, leaving
+   out the source model files not referenced anymore;
+3. the original job and the converted one (the job extracted from the
+   archive, so that a missing file is an error) are compared by applying
+   the uncertainties with the engine in each realization (with full
+   enumeration of the source model paths): the annual occurrence rates of
+   all the sources must be the same. If the check is successful the
+   archive is saved as job.zip, else it is left in job_mfd.zip to be
+   inspected and job.zip is not touched.
 
 NB: the equivalence concerns the rates of the sources, not the numerical
 approximations of the calculation. With ps_grid_spacing the point sources
@@ -83,11 +91,12 @@ Use it with `oq check_input --better-smlt job.ini`.
 import os
 import copy
 import re
-import shutil
 import tempfile
 import textwrap
 import hashlib
 import logging
+import operator
+import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from collections import Counter
@@ -96,20 +105,18 @@ from contextlib import closing
 import numpy
 from openquake.baselib.general import duplicated, groupby
 from openquake.baselib.node import striptag
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, logictree
 from openquake.hazardlib.logictree import SourceModelLogicTree, branch_id
 from openquake.hazardlib.source_reader import (
-    modified_groups, get_bset_values, TWO24)
-from openquake.commonlib import datastore, oqzip, oqvalidation, readinput
+    modified_groups, get_bset_values, TWO24, MFD_UNCERTAINTY)
+from openquake.commonlib import datastore, oqvalidation, readinput
 
 MFD_TAGS = {'truncGutenbergRichterMFD', 'incrementalMFD', 'multiMFD',
             'arbitraryMFD', 'YoungsCoppersmithMFD',
             'taperedGutenbergRichterMFD'}
-UTYPE = {'truncGutenbergRichterMFD': 'abMaxMagAbsolute',
-         'minMag': 'minMagGRAbsolute',
-         'incrementalMFD': 'incrementalMFDAbsolute',
-         'multiMFD': 'multiMFDAbsolute'}
-MFD_DIR = '_fixed'  # folder with the rewritten source models
+# minMag is a pseudo-kind, see _link_copies
+UTYPE = dict(MFD_UNCERTAINTY, minMag='minMagGRAbsolute')
+LINE_WIDTH = 120  # maximum length of the lines of the multiMFD arrays
 SM_TYPES = ('sourceModel', 'extendModel')
 BRANCH_ID_RE = re.compile(valid.branch_id.regex)
 
@@ -122,7 +129,7 @@ def _read_xml(path):
 
 
 def _write_xml(root, path):
-    # use the document's namespace and wrap multiMFD arrays to 79 columns
+    # use the document's namespace and wrap multiMFD arrays to LINE_WIDTH
     if root.tag.startswith('{'):
         ET.register_namespace('', root.tag[1:].split('}')[0])
     ET.register_namespace('gml', 'http://www.opengis.net/gml')
@@ -135,7 +142,7 @@ def _write_xml(root, path):
                     continue
                 values = ' '.join((child.text or '').split())
                 child.text = ('\n' + textwrap.fill(
-                    values, width=79, initial_indent=ind + '    ',
+                    values, width=LINE_WIDTH, initial_indent=ind + '    ',
                     subsequent_indent=ind + '    ') + '\n' + ind)
     ET.ElementTree(root).write(path, encoding='utf-8', xml_declaration=True)
 
@@ -173,6 +180,13 @@ def read_tree(smlt):
     return root, bsets
 
 
+def _canonical(el):
+    # the content of an element, ignoring the order of the attributes and
+    # the formatting, i.e. the whitespace in the texts and between elements
+    return tuple((striptag(e.tag), tuple(sorted(e.attrib.items())),
+                  ' '.join((e.text or '').split())) for e in el.iter())
+
+
 class Copy:
     # a copy of a source in a source model file; pos is the index of the
     # source in the file (in document order), used to rename it
@@ -184,23 +198,23 @@ class Copy:
         mfd = mfds[0] if mfds else None
         self.mfd = mfd
         self.kind = striptag(mfd.tag) if mfd is not None else None
+        # the geometry, i.e. the content without the name and the MFD
         attrs = {k: v for k, v in el.attrib.items() if k != 'name'}
         geom = hashlib.md5(repr(sorted(attrs.items())).encode())
         for c in el:
             if striptag(c.tag) not in MFD_TAGS:
-                geom.update(ET.tostring(c))
+                geom.update(repr(_canonical(c)).encode())
         self.key = (self.id, repr(sorted(group.items())), geom.hexdigest())
         self.params = self.get_params(mfd)
 
     def get_params(self, mfd):
-        # compare the original strings, ignoring attribute order and whitespace
+        # compare the original strings, ignoring the formatting
         if mfd is None:
             return ()
         if self.kind == 'truncGutenbergRichterMFD':
             return tuple(mfd.attrib[k] for k in
                          ('aValue', 'bValue', 'maxMag', 'minMag'))
-        return tuple((striptag(el.tag), tuple(sorted(el.attrib.items())),
-                      ' '.join((el.text or '').split())) for el in mfd.iter())
+        return _canonical(mfd)
 
 
 def _parse(path, fname):
@@ -227,10 +241,7 @@ def read_copies(smlt_dir, fnames):
 def _group(copies, attr='key'):
     # group by (source ID, source group, geometry), or another attribute,
     # preserving document order (which determines the renamed IDs)
-    bykey = {}
-    for cp in copies:
-        bykey.setdefault(getattr(cp, attr), []).append(cp)
-    return bykey
+    return groupby(copies, operator.attrgetter(attr), sort=False)
 
 
 def _has_variants(copies):
@@ -279,24 +290,42 @@ def rename_duplicates(copies):
     return renamed
 
 
-def find_variants(bykey):
-    # the groups of copies with different MFDs in different files
+def _skip_reason(copies, bsets, carriers, renamed):
+    # the reason why a group of MFD variants cannot be converted, or None
+    kinds = {cp.kind for cp in copies}
+    src = copies[0].id
+    if ':' in src:  # the logic tree sees only the base name
+        return 'fragment of a source (colon convention)'
+    if len(kinds) > 1 or kinds - set(UTYPE):
+        return f'MFD types {sorted(map(str, kinds))}'
+    if kinds == {'multiMFD'} and len({(cp.mfd.get('kind'), cp.mfd.get('size'))
+                                      for cp in copies}) > 1:
+        return 'different kind or number of points'
+    # the absolute MFD must be applied before the other uncertainties
+    old = renamed.get(src, src)
+    first = min(o for cp in copies for o, _ in carriers[cp.fname])
+    before = [bs.id for bs in bsets[:first] if bs.utype not in SM_TYPES
+              and (not bs.ats or '*' in bs.ats or old in bs.ats or
+                   old.split(':')[0] in bs.ats)]
+    if before:
+        return f'modified before by {before}'
+    return None
+
+
+def find_variants(copies, bsets, carriers, renamed):
+    """
+    :returns: the groups of copies of the same source (same ID, group and
+              geometry) with different MFDs in different files that can be
+              converted, and the list of (source ID, reason) of the others
+    """
     variants, skipped = [], []
-    for copies in bykey.values():
-        if not _has_variants(copies):
-            continue
-        kinds = {cp.kind for cp in copies}
-        src = copies[0].id
-        if ':' in src:  # the logic tree sees only the base name
-            skipped.append((src, 'fragment of a source (colon convention)'))
-        elif len(kinds) > 1 or kinds - set(UTYPE):
-            skipped.append((src, f'MFD types {sorted(map(str, kinds))}'))
-        elif kinds == {'multiMFD'} and len(
-                {(cp.mfd.get('kind'), cp.mfd.get('size'))
-                 for cp in copies}) > 1:
-            skipped.append((src, 'different kind or number of points'))
-        else:
-            variants.append(copies)
+    for cps in _group(copies).values():
+        if _has_variants(cps):
+            reason = _skip_reason(cps, bsets, carriers, renamed)
+            if reason:
+                skipped.append((cps[0].id, reason))
+            else:
+                variants.append(cps)
     return variants, skipped
 
 
@@ -320,19 +349,29 @@ def _set_value(node, cp):
             _sub(mfd, striptag(child.tag), **child.attrib).text = child.text
 
 
-def _link(bs, parent, pairs, new_id):
-    # a single-branch link; one source needs no correlated element
-    bsid = f'{bs.id}_{new_id}'
-    node = ET.Element(bs.el.tag, branchSetID=bsid,
-                      uncertaintyType=UTYPE[pairs[0][1].kind],
+def _mfd_bset(tag, bsid, parent, branches):
+    # a branchset applied to the parent branch, setting the MFDs of the same
+    # sources in each branch (ID, weight, [(source ID, copy)]), all copies
+    # of the same kind; one source needs no correlated element
+    pairs0 = branches[0][2]
+    node = ET.Element(tag, branchSetID=bsid,
+                      uncertaintyType=UTYPE[pairs0[0][1].kind],
                       applyToBranches=parent, applyToSources=(
-                          pairs[0][0] if len(pairs) == 1 else '*'))
-    branch = _sub(node, 'logicTreeBranch', branchID=new_id)
-    model = _sub(branch, 'uncertaintyModel')
-    for srcid, cp in pairs:
-        _set_value(model if len(pairs) == 1 else
-                   _sub(model, 'correlated', src=srcid), cp)
-    _sub(branch, 'uncertaintyWeight').text = '1.0'
+                          pairs0[0][0] if len(pairs0) == 1 else '*'))
+    for br_id, weight, pairs in branches:
+        branch = _sub(node, 'logicTreeBranch', branchID=br_id)
+        model = _sub(branch, 'uncertaintyModel')
+        for srcid, cp in pairs:
+            _set_value(model if len(pairs) == 1 else
+                       _sub(model, 'correlated', src=srcid), cp)
+        _sub(branch, 'uncertaintyWeight').text = weight
+    return node
+
+
+def _link(bs, parent, pairs, new_id):
+    # a single-branch link
+    bsid = f'{bs.id}_{new_id}'
+    node = _mfd_bset(bs.el.tag, bsid, parent, [(new_id, '1.0', pairs)])
     if bs.in_level:  # NRML 0.4: one branchset per branching level
         level = ET.Element(bs.container.tag, branchingLevelID=bsid)
         level.append(node)
@@ -458,23 +497,6 @@ def _expand(src, renamed):
     return (exact or [src]) + frags
 
 
-def _check_order(variants, bsets, carriers, renamed):
-    # skip the sources modified before the branchset loading them
-    ok, skipped = [], []
-    for copies in variants:
-        src = renamed.get(copies[0].id, copies[0].id)
-        first = min(bsets[o].ordinal for cp in copies
-                    for o, _ in carriers[cp.fname])
-        before = [bs.id for bs in bsets[:first] if bs.utype not in SM_TYPES
-                  and (not bs.ats or '*' in bs.ats or src in bs.ats or
-                       src.split(':')[0] in bs.ats)]
-        if before:
-            skipped.append((src, f'modified before by {before}'))
-        else:
-            ok.append(copies)
-    return ok, skipped
-
-
 def rename_branches(bsets):
     """
     Replace the characters not allowed by valid.branch_id (like spaces
@@ -499,8 +521,9 @@ def rename_branches(bsets):
 
 
 def _read_variants(smlt_dir, bsets):
-    # read the copies of the sources, rename the duplicated IDs and find
-    # the MFD variants that can be converted
+    # read the copies of the sources, rename the duplicated IDs, find the
+    # MFD variants that can be converted and plan the conversion: first the
+    # branchsets to collapse, then the chains for the other branchsets
     carriers = {}  # file -> [(bset ordinal, branch ID)]
     for bs in bsets:
         for br_id, _ in bs.branches:
@@ -508,18 +531,29 @@ def _read_variants(smlt_dir, bsets):
                 carriers.setdefault(fname, []).append((bs.ordinal, br_id))
     copies = read_copies(smlt_dir, carriers)
     renamed = rename_duplicates(copies)
-    variants, skipped = find_variants(_group(copies))
-    variants, skip2 = _check_order(variants, bsets, carriers, renamed)
-    variants, links, identity, skip3 = complete_chains(
-        variants, bsets, carriers, renamed, copies)
-    return (copies, renamed, variants, links, identity,
-            skipped + skip2 + skip3)
+    variants, skipped = find_variants(copies, bsets, carriers, renamed)
+    byfile = _group(copies, 'fname')
+    while True:
+        rows = {}  # bset ordinal -> MFD links of each branch
+        for bs in bsets:
+            out = _mfd_rows(bs, byfile, variants, renamed)
+            if out:
+                rows[bs.ordinal] = out
+        # the collapsed branchsets need no chains
+        free = {f: [k for k in keys if k[0] not in rows]
+                for f, keys in carriers.items()}
+        ok, links, identity, skip = complete_chains(
+            variants, bsets, free, renamed, copies)
+        skipped += skip
+        if len(ok) == len(variants):
+            return copies, renamed, variants, rows, links, identity, skipped
+        variants = ok  # some variants were skipped, plan again
 
 
-def _write_files(smlt_dir, copies, renamed, variants):
-    # write the source model files with the renamed sources and the MFDs
-    # normalized to the MFD of the first copy, in the folder _fixed;
-    # return a dictionary file -> new file
+def _write_files(smlt_dir, outdir, copies, renamed, variants, referenced):
+    # write in outdir, with the same relative paths, the referenced source
+    # model files with the renamed sources and the MFDs normalized to the
+    # MFD of the first copy; return the number of rewritten files
     new_ids = {}  # file -> {position: new ID}
     for cp in copies:
         if cp.id in renamed:
@@ -529,8 +563,8 @@ def _write_files(smlt_dir, copies, renamed, variants):
         for cp in cps:
             if cp.params != cps[0].params:
                 bases.setdefault(cp.fname, {})[cp.pos] = cps[0]
-    renames = {}
-    for fname in sorted(new_ids.keys() | bases.keys()):
+    fnames = sorted((new_ids.keys() | bases.keys()) & referenced)
+    for fname in fnames:
         root = _read_xml(smlt_dir / fname)
         sources = (el for el in root.iter() if isinstance(el.tag, str)
                    and el.tag.endswith('Source') and 'id' in el.attrib)
@@ -543,18 +577,106 @@ def _write_files(smlt_dir, copies, renamed, variants):
                 new = copy.deepcopy(bases[fname][pos].mfd)
                 new.tail = old.tail
                 el[list(el).index(old)] = new
-        # use forward slashes, also on Windows, in the logic tree
-        renames[fname] = f'{MFD_DIR}/{fname}'
-        path = smlt_dir / renames[fname]
+        path = outdir / fname
         path.parent.mkdir(parents=True, exist_ok=True)
         _write_xml(root, path)
-    return renames
+    return len(fnames)
 
 
-def _build_chains(bsets, links, identity):
+def _mfd_rows(bs, byfile, variants, renamed):
+    # the links of each branch of a branchset whose branches load the same
+    # sources in the same order, differing only in the MFDs of converted
+    # copies: each branch sets the MFDs of its own copies, for all the kinds
+    # needed by any branch; None if the branchset cannot be collapsed
+    if bs.utype not in SM_TYPES or bs.in_level or len(bs.branches) < 2:
+        return None
+    rows = [[cp for f in bs.files(br) for cp in byfile.get(f, [])]
+            for br, _ in bs.branches]
+    sig = [cp.key for cp in rows[0]]
+    if not sig or any([cp.key for cp in row] != sig for row in rows[1:]):
+        return None
+    if any(cp.id in renamed for row in rows for cp in row):
+        return None
+    base_of = {id(cp): cps[0] for cps in variants for cp in cps}
+    out = [[] for _ in rows]
+    for col in zip(*rows):
+        if len({cp.params for cp in col}) == 1:
+            continue  # same MFD in all the branches
+        if any(id(cp) not in base_of for cp in col):
+            return None  # not converted, see the skipped sources
+        base = base_of[id(col[0])]
+        kinds = {lcp.kind for cp in col for lcp in _link_copies(base, cp)}
+        for k, cp in enumerate(col):
+            for kind in sorted(kinds):
+                lcp = copy.copy(cp)
+                lcp.kind = kind
+                out[k].append((cp.id, lcp))
+    # two branches with the same MFDs would be duplicated branches
+    values = {tuple((srcid, lcp.kind, lcp.params) for srcid, lcp in row)
+              for row in out}
+    if len(values) < len(out):
+        return None
+    return out if out[0] else None
+
+
+def _new_id(name, used):
+    # a branch (or branchset) ID not used yet
+    while name in used:
+        name += '_'
+    used.add(name)
+    return name
+
+
+def _collapse(bsets, rows, used):
+    """
+    Replace each branchset whose branches load copies of the same sources,
+    differing only in the MFDs, with a single branch loading the files of
+    the first branch, followed by a branchset with the original branches
+    and weights setting the MFDs; the further kinds of MFD (i.e. minMag)
+    are set by single-branch links below each branch. Then the files of
+    the other branches are not needed anymore.
+
+    :param rows: bset ordinal -> MFD links of each branch (see _mfd_rows)
+    :param used: the branch IDs already used
+    :returns: the added branch IDs and the ends of the chains
+    """
+    added, chain_end = [], {}
+    for bs in bsets:
+        if bs.ordinal not in rows:
+            continue
+        brels = bs.el.findall('{*}logicTreeBranch')
+        weights = [br.find('{*}uncertaintyWeight').text.strip()
+                   for br in brels]
+        br_ids = [br for br, _ in bs.branches]
+        base_id = _new_id(f'{br_ids[0]}_base', used)
+        for br in brels[1:]:
+            bs.el.remove(br)
+        brels[0].find('{*}uncertaintyWeight').text = '1.0'
+        bs.branches = [(base_id, bs.branches[0][1])]
+        added.append(base_id)
+        bykind = [groupby(row, key=lambda pair: pair[1].kind)
+                  for row in rows[bs.ordinal]]
+        kinds = sorted(bykind[0])
+        nodes = [_mfd_bset(bs.el.tag, _new_id(f'{bs.id}_mfd', used), base_id,
+                           [(br, w, bk[kinds[0]])
+                            for br, w, bk in zip(br_ids, weights, bykind)])]
+        for br, bk in zip(br_ids, bykind):
+            parent = br
+            for n, kind in enumerate(kinds[1:], 2):
+                link_id = _new_id(f'{br}_mfd{n}', used)
+                nodes.append(_link(bs, parent, bk[kind], link_id))
+                added.append(link_id)
+                parent = link_id
+            if parent != br:
+                chain_end[br] = parent
+        pos = list(bs.parent).index(bs.container) + 1
+        bs.parent[pos:pos] = nodes
+    return added, chain_end
+
+
+def _build_chains(bsets, links, identity, used):
     # insert chains after the modified branchsets (or their NRML 0.4
     # levels); return the added branch IDs and the ends of the chains
-    used = {br for bs in bsets for br, _ in bs.branches}
     chain_end, added = {}, []
     for bs in bsets:
         chains = []
@@ -566,10 +688,7 @@ def _build_chains(bsets, links, identity):
             bykind = groupby(sorted(pairs, key=lambda pair: pair[0]),
                              key=lambda pair: pair[1].kind)
             for n, kind in enumerate(sorted(bykind), 1):
-                new_id = f'{br_id}_mfd{n}'
-                while new_id in used:
-                    new_id += '_'
-                used.add(new_id)
+                new_id = _new_id(f'{br_id}_mfd{n}', used)
                 chains.append(_link(bs, parent, bykind[kind], new_id))
                 added.append(new_id)
                 parent = new_id
@@ -580,7 +699,7 @@ def _build_chains(bsets, links, identity):
     return added, chain_end
 
 
-def _rewrite_tree(bsets, renames, renamed, chain_end):
+def _rewrite_tree(bsets, renamed, chain_end):
     # update only the original branchsets: newly inserted links already
     # refer to their immediate parents and must not be redirected
     for bs in bsets:
@@ -589,8 +708,7 @@ def _rewrite_tree(bsets, renames, renamed, chain_end):
             br.set('branchID', br_id)
             if bs.utype in SM_TYPES:
                 model = br.find('{*}uncertaintyModel')
-                model.text = ' '.join(
-                    renames.get(f, f) for f in bs.files(br_id))
+                model.text = ' '.join(bs.files(br_id))
                 for child in model:
                     child.tail = None  # filenames are now all in model.text
         if bs.ats:
@@ -601,29 +719,24 @@ def _rewrite_tree(bsets, renames, renamed, chain_end):
                 chain_end.get(br, br) for br in bs.atb))
 
 
-def convert(smlt, out):
+def convert(smlt, outdir):
     """
-    Convert the MFD variants of a source model logic tree, writing the
-    new logic tree in `out` and the new source model files in the folder
-    `_fixed`, which must not exist (nothing is written if there is nothing
-    to convert)
+    Convert the MFD variants of a source model logic tree, writing in
+    `outdir` the converted logic tree, with the name of the original one,
+    and the rewritten source model files, with their relative paths
+    (nothing is written if there is nothing to convert)
 
     :param smlt: path to the source model logic tree
-    :param out: path to the converted logic tree, in the same folder
+    :param outdir: path to the output folder
     :returns: the IDs of the branches added to the logic tree and the
               dictionaries new ID -> old ID of the renamed sources and
               of the renamed branches
     """
-    smlt, out = Path(smlt), Path(out)
-    if smlt.parent.resolve() != out.parent.resolve():
-        raise ValueError('The output must be in the folder of the input')
+    smlt, outdir = Path(smlt), Path(outdir)
     smlt_dir = smlt.parent
-    if (smlt_dir / MFD_DIR).exists():
-        raise FileExistsError(f'{smlt_dir / MFD_DIR} exists already: '
-                              'remove it or rename it')
     root, bsets = read_tree(smlt)
     brnames = rename_branches(bsets)
-    (copies, renamed, variants, links, identity,
+    (copies, renamed, variants, rows, links, identity,
      skipped) = _read_variants(smlt_dir, bsets)
     for src, reason in skipped:
         logging.info('Not converted %s: %s', src, reason)
@@ -631,18 +744,26 @@ def convert(smlt, out):
         logging.warning('%s: no MFD variants to convert (%d skipped)',
                         smlt, len(skipped))
         return set(), {}, {}
-    renames = _write_files(smlt_dir, copies, renamed, variants)
-    added, chain_end = _build_chains(bsets, links, identity)
-    _rewrite_tree(bsets, renames, renamed, chain_end)
-    _write_xml(root, out)
+    outdir.mkdir(parents=True, exist_ok=True)
+    used = {br for bs in bsets for br, _ in bs.branches}
+    added, chain_end = _collapse(bsets, rows, used)
+    added2, chain_end2 = _build_chains(bsets, links, identity, used)
+    added += added2
+    chain_end.update(chain_end2)
+    referenced = {f for bs in bsets for br, _ in bs.branches
+                  for f in bs.files(br)}
+    nfiles = _write_files(smlt_dir, outdir, copies, renamed, variants,
+                          referenced)
+    _rewrite_tree(bsets, renamed, chain_end)
+    _write_xml(root, outdir / smlt.name)
     for new, old in renamed.items():
         logging.info('Renamed source %s -> %s', old, new)
     for new, old in brnames.items():
         logging.info('Renamed branch %r -> %s', old, new)
-    logging.warning('%s: %d source(s) converted, %d skipped, %d file(s) '
-                    'rewritten in %s, %d branchset(s) added', out,
-                    len(variants), len(skipped), len(renames),
-                    smlt_dir / MFD_DIR, len(added))
+    logging.warning('%s: %d source(s) converted, %d skipped, %d branchset(s) '
+                    'collapsed, %d file(s) rewritten, %d branch(es) added',
+                    smlt, len(variants), len(skipped), len(rows), nfiles,
+                    len(added))
     return set(added), renamed, brnames
 
 
@@ -692,9 +813,11 @@ def _trivial_gsim_lt(smlt, path):
     _write_xml(root, path)
 
 
-def check(job_ini, out, added, renamed, smlt, brnames):
+def check(job_ini, conv_ini, added, renamed, smlt, brnames):
     """
-    Compare the rates of all the sources in all the realizations
+    Compare the rates of all the sources in all the realizations of the
+    original job and of the converted one (the job.ini extracted from the
+    archive, so that a missing file is an error)
     """
     warnings = []
 
@@ -712,16 +835,16 @@ def check(job_ini, out, added, renamed, smlt, brnames):
     # the GMPEs are irrelevant for the rates, so a trivial GMPE logic
     # tree is used, written next to the job, since paths must be relative
     gsim_lt = job_ini.parent / '_check_gmmLT.xml'
-    _trivial_gsim_lt(smlt, gsim_lt)
     full['gsim_logic_tree_file'] = gsim_lt.name
-    relpath = os.path.relpath(out.resolve(), job_ini.parent.resolve())
     try:
+        _trivial_gsim_lt(smlt, gsim_lt)
+        _trivial_gsim_lt(smlt, conv_ini.parent / gsim_lt.name)
         orig = _rates(job_ini, full)
         nwarn = len(warnings)
-        conv = _rates(job_ini, dict(full,
-                                    source_model_logic_tree_file=relpath))
+        conv = _rates(conv_ini, full)
     finally:
         logging.getLogger().removeHandler(handler)
+        gsim_lt.unlink(missing_ok=True)
 
     # remove the added branches from the paths and restore the original
     # IDs of the renamed sources (dummy branches were removed above)
@@ -749,78 +872,77 @@ def check(job_ini, out, added, renamed, smlt, brnames):
     return not bad
 
 
-def make_zip(job_ini, smlt, out):
+def make_zip(job_ini, smlt, convdir, archive):
     """
-    Complete the folder `_fixed`, which contains the rewritten source models,
-    into a copy of the job where all the files have the original names:
-    the converted logic tree is saved with the name of the original one
-    and the other files of the job are linked (or copied) there; then zip
-    it in the file job.zip, in the folder of the job and remove the folder
-    `_fixed` and the converted logic tree. It works only if the logic tree is
-    in the same folder of the job.ini, else nothing is removed.
+    Zip a copy of the job using the converted logic tree, with the
+    original file names: the converted logic tree and the rewritten source
+    models in `convdir` replace the original ones, and the source models
+    not referenced anymore by the converted logic tree are left out.
 
     :param job_ini: path to the original job.ini file
     :param smlt: path to the original logic tree
-    :param out: path to the converted logic tree
-    :returns: the path to the zip file, or None
+    :param convdir: folder with the converted logic tree and the
+                    rewritten source models (see convert)
+    :param archive: path to the zip file to write
     """
-    job_ini, smlt = Path(job_ini).resolve(), Path(smlt).resolve()
-    jobdir = job_ini.parent
-    if smlt.parent != jobdir:
-        logging.warning('%s is not in the folder of %s: no job.zip',
-                        smlt, job_ini)
-        return
-    pkg = jobdir / MFD_DIR
-    # the converted tree refers to rewritten files as _fixed/<file>
-    renames = {f'{MFD_DIR}/{f.relative_to(pkg).as_posix()}':
-               f.relative_to(pkg).as_posix() for f in pkg.rglob('*')
-               if f.is_file()}
-    root, bsets = read_tree(out)
-    _rewrite_tree(bsets, renames, {}, {})
-    _write_xml(root, pkg / smlt.name)
-    shutil.copy(job_ini, pkg / job_ini.name)
     # do not validate to avoid permissions errors on the export_dir
     oq = oqvalidation.OqParam(**readinput.get_params(str(job_ini)))
+    info = logictree.collect_info(str(smlt))
+    old = {os.path.normpath(f) for f in info.smpaths + info.h5paths}
+    src = {}  # path in the job -> file to zip
     for f in readinput.get_input_files(oq):
-        dest = pkg / Path(f).resolve().relative_to(jobdir)
-        if not dest.exists():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                os.link(f, dest)
-            except OSError:  # different file systems
-                shutil.copy2(f, dest)
-    archive = jobdir / 'job.zip'
-    archive.unlink(missing_ok=True)  # zip_job refuses to overwrite
-    oqzip.zip_job(str(pkg / job_ini.name), str(archive), log=logging.debug)
-    logging.warning('Wrote %s', archive)
-    shutil.rmtree(pkg)
-    Path(out).unlink()
-    return archive
+        path = os.path.normpath(f)
+        if path not in old:
+            src[path] = path
+    src[os.path.normpath(smlt)] = convdir / smlt.name
+    _, bsets = read_tree(convdir / smlt.name)
+    for bs in bsets:
+        for br, _ in bs.branches:
+            for f in bs.files(br):
+                path = os.path.normpath(smlt.parent / f)
+                new = convdir / f
+                src[path] = new if new.exists() else path
+                h5 = os.path.splitext(path)[0] + '.hdf5'
+                if os.path.exists(h5):
+                    src[h5] = h5
+    # the paths in the archive are relative to the common folder
+    prefix = os.path.commonpath([os.path.dirname(p) for p in src])
+    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED,
+                         allowZip64=True) as z:
+        for path, fname in sorted(src.items()):
+            z.write(fname, Path(os.path.relpath(path, prefix)).as_posix())
 
 
 def main(job_ini):
     """
-    Convert the source model logic tree of the given job and check it;
-    if the check is successful, write a job.zip file with the job using
-    the converted logic tree (with the original file names).
+    Convert the source model logic tree of the given job, zip the job with
+    the converted logic tree (with the original file names) and check it:
+    if the check is successful the archive is saved as job.zip, in the
+    folder of the job.ini, else as job_mfd.zip, to be inspected.
 
     :param job_ini: path to a job.ini file
     :returns: True if the converted logic tree is equivalent to the
               original one (or if there is nothing to convert)
     """
-    job_ini = Path(job_ini)
+    job_ini = Path(job_ini).resolve()
     inputs = readinput.get_params(job_ini)['inputs']
     if 'source_model_logic_tree' not in inputs:
         raise ValueError(f'{job_ini}: missing source_model_logic_tree_file')
-    smlt = Path(inputs['source_model_logic_tree'])
-    out = smlt.with_name(smlt.stem + '_mfd' + smlt.suffix)
-    added, renamed, brnames = convert(smlt, out)
-    if not added:  # nothing converted, nothing to check
-        return True
-    try:
-        ok = check(job_ini, out, added, renamed, smlt, brnames)
-    finally:
-        (job_ini.parent / '_check_gmmLT.xml').unlink(missing_ok=True)
+    smlt = Path(inputs['source_model_logic_tree']).resolve()
+    archive = job_ini.parent / 'job_mfd.zip'
+    with tempfile.TemporaryDirectory() as tmp:
+        convdir = Path(tmp) / 'converted'
+        added, renamed, brnames = convert(smlt, convdir)
+        if not added:  # nothing converted, nothing to check
+            return True
+        make_zip(job_ini, smlt, convdir, archive)
+        [conv_ini] = [f for f in readinput.extract_from_zip(
+            archive, targetdir=os.path.join(tmp, 'job'))
+            if Path(f).name == job_ini.name]
+        ok = check(job_ini, Path(conv_ini), added, renamed, smlt, brnames)
     if ok:
-        make_zip(job_ini, smlt, out)
+        archive = archive.replace(archive.with_name('job.zip'))
+        logging.warning('Wrote %s', archive)
+    else:
+        logging.error('The converted job is in %s', archive)
     return ok
