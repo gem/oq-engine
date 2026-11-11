@@ -15,15 +15,55 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Branches, branchsets, uncertainties and the base classes of the logic
+trees. All the logic trees implement the interface of AbstractLogicTree;
+the logic trees made of branchsets derive from BranchSetLogicTree and the
+logic trees which can be the extra logic tree of a FullLogicTree derive
+from ExtraLogicTree. Here is the hierarchy, with the methods defined or
+overridden by each class::
 
+    AbstractLogicTree
+    │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
+    │   sample
+    ├── BranchSetLogicTree
+    │   │   root_branchset, set_num_paths, get_num_paths, get_realizations,
+    │   │   sample, get_all_paths, to_node, to_nrml, h5attrs, __toh5__,
+    │   │   __fromh5__
+    │   ├── CompositeLogicTree
+    │   │       sample_paths, apply_all
+    │   ├── SourceModelLogicTree
+    │   │       set_num_paths, decompose, reduce, prune, bset_values, h5attrs,
+    │   │       __fromh5__
+    │   └── ExtraLogicTree
+    │       │   get_realizations, sample, shortener
+    │       ├── PFDLogicTree
+    │       │       selections_for, check_r_sigma_conflict
+    │       └── AmplificationLogicTree
+    │               from_xml, is_amp_lt, names, weights, filenames,
+    │               branchset_id, amplify, check, __fromh5__
+    ├── GsimLogicTree
+    │       get_realizations, sample, get_num_paths, to_node, __toh5__,
+    │       __fromh5__
+    └── FullLogicTree
+            get_realizations, get_num_paths, sample, __toh5__, __fromh5__
+
+The classes are defined in the modules lt, logictree, gsim_lt, pfd_lt and
+amp_lt of openquake.hazardlib.
+"""
+import abc
+import ast
 import copy
+import json
 import math
+import base64
 import pickle
 import itertools
 import operator
 import toml
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, BASE183
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
@@ -33,7 +73,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
 
 NOAPPLY_UNCERTAINTIES = [
-    'sourceModel', 'extendModel', 'gmpeModel']
+    'sourceModel', 'extendModel', 'gmpeModel', 'amplificationModel']
 
 
 class LogicTreeError(Exception):
@@ -1302,6 +1342,143 @@ class Realization(object):
             '~'.join(self.lt_path), self.weight, samples)
 
 
+# ############################ serialization ############################# #
+
+branch_dt = numpy.dtype([
+    ('branchset', hdf5.vstr),
+    ('branch', hdf5.vstr),
+    ('utype', hdf5.vstr),
+    ('uvalue', hdf5.vstr),
+    ('weight', float),
+])
+
+# the filters whose value is a list of IDs
+LIST_FILTERS = ('applyToSources', 'applyToBranches')
+
+
+def fix_bytes(record):
+    # convert a record with bytes fields into a dictionary of strings
+    dic = {}
+    for n in record.dtype.names:
+        v = record[n]
+        dic[n] = v.decode('utf-8') if isinstance(v, bytes) else v
+    return dic
+
+
+def parse_filters(attrs, sort=False):
+    """
+    :param attrs: the attributes of a branchset, as read from the XML file
+        or from the datastore (where the lists of IDs can be JSON lists)
+    :param sort: if True, sort the lists of IDs
+    :returns: the filters, i.e. the attributes starting with "applyTo",
+        with the lists of IDs split
+    """
+    filters = {}
+    for key, val in attrs.items():
+        if not key.startswith('applyTo') or val is None:
+            continue
+        if key in LIST_FILTERS:
+            ids = val.split() if isinstance(val, str) else list(val)
+            val = sorted(ids) if sort else ids
+        filters[key] = val
+    return filters
+
+
+def branches_to_h5(branches, bsetdict):
+    """
+    Build the ``(branch_dt array, attrs)`` pair shared by the logic-tree
+    classes, so their ``__toh5__`` methods do not duplicate the layout.
+
+    :param branches:
+        iterable of ``(branchset_id, branch_id, uncertainty_type, value,
+        weight)``
+    :param bsetdict:
+        mapping ``branchset_id -> attribute dict``
+    """
+    tbl = [(bsid, bid, utype, repr(value), float(weight))
+           for bsid, bid, utype, value, weight in branches]
+    # NB: the string column above contains repr(value), which is not
+    # reversible, so the parsed values (i.e. the objects returned by
+    # parse_uncertainty) are pickled in an attribute; this is required
+    # by the readers applying the uncertainties from the datastore,
+    # i.e. the classical workers
+    parsed = base64.b64encode(pickle.dumps(
+        {(bsid, bid): value
+         for bsid, bid, _ut, value, _w in branches},
+        protocol=pickle.HIGHEST_PROTOCOL)).decode('ascii')
+    attrs = dict(bsetdict=json.dumps(bsetdict), parsed_values=parsed)
+    return numpy.array(tbl, branch_dt), attrs
+
+
+def h5_to_branches(array):
+    """
+    Decode a ``branch_dt`` array into the shared ``(utypes, rows)`` form.
+
+    :returns:
+        ``utypes`` maps ``branchset_id -> uncertainty_type`` and ``rows``
+        maps ``branchset_id -> [(branch_id, value, weight), ...]`` in file
+        order
+    """
+    utypes = {}
+    rows = {}
+    for rec in array:
+        rec = fix_bytes(rec)
+        bsid = rec['branchset']
+        utypes[bsid] = rec['utype']
+        try:
+            value = ast.literal_eval(rec['uvalue'])
+        except (SyntaxError, ValueError):
+            value = rec['uvalue']  # not really deserializable :-(
+        rows.setdefault(bsid, []).append(
+            (rec['branch'], value, float(rec['weight'])))
+    return utypes, rows
+
+
+class AbstractLogicTree(abc.ABC):
+    """
+    Common interface of the logic trees. The subclasses must define
+    get_num_paths, get_realizations and the serialization methods
+    __toh5__ and __fromh5__; sample can be overridden, by default it
+    samples the realizations by weight.
+    """
+    @abc.abstractmethod
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+
+    @abc.abstractmethod
+    def get_realizations(self):
+        """
+        :returns: the list of the realizations of the logic tree
+        """
+
+    @abc.abstractmethod
+    def __toh5__(self):
+        """
+        :returns: a pair (array or dictionary, attributes) to be stored in
+                  the datastore, see openquake.baselib.hdf5
+        """
+
+    @abc.abstractmethod
+    def __fromh5__(self, data, attrs):
+        """
+        Restore the logic tree from the data and the attributes returned
+        by __toh5__ and stored in the datastore
+        """
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        :param n: number of samples
+        :param seed: random seed
+        :param sampling_method: by default 'early_weights'
+        :returns: n realizations sampled with probability equal to their
+                  weight (they may repeat or be absent)
+        """
+        probs = random(n, seed, sampling_method)
+        return sample(self.get_realizations(), probs, sampling_method)
+
+
 def set_short_id(branches, short_ids):
     for branch, short_id in zip(branches, short_ids):
         branch.short_id = short_id
@@ -1386,10 +1563,208 @@ def smlt_path(branches):
     return tuple(path)
 
 
-class CompositeLogicTree(object):
+class BranchSetLogicTree(AbstractLogicTree):
+    """
+    Logic tree made of branchsets, each one attached to branches of the
+    previous ones (see attach_branches). The subclasses must set the
+    attribute `branchsets` and call set_num_paths (or set `num_paths`);
+    they can set `num_samples`, `seed` and `sampling_method`. To be stored
+    in the datastore, the branchsets must have an `id` and the subclasses
+    must set `filename` and the dictionary `bsetdict` branchset ID ->
+    attributes of the branchset (including the filters).
+    """
+    num_samples = 0
+    seed = 42
+    sampling_method = 'early_weights'
+
+    @property
+    def root_branchset(self):
+        """
+        The first branchset, or None if there are no branchsets
+        """
+        return self.branchsets[0] if self.branchsets else None
+
+    def h5attrs(self):
+        """
+        :returns: the attributes of the logic tree stored by __toh5__;
+                  the subclasses can extend them
+        """
+        return dict(filename=self.filename, seed=self.seed,
+                    num_samples=self.num_samples,
+                    sampling_method=self.sampling_method,
+                    num_paths=self.num_paths)
+
+    def __toh5__(self):
+        branches = [(bset.id, br.branch_id, bset.uncertainty_type,
+                     br.value, br.weight)
+                    for bset in self.branchsets for br in bset.branches]
+        array, attrs = branches_to_h5(branches, self.bsetdict)
+        attrs.update(self.h5attrs())
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        self.filename = attrs['filename']
+        # NB: converting the seed into an integer is needed on Windows
+        self.seed = int(attrs['seed'])
+        self.num_samples = int(attrs['num_samples'])
+        self.sampling_method = str(attrs['sampling_method'])
+        self.bsetdict = json.loads(attrs['bsetdict'])
+        # restore the parsed values, which cannot be recovered from the
+        # repr strings (see branches_to_h5); NB: datastores generated by
+        # older versions of the engine do not have the attribute
+        parsed = attrs.get('parsed_values')
+        values = pickle.loads(base64.b64decode(parsed)) if parsed else {}
+        utypes, rows = h5_to_branches(array)
+        self.branchsets = []
+        for ordinal, (bsid, brows) in enumerate(rows.items()):
+            filters = parse_filters(self.bsetdict[bsid], sort=True)
+            bset = BranchSet(utypes[bsid], filters, ordinal)
+            bset.id = bsid
+            for brid, value, weight in brows:
+                bset.branches.append(Branch(
+                    brid, values.get((bsid, brid), value), weight, bsid))
+            self.branchsets.append(bset)
+        if self.branchsets:
+            attach_branches(self, override=True)
+        if 'num_paths' in attrs:  # missing in old PFD datastores
+            self.num_paths = int(attrs['num_paths'])
+        else:
+            self.set_num_paths()
+
+    def set_num_paths(self):
+        """
+        Set the attribute num_paths, i.e. the number of end branches
+        """
+        self.num_paths = (count_paths(self.branchsets[0].branches)
+                          if self.branchsets else 0)
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else self.num_paths
+
+    def get_realizations(self):
+        """
+        :returns: the list of the realizations, sampled if num_samples is
+            set, otherwise all of them; notice that the weight is homogeneous
+            with early sampling, since it is accounted for in the sampling
+            procedure
+        """
+        if self.num_samples:
+            return self.sample(
+                self.num_samples, self.seed, self.sampling_method)
+        rlzs = []
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            value = [br.value for br in branches]
+            rlzs.append(Realization(value, weight, 0, smlt_path(branches)))
+        rlzs.sort(key=operator.attrgetter('pid'))
+        for r, rlz in enumerate(rlzs):
+            rlz.ordinal = r
+        return rlzs
+
+    def sample(self, n, seed, sampling_method='early_weights'):
+        """
+        Sample the logic tree branchset by branchset. Notice that the weight
+        is homogeneous with early sampling, since it is accounted for in
+        the sampling procedure.
+
+        :param n: number of samples
+        :param seed: random seed
+        :param sampling_method: by default 'early_weights'
+        :returns: n Realization objects
+        """
+        probs = random((n, len(self.branchsets)), seed, sampling_method)
+        rlzs = []
+        for ordinal, branches in enumerate(
+                self.branchsets[0].sample(probs, sampling_method)):
+            value = [br.value for br in branches]
+            if sampling_method.startswith('early_'):
+                weight = 1. / n  # already accounted
+            elif sampling_method.startswith('late_'):
+                weight = numpy.prod([br.weight for br in branches])
+            else:
+                raise NotImplementedError(sampling_method)
+            rlzs.append(Realization(value, weight, ordinal,
+                                    smlt_path(branches)))
+        return rlzs
+
+    def get_all_paths(self):
+        """
+        :returns: the paths of the logic tree as strings, padded with dots
+        """
+        out = []
+        nb = len(self.branchsets)
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            lt_path = ''.join(br.id for br in branches)
+            out.append(lt_path.ljust(nb, '.'))
+        return out
+
+    def to_node(self):
+        """
+        Converts the underlying branchsets, with their filters, into a node
+        that can be serialized into XML with nrml.write([node], outfile);
+        the branchsets keep their IDs, if any
+        """
+        out = Node('logicTree', dict(logicTreeID="lt"))
+        for bset in self.branchsets:
+            attrib = dict(uncertaintyType=bset.uncertainty_type,
+                          branchSetID=getattr(bset, 'id', '') or
+                          f'bs{bset.ordinal}')
+            # empty filters are not written
+            attrib.update((key, val) for key, val in bset.filters.items()
+                          if val)
+            n = Node('logicTreeBranchSet', attrib, None,
+                     [br.to_node() for br in bset.branches])
+            out.nodes.append(n)
+        return out
+
+    def to_nrml(self):
+        """
+        Converts the logic tree into a string in NRML format
+        """
+        return nrml.to_string(self.to_node())
+
+
+class ExtraLogicTree(BranchSetLogicTree):
+    """
+    Logic tree which can be the extra logic tree of a FullLogicTree, like
+    PFDLogicTree and AmplificationLogicTree: the realizations are the end
+    branches, with value and path given by the branch IDs, and they are
+    sampled by weight, not branchset by branchset
+    """
+    sample = AbstractLogicTree.sample
+
+    def get_realizations(self):
+        """
+        :returns: the end branches as Realization objects
+        """
+        rlzs = []
+        for ordinal, (weight, branches) in enumerate(
+                self.root_branchset.enumerate_paths()):
+            chosen = [br.branch_id for br in branches if not br.is_dummy()]
+            rlzs.append(Realization(
+                '~'.join(chosen), weight, ordinal, tuple(chosen)))
+        return rlzs
+
+    @property
+    def shortener(self):
+        """
+        :returns: dict realization path -> two-char abbreviation, matching
+            the format of the source model and GSIM shorteners
+        """
+        return {'~'.join(rlz.lt_path): BASE183[i] + '0'
+                for i, rlz in enumerate(self.get_realizations())}
+
+
+class CompositeLogicTree(BranchSetLogicTree):
     """
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
+
+    NB: it is not stored in the datastore, since the serialization
+    inherited from BranchSetLogicTree requires branchset IDs, a filename
+    and a bsetdict
     """
     def __init__(self, branchsets, seed=42, num_samples=0,
                  sampling_method='early_weights'):
@@ -1402,54 +1777,7 @@ class CompositeLogicTree(object):
             bset.check_duplicates()
             bset.check_weights()
         attach_branches(self, override=True)
-
-    def __iter__(self):
-        """
-        Yield Realization tuples. Notice that the weight is homogeneous when
-        sampling is enabled, since it is accounted for in the sampling
-        procedure.
-        """
-        if self.num_samples:
-            # random sampling of the logic tree
-            probs = random((self.num_samples, len(self.branchsets)),
-                           self.seed, self.sampling_method)
-            ordinal = 0
-            for branches in self.branchsets[0].sample(
-                    probs, self.sampling_method):
-                value = [br.value for br in branches]
-                if self.sampling_method.startswith('early_'):
-                    weight = 1. / self.num_samples  # already accounted
-                elif self.sampling_method.startswith('late_'):
-                    weight = numpy.prod([br.weight for br in branches])
-                else:
-                    raise NotImplementedError(self.sampling_method)
-                yield Realization(value, weight, ordinal, smlt_path(branches))
-                ordinal += 1
-        else:  # full enumeration
-            rlzs = []
-            for weight, branches in self.branchsets[0].enumerate_paths():
-                value = [br.value for br in branches]
-                rlz = Realization(value, weight, 0, smlt_path(branches))
-                rlzs.append(rlz)
-            rlzs.sort(key=operator.attrgetter('pid'))
-            for r, rlz in enumerate(rlzs):
-                rlz.ordinal = r
-                yield rlz
-
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else count_paths(
-            self.branchsets[0].branches)
-
-    def get_all_paths(self):
-        out = []
-        nb = len(self.branchsets)
-        for weight, branches in self.branchsets[0].enumerate_paths():
-            lt_path = ''.join(br.id for br in branches)
-            out.append(lt_path.ljust(nb, '.'))
-        return out
+        self.set_num_paths()
 
     def sample_paths(self, num_samples, seed=42,
                      sampling_method='early_weights'):
@@ -1459,30 +1787,6 @@ class CompositeLogicTree(object):
         for branches in self.branchsets[0].sample(probs, sampling_method):
             out.append(''.join(br.id for br in branches))
         return out
-
-    def to_node(self):
-        """
-        Converts the undelying branchsets into a node that can be serialized
-        into XML with the function nrml.write([node], outfile)
-        """
-        out = Node('logicTree', dict(logicTreeID="lt"))
-        for bset in self.branchsets:
-            attrib = dict(uncertaintyType=bset.uncertainty_type,
-                          branchSetID=f'bs{bset.ordinal}')
-            attrib.update(bset.filters)
-            if 'applyToBranches' in attrib and not attrib['applyToBranches']:
-                # remove empty attribute
-                del attrib['applyToBranches']
-            n = Node('logicTreeBranchSet', attrib, None,
-                     [br.to_node() for br in bset.branches])
-            out.nodes.append(n)
-        return out
-
-    def to_nrml(self):
-        """
-        Converts the logic tree into a string in NRML format
-        """
-        return nrml.to_string(self.to_node())
 
     def apply_all(self, src):
         """
@@ -1494,7 +1798,7 @@ class CompositeLogicTree(object):
         srcs = []
         bs0 = self.branchsets[0]
         n = len(self.branchsets)
-        for rlz in self:
+        for rlz in self.get_realizations():
             if len(rlz.lt_path) != n:
                 raise ValueError("The branch IDs must be one-character long")
             bset_values = bs0.get_bset_values(rlz.lt_path)

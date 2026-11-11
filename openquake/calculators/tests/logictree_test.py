@@ -294,7 +294,8 @@ hazard_uhs-std.csv
                          ('0.010000', '0.100000', '0.200000'))
 
         # check ordering by rm_rlz.pid
-        r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
+        smlt = self.calc.datastore['full_lt/source_model_lt']
+        r0, r1, r2 = smlt.get_realizations()
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
                          "path=SM1~., weight=0.5>")
@@ -439,8 +440,9 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
         # check the realizations contains only literals
+        smlt = self.calc.datastore['full_lt'].source_model_lt
         got = [dict(zip(rlz.lt_path, rlz.value))
-               for rlz in self.calc.datastore['full_lt'].source_model_lt]
+               for rlz in smlt.get_realizations()]
         self._check(got)
 
     def _check(self, got):

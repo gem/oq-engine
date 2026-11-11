@@ -26,7 +26,8 @@ from types import SimpleNamespace
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
-    nrml, lt, sourceconverter, calc, site, valid, contexts)
+    nrml, lt, sourceconverter, calc, site, valid, contexts, logictree,
+    gsim_lt, amp_lt, pfd_lt)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.mfd import TruncatedGRMFD
@@ -185,7 +186,7 @@ class CollapseTestCase(unittest.TestCase):
         self.assertEqual(effctxs, 36)
 
     def test_apply_all(self):
-        rlz0, rlz1, rlz2 = self.clt
+        rlz0, rlz1, rlz2 = self.clt.get_realizations()
         src0, src1, src2 = self.clt.apply_all(self.sg[0])
         self.assertEqual(src0.mfd.a_val, 4.6)
         self.assertEqual(src0.mfd.b_val, 1.1)
@@ -525,7 +526,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['B', 'common2', 0.35],
                         ['C', 'dummy', 0.0]])
         clt.num_samples = 100
-        rlzs = list(clt)
+        rlzs = clt.get_realizations()
         paths = [''.join(rlz.lt_path) for rlz in rlzs]
         cnt = collections.Counter(paths)
         assert cnt == {'A': 64, 'B': 36}
@@ -704,3 +705,73 @@ class MinMagGRAbsoluteTestCase(unittest.TestCase):
         expected = TruncatedGRMFD(6.1, 7.1, 0.1, -1.5, 0.9)
         self.assertEqual(list(src.mfd.get_annual_occurrence_rates()),
                          list(expected.get_annual_occurrence_rates()))
+
+
+class AbstractLogicTreeTestCase(unittest.TestCase):
+    # the common interface of the logic trees, see lt.AbstractLogicTree
+
+    def test_subclasses(self):
+        for cls in (logictree.SourceModelLogicTree, logictree.FullLogicTree,
+                    lt.CompositeLogicTree, gsim_lt.GsimLogicTree,
+                    amp_lt.AmplificationLogicTree, pfd_lt.PFDLogicTree):
+            self.assertTrue(issubclass(cls, lt.AbstractLogicTree), cls)
+        # the logic trees made of branchsets
+        for cls in (logictree.SourceModelLogicTree, lt.CompositeLogicTree,
+                    pfd_lt.PFDLogicTree):
+            self.assertTrue(issubclass(cls, lt.BranchSetLogicTree), cls)
+
+    def test_missing_methods(self):
+        # get_num_paths, get_realizations, __toh5__ and __fromh5__ are
+        # abstract
+        class Empty(lt.AbstractLogicTree):
+            pass
+        with self.assertRaises(TypeError) as ctx:
+            Empty()
+        for name in ('get_num_paths', 'get_realizations', '__toh5__',
+                     '__fromh5__'):
+            self.assertIn(name, str(ctx.exception))
+        # the logic trees are not iterable, use get_realizations
+        self.assertFalse(hasattr(lt.AbstractLogicTree, '__iter__'))
+
+    def test_generic_methods(self):
+        class Simple(lt.AbstractLogicTree):
+            def __init__(self, values, weights):
+                self.values, self.weights = values, weights
+
+            def get_realizations(self):
+                return [lt.Realization(val, weight, i, (val,))
+                        for i, (val, weight) in enumerate(
+                            zip(self.values, self.weights))]
+
+            def get_num_paths(self):
+                return len(self.values)
+
+            def __toh5__(self):
+                return numpy.array(self.weights), {'values': self.values}
+
+            def __fromh5__(self, array, attrs):
+                self.values, self.weights = attrs['values'], list(array)
+        tree = Simple(['a', 'b'], [.25, .75])
+        self.assertEqual([rlz.value for rlz in tree.get_realizations()],
+                         ['a', 'b'])
+        rlzs = tree.sample(100, 42)
+        self.assertEqual(len(rlzs), 100)
+        nb = sum(rlz.value == 'b' for rlz in rlzs)
+        self.assertTrue(55 < nb < 95, nb)
+        new = object.__new__(Simple)
+        new.__fromh5__(*tree.__toh5__())
+        self.assertEqual(
+            [(rlz.value, rlz.weight) for rlz in new.get_realizations()],
+            [('a', .25), ('b', .75)])
+
+    def test_composite_sample(self):
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]])
+        rlzs = clt.sample(10, 42)
+        self.assertEqual(len(rlzs), 10)
+        self.assertEqual({rlz.weight for rlz in rlzs}, {0.1})
+        # the realizations of a sampled logic tree are the same
+        clt.num_samples = 10
+        self.assertEqual([rlz.lt_path for rlz in clt.get_realizations()],
+                         [rlz.lt_path for rlz in rlzs])
