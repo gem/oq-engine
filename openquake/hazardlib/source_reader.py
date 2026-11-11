@@ -399,13 +399,26 @@ def get_bset_values(full_lt, sources):
         ones of its first realization
 
     NB: only the uncertainties relevant for the given sources are
-        returned, since the logic tree can be huge and the dictionary is
-        sent to the workers
+        returned, i.e. the ones of their realizations, without the
+        branchsets applied to other sources, since the logic tree can be
+        huge and the dictionary is sent to the workers
     """
     ordinals = {trt_smrs[0] % TWO24 for src in sources
                 for trt_smrs in src.get_ts_sets()}
-    return {ordinal: full_lt.get_bset_values(ordinal)
+    ids = source_ids(sources)
+    return {ordinal: [(bset, value) for bset, value in
+                      full_lt.get_bset_values(ordinal)
+                      if _may_apply(bset, value, ids)]
             for ordinal in sorted(ordinals)}
+
+
+def _may_apply(bset, value, ids):
+    # False if the branchset certainly does not apply to the sources with
+    # the given IDs and basenames (see source_ids and get_bset_value)
+    if bset.correlated:
+        return not ids.isdisjoint(value)
+    ats = bset.filters.get('applyToSources')
+    return not ats or not ids.isdisjoint(ats)
 
 
 def modified_groups(sources, bset_values):
