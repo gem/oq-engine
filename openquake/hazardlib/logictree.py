@@ -41,7 +41,7 @@ import operator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import decode
-from openquake.baselib.node import node_from_elem, context, Node
+from openquake.baselib.node import node_from_elem, context
 from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
@@ -1013,24 +1013,6 @@ class SourceModelLogicTree(BranchSetLogicTree):
             out[src_id] = SourceSpecificLogicTree(
                 src_id, bsets[src_id], bsetdict[src_id])
         return out
-
-    def to_node(self):
-        """
-        :returns: a logicTree Node convertible into NRML format
-        """
-        bsnodes = []
-        for bset in self.branchsets:
-            dic = dict(branchSetID='bs%02d' % bset.ordinal,
-                       uncertaintyType=bset.uncertainty_type)
-            brnodes = []
-            for br in bset.branches:
-                um = Node('uncertaintyModel', {}, br.value)
-                uw = Node('uncertaintyWeight', {}, br.weight)
-                brnode = Node('logicTreeBranch', {'branchID': br.branch_id},
-                              nodes=[um, uw])
-                brnodes.append(brnode)
-            bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
-        return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
     # SourceModelLogicTree
     def __toh5__(self):

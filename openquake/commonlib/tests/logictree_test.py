@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 import pprint
 import codecs
 import unittest
@@ -30,7 +31,7 @@ import pandas
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid
+from openquake.hazardlib import geo, lt, gsim_lt, logictree, valid, nrml
 from openquake.commonlib import readinput, tests
 from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -52,6 +53,25 @@ class SmltTestCase(unittest.TestCase):
         msg = str(ctx.exception)
         assert ('No such file or directory:' in msg
                 or 'too many branches' in msg)
+
+    def test_to_node(self):
+        # the branchset IDs and the filters are written, so the logic tree
+        # read back has the same realizations; when applyToBranches was
+        # lost, the logic tree of logictree/case_12 had 18 rlzs instead of 12
+        from openquake.qa_tests_data.logictree import case_12
+        dname = os.path.dirname(case_12.__file__)
+        smlt = logictree.SourceModelLogicTree(os.path.join(dname, 'ssmLT.xml'))
+        with TemporaryDirectory() as tmp:
+            # the source model files must be next to the written file
+            dst = shutil.copytree(dname, os.path.join(tmp, 'case_12'))
+            out = os.path.join(dst, 'written.xml')
+            with open(out, 'wb') as f:
+                nrml.write([smlt.to_node()], f)
+            new = logictree.SourceModelLogicTree(out)
+        self.assertEqual([bs.id for bs in new.branchsets],
+                         [bs.id for bs in smlt.branchsets])
+        self.assertEqual(sorted(rlz.lt_path for rlz in new),
+                         sorted(rlz.lt_path for rlz in smlt))
 
 
 class CompositeLtTestCase(unittest.TestCase):

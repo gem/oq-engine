@@ -1513,6 +1513,31 @@ class BranchSetLogicTree(AbstractLogicTree):
             out.append(lt_path.ljust(nb, '.'))
         return out
 
+    def to_node(self):
+        """
+        Converts the underlying branchsets, with their filters, into a node
+        that can be serialized into XML with nrml.write([node], outfile);
+        the branchsets keep their IDs, if any
+        """
+        out = Node('logicTree', dict(logicTreeID="lt"))
+        for bset in self.branchsets:
+            attrib = dict(uncertaintyType=bset.uncertainty_type,
+                          branchSetID=getattr(bset, 'id', '') or
+                          f'bs{bset.ordinal}')
+            # empty filters are not written
+            attrib.update((key, val) for key, val in bset.filters.items()
+                          if val)
+            n = Node('logicTreeBranchSet', attrib, None,
+                     [br.to_node() for br in bset.branches])
+            out.nodes.append(n)
+        return out
+
+    def to_nrml(self):
+        """
+        Converts the logic tree into a string in NRML format
+        """
+        return nrml.to_string(self.to_node())
+
 
 class CompositeLogicTree(BranchSetLogicTree):
     """
@@ -1540,30 +1565,6 @@ class CompositeLogicTree(BranchSetLogicTree):
         for branches in self.branchsets[0].sample(probs, sampling_method):
             out.append(''.join(br.id for br in branches))
         return out
-
-    def to_node(self):
-        """
-        Converts the undelying branchsets into a node that can be serialized
-        into XML with the function nrml.write([node], outfile)
-        """
-        out = Node('logicTree', dict(logicTreeID="lt"))
-        for bset in self.branchsets:
-            attrib = dict(uncertaintyType=bset.uncertainty_type,
-                          branchSetID=f'bs{bset.ordinal}')
-            attrib.update(bset.filters)
-            if 'applyToBranches' in attrib and not attrib['applyToBranches']:
-                # remove empty attribute
-                del attrib['applyToBranches']
-            n = Node('logicTreeBranchSet', attrib, None,
-                     [br.to_node() for br in bset.branches])
-            out.nodes.append(n)
-        return out
-
-    def to_nrml(self):
-        """
-        Converts the logic tree into a string in NRML format
-        """
-        return nrml.to_string(self.to_node())
 
     def apply_all(self, src):
         """
