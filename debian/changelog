@@ -1,4 +1,13 @@
-  [Michele Simionato]
+ [Anirudh Rao]
+  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
+    correlation model
+
+ [Michele Simionato]
+  * Added a warning for sources with different IDs, the same geometry and
+    different MFDs, which are likely variants of a base source, and
+    `oq check_input --better-smlt` now generates a job.zip
+  * Added an option `oq check_input --better-smlt` to reduce sources with
+    the same geometry
   * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
     magnitude of a truncated Gutenberg-Richter MFD
   * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the

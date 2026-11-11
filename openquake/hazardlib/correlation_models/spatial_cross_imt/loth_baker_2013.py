@@ -185,6 +185,7 @@ class LothBaker2013(SpatialCrossIMTCorrelationModel):
     supported through the conventional SA(0.01) correlation proxy.
     """
 
+    SUPPORTS_CIRCULANT_EMBEDDING = True
     DEFINED_FOR_RESIDUAL_COMPONENT = ResidualComponent.WITHIN_EVENT
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     CALIBRATED_FOR_INTENSITY_MEASURE_TYPES = {SA}

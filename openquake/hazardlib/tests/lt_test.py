@@ -20,13 +20,15 @@ import os
 import filecmp
 import difflib
 import unittest
+from unittest import mock
 import collections
 import numpy
 from types import SimpleNamespace
 from openquake.baselib.general import DictArray, gettemp
 from openquake.baselib.node import Node
 from openquake.hazardlib import (
-    nrml, lt, sourceconverter, calc, site, valid, contexts)
+    nrml, lt, sourceconverter, calc, site, valid, contexts, logictree,
+    gsim_lt, amp_lt, pfd_lt)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.mfd import TruncatedGRMFD
@@ -185,7 +187,7 @@ class CollapseTestCase(unittest.TestCase):
         self.assertEqual(effctxs, 36)
 
     def test_apply_all(self):
-        rlz0, rlz1, rlz2 = self.clt
+        rlz0, rlz1, rlz2 = self.clt.get_realizations()
         src0, src1, src2 = self.clt.apply_all(self.sg[0])
         self.assertEqual(src0.mfd.a_val, 4.6)
         self.assertEqual(src0.mfd.b_val, 1.1)
@@ -300,6 +302,60 @@ xmlns:gml="http://www.opengis.net/gml"
     </logicTree>
 </nrml>
 '''
+
+
+class UncertaintySerializationTestCase(unittest.TestCase):
+    def _roundtrip(self, utype, value):
+        # Read back twice: the second write serializes parsed engine values,
+        # including the source-ID mapping of correlated uncertainties.
+        root = lt.BranchSet('sourceModel')
+        root.id = 'sm'
+        root.branches = [lt.Branch('base', '_fake.xml', 1., root.id)]
+        bset = lt.BranchSet(utype, dict(applyToSources=['*'],
+                                       applyToBranches=['base']))
+        bset.id = 'mfd'
+        bset.branches = [lt.Branch('change', value, 1., bset.id)]
+        tree = lt.BranchSetLogicTree()
+        tree.branchsets = [root, bset]
+        for _ in range(2):
+            fname = gettemp(tree.to_nrml('%.16E'), suffix='.xml')
+            tree = logictree.SourceModelLogicTree(fname, test_mode=True)
+            ae(tree.branchsets[1].branches[0].value, value)
+        return nrml.read(fname).logicTree[1]
+
+    def test_incremental(self):
+        value = {'s1': (4.5, .1, [.123456789012345, .2]),
+                 's2': (5., .2, [.3])}
+        node = self._roundtrip('incrementalMFDAbsolute', value)
+        self.assertEqual(node['applyToSources'], '*')
+        self.assertEqual(node['applyToBranches'], 'base')
+
+    def test_multi_mfd(self):
+        cases = [
+            ('incrementalMFD', 3, dict(
+                min_mag=[4.5], bin_width=[.1],
+                occurRates=[[.123456789012345, .2], [.3], [.4, .5, .6]])),
+            ('truncGutenbergRichterMFD', 2, dict(
+                a_val=[2., 3.], b_val=[1.], min_mag=[4.5], max_mag=[7.])),
+            ('truncGutenbergRichterMFD', 2, dict(
+                a_val=[2., 3.], b_val=[1.], min_mag=[4.5], max_mag=[7.],
+                bin_width=[.1]))]
+        for value in cases:
+            with self.subTest(value=value):
+                node = self._roundtrip('multiMFDAbsolute', {'src': value})
+                mfd = node[0].uncertaintyModel[0].multiMFD
+                self.assertEqual(hasattr(mfd, 'bin_width'),
+                                 'bin_width' in value[2])
+
+    def test_reused_xml(self):
+        model = Node('uncertaintyModel', nodes=[Node(
+            'incrementalMFD', dict(minMag=4.5, binWidth=.1),
+            nodes=[Node('occurRates', text=[.1])])])
+        before = nrml.to_string(model)
+        value = {'s1': model, 's2': model}
+        node = lt.uncertainty_to_node('incrementalMFDAbsolute', value, True)
+        self.assertEqual([n['src'] for n in node], ['s1', 's2'])
+        self.assertEqual(nrml.to_string(model), before)
 
 
 class CompositeLogicTreeTestCase(unittest.TestCase):
@@ -525,7 +581,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['B', 'common2', 0.35],
                         ['C', 'dummy', 0.0]])
         clt.num_samples = 100
-        rlzs = list(clt)
+        rlzs = clt.get_realizations()
         paths = [''.join(rlz.lt_path) for rlz in rlzs]
         cnt = collections.Counter(paths)
         assert cnt == {'A': 64, 'B': 36}
@@ -704,3 +760,116 @@ class MinMagGRAbsoluteTestCase(unittest.TestCase):
         expected = TruncatedGRMFD(6.1, 7.1, 0.1, -1.5, 0.9)
         self.assertEqual(list(src.mfd.get_annual_occurrence_rates()),
                          list(expected.get_annual_occurrence_rates()))
+
+
+class AbstractLogicTreeTestCase(unittest.TestCase):
+    def test_gsim_nrml(self):
+        tree = gsim_lt.GsimLogicTree.from_('BooreAtkinson2008')
+        fname = gettemp(tree.to_nrml(), suffix='.xml')
+        new = gsim_lt.GsimLogicTree(fname)
+        self.assertEqual(repr(new.values['*'][0]), '[BooreAtkinson2008]')
+        self.assertEqual(new.get_num_paths(), 1)
+        self.assertEqual(new.branches[0].weight['default'], 1.)
+
+    def test_full_nrml(self):
+        tree = logictree.FullLogicTree.fake()
+        with self.assertRaisesRegex(NotImplementedError, 'FullLogicTree'):
+            tree.to_nrml()
+
+    # the common interface of the logic trees, see lt.AbstractLogicTree
+
+    def test_subclasses(self):
+        for cls in (logictree.SourceModelLogicTree, logictree.FullLogicTree,
+                    lt.CompositeLogicTree, gsim_lt.GsimLogicTree,
+                    amp_lt.AmplificationLogicTree, pfd_lt.PFDLogicTree):
+            self.assertTrue(issubclass(cls, lt.AbstractLogicTree), cls)
+        # the logic trees made of branchsets
+        for cls in (logictree.SourceModelLogicTree, lt.CompositeLogicTree,
+                    pfd_lt.PFDLogicTree):
+            self.assertTrue(issubclass(cls, lt.BranchSetLogicTree), cls)
+
+    def test_missing_methods(self):
+        # get_num_paths, get_realizations, __toh5__ and __fromh5__ are
+        # abstract
+        class Empty(lt.AbstractLogicTree):
+            pass
+        with self.assertRaises(TypeError) as ctx:
+            Empty()
+        for name in ('get_num_paths', 'get_realizations', '__toh5__',
+                     '__fromh5__'):
+            self.assertIn(name, str(ctx.exception))
+        # the logic trees are not iterable, use get_realizations
+        self.assertFalse(hasattr(lt.AbstractLogicTree, '__iter__'))
+
+    def test_generic_methods(self):
+        class Simple(lt.AbstractLogicTree):
+            def __init__(self, values, weights):
+                self.values, self.weights = values, weights
+
+            def get_realizations(self):
+                return [lt.Realization(val, weight, i, (val,))
+                        for i, (val, weight) in enumerate(
+                            zip(self.values, self.weights))]
+
+            def get_num_paths(self):
+                return len(self.values)
+
+            def __toh5__(self):
+                return numpy.array(self.weights), {'values': self.values}
+
+            def __fromh5__(self, array, attrs):
+                self.values, self.weights = attrs['values'], list(array)
+        tree = Simple(['a', 'b'], [.25, .75])
+        self.assertEqual([rlz.value for rlz in tree.get_realizations()],
+                         ['a', 'b'])
+        rlzs = tree.sample(100, 42)
+        self.assertEqual(len(rlzs), 100)
+        nb = sum(rlz.value == 'b' for rlz in rlzs)
+        self.assertTrue(55 < nb < 95, nb)
+        new = object.__new__(Simple)
+        new.__fromh5__(*tree.__toh5__())
+        self.assertEqual(
+            [(rlz.value, rlz.weight) for rlz in new.get_realizations()],
+            [('a', .25), ('b', .75)])
+
+    def test_composite_sample(self):
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]])
+        rlzs = clt.sample(10, 42)
+        self.assertEqual(len(rlzs), 10)
+        self.assertEqual({rlz.weight for rlz in rlzs}, {0.1})
+        # the realizations of a sampled logic tree are the same
+        clt.num_samples = 10
+        self.assertEqual([rlz.lt_path for rlz in clt.get_realizations()],
+                         [rlz.lt_path for rlz in rlzs])
+
+    def test_extra_sample_large_tree(self):
+        # Forty binary branchsets represent over a trillion paths. Build
+        # the shared graph directly, without enumerating complete paths.
+        tree = lt.ExtraLogicTree()
+        tree.branchsets = []
+        previous = []
+        for ordinal in range(40):
+            bs = lt.BranchSet('maxMagGRRelative', ordinal=ordinal)
+            bs.branches = [lt.Branch(f'b{ordinal}_{i}', i, .5)
+                           for i in range(2)]
+            for branch in previous:
+                branch.bset = bs
+            previous = bs.branches
+            tree.branchsets.append(bs)
+        tree.set_num_paths()
+        self.assertEqual(tree.num_paths, 2 ** 40)
+        with mock.patch.object(tree.root_branchset, 'enumerate_paths',
+                               side_effect=AssertionError):
+            rlzs = tree.sample(7, seed=42)
+        self.assertEqual(len(rlzs), 7)
+        self.assertEqual([r.ordinal for r in rlzs], list(range(7)))
+        self.assertTrue(all(len(r.lt_path) == 40 for r in rlzs))
+        self.assertTrue(all(r.value == r.pid for r in rlzs))
+        self.assertEqual({r.weight for r in rlzs}, {1. / 7})
+        with mock.patch('builtins.print') as output:
+            lt.print_tree(tree)
+        self.assertLess(output.call_count, 200)
+        self.assertTrue(any('shared' in str(call)
+                            for call in output.call_args_list))
