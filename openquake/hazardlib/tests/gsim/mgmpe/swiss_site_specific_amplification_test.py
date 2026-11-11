@@ -13,17 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-import csv
 import os
+import csv
 import tempfile
 import unittest
-from math import sqrt
+import numpy as np
 from types import SimpleNamespace
 
-import numpy as np
-
 from openquake.baselib import InvalidFile
-# Only the CSV integration case needs the engine's input layer.
 from openquake.commonlib import readinput
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import simple_cmaker
@@ -91,7 +88,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         assert_close(mean, [-0.8, -2., -3.1])
         assert_close(phi, [0.5, 0.5, 1.])
         assert_close(tau, [0.2, 0.3, 0.5])
-        assert_close(sigma, [sqrt(29) / 10, sqrt(34) / 10, sqrt(5) / 2])
+        assert_close(sigma, np.sqrt([0.29, 0.34, 1.25]))
 
     def test_selected_periods_and_instance_isolation(self):
         original = valid.gsim(MODEL)

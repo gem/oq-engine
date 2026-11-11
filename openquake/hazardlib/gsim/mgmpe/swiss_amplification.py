@@ -55,8 +55,7 @@ def _swiss_site_specific_periods(periods):
         if (isinstance(period, (bool, np.bool_)) or not isinstance(
                 period, (int, float, np.integer, np.floating)) or
                 period not in SWISS_SITE_SPECIFIC_FIELDS):
-            raise ValueError('Unsupported Swiss site-specific period: '
-                             f'{period!r}')
+            raise ValueError(f'Unsupported Swiss site-specific period: {period!r}')
     if len(set(periods)) != len(periods):
         raise ValueError('Duplicate Swiss site-specific periods')
     return tuple(periods)
@@ -69,8 +68,7 @@ def _swiss_site_specific_fields(imt, periods):
         raise ValueError('Swiss site-specific amplification supports PGA and '
                          f'selected 5%-damped SA: {imt}')
     if imt.period not in periods:
-        raise ValueError('No selected Swiss site-specific correction for '
-                         f'{imt}')
+        raise ValueError(f'No selected Swiss site-specific correction for {imt}')
     return SWISS_SITE_SPECIFIC_FIELDS[imt.period]
 
 
@@ -109,8 +107,8 @@ def _check_stddevs(**stddevs):
     # in errors so invalid inputs can be traced to their source.
     for name, values in stddevs.items():
         if not np.all(np.isfinite(values)) or np.any(values < 0):
-            raise ValueError(f'Swiss site-specific {name} must be finite '
-                             'and nonnegative')
+            raise ValueError(
+                f'Swiss site-specific {name} must be finite and non-negative')
 
 
 def _apply_swiss_sa_correction(amplification, phis2s, phiss, me, si, ta, ph):
@@ -129,7 +127,6 @@ def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
     """
     Adjust Swiss GMPEs to add amplification and correct intra-event residuals
     """
-
     if imt.period not in (0.3, 0.6):
         raise ValueError(f'No Swiss SA correction for {imt}; '
                          'supported periods are 0.3 and 0.6 s')
