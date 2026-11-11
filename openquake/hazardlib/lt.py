@@ -1402,9 +1402,10 @@ def h5_to_branches(array):
 class AbstractLogicTree(abc.ABC):
     """
     Common interface of the logic trees. The subclasses must define
-    get_num_paths and at least one of __iter__ and get_realizations,
-    since each one is implemented in terms of the other; sample can be
-    overridden, by default it samples the realizations by weight.
+    get_num_paths, the serialization methods __toh5__ and __fromh5__ and
+    at least one of __iter__ and get_realizations, since each one is
+    implemented in terms of the other; sample can be overridden, by
+    default it samples the realizations by weight.
     """
     def __init_subclass__(cls, **kw):
         super().__init_subclass__(**kw)
@@ -1417,6 +1418,20 @@ class AbstractLogicTree(abc.ABC):
     def get_num_paths(self):
         """
         :returns: the number of paths in the logic tree
+        """
+
+    @abc.abstractmethod
+    def __toh5__(self):
+        """
+        :returns: a pair (array or dictionary, attributes) to be stored in
+                  the datastore, see openquake.baselib.hdf5
+        """
+
+    @abc.abstractmethod
+    def __fromh5__(self, data, attrs):
+        """
+        Restore the logic tree from the data and the attributes returned
+        by __toh5__ and stored in the datastore
         """
 
     def __iter__(self):
@@ -1696,6 +1711,10 @@ class CompositeLogicTree(BranchSetLogicTree):
     """
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
+
+    NB: it is not stored in the datastore, since the serialization
+    inherited from BranchSetLogicTree requires branchset IDs, a filename
+    and a bsetdict
     """
     def __init__(self, branchsets, seed=42, num_samples=0,
                  sampling_method='early_weights'):

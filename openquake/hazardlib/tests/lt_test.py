@@ -729,27 +729,43 @@ class AbstractLogicTreeTestCase(unittest.TestCase):
                 def get_num_paths(self):
                     return 0
 
-        # get_num_paths is abstract
+        # get_num_paths, __toh5__ and __fromh5__ are abstract
         class NoNumPaths(lt.AbstractLogicTree):
             def get_realizations(self):
                 return []
-        with self.assertRaises(TypeError):
+        with self.assertRaises(TypeError) as ctx:
             NoNumPaths()
+        for name in ('get_num_paths', '__toh5__', '__fromh5__'):
+            self.assertIn(name, str(ctx.exception))
 
     def test_generic_methods(self):
         class Simple(lt.AbstractLogicTree):
+            def __init__(self, values, weights):
+                self.values, self.weights = values, weights
+
             def get_realizations(self):
-                return [lt.Realization('a', .25, 0, ('a',)),
-                        lt.Realization('b', .75, 1, ('b',))]
+                return [lt.Realization(val, weight, i, (val,))
+                        for i, (val, weight) in enumerate(
+                            zip(self.values, self.weights))]
 
             def get_num_paths(self):
-                return 2
-        tree = Simple()
+                return len(self.values)
+
+            def __toh5__(self):
+                return numpy.array(self.weights), {'values': self.values}
+
+            def __fromh5__(self, array, attrs):
+                self.values, self.weights = attrs['values'], list(array)
+        tree = Simple(['a', 'b'], [.25, .75])
         self.assertEqual([rlz.value for rlz in tree], ['a', 'b'])
         rlzs = tree.sample(100, 42)
         self.assertEqual(len(rlzs), 100)
         nb = sum(rlz.value == 'b' for rlz in rlzs)
         self.assertTrue(55 < nb < 95, nb)
+        new = object.__new__(Simple)
+        new.__fromh5__(*tree.__toh5__())
+        self.assertEqual([(rlz.value, rlz.weight) for rlz in new],
+                         [('a', .25), ('b', .75)])
 
     def test_composite_sample(self):
         clt = lt.build(['sourceModel', '',

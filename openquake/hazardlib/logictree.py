@@ -1404,7 +1404,11 @@ class FullLogicTree(AbstractLogicTree):
 
 class SourceSpecificLogicTree(BranchSetLogicTree):
     """
-    Source specific logic tree (full enumeration)
+    Source specific logic tree (full enumeration), see
+    SourceModelLogicTree.decompose.
+
+    NB: it is not stored in the datastore, since the serialization
+    inherited from BranchSetLogicTree requires a filename
     """
     def __init__(self, source_id, branchsets, bsetdict):
         self.source_id = source_id
