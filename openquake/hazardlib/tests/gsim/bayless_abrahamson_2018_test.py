@@ -61,3 +61,35 @@ class BaylessAbrahamson2018TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check(self.fname_std_tot, max_discrep_percentage=0.1)
+
+    def test_off_grid_interpolation(self):
+        # The MATLAB script interpolates log EAS and sigma using log(f)
+        gsim = self.GSIM_CLASS()
+        ctx = np.rec.fromrecords(
+            [(5., 10., 180., 1., 0., 500.),  # Soil
+             (5., 10., 760., 1., 0., 500.)], # Bedrock
+            names='mag, rrup, vs30, ztor, rake, z1pt0')
+
+        # Frequency pairs
+        pairs = [(0.1, 0.102329),       # Low-freq scaling
+                 (2.187761, 2.238721),  # Non-linear site response
+                 (23.988321, 24.54708), # Start of kappa extrapolation
+                 (97.723724, 100.)]     # Upper end of the freq range
+
+        # Compute mean/sig at the lower and upper frequencies
+        native_imts = [EAS(f) for pair in pairs for f in pair]
+        native = np.zeros((4, len(native_imts), len(ctx)))
+        gsim.compute(ctx, native_imts, *native)
+
+        # sqrt(low * high) lies halfway between the endpoints in log(f)
+        imts = [EAS(np.sqrt(low * high)) for low, high in pairs]
+        actual = np.zeros((4, len(imts), len(ctx)))
+        gsim.compute(ctx, imts, *actual) #  Predictions at these off-grid freqs
+
+        # At each midpoint, every output must equal its endpoint average
+        expected = (native[:, ::2] + native[:, 1::2]) / 2 # The slices select
+        np.testing.assert_allclose(                       # alternating lower
+            actual, expected, rtol=1e-12, atol=1e-14)     # and upper endpoint 
+                                                          # values
+             
+        

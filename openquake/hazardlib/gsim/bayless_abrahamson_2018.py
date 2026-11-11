@@ -83,7 +83,7 @@ def _get_ln_ir_outcrop(self, ctx):
     strongly with the PGA" - p. 2093
     """
     # 5 Hz in paper but use exact value in matlab script (line 156)
-    im = EAS(5.0118725)
+    im = EAS(5.011872)
     tc = self.COEFFS[im]
 
     # Get mean
@@ -271,6 +271,24 @@ def _get_mean(self, C, ctx, imt):
     return mean
 
 
+def _get_native_predictions(self, ctx, nl_response, indices):
+    """
+    Compute log median EAS and standard deviations at native frequencies.
+    """
+    predictions = {}
+    for index in np.unique(indices):
+        imt = EAS(self.FREQ_NL[index])
+        C = self.COEFFS[imt]
+        # Compute log median EAS before nonlinear site response
+        lin_component = _get_mean(self, C, ctx, imt)
+        # Combine to get the log median EAS
+        mean = lin_component + nl_response[index]
+        # Compute sigma components
+        sigma, tau, phi = _get_stddevs(C, ctx)
+        predictions[index] = np.array([mean, sigma, tau, phi])
+    return predictions
+
+
 class BaylessAbrahamson2018(GMPE):
     """
     Implements the Bayless and Abrahamson (2018, 2019) model. References:
@@ -312,9 +330,6 @@ class BaylessAbrahamson2018(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def __init__(self):
-        """
-        Load coefficients and initialize the native grid and LOWESS weights.
-        """
         # Load the coeffs
         with open(BA_COEFFS) as f:
             self.COEFFS = CoeffsTable(table=f.read())
@@ -342,21 +357,25 @@ class BaylessAbrahamson2018(GMPE):
         nl_response = _get_nl_site_response(
             ctx, ln_ir_outcrop, self.COEFF_NL, self.LOWESS_MATRIX)
 
-        # Compute per IMT
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
+        # Find the native frequencies surrounding each requested IMT
+        for imt in imts:
+            if not self.FREQ_NL[0] <= imt.frequency <= self.FREQ_NL[-1]:
+                raise KeyError(imt)
+        frequencies = np.array([imt.frequency for imt in imts])
+        high = np.searchsorted(self.FREQ_NL, frequencies)
+        low = np.maximum(high - 1, 0)
+        low = np.where(self.FREQ_NL[high] == frequencies, high, low)
+        predictions = _get_native_predictions(
+            self, ctx, nl_response, np.r_[low, high])
 
-            # Compute log median EAS before nonlinear site response
-            lin_component = _get_mean(self, C, ctx, imt)
-
-            # Interpolate the smoothed nonlinear term to the requested
-            # frequency
-            nl_component = np.array([
-                np.interp(imt.frequency, self.FREQ_NL, site)
-                for site in nl_response.T])
-
-            # Combine to get the log median EAS
-            mean[m] = (lin_component + nl_component)
-
-            # Compute sigma compnents
-            sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
+        # Compute per IMT, interpolating completed outputs in log frequency
+        log_freqs = np.log(self.FREQ_NL)
+        for m, (lo, hi) in enumerate(zip(low, high)):
+            if lo == hi:
+                values = predictions[lo]
+            else:
+                ratio = ((np.log(frequencies[m]) - log_freqs[lo]) /
+                         (log_freqs[hi] - log_freqs[lo]))
+                values = (predictions[lo] + ratio *
+                          (predictions[hi] - predictions[lo]))
+            mean[m], sigma[m], tau[m], phi[m] = values
