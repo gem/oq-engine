@@ -345,9 +345,11 @@ def select_candidate(groups, cmakers, sites, oq, spacings, distances, h5):
         good = [row for row in rows if row.p99_norm <= minerr * (1 + CLOSE)]
     best = min(good, key=lambda row: row.weight)  # the cheapest
     if best.p99_norm > 1.:
-        logging.warning( 'p99_err = %.4f g > ATOL + RTOL * |reference|',
-        best.ps_grid_spacing, best.pointsource_distance,
-        best.p99_err, best.p99_norm)
+        logging.warning(
+            'ps_grid_spacing=%s, pointsource_distance=%s: p99_err = %.4f g '
+            '> ATOL + RTOL * |reference| (p99_norm=%.2f)',
+            best.ps_grid_spacing, best.pointsource_distance,
+            best.p99_err, best.p99_norm)
     return best.ps_grid_spacing, best.pointsource_distance
 
 
