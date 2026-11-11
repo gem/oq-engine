@@ -100,11 +100,10 @@ import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from collections import Counter
-from concurrent.futures import ProcessPoolExecutor
 from contextlib import closing
-import numpy
 from openquake.baselib.general import duplicated, groupby
 from openquake.baselib.node import striptag
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import valid, logictree
 from openquake.hazardlib.logictree import SourceModelLogicTree, branch_id
 from openquake.hazardlib.source_reader import (
@@ -118,6 +117,7 @@ MFD_TAGS = {'truncGutenbergRichterMFD', 'incrementalMFD', 'multiMFD',
 UTYPE = dict(MFD_UNCERTAINTY, minMag='minMagGRAbsolute')
 LINE_WIDTH = 120  # maximum length of the lines of the multiMFD arrays
 SM_TYPES = ('sourceModel', 'extendModel')
+HASH_MASK = 2 ** 64 - 1  # the hashes of the rates are 64 bit integers
 BRANCH_ID_RE = re.compile(valid.branch_id.regex)
 
 
@@ -217,25 +217,30 @@ class Copy:
         return _canonical(mfd)
 
 
-def _parse(path, fname):
-    # read the source inventory once; identity links reuse these copies
+def parse_copies(idx, path, fname):
+    """
+    Task reading the copies of the sources in a source model file.
+
+    :returns: a dictionary {idx: copies}
+    """
     root = ET.parse(path).getroot()
     parents = {c: p for p in root.iter() for c in p}
     sources = (el for el in root.iter()
                if el.tag.endswith('Source') and 'id' in el.attrib)
-    return [Copy(fname, pos, el, parents[el].attrib if
-                 striptag(parents[el].tag) == 'sourceGroup' else {})
-            for pos, el in enumerate(sources)]
+    return {idx: [Copy(fname, pos, el, parents[el].attrib if
+                       striptag(parents[el].tag) == 'sourceGroup' else {})
+                  for pos, el in enumerate(sources)]}
 
 
 def read_copies(smlt_dir, fnames):
     """
-    Read all source copies in parallel, preserving file and document order.
+    Read all source copies in parallel, preserving file and document order
+    (the identity links reuse these copies).
     """
-    fnames = list(fnames)
-    with ProcessPoolExecutor() as pool:
-        results = pool.map(_parse, [smlt_dir / f for f in fnames], fnames)
-        return [cp for copies in results for cp in copies]
+    allargs = [(i, smlt_dir / f, f) for i, f in enumerate(fnames)]
+    bypos = Starmap(parse_copies, allargs).reduce(
+        agg=lambda acc, dic: acc.update(dic) or acc, acc={})
+    return [cp for i in sorted(bypos) for cp in bypos[i]]
 
 
 def _group(copies, attr='key'):
@@ -767,36 +772,105 @@ def convert(smlt, outdir):
     return set(added), renamed, brnames
 
 
-def _rates(job_ini, kw):
-    # rates of the sources by (realization path, source ID)
-    oq = readinput.get_oqparam(str(job_ini), kw=kw)
-    # a temporary datastore, needed for the sections of multiFaultSources
-    with tempfile.TemporaryDirectory() as tmp, closing(
-            datastore.DataStore(os.path.join(tmp, 'check.hdf5'))) as dstore:
-        dstore['oqparam'] = oq
-        csm = readinput.get_composite_source_model(oq, dstore)
-        return _rates_table(csm)
+def _digest(srcid, rates):
+    # a 64 bit hash of the source ID and of the (magnitude, rate) pairs
+    # rounded to 10 significant digits, so that rates equal within the
+    # tolerance have the same hash
+    text = srcid + ',' + ','.join('%.9e %.9e' % pair for pair in rates)
+    return int.from_bytes(hashlib.blake2b(
+        text.encode(), digest_size=8).digest(), 'little')
 
 
-def _rates_table(csm):
-    # the rates of the sources in each realization, uncertainties applied
-    # ignore dummy branches in both trees when identifying a realization
-    full = csm.full_lt
-    paths = [tuple(b for b in rlz.lt_path if b != '.') for rlz in full.sm_rlzs]
+def _add(acc, table, normkey=None):
+    # add a table (count, sum of the hashes) to acc, normalizing the keys
+    for key, (n, h) in table.items():
+        if normkey:
+            key = normkey(key)
+        m, g = acc.get(key, (0, 0))
+        acc[key] = (m + n, (g + h) & HASH_MASK)
+    return acc
+
+
+def rates_table(sources, bset_values, paths, renamed, detail):
+    """
+    Task computing the hashes of the rates of a block of sources.
+
+    :param sources: a block of sources of the same group
+    :param bset_values: the uncertainties to apply, see get_bset_values
+    :param paths: the realization paths, by ordinal
+    :param renamed: a dictionary new source ID -> original source ID
+    :param detail: None or a set of realization paths
+    :returns: a dictionary realization path -> (number of rates, sum of
+              the hashes of the source IDs and rates), with the
+              uncertainties applied, or (realization path, source ID) ->
+              (number, sum) for the paths in `detail`; the sum does not
+              depend on the order, so the tables of the blocks can be merged
+    """
     table = {}
-    for sg in csm.src_groups:
-        bsv = get_bset_values(full, sg)
-        for trt_smrs, grp in modified_groups(sg, bsv):
-            for src in grp:
-                mfd = getattr(src, 'mfd', None)
-                if mfd is None:
-                    continue
-                srcid = re.split('[!;]', src.source_id)[0]
-                rates = tuple(mfd.get_annual_occurrence_rates())
-                for t in trt_smrs:
-                    key = (paths[t % TWO24], srcid)
-                    table.setdefault(key, []).append(rates)
+    for trt_smrs, grp in modified_groups(sources, bset_values):
+        for src in grp:
+            mfd = getattr(src, 'mfd', None)
+            if mfd is None:
+                continue
+            srcid = re.split('[!;]', src.source_id)[0]
+            srcid = renamed.get(srcid, srcid)
+            h = _digest(srcid, mfd.get_annual_occurrence_rates())
+            for t in trt_smrs:
+                key = paths[t % TWO24]
+                if detail is not None:
+                    if key not in detail:
+                        continue
+                    key = (key, srcid)
+                n, s = table.get(key, (0, 0))
+                table[key] = (n + 1, (s + h) & HASH_MASK)
     return table
+
+
+def _blocks(src_groups):
+    # split the source groups in blocks of sources (keeping the atomic
+    # groups whole), about Starmap.CT blocks in total
+    size = max(1, sum(len(sg) for sg in src_groups) // Starmap.CT)
+    for sg in src_groups:
+        step = max(1, len(sg)) if sg.atomic else size
+        for start in range(0, len(sg), step):
+            block = copy.copy(sg)
+            block.sources = sg.sources[start:start + step]
+            yield block
+
+
+def _rates(job_ini, kw, renamed, detail=None):
+    """
+    :returns: the hashes of the rates of the sources, see rates_table,
+              and the number of warnings about the MFD variants; the rates
+              are computed in parallel
+    """
+    warnings = []
+
+    class Handler(logging.Handler):
+        def emit(self, record):
+            if 'appear multiple times' in record.getMessage():
+                warnings.append(record)
+    handler = Handler()
+    logging.getLogger().addHandler(handler)
+    oq = readinput.get_oqparam(str(job_ini), kw=kw)
+    # a temporary datastore, needed for the sections of the
+    # multiFaultSources, which must exist while computing the rates
+    with tempfile.TemporaryDirectory() as tmp, closing(
+            datastore.DataStore(os.path.join(tmp, 'c.hdf5'))) as dstore:
+        dstore['oqparam'] = oq
+        try:
+            csm = readinput.get_composite_source_model(oq, dstore)
+        finally:
+            logging.getLogger().removeHandler(handler)
+        full = csm.full_lt
+        # ignore the dummy branches when identifying a realization
+        paths = [tuple(b for b in rlz.lt_path if b != '.')
+                 for rlz in full.sm_rlzs]
+        allargs = [(block, get_bset_values(full, block), paths, renamed,
+                    detail) for block in _blocks(csm.src_groups)]
+        del csm
+        table = Starmap(rates_table, allargs).reduce(agg=_add, acc={})
+    return table, len(warnings)
 
 
 def _trivial_gsim_lt(smlt, path):
@@ -817,17 +891,11 @@ def check(job_ini, conv_ini, added, renamed, smlt, brnames):
     """
     Compare the rates of all the sources in all the realizations of the
     original job and of the converted one (the job.ini extracted from the
-    archive, so that a missing file is an error)
+    archive, so that a missing file is an error); the rates are computed
+    in parallel and compared by hash, see _digest, one hash per
+    realization; the sources are compared only in the realizations with
+    different hashes, to report them
     """
-    warnings = []
-
-    class Handler(logging.Handler):
-        def emit(self, record):
-            msg = record.getMessage()
-            if 'appear multiple times' in msg:
-                warnings.append(msg)
-    handler = Handler()
-    logging.getLogger().addHandler(handler)
     # NB: strict=false, so that the original logic tree can have invalid
     # branch IDs (the engine replaces their spaces with underscores)
     full = {'number_of_logic_tree_samples': '0', 'strict': 'false',
@@ -839,36 +907,33 @@ def check(job_ini, conv_ini, added, renamed, smlt, brnames):
     try:
         _trivial_gsim_lt(smlt, gsim_lt)
         _trivial_gsim_lt(smlt, conv_ini.parent / gsim_lt.name)
-        orig = _rates(job_ini, full)
-        nwarn = len(warnings)
-        conv = _rates(conv_ini, full)
+        # the renamed sources are hashed with their original IDs
+        orig, warn_orig = _rates(job_ini, full, {})
+        conv, warn_conv = _rates(conv_ini, full, renamed)
+        # remove the added branches from the converted paths (the dummy
+        # branches were removed in _rates) and restore the original
+        # branch IDs
+        paths = {path: tuple(branch_id(brnames.get(b, b)) for b in path
+                             if b not in added) for path in conv}
+        conv = _add({}, conv, paths.get)
+        bad = {path for path in set(orig) | set(conv)
+               if orig.get(path) != conv.get(path)}
+        logging.warning('Checked %d realizations, %d source rates: %d '
+                        'realization(s) different', len(orig),
+                        sum(n for n, _ in orig.values()), len(bad))
+        if bad:  # find the sources with different rates
+            orig, _ = _rates(job_ini, full, {}, bad)
+            conv, _ = _rates(conv_ini, full, renamed,
+                             {path for path in paths if paths[path] in bad})
+            conv = _add({}, conv, lambda key: (paths[key[0]], key[1]))
+            srcs = [key for key in set(orig) | set(conv)
+                    if orig.get(key) != conv.get(key)]
+            for key in sorted(srcs, key=str)[:10]:
+                logging.error('Different rates for %s', key)
     finally:
-        logging.getLogger().removeHandler(handler)
         gsim_lt.unlink(missing_ok=True)
-
-    # remove the added branches from the paths and restore the original
-    # IDs of the renamed sources (dummy branches were removed above)
-    normed = {}
-    for (path, srcid), rates in conv.items():
-        key = (tuple(branch_id(brnames.get(b, b)) for b in path
-                     if b not in added),
-               renamed.get(srcid, srcid))
-        normed.setdefault(key, []).extend(rates)
-    conv = normed
-    bad = []
-    for key in set(orig) | set(conv):
-        a, b = sorted(orig.get(key, [])), sorted(conv.get(key, []))
-        if len(a) != len(b) or any(
-                len(x) != len(y) or not numpy.allclose(x, y, rtol=1e-10)
-                for x, y in zip(a, b)):
-            bad.append(key)
-    npaths = len({k[0] for k in orig})
-    logging.warning('Checked %d realizations, %d (realization, source) '
-                    'pairs: %d different', npaths, len(orig), len(bad))
-    for key in sorted(bad, key=str)[:10]:
-        logging.error('Different rates for %s', key)
     logging.warning('MFD variants warning: %d in the original, %d in the '
-                    'converted logic tree', nwarn, len(warnings) - nwarn)
+                    'converted logic tree', warn_orig, warn_conv)
     return not bad
 
 
