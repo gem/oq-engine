@@ -46,8 +46,7 @@ overridden by each class::
     │       get_realizations, sample, get_num_paths, to_node, __toh5__,
     │       __fromh5__
     └── FullLogicTree
-            get_realizations, get_num_paths, sample → NotImplementedError,
-            __toh5__, __fromh5__
+            get_realizations, get_num_paths, sample, __toh5__, __fromh5__
 
 The classes are defined in the modules lt, logictree, gsim_lt, pfd_lt and
 amp_lt of openquake.hazardlib.

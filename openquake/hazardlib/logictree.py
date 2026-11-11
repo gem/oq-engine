@@ -1216,11 +1216,27 @@ class FullLogicTree(AbstractLogicTree):
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
-        Not implemented: the full logic tree is sampled through its
-        components, according to the num_samples of the source model
-        logic tree, see get_realizations
+        :param n: number of samples, must be positive
+        :param seed: random seed, used for the source model, the GSIMs
+            (seed + 1) and the extra logic tree (seed + 2)
+        :param sampling_method: by default 'early_weights'
+        :returns: n realizations, as get_realizations does with
+            number_of_logic_tree_samples=n; the tree is not modified
         """
-        raise NotImplementedError('FullLogicTree cannot be sampled directly')
+        if n < 1:
+            raise ValueError('The number of samples must be positive, got %r'
+                             % n)
+        # sample a copy with the same components: get_realizations sets the
+        # IMT weigher of the gsim_lt, so the gsim_lt is copied as well
+        new = copy.copy(self)
+        new._rlzs_by = ()
+        new.gsim_lt = copy.copy(self.gsim_lt)
+        new.source_model_lt = copy.copy(self.source_model_lt)
+        new.source_model_lt.num_samples = n
+        new.source_model_lt.seed = seed
+        new.source_model_lt.sampling_method = sampling_method
+        new.init()
+        return new.get_realizations()
 
     def get_realizations(self):
         """

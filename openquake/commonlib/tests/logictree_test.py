@@ -2524,5 +2524,52 @@ taxo4,taxo1,.5
         pandas.testing.assert_frame_equal(got, exp)
 
 
+def _full_lt(num_samples=0, seed=42, sampling_method='early_weights'):
+    # a full logic tree of the classical case_05 (6 source models, 12 GMPEs)
+    dname = os.path.dirname(case_05.__file__)
+    smlt = logictree.SourceModelLogicTree(
+        os.path.join(dname, 'smlt.xml'), seed=seed, num_samples=num_samples,
+        sampling_method=sampling_method)
+    gslt = logictree.GsimLogicTree(
+        os.path.join(dname, 'gmpe_logic_tree_MPS19.xml'),
+        ['Active Shallow Crust'])
+    return logictree.FullLogicTree(smlt, gslt)
+
+
+def _keys(rlzs):
+    # what identifies a realization: source model path, ordinal, weight,
+    # GMPEs
+    return [(tuple(rlz.sm_lt_path), rlz.ordinal,
+             round(float(rlz.weight[0]), 12),
+             tuple(str(v) for v in rlz.gsim_rlz.value))
+            for rlz in rlzs]
+
+
+class FullLogicTreeSampleTestCase(unittest.TestCase):
+    def test_sample(self):
+        # sample(n, seed) gives the realizations of a tree with
+        # number_of_logic_tree_samples=n and the same seed
+        flt = _full_lt()
+        before = _keys(flt.get_realizations())
+        got = flt.sample(7, 42)
+        expected = _full_lt(num_samples=7, seed=42).get_realizations()
+        self.assertEqual(len(got), 7)
+        self.assertEqual(_keys(got), _keys(expected))
+        # the tree is not modified
+        self.assertEqual(flt.source_model_lt.num_samples, 0)
+        self.assertEqual(_keys(flt.get_realizations()), before)
+
+    def test_sample_methods(self):
+        flt = _full_lt()
+        early = _keys(flt.sample(7, 42))
+        late = _keys(flt.sample(7, 42, 'late_weights'))
+        self.assertNotEqual(early, late)
+        self.assertEqual(early, _keys(flt.sample(7, 42)))  # deterministic
+
+    def test_sample_rejects_zero(self):
+        with self.assertRaises(ValueError):
+            _full_lt().sample(0, 42)
+
+
 def teardown_module():
     parallel.Starmap.shutdown()
