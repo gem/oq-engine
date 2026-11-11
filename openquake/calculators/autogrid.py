@@ -85,7 +85,10 @@ def calibration(srcs, sites, cmaker, keys, monitor):
     number of contexts and (rupture, site) pairs; unlike the time on the
     sample, it ranks correctly the cost of the full calculation
     """
-    cmaker.init_monitoring(monitor)
+    # NB: the child monitors are attached to an unregistered copy of the
+    # monitor, so that the calibration does not show up in the performance
+    # report (in particular 'building contexts' in the preclassical phase)
+    cmaker.init_monitoring(monitor.new())
     out = AccumDict()
     # Keep the batched magnitudes and shared distances, but release the
     # contexts between source batches instead of retaining the whole task.
