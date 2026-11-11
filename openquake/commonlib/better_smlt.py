@@ -103,9 +103,9 @@ from pathlib import Path
 from collections import Counter
 from contextlib import closing
 from openquake.baselib.general import duplicated, groupby
-from openquake.baselib.node import Node, node_from_elem, striptag
+from openquake.baselib.node import node_from_elem, striptag
 from openquake.baselib.parallel import Starmap
-from openquake.hazardlib import valid, logictree, lt, nrml
+from openquake.hazardlib import valid, logictree, lt, gsim_lt
 from openquake.hazardlib.logictree import SourceModelLogicTree, branch_id
 from openquake.hazardlib.source_reader import (
     modified_groups, get_bset_values, TWO24, MFD_UNCERTAINTY)
@@ -146,24 +146,6 @@ def _write_xml(root, path):
                     values, width=LINE_WIDTH, initial_indent=ind + '    ',
                     subsequent_indent=ind + '    ') + '\n' + ind)
     ET.ElementTree(root).write(path, encoding='utf-8', xml_declaration=True)
-
-
-def read_tree(smlt):
-    # Keep nested uncertainty models as XML nodes: conversion edits the
-    # topology; the engine parses their values during the equivalence check.
-    bsets = []
-    for level in nrml.read(str(smlt)).logicTree:
-        for node in logictree.bsnodes(str(smlt), level):
-            bs = lt.BranchSet(node['uncertaintyType'],
-                              lt.parse_filters(node.attrib), len(bsets))
-            bs.id = node['branchSetID']
-            for br in node:
-                model = br.uncertaintyModel
-                value = model if model.nodes else model.text
-                bs.branches.append(lt.Branch(
-                    br['branchID'], value, ~br.uncertaintyWeight, bs.id))
-            bsets.append(bs)
-    return bsets
 
 
 def _files(bs, branch):
@@ -328,16 +310,12 @@ def find_variants(copies, bsets, carriers, renamed):
 
 
 def _mfd_value(cp):
-    # write the absolute uncertainty using the original MFD element
+    # GR uncertainties are numeric values; other MFDs retain their XML.
     if cp.kind == 'truncGutenbergRichterMFD':
-        return Node('uncertaintyModel', text=' '.join(cp.params[:3]))
+        return cp.params[:3]
     if cp.kind == 'minMag':  # pseudo-kind, see _link_copies
-        return Node('uncertaintyModel', text=cp.params[3])
-    # Source files can use a different NRML version from the logic tree.
-    mfd = node_from_elem(cp.mfd)
-    for node in [mfd] + list(mfd):
-        node.tag = striptag(node.tag)
-    return Node('uncertaintyModel', nodes=[mfd])
+        return cp.params[3]
+    return node_from_elem(cp.mfd)
 
 
 def _mfd_bset(bsid, parent, branches):
@@ -350,15 +328,9 @@ def _mfd_bset(bsid, parent, branches):
             [pairs0[0][0]] if len(pairs0) == 1 else ['*'])))
     bs.id = bsid
     for br_id, weight, pairs in branches:
-        model = _mfd_value(pairs[0][1])
-        if len(pairs) > 1:
-            model = Node('uncertaintyModel')
-            for srcid, cp in pairs:
-                value = _mfd_value(cp)
-                value.tag = 'correlated'
-                value['src'] = srcid
-                model.append(value)
-        bs.branches.append(lt.Branch(br_id, model, weight, bsid))
+        values = {srcid: _mfd_value(cp) for srcid, cp in pairs}
+        value = values if bs.correlated else next(iter(values.values()))
+        bs.branches.append(lt.Branch(br_id, value, weight, bsid))
     return bs
 
 
@@ -712,7 +684,7 @@ def convert(smlt, outdir):
     """
     smlt, outdir = Path(smlt), Path(outdir)
     smlt_dir = smlt.parent
-    bsets = read_tree(smlt)
+    bsets = gsim_lt.read_branchsets(smlt)
     brnames = rename_branches(bsets)
     (copies, renamed, variants, rows, links, identity,
      skipped) = _read_variants(smlt_dir, bsets)
@@ -737,7 +709,7 @@ def convert(smlt, outdir):
     tree = lt.BranchSetLogicTree()
     tree.branchsets = [node for bs in bsets
                        for node in [bs] + after.get(bs.ordinal, [])]
-    (outdir / smlt.name).write_text(tree.to_nrml(), encoding='utf-8')
+    (outdir / smlt.name).write_text(tree.to_nrml('%.16E'), encoding='utf-8')
     for new, old in renamed.items():
         logging.info('Renamed source %s -> %s', old, new)
     for new, old in brnames.items():
@@ -936,7 +908,7 @@ def make_zip(job_ini, smlt, convdir, archive):
         if path not in old:
             src[path] = path
     src[os.path.normpath(smlt)] = convdir / smlt.name
-    bsets = read_tree(convdir / smlt.name)
+    bsets = gsim_lt.read_branchsets(convdir / smlt.name)
     for bs in bsets:
         for br in bs.branches:
             for f in _files(bs, br):

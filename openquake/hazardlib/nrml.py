@@ -414,12 +414,12 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None,
         read(output)  # validate the written file
 
 
-def to_string(node):
+def to_string(node, fmt='%.7E'):
     """
-    Convert a node into a string in NRML format
+    Convert a node into a string in NRML format, using the given float format
     """
     with io.BytesIO() as f:
-        write([node], f)
+        write([node], f, fmt=fmt)
         return f.getvalue().decode('utf-8')
 
 

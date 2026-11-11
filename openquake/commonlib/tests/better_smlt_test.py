@@ -185,7 +185,7 @@ def test_existing_nested_uncertainty(tmp_path):
       <logicTreeBranch branchID="changed">
         <uncertaintyModel><correlated src="1">
           <incrementalMFD minMag="5" binWidth="0.1">
-            <occurRates>3 2 1</occurRates>
+            <occurRates>0.123456789012345 2 1</occurRates>
           </incrementalMFD></correlated></uncertaintyModel>
         <uncertaintyWeight>1</uncertaintyWeight></logicTreeBranch>
     </logicTreeBranchSet>
@@ -197,7 +197,7 @@ def test_existing_nested_uncertainty(tmp_path):
     later = root.find('.//{*}logicTreeBranchSet[@branchSetID="later"]')
     assert later.find('.//{*}correlated').get('src') == '1'
     rates = later.find('.//{*}occurRates').text.split()
-    assert list(map(float, rates)) == [3., 2., 1.]
+    assert list(map(float, rates)) == [0.123456789012345, 2., 1.]
 
 
 def test_no_variants(tmp_path):

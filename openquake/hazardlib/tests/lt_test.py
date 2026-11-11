@@ -303,6 +303,60 @@ xmlns:gml="http://www.opengis.net/gml"
 '''
 
 
+class UncertaintySerializationTestCase(unittest.TestCase):
+    def _roundtrip(self, utype, value):
+        # Read back twice: the second write serializes parsed engine values,
+        # including the source-ID mapping of correlated uncertainties.
+        root = lt.BranchSet('sourceModel')
+        root.id = 'sm'
+        root.branches = [lt.Branch('base', '_fake.xml', 1., root.id)]
+        bset = lt.BranchSet(utype, dict(applyToSources=['*'],
+                                       applyToBranches=['base']))
+        bset.id = 'mfd'
+        bset.branches = [lt.Branch('change', value, 1., bset.id)]
+        tree = lt.BranchSetLogicTree()
+        tree.branchsets = [root, bset]
+        for _ in range(2):
+            fname = gettemp(tree.to_nrml('%.16E'), suffix='.xml')
+            tree = logictree.SourceModelLogicTree(fname, test_mode=True)
+            ae(tree.branchsets[1].branches[0].value, value)
+        return nrml.read(fname).logicTree[1]
+
+    def test_incremental(self):
+        value = {'s1': (4.5, .1, [.123456789012345, .2]),
+                 's2': (5., .2, [.3])}
+        node = self._roundtrip('incrementalMFDAbsolute', value)
+        self.assertEqual(node['applyToSources'], '*')
+        self.assertEqual(node['applyToBranches'], 'base')
+
+    def test_multi_mfd(self):
+        cases = [
+            ('incrementalMFD', 3, dict(
+                min_mag=[4.5], bin_width=[.1],
+                occurRates=[[.123456789012345, .2], [.3], [.4, .5, .6]])),
+            ('truncGutenbergRichterMFD', 2, dict(
+                a_val=[2., 3.], b_val=[1.], min_mag=[4.5], max_mag=[7.])),
+            ('truncGutenbergRichterMFD', 2, dict(
+                a_val=[2., 3.], b_val=[1.], min_mag=[4.5], max_mag=[7.],
+                bin_width=[.1]))]
+        for value in cases:
+            with self.subTest(value=value):
+                node = self._roundtrip('multiMFDAbsolute', {'src': value})
+                mfd = node[0].uncertaintyModel[0].multiMFD
+                self.assertEqual(hasattr(mfd, 'bin_width'),
+                                 'bin_width' in value[2])
+
+    def test_reused_xml(self):
+        model = Node('uncertaintyModel', nodes=[Node(
+            'incrementalMFD', dict(minMag=4.5, binWidth=.1),
+            nodes=[Node('occurRates', text=[.1])])])
+        before = nrml.to_string(model)
+        value = {'s1': model, 's2': model}
+        node = lt.uncertainty_to_node('incrementalMFDAbsolute', value, True)
+        self.assertEqual([n['src'] for n in node], ['s1', 's2'])
+        self.assertEqual(nrml.to_string(model), before)
+
+
 class CompositeLogicTreeTestCase(unittest.TestCase):
 
     def test5(self):
@@ -708,6 +762,19 @@ class MinMagGRAbsoluteTestCase(unittest.TestCase):
 
 
 class AbstractLogicTreeTestCase(unittest.TestCase):
+    def test_gsim_nrml(self):
+        tree = gsim_lt.GsimLogicTree.from_('BooreAtkinson2008')
+        fname = gettemp(tree.to_nrml(), suffix='.xml')
+        new = gsim_lt.GsimLogicTree(fname)
+        self.assertEqual(repr(new.values['*'][0]), '[BooreAtkinson2008]')
+        self.assertEqual(new.get_num_paths(), 1)
+        self.assertEqual(new.branches[0].weight['default'], 1.)
+
+    def test_full_nrml(self):
+        tree = logictree.FullLogicTree.fake()
+        with self.assertRaisesRegex(NotImplementedError, 'FullLogicTree'):
+            tree.to_nrml()
+
     # the common interface of the logic trees, see lt.AbstractLogicTree
 
     def test_subclasses(self):

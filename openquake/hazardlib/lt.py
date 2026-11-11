@@ -25,11 +25,10 @@ overridden by each class::
 
     AbstractLogicTree
     │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
-    │   sample
+    │   sample, to_node, to_nrml
     ├── BranchSetLogicTree
     │   │   root_branchset, set_num_paths, get_num_paths, get_realizations,
-    │   │   sample, get_all_paths, to_node, to_nrml, h5attrs, __toh5__,
-    │   │   __fromh5__
+    │   │   sample, get_all_paths, to_node, h5attrs, __toh5__, __fromh5__
     │   ├── CompositeLogicTree
     │   │       sample_paths, apply_all
     │   ├── SourceModelLogicTree
@@ -48,6 +47,14 @@ overridden by each class::
     └── FullLogicTree
             get_realizations, get_num_paths, sample, __toh5__, __fromh5__
 
+NRML export is optional: AbstractLogicTree.to_nrml calls to_node, which
+BranchSetLogicTree and GsimLogicTree implement. FullLogicTree combines
+separate trees and inherits the default to_node raising NotImplementedError.
+The uncertainty_to_node helper serializes MFD values and correlated mappings.
+The gsim_lt.read_branchsets helper reads editable branchsets without
+validating branch IDs or loading source files, retaining nested uncertainty
+XML.
+
 The classes are defined in the modules lt, logictree, gsim_lt, pfd_lt and
 amp_lt of openquake.hazardlib.
 """
@@ -65,7 +72,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, BASE183
-from openquake.baselib.node import Node
+from openquake.baselib.node import Node, striptag
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -371,6 +378,40 @@ def pfd_r_sigma(utype, node, filename):
             node, filename,
             'value must be a non-negative finite float (km), got %r' % raw)
     return value
+
+
+def uncertainty_to_node(utype, value, correlated=False):
+    """
+    Serialize a text value, parsed MFD uncertainty or correlated mapping.
+    Unparsed uncertaintyModel or MFD nodes are also accepted, so editing a
+    tree does not require parsing and reconstructing unrelated geometries.
+    """
+    if isinstance(value, Node):
+        if striptag(value.tag) == 'uncertaintyModel':
+            return value
+        return Node('uncertaintyModel', nodes=[value])
+    if correlated:
+        nodes = []
+        for srcid, val in value.items():
+            node = copy.copy(uncertainty_to_node(utype, val))
+            node.tag = 'correlated'
+            node.attrib = dict(node.attrib, src=srcid)
+            nodes.append(node)
+        return Node('uncertaintyModel', nodes=nodes)
+    if utype == 'incrementalMFDAbsolute':
+        min_mag, bin_width, rates = value
+        mfd = Node('incrementalMFD', dict(minMag=min_mag, binWidth=bin_width),
+                   nodes=[Node('occurRates', text=rates)])
+        return Node('uncertaintyModel', nodes=[mfd])
+    if utype == 'multiMFDAbsolute':
+        from openquake.hazardlib.sourcewriter import build_multi_mfd
+        kind, size, kwargs = value
+        mfd = build_multi_mfd(MultiMFD(kind, size, **kwargs))
+        # An omitted bin width is inherited from the source, not written NaN.
+        mfd.nodes = [n for n in mfd if striptag(n.tag) != 'bin_width' or
+                     'bin_width' in kwargs]
+        return Node('uncertaintyModel', nodes=[mfd])
+    return Node('uncertaintyModel', text=value)
 
 
 # validations
@@ -919,7 +960,8 @@ class Branch(object):
         The actual uncertainty parameter value. A text node contents
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type. For serialization, an unparsed
-        ``uncertaintyModel`` Node can be supplied to retain nested XML.
+        ``uncertaintyModel`` or MFD Node can retain nested XML. Correlated
+        uncertainties use a dictionary of source IDs to uncertainty values.
     :param weight:
         float value of weight assigned to the branch. A text node contents
         of ``<uncertaintyWeight />`` child node.
@@ -951,11 +993,9 @@ class Branch(object):
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
 
-    def to_node(self):
+    def to_node(self, uncertainty_type=None, correlated=False):
         attrib = dict(branchID=self.branch_id)
-        # An unparsed uncertainty model can contain nested XML elements.
-        model = (self.value if isinstance(self.value, Node) else
-                 Node('uncertaintyModel', {}, self.value))
+        model = uncertainty_to_node(uncertainty_type, self.value, correlated)
         nodes = [model,
                  Node('uncertaintyWeight', {}, self.weight)]
         return Node('logicTreeBranch', attrib, None, nodes)
@@ -1443,7 +1483,8 @@ class AbstractLogicTree(abc.ABC):
     Common interface of the logic trees. The subclasses must define
     get_num_paths, get_realizations and the serialization methods
     __toh5__ and __fromh5__; sample can be overridden, by default it
-    samples the realizations by weight.
+    samples the realizations by weight. Subclasses supporting NRML export
+    override to_node and inherit to_nrml.
     """
     @abc.abstractmethod
     def get_num_paths(self):
@@ -1470,6 +1511,19 @@ class AbstractLogicTree(abc.ABC):
         Restore the logic tree from the data and the attributes returned
         by __toh5__ and stored in the datastore
         """
+
+    def to_node(self):
+        """Return an XML node, when this tree supports NRML export."""
+        raise NotImplementedError(
+            f'{type(self).__name__} does not support NRML export')
+
+    def to_nrml(self, fmt='%.7E'):
+        """
+        Converts the logic tree into a string in NRML format.
+
+        :param fmt: format for floating-point values
+        """
+        return nrml.to_string(self.to_node(), fmt)
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -1719,15 +1773,10 @@ class BranchSetLogicTree(AbstractLogicTree):
             attrib.update((key, val) for key, val in bset.filters.items()
                           if val)
             n = Node('logicTreeBranchSet', attrib, None,
-                     [br.to_node() for br in bset.branches])
+                     [br.to_node(bset.uncertainty_type, bset.correlated)
+                      for br in bset.branches])
             out.nodes.append(n)
         return out
-
-    def to_nrml(self):
-        """
-        Converts the logic tree into a string in NRML format
-        """
-        return nrml.to_string(self.to_node())
 
 
 class ExtraLogicTree(BranchSetLogicTree):
