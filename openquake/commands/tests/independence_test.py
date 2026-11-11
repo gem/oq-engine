@@ -24,7 +24,6 @@ level 7            engine
 level 6            calculators
 level 5            commonlib
 level 4            risklib
-level 3            hmtk
 level 2            hazardlib, sep
 level 1            baselib
 """
@@ -42,10 +41,6 @@ class IndependenceTestCase(unittest.TestCase):
     def test_risklib(self):
         assert_independent('openquake.risklib', 'openquake.commonlib')
         assert_independent('openquake.risklib', 'openquake.calculators')
-
-    def test_hmtk(self):
-        assert_independent('openquake.hmtk', 'openquake.risklib')
-        assert_independent('openquake.hmtk', 'openquake.commonlib')
 
     def test_commonlib(self):
         assert_independent('openquake.commonlib', 'openquake.calculators')

@@ -26,7 +26,7 @@ from shapely.geometry import Polygon, box
 from dataclasses import dataclass
 from typing import Any
 from openquake.commonlib import readinput, datastore
-from openquake.hmtk.plotting.patch import PolygonPatch
+from openquake.hazardlib.geo.utils import PolygonPatch
 
 
 def auto_limits(ax):

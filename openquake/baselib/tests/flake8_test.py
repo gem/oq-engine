@@ -210,7 +210,6 @@ def test_forbid_long_funcs():
                                  'openquake.risklib',
                                  'openquake.calculators',
                                  'openquake.engine',
-                                 'openquake.hmtk',
                                  'openquake.sep',
                                  'openquake._unc',
                                  ], MAX_FUN_LEN)

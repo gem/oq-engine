@@ -14,7 +14,6 @@ Contents:
    openquake.baselib
    openquake.hazardlib
    openquake.pfd
-   openquake.hmtk
    openquake.risklib
    openquake.commonlib
    openquake.calculators

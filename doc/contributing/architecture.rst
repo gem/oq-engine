@@ -43,7 +43,6 @@ vice versa:
 - **level 6**: calculators (hazard and risk calculators)
 - **level 5**: commonlib (configuration, logic trees, I/O)
 - **level 4**: risklib (risk validation, risk models, risk inputs)
-- **level 3**: hmtk (catalogues, plotting, …)
 - **level 2**: hazardlib (validation, read/write XML, source and site objects, geospatial utilities, GSIM library)
 - **level 1**: baselib (programming utilities, parallelization, monitoring, hdf5…)
 
