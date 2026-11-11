@@ -1,4 +1,8 @@
-  [Michele Simionato]
+ [Anirudh Rao]
+  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
+    correlation model
+
+ [Michele Simionato]
   * Added a warning for sources with different IDs, the same geometry and
     different MFDs, which are likely variants of a base source, and
     `oq check_input --better-smlt` now generates a job.zip
