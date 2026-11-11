@@ -918,7 +918,8 @@ class Branch(object):
     :param value:
         The actual uncertainty parameter value. A text node contents
         of ``<uncertaintyModel />`` child node. Type depends
-        on the branchset's uncertainty type.
+        on the branchset's uncertainty type. For serialization, an unparsed
+        ``uncertaintyModel`` Node can be supplied to retain nested XML.
     :param weight:
         float value of weight assigned to the branch. A text node contents
         of ``<uncertaintyWeight />`` child node.
@@ -952,7 +953,10 @@ class Branch(object):
 
     def to_node(self):
         attrib = dict(branchID=self.branch_id)
-        nodes = [Node('uncertaintyModel', {}, self.value),
+        # An unparsed uncertainty model can contain nested XML elements.
+        model = (self.value if isinstance(self.value, Node) else
+                 Node('uncertaintyModel', {}, self.value))
+        nodes = [model,
                  Node('uncertaintyWeight', {}, self.weight)]
         return Node('logicTreeBranch', attrib, None, nodes)
 
