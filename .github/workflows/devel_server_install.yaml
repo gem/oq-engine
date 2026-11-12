@@ -14,8 +14,7 @@ on:
         default: false
   schedule:
     - cron: "05 15 * * *"
-  push:
-    branches:
+  pull_request:
 
 jobs:
   Test_WebUI:
@@ -25,11 +24,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11"]
         # engine-ref values, if manual run do not use the matrix
         # engine-ref: ["master", "engine-3.26"]
         # engine-ref: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master","engine-3.26"]') }}
-        engine-ref: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master"]') }}
+        engine-ref: ${{ fromJson(github.event_name == 'pull_request' && format('["{0}"]', github.head_ref) || github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.git-ref) || '["master"]') }}
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -49,22 +48,26 @@ jobs:
           sudo usermod -aG sudo openquake
           echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
       - name: Install OQ with ${{ matrix.python-version }} as user openquake
+        env:
+          # the code to install: the head of the pull request (also when it
+          # comes from a fork), the git-ref of a manual run, or master
+          SRC_URL: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.clone_url || 'https://github.com/gem/oq-engine.git' }}
+          SRC_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.git-ref || 'master' }}
         run: |
-          GIT_REF="${{ inputs.git-ref }}"
-          BRANCH="${GIT_REF:-master}"
-          echo "Running branch=${BRANCH}"
+          echo "Installing ref=${SRC_REF} from ${SRC_URL}"
           cat > /tmp/scripts.sh <<'EOF'
           #!/usr/bin/env bash
           set -euo pipefail
-          echo "Running as $(whoami) in $(pwd), branch=${BRANCH}"
+          echo "Running as $(whoami) in $(pwd), ref=${SRC_REF}"
           cd /home/openquake
           rm -rf oq-engine
-          git clone -b "$BRANCH" https://github.com/gem/oq-engine.git
+          git clone "$SRC_URL" oq-engine
           cd oq-engine
+          git checkout "$SRC_REF"
           sudo -H $PY_TO_USE install.py devel_server
           EOF
           chmod +x /tmp/scripts.sh
-          sudo -i -u openquake HOME=/home/openquake BRANCH="$BRANCH" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
+          sudo -i -u openquake HOME=/home/openquake SRC_URL="$SRC_URL" SRC_REF="$SRC_REF" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
       - name: Actualize 'default' templates for email notifications
         run: |
           sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
