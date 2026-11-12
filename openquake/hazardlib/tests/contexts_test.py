@@ -65,6 +65,12 @@ def set_msparams(src, sectiondict):
     src.set_msparams(secparams, ry0=True)
 
 
+
+def _canonical(ctx):
+    # sort the rows of a context array by all its scalar fields
+    names = [n for n in ctx.dtype.names if ctx.dtype[n].shape == ()]
+    return numpy.sort(ctx.view(numpy.ndarray), order=names)
+
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -542,8 +548,11 @@ class FromSrcsPsdistsTestCase(unittest.TestCase):
             expected = cmaker.from_srcs([src], sites, [15., 100.])
             batched = cmaker.copy(batch_point_sources=True)
             actual = batched.from_srcs([src], sites, [15., 100.])
+            # the batched rows can come in a different order (grouped by
+            # site), so the rows are compared in a canonical order
             for psd in expected:
-                numpy.testing.assert_array_equal(actual[psd], expected[psd])
+                numpy.testing.assert_array_equal(
+                    _canonical(actual[psd]), _canonical(expected[psd]))
 
     def test(self):
         # the contexts built at once for several pointsource distances

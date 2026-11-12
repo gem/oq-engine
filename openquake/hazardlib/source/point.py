@@ -357,7 +357,7 @@ class PointSource(ParametricSeismicSource):
         hdf = self.hypo_dip_fracs
         return (mags, npd, tuple(self.hypocenter_distribution.data),
                 None if hdf is None else tuple(hdf),
-                id(self.magnitude_scaling_relationship),
+                type(self.magnitude_scaling_relationship), msr_name(self),
                 self.rupture_aspect_ratio,
                 self.upper_seismogenic_depth, self.lower_seismogenic_depth)
 

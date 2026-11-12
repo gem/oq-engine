@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import config
 from openquake.baselib.general import (
-    DictArray, RecordBuilder, split_in_slices, block_splitter,
+    AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     getsizeof)
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
@@ -42,6 +42,7 @@ from openquake.hazardlib.calc.filters import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.geodetic import spherical_to_cartesian
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar, precompute_planars)
 
@@ -68,6 +69,8 @@ PAIR_COST = 20.
 MAX_CTX = 10_000  # max number of rows passed to the GMPEs, see _gen_poes
 # number of point sources whose planars are built together, see from_srcs
 PRECOMPUTE = 1000
+# number of point sources processed together by _gen_site_ctxs
+SITE_CHUNK = 4000
 # max number of (expected) contexts held in memory at the same time when
 # collapsing, see _collapse_by_mag; 5 millions gave workers of over 11 GB
 # in the CHN model
@@ -446,6 +449,343 @@ def _batched_quintets(src, planardict, meandict, magdist, magrange, psdists,
         flat = rowbands[:, ok].flatten()
         yield ([(kk, flat == i) for kk, i in groups], 0, mags[mi],
                mdists[mi], planars, sites.filter(ok))
+
+
+# indices of the concatenated ranges start..stop, i.e. the vectorized
+# version of numpy.concatenate([numpy.arange(a, b) for a, b in ...])
+def _multi_arange(starts, stops):
+    lens = stops - starts
+    offsets = numpy.cumsum(lens) - lens  # position of each range
+    return numpy.repeat(starts - offsets, lens) + numpy.arange(lens.sum())
+
+
+# the sids of the sites close to the point source and their distances
+# from its location, selected as in from_srcs and _quintets, or None
+def _close_sites(src, radii, magdist, srcfilter):
+    sites = srcfilter.get_close_sites(src)
+    src.nsites = 0 if sites is None else len(sites)
+    valid = {mag: dist for mag, dist in magdist.items() if dist > 0}
+    if sites is None or not valid:
+        return None
+    maxdist = valid[max(valid)]
+    cdist = sites.get_cdist(src.location)
+    mask = cdist <= maxdist + src.max_radius(maxdist, radii)
+    return sites.sids[mask], cdist[mask]
+
+
+# yield (mag, psdists, mean planar, planars) for the magnitudes of a point
+# source inside the range of the maximum distance, as in _quintets; with a
+# single rupture per magnitude there is no mean planar and psdists is None,
+# since the same rupture is used for all the pointsource distances
+def _mag_entries(cmaker, src, pre, magdist, psdists):
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    if src.count_nphc() == 1:
+        for mag, pla in pre.planars.items():
+            if minmag <= mag <= maxmag:
+                yield mag, None, None, pla[:1]
+        return
+    for m, (mag, [mpla]) in enumerate(pre.means.items()):
+        if minmag <= mag <= maxmag:
+            psdist = [src.get_psdist(m, mag, psd, magdist, pre.radii)
+                      for psd in psdists]
+            yield mag, psdist, mpla.reshape(-1, 3), pre.planars[mag]
+
+
+# A block of the tables of _site_tables is an AccumDict of lists with the
+# entries (mag, rate, mdist, psdist, src), the rows of the mean ruptures
+# and of all the ruptures with the entry they belong to (mean_rows,
+# mean_entry, all_rows, all_entry) and the pairs source-site with their
+# distance (psrc, psid, pcd); the indices are relative to the block.
+# This is the block for the point sources processed one by one, i.e. the
+# ones without a planar key which are not collapsed.
+def _generic_block(cmaker, srcs, srcfilter, psdists):
+    inf = [numpy.inf] * len(psdists)
+    blk = AccumDict(accum=[])
+    pre = precompute_planars(srcs, cmaker.shift_hypo)
+    for s, (src, p) in enumerate(zip(srcs, pre)):
+        mags = list(p.planars)
+        magdist = dict(zip(mags, cmaker.maximum_distance(numpy.array(mags))))
+        close = _close_sites(src, p.radii, magdist, srcfilter)
+        if close is None or len(close[0]) == 0:
+            continue
+        blk['psrc'].append(numpy.full(len(close[0]), s))
+        blk['psid'].append(close[0])
+        blk['pcd'].append(close[1])
+        mrate = dict(src.get_annual_occurrence_rates())
+        for mag, psdist, mean, alls in _mag_entries(
+                cmaker, src, p, magdist, psdists):
+            entry = len(blk['mag'])
+            blk['mag'].append([mag])
+            blk['rate'].append([mrate[mag]])
+            blk['mdist'].append([magdist[mag]])
+            blk['psdist'].append([inf if psdist is None else psdist])
+            blk['src'].append([s])
+            if mean is not None:
+                blk['mean_rows'].append(mean)
+                blk['mean_entry'].append(numpy.full(len(mean), entry))
+            for pla in alls:
+                blk['all_rows'].append(pla)
+                blk['all_entry'].append(numpy.full(len(pla), entry))
+    blk['ids'] = [src.id for src in srcs]
+    return blk
+
+
+# add to the block the entries and the rows with all the ruptures of P
+# point sources with the same planar key; `srcidx` contains the index of
+# the source the rows belong to (for the points of collapsed sources, the
+# index of the cell) and `psd` the pointsource distances, P arrays of
+# shape (M, K) or a single one valid for all the sources
+def _add_rows(blk, cmaker, srcs, srcidx, mags, magdist, inrange, psd):
+    rates = numpy.array([[rate for _mag, rate in
+                          src.get_annual_occurrence_rates()]
+                         for src in srcs])[:, inrange]
+    P, M = rates.shape
+    lons = numpy.array([src.location.x for src in srcs])
+    lats = numpy.array([src.location.y for src in srcs])
+    planar = srcs[0]._build_planar(  # shape (P, M, N, D, 3)
+        lons, lats, cmaker.shift_hypo)[:, inrange]
+    nphc = planar.shape[2] * planar.shape[3]
+    offset = sum(len(mag) for mag in blk['mag'])  # entries in the block
+    blk['mag'].append(numpy.tile(mags[inrange], P))
+    blk['rate'].append(rates.flatten())
+    blk['mdist'].append(numpy.tile(magdist[inrange], P))
+    blk['psdist'].append(
+        numpy.concatenate([p[inrange] for p in psd]) if isinstance(psd, list)
+        else numpy.tile(psd[inrange], (P, 1)))
+    blk['src'].append(numpy.repeat(srcidx, M))
+    blk['all_rows'].append(planar.reshape(-1, 3))
+    blk['all_entry'].append(offset + numpy.repeat(numpy.arange(P * M), nphc))
+    return offset, lons, lats
+
+
+# Block for point sources with the same planar key, i.e. differing only
+# by location and rates: the close sites, the planars and the entries are
+# built for all the sources at once
+def _group_block(cmaker, srcs, srcfilter, psdists):
+    src0 = srcs[0]
+    md = cmaker.maximum_distance
+    mags = numpy.array([mag for mag, _r in src0.get_annual_occurrence_rates()])
+    magdist = md(mags)
+    radii = src0._get_rupture_projection_radii()
+    xyz = spherical_to_cartesian(*numpy.array(
+        [(s.location.x, s.location.y, s.location.z) for s in srcs]).T)
+    # sites within the maximum distance, as in SourceFilter.close_sids
+    lists = srcfilter.close_ids(xyz, md.y[-1] + src0.max_radius(md.y[-1]))
+    for src, ids in zip(srcs, lists):
+        src.nsites = len(ids)
+    valid = magdist > 0
+    inrange = (mags >= md.x[0]) & (mags <= md.x[-1])
+    blk = AccumDict(accum=[])
+    if not valid.any() or not inrange.any():
+        return blk
+    # then the sites are filtered as in _quintets
+    maxdist = magdist[valid][mags[valid].argmax()]
+    psrc = numpy.repeat(numpy.arange(len(srcs)), [len(ids) for ids in lists])
+    pos = numpy.concatenate(lists).astype(int)
+    cd = numpy.sqrt(
+        ((xyz[psrc] - srcfilter.sitecol.xyz[pos]) ** 2).sum(axis=1))
+    ok = cd <= maxdist + src0.max_radius(maxdist, radii)
+    if not ok.any():
+        return blk
+    # keep only the sources with close sites
+    sel, psrc = numpy.unique(psrc[ok], return_inverse=True)
+    srcs = [srcs[i] for i in sel]
+    blk.update(ids=[src.id for src in srcs], psrc=[psrc],
+               psid=[srcfilter.sitecol.sids[pos[ok]]], pcd=[cd[ok]])
+    if src0.count_nphc() == 1:  # the same rupture for all the distances
+        psd = numpy.full((len(mags), len(psdists)), numpy.inf)
+    else:  # as in PointSource.get_psdist
+        psd = numpy.array(psdists) + numpy.minimum(
+            radii, magdist / 2)[:, None]
+    _off, lons, lats = _add_rows(blk, cmaker, srcs, numpy.arange(len(srcs)),
+                                 mags, magdist, inrange, psd)
+    if src0.count_nphc() > 1:
+        mean = src0.mean_source()._build_planar(
+            lons, lats, cmaker.shift_hypo)[:, inrange]
+        blk['mean_rows'].append(mean.reshape(-1, 3))
+        blk['mean_entry'].append(numpy.arange(len(blk['mag'][0])))
+    return blk
+
+
+# Block for the collapsed point sources (cells): the far sites use the mean
+# rupture of the cell and the close sites all the ruptures of the
+# underlying points, which are built together for all the cells, with the
+# pointsource distances of the cell they belong to
+def _collapsed_block(cmaker, cells, srcfilter, psdists):
+    md = cmaker.maximum_distance
+    blk = AccumDict(accum=[])
+    points, cellidx, cellpsd = [], [], {}
+    for s, cell in enumerate(cells):
+        mags, rates = numpy.array(cell.get_annual_occurrence_rates()).T
+        magdist = md(mags)
+        radii = cell._get_rupture_projection_radii()
+        close = _close_sites(cell, radii, dict(zip(mags, magdist)), srcfilter)
+        inrange = (mags >= md.x[0]) & (mags <= md.x[-1])
+        if close is None or len(close[0]) == 0 or not inrange.any():
+            continue
+        blk['psrc'].append(numpy.full(len(close[0]), s))
+        blk['psid'].append(close[0])
+        blk['pcd'].append(close[1])
+        # as in CollapsedPointSource.get_psdist
+        psd = cell.extent + numpy.array(psdists) + numpy.minimum(
+            radii, magdist / 2)[:, None]
+        cellpsd[s] = dict(zip(mags, psd))  # mag -> pointsource distances
+        mean = cell.mean_source()
+        rows = mean._build_planar(
+            mean.location.x, mean.location.y, cmaker.shift_hypo)[inrange]
+        offset = sum(len(mag) for mag in blk['mag'])
+        blk['mag'].append(mags[inrange])
+        blk['rate'].append(rates[inrange])
+        blk['mdist'].append(magdist[inrange])
+        blk['psdist'].append(psd[inrange])
+        blk['src'].append(numpy.full(inrange.sum(), s))
+        blk['mean_rows'].append(rows.reshape(-1, 3))
+        blk['mean_entry'].append(offset + numpy.arange(inrange.sum()))
+        pts = cell.pointsources
+        points.extend(pts)
+        cellidx.extend([s] * len(pts))
+    groups = AccumDict(accum=[])  # planar key -> indices of the points
+    for i, point in enumerate(points):
+        groups[point.planar_key() or i].append(i)
+    cellidx = numpy.array(cellidx)
+    for idxs in groups.values():
+        pts = [points[i] for i in idxs]
+        mags = numpy.array(
+            [mag for mag, _r in pts[0].get_annual_occurrence_rates()])
+        inrange = (mags >= md.x[0]) & (mags <= md.x[-1])
+        if inrange.any():
+            psd = [numpy.array([cellpsd[s][mag] for mag in mags])
+                   for s in cellidx[idxs]]
+            _add_rows(blk, cmaker, pts, cellidx[idxs], mags, md(mags),
+                      inrange, psd)
+    blk['ids'] = [cell.id for cell in cells]
+    return blk
+
+
+# Tables used by _gen_site_ctxs for a chunk of point sources. There is an
+# entry for each pair (source, magnitude) with the magnitude, its rate,
+# its maximum distance, its effective pointsource distances and the index
+# of the source; the planars of the mean ruptures and of all the ruptures
+# are stored in two arrays ordered by source, with the entry of each row
+# and the range of rows of each source; the pairs (source, close site) are
+# stored with their distance. The sources are numbered block by block.
+def _site_tables(cmaker, srcs, srcfilter, psdists):
+    groups = AccumDict(accum=[])  # planar key -> sources
+    for src in srcs:
+        groups[src.planar_key()].append(src)
+    nokey = groups.pop(None, [])
+    # the collapsed sources with more than one underlying point
+    cells = [src for src in nokey if len(getattr(src, 'pdata', {}).get(
+        'array', ())) > 1]
+    cellids = {id(cell) for cell in cells}
+    others = [src for src in nokey if id(src) not in cellids]
+    blocks = [_group_block(cmaker, group, srcfilter, psdists)
+              for group in groups.values()]
+    if cells:
+        blocks.append(_collapsed_block(cmaker, cells, srcfilter, psdists))
+    if others:
+        blocks.append(_generic_block(cmaker, others, srcfilter, psdists))
+    blocks = [blk for blk in blocks if blk['mag']]
+    if not blocks:  # no source affects the sites
+        return None
+    soff = numpy.cumsum([0] + [len(blk['ids']) for blk in blocks[:-1]])
+    tab = {name: numpy.concatenate([arr for blk in blocks
+                                    for arr in blk[name]])
+           for name in ('mag', 'rate', 'mdist', 'psdist', 'psid', 'pcd')}
+    for name in ('src', 'psrc'):  # with the global index of the source
+        tab[name] = numpy.concatenate(
+            [arr + off for blk, off in zip(blocks, soff) for arr in blk[name]])
+    tab['srcids'] = numpy.array([i for blk in blocks for i in blk['ids']])
+    eoff = numpy.cumsum([0] + [sum(len(mag) for mag in blk['mag'])
+                               for blk in blocks[:-1]])
+    for kind in ('mean', 'all'):
+        tab[kind] = _rows_by_src(
+            [pla for blk in blocks for pla in blk[kind + '_rows']],
+            [arr + off for blk, off in zip(blocks, eoff)
+             for arr in blk[kind + '_entry']], tab['src'], len(tab['srcids']))
+    return tab
+
+
+# concatenate the rows of the planars and order them by source; returns a
+# dictionary with the planar array, the entry of each row and the range
+# of rows (starts, stops) of each source
+def _rows_by_src(planars, entries, src, nsrcs):
+    if not planars:
+        zero = numpy.zeros(nsrcs, int)
+        return dict(planar=None, entry=zero[:0], starts=zero, stops=zero)
+    planar = numpy.concatenate(planars)
+    entry = numpy.concatenate(entries)
+    rowsrc = src[entry]
+    if (numpy.diff(rowsrc) < 0).any():  # not ordered
+        order = numpy.argsort(rowsrc, kind='stable')
+        planar, entry, rowsrc = planar[order], entry[order], rowsrc[order]
+    stops = numpy.cumsum(numpy.bincount(rowsrc, minlength=nsrcs))
+    return dict(planar=planar.view(numpy.recarray), entry=entry,
+                stops=stops, starts=numpy.concatenate([[0], stops[:-1]]))
+
+
+def _gen_site_ctxs(cmaker, srcs, sitecol, srcfilter, psdists):
+    """
+    Context generator equivalent to calling genctxs_Pp on each point
+    source, but looping on the sites: for each site the contexts of all
+    the sources are built with a single call for the mean ruptures (used
+    if the site is far) and one for all the ruptures (used if the site is
+    close). This is much faster with many point sources and sparse sites,
+    like in the calibration, since the overhead is per site and not per
+    source and magnitude.
+
+    :yields: pairs (ks, ctx) like genctxs_Pp
+    """
+    tab = _site_tables(cmaker, srcs, srcfilter, psdists)
+    if tab is None:
+        return
+    dd = cmaker.defaultdict.copy()
+    dd['probs_occur'] = numpy.zeros(0)
+    builder = RecordBuilder(**dd)
+    cmaker.siteparams = [par for par in sitecol.array.dtype.names
+                         if par in dd]
+    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {
+        'occurrence_rate'}
+    ks = tuple(range(len(psdists)))
+    # a site of band i, i.e. psdist[i-1] < cd <= psdist[i], is far for the
+    # distances before i (mean ruptures) and close for the others
+    far = [(ks[:i], i) for i in range(1, len(ks) + 1)]
+    close = [(ks[i:], i) for i in range(len(ks))]
+    order = numpy.argsort(tab['psid'], kind='stable')
+    sids, starts = numpy.unique(tab['psid'][order], return_index=True)
+    for sid, idx in zip(sids, numpy.split(order, starts[1:])):
+        site = sitecol.complete.filtered(numpy.array([sid]))
+        for kind, groups in (('mean', far), ('all', close)):
+            yield from _site_kind_ctxs(
+                cmaker, builder, tab, tab[kind], groups, site,
+                tab['psrc'][idx], tab['pcd'][idx])
+
+
+# contexts of a single site for the given sources (with indices srcs and
+# distances cds from the site), for the mean ruptures or all the ruptures
+def _site_kind_ctxs(cmaker, builder, tab, kind, groups, site, srcs, cds):
+    starts, stops = kind['starts'][srcs], kind['stops'][srcs]
+    rows = _multi_arange(starts, stops)
+    entry = kind['entry'][rows]
+    # number of pointsource distances smaller than the site distance
+    band = (tab['psdist'][entry] < numpy.repeat(
+        cds, stops - starts)[:, None]).sum(axis=1)
+    ok = (band >= groups[0][1]) & (band <= groups[-1][1])
+    if not ok.any():
+        return
+    rows, entry, band = rows[ok], entry[ok], band[ok]
+    with cmaker.ctx_mon:
+        ctx = _get_ctx_planar(
+            cmaker, builder, tab['mag'][entry], tab['rate'][entry], 0,
+            kind['planar'][rows], site, tab['srcids'][tab['src'][entry]],
+            0, None)
+    cmaker.ctx_mon.counts += len(rows) - 1
+    inrange = ctx.rrup < tab['mdist'][entry]
+    for ks, i in groups:
+        ctxt = ctx[inrange & (band == i)]
+        if len(ctxt):
+            yield ks, ctxt
 
 
 def collapse_ctx(ctx, rparams, dparams, prec):
@@ -1225,6 +1565,18 @@ class ContextMaker(object):
         ctxs = []
         bypsd = [[] for _ in psdists]  # contexts for each distance
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
+        if psdists and self._loop_on_sites(srcs, sitecol):
+            # much faster than looping on the sources, see _gen_site_ctxs
+            for i, src in enumerate(srcs):
+                if src.id == -1:  # not set yet
+                    src.id = i
+            for start in range(0, len(srcs), SITE_CHUNK):
+                chunk = srcs[start:start + SITE_CHUNK]
+                for ks, ctx in _gen_site_ctxs(
+                        self, chunk, sitecol, srcfilter, psdists):
+                    for k in ks:
+                        bypsd[k].append(ctx)
+            return {psd: concat(lst) for psd, lst in zip(psdists, bypsd)}
         pre = {}  # id(src) -> Precomputed, see _precompute
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
@@ -1252,6 +1604,19 @@ class ContextMaker(object):
         if psdists:
             return {psd: concat(lst) for psd, lst in zip(psdists, bypsd)}
         return concat(ctxs)
+
+    def _loop_on_sites(self, srcs, sitecol):
+        # True if the contexts can be built by _gen_site_ctxs, i.e. in the
+        # calibration (batch_point_sources) with many sites, without
+        # collapse_precision (the contexts would be collapsed across the
+        # sources) and only for Poissonian point sources
+        self._init_sites(sitecol)
+        if (not getattr(self, 'batch_point_sources', False) or
+                self.fewsites or self.collapse_precision):
+            return False
+        return all(getattr(src, 'location', None) and not isinstance(
+            getattr(src, 'temporal_occurrence_model', None),
+            NegativeBinomialTOM) for src in srcs)
 
     def _precompute(self, srcs):
         # planars, mean planars and rupture radii of the point sources,

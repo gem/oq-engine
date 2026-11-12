@@ -570,12 +570,22 @@ class SourceFilter(object):
             return self.sitecol.within_bbox(bbox)
 
     def _close_sids(self, lon, lat, dep, dist):
-        if not hasattr(self, 'kdt'):
-            self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
-        ids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+        ids = U32(self.close_ids(xyz, dist))
         ids.sort()  # for cross-platform consistency
         return self.sitecol.sids[ids]  # works also for filtered sitecol
+
+    def close_ids(self, xyz, dist):
+        """
+        :param xyz: cartesian coordinates of a point, or array of shape
+                    (P, 3) with the coordinates of P points
+        :param dist: distance in km
+        :returns: the indices of the sites within the distance from the
+                  point, or P lists of indices, one for each point
+        """
+        if not hasattr(self, 'kdt'):
+            self.kdt = KDTree(self.sitecol.xyz)
+        return self.kdt.query_ball_point(xyz, dist, eps=.001)
 
     def filter(self, sources):
         """
