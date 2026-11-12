@@ -73,6 +73,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
 
 def main(job_ini,
          pdb=False,
+         calibrate=False,
          *,
          slowest: int = None,
          hc: valid.calculation = None,
@@ -108,6 +109,9 @@ def main(job_ini,
         params['hazard_calculation_id'] = str(hc)
     if concurrent_tasks is not None:
         params['concurrent_tasks'] = str(concurrent_tasks)
+    if calibrate:  # only the calibration of the preclassical phase
+        params['calculation_mode'] = 'preclassical'
+        params['calibration_only'] = 'true'
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini, None, pdb, loglevel, '
@@ -144,11 +148,14 @@ def main(job_ini,
 
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
+main.calibrate = dict(help='run only the calibration of ps_grid_spacing '
+                      'and pointsource_distance')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
 main.param = dict(help='override parameters with TOML syntax', nargs='*',
                   action='extend')
-main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+main.concurrent_tasks = dict(help='hint for the number of tasks to spawn',
+                             abbrev='--ct')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())

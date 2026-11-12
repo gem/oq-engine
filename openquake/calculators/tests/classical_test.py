@@ -687,7 +687,25 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    # the stop after the calibration does not depend on the sampling
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
+    def test_calibration_only(self):
+        # oq run --calibrate: the calibration is stored and the
+        # preclassical stops before the splitting of the sources
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical',
+                      calibration_only='true', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
+        self.assertNotIn('source_info', self.calc.datastore)
+
     @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # the full calibration, i.e. without the random sample, is checked here
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
@@ -1362,7 +1380,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_96(self):
         # a source with an uncertainty and magnitudes partially outside
         # the integration distance: the magnitudes with zero integration
-        # distance must be ignored, not raise a KeyError (see _quintets).
+        # distance must be ignored, not raise a KeyError (see _sextets).
         # The source is weighted in the preclassical before the
         # uncertainties are applied, i.e. before the magnitude filtering,
         # which is performed in the classical workers (see filter_mag)
