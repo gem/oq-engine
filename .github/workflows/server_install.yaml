@@ -188,6 +188,8 @@ jobs:
           /opt/openquake/venv/bin/python3 manage.py migrate
           /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
           /opt/openquake/venv/bin/python3 manage.py createuser user2 testuser2@test.com --level 1 --password level_1_password --no-email
+          /opt/openquake/venv/bin/python3 manage.py createuser user3 testuser3@test.com --level 1 --password level_1_password --no-email
+          /opt/openquake/venv/bin/python3 manage.py createuser user4 testuser4@test.com --level 1 --password level_1_password --no-email
           # Install gunicorn in the venv (optional dependency of
           # openquake.engine[server], pinned as in pyproject.toml).
           # Do not install the extra itself: it would replace the
@@ -237,6 +239,13 @@ jobs:
            /opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
            echo "Display the Outputs of the last job"
            /opt/openquake/venv/bin/oq engine --list-outputs 1
+      - name: Concurrent access to the front page by user3 and user4
+        # both users log in together and load the pages a few times
+        if: matrix.kind == 'server'
+        run: |
+          ${{ github.workspace }}/.github/scripts/webui_concurrent_users.py \
+            --base http://127.0.0.1:8800 --rounds 3 --timeout 60 \
+            --user user3:level_1_password --user user4:level_1_password
       # ---- devel ----
       - name: Create openquake user (devel)
         if: matrix.kind == 'devel_server'
