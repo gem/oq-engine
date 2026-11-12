@@ -34,7 +34,8 @@ from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.nrml import validators as nrml_validators
 from openquake.hazardlib.correlation_models.base import ResidualComponent
-from openquake.hazardlib.correlation_models.registry import get_model_specs
+from openquake.hazardlib.correlation_models.registry import (
+    get_model, get_model_specs)
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -528,6 +529,16 @@ def _check_correlation_models(params, user, use_shakemap):
     if user.level < 2:  # the default model takes no parameters
         params['within_event_correlation_params'] = {}
     params.setdefault('within_event_correlation_params', {})
+    # build the model once, so that wrong parameters are reported here
+    # rather than when the job starts
+    model = params['within_event_correlation_model']
+    try:
+        get_model(model, **params['within_event_correlation_params'])
+    except (TypeError, ValueError) as exc:
+        field = 'within_event_correlation_params'
+        return {'status': 'failed', 'invalid_inputs': [field],
+                'error_msg': f'{IMPACT_FORM_LABELS[field]}: invalid for '
+                f'{model}: {exc}'}
     return {}
 
 

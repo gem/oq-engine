@@ -102,6 +102,14 @@ class ImpactValidateTestCase(unittest.TestCase):
                 {field: model}, user, use_shakemap)
             self.assertEqual(err['invalid_inputs'], [field])
             self.assertIn(f'{model} is not available', err['error_msg'])
+        # and get an error for parameters not accepted by the model
+        params = {'within_event_correlation_model': 'MonteiroEtAl2026',
+                  'within_event_correlation_params': {
+                      'vs30_clustering': True}}
+        err = _check_correlation_models(params, user, use_shakemap=False)
+        self.assertEqual(err['invalid_inputs'],
+                         ['within_event_correlation_params'])
+        self.assertIn('invalid for MonteiroEtAl2026', err['error_msg'])
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
