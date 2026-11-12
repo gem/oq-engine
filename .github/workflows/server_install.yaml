@@ -75,6 +75,40 @@ jobs:
              cp -- "$file" "${file%.default.tmpl}"
           done
           ls -lrt ${SITE_PKG}/openquake/server/templates/registration/
+      # Local emulation without root: .github/scripts/emulate_server_install.sh
+      # (see its header). What the emulation does NOT check, i.e. what only
+      # this step and the install step above test:
+      #  - install.py and its systemd unit (/etc/systemd/system/
+      #    openquake-webui.service), including the sed that sets gunicorn
+      #    as ExecStart and the daemon-reload
+      #  - the openquake user, file ownership, /var/log/oq-engine, and the
+      #    secret in /etc/openquake/django_secret.env
+      #  - the WebUI imported from /opt/openquake site-packages, not from
+      #    the repository, with its real local_settings.py (SMTP settings)
+      #  - the environment of systemd (GITHUB_ACTIONS unset, no USER
+      #    override: the access log is written because the service runs as
+      #    openquake)
+      #  - the email backend: SMTP here, in-memory in the emulation
+      # The emulation does not run the concurrency check either
+      # (.github/scripts/run_webui_concurrency.sh): it is not in this job.
+      #
+      # Requests that keep a gunicorn worker busy (read from the code, not
+      # all measured; the gunicorn command of this step uses --workers 2):
+      #  - downloading a result that is generated on request, e.g.
+      #    /v1/calc/result/<id> for a large GMF: the export runs inside the
+      #    request, before the first byte is sent
+      #  - the IMPACT calls to USGS (impact_get_stations_from_usgs,
+      #    impact_get_shakemap_versions, impact_get_nodal_planes_and_info):
+      #    synchronous, 30 s timeout per attempt, up to 5 attempts
+      #  - downloading /v1/calc/<id>/datastore (calc_<id>.hdf5): streamed,
+      #    but the worker stays busy until the client has received it
+      #  - /extract: loads the data into memory before saving it
+      #  Effects to check: with N workers, N such requests make the WebUI
+      #  unresponsive for everybody else; a worker that does not answer
+      #  within --timeout is killed (log: WORKER TIMEOUT) and the client gets
+      #  a dropped connection; a calc run with oq engine --run by a user
+      #  other than openquake posts each log line to /v0/db/log and waits
+      #  for a free worker, so it can look stalled.
       - name: WebUI and calculation with Auth
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
@@ -108,6 +142,18 @@ jobs:
           # Perform migration after setup local_settings
           /opt/openquake/venv/bin/python3 manage.py migrate
           /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
+          # Install gunicorn in the venv (optional dependency of
+          # openquake.engine[server], pinned as in pyproject.toml).
+          # Do not install the extra itself: it would replace the
+          # engine under test with the one from PyPI
+          /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
+          # Replace the ExecStart of the WebUI unit written by install.py
+          # with gunicorn, as in doc/getting-started/installation-instructions/server.md
+          sed -i \
+            -e "s|^WorkingDirectory=.*|WorkingDirectory=${SITE_PKG}openquake/server|" \
+            -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
+            /etc/systemd/system/openquake-webui.service
+          systemctl daemon-reload
           # STOP AND START WEBUI
           systemctl stop openquake-webui
           sleep 10

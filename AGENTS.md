@@ -34,6 +34,15 @@ scratch database, never the engine database in ~/oqdata.
 After a refactoring run `ruff check` and openquake/baselib/tests/flake8_test.py;
 make sure they do not fail.
 
+The WebUI part of the server installation test (.github/workflows/
+server_install.yaml) can be emulated without root with
+.github/scripts/emulate_server_install.sh, which needs gunicorn in the
+venv and uses a scratch database. Read the header of the script for what
+it does and does not cover; do not run the workflow steps with sudo.
+To check that the WebUI does not hang with several users at once, run
+.github/scripts/run_webui_concurrency.sh (same requirements); its header
+explains the steps, the environment variables and how to read the output.
+
 # tips
 
 The performance of a machine can be assessed with the command
