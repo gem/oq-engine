@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import math
 import logging
+from typing import NamedTuple
 import numpy
 import numba
 from openquake.baselib.node import Node
@@ -332,6 +333,79 @@ def build_planar_array(corners, sdr=None, hypo=None, check=False):
             raise ValueError("top and bottom edges have different lengths")
     return planar_array
 
+
+# call func(src) only once for the sources with the same (non-None) key;
+# the key is src.planar_key() (see point.py): the parameters of a point
+# source except its location, so sources differing only by location share
+# the value computed by func; None means no sharing
+def _once_per_key(srcs, keys, func):
+    cache = {}
+    out = []
+    for src, key in zip(srcs, keys):
+        if key is None:
+            out.append(func(src))
+        else:
+            if key not in cache:
+                cache[key] = func(src)
+            out.append(cache[key])
+    return out
+
+
+def get_planars(srcs, shift_hypo=False, iruptures=False, keys=None):
+    """
+    Vectorized version of `[src.get_planar(shift_hypo, iruptures) for src
+    in srcs]`: the point sources differing only by location (like the
+    points of an area source) are processed together.
+
+    :param srcs: a list of point sources
+    :param keys: the planar keys of the sources (computed if not given)
+    :returns: a list of dictionaries mag -> list of planar arrays
+    """
+    if keys is None:
+        keys = [src.planar_key() for src in srcs]
+    out = [None] * len(srcs)
+    groups = {}
+    for i, (src, key) in enumerate(zip(srcs, keys)):
+        if key is None:
+            out[i] = src.get_planar(shift_hypo, iruptures)
+        else:
+            groups.setdefault(key, []).append(i)
+    for idxs in groups.values():
+        src = srcs[idxs[0]]
+        mags = [mag for mag, _rate in src.get_annual_occurrence_rates()]
+        lons = numpy.array([srcs[i].location.x for i in idxs])
+        lats = numpy.array([srcs[i].location.y for i in idxs])
+        planar = src._build_planar(lons, lats, shift_hypo)  # (P, M, ...)
+        for i, planar_p in zip(idxs, planar):
+            out[i] = {mag: [pla.reshape(-1, 3)]
+                      for mag, pla in zip(mags, planar_p)}
+    return out
+
+
+# the precomputed data of a point source, see precompute_planars
+class Precomputed(NamedTuple):
+    planars: dict  # mag -> list of planar arrays, see get_planar
+    means: dict  # the same for the mean ruptures, see iruptures
+    radii: numpy.ndarray  # see _get_rupture_projection_radii
+
+
+def precompute_planars(srcs, shift_hypo=False):
+    """
+    Precompute the planars, the planars of the mean ruptures (see
+    iruptures) and the rupture radii of the given point sources; the
+    sources differing only by location are processed together.
+
+    :returns: a list of Precomputed namedtuples, one per source
+    """
+    keys = [src.planar_key() for src in srcs]
+    radii = _once_per_key(
+        srcs, keys, lambda src: src._get_rupture_projection_radii())
+    # NB: the mean sources of sources with the same key have the same key
+    means = [src.restrict(*params) for src, params in zip(
+        srcs, _once_per_key(srcs, keys, lambda src: src._mean_params()))]
+    return [Precomputed(*triple) for triple in zip(
+        get_planars(srcs, shift_hypo, keys=keys),
+        get_planars(means, shift_hypo, True, keys), radii)]
 
 # numbified below
 def project(planar, points):

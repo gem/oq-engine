@@ -43,7 +43,7 @@ from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
-    project, project_back, get_distances_planar)
+    project, project_back, get_distances_planar, precompute_planars)
 
 U8 = numpy.uint8
 I32 = numpy.int32
@@ -286,11 +286,12 @@ def _quintets(cmaker, src, sitecol, psdists, pre=None):
     # groups is a list of pairs (ks, rowmask), being ks the indices of the
     # pointsource distances for which the context rows selected by rowmask
     # (None means all the rows) are valid, see genctxs_Pp;
-    # pre is None or the triple (planars, mean planars, radii) of the
-    # source, precomputed for many sources at once (see from_srcs)
+    # pre is None or the Precomputed namedtuple of the source, with the
+    # planars, mean planars and radii, see from_srcs
     with cmaker.ir_mon:
         # building planar geometries
-        planardict = pre[0] if pre else src.get_planar(cmaker.shift_hypo)
+        planardict = (src.get_planar(cmaker.shift_hypo) if pre is None
+                      else pre.planars)
 
     # NB: a single call to the interpolating function for all magnitudes,
     # since calling it on scalars is slow
@@ -309,7 +310,8 @@ def _quintets(cmaker, src, sitecol, psdists, pre=None):
     cdist = sitecol.get_cdist(src.location)
     # Reuse the rupture radii while handling this source; get_psdist is
     # called once per rupture and recomputing the whole vector is expensive.
-    radii = pre[2] if pre else src._get_rupture_projection_radii()
+    radii = (src._get_rupture_projection_radii() if pre is None
+             else pre.radii)
     mask = cdist <= maxdist + src.max_radius(maxdist, radii)
     sites = sitecol.filter(mask)
     if sites is None:
@@ -343,8 +345,8 @@ def _quintets(cmaker, src, sitecol, psdists, pre=None):
         return
     cd = cdist[mask]
     if getattr(cmaker, 'batch_point_sources', False) and not cmaker.fewsites:
-        meandict = (pre[1] if pre else
-                    src._mean_source().get_planar(iruptures=True))
+        meandict = (src.mean_source().get_planar(iruptures=True)
+                    if pre is None else pre.means)
         yield from _batched_quintets(
             src, planardict, meandict, magdist, (minmag, maxmag), psdists,
             radii, sites, cd)
@@ -1223,7 +1225,7 @@ class ContextMaker(object):
         ctxs = []
         bypsd = [[] for _ in psdists]  # contexts for each distance
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
-        pre = {}  # id(src) -> (planars, mean planars, radii)
+        pre = {}  # id(src) -> Precomputed, see _precompute
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
@@ -1258,11 +1260,9 @@ class ContextMaker(object):
         # batch_point_sources, otherwise returns an empty dictionary
         if not getattr(self, 'batch_point_sources', False):
             return {}
-        # NB: imported here to avoid a circular import of the source package
-        from openquake.hazardlib.source.point import precompute_planars
         pts = [src for src in srcs if getattr(src, 'location', None)]
-        triples = precompute_planars(pts, self.shift_hypo)
-        return dict(zip(map(id, pts), triples))
+        precomputed = precompute_planars(pts, self.shift_hypo)
+        return dict(zip(map(id, pts), precomputed))
 
     @staticmethod
     def _get_zbot(rup, msparam):

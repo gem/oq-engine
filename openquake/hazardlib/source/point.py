@@ -24,7 +24,7 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.codes import POINT, COLLAPSED_POINT
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar, PlanarSurface, planin_dt, get_rupdims)
+    build_planar, PlanarSurface, planin_dt, get_rupdims, get_planars)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.aspect_ratio import MagDepAspectRatio
@@ -345,13 +345,29 @@ class PointSource(ParametricSeismicSource):
         return self._gen_ruptures(shift_hypo=kwargs.get('shift_hypo'))
 
     # PointSource
+    def planar_key(self):
+        # the parameters determining the planars of the point source except
+        # its location, or None if the planars must be built one by one;
+        # used by geo.surface.planar.get_planars
+        if isinstance(self.rupture_aspect_ratio, MagDepAspectRatio):
+            return None
+        mags = tuple(mag for mag, _rate in self.get_annual_occurrence_rates())
+        npd = tuple((prob, nplane.strike, nplane.dip, nplane.rake)
+                    for prob, nplane in self.nodal_plane_distribution.data)
+        hdf = self.hypo_dip_fracs
+        return (mags, npd, tuple(self.hypocenter_distribution.data),
+                None if hdf is None else tuple(hdf),
+                id(self.magnitude_scaling_relationship),
+                self.rupture_aspect_ratio,
+                self.upper_seismogenic_depth, self.lower_seismogenic_depth)
+
     def _mean_params(self):
-        # the mean nodal plane, depth and dip fraction, used in _mean_source
+        # the mean nodal plane, depth and dip fraction, used in mean_source
         avg = calc_average([self])  # over nodal planes and hypocenters
         np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
         return np, avg['dep'], avg['hypo_dip_frac']
 
-    def _mean_source(self):
+    def mean_source(self):
         # the source restricted to the mean nodal plane and hypocenter
         return self.restrict(*self._mean_params())
 
@@ -359,7 +375,7 @@ class PointSource(ParametricSeismicSource):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
-        yield from self._mean_source()._gen_ruptures(iruptures=True)
+        yield from self.mean_source()._gen_ruptures(iruptures=True)
 
     def count_nphc(self):
         """
@@ -513,88 +529,6 @@ def pdata_to_psources(pdata):
     return out
 
 
-# the parameters determining the planars of a point source except its
-# location, or None if the planars must be built source by source; the
-# collapsed point sources are excluded, since their parameters are
-# averages which are never shared and computing the key would be slow
-def _planar_key(src):
-    if (type(src).get_planar is not PointSource.get_planar or
-            isinstance(src, CollapsedPointSource) or
-            isinstance(src.rupture_aspect_ratio, MagDepAspectRatio)):
-        return None
-    mags = tuple(mag for mag, _rate in src.get_annual_occurrence_rates())
-    npd = tuple((prob, np.strike, np.dip, np.rake)
-                for prob, np in src.nodal_plane_distribution.data)
-    hdf = src.hypo_dip_fracs
-    return (mags, npd, tuple(src.hypocenter_distribution.data),
-            None if hdf is None else tuple(hdf),
-            id(src.magnitude_scaling_relationship), src.rupture_aspect_ratio,
-            src.upper_seismogenic_depth, src.lower_seismogenic_depth)
-
-
-# call func(src) only once for the sources with the same (non-None) key
-def _once_per_key(srcs, keys, func):
-    cache = {}
-    out = []
-    for src, key in zip(srcs, keys):
-        if key is None:
-            out.append(func(src))
-        else:
-            if key not in cache:
-                cache[key] = func(src)
-            out.append(cache[key])
-    return out
-
-
-def get_planars(srcs, shift_hypo=False, iruptures=False, keys=None):
-    """
-    Vectorized version of `[src.get_planar(shift_hypo, iruptures) for src
-    in srcs]`: the point sources differing only by location (like the
-    points of an area source) are processed together.
-
-    :param srcs: a list of point sources
-    :param keys: the planar keys of the sources (computed if not given)
-    :returns: a list of dictionaries mag -> list of planar arrays
-    """
-    if keys is None:
-        keys = [_planar_key(src) for src in srcs]
-    out = [None] * len(srcs)
-    groups = {}
-    for i, (src, key) in enumerate(zip(srcs, keys)):
-        if key is None:
-            out[i] = src.get_planar(shift_hypo, iruptures)
-        else:
-            groups.setdefault(key, []).append(i)
-    for idxs in groups.values():
-        src = srcs[idxs[0]]
-        mags = [mag for mag, _rate in src.get_annual_occurrence_rates()]
-        lons = numpy.array([srcs[i].location.x for i in idxs])
-        lats = numpy.array([srcs[i].location.y for i in idxs])
-        planar = src._build_planar(lons, lats, shift_hypo)  # (P, M, ...)
-        for i, planar_p in zip(idxs, planar):
-            out[i] = {mag: [pla.reshape(-1, 3)]
-                      for mag, pla in zip(mags, planar_p)}
-    return out
-
-
-def precompute_planars(srcs, shift_hypo=False):
-    """
-    Precompute the planars, the planars of the mean ruptures (see
-    iruptures) and the rupture radii of the given point sources; the
-    sources differing only by location are processed together.
-
-    :returns: a list of triples (planars, mean planars, radii)
-    """
-    keys = [_planar_key(src) for src in srcs]
-    radii = _once_per_key(
-        srcs, keys, lambda src: src._get_rupture_projection_radii())
-    # NB: the mean sources of sources with the same key have the same key
-    means = [src.restrict(*params) for src, params in zip(
-        srcs, _once_per_key(srcs, keys, lambda src: src._mean_params()))]
-    return list(zip(get_planars(srcs, shift_hypo, keys=keys),
-                    get_planars(means, shift_hypo, True, keys), radii))
-
-
 class CollapsedPointSource(PointSource):
     """
     Source typology representing a cluster of point sources around a
@@ -647,15 +581,20 @@ class CollapsedPointSource(PointSource):
         """
         :returns: a list of pairs [(mag, mag_occur_rate), ...]
         """
-        # NB: the rates are cached, since rebuilding the point sources
-        # is slow; the cache is reset by _update_pointsources
-        rates = self.__dict__.get('_rates')
-        if rates is None:
-            acc = AccumDict(accum=0)
-            for psource in self.pointsources:
-                acc += dict(psource.get_annual_occurrence_rates())
-            self._rates = rates = sorted(acc.items())
-        return list(rates)
+        # computed from the distinct MFDs, weighted by the scaling rates of
+        # the points sharing them, without building the point sources (which
+        # is slow) and without caching the result (which would be pickled)
+        pdata = self.pdata
+        weights = numpy.bincount(pdata['mfd'].inv,
+                                 weights=pdata['scaling_rate'],
+                                 minlength=len(pdata['mfd'].uni))
+        acc = AccumDict(accum=0)
+        for mfd, weight in zip(pdata['mfd'].uni, weights):
+            # filtering by rate > 0 as in BaseSeismicSource
+            acc += {mag: rate * weight
+                    for mag, rate in mfd.get_annual_occurrence_rates()
+                    if rate > 0}
+        return sorted(acc.items())
 
     def count_nphc(self):
         """
@@ -671,8 +610,13 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
+    def planar_key(self):
+        # the averages of the underlying point sources are never shared,
+        # and computing the key would be slow: they are built one by one
+        return None
+
     def _mean_params(self):
-        # the averages over the underlying point sources, see _mean_source
+        # the averages over the underlying point sources, see mean_source
         np = NodalPlane(self.strike, self.dip, self.rake)
         return np, self.location.z, self.hypo_dip_frac
 
@@ -718,7 +662,6 @@ class CollapsedPointSource(PointSource):
         self._update_pointsources(pointsources)
 
     def _update_pointsources(self, pointsources):
-        self.__dict__.pop('_rates', None)  # see get_annual_occurrence_rates
         self.pdata = psources_to_pdata(pointsources, self.source_id)
         vars(self).update(calc_average(pointsources))
         self.location = Point(self.lon, self.lat, self.dep)
