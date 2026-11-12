@@ -526,6 +526,23 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     return zeroctx.flatten()  # shape N*U
 
 
+# set the site and rupture parameters on the cmaker and return the builder
+# of the contexts of a point source and its temporal occurrence model
+def _builder(cmaker, src, sitecol):
+    dd = cmaker.defaultdict.copy()
+    tom = getattr(src, 'temporal_occurrence_model', None)
+
+    if tom and isinstance(tom, NegativeBinomialTOM):
+        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
+    else:
+        dd['probs_occur'] = numpy.zeros(0)
+
+    cmaker.siteparams = [par for par in sitecol.array.dtype.names
+                         if par in dd]
+    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
+    return RecordBuilder(**dd), tom
+
+
 def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     """
     Context generator for point sources and collapsed point sources;
@@ -535,19 +552,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     for which the context array is valid
     """
     psdists = psdists or [cmaker.pointsource_distance]
-    dd = cmaker.defaultdict.copy()
-    tom = getattr(src, 'temporal_occurrence_model', None)
-
-    if tom and isinstance(tom, NegativeBinomialTOM):
-        dd['probs_occur'] = numpy.zeros_like(NegativeBinomialTOM.x)
-    else:
-        dd['probs_occur'] = numpy.zeros(0)
-
-    builder = RecordBuilder(**dd)
-    cmaker.siteparams = [par for par in sitecol.array.dtype.names
-                         if par in dd]
-    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
-
+    builder, tom = _builder(cmaker, src, sitecol)
     mrate = dict(src.get_annual_occurrence_rates())
     for ks, magi, mag, magdist, planars, sites in _quintets(
             cmaker, src, sitecol, psdists):
@@ -580,6 +585,66 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
             cmaker.cfactor[1] += nctxt - len(ctxt)  # removed by collapsing
         if len(ctxt):
             yield ks, ctxt
+
+
+def genctxs_batched(src, sitecol, cmaker, psdists):
+    """
+    Faster version of genctxs_Pp for sources with several nodal planes or
+    hypocenters, used in the calibration of the pointsource_distance (see
+    autogrid), where there are few sites per source and the overhead of
+    building the contexts for each magnitude and distance dominates: here
+    the contexts of all the magnitudes are built at once for the mean
+    ruptures (used by the far sites) and at once for all the ruptures (used
+    by the close sites), then they are split by pointsource distance.
+
+    :yields: pairs (ks, ctx) with the same rows as genctxs_Pp, in a
+             different order
+    """
+    builder, tom = _builder(cmaker, src, sitecol)
+    md = cmaker.maximum_distance
+    mags, rates = numpy.array(src.get_annual_occurrence_rates()).T
+    mdist = md(mags)  # 0 outside the magnitude range
+    inrange = numpy.flatnonzero(mdist > 0)
+    if len(inrange) == 0:  # the source is irrelevant
+        return
+    # select the sites as in _quintets
+    maxdist = mdist[inrange[mags[inrange].argmax()]]
+    radii = src._get_rupture_projection_radii()
+    cdist = sitecol.get_cdist(src.location)
+    mask = cdist <= maxdist + src.max_radius(maxdist, radii)
+    sites, cd = sitecol.filter(mask), cdist[mask]
+    if sites is None:
+        return
+    # effective pointsource distances, array of shape (M, K)
+    magdist = dict(zip(mags, mdist))
+    psd = numpy.array([[src.get_psdist(m, mag, psdist, magdist, radii)
+                        for psdist in psdists] for m, mag in enumerate(mags)])
+    planardict = src.get_planar(cmaker.shift_hypo)
+    means = [rup.surface.array.reshape(-1, 3) for rup in src.iruptures()]
+    for close in (False, True):
+        # the far sites use the mean ruptures, the close ones all of them
+        ok = cd <= psd[inrange].max() if close else cd > psd[inrange].min()
+        if not ok.any():
+            continue
+        plas = [(m, pla) for m in inrange for pla in (
+            planardict[mags[m]] if close else [means[m]])]
+        # magnitude index of each planar
+        mi = numpy.concatenate([numpy.full(len(pla), m) for m, pla in plas])
+        planar = numpy.concatenate([pla for _m, pla in plas]).view(
+            numpy.recarray)
+        with cmaker.ctx_mon:
+            ctx = _get_ctx_planar(  # U planars times N sites, flattened
+                cmaker, builder, mags[mi], rates[mi], 0, planar,
+                sites.filter(ok), src.id, src.offset, tom)
+        cmaker.ctx_mon.counts += len(inrange) - 1
+        valid = ctx.rrup < numpy.repeat(mdist[mi], ok.sum())
+        for k in range(len(psdists)):
+            # a site is close if within the pointsource distance for the
+            # magnitude of the planar
+            isclose = (cd[ok] <= psd[mi, k][:, None]).flatten()
+            ctxt = ctx[valid & (isclose == close)]
+            if len(ctxt):
+                yield (k,), ctxt
 
 
 def estimate_nctxs(cmaker, srcs, sitecol):
@@ -1140,8 +1205,13 @@ class ContextMaker(object):
             elif getattr(src, 'location', None):  # point source
                 # the contexts are shared between the distances
                 self._init_sites(sites)
-                for ks, ctx in genctxs_Pp(src, sites, self,
-                                          self.collapse_precision, psdists):
+                prec = self.collapse_precision
+                batched = (getattr(self, 'batch_point_sources', False)
+                           and not self.fewsites and not prec
+                           and src.count_nphc() > 1)
+                for ks, ctx in (genctxs_batched(src, sites, self, psdists)
+                                if batched else
+                                genctxs_Pp(src, sites, self, prec, psdists)):
                     for k in ks:
                         bypsd[k].append(ctx)
             else:  # the pointsource distance is irrelevant
