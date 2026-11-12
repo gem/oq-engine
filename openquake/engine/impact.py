@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    ImpactParam, IMPACT_FORM_DEFAULTS, impact_validate)
+    ImpactParam, IMPACT_FORM_DEFAULTS, IMPACT_IMTS, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -75,6 +75,8 @@ def main_cmd(usgs_id, rupture_file=None,
              description=ImpactParam.description,
              notes=ImpactParam.notes,
              region_grid_spacing=IMPACT_FORM_DEFAULTS['region_grid_spacing'],
+             within_event_correlation_model=None,
+             between_event_correlation_model=None,
              userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
@@ -112,8 +114,7 @@ def main_cmd(usgs_id, rupture_file=None,
     if approach == 'use_shakemap_from_usgs':
         oqparams['secondary_perils'] = (
             'AllstadtEtAl2022Landslides, AllstadtEtAl2022Liquefaction')
-        oqparams['intensity_measure_types'] = (
-            'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)')
+        oqparams['intensity_measure_types'] = IMPACT_IMTS['shakemap']
     if err:
         callback(None, oqparams, exc=err)
         return
@@ -159,6 +160,12 @@ main_cmd.msr = 'Magnitude scaling relationship'
 main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.make_impact_reports = 'Make two-page report for each involved country'
+main_cmd.within_event_correlation_model = (
+    'Within-event correlation model (by default LothBaker2013, the only one '
+    'for the ShakeMap jobs)')
+main_cmd.between_event_correlation_model = (
+    'Between-event correlation model (by default '
+    'AbrahamsonEtAl2014BetweenEvent)')
 main_cmd.userlevel = 'User level'
 main = main_cmd
 

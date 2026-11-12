@@ -108,7 +108,6 @@ def test_covariance_is_symmetric_positive_definite():
 
 
 @pytest.mark.parametrize(('imt', 'message'), [
-    (PGV(), 'does not support PGV'),
     (SA(0.005), 'periods from 0.01 to 10 s'),
     (SA(10.1), 'periods from 0.01 to 10 s'),
     (SA(1.0, damping=10.0), 'only 5%-damped SA'),
@@ -116,6 +115,30 @@ def test_covariance_is_symmetric_positive_definite():
 def test_rejects_imts_outside_calibrated_domain(imt, message):
     with pytest.raises(ValueError, match=message):
         LothBaker2013().validate_imts([imt])
+
+
+def test_pgv_uses_the_sa_1_0_proxy():
+    distances = numpy.array([[0., 10.], [10., 0.]])
+    LothBaker2013().validate_imts([PGV()])
+    pgv = LothBaker2013().correlation_block(
+        distances, [PGV()], [PGV()])
+    sa1 = LothBaker2013().correlation_block(
+        distances, [SA(1.0)], [SA(1.0)])
+    numpy.testing.assert_allclose(pgv, sa1)
+
+
+def test_coregionalization_rebuilds_the_correlation_block():
+    # B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I is the joint correlation of the model
+    distances = numpy.array([[0., 5., 30.], [5., 0., 25.], [30., 25., 0.]])
+    imts = [PGA(), SA(0.3), PGV()]
+    B1, B2, B3 = LothBaker2013().coregionalization(imts)
+    R1 = numpy.exp(-3 * distances / 20)
+    R2 = numpy.exp(-3 * distances / 70)
+    expected = (numpy.kron(B1, R1) + numpy.kron(B2, R2) +
+                numpy.kron(B3, numpy.eye(3)))
+    numpy.testing.assert_allclose(
+        LothBaker2013().correlation_block(distances, imts), expected,
+        atol=1E-12)
 
 
 def test_rejects_pga_together_with_sa_0_01():
@@ -128,6 +151,28 @@ def test_rejects_wrong_residual_component():
         LothBaker2013().correlation_block(
             numpy.zeros((1, 1)), [SA(1.0)],
             component=ResidualComponent.TOTAL)
+
+
+def test_shakemap_coefficients_match_esi_shakelib():
+    # Golden coefficients from esi-shakelib 1.2.6, not the authors' 2022
+    # interpolation used by the general engine model.
+    from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+        loth_baker_2013 import ShakeMapLothBaker2013
+    model = ShakeMapLothBaker2013()
+    matrices = model.raw_coregionalization([SA(p) for p in (.01, .3, .6)])
+    expected = (
+        [[.29, .23, .22], [.23, .2833333333333333, .2066666666666667],
+         [.22, .2066666666666667, .314]],
+        [[.47, .4033333333333333, .334],
+         [.4033333333333333, .44, .3633333333333333],
+         [.334, .3633333333333333, .432]],
+        [[.24, .17, .068], [.17, .2733333333333333, .0973333333333333],
+         [.068, .0973333333333333, .248]])
+    numpy.testing.assert_allclose(matrices, expected, atol=1E-14)
+    raw = model.raw_coregionalization([SA(1)])
+    assert sum(b[0, 0] for b in raw) == 1.01
+    numpy.testing.assert_allclose(model.correlation_block(
+        numpy.zeros((1, 1)), [SA(1)]), 1.)
 
 
 @pytest.mark.parametrize(('distances', 'message'), [

@@ -46,6 +46,15 @@ def test_impact_ui_level_1(
         application_mode, authenticated_page, user, default_usgs_id,
         should_remove_job):
     page = ImpactPageLevel1(authenticated_page)
+    # level 1 users see the correlation models, which they cannot change
+    for field, model in [
+            ('within_event_correlation_model', 'LothBaker2013'),
+            ('between_event_correlation_model',
+             'AbrahamsonEtAl2014BetweenEvent')]:
+        select = authenticated_page.locator(f'select#{field}')
+        expect(select).to_be_visible()
+        expect(select).to_be_disabled()
+        expect(select).to_have_value(model)
     page.set_rupture_identifier('us6000t7zp')
     expect(page.maximum_distance()).not_to_be_visible()
     page.select_shakemap_version(
@@ -163,6 +172,17 @@ def test_impact_ui_level_2_build_rupture(
         should_abort_job, should_remove_job):
     page = ImpactPageLevel2(authenticated_page)
     page.set_approach('Build rupture from USGS nodal plane solutions')
+    within = authenticated_page.locator(
+        'select#within_event_correlation_model')
+    between = authenticated_page.locator(
+        'select#between_event_correlation_model')
+    # the jobs without ShakeMap can use the models supporting circulant
+    # embedding, LothBaker2013 by default
+    expect(within).to_have_value('LothBaker2013')
+    expect(within.locator('option')).to_have_count(3)
+    within.select_option('DuNing2021Interpolated')
+    expect(between).to_have_value('AbrahamsonEtAl2014BetweenEvent')
+    between.select_option('GodaAtkinson2009')
     expect(page.rupture_identifier()).to_be_visible()
     expect(authenticated_page.locator(
         'div#shakemap_version_grp')).to_be_visible()
@@ -183,6 +203,8 @@ def test_impact_ui_level_2_build_rupture(
         page.run_impact_calc()
     assert 'name="nodal_plane"' in request.value.post_data
     assert 'NP2' in request.value.post_data
+    assert 'DuNing2021Interpolated' in request.value.post_data
+    assert 'GodaAtkinson2009' in request.value.post_data
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()
         if should_abort_job:
@@ -261,6 +283,38 @@ def test_impact_ui_level_2_provide_rupture_nrml(
     page.confirm_relocated_hypocenter_warning()
     # expect(page.local_timestamp()).not_to_be_visible(timeout=30_000)
     page.set_no_uncertainty()
+    page.run_impact_calc()
+    if should_abort_job or should_remove_job:
+        job_id = page.get_job_id_from_new_job()
+        if should_abort_job:
+            page.abort_job(job_id)
+        if should_remove_job:
+            page.remove_job(job_id)
+
+
+@pytest.mark.parametrize("user", [2], indirect=True)
+@pytest.mark.parametrize("application_mode", ["IMPACT"], indirect=True)
+@pytest.mark.parametrize("default_usgs_id", [""], indirect=True)
+def test_impact_ui_level_2_provide_rupture_nrml_correlation_models(
+        application_mode, authenticated_page, user, default_usgs_id,
+        should_abort_job, should_remove_job):
+    page = ImpactPageLevel2(authenticated_page)
+    # the ShakeMap jobs can only use LothBaker2013
+    within = authenticated_page.locator(
+        'select#within_event_correlation_model')
+    expect(within.locator('option')).to_have_count(1)
+    page.set_approach('Provide earthquake rupture in OpenQuake NRML format')
+    page.choose_rupture_model()
+    correlation = within
+    expect(correlation).to_be_visible()
+    correlation.select_option('MonteiroEtAl2026')
+    page.retrieve_data()
+    expect(page.rupture_map()).to_be_visible(timeout=50_000)
+    page.confirm_relocated_hypocenter_warning()
+    page.set_no_uncertainty()
+    # the body of a request with an uploaded file is not visible to
+    # Playwright, so check the value the form will submit
+    expect(correlation).to_have_value('MonteiroEtAl2026')
     page.run_impact_calc()
     if should_abort_job or should_remove_job:
         job_id = page.get_job_id_from_new_job()

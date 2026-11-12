@@ -46,6 +46,7 @@ from openquake.hazardlib.countries import mosaic_index
 from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
+from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
@@ -54,7 +55,10 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
-from openquake.hazardlib.shakemap.gmfs import to_gmfs
+from openquake.hazardlib.shakemap.gmfs import (
+    to_gmfs, circulant_embedding_feasible, between_event_description)
+from openquake.hazardlib.shakemap.realization import (
+    get_metadata, conditioning_stations)
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -1870,12 +1874,71 @@ def store_events(dstore, eids):
     return events
 
 
+def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
+    # record for the outputs page the correlation really used
+    calc.datastore['correlation_strategy_used'] = numpy.array(
+        [strategy], dtype=hdf5.vstr)
+    if gmf_dict.get('spatial_model') is None:
+        return
+    name = gmf_dict['spatial_model'].__class__.__name__
+    between_model = gmf_dict.get('between_event_model')
+    if 'CL' in shakemap.dtype.names:
+        # the stored posterior components are sampled with Loth and
+        # Baker (2013), whatever correlation model was requested
+        conditioning = (
+            'station-conditioned'
+            if conditioning_stations(shakemap) is not None
+            else 'marginal approximation, no station conditioning')
+        model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
+                 'approximate cross-IMT dependence, between-event terms '
+                 f'{between_event_description(between_model)})')
+    else:
+        # XML ShakeMaps or shake_result.hdf without the posterior factors
+        model = (f'{name}, {strategy} (approximation from the marginal '
+                 'ShakeMap uncertainties)')
+        if strategy != calc.oqparam.correlation_strategy:
+            model += (f'; {calc.oqparam.correlation_strategy} is not '
+                      'applicable to these sites')
+        if between_model is not None and 'tau' not in shakemap.dtype.names:
+            # only the total uncertainty is known
+            logging.warning('The between-event correlation model is not '
+                            'used, since the ShakeMap has no tau')
+            model += (f'; {between_model.__class__.__name__} not used, '
+                      'the ShakeMap has no between-event uncertainty')
+    note = get_metadata(shakemap, 'note')
+    if note:  # for instance why shake_result.hdf was not used
+        model += f'; {note}'
+    calc.datastore['correlation_model_used'] = numpy.array(
+        [model], dtype=hdf5.vstr)
+
+
 def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
+    if gmf_dict['kind'] == 'Silva&Horspool':
+        rupture_dict = oq.rupture_dict or {}
+        strategy = oq.correlation_strategy
+        # shake_result.hdf products are sampled with Loth and Baker (2013)
+        # and do not use circulant embedding
+        if (strategy == 'circulant_embedding' and
+                'CL' not in shakemap.dtype.names and
+                not circulant_embedding_feasible(sitecol)):
+            # sparse sites, e.g. a ShakeMap with gaps: use Cholesky instead
+            logging.warning(
+                'Circulant embedding is not applicable to these sites, '
+                'using cholesky_decomposition instead')
+            strategy = 'cholesky_decomposition'
+        _save_correlation_info(calc, shakemap, gmf_dict, strategy)
+        gmf_dict.update(
+            correlation_strategy=strategy,
+            sites=sitecol,
+            context=CorrelationContext(
+                mag=rupture_dict.get('mag'),
+                rake=rupture_dict.get('rake'),
+                trt=oq.tectonic_region_type))
     sec_perils = oq.get_sec_perils()  # FIXME: it should be in calc.sec_perils
     with calc.monitor('building/saving GMFs'):
         vs30 = None  # do not amplify, the ShakeMap takes care of that already
@@ -1953,16 +2016,16 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.impact:
-            gmf_dict = {'kind': 'basic'}  # possibly add correlation
-        elif (oq.within_event_correlation_model or
-              oq.total_residual_correlation_model):
+        if (oq.within_event_correlation_model or
+                oq.total_residual_correlation_model):
             # spatial and cross-IMT correlation after Silva and Horspool
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatial_model':
                         oq.get_within_event_correlation_model(),
                         'cross_imt_model':
                         oq.get_total_residual_correlation_model(),
+                        'between_event_model':
+                        oq.get_between_event_correlation_model(),
                         'cholesky_limit': oq.cholesky_limit}
         else:
             # no correlation required, basic calculation is faster

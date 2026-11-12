@@ -23,15 +23,19 @@ from dataclasses import dataclass
 import numpy
 
 from openquake.baselib import config, general, hdf5, performance
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, imt
 from openquake.commonlib import readinput
+from openquake.commonlib.oqvalidation import CORRELATION_STRATEGIES
 from openquake.commonlib.readinput import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import (
-    get_nodal_planes_and_product, get_rup_dic)
+    get_nodal_planes_and_product, get_rup_dic, save_shakemap)
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.nrml import validators as nrml_validators
+from openquake.hazardlib.correlation_models.base import ResidualComponent
+from openquake.hazardlib.correlation_models.registry import (
+    get_model, get_model_specs)
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -61,8 +65,10 @@ class ImpactParam:
     make_impact_reports: bool = False
     region_grid_spacing: float = 10 if TEST_MODE else 1  # km, mandatory
     within_event_correlation_model: str = None
+    correlation_strategy: str = 'circulant_embedding'
     calculation_mode: str = 'scenario_risk'  # hidden from the form
     within_event_correlation_params: dict = None
+    between_event_correlation_model: str = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -109,20 +115,22 @@ class ImpactParam:
                 self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
+            correlation_strategy=self.correlation_strategy,
             make_impact_reports=bool(self.make_impact_reports),
             inputs=inputs)
         if use_shakemap:
-            fname = general.gettemp(suffix='.npy')
-            numpy.save(fname, shakemap_array)
+            fname = general.gettemp(suffix='.npz')
+            # keeping the stations of the shake_result.hdf products
+            save_shakemap(fname, shakemap_array)
             params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
             params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
             params['local_timestamp'] = self.local_timestamp
-        if self.within_event_correlation_model is not None:
-            params['within_event_correlation_model'] = (
-                self.within_event_correlation_model)
-            params['within_event_correlation_params'] = str(
-                self.within_event_correlation_params or {})
+        for field in ('within_event_correlation_model',
+                      'within_event_correlation_params',
+                      'between_event_correlation_model'):
+            if getattr(self, field) is not None:
+                params[field] = str(getattr(self, field))
         if self.maximum_distance_stations is not None:
             params['maximum_distance_stations'] = str(
                 self.maximum_distance_stations)
@@ -184,6 +192,8 @@ IMPACT_FORM_LABELS = {
     'calculation_mode': 'Calculation mode',
     'within_event_correlation_model': 'Within-event correlation model',
     'within_event_correlation_params': 'Within-event correlation params',
+    'between_event_correlation_model': 'Between-event correlation model',
+    'correlation_strategy': 'Spatial correlation strategy',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -216,6 +226,56 @@ IMPACT_FORM_PLACEHOLDERS = {
     'description': 'Leave blank to set automatically',
     'notes': '',
 }
+
+# IMTs of the impact calculations: the ShakeMap jobs compute all of them
+# (see create_impact_job in views.py), the other jobs the ones of the
+# global vulnerability models
+IMPACT_IMTS = {
+    'shakemap': 'PGA, PGV, SA(0.3), SA(0.6), SA(1.0)',
+    'rupture': 'PGA, SA(0.3), SA(0.6), SA(1.0)'}
+
+DEFAULT_CORRELATION_MODELS = {
+    'within_event_correlation_model': 'LothBaker2013',
+    'between_event_correlation_model': 'AbrahamsonEtAl2014BetweenEvent'}
+
+
+# True if the model class accepts all the given IMTs
+def _accepts(cls, imts):
+    try:
+        cls().validate_imts([imt.from_string(im) for im in imts.split(', ')])
+    except ValueError:
+        return False
+    return True
+
+
+# The correlation models offered to the level 2 users, by kind of job.
+# The ShakeMap jobs use the within-event model of the ShakeMap conditioning;
+# the other jobs the joint models enabled for circulant embedding, since a
+# dense factorization of the impact grids could exhaust the memory
+def _impact_correlation_models():
+    within = {name: spec.cls for name, spec in get_model_specs(
+        'spatial_cross_imt').items()
+        if spec.cls.SUPPORTS_CIRCULANT_EMBEDDING}
+    between = {name: spec.cls for name, spec in get_model_specs(
+        'cross_imt').items()
+        if spec.residual_component == ResidualComponent.BETWEEN_EVENT}
+    models = {}
+    for scope, imts in IMPACT_IMTS.items():
+        scope_within = ({'LothBaker2013': within['LothBaker2013']}
+                        if scope == 'shakemap' else within)
+        for field, classes in (
+                ('within_event_correlation_model', scope_within),
+                ('between_event_correlation_model', between)):
+            default = DEFAULT_CORRELATION_MODELS[field]
+            # the default model first, then in alphabetical order
+            models[field, scope] = sorted(
+                (name for name, cls in classes.items()
+                 if _accepts(cls, imts)),
+                key=lambda name: (name != default, name))
+    return models
+
+
+IMPACT_CORRELATION_MODELS = _impact_correlation_models()
 
 # maximum value of maximum_distance (in km) allowed to level 1 users
 MAX_DISTANCE_LEVEL1 = 500
@@ -293,6 +353,7 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file_input': '',
     'station_data_file_loaded': '',
     'description': '',
+    **DEFAULT_CORRELATION_MODELS,
 }
 
 IMPACT_APPROACHES = {
@@ -340,6 +401,8 @@ validators = {
     'notes': valid.utf8,
     'make_impact_reports': valid.boolean,
     'within_event_correlation_model': valid.NoneOr(valid.utf8_not_empty),
+    'between_event_correlation_model': valid.NoneOr(valid.utf8_not_empty),
+    'correlation_strategy': valid.Choice(*CORRELATION_STRATEGIES),
     'calculation_mode': valid.Choice('scenario', 'scenario_risk'),
     'within_event_correlation_params': valid.dictionary,
 }
@@ -436,6 +499,49 @@ def _apply_nodal_plane(inputdic, user, monitor):
     return {}
 
 
+# level 1 users cannot exceed MAX_DISTANCE_LEVEL1
+def _check_maximum_distance(params, user):
+    maxdist = params.get('maximum_distance')
+    if (user.level < 2 and maxdist is not None
+            and maxdist > MAX_DISTANCE_LEVEL1):
+        return {"status": "failed",
+                "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
+                              f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
+                "invalid_inputs": ['maximum_distance']}
+    return {}
+
+
+# Level 1 users always get the default correlation models, level 2 users
+# choose among the models of their kind of job, see IMPACT_CORRELATION_MODELS
+def _check_correlation_models(params, user, use_shakemap):
+    scope = 'shakemap' if use_shakemap else 'rupture'
+    for field, default in DEFAULT_CORRELATION_MODELS.items():
+        if user.level < 2 or not params.get(field):
+            params[field] = default
+        allowed = IMPACT_CORRELATION_MODELS[field, scope]
+        if params[field] not in allowed:
+            kind = 'ShakeMap' if use_shakemap else 'rupture-based'
+            return {'status': 'failed', 'invalid_inputs': [field],
+                    'error_msg': (
+                        f'{IMPACT_FORM_LABELS[field]}: {params[field]} is '
+                        f'not available for {kind} jobs; choose among '
+                        f'{", ".join(allowed)}')}
+    if user.level < 2:  # the default model takes no parameters
+        params['within_event_correlation_params'] = {}
+    params.setdefault('within_event_correlation_params', {})
+    # build the model once, so that wrong parameters are reported here
+    # rather than when the job starts
+    model = params['within_event_correlation_model']
+    try:
+        get_model(model, **params['within_event_correlation_params'])
+    except (TypeError, ValueError) as exc:
+        field = 'within_event_correlation_params'
+        return {'status': 'failed', 'invalid_inputs': [field],
+                'error_msg': f'{IMPACT_FORM_LABELS[field]}: invalid for '
+                f'{model}: {exc}'}
+    return {}
+
+
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                     monitor=performance.Monitor()):
     """
@@ -449,13 +555,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     inputdic, params, err = _validate(POST)
     if err:
         return None, inputdic, params, err
-    maxdist = params.get('maximum_distance')
-    if (user.level < 2 and maxdist is not None
-            and maxdist > MAX_DISTANCE_LEVEL1):
-        err = {"status": "failed",
-               "error_msg": (f'{IMPACT_FORM_LABELS["maximum_distance"]}'
-                             f' cannot exceed {MAX_DISTANCE_LEVEL1} km'),
-               "invalid_inputs": ['maximum_distance']}
+    run = len(params) > 1  # called by impact_run
+    err = _check_maximum_distance(params, user)
+    if err:
         return None, inputdic, params, err
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
@@ -470,6 +572,10 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    if run:
+        err = _check_correlation_models(params, user, use_shakemap)
+        if err:
+            return None, inputdic, params, err
     shakemap_version = POST.get('shakemap_version') or 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(
@@ -506,7 +612,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     for field, get_default in MAG_DEPENDENT_DEFAULTS.items():
         if params.get(field, 0) is None:
             params[field] = get_default(rupdic['mag'])
-    if len(params) > 1:  # called by impact_run
+    if run:
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
         params['mmi_file'] = rupdic.get('mmi_file')

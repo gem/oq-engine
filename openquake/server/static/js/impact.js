@@ -42,6 +42,36 @@ window.initImpactForm = function() {
         });
     }
 
+    // each correlation dropdown offers the models of the kind of job
+    // (data-scope shakemap or rupture): all the options are kept here
+    const correlation_fields = ['within_event_correlation_model',
+                                'between_event_correlation_model'];
+    const all_correlation_options = {};
+    correlation_fields.forEach(function (field) {
+        all_correlation_options[field] = $('#' + field + ' option').clone();
+    });
+
+    // called when the page is loaded and when the approach changes; the
+    // default model is selected if available, otherwise the first one
+    function refresh_correlation_options() {
+        const scope = use_shakemap() ? 'shakemap' : 'rupture';
+        correlation_fields.forEach(function (field) {
+            const select = $('#' + field);
+            select.empty();
+            all_correlation_options[field].each(function () {
+                if ($(this).data('scope') === scope) {
+                    select.append($(this).clone());
+                }
+            });
+            const default_model = window.IMPACT.impact_form_defaults[field];
+            if (select.find('option[value="' + default_model + '"]').length) {
+                select.val(default_model);
+            } else {
+                select.prop('selectedIndex', 0);
+            }
+        });
+    }
+
     function use_shakemap() {
         const approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
@@ -116,8 +146,8 @@ window.initImpactForm = function() {
     }
 
     function set_retrieve_data_btn_state(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
-        const approach = get_selected_approach();
-        const msg = retrieve_data_btn_txt_map[approach][state];
+        const impact_approach = get_selected_approach();
+        const msg = retrieve_data_btn_txt_map[impact_approach][state];
         if (state == 'initial') {
             $('.submit_impact_get_rupture_waiting').hide();
         } else {
@@ -285,6 +315,7 @@ window.initImpactForm = function() {
             selector.empty();
         }
         $('#time_event').val(window.IMPACT.impact_form_defaults['time_event']);
+        refresh_correlation_options();
         $('#no_uncertainty').prop('checked', false);
         default_truncation_level = window.IMPACT.impact_form_defaults.truncation_level;
         $('#rupture-map').hide();
@@ -317,6 +348,7 @@ window.initImpactForm = function() {
     }
 
     $('input[name="impact_approach"]').change(function () {
+        refresh_correlation_options();
         const selected_approach = $(this).val();
         invalidate_shakemap_versions_request();
         set_retrieve_data_btn_state('initial');
@@ -743,6 +775,9 @@ window.initImpactForm = function() {
         formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
         formData.append('region_grid_spacing', $('#region_grid_spacing').val());
         formData.append('ses_seed', $('#ses_seed').val());
+        correlation_fields.forEach(function (field) {
+            formData.append(field, $('#' + field).val());
+        });
         formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
         formData.append('local_timestamp', $("#local_timestamp").val());
         formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
@@ -768,7 +803,8 @@ window.initImpactForm = function() {
             if ("invalid_inputs" in resp) {
                 for (var i = 0; i < resp.invalid_inputs.length; i++) {
                     var input_id = resp.invalid_inputs[i];
-                    $("input#" + input_id).css("background-color", "#F2DEDE");
+                    $("input#" + input_id + ", select#" + input_id)
+                        .css("background-color", "#F2DEDE");
                 }
             }
             var err_msg = resp.error_msg || ajax_error_message(
@@ -784,6 +820,7 @@ window.initImpactForm = function() {
     $("#impact_run_form > input").click(function() {
         $(this).css("background-color", "white");
     });
+    refresh_correlation_options();
     // NB: this also enables the approach radios, which are disabled in the
     // template so that they cannot be changed before the handlers are bound
     set_shakemap_version_selector();

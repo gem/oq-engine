@@ -45,6 +45,7 @@ from xml.dom import minidom
 
 from shapely.geometry import shape, Point, Polygon
 import pandas as pd
+import h5py
 import numpy
 
 from openquake.baselib import performance, config
@@ -52,6 +53,8 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import nrml, sourceconverter, valid
+from openquake.hazardlib.shakemap.realization import (
+    psd_factor, STATION_DT, with_metadata, get_metadata)
 from openquake.hazardlib.source.rupture import (
     build_planar_rupture_from_dict, get_ruptures)
 
@@ -142,6 +145,8 @@ def get_array(**kw):
     elif kind == 'usgs_xml':
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
+    elif kind == 'shake_result_hdf':
+        return get_array_shake_result_hdf(kw['fname'])
     elif kind == 'usgs_id':
         # NOTE: _get_contents uses the 'usgs_preferred' ShakeMap
         #       version by default
@@ -1074,7 +1079,8 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
         return None, None, None, None, err
     contents = shakemap['contents']
 
-    if get_grid and 'download/grid.xml' in contents:
+    if (get_grid and ('download/grid.xml' in contents or
+                      'download/shake_result.hdf' in contents)):
         if user.testdir:  # in parsers_test
             grid_fname = f'{user.testdir}/{usgs_id}-grid.xml'
             shakemap_array = get_shakemap_array(grid_fname)
@@ -1637,25 +1643,250 @@ def get_array_usgs_id(kind, id, contents={}):
 
     :param kind: the string "usgs_id", for API compatibility
     :param id: ShakeMap ID
-    :param contents: a dictionary containing 'download/grid.xml'
+    :param contents: product links from the USGS event response
     """
+    # shake_result.hdf is preferred also for the uncorrelated jobs, as
+    # requested in issue #11706: its grid and medians coincide with
+    # grid.xml up to the float32 rounding, so the results of the jobs
+    # without correlation are practically unchanged
+    result = contents.get('download/shake_result.hdf')
+    note = None
+    if result:
+        try:
+            array = get_array(
+                kind='shake_result_hdf', fname=result['url'])
+            logging.info('Using shake_result.hdf for %s', id)
+            return array
+        # only unreadable or unusable products fall back to grid.xml: other
+        # errors are bugs and must not be hidden by the fallback
+        except (OSError, KeyError, ShakeMapProductError) as exc:
+            # grid.xml has no phi/tau, so the within-event residuals
+            # will be built from the total standard deviation only
+            note = f'shake_result.hdf not used: {exc}'
+            logging.warning('Unable to read shake_result.hdf for %s: %s; '
+                            'falling back to grid.xml, without phi/tau '
+                            'components', id, exc)
     grid = contents.get('download/grid.xml')
     if not grid:
-        raise MissingLink('Could not find grid.xml link for %s' % id)
+        raise MissingLink('Could not find a ShakeMap grid for %s' % id)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
     if not uncertainty:
         logging.warning('No uncertainty.xml file')
-    return get_array(
+    logging.info('Using grid.xml for %s', id)
+    array = get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)
+    return with_metadata(array, note=note)
+
+
+def _hdf_json(h5, key):
+    # Decode a JSON dictionary stored in a shake_result.hdf file.
+    text = h5[key][()]
+    return json.loads(text.decode('utf8') if isinstance(text, bytes)
+                      else text)
+
+
+def _hdf_grid(h5, conf):
+    # Return lon_min, lat_max, xres, yres of the grid of the arrays. The
+    # arrays store their own grid, which can be coarser than the configured
+    # resolution when ShakeMap limits the number of points: the configured
+    # extent and resolution are used only if the grid is not stored.
+    # As in esi-shakelib (GeoDict.createDictFromBox), the grid starts at
+    # the west and north edges: the stored xmax and ymin are the requested
+    # bounds, which differ from the last grid points when the extent is not
+    # a multiple of the spacing (by 0.005 degrees for us6000t7zp)
+    attrs = h5['arrays/vs30'].attrs
+    if all(key in attrs for key in ('xmin', 'xmax', 'ymax', 'dx', 'dy')):
+        xmin, xmax = float(attrs['xmin']), float(attrs['xmax'])
+        if xmin > xmax:  # crossing the antimeridian, as in esi-shakelib
+            xmin -= 360
+        return xmin, float(attrs['ymax']), float(attrs['dx']), float(
+            attrs['dy'])
+    extent = list(map(float, conf['extent']['bounds']['extent']))
+    if -999 in extent or not numpy.isfinite(extent).all():
+        map_info = _hdf_json(h5, 'dictionaries/info.json')[
+            'output']['map_information']
+        extent = [
+            float(map_info['min']['longitude']),
+            float(map_info['min']['latitude']),
+            float(map_info['max']['longitude']),
+            float(map_info['max']['latitude'])]
+    prediction = conf['interp']['prediction_location']
+    return (extent[0], extent[3], float(prediction['xres']),
+            float(prediction['yres']))
+
+
+class ShakeMapProductError(ValueError):
+    """
+    Raised for shake_result.hdf products which cannot be used
+    """
+
+
+def _station_period_indices(group, periods):
+    # indices of the periods of the observations, checked against the
+    # table of the periods of the product
+    indices = group['sta_per_ix'][()].reshape(-1)
+    if numpy.any(indices < 0) or numpy.any(indices >= len(periods)):
+        raise ShakeMapProductError('Invalid ShakeMap station period indices')
+    return indices
+
+
+def _hdf_stations(h5, conf, groups, imts):
+    # Return the STATION_DT array of the stations conditioning each IMT;
+    # an IMT with incomplete station bookkeeping gets a station with NaN
+    # values, so that the conditioning is dropped only if that IMT is
+    # required (see conditioning_stations); the correlation with the
+    # sites is computed only when sampling (see gmfs.py)
+    fields = ('sta_lons_rad', 'sta_lats_rad', 'sta_per_ix', 'sta_phi',
+              'add_uncertainty')
+    incomplete = [im for im in imts
+                  if not all(f in groups[im] for f in fields)]
+    if incomplete:
+        logging.warning('Incomplete ShakeMap station bookkeeping for %s',
+                        ', '.join(incomplete))
+    imts = [im for im in imts if im not in incomplete]
+    if not imts:
+        return None
+    ccf = conf.get('modeling', {}).get('ccf')
+    module = conf.get('ccf_modules', {}).get(ccf, [ccf])[0]
+    if module not in ('LB13', 'LothBaker2013'):
+        raise ShakeMapProductError(
+            f'Unsupported ShakeMap conditioning model: {ccf}')
+    arrays = []
+    for im in imts:
+        group = groups[im]
+        size = group['sta_phi'].size
+        if not size:
+            continue
+        # the periods are float32 in the products: 0.01 would be below the
+        # minimum period of the LothBaker2013 tables without the rounding
+        periods = numpy.round(
+            h5['arrays/imt_periods'][()].astype(numpy.float64), 6)
+        values = [numpy.degrees(group['sta_lons_rad'][()].reshape(-1)),
+                  numpy.degrees(group['sta_lats_rad'][()].reshape(-1)),
+                  periods[_station_period_indices(group, periods)],
+                  group['sta_phi'][()].reshape(-1),
+                  group['add_uncertainty'][()].reshape(-1)]
+        if any(len(vals) != size for vals in values):
+            raise ShakeMapProductError(
+                'Inconsistent ShakeMap station array lengths')
+        array = numpy.zeros(size, STATION_DT)
+        array['imt'] = im
+        for name, vals in zip(STATION_DT.names[1:], values):
+            array[name] = vals
+        arrays.append(array)
+    for im in incomplete:
+        array = numpy.zeros(1, STATION_DT)
+        array['imt'] = im
+        for name in STATION_DT.names[1:]:
+            array[name] = numpy.nan
+        arrays.append(array)
+    return (numpy.concatenate(arrays) if arrays
+            else numpy.zeros(0, STATION_DT))
+
+
+def _hdf_between_factor(group):
+    # With no stations ShakeMap stores empty C and Sigma_HH_YD arrays.
+    # The remaining prior between-event residual is spatially common.
+    sigma = group['Sigma_HH_YD'][()]
+    C = group['C'][()]
+    if not sigma.size and not C.size:
+        return group['tau'][()].reshape(-1, 1)
+    C = C.reshape(-1, C.shape[-1])
+    return C @ psd_factor(sigma)
+
+
+def get_array_shake_result_hdf(fname):
+    # Convert the HDF5 grid to the common ShakeMap array representation.
+    url = path2url(fname)
+    with h5py.File(io.BytesIO(_download_url(url)), 'r') as h5:
+        conf = _hdf_json(h5, 'dictionaries/config')
+        lon_min, lat_max, xres, yres = _hdf_grid(h5, conf)
+        component = conf['interp'].get(
+            'component', 'GREATER_OF_TWO_HORIZONTAL')
+        imt_groups = h5[f'arrays/imts/{component}']
+        imts = sorted(imt for imt in imt_groups
+                      if 'mean' in imt_groups[imt])
+        shape = h5['arrays/vs30'].shape
+        ny, nx = shape
+        dt = [(imt, F32) for imt in imts]
+        # the posterior components are read per IMT: the IMTs without them
+        # (for instance an MMI group with only mean and std) get NaN values,
+        # so that filter_unused_imts drops the fields only if a required
+        # IMT misses them, instead of taking them as zero uncertainties
+        components = [field for field in ('phi', 'tau') if any(
+            field in imt_groups[imt] for imt in imts)]
+        dtlist = [('lon', numpy.float64), ('lat', numpy.float64),
+                  ('vs30', F32), ('val', dt), ('std', dt)]
+        dtlist.extend((field, [(im, numpy.float64) for im in imts])
+                      for field in components)
+        # the between-event factor C @ chol(Sigma_HH_YD) is stored for the
+        # IMTs having both arrays (shakemap-modules >= 1.1.4) and phi,
+        # padded to the largest number of between-event terms
+        cl_imts = [imt for imt in imts if all(
+            key in imt_groups[imt] for key in ('phi', 'C', 'Sigma_HH_YD'))]
+        if cl_imts:
+            width = max(1, max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
+                               for imt in cl_imts))
+            dtlist.append(('CL', [(imt, F32, (width,)) for imt in imts]))
+        array = numpy.zeros(ny * nx, dtlist)
+        lons = lon_min + numpy.arange(nx) * xres
+        lats = lat_max - numpy.arange(ny) * yres
+        array['lon'] = numpy.tile(lons, ny)
+        array['lat'] = numpy.repeat(lats, nx)
+        array['vs30'] = h5['arrays/vs30'][()].reshape(-1)
+        for imt in imts:
+            group = imt_groups[imt]
+            # the means are natural logarithms of g (cm/s for PGV), while
+            # the ShakeMap arrays store %g, as grid.xml, and MMI as such
+            mean = group['mean'][()].reshape(-1)
+            scale = 1 if imt in ('MMI', 'PGV') else 100
+            array['val'][imt] = (mean if imt == 'MMI' else
+                                 numpy.exp(mean) * scale)
+            array['std'][imt] = group['std'][()].reshape(-1)
+            for field in components:
+                array[field][imt] = (group[field][()].reshape(-1)
+                                     if field in group else numpy.nan)
+            if imt in cl_imts:
+                # the between-event samples are C @ chol(Sigma) @ z
+                cl = _hdf_between_factor(group)
+                array['CL'][imt][:, :cl.shape[1]] = cl
+            elif cl_imts:
+                array['CL'][imt] = numpy.nan
+        if cl_imts:
+            stations = _hdf_stations(h5, conf, imt_groups, cl_imts)
+            array = with_metadata(array, stations)
+    return array
 
 
 def get_array_file_npy(kind, fname):
     """
-    Read a ShakeMap in .npy format from the local file system
+    Read a ShakeMap in .npy format from the local file system, or in the
+    .npz format written by save_shakemap, which also stores the stations
+    of the shake_result.hdf products
     """
-    return numpy.load(fname)
+    data = numpy.load(fname)
+    if not isinstance(data, numpy.lib.npyio.NpzFile):
+        return data
+    with data:
+        note = str(data['note']) if 'note' in data else None
+        stations = data['stations'] if 'stations' in data else None
+        return with_metadata(data['shakemap'], stations, note)
+
+
+def save_shakemap(fname, array):
+    """
+    Save a ShakeMap array in a format readable by get_array_file_npy,
+    keeping the stations and the note carried by the array, if any
+
+    :param fname: path of the file, written as given (no suffix added)
+    :param array: a ShakeMap array
+    """
+    extra = {key: get_metadata(array, key) for key in ('stations', 'note')}
+    with open(fname, 'wb') as f:
+        numpy.savez(f, shakemap=with_metadata(array), **{
+            key: val for key, val in extra.items() if val is not None})
 
 
 def get_shapefile_arrays(polygons, records):

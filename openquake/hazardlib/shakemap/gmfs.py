@@ -18,11 +18,24 @@
 
 import logging
 import numpy
+from scipy.linalg import solve_triangular
 from scipy.stats import truncnorm
 from scipy import interpolate
 
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, imt
+from openquake.baselib import config
+from openquake.baselib.general import CallableDict, humansize
+from openquake.hazardlib import geo, imt, site
+from openquake.hazardlib.correlation_models.base import (
+    ResidualComponent, SpatialCorrelationModel)
+from openquake.hazardlib.correlation_models.spatial_cross_imt import (
+    loth_baker_2013)
+from openquake.hazardlib.shakemap.realization import (
+    psd_factor, posterior_within_residuals, station_conditioning,
+    conditioning_stations)
+from openquake.hazardlib.calc.gmf import (
+    _site_positions, _correlation_budget, _truncated_normals)
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    CirculantEmbeddingFactor, RegularGridLayout)
 
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
@@ -30,7 +43,7 @@ MAX_GMV = 5.  # 5 g
 MAX_PGV_GMV = 500.  # cm/s
 
 
-def spatial_correlation_array(dmatrix, imts, model):
+def spatial_correlation_array(dmatrix, imts, model, context=None):
     """
     :param dmatrix: distance matrix of shape (N, N)
     :param imts: M intensity measure types
@@ -44,7 +57,8 @@ def spatial_correlation_array(dmatrix, imts, model):
     model.validate_imts(imts)
     corr = numpy.zeros((len(imts), n, n))
     for imti, imt_ in enumerate(imts):
-        corr[imti] = model.correlation_matrix(dmatrix, imt_)
+        corr[imti] = model.correlation_matrix(
+            dmatrix, imt_, context=context)
     return corr
 
 
@@ -164,57 +178,564 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
     ]).reshape(-1, 1)
 
 
-@calculate_gmfs.add('Silva&Horspool')
-def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
-                      cross_imt_model, cholesky_limit):
-    """
-    Implementation of paper by Silva and Horspool 2019
-    https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
+class _SeparableCorrelationModel:
+    # Compose spatial and cross-IMT models for circulant embedding: the
+    # correlation between IMT i at a site and IMT j at another site is the
+    # cross-IMT coefficient times the larger of the spatial correlations of
+    # the two IMTs, i.e. the one with the longer range (the dense path
+    # combines instead the factors, L_i @ L_j.T, see cholesky); without a
+    # spatial model the sites are independent
+    SUPPORTS_CIRCULANT_EMBEDDING = True
 
-    :param shakemap: site coordinates with median ShakeMap values
-    :param imts: list of required imts
-    :param spatial_model: spatial correlation model
-    :param cross_imt_model: cross-IMT correlation model
-    :returns: F(Z, mu) to calculate gmfs
+    def __init__(self, spatial_model, cross_imt_model):
+        self.spatial_model = spatial_model
+        self.cross_imt_model = cross_imt_model
+
+    def correlation_block(self, distances, imts1, imts2=None,
+                          component=None, context=None):
+        if imts2 is None:
+            imts2 = imts1
+        blocks = numpy.zeros((len(imts1) * len(distances),
+                              len(imts2) * distances.shape[1]))
+        for i, imt1 in enumerate(imts1):
+            for j, imt2 in enumerate(imts2):
+                if self.spatial_model is None:
+                    spatial = (distances == 0).astype(float)
+                else:
+                    corr1 = self.spatial_model.correlation_matrix(
+                        distances, imt1, context=context)
+                    corr2 = self.spatial_model.correlation_matrix(
+                        distances, imt2, context=context)
+                    spatial = numpy.maximum(corr1, corr2)
+                cross = (self.cross_imt_model.rho(
+                    imt1, imt2, context=context)
+                    if self.cross_imt_model else float(imt1 == imt2))
+                row = slice(i * len(distances), (i + 1) * len(distances))
+                col = slice(j * distances.shape[1],
+                            (j + 1) * distances.shape[1])
+                blocks[row, col] = spatial * cross
+        return blocks
+
+
+def circulant_embedding_feasible(sites):
     """
-    # make sure all imts used have a period, needed for correlation
-    imts = [im for im in imts if hasattr(im, 'period')]
-    # checks
-    N = len(shakemap)
-    M = len(imts)
-    if N * M > cholesky_limit:
+    :returns: True if the sites, or their complete grid, can be laid out
+              on a regular correlation grid for circulant embedding
+    """
+    complete = getattr(sites, 'complete', sites)
+    for candidate in (complete, sites):
+        try:
+            RegularGridLayout.from_sites(candidate)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+# Factorize a regular-grid correlation field and retain only selected sites.
+def _circulant_factor(sites, imts, spatial_model,
+                      cross_imt_model, context):
+    if (spatial_model is not None and
+            not spatial_model.SUPPORTS_CIRCULANT_EMBEDDING):
+        raise ValueError(
+            f'{spatial_model.__class__.__name__} does not support '
+            'circulant_embedding')
+    complete = getattr(sites, 'complete', sites)
+    try:
+        layout = RegularGridLayout.from_sites(complete)
+        site_indices = (layout.site_indices if complete is sites else
+                        layout.site_indices[_site_positions(complete, sites)])
+    except ValueError as complete_error:
+        if complete is sites:
+            raise
+        logging.warning('Using selected sites for circulant embedding: %s',
+                        complete_error)
+        layout = RegularGridLayout.from_sites(sites)
+        site_indices = layout.site_indices
+    model = spatial_model
+    if cross_imt_model is not None or model is None:
+        model = _SeparableCorrelationModel(model, cross_imt_model)
+    return CirculantEmbeddingFactor.build(
+        model, imts, layout.grid_shape, layout.spacing,
+        ResidualComponent.WITHIN_EVENT, context, site_indices)
+
+
+# Apply the selected spatial factorization to sampled residuals.
+def _correlate_residuals(Z, imts, sites, spatial_model,
+                         cross_imt_model, correlation_strategy, context,
+                         cholesky_limit, truncation_level, seed):
+    M, N = len(imts), len(sites.lons)
+    if correlation_strategy == 'circulant_embedding':
+        factor = _circulant_factor(
+            sites, imts, spatial_model, cross_imt_model, context)
+        budget = int(float(config.memory.correlated_gmf_gb) * 1024 ** 3)
+        batch_size = factor.batch_size(budget)
+        residuals = numpy.empty((factor.output_size, Z.shape[1]), F32)
+        rng = numpy.random.default_rng(seed + 2)
+        for start in range(0, Z.shape[1], batch_size):
+            stop = min(start + batch_size, Z.shape[1])
+            shape = (factor.input_size, stop - start)
+            if truncation_level <= 1E-9:
+                samples = numpy.zeros(shape)
+            else:
+                samples = truncnorm.rvs(
+                    -truncation_level, truncation_level, loc=0, scale=1,
+                    size=shape, random_state=rng)
+            residuals[:, start:stop] = factor.apply(samples)
+        return residuals
+    if M * N > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
             f'{M=} x {N=}', cholesky_limit))
+    return _correlate_dense(
+        Z, imts, spatial_model, cross_imt_model, context,
+        sites.lons, sites.lats)
 
-    # Cross Correlation
-    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
 
-    # Spatial Correlation and Covariance
-    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
+# Dense correlation path for arbitrary site geometry.
+def _spatial_correlation(dmatrix, imts, spatial_model, context):
+    # spatial_correlation_array, warning if the matrix of the first IMT is
+    # degenerate, for instance for coincident sites
     spatial_corr = spatial_correlation_array(
-        dmatrix, imts, spatial_model)
-
+        dmatrix, imts, spatial_model, context)
     eig, _ = numpy.linalg.eigh(spatial_corr[0])
     small_eig = (eig < 1E-6).sum()
     if small_eig:
-        # raise RuntimeError(f'{small_eig} of {N} eigenvalues are zeros')
         logging.warning('The spatial correlation matrix is degenerate, '
-                        f'{small_eig} of {N} eigenvalues are zeros')
+                        f'{small_eig} of {len(dmatrix)} eigenvalues are '
+                        'zeros')
+    return spatial_corr
 
-    stddev = [shakemap['std'][str(imt)] for imt in imts]
+
+def _correlate_legacy(Z, imts, shakemap, spatial_model,
+                      cross_imt_model, cholesky_limit, context):
+    # The dense calculation of the engine before shake_result.hdf, kept for
+    # the XML ShakeMaps sampled with separate spatial and cross-IMT models:
+    # it factorizes the covariance, so it returns residuals in ln units
+    M, N = len(imts), len(shakemap)
+    if M * N > cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            f'{M=} x {N=}', cholesky_limit))
+    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
+    dmatrix = geo.geodetic.distance_matrix(
+        shakemap['lon'], shakemap['lat'])
+    spatial_corr = _spatial_correlation(
+        dmatrix, imts, spatial_model, context)
+    stddev = [shakemap['std'][str(im)] for im in imts]
     for im, std in zip(imts, stddev):
         if std.sum() == 0:
             raise ValueError('Cannot decompose the spatial covariance '
                              'because stddev==0 for IMT=%s' % im.string)
-    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+    covariance = spatial_covariance_array(stddev, spatial_corr)
 
-    # Cholesky Decomposition
-    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+    # Cholesky Decomposition: L @ Z contains ln-unit residuals
+    return cholesky(covariance, cross_corr) @ Z
 
+
+def _is_joint_model(model):
+    # True for the within-event models correlating sites and IMTs jointly,
+    # like LothBaker2013, which have no separate spatial correlation
+    return model is not None and not isinstance(
+        model, SpatialCorrelationModel)
+
+
+def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
+                     context, lons, lats):
+    # Dense correlation for the unit-variance residuals of the points
+    dmatrix = geo.geodetic.distance_matrix(lons, lats)
+    if _is_joint_model(spatial_model):
+        corr = spatial_model.correlation_block(
+            dmatrix, imts, context=context)
+        try:
+            return numpy.linalg.cholesky(corr) @ Z
+        except numpy.linalg.LinAlgError:
+            return psd_factor(corr) @ Z
+    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
+    spatial_corr = _spatial_correlation(
+        dmatrix, imts, spatial_model, context)
+    return cholesky(spatial_corr, cross_corr) @ Z
+
+
+def _spatial_factor(dist, corr_range):
+    # factor of the exponential correlation exp(-3 d / range); the
+    # eigendecomposition is used only if the Cholesky decomposition fails
+    corr = numpy.multiply(dist, -3 / corr_range, dtype=numpy.float64)
+    numpy.exp(corr, out=corr)
+    try:
+        return numpy.linalg.cholesky(corr)
+    except numpy.linalg.LinAlgError:
+        return psd_factor(corr)
+
+
+def _dense_loth_baker_residuals(points, imts, Z):
+    # Some interpolated coregionalization matrices are indefinite even
+    # when the complete covariance is valid. Use the common factorization
+    # instead of independently clipping them and inflating the variances.
+    size = len(points) * len(imts)
+    if 40 * size ** 2 > _correlation_budget():
+        raise ValueError('Dense LothBaker2013 sampling exceeds '
+                         'correlated_gmf_gb; request fewer sites or IMTs')
+    sites = site.SiteCollection.from_points(points[:, 0], points[:, 1])
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    try:
+        factor = model.factor(sites, imts, ensure_psd=False)
+    except numpy.linalg.LinAlgError:
+        factor = model.factor(sites, imts)
+        residuals = factor.apply(Z).reshape(len(imts), len(points), -1)
+        # A joint covariance repair can perturb marginal spatial blocks.
+        # Restore each block by a linear map, retaining joint PSD by
+        # construction and using the same common factorization interface.
+        for i, im in enumerate(imts):
+            rows = factor.lower_triangle[
+                i * len(points):(i + 1) * len(points)]
+            lower = numpy.linalg.cholesky(rows @ rows.T)
+            marginal = model.factor(sites, [im], ensure_psd=False)
+            residuals[i] = marginal.apply(solve_triangular(
+                lower, residuals[i], lower=True))
+        return residuals
+    return factor.apply(Z).reshape(len(imts), len(points), -1)
+
+
+def _loth_baker_residuals(lons, lats, imts, Z, seed, truncation_level):
+    # Unit-variance Loth and Baker (2013) residuals of shape (M, N, E),
+    # sampled with the linear model of coregionalization of the model,
+    # B1 ⊗ R1 + B2 ⊗ R2 + B3 ⊗ I: this is the same distribution as the
+    # dense (M * N, M * N) factorization, with two (U, U) factorizations,
+    # U being the number of distinct points; the sites associated to the
+    # same ShakeMap point have distance zero and share its residuals
+    M, E = len(imts), Z.shape[1]
+    points, first, inverse = numpy.unique(
+        numpy.column_stack([lons, lats]), axis=0,
+        return_index=True, return_inverse=True)
+    U = len(points)
+    # peak memory measured for 10_000 points: about 40 bytes per pair,
+    # for the distance matrix and its temporaries, the correlation and
+    # the factor
+    required = 40 * U ** 2
+    if required > _correlation_budget():
+        raise ValueError(
+            f'Sampling the Loth and Baker (2013) correlation on {U} '
+            f'ShakeMap points requires about {humansize(required)}, more '
+            'than the correlated_gmf_gb of openquake.cfg; set a proper '
+            '`region_grid_spacing` so that your exposure involves less '
+            'sites')
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    B1, B2, B3 = model.coregionalization(imts)
+    if any(numpy.linalg.eigvalsh(b).min() < -1E-10
+           for b in (B1, B2, B3)):
+        samples = Z.reshape(M, -1, E)[:, first].reshape(M * U, E)
+        return _dense_loth_baker_residuals(
+            points, imts, samples)[:, inverse]
+    # the nugget uses the samples Z of the distinct points, while the
+    # two spatial structures use new samples, truncated in the same way
+    res = numpy.einsum('ij,jue->iue', psd_factor(B3),
+                       Z.reshape(M, -1, E)[:, first])
+    rng = numpy.random.default_rng(seed + 4)
+    dist = geo.geodetic.distance_matrix(points[:, 0], points[:, 1])
+    for B, corr_range in ((B1, loth_baker_2013.SHORT_RANGE),
+                          (B2, loth_baker_2013.LONG_RANGE)):
+        z = _truncated_normals((U, M * E), truncation_level, rng)
+        field = (_spatial_factor(dist, corr_range) @ z).reshape(U, M, E)
+        res += numpy.einsum('ij,uje->iue', psd_factor(B), field)
+    return res[:, inverse.reshape(-1)]
+
+
+def _conditional_phi(std, tau2):
+    # Conditional within-event sigma sqrt(std^2 - tau^2) of a
+    # shake_result.hdf product: std and tau are conditional on the
+    # stations, while the stored phi is the prior within-event sigma; the
+    # clip protects from the rounding of the float32 values when the
+    # within-event uncertainty is negligible
+    var = numpy.asarray(std, numpy.float64) ** 2 - tau2
+    return numpy.sqrt(numpy.clip(var, 0, None))
+
+
+def _between_residuals(shakemap, imts, E, seed, truncation_level,
+                       between_event_model):
+    # ShakeMap stores for each IMT a factor CL of the posterior
+    # between-event terms, sampled as CL @ z with z standard normal, but not
+    # their joint posterior across IMTs; one draw per event of each z,
+    # truncated as the within-event samples Z; hence, like in the rest of
+    # the engine, the variance phi^2 + |CL|^2 = std^2 is reached only for a
+    # large truncation level and is reduced by the variance of the
+    # truncated normal otherwise (see to_gmfs)
+    rng = numpy.random.default_rng(seed + 3)
+    zbs = [truncnorm.rvs(-truncation_level, truncation_level,
+                         size=(shakemap['CL'][str(im)].shape[1], E),
+                         random_state=rng) for im in imts]
+    if between_event_model is None:  # independent across IMTs
+        return [shakemap['CL'][str(im)] @ zb for im, zb in zip(imts, zbs)]
+    # with a between-event model, z = u w + (I - u u') v, where w are the
+    # event terms correlated by the model, u is the dominant direction of
+    # CL and v the independent draws: z is still standard normal, so the
+    # posterior of each IMT is unchanged, and the IMTs are correlated as in
+    # the model when CL has rank one, as for the products without stations
+    eps = between_event_model.get_inter_eps(
+        imts, E, numpy.random.default_rng(seed + 5))  # shape (M, E)
+    between = []
+    for im, zb, w in zip(imts, zbs, eps):
+        CL = shakemap['CL'][str(im)].astype(numpy.float64)
+        u = numpy.linalg.eigh(CL.T @ CL)[1][:, -1]
+        # orient u so that a positive w raises the ground motion of the
+        # IMT, as for the other IMTs: otherwise a positive correlation of
+        # the model would become a negative one
+        if (CL @ u).sum() < 0:
+            u = -u
+        between.append(CL @ (zb + numpy.outer(u, w - u @ zb)))
+    return between
+
+
+def _realization_residuals(shakemap, imts, Z, seed, truncation_level,
+                           between_event_model=None):
+    # Within-event fields share a joint prior and each gets its own
+    # conditioning map; between-event terms see _between_residuals
+    phi = numpy.concatenate([_conditional_phi(
+        shakemap['std'][str(im)],
+        (shakemap['CL'][str(im)].astype(numpy.float64) ** 2).sum(axis=1))
+        for im in imts])
+    between = _between_residuals(shakemap, imts, Z.shape[1], seed,
+                                 truncation_level, between_event_model)
+    within = _loth_baker_residuals(
+        shakemap['lon'], shakemap['lat'], imts, Z, seed, truncation_level)
+    within = _condition_within(shakemap, imts, within, phi)
+    return (within.reshape(phi.shape[0], -1) +
+            numpy.concatenate(between))
+
+
+def _condition_within(shakemap, imts, within, conditional_phi):
+    # Each linear transformation preserves the posterior covariance of
+    # one IMT; cross-IMT dependence is an explicitly defined approximation.
+    # The station correction K is computed only for the distinct points
+    # of the calculation, not for the whole ShakeMap grid
+    phi = conditional_phi.reshape(len(imts), -1)
+    result = phi[:, :, None] * within
+    stations = conditioning_stations(shakemap)
+    if stations is None or not len(stations):
+        return result  # older NPY/HDF products retain a warned approximation
+    points, first, inverse = numpy.unique(numpy.column_stack([
+        shakemap['lon'], shakemap['lat']]), axis=0,
+        return_index=True, return_inverse=True)
+    U, D = len(points), numpy.unique(stations['imt'], return_counts=True)[1]
+    # the dense posterior covariance and the (U, D) station correction;
+    # the peak, in the eigendecomposition, is about 3 (U, U) matrices,
+    # measured at 26 bytes per pair for 6000 points, plus a margin
+    required = 32 * U ** 2 + 8 * U * D.max() + 48 * D.max() ** 2
+    if required > _correlation_budget():
+        raise ValueError(
+            f'The ShakeMap posterior covariance of {U} points requires '
+            f'about {humansize(required)}, more than the correlated_gmf_gb '
+            'of openquake.cfg; request fewer sites')
+    for i, im in enumerate(imts):
+        sta = stations[stations['imt'] == str(im).encode()]
+        if not len(sta):
+            continue
+        prior_phi = shakemap['phi'][str(im)][first].astype(numpy.float64)
+        K = station_conditioning(
+            points[:, 0], points[:, 1],
+            loth_baker_2013._correlation_period(im), prior_phi, sta)
+        # the distances are recomputed for each IMT, since computing them
+        # is cheap compared to the eigendecomposition and keeping them
+        # would require an additional (U, U) matrix
+        correlation = _single_imt_correlation(points, im)
+        posterior = posterior_within_residuals(
+            within[i, first], correlation, prior_phi, K, phi[i, first])
+        del correlation  # overwritten by posterior_within_residuals
+        result[i] = posterior[inverse]
+    return result
+
+
+def _single_imt_correlation(points, im):
+    # ShakeMapLothBaker2013().correlation_block(dist, [im]) of the (U, 2)
+    # points, with the same floating point operations, but overwriting
+    # the distance matrix, so that the peak memory is two (U, U) matrices
+    # instead of about six; the float32 distances are converted to float64
+    # as in correlation_block
+    dist = geo.geodetic.distance_matrix(
+        points[:, 0], points[:, 1]).astype(numpy.float64)
+    model = loth_baker_2013.ShakeMapLothBaker2013()
+    b1, b2, b3 = (b.item() for b in model.coregionalization([im]))
+    same_site = dist == 0
+    corr = numpy.multiply(dist, -3)
+    corr /= loth_baker_2013.SHORT_RANGE
+    numpy.exp(corr, out=corr)
+    corr *= b1
+    dist *= -3
+    dist /= loth_baker_2013.LONG_RANGE
+    numpy.exp(dist, out=dist)
+    dist *= b2
+    corr += dist
+    corr[same_site] += b3
+    return corr
+
+
+def _warn_xml_approximation(shakemap, correlated, spatial_model):
+    # Legacy inputs have only the marginal total uncertainty.
+    if (correlated and spatial_model is not None and
+            'CL' not in shakemap.dtype.names):
+        logging.warning(
+            'The correlated realizations are built from the marginal '
+            'ShakeMap uncertainties: this is an approximation of the '
+            'posterior sampling, use a complete shake_result.hdf product')
+
+
+def _is_loth_baker_product(shakemap, imts, spatial_model):
+    # True if the stored posterior components of a shake_result.hdf
+    # product are sampled, i.e. there is a correlation and only PGA, PGV
+    # and SA are requested
+    if 'CL' not in shakemap.dtype.names or spatial_model is None:
+        return False
+    if all(im.name in ('PGA', 'SA', 'PGV') for im in imts):
+        return True
+    logging.warning(
+        'The stored between-event components are only used for PGA, PGV and '
+        'SA: the ShakeMap is sampled with the legacy approximation')
+    return False
+
+
+def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, spatial_model,
+                     seed, truncation_level, between_event_model=None):
+    # only the Loth and Baker (2013) correlation is used for these products
+    if not isinstance(spatial_model, loth_baker_2013.LothBaker2013):
+        logging.warning(
+            'The ShakeMap is sampled with LothBaker2013, the requested '
+            '%s is not used', spatial_model.__class__.__name__)
+    if conditioning_stations(shakemap) is None:
+        logging.warning(
+            'Incomplete ShakeMap station bookkeeping: the within-event '
+            'correlation uses a marginal approximation without conditioning')
+    if len(imts) > 1:
+        logging.warning(
+            'Cross-IMT posterior dependence is approximate: each IMT uses '
+            'its own conditioning transform of a shared LothBaker2013 '
+            'prior; between-event terms are %s',
+            between_event_description(between_event_model))
+    residuals = _realization_residuals(
+        shakemap, imts, Z, seed, truncation_level, between_event_model)
+    return mu * numpy.exp(residuals) / scale
+
+
+def between_event_description(between_event_model):
+    """
+    :returns: how the between-event terms of a shake_result.hdf product
+              are correlated across IMTs, for the logs and the outputs page
+    """
+    if between_event_model is None:
+        return 'independent across IMTs'
+    return ('correlated across IMTs with %s along their dominant direction'
+            % between_event_model.__class__.__name__)
+
+
+@calculate_gmfs.add('Silva&Horspool')
+def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
+                      cross_imt_model, cholesky_limit,
+                      correlation_strategy='cholesky_decomposition',
+                      sites=None, context=None, tau_Z=None,
+                      truncation_level=3, correlation_seed=0,
+                      between_event_model=None):
+    """
+    Implementation of paper by Silva and Horspool 2019
+    https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
+    For shake_result.hdf products the stored posterior components are
+    sampled with the Loth and Baker (2013) correlation instead.
+
+    :param shakemap: site coordinates with median ShakeMap values
+    :param imts: list of required imts
+    :param Z: truncated standard normal samples of shape (M * N, E)
+    :param mu: ShakeMap medians of shape (M * N, E)
+    :param spatial_model: spatial correlation model
+    :param cross_imt_model: cross-IMT correlation model
+    :param cholesky_limit: maximum M * N for a dense factorization of the
+        legacy (XML) correlation
+    :param correlation_strategy: cholesky_decomposition or
+        circulant_embedding
+    :param sites: site collection of the ShakeMap points, if any
+    :param context: CorrelationContext of the rupture, if any
+    :param tau_Z: between-event samples of shape (M, E), if any
+    :param truncation_level: truncation level of the samples
+    :param correlation_seed: seed of the correlated samples
+    :param between_event_model: cross-IMT model of the between-event
+        terms, if any; otherwise they are independent across IMTs
+    :returns: gmfs of shape (M * N, E)
+    """
+    correlated = [i for i, im in enumerate(imts) if hasattr(im, 'period')]
+    N = len(shakemap)
+    total_std = numpy.array([
+        shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
+    # with tau the between-event terms are sampled separately and the
+    # within-event sigma is sqrt(std^2 - tau^2), otherwise std is used
+    has_tau = spatial_model is not None and 'tau' in shakemap.dtype.names
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
-
-    # mu contains the ShakeMap medians; L @ Z contains ln-unit residuals
-    return mu * numpy.exp(L @ Z) / scale
+    result = mu * numpy.exp(Z * total_std) / scale
+    if (truncation_level <= 1E-9 or
+            spatial_model is None and cross_imt_model is None):
+        return result  # median-only or independent total-residual sampling
+    _warn_xml_approximation(shakemap, correlated, spatial_model)
+    if _is_loth_baker_product(shakemap, imts, spatial_model):
+        return _loth_baker_gmfs(
+            shakemap, imts, Z, mu, scale, spatial_model,
+            correlation_seed, truncation_level, between_event_model)
+    if not correlated:
+        return result
+    tau_present = has_tau and tau_Z is not None
+    active = [i for i in correlated
+              if numpy.any(shakemap['std'][str(imts[i])])]
+    if len(active) != len(correlated):
+        skipped = [str(imts[i]) for i in correlated if i not in active]
+        if skipped:
+            logging.warning(
+                'No ShakeMap uncertainty for %s; those IMTs are '
+                'deterministic and will not be spatially correlated',
+                ', '.join(skipped))
+    if not active:
+        logging.warning(
+            'ShakeMap uncertainty is zero; spatial correlation was skipped')
+        return result
+    corr_imts = [imts[i] for i in active]
+    row_indices = numpy.concatenate([
+        numpy.arange(i * N, (i + 1) * N) for i in active])
+    corr_Z = Z[row_indices]
+    if (correlation_strategy == 'cholesky_decomposition' and
+            not has_tau and not _is_joint_model(spatial_model)):
+        residuals = _correlate_legacy(
+            corr_Z, corr_imts, shakemap, spatial_model, cross_imt_model,
+            cholesky_limit, context)
+        # mu contains the ShakeMap medians, residuals are in ln units
+        result[row_indices] = mu[row_indices] * numpy.exp(
+            residuals) / scale[row_indices]
+        return result
+    if sites is None:  # a minimal site collection, with lons and lats
+        sites = type('Sites', (), {
+            'lons': shakemap['lon'], 'lats': shakemap['lat']})()
+    residuals = _correlate_residuals(
+        corr_Z, corr_imts, sites, spatial_model, cross_imt_model,
+        correlation_strategy, context, cholesky_limit,
+        truncation_level, correlation_seed)
+    if has_tau:  # std and tau are conditional on the stations
+        corr_stds = numpy.array([_conditional_phi(
+            shakemap['std'][str(im)],
+            shakemap['tau'][str(im)].astype(numpy.float64) ** 2)
+            for im in corr_imts]).reshape(-1, 1)
+    else:
+        corr_stds = numpy.array([
+            shakemap['std'][str(im)] for im in corr_imts]).reshape(-1, 1)
+    residuals *= corr_stds
+    if tau_present:
+        tau = numpy.array([
+            shakemap['tau'][str(im)] for im in corr_imts])
+        # the event terms, correlated across IMTs by the between-event
+        # model, if any
+        eps = (tau_Z[active] if between_event_model is None else
+               between_event_model.get_inter_eps(
+                   corr_imts, tau_Z.shape[1],
+                   numpy.random.default_rng(correlation_seed + 5)))
+        tau_samples = numpy.repeat(
+            eps[:, numpy.newaxis, :], N, axis=1).reshape(
+                len(corr_imts) * N, -1)
+        residuals += tau.reshape(-1, 1) * tau_samples
+    corr_mu = mu[row_indices]
+    corr_scale = scale[row_indices]
+    result[row_indices] = corr_mu * numpy.exp(
+        residuals) / corr_scale
+    return result
 
 
 @calculate_gmfs.add('basic')
@@ -285,6 +806,11 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     if truncation_level <= 1E-9:
         Z = numpy.zeros((M * N, num_gmfs))
     else:
+        # as in the scenario and event based calculators, the normal
+        # samples are truncated before being correlated, so the variance
+        # of the residuals is reduced by the variance of the truncated
+        # normal (0.29, 0.77 and 0.97 for truncation levels 1, 2 and 3)
+        # while the correlation coefficients are preserved
         Z = truncnorm.rvs(
             -truncation_level, truncation_level, loc=0, scale=1,
             size=(M * N, num_gmfs), random_state=seed)
@@ -293,8 +819,24 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
-    # assemble dictionary for the calculation of the gmfs
+    # assemble dictionary for the calculation of the gmfs; the random
+    # streams are: seed for Z, seed + 1 for tau_Z, seed + 2 for circulant
+    # embedding, seed + 3 for the between-event factors CL of the
+    # shake_result.hdf products, seed + 4 for the spatial structures of
+    # Loth and Baker and seed + 5 for the between-event correlation model
     gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
+    if gmf_dict.get('kind') == 'Silva&Horspool':
+        gmf_dict.update(
+            truncation_level=truncation_level, correlation_seed=seed)
+    if ('tau' in shakemap.dtype.names and
+            gmf_dict.get('kind') == 'Silva&Horspool'):
+        if truncation_level <= 1E-9:
+            tau_Z = numpy.zeros((M, num_gmfs))
+        else:
+            tau_Z = truncnorm.rvs(
+                -truncation_level, truncation_level, loc=0, scale=1,
+                size=(M, num_gmfs), random_state=seed + 1)
+        gmf_dict['tau_Z'] = tau_Z
 
     # execute the calculation
     gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
