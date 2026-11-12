@@ -124,6 +124,7 @@ def _calibrate_batch(srcs, sites, cmaker, keys):
 # all the same max_radius, so only the first point is considered
 def _get_margin(sg, maxdist):
     radius = 0.
+    radii = {}  # planar key -> max_radius
     for src in sg:
         # NB: the sources with bysrc_unc are included too, since their
         # uncertainties do not change the geometry of the points
@@ -134,7 +135,13 @@ def _get_margin(sg, maxdist):
         else:
             continue
         for point in points:
-            radius = max(radius, point.max_radius(maxdist))
+            # NB: the radius depends only on the planar key, so it is
+            # computed once for the points with the same key (None means
+            # that the key cannot be used)
+            key = point.planar_key()
+            if key is None or key not in radii:
+                radii[key] = point.max_radius(maxdist)
+            radius = max(radius, radii[key])
     return DIAGONAL + radius
 
 
