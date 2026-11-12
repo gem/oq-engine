@@ -154,7 +154,8 @@ main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
 main.param = dict(help='override parameters with TOML syntax', nargs='*',
                   action='extend')
-main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+main.concurrent_tasks = dict(help='hint for the number of tasks to spawn',
+                             abbrev='--ct')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
