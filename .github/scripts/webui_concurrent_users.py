@@ -18,14 +18,14 @@ Every request is limited to --timeout seconds. Problems are printed as:
 
 The last line gives the number of checks, how many passed, and the
 latency of the requests that passed. The exit status is 1 if any check
-failed. The stdlib only, so it runs with any Python 3.
+failed. Only the standard library is used.
 
 Usage, against a WebUI already running on --base:
   webui_concurrent_users.py --user u1:pw1 --user u2:pw2 \
       --archive openquake/server/tests/data/archive_ok.zip
-Without --archive the users only browse the pages.
-The users must already exist in the WebUI database; see
-run_webui_concurrency.sh, which sets everything up and runs this file.
+Without --archive the users only browse the pages. The users must already
+exist in the WebUI database: run_webui_concurrency.sh sets everything up
+and runs this file.
 """
 import sys
 import json
@@ -41,6 +41,8 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+LOGIN = '/accounts/login/'
+
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     # keep the 302 of a successful login visible instead of following it
@@ -48,128 +50,124 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def make_opener():
-    # one cookie jar per user, redirects not followed
-    jar = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(
-        urllib.request.HTTPCookieProcessor(jar), NoRedirect)
-    opener.jar = jar
-    return opener
-
-
 def fetch(opener, url, timeout, body=None, headers=None):
-    # return (http code, seconds, response bytes, problem or None)
+    """Return (HTTP code, seconds, response bytes, problem or None)."""
     req = urllib.request.Request(url, data=body, headers=headers or {})
     t0 = time.monotonic()
     try:
         with opener.open(req, timeout=timeout) as resp:
-            data = resp.read()
-            return resp.status, time.monotonic() - t0, data, None
+            return resp.status, time.monotonic() - t0, resp.read(), None
     except urllib.error.HTTPError as exc:
         return exc.code, time.monotonic() - t0, b'', None
     except (socket.timeout, TimeoutError):
         return None, time.monotonic() - t0, b'', 'timeout'
     except urllib.error.URLError as exc:
+        secs = time.monotonic() - t0
         if isinstance(exc.reason, (socket.timeout, TimeoutError)):
-            return None, time.monotonic() - t0, b'', 'timeout'
-        return None, time.monotonic() - t0, b'', \
-            f'connection error: {exc.reason}'
+            return None, secs, b'', 'timeout'
+        return None, secs, b'', f'connection error: {exc.reason}'
 
 
-def form_body(fields):
-    return urllib.parse.urlencode(fields).encode()
-
-
-def multipart_body(files):
-    # files: {field name: (file name, bytes)}
+def multipart_body(filename, data):
+    # a multipart/form-data body with one file field named "archive"
     boundary = uuid.uuid4().hex
-    parts = []
-    for key, (fname, data) in files.items():
-        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; '
-                     f'name="{key}"; filename="{fname}"\r\n'
-                     f'Content-Type: application/zip\r\n\r\n'.encode()
-                     + data + b'\r\n')
-    parts.append(f'--{boundary}--\r\n'.encode())
-    return b''.join(parts), f'multipart/form-data; boundary={boundary}'
+    body = (f'--{boundary}\r\nContent-Disposition: form-data; '
+            f'name="archive"; filename="{filename}"\r\n'
+            f'Content-Type: application/zip\r\n\r\n').encode()
+    body += data + f'\r\n--{boundary}--\r\n'.encode()
+    return body, f'multipart/form-data; boundary={boundary}'
 
 
-def run_user(name, password, args, barrier, archive_bytes):
-    base = args.base
-    opener = make_opener()
-    events = []  # (label, http code, seconds, problem or None)
+class User:
+    def __init__(self, name, password, args):
+        self.name, self.password, self.args = name, password, args
+        self.jar = http.cookiejar.CookieJar()
+        self.opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(self.jar), NoRedirect)
+        self.events = []  # (label, HTTP code, seconds, problem or None)
+        self.token = None
 
-    def record(label, url, body=None, headers=None):
-        code, secs, data, problem = fetch(opener, url, args.timeout,
-                                          body, headers)
+    def get(self, label, url, body=None, headers=None):
+        # one checked request: record it and return (code, data, problem)
+        code, secs, data, problem = fetch(
+            self.opener, url, self.args.timeout, body, headers)
         if problem is None and code not in (200, 302):
             problem = f'HTTP {code}'
-        events.append((label, code, secs, problem))
-        return code, data
+        self.events.append((label, code, secs, problem))
+        return code, data, problem
 
-    login_url = base + '/accounts/login/'
-    barrier.wait()  # all users start at the same moment
-    record('login page', login_url)
-    if events[-1][3] is not None:
-        return name, events  # no page, so nothing else can be checked
-    token = next((c.value for c in opener.jar
-                  if c.name == 'csrftoken'), None)
-    if token is None:
-        events.append(('login', None, 0.0, 'no csrftoken cookie'))
-        return name, events
-    code, _ = record('login', login_url, body=form_body({
-        'csrfmiddlewaretoken': token, 'username': name,
-        'password': password}),
-        headers={'Referer': login_url})
-    if code != 302:
-        return name, events  # the failure is already in events
+    def login(self):
+        url = self.args.base + LOGIN
+        _, _, problem = self.get('login page', url)
+        self.token = next((c.value for c in self.jar
+                           if c.name == 'csrftoken'), None)
+        if problem or self.token is None:
+            return False
+        body = urllib.parse.urlencode({
+            'csrfmiddlewaretoken': self.token, 'username': self.name,
+            'password': self.password}).encode()
+        code, _, _ = self.get('login', url, body, {'Referer': url})
+        return code == 302
 
-    job = None
-    complete = False
-    if archive_bytes:
-        body, ctype = multipart_body({'archive': ('archive_ok.zip',
-                                                  archive_bytes)})
-        code, data = record('submit calc', base + '/v1/calc/run',
-                            body=body, headers={'Content-Type': ctype,
-                                                'X-CSRFToken': token})
+    def submit(self, archive):
+        # return the job id, or None if the calculation was not started
+        body, ctype = multipart_body('archive_ok.zip', archive)
+        code, data, problem = self.get(
+            'submit calc', self.args.base + '/v1/calc/run', body,
+            {'Content-Type': ctype, 'X-CSRFToken': self.token})
+        if problem:
+            return None
         try:
-            job = json.loads(data)['job_id']
+            return json.loads(data)['job_id']
         except (ValueError, KeyError, TypeError):
-            events.append(('submit calc', code, 0.0,
-                           'no job_id in response'))
-            return name, events
-        deadline = time.monotonic() + args.calc_timeout
+            self.events.append(('submit calc', code, 0.0,
+                                'no job_id in response'))
+            return None
+
+    def wait_job(self, job):
+        # poll the job until complete or failed; return its status
+        url = f'{self.args.base}/v1/calc/{job}/status'
         status = None
+        deadline = time.monotonic() + self.args.calc_timeout
         while time.monotonic() < deadline:
-            code, _, data, problem = fetch(
-                opener, f'{base}/v1/calc/{job}/status', args.timeout)
+            code, _, data, problem = fetch(self.opener, url,
+                                           self.args.timeout)
             if problem:
-                events.append((f'poll calc {job}', code, 0.0, problem))
-                break
+                self.events.append((f'poll calc {job}', code, 0.0,
+                                    problem))
+                return None
             status = json.loads(data).get('status')
             if status in ('complete', 'failed'):
                 break
             time.sleep(2)
-        if status not in ('complete', 'failed'):
-            events.append((f'calc {job}', None, 0.0,
-                           f'calc stuck: still {status} after '
-                           f'{args.calc_timeout:g}s'))
-        elif status == 'failed':
-            events.append((f'calc {job}', None, 0.0,
-                           'calc finished with status failed'))
-        complete = status == 'complete'
+        if status == 'failed':
+            self.events.append((f'calc {job}', None, 0.0,
+                                'calc finished with status failed'))
+        elif status != 'complete':
+            self.events.append((f'calc {job}', None, 0.0,
+                                f'calc stuck: still {status} after '
+                                f'{self.args.calc_timeout:g}s'))
+        return status
 
-    pages = ['/engine/', '/v1/calc/list']
-    if job is not None:
-        pages.append(f'/v1/calc/{job}/status')
-    if complete:
-        pages.append(f'/engine/{job}/outputs')
-    for _ in range(args.rounds):
-        for page in pages:
-            record(f'GET {page}', base + page)
-    return name, events
+    def run(self, barrier, archive):
+        barrier.wait()  # all users start at the same moment
+        if not self.login():
+            return self.events
+        pages = ['/engine/', '/v1/calc/list']
+        if archive:
+            job = self.submit(archive)
+            if job is None:
+                return self.events
+            pages.append(f'/v1/calc/{job}/status')
+            if self.wait_job(job) == 'complete':
+                pages.append(f'/engine/{job}/outputs')
+        for _ in range(self.args.rounds):
+            for page in pages:
+                self.get(f'GET {page}', self.args.base + page)
+        return self.events
 
 
-def report(results, users, args, wall):
+def report(results, args, wall):
     # print one line per problem and the summary; return the bad count
     bad = 0
     lat = []
@@ -187,7 +185,7 @@ def report(results, users, args, wall):
             else:
                 print(f'ERROR: user {name} {label}: {problem} '
                       f'(HTTP {code}, after {secs:.2f}s)')
-    print(f'{users} users, {len(lat) + bad} checks in {wall:.1f}s: '
+    print(f'{len(results)} users, {len(lat) + bad} checks in {wall:.1f}s: '
           f'{len(lat)} ok, {bad} failed')
     if lat:
         print(f'latency of ok requests: median {statistics.median(lat):.3f}s,'
@@ -208,18 +206,17 @@ def main():
     p.add_argument('--timeout', type=float, default=60.0)
     p.add_argument('--calc-timeout', type=float, default=300.0)
     args = p.parse_args()
-    archive_bytes = None
+    archive = None
     if args.archive:
         with open(args.archive, 'rb') as f:
-            archive_bytes = f.read()
-    users = [u.split(':', 1) for u in args.user]
+            archive = f.read()
+    users = [User(*u.split(':', 1), args) for u in args.user]
     barrier = threading.Barrier(len(users))
     t0 = time.monotonic()
     with ThreadPoolExecutor(max_workers=len(users)) as pool:
-        futures = [pool.submit(run_user, n, pw, args, barrier,
-                               archive_bytes) for n, pw in users]
-        results = [f.result() for f in futures]
-    bad = report(results, len(users), args, time.monotonic() - t0)
+        futures = [pool.submit(u.run, barrier, archive) for u in users]
+        results = [(u.name, f.result()) for u, f in zip(users, futures)]
+    bad = report(results, args, time.monotonic() - t0)
     return 1 if bad else 0
 
 
