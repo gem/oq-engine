@@ -18,6 +18,7 @@
 
 # NB: run these tests with OQ_APPLICATION_MODE=RESTRICTED,
 import pytest
+from openquake.server.tests.pages.login_page import LoginPage
 from playwright.sync_api import expect
 
 
@@ -27,3 +28,20 @@ def test_login(ui_logged_in_page, user, test_credentials):
     expect(ui_logged_in_page.get_by_text(
         f"Hello, {test_credentials['username']}")).to_be_visible()
     ui_logged_in_page.wait_for_load_state("networkidle")
+
+
+@pytest.mark.parametrize("user", [0], indirect=True)
+@pytest.mark.parametrize("application_mode", ["RESTRICTED"], indirect=True)
+def test_login_logout(page, live_server, user, test_credentials,
+                      application_mode):
+    # log in and out by clicking on the buttons of the web interface
+    LoginPage(page, live_server.url).check_login_and_logout(
+        test_credentials['username'], test_credentials['password'])
+
+
+@pytest.mark.parametrize("user", [0], indirect=True)
+@pytest.mark.parametrize("application_mode", ["RESTRICTED"], indirect=True)
+def test_login_wrong_password(page, live_server, user, test_credentials,
+                              application_mode):
+    LoginPage(page, live_server.url).check_wrong_password(
+        test_credentials['username'])

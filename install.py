@@ -222,15 +222,27 @@ URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/post-inst/"
 WHEELHOUSE_URL = "https://wheelhouse.openquake.org/unified/"
 STANDALONE_APP_INFO = [
     # All engine Django app need oq-platform-standalone
-    {"pkg": "oq-platform-standalone", "name": None,
-     "ver": "~=2.16.4"},
+    # {"pkg": "oq-platform-standalone", "name": None,
+    #  "ver": "~=2.16.4"},
+    {"pkg": "https://github.com/gem/oq-platform-standalone/archive/refs/heads/django52.zip",
+     "name": None,
+     "ver": ""},
     # Django apps to install
-    {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
-     "ver": "~=1.21.0"},
-    {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
-     "ver": "~=1.2.0"},
-    {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
-     "ver": "~=1.4.4"},
+    # {"pkg": "oq-platform-ipt",        "name": "openquakeplatform_ipt",
+    #  "ver": "~=1.21.0"},
+    {"pkg": "https://github.com/gem/oq-platform-ipt/archive/refs/heads/django52.zip",
+     "name": "openquakeplatform_ipt",
+     "ver": ""},
+    # {"pkg": "oq-platform-taxonomy",   "name": "openquakeplatform_taxonomy",
+    #  "ver": "~=1.2.0"},
+    {"pkg": "https://github.com/gem/oq-platform-taxonomy/archive/refs/heads/django52.zip",
+     "name": "openquakeplatform_taxonomy",
+     "ver": ""},
+    # {"pkg": "django-gem-taxonomy",    "name": "django_gem_taxonomy",
+    #  "ver": "~=1.4.4"},
+    {"pkg": "https://github.com/gem/django-gem-taxonomy/archive/refs/heads/django52.zip",
+     "name": "django_gem_taxonomy",
+     "ver": ""},
 ]
 
 
@@ -324,6 +336,13 @@ def install_standalone(inst):
                  "--find-links", WHEELHOUSE_URL,
                  "--find-links", URL_STANDALONE,
                  app['pkg'] + app['ver']])
+            result = subprocess.check_call([pycmd, "-m", "pip", "check"])
+            print('MATTEO3 return code')
+            print(result)
+        except subprocess.CalledProcessError as exc:
+            print('MATTEO4')
+            print(exc)
+            raise
         except Exception as exc:
             # for instance if somebody removed a wheel from the wheelhouse
             errors.append(f"{exc}: could not install {app['pkg']}")
@@ -564,6 +583,9 @@ def install_requirements(inst, pycmd, version, from_fork):
         [pycmd, "-m", "pip", "install", "--force-reinstall",
          "--trusted-host", "wheelhouse.openquake.org",
          "--trusted-host", "raw.githubusercontent.com", "-r", req])
+    result = subprocess.check_call([pycmd, "-m", "pip", "check"])
+    print('MATTEO return code')
+    print(result)
 
 
 def git_zip_url(commit):
@@ -600,6 +622,9 @@ def install_engine(inst, pycmd, version, noupgrade):
                 [pycmd, "-m", "pip", "install"] + upgrade
                 + [git_zip_url(commit), "--no-clean"], env=custom_env)
         fix_version(commit, inst.VENV)
+    result = subprocess.check_call([pycmd, "-m", "pip", "check"])
+    print('MATTEO2 return code')
+    print(result)
 
 
 def create_cfg(inst):
