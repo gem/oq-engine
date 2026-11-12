@@ -687,6 +687,8 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    # the stop after the calibration does not depend on the sampling
+    @mock.patch('openquake.calculators.autogrid.POINT_STEP', 1)
     def test_calibration_only(self):
         # oq run --calibrate: the calibration is stored and the
         # preclassical stops before the splitting of the sources
