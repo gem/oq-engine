@@ -725,6 +725,15 @@ def _rows_by_src(planars, entries, src, nsrcs):
                 stops=stops, starts=numpy.concatenate([[0], stops[:-1]]))
 
 
+# Idea: the calibration pays a fixed overhead for every source and every
+# magnitude, since each one needs its own numpy calls. _gen_site_ctxs
+# inverts the loops: the sources are tabulated once (one row per source and
+# magnitude, the planars concatenated), the pairs (source, close site) are
+# sorted by site, and for each site the rows of all its sources are built
+# with two calls, one for the mean ruptures (far sites) and one for all
+# the ruptures (close sites), the distance bands being masks. The contexts
+# are the same, but the rows come out grouped by site, not by source: the
+# order does not matter for the calibration, which sums the rates.
 def _gen_site_ctxs(cmaker, srcs, sitecol, srcfilter, psdists):
     """
     Context generator equivalent to calling genctxs_Pp on each point
