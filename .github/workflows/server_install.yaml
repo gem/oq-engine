@@ -22,20 +22,13 @@ on:
   schedule:
     - cron: "05 11 * * *"
     - cron: "05 15 * * *"
-  pull_request:
-  # Called from engine_pr_test.yml (only when install.py changed), which
-  # passes kind: server
+  # Called from engine_pr_test.yml on every PR (not for forks)
   workflow_call:
     inputs:
       git-ref:
         description: Git Ref Branch
         type: string
         default: master
-        required: false
-      kind:
-        description: "server or devel_server: the only kind to run"
-        type: string
-        default: ""
         required: false
 
 jobs:
@@ -49,22 +42,16 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
-          KIND: ${{ inputs.kind }}
         run: |
-          if [ -n "$KIND" ]; then
-            kinds="[\"$KIND\"]"
-          else
-            case "$EVENT" in
-              pull_request) kinds='["devel_server"]' ;;
-              schedule)
-                if [ "$SCHEDULE" = "05 11 * * *" ]; then
-                  kinds='["server"]'
-                else
-                  kinds='["devel_server"]'
-                fi ;;
-              *) kinds='["server","devel_server"]' ;;
-            esac
-          fi
+          case "$EVENT" in
+            schedule)
+              if [ "$SCHEDULE" = "05 11 * * *" ]; then
+                kinds='["server"]'
+              else
+                kinds='["devel_server"]'
+              fi ;;
+            *) kinds='["server","devel_server"]' ;;  # PR, manual run
+          esac
           echo "kinds=$kinds" >> "$GITHUB_OUTPUT"
           echo "kinds=$kinds"
 
