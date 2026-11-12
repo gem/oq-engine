@@ -95,13 +95,6 @@ def get_site_parameters(params):
             for field in SWISS_SITE_SPECIFIC_FIELDS[period]}
 
 
-def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
-    """
-    Adds amplfactor to mean
-    """
-    me[:] += ctx.amplfactor
-
-
 def _check_stddevs(**stddevs):
     # Zero uncertainty is valid. Include the component or site column name
     # in errors so invalid inputs can be traced to their source.
@@ -123,7 +116,7 @@ def _apply_swiss_sa_correction(amplification, phis2s, phiss, me, si, ta, ph):
     si[:] = np.hypot(ta, ph)
 
 
-def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+def _apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
     """
     Adjust Swiss GMPEs to add amplification and correct intra-event residuals
     """
@@ -135,7 +128,7 @@ def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
     _apply_swiss_sa_correction(amplification, phis2s, phiss, me, si, ta, ph)
 
 
-def apply_swiss_site_specific_amplification_sa(
+def _apply_swiss_site_specific_amplification_sa(
         ctx, imt, me, si, ta, ph, periods=SWISS_SITE_SPECIFIC_PERIODS):
     """
     Apply supplied natural-log site corrections at explicitly selected periods.

@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 from openquake.hazardlib.gsim.mgmpe.swiss_amplification import (
-    apply_swiss_amplification_sa, apply_swiss_site_specific_amplification_sa)
+    _apply_swiss_amplification_sa, _apply_swiss_site_specific_amplification_sa)
 
 
 FIELDS = {
@@ -133,7 +133,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         mean = np.array([-1., -2., -3.])
         sigma, phi = np.zeros(3), np.zeros(3)
         tau = np.array([0.2, 0.3, 0.5])
-        apply_swiss_site_specific_amplification_sa(
+        _apply_swiss_site_specific_amplification_sa(
             ctx, SA(0.2), mean, sigma, tau, phi, periods=[0.2])
         assert_close(mean, [-0.8, -2., -3.1])
         assert_close(phi, [0.5, 0.5, 1.])
@@ -189,7 +189,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         # with tau/phi so this verifies reconstruction, not a complete no-op.
         mean, sigma = np.array([-1., -2.]), np.full(2, 9.)
         tau, phi = np.array([0.3, 0.6]), np.array([0.4, 0.8])
-        apply_swiss_site_specific_amplification_sa(
+        _apply_swiss_site_specific_amplification_sa(
             SimpleNamespace(), PGA(), mean, sigma, tau, phi)
         assert_close(mean, [-1., -2.])
         assert_close(phi, [0.4, 0.8])
@@ -198,7 +198,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         for value in (np.nan, -0.1):
             with self.subTest(phi=value):
                 with self.assertRaises(ValueError):
-                    apply_swiss_site_specific_amplification_sa(
+                    _apply_swiss_site_specific_amplification_sa(
                         SimpleNamespace(), PGA(), mean, sigma, tau,
                         np.array([value, 0.8]))
 
@@ -225,7 +225,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         for imt in (PGA(), PGV(), SA(0.2), SA(0.4), SA(0.5)):
             with self.subTest(imt=imt):
                 with self.assertRaisesRegex(ValueError, 'supported periods'):
-                    apply_swiss_amplification_sa(
+                    _apply_swiss_amplification_sa(
                         SimpleNamespace(), imt, *np.zeros((4, 1)))
 
     def test_uncertainty_numerical_range(self):
@@ -236,9 +236,9 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
             ch_ampl03=np.zeros(2), ch_phis2s03=0.3 * scale,
             ch_phiss03=0.4 * scale)
         for modifier, imt in (
-                (apply_swiss_amplification_sa, SA(0.3)),
-                (apply_swiss_site_specific_amplification_sa, SA(0.3)),
-                (apply_swiss_site_specific_amplification_sa, PGA())):
+                (_apply_swiss_amplification_sa, SA(0.3)),
+                (_apply_swiss_site_specific_amplification_sa, SA(0.3)),
+                (_apply_swiss_site_specific_amplification_sa, PGA())):
             with self.subTest(modifier=modifier.__name__, imt=imt):
                 outputs = np.zeros((4, 2))
                 outputs[2], outputs[3] = 1.2 * scale, 0.5 * scale
@@ -268,7 +268,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         for imt in (PGV(), SA(0.3), SA(0.2, 10.)):
             with self.subTest(imt=imt):
                 with self.assertRaises(ValueError):
-                    apply_swiss_site_specific_amplification_sa(
+                    _apply_swiss_site_specific_amplification_sa(
                         ctx, imt, *outputs, periods=[0.2])
         cases = [('ch_ampl02', np.nan), ('ch_phis2s02', np.inf),
                  ('ch_phis2s02', -0.1), ('ch_phiss02', -0.1),
@@ -282,7 +282,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
                 else:
                     ctx[field][0] = value
                 with self.assertRaisesRegex(ValueError, field):
-                    apply_swiss_site_specific_amplification_sa(
+                    _apply_swiss_site_specific_amplification_sa(
                         ctx, SA(0.2), *outputs, periods=[0.2])
 
 

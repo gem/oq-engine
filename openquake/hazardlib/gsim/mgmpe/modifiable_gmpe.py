@@ -36,12 +36,7 @@ from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
     _get_bssa14_site_term)
 from openquake.hazardlib.gsim.mgmpe import swiss_amplification
-from openquake.hazardlib.gsim.mgmpe.swiss_amplification import (
-    apply_swiss_amplification as apply_swiss_amplification,
-    apply_swiss_amplification_sa as apply_swiss_amplification_sa,
-    apply_swiss_site_specific_amplification_sa as
-    apply_swiss_site_specific_amplification_sa)
- 
+
 # Basin terms imports
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
@@ -311,6 +306,31 @@ def bssa14_site_term(ctx, imt, me, si, ta, phi):
     This function adds the BSSA14 site term to GMMs requiring it.
     """
     me[:] += _get_bssa14_site_term(imt, ctx)
+
+
+def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
+    """
+    Adds the Swiss amplfactor to the log mean.
+    """
+    me[:] += ctx.amplfactor
+
+
+def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+    """
+    Legacy Swiss SA amplification at 0.3 and 0.6 s with intra-event correction.
+    """
+    swiss_amplification._apply_swiss_amplification_sa(
+        ctx, imt, me, si, ta, ph)
+
+
+def apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph,
+        periods=swiss_amplification.SWISS_SITE_SPECIFIC_PERIODS):
+    """
+    Applies supplied natural-log site corrections at selected SA periods.
+    """
+    swiss_amplification._apply_swiss_site_specific_amplification_sa(
+        ctx, imt, me, si, ta, ph, periods)
 
 
 def cb14_basin_term(ctx, imt, me, si, ta, phi):
