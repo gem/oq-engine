@@ -428,26 +428,48 @@ def _conditional_phi(std, tau2):
     return numpy.sqrt(numpy.clip(var, 0, None))
 
 
-def _realization_residuals(shakemap, imts, Z, seed, truncation_level):
-    # Sample the between-event factors independently across output IMTs.
-    # Their joint posterior is not provided by ShakeMap. Within-event
-    # fields share a joint prior and each gets its own conditioning map.
-    phi = numpy.concatenate([_conditional_phi(
-        shakemap['std'][str(im)],
-        (shakemap['CL'][str(im)].astype(numpy.float64) ** 2).sum(axis=1))
-        for im in imts])
-    # one draw per event of the between-event terms of each IMT,
+def _between_residuals(shakemap, imts, E, seed, truncation_level,
+                       between_event_model):
+    # ShakeMap stores for each IMT a factor CL of the posterior
+    # between-event terms, sampled as CL @ z with z standard normal, but not
+    # their joint posterior across IMTs; one draw per event of each z,
     # truncated as the within-event samples Z; hence, like in the rest of
     # the engine, the variance phi^2 + |CL|^2 = std^2 is reached only for a
     # large truncation level and is reduced by the variance of the
     # truncated normal otherwise (see to_gmfs)
     rng = numpy.random.default_rng(seed + 3)
+    zbs = [truncnorm.rvs(-truncation_level, truncation_level,
+                         size=(shakemap['CL'][str(im)].shape[1], E),
+                         random_state=rng) for im in imts]
+    if between_event_model is None:  # independent across IMTs
+        return [shakemap['CL'][str(im)] @ zb for im, zb in zip(imts, zbs)]
+    # with a between-event model, z = u w + (I - u u') v, where w are the
+    # event terms correlated by the model, u is the dominant direction of
+    # CL and v the independent draws: z is still standard normal, so the
+    # posterior of each IMT is unchanged, and the IMTs are correlated as in
+    # the model when CL has rank one, as for the products without stations
+    eps = between_event_model.get_inter_eps(
+        imts, E, numpy.random.default_rng(seed + 5))  # shape (M, E)
     between = []
-    for im in imts:
-        CL = shakemap['CL'][str(im)]
-        zb = truncnorm.rvs(-truncation_level, truncation_level,
-                           size=(CL.shape[1], Z.shape[1]), random_state=rng)
-        between.append(CL @ zb)
+    for im, zb, w in zip(imts, zbs, eps):
+        CL = shakemap['CL'][str(im)].astype(numpy.float64)
+        u = numpy.linalg.eigh(CL.T @ CL)[1][:, -1]
+        if (CL @ u).sum() < 0:  # the event terms must have the same sign
+            u = -u
+        between.append(CL @ (zb + numpy.outer(u, w - u @ zb)))
+    return between
+
+
+def _realization_residuals(shakemap, imts, Z, seed, truncation_level,
+                           between_event_model=None):
+    # Within-event fields share a joint prior and each gets its own
+    # conditioning map; between-event terms see _between_residuals
+    phi = numpy.concatenate([_conditional_phi(
+        shakemap['std'][str(im)],
+        (shakemap['CL'][str(im)].astype(numpy.float64) ** 2).sum(axis=1))
+        for im in imts])
+    between = _between_residuals(shakemap, imts, Z.shape[1], seed,
+                                 truncation_level, between_event_model)
     within = _loth_baker_residuals(
         shakemap['lon'], shakemap['lat'], imts, Z, seed, truncation_level)
     within = _condition_within(shakemap, imts, within, phi)
@@ -545,8 +567,8 @@ def _is_loth_baker_product(shakemap, imts, spatial_model):
     return False
 
 
-def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
-                     spatial_model, seed, truncation_level):
+def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, spatial_model,
+                     seed, truncation_level, between_event_model=None):
     # only the Loth and Baker (2013) correlation is used for these products
     if not isinstance(spatial_model, loth_baker_2013.LothBaker2013):
         logging.warning(
@@ -560,10 +582,22 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale,
         logging.warning(
             'Cross-IMT posterior dependence is approximate: each IMT uses '
             'its own conditioning transform of a shared LothBaker2013 '
-            'prior; between-event terms are independent across IMTs')
+            'prior; between-event terms are %s',
+            between_event_description(between_event_model))
     residuals = _realization_residuals(
-        shakemap, imts, Z, seed, truncation_level)
+        shakemap, imts, Z, seed, truncation_level, between_event_model)
     return mu * numpy.exp(residuals) / scale
+
+
+def between_event_description(between_event_model):
+    """
+    :returns: how the between-event terms of a shake_result.hdf product
+              are correlated across IMTs, for the logs and the outputs page
+    """
+    if between_event_model is None:
+        return 'independent across IMTs'
+    return ('correlated across IMTs with %s along their dominant direction'
+            % between_event_model.__class__.__name__)
 
 
 @calculate_gmfs.add('Silva&Horspool')
@@ -571,7 +605,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
                       cross_imt_model, cholesky_limit,
                       correlation_strategy='cholesky_decomposition',
                       sites=None, context=None, tau_Z=None,
-                      truncation_level=3, correlation_seed=0):
+                      truncation_level=3, correlation_seed=0,
+                      between_event_model=None):
     """
     Implementation of paper by Silva and Horspool 2019
     https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
@@ -593,6 +628,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     :param tau_Z: between-event samples of shape (M, E), if any
     :param truncation_level: truncation level of the samples
     :param correlation_seed: seed of the correlated samples
+    :param between_event_model: cross-IMT model of the between-event
+        terms, if any; otherwise they are independent across IMTs
     :returns: gmfs of shape (M * N, E)
     """
     correlated = [i for i, im in enumerate(imts) if hasattr(im, 'period')]
@@ -609,8 +646,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     _warn_xml_approximation(shakemap, correlated, spatial_model)
     if _is_loth_baker_product(shakemap, imts, spatial_model):
         return _loth_baker_gmfs(
-            shakemap, imts, Z, mu, scale,
-            spatial_model, correlation_seed, truncation_level)
+            shakemap, imts, Z, mu, scale, spatial_model,
+            correlation_seed, truncation_level, between_event_model)
     if not correlated:
         return result
     tau_present = components and tau_Z is not None
@@ -659,8 +696,14 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     if tau_present:
         tau = numpy.array([
             shakemap['tau'][str(im)] for im in corr_imts])
+        # the event terms, correlated across IMTs by the between-event
+        # model, if any
+        eps = (tau_Z[active] if between_event_model is None else
+               between_event_model.get_inter_eps(
+                   corr_imts, tau_Z.shape[1],
+                   numpy.random.default_rng(correlation_seed + 5)))
         tau_samples = numpy.repeat(
-            tau_Z[active, numpy.newaxis, :], N, axis=1).reshape(
+            eps[:, numpy.newaxis, :], N, axis=1).reshape(
                 len(corr_imts) * N, -1)
         residuals += tau.reshape(-1, 1) * tau_samples
     corr_mu = mu[row_indices]

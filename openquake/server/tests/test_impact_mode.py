@@ -55,9 +55,15 @@ def test_format_oqparam_displays_selected_nodal_plane():
         truncation_level=3, number_of_ground_motion_fields=10,
         asset_hazard_distance={'default': 15}, ses_seed=42,
         mosaic_model='MODEL', tectonic_region_type='TRT', inputs={},
-        within_event_correlation_model=None)
+        within_event_correlation_model='DuNing2021Interpolated',
+        within_event_correlation_params={},
+        between_event_correlation_model='AbrahamsonEtAl2014BetweenEvent')
     inputs = format_oqparam(oqparam)
     assert inputs['Nodal plane'] == 'NP2'
+    assert inputs['Within-event correlation model'] == (
+        'DuNing2021Interpolated')
+    assert inputs['Between-event correlation model'] == (
+        'AbrahamsonEtAl2014BetweenEvent')
     assert inputs['Time of the event'] == 'night'
     assert list(inputs).index('Nodal plane') < list(inputs).index(
         'Magnitude scaling relationship')
@@ -513,13 +519,13 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
                          if version['number'] == '5']
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id,
-                    maximum_distance='100',
-                    spatial_correlation='loth_baker')
+                    maximum_distance='100')
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     def test_run_by_usgs_id_point_rupture_correlation(self):
         # the GMFs are computed from the point rupture, not from a ShakeMap,
-        # so the within-event correlation model is really used
+        # so the within-event correlation model is really used; level 1
+        # users always get the default models, whatever they request
         self.set_user_level_and_remove_groups(1)
         data = dict(usgs_id='us6000phrk', approach='use_pnt_rup_from_usgs',
                     use_shakemap='false', maximum_distance='100',
@@ -541,10 +547,14 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 tb = self.get_json('%s/traceback' % job_id)
                 raise Exception('\n'.join(tb))
             self.assertEqual(job_dic['status'], 'complete')
+            page = self.get(f'/engine/{job_id}/outputs_impact', prefix='')
+            self.assertIn(b'LothBaker2013', page.content)
+            self.assertIn(b'AbrahamsonEtAl2014BetweenEvent', page.content)
+            self.assertNotIn(b'JayaramBaker2009', page.content)
             ret = self.post('%s/remove' % job_id)
             self.assertEqual(ret.status_code, 200)
 
-    def test_provide_rup_params_spatial_correlation_then_remove_calc(self):
+    def test_provide_rup_params_correlation_models_then_remove_calc(self):
         # rupture-only job without ShakeMap, through the form fields
         self.set_user_level_and_remove_groups(2)
         data = dict(usgs_id='UserProvided', approach='provide_rup_params',
@@ -555,7 +565,8 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                     truncation_level='3', ses_seed='42',
                     number_of_ground_motion_fields='10',
                     asset_hazard_distance='15',
-                    spatial_correlation='circulant_embedding')
+                    within_event_correlation_model='DuNing2021Interpolated',
+                    between_event_correlation_model='GodaAtkinson2009')
         # NOTE: no MMI outputs without a ShakeMap, so the checks done by
         #       impact_run_then_remove do not apply here
         with tempfile.TemporaryDirectory() as email_dir:
@@ -569,9 +580,10 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                 tb = self.get_json('%s/traceback' % job_id)
                 raise Exception('\n'.join(tb))
             self.assertEqual(job_dic['status'], 'complete')
-            # the outputs page must say which spatial correlation was used
+            # the outputs page must say which correlation models were used
             page = self.get(f'/engine/{job_id}/outputs_impact', prefix='')
-            self.assertIn(b'Circulant embedding', page.content)
+            self.assertIn(b'DuNing2021Interpolated', page.content)
+            self.assertIn(b'GodaAtkinson2009', page.content)
             ret = self.post('%s/remove' % job_id)
             self.assertEqual(ret.status_code, 200)
 
@@ -636,9 +648,13 @@ class ImpactModeTestCase(django.test.TransactionTestCase):
                          'station_data_file', 'maximum_distance_stations',
                          'msr', 'rupture_was_loaded', 'rupture_file_input',
                          'station_data_file_input', 'station_data_file_loaded',
-                         'description', 'spatial_correlation']
+                         'description', 'within_event_correlation_model',
+                         'between_event_correlation_model']
         self.assertEqual(list(resp), expected_list)
-        self.assertEqual(resp['spatial_correlation'], 'none')
+        self.assertEqual(resp['within_event_correlation_model'],
+                         'LothBaker2013')
+        self.assertEqual(resp['between_event_correlation_model'],
+                         'AbrahamsonEtAl2014BetweenEvent')
 
     def test_impact_get_shakemap_versions(self):
         self.set_user_level_and_remove_groups(1)

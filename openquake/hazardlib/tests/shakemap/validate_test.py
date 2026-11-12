@@ -32,7 +32,7 @@ import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    _validate, impact_validate)
+    impact_validate, _check_correlation_models, IMPACT_CORRELATION_MODELS)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -48,12 +48,60 @@ class ImpactValidateTestCase(unittest.TestCase):
         else:
             del timezonefinder
 
-    def test_spatial_correlation_none(self):
-        _inputdic, params, err = _validate(
-            {'spatial_correlation': 'none'})
-        self.assertEqual(err, {})
-        self.assertNotIn('within_event_correlation_model', params)
-        self.assertNotIn('correlation_strategy', params)
+    def test_correlation_models_by_kind_of_job(self):
+        # ShakeMap jobs use LothBaker2013, the other jobs the joint models
+        # supporting circulant embedding; any between-event model
+        # accepting the IMTs of the job
+        models = IMPACT_CORRELATION_MODELS
+        self.assertEqual(
+            models['within_event_correlation_model', 'shakemap'],
+            ['LothBaker2013'])
+        self.assertEqual(
+            models['within_event_correlation_model', 'rupture'],
+            ['LothBaker2013', 'DuNing2021Interpolated', 'MonteiroEtAl2026'])
+        # GodaAtkinson2009 does not support the PGV of the ShakeMap jobs
+        self.assertEqual(
+            models['between_event_correlation_model', 'shakemap'],
+            ['AbrahamsonEtAl2014BetweenEvent', 'FullCrossCorrelation',
+             'NoCrossCorrelation'])
+        self.assertEqual(
+            models['between_event_correlation_model', 'rupture'],
+            ['AbrahamsonEtAl2014BetweenEvent', 'FullCrossCorrelation',
+             'GodaAtkinson2009', 'NoCrossCorrelation'])
+
+    def test_check_correlation_models(self):
+        # level 1 users always get the defaults
+        params = {'within_event_correlation_model': 'JayaramBaker2009',
+                  'within_event_correlation_params': {
+                      'vs30_clustering': True},
+                  'between_event_correlation_model': 'NoCrossCorrelation'}
+        self.assertEqual(_check_correlation_models(
+            params, User(level=1), use_shakemap=True), {})
+        self.assertEqual(params, {
+            'within_event_correlation_model': 'LothBaker2013',
+            'between_event_correlation_model':
+            'AbrahamsonEtAl2014BetweenEvent',
+            'within_event_correlation_params': {}})
+        # level 2 users get the defaults for the missing fields
+        params = {'between_event_correlation_model': 'GodaAtkinson2009'}
+        self.assertEqual(_check_correlation_models(
+            params, user, use_shakemap=False), {})
+        self.assertEqual(params['within_event_correlation_model'],
+                         'LothBaker2013')
+        self.assertEqual(params['between_event_correlation_model'],
+                         'GodaAtkinson2009')
+        # and cannot use a model not available for their kind of job
+        for field, model, use_shakemap in [
+                ('within_event_correlation_model', 'DuNing2021Interpolated',
+                 True),
+                ('within_event_correlation_model', 'JayaramBaker2009',
+                 False),
+                ('between_event_correlation_model', 'GodaAtkinson2009',
+                 True)]:
+            err = _check_correlation_models(
+                {field: model}, user, use_shakemap)
+            self.assertEqual(err['invalid_inputs'], [field])
+            self.assertIn(f'{model} is not available', err['error_msg'])
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
@@ -123,7 +171,8 @@ class ImpactValidateTestCase(unittest.TestCase):
             'strike': '0',
             'time_event': 'day',
             'trt': 'active shallow crust normal',
-            'spatial_correlation': 'cholesky_decomposition',
+            'within_event_correlation_model': 'DuNing2021Interpolated',
+            'between_event_correlation_model': 'GodaAtkinson2009',
             'truncation_level': '3',
             'usgs_id': 'FromFile',
             'approach': 'provide_rup'}
@@ -174,12 +223,12 @@ class ImpactValidateTestCase(unittest.TestCase):
             self.assertEqual(params['number_of_ground_motion_fields'], '2'),
             self.assertEqual(params['ses_seed'], '42')
             self.assertEqual(
-                params['correlation_strategy'], 'cholesky_decomposition')
-            self.assertEqual(
-                params['within_event_correlation_model'],
-                'JayaramBaker2009')
-            self.assertIn('vs30_clustering',
-                          params['within_event_correlation_params'])
+                params['correlation_strategy'], 'circulant_embedding')
+            self.assertEqual(params['within_event_correlation_model'],
+                             'DuNing2021Interpolated')
+            self.assertEqual(params['between_event_correlation_model'],
+                             'GodaAtkinson2009')
+            self.assertEqual(params['within_event_correlation_params'], '{}')
             # self.assertEqual(params['station_data_file'], stations)  # FIXME
             self.assertEqual(err, {})
 
@@ -200,8 +249,8 @@ class ImpactValidateTestCase(unittest.TestCase):
         _rup, rupdic, _oqparams, _err = impact_validate(POST, user)
         self.assertIn('msr', rupdic)
 
-    def test_provide_rup_params_spatial_correlation(self):
-        # rupture-only job without ShakeMap keeps the correlation settings
+    def test_provide_rup_params_correlation_models(self):
+        # rupture-only job without ShakeMap keeps the chosen models
         POST = {
             'approach': 'provide_rup_params', 'use_shakemap': 'false',
             'usgs_id': 'UserProvided', 'lon': '84.4', 'lat': '27.6',
@@ -213,11 +262,14 @@ class ImpactValidateTestCase(unittest.TestCase):
             'asset_hazard_distance': '15',
             'number_of_ground_motion_fields': '2', 'ses_seed': '42',
             'truncation_level': '3',
-            'spatial_correlation': 'circulant_embedding'}
+            'within_event_correlation_model': 'MonteiroEtAl2026',
+            'between_event_correlation_model': 'NoCrossCorrelation'}
         _rup, _rupdic, oqparams, err = impact_validate(POST, user)
         self.assertFalse(err)
         self.assertEqual(oqparams['within_event_correlation_model'],
-                         'JayaramBaker2009')
+                         'MonteiroEtAl2026')
+        self.assertEqual(oqparams['between_event_correlation_model'],
+                         'NoCrossCorrelation')
         self.assertEqual(oqparams['correlation_strategy'],
                          'circulant_embedding')
         self.assertNotIn('shakemap_uri', oqparams)

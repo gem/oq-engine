@@ -51,16 +51,21 @@
                 <label for="ses_seed">{{ impact_form_labels.ses_seed }}</label>
                 <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="{{ impact_form_defaults.ses_seed }}" {% if user_level < 2 %}disabled{% endif %}/>
               </div>
+              {% for field, options in impact_correlation_options.items %}
               <div class="impact_form_row">
-                <label for="spatial_correlation">{{ impact_form_labels.spatial_correlation }}</label>
-                <select id="spatial_correlation" class="impact-select">
-                  {% for value, label in impact_spatial_correlation_options %}
-                  <option value="{{ value }}" data-scope="{% if value == 'none' %}both{% elif value == 'loth_baker' %}shakemap{% else %}rupture{% endif %}"{% if value == impact_form_defaults.spatial_correlation %} selected{% endif %}>{{ label }}</option>
+                <label for="{{ field }}">{% if field == 'within_event_correlation_model' %}{{ impact_form_labels.within_event_correlation_model }}{% else %}{{ impact_form_labels.between_event_correlation_model }}{% endif %}</label>
+                {# the options of the kind of job (data-scope) are shown by impact.js #}
+                <select id="{{ field }}" class="impact-select impact-correlation-select" {% if user_level < 2 %}disabled{% endif %}>
+                  {% for model, scope in options %}
+                  <option value="{{ model }}" data-scope="{{ scope }}">{{ model }}</option>
                   {% endfor %}
                 </select>
-                <small>JayaramBaker2009 uses vs30_clustering=True;
-                  LothBaker2013 samples the components stored in the
-                  ShakeMap shake_result.hdf product.</small>
+              </div>
+              {% endfor %}
+              <div class="impact_form_row">
+                <small>ShakeMap jobs use LothBaker2013, the model of the
+                  ShakeMap conditioning; the other jobs use models
+                  supporting circulant embedding.</small>
               </div>
               <div class="impact_form_row usgs_id_grp hidden-for-shakemap" {% if user_level < 2 %}hidden{% endif %}>
                 <label for="station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>

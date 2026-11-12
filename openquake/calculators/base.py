@@ -60,7 +60,7 @@ from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import (
-    to_gmfs, circulant_embedding_feasible)
+    to_gmfs, circulant_embedding_feasible, between_event_description)
 from openquake.hazardlib.shakemap.realization import get_metadata
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -1897,6 +1897,7 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
     if gmf_dict.get('spatial_model') is None:
         return
     name = gmf_dict['spatial_model'].__class__.__name__
+    between_model = gmf_dict.get('between_event_model')
     if 'CL' in shakemap.dtype.names:
         # the stored posterior components are sampled with Loth and
         # Baker (2013), whatever correlation model was requested
@@ -1906,13 +1907,19 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
             else 'marginal approximation, no station conditioning')
         model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
                  'approximate cross-IMT dependence, between-event terms '
-                 'independent across IMTs)')
+                 f'{between_event_description(between_model)})')
     else:
         model = (f'{name}, {strategy} (XML ShakeMap: approximation from '
                  'the marginal uncertainties)')
         if strategy != calc.oqparam.correlation_strategy:
             model += (f'; {calc.oqparam.correlation_strategy} is not '
                       'applicable to these sites')
+        if between_model is not None and 'tau' not in shakemap.dtype.names:
+            # only the total uncertainty is known
+            logging.warning('The between-event correlation model is not '
+                            'used, since the ShakeMap has no tau')
+            model += (f'; {between_model.__class__.__name__} not used, '
+                      'the ShakeMap has no between-event uncertainty')
     note = get_metadata(shakemap, 'note')
     if note:  # for instance why shake_result.hdf was not used
         model += f'; {note}'
@@ -2033,6 +2040,8 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                         oq.get_within_event_correlation_model(),
                         'cross_imt_model':
                         oq.get_total_residual_correlation_model(),
+                        'between_event_model':
+                        oq.get_between_event_correlation_model(),
                         'cholesky_limit': oq.cholesky_limit}
         else:
             # no correlation required, basic calculation is faster

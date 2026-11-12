@@ -61,8 +61,16 @@ warning is logged above that, and an error is raised above 1%).
 ShakeMap does not export joint posterior covariance blocks across IMTs.
 The engine approximates this dependence by transforming each component of a
 shared Loth and Baker prior field to its individual posterior covariance.
-Between-event terms are sampled independently across output IMTs. Each
-individual IMT retains its reconstructed posterior spatial covariance.
+Without a ``between_event_correlation_model`` the between-event terms are
+sampled independently across output IMTs. With one, the standard normal
+vector :math:`z` multiplying the between-event factor ``CL`` of each IMT is
+built as :math:`z = u\,w + (I - u u^T)\,v`, where :math:`u` is the dominant
+direction of ``CL``, :math:`w` the event term of that IMT, correlated across
+IMTs by the model, and :math:`v` an independent draw. Since :math:`z` is
+still standard normal, each individual IMT retains its reconstructed
+posterior spatial covariance; the IMTs get the correlation of the model
+where ``CL`` has rank one, as for the products without stations, and a
+smaller one otherwise.
 
 XML inputs and incomplete HDF or older NPY products remain supported, with
 warnings when correlated sampling uses marginal uncertainty approximations.

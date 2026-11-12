@@ -10,8 +10,10 @@ from openquake.baselib import config
 from openquake.hazardlib import geo, imt, site
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
+from openquake.hazardlib.correlation_models.cross_imt.\
+    abrahamson_et_al_2014 import AbrahamsonEtAl2014BetweenEvent
 from openquake.hazardlib.shakemap.gmfs import (
-    to_gmfs, _loth_baker_residuals)
+    to_gmfs, _loth_baker_residuals, _between_residuals)
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.parsers import (
     get_array, get_array_usgs_id, save_shakemap, ShakeMapProductError)
@@ -97,12 +99,14 @@ def _product(path, conditioned=True, sa_period=.3):
     return expected
 
 
-def _gmfs(shakemap, names, model=True, truncation=99, count=100_000):
+def _gmfs(shakemap, names, model=True, truncation=99, count=100_000,
+          between_event_model=None):
     # Exercise the public dispatcher, including generation of tau samples.
     method = {'kind': 'Silva&Horspool',
               'spatial_model': loth_baker_2013.LothBaker2013()
               if model else None,
-              'cross_imt_model': None, 'cholesky_limit': 10000}
+              'cross_imt_model': None, 'cholesky_limit': 10000,
+              'between_event_model': between_event_model}
     return to_gmfs(shakemap, method, None, truncation, count, 42, names)[1]
 
 
@@ -132,6 +136,46 @@ def test_hdf_posterior_spatial_covariance(tmp_path, conditioned):
         numpy.log(gmfs).mean(axis=1), numpy.log(.1), atol=.008)
     median = _gmfs(shakemap, names, truncation=0, count=3)
     numpy.testing.assert_allclose(median, .1)
+
+
+@pytest.mark.parametrize('conditioned', [True, False])
+def test_hdf_between_event_correlation(tmp_path, conditioned):
+    # a between-event model correlates the event terms of the IMTs without
+    # changing the posterior of each IMT; without stations the stored
+    # between-event factors have rank one and get the model correlation
+    path = tmp_path / 'shake_result.hdf'
+    expected = _product(path, conditioned)
+    shakemap = get_array(kind='shake_result_hdf', fname=str(path))
+    imts = [imt.PGA(), imt.SA(.3)]
+    model = AbrahamsonEtAl2014BetweenEvent()
+    rho = model.correlation_matrix(imts)[0, 1]
+    assert rho > .5
+    independent = _between_residuals(shakemap, imts, 100_000, 42, 99, None)
+    correlated = _between_residuals(shakemap, imts, 100_000, 42, 99, model)
+    for indep, corr in zip(independent, correlated):
+        numpy.testing.assert_allclose(
+            numpy.cov(corr), numpy.cov(indep), atol=.003)
+    tau = [numpy.sqrt((shakemap['CL'][str(im)].astype(float) ** 2).sum(
+        axis=1)) for im in imts]
+    cross = numpy.cov(numpy.vstack(correlated))[:4, 4:]
+    if conditioned:  # up to the model correlation, with the same sign
+        bound = rho * tau[0] * tau[1]  # the last point has no tau
+        assert (numpy.diag(cross)[:3] > .1 * bound[:3]).all()
+        assert (numpy.diag(cross) < bound + .003).all()
+    else:
+        numpy.testing.assert_allclose(cross, rho * .04, atol=.003)
+        # through the public dispatcher, with the within-event correlation
+        gmfs = _gmfs(shakemap, list(expected), between_event_model=model)
+        residuals = numpy.log(gmfs).transpose(2, 0, 1).reshape(8, -1)
+        within = .6 * .7 * loth_baker_2013.ShakeMapLothBaker2013(
+            ).correlation_block(geo.geodetic.distance_matrix(
+                shakemap['lon'], shakemap['lat']), [imt.PGA()], [imt.SA(.3)])
+        numpy.testing.assert_allclose(
+            numpy.cov(residuals)[:4, 4:], within + rho * .04, atol=.006)
+        for i, name in enumerate(expected):
+            numpy.testing.assert_allclose(
+                numpy.cov(numpy.log(gmfs[:, :, i])), expected[name],
+                atol=.006)
 
 
 def test_conditioning_survives_npy_filtering_and_association(tmp_path):

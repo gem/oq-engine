@@ -165,12 +165,15 @@ def test_shakemap():
 
 
 @pytest.mark.parametrize('kw, level, expected', [
-    ({}, 1, 'loth_baker'),  # the ShakeMap is used
-    ({'nodal_plane': 'NP1'}, 2, 'none'),  # the rupture is built
-    ({'spatial_correlation': 'none'}, 1, 'none')])
-def test_cli_default_spatial_correlation(kw, level, expected):
-    # oq impact correlates by default the jobs using the ShakeMap,
-    # as the web form does
+    ({}, 1, (None, None)),  # the ShakeMap is used
+    ({'nodal_plane': 'NP1'}, 2, (None, None)),  # the rupture is built
+    ({'within_event_correlation_model': 'DuNing2021Interpolated',
+      'between_event_correlation_model': 'NoCrossCorrelation',
+      'nodal_plane': 'NP1'}, 2,
+     ('DuNing2021Interpolated', 'NoCrossCorrelation'))])
+def test_cli_correlation_models(kw, level, expected):
+    # oq impact passes the chosen models, if any, to impact_validate, which
+    # sets the defaults as for the web form
     err = {'status': 'failed', 'error_msg': 'stop'}
     with patch.object(impact, 'impact_validate',
                       return_value=(None, {}, {}, err)) as validate:
@@ -178,4 +181,5 @@ def test_cli_default_spatial_correlation(kw, level, expected):
                         callback=lambda *args, **kw: None, **kw)
     post, user = validate.call_args.args[:2]
     assert user.level == level
-    assert post['spatial_correlation'] == expected
+    assert (post['within_event_correlation_model'],
+            post['between_event_correlation_model']) == expected
