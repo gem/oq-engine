@@ -214,7 +214,8 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False,
     :param hdd:
         Hypocenter depths
     :param lon, lat:
-        Longitude and latitude of the hypocenters (scalars)
+        Longitude and latitude of the hypocenters, scalars or arrays of P
+        values, for P point sources differing only by location
     :param dip_fracs:
         Optional array, one entry per depth in hdd. Each value is the
         down-dip fraction placing the hypocentre on the rupture (0=top of
@@ -222,33 +223,45 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False,
         at that fraction along dip, then clamped to [USD, LSD].
         Defaults to 0.5 (hypocentre at rupture centroid, default OQ behaviour).
     :return:
-        an array of shape (M, N, D, 3)
+        an array of shape (M, N, D, 3), or (P, M, N, D, 3) for arrays
     """
     if dip_fracs is None:
         dip_fracs = numpy.full(len(hdd), 0.5)
-    if isinstance(rar, numpy.ndarray):
-        # Compute aratio per mag
-        M, N = planin.mag.shape
-        corners = numpy.zeros((6, M, N, len(hdd), 3))
-        for m in range(M):
-            for n in range(N):
-                corners[:, m, n] = _build_corners(
-                    usd, lsd, rar[m, n], planin.area[m, n], planin.mag[m, n],
-                    planin.strike[m, n], planin.dip[m, n], planin.rake[m, n],
-                    lon, lat, hdd[:, 1], dip_fracs)
-    else:
-        # Regular scalar aratio
-        corners = build_corners(
+    if numpy.ndim(lon) == 0:
+        corners = _corners(planin, hdd, lon, lat, usd, lsd, rar, dip_fracs)
+    else:  # building the planars of all the points with a single call
+        corners = numpy.stack(  # shape (6, P, M, N, D, 3)
+            [_corners(planin, hdd, lo, la, usd, lsd, rar, dip_fracs)
+             for lo, la in zip(lon, lat)], axis=1)
+    planar_array = build_planar_array(corners[:4], corners[4], corners[5])
+    # longitudes and latitudes broadcastable to the shape (P, M, N)
+    lon = numpy.asarray(lon)[..., None, None]
+    lat = numpy.asarray(lat)[..., None, None]
+    for d, (drate, dep) in enumerate(hdd):
+        planar_array.wlr[..., d, 2] = planin.rate * drate
+        if not shift_hypo:  # use the original hypocenter
+            planar_array.hypo[..., d, 0] = lon
+            planar_array.hypo[..., d, 1] = lat
+            planar_array.hypo[..., d, 2] = dep
+    return planar_array
+
+
+# corners of the ruptures of a point source, of shape (6, M, N, D, 3)
+def _corners(planin, hdd, lon, lat, usd, lsd, rar, dip_fracs):
+    if not isinstance(rar, numpy.ndarray):  # regular scalar aratio
+        return build_corners(
             usd, lsd, rar, planin.area, planin.mag,
             planin.strike, planin.dip, planin.rake, hdd, lon, lat, dip_fracs)
-    planar_array = build_planar_array(corners[:4], corners[4], corners[5])
-    for d, (drate, dep) in enumerate(hdd):
-        planar_array.wlr[:, :, d, 2] = planin.rate * drate
-        if not shift_hypo:  # use the original hypocenter
-            planar_array.hypo[:, :, d, 0] = lon
-            planar_array.hypo[:, :, d, 1] = lat
-            planar_array.hypo[:, :, d, 2] = dep
-    return planar_array
+    # compute aratio per mag
+    M, N = planin.mag.shape
+    corners = numpy.zeros((6, M, N, len(hdd), 3))
+    for m in range(M):
+        for n in range(N):
+            corners[:, m, n] = _build_corners(
+                usd, lsd, rar[m, n], planin.area[m, n], planin.mag[m, n],
+                planin.strike[m, n], planin.dip[m, n], planin.rake[m, n],
+                lon, lat, hdd[:, 1], dip_fracs)
+    return corners
 
 
 def dot(a, b):

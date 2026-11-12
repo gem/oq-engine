@@ -287,17 +287,26 @@ class PointSource(ParametricSeismicSource):
         if isinstance(self, CollapsedPointSource) and not iruptures:
             out = AccumDict(accum=[])
             total_rates = dict(self.get_annual_occurrence_rates())
-            for src in self.pointsources:
+            psources = self.pointsources
+            for src, dic in zip(psources, get_planars(psources, shift_hypo)):
                 src_rates = dict(src.get_annual_occurrence_rates())
-                for mag, [pla] in src.get_planar(shift_hypo).items():
+                for mag, [pla] in dic.items():
                     # The context builder applies the aggregate magnitude
                     # rate. Normalize each source block by its own rate.
                     pla.wlr[:, 2] *= src_rates[mag] / total_rates[mag]
                     out += {mag: [pla]}
             return out
 
+        planar = self._build_planar(
+            self.location.x, self.location.y, shift_hypo)
+        dic = {mag: [pla.reshape(-1, 3)]   # MND3
+               for (_rate, mag), pla in zip(magd, planar)}
+        return dic
+
+    def _build_planar(self, lon, lat, shift_hypo):
+        # the planars of the source located in (lon, lat), which can also
+        # be arrays of locations, see build_planar
         hdd = numpy.array(self.hypocenter_distribution.data)
-        clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         planin = self.get_planin()
@@ -312,11 +321,8 @@ class PointSource(ParametricSeismicSource):
         dip_fracs = (None if self.hypo_dip_fracs is None else
                      numpy.array([0.5 if f is None else f
                                   for f in self.hypo_dip_fracs]))
-        planar = build_planar(
-            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo, dip_fracs)
-        dic = {mag: [pla.reshape(-1, 3)]   # MND3
-               for (_rate, mag), pla in zip(magd, planar)}
-        return dic
+        return build_planar(
+            planin, hdd, lon, lat, usd, lsd, rar, shift_hypo, dip_fracs)
 
     def _gen_ruptures(self, shift_hypo=False, iruptures=False):
         magrate = dict(self.get_annual_occurrence_rates())
@@ -339,14 +345,21 @@ class PointSource(ParametricSeismicSource):
         return self._gen_ruptures(shift_hypo=kwargs.get('shift_hypo'))
 
     # PointSource
+    def _mean_params(self):
+        # the mean nodal plane, depth and dip fraction, used in _mean_source
+        avg = calc_average([self])  # over nodal planes and hypocenters
+        np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
+        return np, avg['dep'], avg['hypo_dip_frac']
+
+    def _mean_source(self):
+        # the source restricted to the mean nodal plane and hypocenter
+        return self.restrict(*self._mean_params())
+
     def iruptures(self):
         """
         Generate one rupture for each magnitude, called only if nphc > 1
         """
-        avg = calc_average([self])  # over nodal planes and hypocenters
-        np = NodalPlane(avg['strike'], avg['dip'], avg['rake'])
-        yield from self.restrict(
-            np, avg['dep'], avg['hypo_dip_frac'])._gen_ruptures(iruptures=True)
+        yield from self._mean_source()._gen_ruptures(iruptures=True)
 
     def count_nphc(self):
         """
@@ -500,6 +513,88 @@ def pdata_to_psources(pdata):
     return out
 
 
+# the parameters determining the planars of a point source except its
+# location, or None if the planars must be built source by source; the
+# collapsed point sources are excluded, since their parameters are
+# averages which are never shared and computing the key would be slow
+def _planar_key(src):
+    if (type(src).get_planar is not PointSource.get_planar or
+            isinstance(src, CollapsedPointSource) or
+            isinstance(src.rupture_aspect_ratio, MagDepAspectRatio)):
+        return None
+    mags = tuple(mag for mag, _rate in src.get_annual_occurrence_rates())
+    npd = tuple((prob, np.strike, np.dip, np.rake)
+                for prob, np in src.nodal_plane_distribution.data)
+    hdf = src.hypo_dip_fracs
+    return (mags, npd, tuple(src.hypocenter_distribution.data),
+            None if hdf is None else tuple(hdf),
+            id(src.magnitude_scaling_relationship), src.rupture_aspect_ratio,
+            src.upper_seismogenic_depth, src.lower_seismogenic_depth)
+
+
+# call func(src) only once for the sources with the same (non-None) key
+def _once_per_key(srcs, keys, func):
+    cache = {}
+    out = []
+    for src, key in zip(srcs, keys):
+        if key is None:
+            out.append(func(src))
+        else:
+            if key not in cache:
+                cache[key] = func(src)
+            out.append(cache[key])
+    return out
+
+
+def get_planars(srcs, shift_hypo=False, iruptures=False, keys=None):
+    """
+    Vectorized version of `[src.get_planar(shift_hypo, iruptures) for src
+    in srcs]`: the point sources differing only by location (like the
+    points of an area source) are processed together.
+
+    :param srcs: a list of point sources
+    :param keys: the planar keys of the sources (computed if not given)
+    :returns: a list of dictionaries mag -> list of planar arrays
+    """
+    if keys is None:
+        keys = [_planar_key(src) for src in srcs]
+    out = [None] * len(srcs)
+    groups = {}
+    for i, (src, key) in enumerate(zip(srcs, keys)):
+        if key is None:
+            out[i] = src.get_planar(shift_hypo, iruptures)
+        else:
+            groups.setdefault(key, []).append(i)
+    for idxs in groups.values():
+        src = srcs[idxs[0]]
+        mags = [mag for mag, _rate in src.get_annual_occurrence_rates()]
+        lons = numpy.array([srcs[i].location.x for i in idxs])
+        lats = numpy.array([srcs[i].location.y for i in idxs])
+        planar = src._build_planar(lons, lats, shift_hypo)  # (P, M, ...)
+        for i, planar_p in zip(idxs, planar):
+            out[i] = {mag: [pla.reshape(-1, 3)]
+                      for mag, pla in zip(mags, planar_p)}
+    return out
+
+
+def precompute_planars(srcs, shift_hypo=False):
+    """
+    Precompute the planars, the planars of the mean ruptures (see
+    iruptures) and the rupture radii of the given point sources; the
+    sources differing only by location are processed together.
+
+    :returns: a list of triples (planars, mean planars, radii)
+    """
+    keys = [_planar_key(src) for src in srcs]
+    radii = _once_per_key(
+        srcs, keys, lambda src: src._get_rupture_projection_radii())
+    # NB: the mean sources of sources with the same key have the same key
+    means = [src.restrict(*params) for src, params in zip(
+        srcs, _once_per_key(srcs, keys, lambda src: src._mean_params()))]
+    return list(zip(get_planars(srcs, shift_hypo, keys=keys),
+                    get_planars(means, shift_hypo, True, keys), radii))
+
+
 class CollapsedPointSource(PointSource):
     """
     Source typology representing a cluster of point sources around a
@@ -552,10 +647,15 @@ class CollapsedPointSource(PointSource):
         """
         :returns: a list of pairs [(mag, mag_occur_rate), ...]
         """
-        acc = AccumDict(accum=0)
-        for psource in self.pointsources:
-            acc += dict(psource.get_annual_occurrence_rates())
-        return sorted(acc.items())
+        # NB: the rates are cached, since rebuilding the point sources
+        # is slow; the cache is reset by _update_pointsources
+        rates = self.__dict__.get('_rates')
+        if rates is None:
+            acc = AccumDict(accum=0)
+            for psource in self.pointsources:
+                acc += dict(psource.get_annual_occurrence_rates())
+            self._rates = rates = sorted(acc.items())
+        return list(rates)
 
     def count_nphc(self):
         """
@@ -571,14 +671,10 @@ class CollapsedPointSource(PointSource):
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
-    def iruptures(self):
-        """
-        :yields: the underlying ruptures with mean nodal plane and hypocenter
-        """
+    def _mean_params(self):
+        # the averages over the underlying point sources, see _mean_source
         np = NodalPlane(self.strike, self.dip, self.rake)
-        yield from self.restrict(
-            np, self.location.z, self.hypo_dip_frac)._gen_ruptures(
-            iruptures=True)
+        return np, self.location.z, self.hypo_dip_frac
 
     def modify(self, modification, parameters):
         if modification == 'set_recurrow':
@@ -622,6 +718,7 @@ class CollapsedPointSource(PointSource):
         self._update_pointsources(pointsources)
 
     def _update_pointsources(self, pointsources):
+        self.__dict__.pop('_rates', None)  # see get_annual_occurrence_rates
         self.pdata = psources_to_pdata(pointsources, self.source_id)
         vars(self).update(calc_average(pointsources))
         self.location = Point(self.lon, self.lat, self.dep)
