@@ -72,6 +72,8 @@ jobs:
     needs: plan
     name: ${{ matrix.kind }} Python 3.11
     runs-on: ubuntu-24.04
+    env:
+      MPLCONFIGDIR: /tmp  # matplotlib cache outside the home
     strategy:
       fail-fast: false
       matrix:
@@ -199,6 +201,7 @@ jobs:
           # with gunicorn, as in doc/getting-started/installation-instructions/server.md
           sed -i \
             -e "s|^WorkingDirectory=.*|WorkingDirectory=${SITE_PKG}openquake/server|" \
+            -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
             -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
             /etc/systemd/system/openquake-webui.service
           systemctl daemon-reload
@@ -294,6 +297,7 @@ jobs:
            sudo /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
            sudo sed -i \
              -e "s|^WorkingDirectory=.*|WorkingDirectory=/home/openquake/oq-engine/openquake/server|" \
+             -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
              -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
              /etc/systemd/system/openquake-webui.service
            sudo systemctl daemon-reload
