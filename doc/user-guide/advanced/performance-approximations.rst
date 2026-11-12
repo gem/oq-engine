@@ -295,6 +295,18 @@ NB: the fact that the Canada model with 7 cities can be made 26 times faster doe
 when you consider the full 130,000+ sites. A test with ``ps_grid_spacing=pointsource_distance=50`` gives a speedup of 7 
 times, which is still very significant.
 
+The precision of the ``ps_grid_spacing`` approximation depends on the engine release, and it has improved
+substantially in engine 3.27 compared with the past. As an example, consider the Lisbon site of the EUR model
+(``ps_grid_spacing=50`` and ``pointsource_distance=50``) compared with the reference without gridding
+(``ps_grid_spacing=0`` and ``pointsource_distance=1000``, i.e. the exact calculation). For the mean PGA hazard curve,
+the maximum relative difference from the reference, for probabilities of at least 1e-4, is 7.7% with engine 3.26 and
+0.7% with engine 3.27, so the error has been reduced by an order of magnitude. The reduction is smaller at long
+periods: for SA(2.0) it goes from 2.7% to 1.5%. With engine 3.27 we have *much* better precision without losing
+performance, so much that in the hazard curves or UHS plots it is impossible to see the difference visually. Of course
+for very small intensities numeric errors are much larger because the rates are very sensitive to the maximum distance
+and to many details, however below 0.01 g there is no reason to be precise since the hazard is too small to have a
+practical effect.
+
 Measuring the reduction of the contexts
 ---------------------------------------
 
