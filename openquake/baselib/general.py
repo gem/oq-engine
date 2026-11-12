@@ -1080,17 +1080,26 @@ class DictArray(Mapping):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(data))
 
 
-def groupby(objects, key, reducegroup=list):
+def groupby(objects, key, reducegroup=list, sort=True):
     """
     :param objects: a sequence of objects with a key value
     :param key: the key function to extract the key value
     :param reducegroup: the function to apply to each group
+    :param sort: if False, keep the keys and the objects in each group in
+                 the original order, and the keys need not be sortable
     :returns: a dict {key value: map(reducegroup, group)}
 
     >>> groupby(['A1', 'A2', 'B1', 'B2', 'B3'], lambda x: x[0],
     ...         lambda group: ''.join(x[1] for x in group))
     {'A': '12', 'B': '123'}
+    >>> groupby(['B2', 'A1', 'B1'], lambda x: x[0], sort=False)
+    {'B': ['B2', 'B1'], 'A': ['A1']}
     """
+    if not sort:
+        groups = {}
+        for obj in objects:
+            groups.setdefault(key(obj), []).append(obj)
+        return {k: reducegroup(group) for k, group in groups.items()}
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return {k: reducegroup(group) for k, group in kgroups}
 

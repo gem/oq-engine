@@ -36,6 +36,7 @@ from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
     duplicated, BASE183, group_array, AccumDict)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
+from openquake.hazardlib.lt import fix_bytes
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
@@ -71,13 +72,26 @@ def bsnodes(fname, branchinglevel):
                          branchinglevel)
 
 
-def fix_bytes(record):
-    # convert a record with bytes fields into a dictionary of strings
-    dic = {}
-    for n in record.dtype.names:
-        v = record[n]
-        dic[n] = v.decode('utf-8') if isinstance(v, bytes) else v
-    return dic
+def read_branchsets(filename):
+    """
+    Read editable branchsets in document order, retaining raw branch IDs
+    and nested uncertainty models. Branchsets are not attached or checked
+    against source files; callers can repair IDs before validating a tree.
+    """
+    filename = str(filename)
+    bsets = []
+    for level in nrml.read(filename).logicTree:
+        for node in bsnodes(filename, level):
+            bs = lt.BranchSet(node['uncertaintyType'],
+                              lt.parse_filters(node.attrib), len(bsets))
+            bs.id = node['branchSetID']
+            for br in node:
+                model = br.uncertaintyModel
+                value = model if model.nodes else model.text
+                bs.branches.append(lt.Branch(
+                    br['branchID'], value, ~br.uncertaintyWeight, bs.id))
+            bsets.append(bs)
+    return bsets
 
 
 class ImtWeight(object):
@@ -180,11 +194,11 @@ class IMTWeigher:
         return weights[:, i]
 
 
-class GsimLogicTree(object):
+class GsimLogicTree(lt.AbstractLogicTree):
     """
-    A GsimLogicTree instance is an iterable yielding `Realization`
-    tuples with attributes `value`, `weight` and `lt_path`, where
-    `value` is a dictionary {trt: gsim}, `weight` is a number in the
+    A GsimLogicTree instance has a method get_realizations returning
+    `Realization` objects with attributes `value`, `weight` and `lt_path`,
+    where `value` is a dictionary {trt: gsim}, `weight` is a number in the
     interval 0..1 and `lt_path` is a tuple with the branch ids of the
     given realization.
 
@@ -647,7 +661,7 @@ class GsimLogicTree(object):
         if samples:
             rlzs = self.sample(samples, seed, sampling_method)
         else:
-            rlzs = list(self)
+            rlzs = self.get_realizations()
         ddic = {}
         for i, trt in enumerate(self.values):
             ddic[i*TWO24] = {gsim: U32([rlz.ordinal for rlz in rlzs
@@ -655,9 +669,10 @@ class GsimLogicTree(object):
                              for gsim in self.values[trt]}
         return ddic
 
-    def __iter__(self):
+    def get_realizations(self):
         """
-        Yield :class:`openquake.hazardlib.logictree.Realization` instances
+        :returns: the list of the
+            :class:`openquake.hazardlib.lt.Realization` instances
         """
         imti = self.wget.imti
         groups = []
@@ -665,19 +680,19 @@ class GsimLogicTree(object):
         for trt in self.values:
             groups.append([b for b in self.branches if b.trt == trt])
         # with T tectonic region types there are T groups and T branches
-        for i, branches in enumerate(itertools.product(*groups)):
+        rlzs = []
+        for ordinal, branches in enumerate(itertools.product(*groups)):
             weight = numpy.ones(len(imti))
-            lt_path = []
             lt_uid = []
             value = []
-            for trt, branch in zip(self.values, branches):
-                lt_path.append(branch.id)
+            for branch in branches:
                 lt_uid.append(branch.id if branch.effective else '.')
                 for imt in branch.weight.dic:
-                    i = imti.get(imt, len(imti))
-                    weight[i] *= branch.weight[imt]
+                    weight[imti.get(imt, len(imti))] *= branch.weight[imt]
                 value.append(branch.gsim)
-            yield lt.Realization(tuple(value), weight, i, tuple(lt_uid))
+            rlzs.append(lt.Realization(
+                tuple(value), weight, ordinal, tuple(lt_uid)))
+        return rlzs
 
     def __repr__(self):
         lines = ['%s,%s,%s,w=%s' %

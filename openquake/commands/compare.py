@@ -25,6 +25,7 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
+from openquake.calculators.export.hazard import workflow_hmaps_array
 
 aac = numpy.testing.assert_allclose
 F64 = numpy.float64
@@ -550,6 +551,72 @@ def compare_vfuncs(file1: str, file2: str, atol: float=1E-3, rtol: float=1E-3):
         aac(dic1[key].mean_loss_ratios, dic2[key].mean_loss_ratios, rtol, atol)
 
 
+def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
+                     atol: float = 1E-3, rtol: float = 0):
+    """
+    Compare the mean hazard maps of a workflow with the CSV files in
+    expected_dir, as exported by `oq export hazard_map-mean-475y` and
+    similar. Exits with 0 if all the values are equal within the tolerance,
+    otherwise with the number of files with differences.
+
+    The expected files are the ones written by `oq export`, one per dataset
+    with the workflow ID in the name, e.g. `hazard_map-mean-475y_19714.csv`
+    for the dataset `hazard_map-mean-475y` of the workflow 19714. Only the
+    files whose name starts with `hazard_map-` are compared, and the dataset
+    is the file name without the `_<id>` suffix. A file whose dataset is not
+    in the workflow counts as a difference.
+
+    If the workflow ID is omitted (-1, the default) the last workflow run is
+    used, as recorded in ~/.last-workflow.
+
+    Examples: `oq compare workflow expected_hmaps 19714`
+              `oq compare workflow expected_hmaps`
+    """
+    if calc_id == -1:
+        calc_id = datastore.last_workflow_id()
+    dstore = datastore.read(calc_id)
+    err = 0
+    for fname in sorted(os.listdir(expected_dir)):
+        if not (fname.startswith('hazard_map-') and fname.endswith('.csv')):
+            continue
+        # 'hazard_map-mean-475y_19714.csv' -> 'hazard_map-mean-475y'
+        base, _, idx = fname[:-len('.csv')].rpartition('_')
+        key = base if idx.isdigit() else fname[:-len('.csv')]
+        if key not in dstore.hdf5:
+            print(f"{key} is not in the workflow, cannot compare")
+            err += 1
+            continue
+        print(f"Comparing {fname}")
+        arr = workflow_hmaps_array(dstore, key)
+        exp = pandas.read_csv(os.path.join(expected_dir, fname), skiprows=1)
+        if len(exp) != len(arr):
+            print(f"{len(exp)} rows in {fname}, {len(arr)} in the workflow")
+            err += 1
+            continue
+        masks = {}  # column -> boolean array of the rows with differences
+        for col in arr.dtype.names:
+            if col == 'calc_id':  # an identifier, changing at every run
+                continue
+            if arr[col].dtype.kind == 'U':  # the model names
+                masks[col] = arr[col] != exp[col].to_numpy().astype(str)
+            else:
+                a = arr[col].astype(numpy.float64)
+                b = exp[col].to_numpy().astype(numpy.float64)
+                masks[col] = numpy.abs(a - b) > atol + (a + b) / 2 * rtol
+        bad = numpy.logical_or.reduce(list(masks.values()))
+        if bad.any():
+            err += 1
+            i = int(numpy.argmax(bad))  # the first row with differences
+            print(f"{bad.sum()} rows differ in {fname}, the first one is "
+                  f"model {arr['model'][i]} (calc_id {arr['calc_id'][i]}) "
+                  f"at lon {arr['lon'][i]}, lat {arr['lat'][i]}:")
+            for col, mask in masks.items():
+                if mask[i]:
+                    print(f"  {col}: workflow {arr[col][i]}, "
+                          f"expected {exp[col][i]}")
+    sys.exit(err)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -565,7 +632,13 @@ main = dict(rups=compare_rups,
             sitecol=compare_sitecol,
             oqparam=compare_oqparam,
             asce=compare_asce,
-            vfuncs=compare_vfuncs)
+            vfuncs=compare_vfuncs,
+            workflow=compare_workflow)
+
+compare_workflow.expected_dir = 'directory with the exported CSV files'
+compare_workflow.calc_id = 'workflow calculation ID (default: the last one)'
+compare_workflow.atol = 'absolute tolerance'
+compare_workflow.rtol = 'relative tolerance'
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
           compare_med_gmv, compare_risk_by_event, compare_sources,

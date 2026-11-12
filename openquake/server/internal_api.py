@@ -42,6 +42,7 @@ from unittest.mock import patch
 from urllib.parse import urljoin
 
 import numpy
+from django.conf import settings
 from django.http import FileResponse, HttpResponse, HttpResponseBase
 from django.urls import re_path
 from django.utils.datastructures import MultiValueDict
@@ -716,7 +717,7 @@ def v0_impact_get_rupture_data(request):
     return impact_get_rupture_data(_form(request))
 
 
-@internal_view('GET', auth=False)
+@internal_view('GET', 'HEAD', auth=False)
 def v0_calc_log_size(request, calc_id):
     """Return the number of log lines for a calculation."""
     return calc_log_size(int(calc_id))
@@ -740,11 +741,16 @@ def v0_calc_result(request, result_id):
     return calc_result(int(result_id), request.GET.get('export_type'))
 
 
-internal_urlpatterns = [
-    re_path(r'^v1/calc_info/(\d+)$', v1_calc_info),
-    re_path(r'^v1/calc_list/count$', v1_calc_list_count),
-    re_path(r'^v1/aelo_site_classes$', v1_aelo_site_classes),
-    re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
+# the v1 routes are served only with the WebUI enabled (WEBUI = True)
+internal_urlpatterns = []
+if settings.WEBUI:
+    internal_urlpatterns += [
+        re_path(r'^v1/calc_info/(\d+)$', v1_calc_info),
+        re_path(r'^v1/calc_list/count$', v1_calc_list_count),
+        re_path(r'^v1/aelo_site_classes$', v1_aelo_site_classes),
+        re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
+    ]
+internal_urlpatterns += [
     re_path(r'^v0/calc/model_provenance/(\d+)$', v0_model_provenance),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),
     re_path(r'^v0/worker_([^/]+)$', v0_worker),

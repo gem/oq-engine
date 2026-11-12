@@ -52,9 +52,12 @@ PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # pointsource_distance of config.performance (or with the one of the user,
 # when not gridding, see count_psdist), 'gridded' is the number of contexts
 # of the gridded point sources before collapse_precision, 'collapsed' the
-# number of contexts after collapse_precision
+# number of contexts after collapse_precision and 'separate' the number of
+# contexts without the source variants optimization, i.e. if the variants
+# of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
-                       ('gridded', numpy.int64), ('collapsed', numpy.int64)])
+                       ('gridded', numpy.int64), ('collapsed', numpy.int64),
+                       ('separate', numpy.int64)])
 
 
 # one real site per H3 cell of resolution `res`, as a complete collection;
@@ -434,8 +437,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
         elif oq.auto_grid or (oq.ps_grid_spacing and not oq.psd_given):
             # with a fixed ps_grid_spacing only pointsource_distance
-            # is calibrated, see autogrid.calibrate
-            self.calibrate_grid(sites)
+            # is calibrated, see autogrid.calibrate; with few sites
+            # the calibration is skipped and the defaults are kept
+            if self.few_sites:
+                logging.info('Few sites: skipping the calibration of '
+                             'ps_grid_spacing and pointsource_distance')
+            else:
+                self.calibrate_grid(sites)
 
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
@@ -537,7 +545,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         exact_ctxs = res.pop('exact_ctxs', 0)
         if exact_ctxs:  # used in classical.log_cfactor
             self.datastore['nctxs'] = numpy.array(
-                [(exact_ctxs, psdist_ctxs, 0, 0)], CTX_EST)
+                [(exact_ctxs, psdist_ctxs, 0, 0, 0)], CTX_EST)
         atomic = set(src.grp_id for src in atomic_sources)
         if atomic:  # case_35
             for grp_id, srcs in groupby(

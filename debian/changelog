@@ -1,4 +1,40 @@
-  [Michele Simionato]
+  [Savas Ceylan]
+  * Added Swiss site-specific SA corrections to ModifiableGMPE.
+    Only site columns for the selected periods are required.
+    PGA keeps mean, phi and tau, and recomputes total sigma.
+
+ [Christopher Brooks]
+ * For Bayless and Abrahamson 2018 GMM:
+    * Fixed high-frequency total sigma values near 10,000 nat log units by
+      replacing placeholder c1a coefficients with zero and corrected the
+      test result labels so sigma comparisons are no longer silently skipped.
+    * Fixed nan mean predictions between 23.988321 and 24 Hz by starting
+      kappa extrapolation at the last valid coefficient frequency.
+    * Added missing span-20 LOWESS smoothing after flattening the non-linear
+      site term on the native frequency grid, matching the MATLAB script.
+    * Fixed off-grid predictions by interpolating completed log EAS and
+      standard deviations against log frequency, matching the MATLAB script.
+      Previously, coefficients were interpolated before evaluation and the
+      non-linear term was interpolated against linear frequency.
+
+ [Anirudh Rao]
+  * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
+    correlation model
+
+ [Michele Simionato]
+  * Added a warning for sources with different IDs, the same geometry and
+    different MFDs, which are likely variants of a base source, and
+    `oq check_input --better-smlt` now generates a job.zip
+  * Added an option `oq check_input --better-smlt` to reduce sources with
+    the same geometry
+  * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
+    magnitude of a truncated Gutenberg-Richter MFD
+  * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
+    points of a multiPointSource, and fixed the source variants optimization
+    to discard in each variant the sources filtered by the maximum distance
+  * The classical calculator now logs the reduction of the contexts due to
+    the source variants optimization, stored in the new `separate` field of
+    the `nctxs` dataset and displayed by `oq show context_reduction`
   * Internal: fixed `oq --version` in devel_server installations by calling
     automatically `git config --global --add safe.directory`
 
@@ -287,9 +323,11 @@
     range of the model to avoid the singularity at Vs30=150.
 
   [Michele Simionato]
-  * Geometry-preserving uncertainties are now optimized in classical calculations
-    with few sites: contexts, means, stddevs and poes are computed only once
-    per realization set
+  * Geometry-preserving uncertainties are now optimized in classical
+    calculations: contexts, means, stddevs and poes are computed only once
+    for the MFD variants of a source, also when their magnitudes are nested
+    (for instance with maxMagGRAbsolute); in the LogicTreeCase2ClassicalPSHA
+    demo the contexts go from 22,422 (engine 3.26) to 2,935
   * Temporarily restored consequences in XML format; this is solely to support
     the current IPT; the XML is still deprecated and should not be used
   * Extended the ps_grid_spacing approximation to the case of few sites
