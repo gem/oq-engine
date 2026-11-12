@@ -1,5 +1,11 @@
 ---
-name: Server Installation of OQ
+name: Installation of OQ (server and devel)
+# One workflow for the two installations of the engine:
+#  - server: install.py server, as in production (WebUI from systemd,
+#    gunicorn, checks as root, journal checked);
+#  - devel: install.py devel_server, from a clone of the repository, as the
+#    openquake user (WebUI from systemd as well, with the gunicorn switch).
+# The kinds run by each trigger are chosen by the plan job below.
 on:
   workflow_dispatch:
     inputs:
@@ -12,9 +18,13 @@ on:
         description: "Run the build with upterm debugging enabled"
         required: false
         default: false
+  # 11:05 runs server, 15:05 runs devel
   schedule:
     - cron: "05 11 * * *"
-  # Called from engine_pr_test.yml (only when install.py changed)
+    - cron: "05 15 * * *"
+  pull_request:
+  # Called from engine_pr_test.yml (only when install.py changed), which
+  # passes kind: server
   workflow_call:
     inputs:
       git-ref:
@@ -22,39 +32,73 @@ on:
         type: string
         default: master
         required: false
+      kind:
+        description: "server or devel: the only kind to run"
+        type: string
+        default: ""
+        required: false
 
 jobs:
-  Sever_Installation:
-    name: Server OQ  Python ${{ matrix.python-version }}
+  plan:
+    # Decides the kinds to run: the matrix of the install job
     runs-on: ubuntu-24.04
-    env:
-      GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
-      GITHUB_REF: ${{ github.ref }}
-      GITHUB_HD_REF: ${{ github.head_ref }}}
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          KIND: ${{ inputs.kind }}
+        run: |
+          if [ -n "$KIND" ]; then
+            kinds="[\"$KIND\"]"
+          else
+            case "$EVENT" in
+              pull_request) kinds='["devel"]' ;;
+              schedule)
+                if [ "$SCHEDULE" = "05 11 * * *" ]; then
+                  kinds='["server"]'
+                else
+                  kinds='["devel"]'
+                fi ;;
+              *) kinds='["server","devel"]' ;;
+            esac
+          fi
+          matrix=$(jq -cn --argjson kinds "$kinds" \
+            '{include: [$kinds[] | {kind: ., "python-version": "3.11"}]}')
+          [ -n "$matrix" ] || { echo "empty matrix"; exit 1; }
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix"
+
+  install:
+    needs: plan
+    name: ${{ matrix.kind }} Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
-      - name: Clone Repository (Master)
-        uses: actions/checkout@v6
-        if: inputs.git-ref == ''
-      - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v6
-        if: inputs.git-ref != ''
-        with:
-          ref: ${{ inputs.git-ref }}
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Checkout the code to test
+        # the scripts of this repository (webui_checks.sh) and the test
+        # archives are taken from here; the code installed is below
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.git-ref || github.ref }}
       - name: Setup upterm session
         uses: owenthereal/action-upterm@v2
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
         with:
-          ## Shut down the server if unconnected after 45 minutes.
+          ## Shut down the server if unconnected after 60 minutes.
           wait-timeout-minutes: 60
+      # ---- server ----
       - name: Install OQ Server with ${{ matrix.python-version }}
+        if: matrix.kind == 'server'
         run: |
           if [ -z ${{ inputs.git-ref }} ];
           then
@@ -66,7 +110,8 @@ jobs:
           if [[ $EXIT_CODE -ne 0 ]]; then
                 break
           fi
-      - name: Actualize 'default' templates for email notifications
+      - name: Actualize 'default' templates for email notifications (server)
+        if: matrix.kind == 'server'
         run: |
           SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
           cd ${SITE_PKG}
@@ -77,7 +122,7 @@ jobs:
           ls -lrt ${SITE_PKG}/openquake/server/templates/registration/
       # Local emulation without root: .github/scripts/emulate_server_install.sh
       # (see its header). What the emulation does NOT check, i.e. what only
-      # this step and the install step above test:
+      # the server step below and the install step above test:
       #  - install.py and its systemd unit (/etc/systemd/system/
       #    openquake-webui.service), including the sed that sets gunicorn
       #    as ExecStart and the daemon-reload
@@ -93,7 +138,8 @@ jobs:
       # (.github/scripts/run_webui_concurrency.sh): it is not in this job.
       #
       # Requests that keep a gunicorn worker busy (read from the code, not
-      # all measured; the gunicorn command of this step uses --workers 2):
+      # all measured; the gunicorn command of the server step uses
+      # --workers 2):
       #  - downloading a result that is generated on request, e.g.
       #    /v1/calc/result/<id> for a large GMF: the export runs inside the
       #    request, before the first byte is sent
@@ -109,7 +155,8 @@ jobs:
       #  a dropped connection; a calc run with oq engine --run by a user
       #  other than openquake posts each log line to /v0/db/log and waits
       #  for a free worker, so it can look stalled.
-      - name: WebUI and calculation with Auth
+      - name: WebUI and calculation with Auth (server)
+        if: matrix.kind == 'server'
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
           whoami  # Outputs: root
@@ -160,11 +207,115 @@ jobs:
           systemctl start openquake-webui
           echo " Run a calc using https"
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
-          # The WebUI checks shared with the local emulation: login page,
-          # login, access log, journal (--journal), a calc submitted through
-          # the WebUI, outputs. See .github/scripts/webui_checks.sh.
+      - name: WebUI checks (server)
+        # as root, for the journal; the checks are in webui_checks.sh
+        if: matrix.kind == 'server'
+        shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
+        run: |
           ${{ github.workspace }}/.github/scripts/webui_checks.sh \
             --base http://127.0.0.1:8800 --user openquake \
             --password level_1_password \
             --archive ${{ github.workspace }}/openquake/server/tests/data/archive_ok.zip \
             --access-log-dir /var/log/oq-engine --journal
+      # ---- devel ----
+      - name: Create openquake user (devel)
+        if: matrix.kind == 'devel'
+        run: |
+          sudo useradd -d /home/openquake -m  -s /bin/bash openquake
+          sudo usermod -aG sudo openquake
+          echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
+      - name: Install OQ with ${{ matrix.python-version }} as user openquake (devel)
+        if: matrix.kind == 'devel'
+        env:
+          # the code to install: the head of the pull request (also when it
+          # comes from a fork), the git-ref of a manual run, or master
+          SRC_URL: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.clone_url || 'https://github.com/gem/oq-engine.git' }}
+          SRC_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.git-ref || 'master' }}
+        run: |
+          echo "Installing ref=${SRC_REF} from ${SRC_URL}"
+          cat > /tmp/scripts.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          echo "Running as $(whoami) in $(pwd), ref=${SRC_REF}"
+          cd /home/openquake
+          rm -rf oq-engine
+          git clone "$SRC_URL" oq-engine
+          cd oq-engine
+          git checkout "$SRC_REF"
+          sudo -H $PY_TO_USE install.py devel_server
+          EOF
+          chmod +x /tmp/scripts.sh
+          sudo -i -u openquake HOME=/home/openquake SRC_URL="$SRC_URL" SRC_REF="$SRC_REF" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
+      - name: Actualize 'default' templates for email notifications (devel)
+        if: matrix.kind == 'devel'
+        run: |
+          sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
+          cp -- "$file" "${file%.default.tmpl}"
+          done
+          '
+      - name: WebUI and calculation with Auth (devel)
+        if: matrix.kind == 'devel'
+        run: |
+           set -o pipefail
+           sudo systemctl stop openquake-webui
+           source /opt/openquake/venv/bin/activate
+           sudo mkdir -p /var/log/oq-engine/
+           sudo chown -R openquake /var/log/oq-engine/
+           sudo runuser -l openquake -c '
+           /opt/openquake/venv/bin/oq engine --upgrade-db
+           oq --version
+           #
+           echo "Add settings for login and logging on webui before to start"
+           cd /home/openquake/oq-engine/openquake/server
+           cat > local_settings.py << EOF
+           APPLICATION_MODE = "RESTRICTED"
+           EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+           EMAIL_HOST = "smtp.gmail.com"
+           EMAIL_PORT = 587
+           EMAIL_USE_TLS = True
+           EMAIL_HOST_USER = "admin@reply.com"
+           EMAIL_HOST_PASSWORD = "polhjuih@"
+           EMAIL_SUPPORT = "noreply@reply.com"
+           WEBUI_ACCESS_LOG_DIR = "/var/log/oq-engine"
+           EOF
+           echo "DISPLAY content of local_settings"
+           cat local_settings.py
+           '
+           # Perform migration after setup local_settings
+           # the secret file is readable only by the openquake user and
+           # runuser -l resets the environment
+           sudo runuser -l openquake -c '
+           set -a
+           source /etc/openquake/django_secret.env
+           set +a
+           source /opt/openquake/venv/bin/activate
+           cd /home/openquake/oq-engine/openquake/server
+           python3 manage.py migrate
+           python3 manage.py createuser level_1_user testuser1@test.com --level 1 --password level_1_password --no-email
+           '
+           # the gunicorn switch, as for the server (see the server step)
+           sudo /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
+           sudo sed -i \
+             -e "s|^WorkingDirectory=.*|WorkingDirectory=/home/openquake/oq-engine/openquake/server|" \
+             -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
+             /etc/systemd/system/openquake-webui.service
+           sudo systemctl daemon-reload
+           # START WEBUI
+           sudo systemctl start openquake-webui
+           # zip area source demo into job.zip
+           zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
+      - name: WebUI checks (devel)
+        if: matrix.kind == 'devel'
+        run: |
+          ${{ github.workspace }}/.github/scripts/webui_checks.sh \
+            --base http://127.0.0.1:8800 --user level_1_user \
+            --password level_1_password --archive "${{ github.workspace }}/job.zip" \
+            --access-log-dir /var/log/oq-engine
+      - name: Run calculation with non openquake users from command line (devel)
+        if: matrix.kind == 'devel'
+        run: |
+           set -o pipefail
+           oq --version
+           oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
+           echo "Display the Outputs of the last job"
+           oq engine --list-outputs 1
