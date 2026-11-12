@@ -42,6 +42,9 @@ it does and does not cover; do not run the workflow steps with sudo.
 To check that the WebUI does not hang with several users at once, run
 .github/scripts/run_webui_concurrency.sh (same requirements); its header
 explains the steps, the environment variables and how to read the output.
+The checks of a running WebUI (login, access log, a calculation submitted
+through the WebUI, outputs) are in .github/scripts/webui_checks.sh, which
+the emulation and both installation workflows run.
 
 # tips
 

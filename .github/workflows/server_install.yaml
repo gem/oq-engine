@@ -158,61 +158,13 @@ jobs:
           systemctl stop openquake-webui
           sleep 10
           systemctl start openquake-webui
-          echo "Waiting WEBUI up on port 8800...."
-          echo "Test WebUI with curl before to test django"
-          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
-            echo "Still waiting WEBUI account login up on port 8800...."
-            sleep 5 # wait for 5 seconds before check again
-          done
-          echo -n "TEST DJANGO LOGIN "
-          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-          YOUR_USER='openquake'
-          YOUR_PASS='level_1_password'
-          COOKIES=cookies.txt
-          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
-          echo -n "Django Auth: get csrftoken ..."
-          $CURL_BIN $LOGIN_URL -o /dev/null
-          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
-          echo " perform login ..."
-          status_code=$($CURL_BIN -w "%{http_code}"\
-             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -X POST $LOGIN_URL -o /dev/null)
-          if [ $status_code != "302" ]; then
-           echo "Unable to login"
-           exit 1
-          fi
-          echo "--------------------"
-          echo "display log of webui"
-          echo "--------------------"
-          cat /var/log/oq-engine/webui-access.log
-          if [ -s /var/log/oq-engine/webui-access.log ]; then
-           # The file is not-empty.
-           cat /var/log/oq-engine/webui-access.log
-          else
-           echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
-           exit 1
-          fi
-          # The WebUI logs its configuration and database paths at start-up
-          # (openquake/server/wsgi.py): systemd sends them to the journal,
-          # so print the journal and check that these lines are there.
-          journalctl -u openquake-webui --no-pager > /tmp/webui-journal.log
-          echo "--------------------"
-          echo "journal of openquake-webui"
-          echo "--------------------"
-          cat /tmp/webui-journal.log
-          for expected in "Using .*openquake.cfg" "Using .*db.sqlite3"; do
-           if ! grep -q "WARNING:root:$expected" /tmp/webui-journal.log; then
-            echo "Missing log line in the journal: $expected"
-            exit 1
-           fi
-          done
           echo " Run a calc using https"
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
-          sleep 10
-          status_code=$($CURL_BIN -w "%{http_code}"\
-             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
-          if [ $status_code != "200" ]; then
-           echo "Unable to visualize outputs"
-           exit 1
-          fi
+          # The WebUI checks shared with the local emulation: login page,
+          # login, access log, journal (--journal), a calc submitted through
+          # the WebUI, outputs. See .github/scripts/webui_checks.sh.
+          ${{ github.workspace }}/.github/scripts/webui_checks.sh \
+            --base http://127.0.0.1:8800 --user openquake \
+            --password level_1_password \
+            --archive ${{ github.workspace }}/openquake/server/tests/data/archive_ok.zip \
+            --access-log-dir /var/log/oq-engine --journal

@@ -122,59 +122,15 @@ jobs:
            '
            # START WEBUI
            sudo systemctl start openquake-webui
-           echo "Waiting WEBUI up on port 8800...."
-           echo "Test WebUI with curl before to test django"
-           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
-             echo "Still waiting WEBUI account login up on port 8800...."
-             sleep 5 # wait for 5 seconds before check again
-           done
-           echo -n "TEST DJANGO LOGIN "
-           LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-           YOUR_USER='level_1_user'
-           YOUR_PASS='level_1_password'
-           COOKIES=cookies.txt
-           CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
-           echo -n "Django Auth: get csrftoken ..."
-           $CURL_BIN $LOGIN_URL -o /dev/null
-           DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
-           echo " perform login ..."
-           status_code=$($CURL_BIN -w "%{http_code}"\
-               -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-               -X POST $LOGIN_URL -o /dev/null)
-           if [ $status_code != "302" ]; then
-             echo "Unable to login"
-             exit 1
-           fi
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
-           $CURL_BIN --fail  -o /dev/null -b cookies.txt -X POST -F "archive=@job.zip" http://127.0.0.1:8800/v1/calc/run
-           # Waiting for the job to complete
-           while [ "$(eval "$CURL_BIN" --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/status | jq -r '.status')" != "complete" ]; do
-             echo "+++++++++++++++++++++++++++++++++"
-             echo "Still waiting the job to complete"
-             sleep 5 # wait for 5 seconds before check again
-           done
-           echo "Show list of calc and results"
-           echo "+++++++++++++++++++++++++++++"
-           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/list | jq
-           $CURL_BIN --fail -b cookies.txt -G http://127.0.0.1:8800/v1/calc/1/results | jq
-           #if [ $status_code != "200" ]; then
-           #  echo "Unable to visualize outputs"
-           #  exit 1
-           #fi
-           echo "--------------------"
-           echo "display log of webui"
-           echo "--------------------"
-           sudo runuser -l openquake -c '
-           cat /var/log/oq-engine/webui-access.log
-           if [ -s /var/log/oq-engine/webui-access.log ]; then
-             # The file is not-empty.
-             cat /var/log/oq-engine/webui-access.log
-           else
-             echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
-             exit 1
-           fi
-           '
+           # The WebUI checks shared with the local emulation (see
+           # .github/scripts/webui_checks.sh): login page, login, access log,
+           # a calc submitted through the WebUI, outputs and results.
+           ${{ github.workspace }}/.github/scripts/webui_checks.sh \
+             --base http://127.0.0.1:8800 --user level_1_user \
+             --password level_1_password --archive "$PWD/job.zip" \
+             --access-log-dir /var/log/oq-engine
       - name: Run calculation with non openquake users from command line
         run: |
            set -o pipefail
