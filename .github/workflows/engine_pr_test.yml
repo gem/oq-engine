@@ -5,6 +5,8 @@ name: engine tests
 
 on:
   pull_request:
+    # the tests run when the PR is opened (or reopened) and on each new push
+    types: [opened, reopened, synchronize]
 
 jobs:
   server_install:
