@@ -687,6 +687,18 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    def test_calibration_only(self):
+        # oq run --calibrate: the calibration is stored and the
+        # preclassical stops before the splitting of the sources
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical',
+                      calibration_only='true', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
+        self.assertNotIn('source_info', self.calc.datastore)
+
     @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
