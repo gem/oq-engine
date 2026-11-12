@@ -1153,6 +1153,10 @@ def reduce_sources(sources_with_same_id):
     add_checksums(unique)
     # in LogicTreeCase2ClassicalPSHA there 81 unique sources
     # grouped in 9 groups of 9 sources each with the same checksum
+    # NB: merging copies of a source can change the order of the sources
+    # and so the numbers of the fragments (see add_semicolons), hence the
+    # random seeds: the event based results can change even if the MFDs
+    # are the same, while the distribution converges to the same MFD
     for srcs in general.groupby(unique, checksum).values():
         # NB: the simplest test featuring the same source in two
         # different source models is logictree/case_01
