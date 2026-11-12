@@ -281,8 +281,8 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
     prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
     groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
-    # keep one point source every 10 in the calibration
-    groups = {g: pts[::10] for g, pts in groups.items()}
+    # keep one point source every 5 in the calibration
+    groups = {g: pts[::5] for g, pts in groups.items()}
     if not groups:
         return None
     return select_candidate(
