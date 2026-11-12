@@ -36,7 +36,6 @@ from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import (
     _get_bssa14_site_term)
 from openquake.hazardlib.gsim.mgmpe import swiss_amplification
-# Re-export modifier names for the existing globals-based dispatch.
 from openquake.hazardlib.gsim.mgmpe.swiss_amplification import (
     apply_swiss_amplification as apply_swiss_amplification,
     apply_swiss_amplification_sa as apply_swiss_amplification_sa,
