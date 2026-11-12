@@ -700,6 +700,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertNotIn('source_info', self.calc.datastore)
 
     @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # the full calibration, i.e. POINT_STEP=1, is checked here
+    @mock.patch('openquake.calculators.autogrid.POINT_STEP', 1)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
@@ -1354,7 +1356,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_96(self):
         # a source with an uncertainty and magnitudes partially outside
         # the integration distance: the magnitudes with zero integration
-        # distance must be ignored, not raise a KeyError (see _quintets).
+        # distance must be ignored, not raise a KeyError (see _sextets).
         # The source is weighted in the preclassical before the
         # uncertainties are applied, i.e. before the magnitude filtering,
         # which is performed in the classical workers (see filter_mag)

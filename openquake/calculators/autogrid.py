@@ -65,6 +65,7 @@ PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
 NSITES = 300  # size of the sample of sites
+POINT_STEP = 5  # EXPERIMENT: keep one point source every POINT_STEP
 MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
 # up to 10% larger than the smallest one are considered equivalent
@@ -281,8 +282,8 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
     prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
     groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
-    # keep one point source every 5 in the calibration
-    groups = {g: pts[::5] for g, pts in groups.items()}
+    # keep one point source every POINT_STEP in the calibration
+    groups = {g: pts[::POINT_STEP] for g, pts in groups.items()}
     if not groups:
         return None
     return select_candidate(
