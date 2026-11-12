@@ -1716,6 +1716,9 @@ def view_usignatures(token, dstore):
     sources with no uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
+    # branchset ID -> uncertainty type, e.g. bs02 -> maxMagGRAbsolute
+    smlt = dstore['full_lt'].source_model_lt
+    utypes = {bs.id: bs.uncertainty_type for bs in smlt.branchsets}
     rows = []
     for source_id, grp in df.groupby('source_id'):
         sigs = [json.loads(sig) for sig in grp['signature']]
@@ -1728,16 +1731,18 @@ def view_usignatures(token, dstore):
             # the sources with no uncertainties have a single signature
             # covering all their realizations
             vals['-'] = ['no uncertainties']
-        cells = [(bset, fmt_sig_values(value_list))
+        cells = [(bset, utypes.get(bset, '-'), fmt_sig_values(value_list))
                  for bset, value_list in vals.items()]
-        for i, (bset, values) in enumerate(cells):
+        for i, (bset, utype, values) in enumerate(cells):
             head = dict(source_id=source_id,
                         num_rlzs=fmt_realizations(grp['count']))
-            rows.append(dict(head, branchset=bset, values=values)
+            rows.append(dict(head, branchset=bset,
+                             uncertainty_type=utype, values=values)
                         if i == 0 else
-                        dict(source_id='', num_rlzs='',
-                             branchset=bset, values=values))
-    header = ['source_id', 'num_rlzs', 'branchset', 'values']
+                        dict(source_id='', num_rlzs='', branchset=bset,
+                             uncertainty_type=utype, values=values))
+    header = ['source_id', 'num_rlzs', 'branchset',
+              'uncertainty_type', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
