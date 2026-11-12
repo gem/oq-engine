@@ -101,11 +101,33 @@ realization sets of different sizes, for instance the source
 .. code-block:: text
 
     $ oq show usignatures
-    | NVA-EF1             | 1, 1, 1, 1, 1, 1, 1, 2, 2 | alt2_rset             | (TE, west, central, 6.8)                                                                         |
-    |                     |                        | alt2_rspl_132         | (0.05, 0.95), (0.15, 0.85)                                                                       |
-    |                     |                        | alt2_rrow_132_scn1    | (0.8, 3.25, 0.371113)                                                                            |
-    |                     |                        | alt2_dip              | 45.0                                                                                             |
-    |                     |                        | alt2_rrow_132_scn2    | (0.8, 3.25, 0.371113)                                                                            |
+    | source_id | num_rlzs                  | branchset             | uncertainty_type       | values                       |
+    |-----------|---------------------------|-----------------------|------------------------|------------------------------|
+    | NVA-EF1   | 1, 1, 1, 1, 1, 1, 1, 2, 2 | alt2_rset-AB          | recurSet               | (TE, east, central, 7.0)     |
+    |           |                           | alt2_rspl-AB_155      | rateSplit              | (0.15, 0.85)                 |
+    |           |                           | alt2_rrow-AB_155_scn2 | recurRow               | (0.882, 3.25, 0.233258)      |
+    |           |                           | alt2_dip-AB           | simpleFaultDipAbsolute | 60.0                         |
+    |           |                           | alt2_rset             | recurSet               | (TE, west, central, 6.8)     |
+    |           |                           | alt2_rspl_132         | rateSplit              | (0.05, 0.95), (0.15, 0.85)   |
+    |           |                           | alt2_rrow_132_scn1    | recurRow               | (0.8, 3.25, 0.371113)        |
+    |           |                           | alt2_dip              | simpleFaultDipAbsolute | 45.0                         |
+    |           |                           | alt2_rrow_132_scn2    | recurRow               | (0.8, 3.25, 0.371113)        |
+    |           |                           | alt3_rset-AB          | recurSet               | (TE, east, central, 7.0, 3), |
+    |           |                           |                       |                        | (TE, east, central, 6.8, 3)  |
+    |           |                           | alt3_rrow-AB_101_scn3 | recurRow               | (0.884, 3.25, 0.174277, 0.3, |
+    |           |                           |                       |                        | 6.0, 0.0015256225)           |
+    |           |                           | alt3_dip-AB           | simpleFaultDipAbsolute | 60.0, 45.0                   |
+    |           |                           | alt3_rrow-AB_230_scn3 | recurRow               | (0.894, 3.25, 0.230119, 0.3, |
+    |           |                           |                       |                        | 5.8, 0.0029008881), (0.894,  |
+    |           |                           |                       |                        | 3.25, 0.173944, 0.3, 5.8,    |
+    |           |                           |                       |                        | 0.0021932077)                |
+    |           |                           | alt3_rset             | recurSet               | (TE, west, central, 6.8, 3), |
+    |           |                           |                       |                        | (TE, west, central, 7.0, 3)  |
+    |           |                           | alt3_rrow_187_scn3    | recurRow               | (0.81, 3.25, 0.291594, 0.3,  |
+    |           |                           |                       |                        | 5.8, 0.0052825432)           |
+    |           |                           | alt3_dip              | simpleFaultDipAbsolute | 45.0, 60.0                   |
+    |           |                           | alt3_rrow_2_scn3      | recurRow               | (0.799, 3.25, 0.291954, 0.3, |
+    |           |                           |                       |                        | 6.0, 0.0038411206)           |
 
 i.e. the source has 11 realizations in 9 realization sets: seven sets of
 size 1 and two sets of size 2. NB: the two
