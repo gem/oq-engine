@@ -179,7 +179,12 @@ def _build_imt_scaling_vector(imts, shakemap_std, pctg_value):
 
 
 class _SeparableCorrelationModel:
-    # Compose spatial and cross-IMT models for circulant embedding.
+    # Compose spatial and cross-IMT models for circulant embedding: the
+    # correlation between IMT i at a site and IMT j at another site is the
+    # cross-IMT coefficient times the larger of the spatial correlations of
+    # the two IMTs, i.e. the one with the longer range (the dense path
+    # combines instead the factors, L_i @ L_j.T, see cholesky); without a
+    # spatial model the sites are independent
     SUPPORTS_CIRCULANT_EMBEDDING = True
 
     def __init__(self, spatial_model, cross_imt_model):
@@ -287,27 +292,34 @@ def _correlate_residuals(Z, imts, sites, spatial_model,
 
 
 # Dense correlation path for arbitrary site geometry.
-def _correlate_legacy(Z, imts, shakemap, spatial_model,
-                      cross_imt_model, cholesky_limit, context):
-    # Preserve the established dense covariance calculation for XML maps.
-    M, N = len(imts), len(shakemap)
-    if M * N > cholesky_limit:
-        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
-            f'{M=} x {N=}', cholesky_limit))
-
-    # Cross Correlation
-    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
-
-    # Spatial Correlation and Covariance
-    dmatrix = geo.geodetic.distance_matrix(
-        shakemap['lon'], shakemap['lat'])
+def _spatial_correlation(dmatrix, imts, spatial_model, context):
+    # spatial_correlation_array, warning if the matrix of the first IMT is
+    # degenerate, for instance for coincident sites
     spatial_corr = spatial_correlation_array(
         dmatrix, imts, spatial_model, context)
     eig, _ = numpy.linalg.eigh(spatial_corr[0])
     small_eig = (eig < 1E-6).sum()
     if small_eig:
         logging.warning('The spatial correlation matrix is degenerate, '
-                        f'{small_eig} of {N} eigenvalues are zeros')
+                        f'{small_eig} of {len(dmatrix)} eigenvalues are '
+                        'zeros')
+    return spatial_corr
+
+
+def _correlate_legacy(Z, imts, shakemap, spatial_model,
+                      cross_imt_model, cholesky_limit, context):
+    # The dense calculation of the engine before shake_result.hdf, kept for
+    # the XML ShakeMaps sampled with separate spatial and cross-IMT models:
+    # it factorizes the covariance, so it returns residuals in ln units
+    M, N = len(imts), len(shakemap)
+    if M * N > cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            f'{M=} x {N=}', cholesky_limit))
+    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
+    dmatrix = geo.geodetic.distance_matrix(
+        shakemap['lon'], shakemap['lat'])
+    spatial_corr = _spatial_correlation(
+        dmatrix, imts, spatial_model, context)
     stddev = [shakemap['std'][str(im)] for im in imts]
     for im, std in zip(imts, stddev):
         if std.sum() == 0:
@@ -328,8 +340,7 @@ def _is_joint_model(model):
 
 def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
                      context, lons, lats):
-    # Dense correlation for the residuals of the points (lons, lats).
-    N = Z.shape[0] // len(imts)
+    # Dense correlation for the unit-variance residuals of the points
     dmatrix = geo.geodetic.distance_matrix(lons, lats)
     if _is_joint_model(spatial_model):
         corr = spatial_model.correlation_block(
@@ -339,13 +350,8 @@ def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
         except numpy.linalg.LinAlgError:
             return psd_factor(corr) @ Z
     cross_corr = cross_correlation_matrix(imts, cross_imt_model)
-    spatial_corr = spatial_correlation_array(
+    spatial_corr = _spatial_correlation(
         dmatrix, imts, spatial_model, context)
-    eig, _ = numpy.linalg.eigh(spatial_corr[0])
-    small_eig = (eig < 1E-6).sum()
-    if small_eig:
-        logging.warning('The spatial correlation matrix is degenerate, '
-                        f'{small_eig} of {N} eigenvalues are zeros')
     return cholesky(spatial_corr, cross_corr) @ Z
 
 
@@ -469,7 +475,10 @@ def _between_residuals(shakemap, imts, E, seed, truncation_level,
     for im, zb, w in zip(imts, zbs, eps):
         CL = shakemap['CL'][str(im)].astype(numpy.float64)
         u = numpy.linalg.eigh(CL.T @ CL)[1][:, -1]
-        if (CL @ u).sum() < 0:  # the event terms must have the same sign
+        # orient u so that a positive w raises the ground motion of the
+        # IMT, as for the other IMTs: otherwise a positive correlation of
+        # the model would become a negative one
+        if (CL @ u).sum() < 0:
             u = -u
         between.append(CL @ (zb + numpy.outer(u, w - u @ zb)))
     return between
@@ -651,8 +660,9 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     N = len(shakemap)
     total_std = numpy.array([
         shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
-    # with tau the within-event sigma is sqrt(std^2 - tau^2), without phi
-    components = spatial_model is not None and 'tau' in shakemap.dtype.names
+    # with tau the between-event terms are sampled separately and the
+    # within-event sigma is sqrt(std^2 - tau^2), otherwise std is used
+    has_tau = spatial_model is not None and 'tau' in shakemap.dtype.names
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
     if (truncation_level <= 1E-9 or
@@ -665,7 +675,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
             correlation_seed, truncation_level, between_event_model)
     if not correlated:
         return result
-    tau_present = components and tau_Z is not None
+    tau_present = has_tau and tau_Z is not None
     active = [i for i in correlated
               if numpy.any(shakemap['std'][str(imts[i])])]
     if len(active) != len(correlated):
@@ -684,7 +694,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         numpy.arange(i * N, (i + 1) * N) for i in active])
     corr_Z = Z[row_indices]
     if (correlation_strategy == 'cholesky_decomposition' and
-            not components and not _is_joint_model(spatial_model)):
+            not has_tau and not _is_joint_model(spatial_model)):
         residuals = _correlate_legacy(
             corr_Z, corr_imts, shakemap, spatial_model, cross_imt_model,
             cholesky_limit, context)
@@ -692,14 +702,14 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         result[row_indices] = mu[row_indices] * numpy.exp(
             residuals) / scale[row_indices]
         return result
-    if sites is None:
+    if sites is None:  # a minimal site collection, with lons and lats
         sites = type('Sites', (), {
             'lons': shakemap['lon'], 'lats': shakemap['lat']})()
     residuals = _correlate_residuals(
         corr_Z, corr_imts, sites, spatial_model, cross_imt_model,
         correlation_strategy, context, cholesky_limit,
         truncation_level, correlation_seed)
-    if components:  # std and tau are conditional on the stations
+    if has_tau:  # std and tau are conditional on the stations
         corr_stds = numpy.array([_conditional_phi(
             shakemap['std'][str(im)],
             shakemap['tau'][str(im)].astype(numpy.float64) ** 2)
@@ -809,7 +819,11 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
-    # assemble dictionary for the calculation of the gmfs
+    # assemble dictionary for the calculation of the gmfs; the random
+    # streams are: seed for Z, seed + 1 for tau_Z, seed + 2 for circulant
+    # embedding, seed + 3 for the between-event factors CL of the
+    # shake_result.hdf products, seed + 4 for the spatial structures of
+    # Loth and Baker and seed + 5 for the between-event correlation model
     gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
     if gmf_dict.get('kind') == 'Silva&Horspool':
         gmf_dict.update(

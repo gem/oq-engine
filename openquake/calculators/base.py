@@ -1893,8 +1893,9 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
                  'approximate cross-IMT dependence, between-event terms '
                  f'{between_event_description(between_model)})')
     else:
-        model = (f'{name}, {strategy} (XML ShakeMap: approximation from '
-                 'the marginal uncertainties)')
+        # XML ShakeMaps or shake_result.hdf without the posterior factors
+        model = (f'{name}, {strategy} (approximation from the marginal '
+                 'ShakeMap uncertainties)')
         if strategy != calc.oqparam.correlation_strategy:
             model += (f'; {calc.oqparam.correlation_strategy} is not '
                       'applicable to these sites')

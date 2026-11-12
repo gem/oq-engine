@@ -1838,6 +1838,8 @@ def get_array_shake_result_hdf(fname):
         array['vs30'] = h5['arrays/vs30'][()].reshape(-1)
         for imt in imts:
             group = imt_groups[imt]
+            # the means are natural logarithms of g (cm/s for PGV), while
+            # the ShakeMap arrays store %g, as grid.xml, and MMI as such
             mean = group['mean'][()].reshape(-1)
             scale = 1 if imt in ('MMI', 'PGV') else 100
             array['val'][imt] = (mean if imt == 'MMI' else

@@ -181,8 +181,8 @@ def _correlation_period(imt):
 class LothBaker2013(SpatialCrossIMTCorrelationModel):
     """Within-event spatial cross-IMT model by Loth and Baker (2013).
 
-    The model was calibrated for 5%-damped SA from 0.01 to 10 s. PGA is
-    supported through the conventional SA(0.01) correlation proxy.
+    The model was calibrated for 5%-damped SA from 0.01 to 10 s. PGA and
+    PGV are supported through the SA(0.01) and SA(1.0) correlation proxies.
     """
 
     SUPPORTS_CIRCULANT_EMBEDDING = True
@@ -255,6 +255,9 @@ class ShakeMapLothBaker2013(LothBaker2013):
         periods = numpy.array([_correlation_period(im) for im in imts])
         p1, p2 = numpy.meshgrid(periods, periods, indexing='ij')
         pairs = numpy.column_stack([p1.ravel(), p2.ravel()])
+        # the nugget table of esi-shakelib has two decimals and differs
+        # from the rounded _B3 on the diagonal at 0.5 s and 1.0 s (indices
+        # 3 and 4 of _PERIODS), where it has 0.26 and 0.20
         nugget = numpy.round(_B3, 2)
         nugget[3, 3], nugget[4, 4] = .26, .20
         matrices = []

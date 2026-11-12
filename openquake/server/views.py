@@ -2054,13 +2054,15 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_approaches'] = IMPACT_APPROACHES
-        # the correlation models by field and kind of job (shakemap or
-        # rupture), as {field: [(model, scope), ...]} for the dropdowns
+        # one dropdown per correlation field, as (field, label, options),
+        # each option being (model, scope) with scope shakemap or rupture
         options = {}
         for (field, scope), models in IMPACT_CORRELATION_MODELS.items():
             options.setdefault(field, []).extend(
                 (model, scope) for model in models)
-        params['impact_correlation_options'] = options
+        params['impact_correlation_options'] = [
+            (field, IMPACT_FORM_LABELS[field], opts)
+            for field, opts in options.items()]
         params['impact_max_distance_level1'] = MAX_DISTANCE_LEVEL1
 
         # this is usually ''; can be set in the local settings for debugging
