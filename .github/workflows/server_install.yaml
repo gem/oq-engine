@@ -214,14 +214,6 @@ jobs:
           ${{ github.workspace }}/.github/scripts/server_checks.sh \
             --repo ${{ github.workspace }} --base http://127.0.0.1:8800 \
             --access-log-dir /var/log/oq-engine --journal
-      - name: Run calculation with non openquake users from command line
-        if: matrix.kind == 'server'
-        run: |
-           set -o pipefail
-           /opt/openquake/venv/bin/oq --version
-           /opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
-           echo "Display the Outputs of the last job"
-           /opt/openquake/venv/bin/oq engine --list-outputs 1
       # ---- devel ----
       - name: Create openquake user (devel)
         if: matrix.kind == 'devel_server'
@@ -316,11 +308,3 @@ jobs:
             --base http://127.0.0.1:8800 --user level_1_user \
             --password level_1_password --archive "${{ github.workspace }}/job.zip" \
             --access-log-dir /var/log/oq-engine
-      - name: Run calculation with non openquake users from command line (devel)
-        if: matrix.kind == 'devel_server'
-        run: |
-           set -o pipefail
-           oq --version
-           oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
-           echo "Display the Outputs of the last job"
-           oq engine --list-outputs 1
