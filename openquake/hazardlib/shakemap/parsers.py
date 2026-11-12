@@ -1799,24 +1799,24 @@ def get_array_shake_result_hdf(fname):
         shape = h5['arrays/vs30'].shape
         ny, nx = shape
         dt = [(imt, F32) for imt in imts]
-        # phi and tau are stored only if all the IMTs have them, otherwise
-        # missing values would be taken as zero uncertainties
-        components = [field for field in ('phi', 'tau') if all(
+        # the posterior components are read per IMT: the IMTs without them
+        # (for instance an MMI group with only mean and std) get NaN values,
+        # so that filter_unused_imts drops the fields only if a required
+        # IMT misses them, instead of taking them as zero uncertainties
+        components = [field for field in ('phi', 'tau') if any(
             field in imt_groups[imt] for imt in imts)]
         dtlist = [('lon', numpy.float64), ('lat', numpy.float64),
                   ('vs30', F32), ('val', dt), ('std', dt)]
         dtlist.extend((field, [(im, numpy.float64) for im in imts])
                       for field in components)
-        # the between-event factor C @ chol(Sigma_HH_YD) is stored only if
-        # all the IMTs have both arrays (shakemap-modules >= 1.1.4),
-        # together with phi, padded to the largest number of between-event
-        # terms; otherwise the product is used without the factor
-        has_cl = 'phi' in components and all(
-            'C' in imt_groups[imt] and 'Sigma_HH_YD' in imt_groups[imt]
-            for imt in imts)
-        if has_cl:
+        # the between-event factor C @ chol(Sigma_HH_YD) is stored for the
+        # IMTs having both arrays (shakemap-modules >= 1.1.4) and phi,
+        # padded to the largest number of between-event terms
+        cl_imts = [imt for imt in imts if all(
+            key in imt_groups[imt] for key in ('phi', 'C', 'Sigma_HH_YD'))]
+        if cl_imts:
             width = max(1, max(imt_groups[imt]['Sigma_HH_YD'].shape[0]
-                               for imt in imts))
+                               for imt in cl_imts))
             dtlist.append(('CL', [(imt, F32, (width,)) for imt in imts]))
         array = numpy.zeros(ny * nx, dtlist)
         lons = lon_min + numpy.arange(nx) * xres
@@ -1830,14 +1830,18 @@ def get_array_shake_result_hdf(fname):
             scale = 1 if imt in ('MMI', 'PGV') else 100
             array['val'][imt] = (mean if imt == 'MMI' else
                                  numpy.exp(mean) * scale)
-            for field in ('std', *components):
-                array[field][imt] = group[field][()].reshape(-1)
-            if has_cl:
+            array['std'][imt] = group['std'][()].reshape(-1)
+            for field in components:
+                array[field][imt] = (group[field][()].reshape(-1)
+                                     if field in group else numpy.nan)
+            if imt in cl_imts:
                 # the between-event samples are C @ chol(Sigma) @ z
                 cl = _hdf_between_factor(group)
                 array['CL'][imt][:, :cl.shape[1]] = cl
-        if has_cl:
-            stations = _hdf_stations(h5, conf, imt_groups, imts)
+            elif cl_imts:
+                array['CL'][imt] = numpy.nan
+        if cl_imts:
+            stations = _hdf_stations(h5, conf, imt_groups, cl_imts)
             array = with_metadata(array, stations)
     return array
 

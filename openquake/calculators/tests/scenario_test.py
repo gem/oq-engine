@@ -29,11 +29,26 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
+    JayaramBaker2009)
+from openquake.hazardlib.correlation_models.spatial_cross_imt.\
+    loth_baker_2013 import LothBaker2013
 from openquake.calculators import base, getters
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
+
+
+def test_xml_legacy_model():
+    # without the stored between-event factors LothBaker2013 is replaced
+    # by JayaramBaker2009 only on the dense paths
+    shakemap = numpy.zeros(1, [('lon', float), ('phi', [('PGA', float)])])
+    for strategy, cls in [('circulant_embedding', LothBaker2013),
+                          ('cholesky_decomposition', JayaramBaker2009)]:
+        dic = base._xml_legacy_model(
+            shakemap, {'spatial_model': LothBaker2013()}, strategy)
+        assert type(dic['spatial_model']) is cls
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):

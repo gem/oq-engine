@@ -1877,15 +1877,20 @@ def store_events(dstore, eids):
     return events
 
 
-def _xml_legacy_model(shakemap, gmf_dict):
-    # Loth and Baker (2013) needs the posterior components of the
-    # shake_result.hdf products: XML inputs keep the legacy model
+def _xml_legacy_model(shakemap, gmf_dict, strategy):
+    # Without the posterior components of a complete shake_result.hdf
+    # product LothBaker2013 is sampled with circulant embedding; the dense
+    # paths only accept a spatial model and a separate cross-IMT model,
+    # so there the legacy JayaramBaker2009 model is used, independently
+    # for each IMT
     model = gmf_dict.get('spatial_model')
     if ('CL' not in shakemap.dtype.names and
+            strategy != 'circulant_embedding' and
             isinstance(model, loth_baker_2013.LothBaker2013)):
         logging.warning(
-            'LothBaker2013 requires a shake_result.hdf product: the XML '
-            'ShakeMap is sampled with JayaramBaker2009')
+            'LothBaker2013 requires circulant embedding or a complete '
+            'shake_result.hdf product: the ShakeMap is sampled with '
+            'JayaramBaker2009, without cross-IMT correlation')
         gmf_dict['spatial_model'] = JayaramBaker2009(vs30_clustering=True)
     return gmf_dict
 
@@ -1934,7 +1939,6 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     logging.info('Building GMFs')
     oq = calc.oqparam
     if gmf_dict['kind'] == 'Silva&Horspool':
-        gmf_dict = _xml_legacy_model(shakemap, dict(gmf_dict))
         rupture_dict = oq.rupture_dict or {}
         strategy = oq.correlation_strategy
         # shake_result.hdf products are sampled with Loth and Baker (2013)
@@ -1947,6 +1951,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
                 'Circulant embedding is not applicable to these sites, '
                 'using cholesky_decomposition instead')
             strategy = 'cholesky_decomposition'
+        gmf_dict = _xml_legacy_model(shakemap, dict(gmf_dict), strategy)
         _save_correlation_info(calc, shakemap, gmf_dict, strategy)
         gmf_dict.update(
             correlation_strategy=strategy,

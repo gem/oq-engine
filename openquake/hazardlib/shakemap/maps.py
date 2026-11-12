@@ -104,6 +104,24 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
             filtered_imts)
 
 
+def _posterior_fields(shakemap, required_imts):
+    # The posterior components of the required IMTs: a field is dropped
+    # if a required IMT misses it (NaN values, see
+    # get_array_shake_result_hdf), and CL is dropped without phi
+    fields = []
+    for field in ('phi', 'tau', 'CL'):
+        if field not in shakemap.dtype.names:
+            continue
+        missing = [im for im in sorted(required_imts) if len(shakemap) and
+                   numpy.isnan(shakemap[field][im]).all()]
+        if missing:
+            logging.warning('The ShakeMap has no %s for %s', field,
+                            ', '.join(missing))
+        elif field != 'CL' or 'phi' in fields:
+            fields.append(field)
+    return fields
+
+
 def filter_unused_imts(shakemap, required_imts,
                        site_fields=('lon', 'lat', 'vs30')):
     """
@@ -122,8 +140,7 @@ def filter_unused_imts(shakemap, required_imts,
     dtlist = [(name, shakemap.dtype[name] if name in site_fields else F32)
               for name in ('lon', 'lat', 'vs30')]
     dtlist.extend([('val', dt), ('std', dt)])
-    extra_fields = [field for field in ('phi', 'tau', 'CL')
-                    if field in shakemap.dtype.names]
+    extra_fields = _posterior_fields(shakemap, required_imts)
     # Retain each IMT's factor width and precision.
     for field in extra_fields:
         dtype = shakemap.dtype[field]
@@ -136,7 +153,8 @@ def filter_unused_imts(shakemap, required_imts,
         for im in required_imts:
             data[name][im] = shakemap[name][im]
     # the new dtype has no metadata: keep the stations of the required IMTs
-    stations = get_metadata(shakemap, 'stations')
+    stations = (get_metadata(shakemap, 'stations')
+                if 'CL' in extra_fields else None)
     if stations is not None:
         imts = numpy.array(sorted(required_imts), stations.dtype['imt'])
         stations = stations[numpy.isin(stations['imt'], imts)]

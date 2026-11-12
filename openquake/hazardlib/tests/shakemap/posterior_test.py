@@ -283,6 +283,51 @@ def test_incomplete_station_arrays_warn(tmp_path, caplog):
     assert 'approximation without conditioning' in caplog.text
 
 
+def test_unused_imt_without_posterior_components(tmp_path, caplog):
+    # an IMT without phi, tau and the between-event arrays (here an MMI
+    # group with only mean and std) disables the posterior sampling only
+    # if it is required
+    path = tmp_path / 'shake_result.hdf'
+    _product(path)
+    with h5py.File(path, 'r+') as h5:
+        group = h5.require_group('arrays/imts/GREATER_OF_TWO_HORIZONTAL/MMI')
+        group['mean'] = numpy.full((2, 2), 5.)
+        group['std'] = numpy.full((2, 2), .5, F32)
+    uri = {'kind': 'shake_result_hdf', 'fname': str(path)}
+    _, shakemap, _, _ = get_sitecol_shakemap(uri, ['PGA', 'SA(0.3)'])
+    assert {'phi', 'tau', 'CL'} <= set(shakemap.dtype.names)
+    assert len(get_metadata(shakemap, 'stations')) == 4
+    _, shakemap, _, _ = get_sitecol_shakemap(uri, ['PGA', 'MMI'])
+    assert not {'phi', 'tau', 'CL'} & set(shakemap.dtype.names)
+    assert get_metadata(shakemap, 'stations') is None
+    assert 'The ShakeMap has no phi for MMI' in caplog.text
+
+
+def test_lothbaker_without_posterior_components(tmp_path):
+    # without the stored between-event factors (XML products, incomplete
+    # shake_result.hdf products) LothBaker2013 is sampled with circulant
+    # embedding, keeping the cross-IMT correlation of the residuals
+    path = tmp_path / 'shake_result.hdf'
+    _product(path, conditioned=False)
+    with h5py.File(path, 'r+') as h5:
+        del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/phi']
+    sitecol, shakemap, _, names = get_sitecol_shakemap(
+        {'kind': 'shake_result_hdf', 'fname': str(path)}, ['PGA', 'SA(0.3)'])
+    assert not {'phi', 'CL'} & set(shakemap.dtype.names)
+    model = loth_baker_2013.LothBaker2013()
+    method = {'kind': 'Silva&Horspool', 'spatial_model': model,
+              'cross_imt_model': None, 'cholesky_limit': 10000,
+              'correlation_strategy': 'circulant_embedding',
+              'sites': sitecol}
+    gmfs = to_gmfs(shakemap, method, None, 99, 50_000, 42, names)[1]
+    residuals = numpy.log(gmfs)
+    corr = [numpy.corrcoef(res[:, 0], res[:, 1])[0, 1] for res in residuals]
+    expected = model.correlation_block(
+        numpy.zeros((1, 1)), [imt.PGA()], [imt.SA(.3)])[0, 0]
+    assert expected > .5
+    numpy.testing.assert_allclose(corr, expected, atol=.02)
+
+
 def test_interpolated_periods_preserve_correlation_and_unit_variance():
     imts = [imt.SA(p) for p in numpy.linspace(.01, 10, 25)]
     samples = numpy.random.default_rng(42).standard_normal((25, 150_000))

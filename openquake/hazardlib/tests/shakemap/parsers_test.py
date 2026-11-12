@@ -176,7 +176,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_shake_result_hdf_without_sigma(self):
         # with C but without Sigma_HH_YD for an IMT the product is still
-        # read, with phi and tau but without the between-event factor
+        # read, with phi and tau; the between-event factor is kept only
+        # if that IMT is not required
         config = {
             'extent': {'bounds': {'extent': [10., 20., 11., 21.]}},
             'interp': {'prediction_location': {'xres': 1., 'yres': 1.}}}
@@ -197,7 +198,11 @@ class ShakemapParsersTestCase(unittest.TestCase):
             array = get_array(kind='shake_result_hdf', fname=fname)
         self.assertIn('phi', array.dtype.names)
         self.assertIn('tau', array.dtype.names)
-        self.assertNotIn('CL', array.dtype.names)
+        self.assertTrue(numpy.isnan(array['CL']['SA(1.0)']).all())
+        pga = filter_unused_imts(array, ['PGA'])
+        self.assertEqual(pga['CL']['PGA'].tolist(), [[1.]] * 4)
+        both = filter_unused_imts(array, ['PGA', 'SA(1.0)'])
+        self.assertEqual(both.dtype.names[-2:], ('phi', 'tau'))
 
     @classmethod
     def setUp(cls):
