@@ -43,7 +43,7 @@ jobs:
     # Decides the kinds to run: the matrix of the install job
     runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.plan.outputs.matrix }}
+      kinds: ${{ steps.plan.outputs.kinds }}
     steps:
       - id: plan
         env:
@@ -65,24 +65,22 @@ jobs:
               *) kinds='["server","devel"]' ;;
             esac
           fi
-          matrix=$(jq -cn --argjson kinds "$kinds" \
-            '{include: [$kinds[] | {kind: ., "python-version": "3.11"}]}')
-          [ -n "$matrix" ] || { echo "empty matrix"; exit 1; }
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "matrix=$matrix"
+          echo "kinds=$kinds" >> "$GITHUB_OUTPUT"
+          echo "kinds=$kinds"
 
   install:
     needs: plan
-    name: ${{ matrix.kind }} Python ${{ matrix.python-version }}
+    name: ${{ matrix.kind }} Python 3.11
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+      matrix:
+        kind: ${{ fromJSON(needs.plan.outputs.kinds) }}
     steps:
-      - name: Set up Python  ${{ matrix.python-version }}
+      - name: Set up Python  3.11
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
       - name: Checkout the code to test
         # the scripts of this repository (webui_checks.sh) and the test
         # archives are taken from here; the code installed is below
@@ -97,7 +95,7 @@ jobs:
           ## Shut down the server if unconnected after 60 minutes.
           wait-timeout-minutes: 60
       # ---- server ----
-      - name: Install OQ Server with ${{ matrix.python-version }}
+      - name: Install OQ Server with 3.11
         if: matrix.kind == 'server'
         run: |
           if [ -z ${{ inputs.git-ref }} ];
@@ -113,7 +111,7 @@ jobs:
       - name: Actualize 'default' templates for email notifications (server)
         if: matrix.kind == 'server'
         run: |
-          SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
+          SITE_PKG="/opt/openquake/venv/lib/python3.11/site-packages/"
           cd ${SITE_PKG}
           for file in openquake/server/templates/registration/*.default.tmpl; do
              echo ' cp -- "$file" "${file%.default.tmpl}" '
@@ -170,7 +168,7 @@ jobs:
           oq --version
           #
           echo "Add settings for login and logging on webui before to start"
-          SITE_PKG="/opt/openquake/venv/lib/python${{ matrix.python-version }}/site-packages/"
+          SITE_PKG="/opt/openquake/venv/lib/python3.11/site-packages/"
           cd  ${SITE_PKG}
           cd openquake/server
           cat > local_settings.py << EOF
@@ -224,7 +222,7 @@ jobs:
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
           sudo usermod -aG sudo openquake
           echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
-      - name: Install OQ with ${{ matrix.python-version }} as user openquake (devel)
+      - name: Install OQ with 3.11 as user openquake (devel)
         if: matrix.kind == 'devel'
         env:
           # the code to install: the head of the pull request (also when it
