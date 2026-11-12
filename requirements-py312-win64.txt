@@ -35,9 +35,7 @@ https://wheelhouse.openquake.org/unified/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/decorator-5.1.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/django-4.2.30-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/django_appconf-1.0.6-py3-none-any.whl
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django_cookie_consent-1.0.0-py3-none-any.whl
-django-cookie-consent==1.0.0
+https://wheelhouse.openquake.org/unified/django_cookie_consent-1.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/django_cors_headers-4.3.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/django_pam-2.1.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/flake8-6.1.0-py2.py3-none-any.whl
