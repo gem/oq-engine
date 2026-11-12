@@ -7,9 +7,9 @@
 # the users of the workflow, and runs the same checks, server_checks.sh.
 # The setup is shared with run_webui_concurrency.sh via webui_common.sh.
 #
-# What it does not do: run install.py, useradd, sudo, write the systemd
-# unit, check the journal, or install gunicorn (it must already be in the
-# venv, e.g. with pip install "gunicorn>=26.2").
+# What it does not do (the list is in the workflow, server_install.yaml,
+# next to the server steps): install.py, useradd, sudo, the systemd unit,
+# the journal, and the environment of systemd.
 #
 # Environment variables (all optional):
 #   OQ_VENV         venv where openquake.engine is installed from this
@@ -30,9 +30,8 @@ RUN=${OQ_EMULATE_DIR:-${TMPDIR:-/tmp}/oq-emulate-server-install}
 trap webui_stop EXIT
 
 webui_setup
-for user in openquake user2 user3 user4; do
-  webui_create_user "$user" level_1_password
-done
+"$HERE/create_webui_users.sh" "$VENV/bin/python" "$REPO/openquake/server" \
+  openquake user2 user3 user4 || fail "users"
 webui_start || fail "webui not up"
 
 "$HERE/server_checks.sh" --repo "$REPO" --base "$BASE" \

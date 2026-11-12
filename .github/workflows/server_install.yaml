@@ -84,19 +84,13 @@ jobs:
           ## Shut down the server if unconnected after 60 minutes.
           wait-timeout-minutes: 60
       # ---- server ----
-      - name: Install OQ Server with 3.11
+      - name: Install OQ (server)
         if: matrix.kind == 'server'
+        env:
+          GIT_REF: ${{ inputs.git-ref }}
         run: |
-          if [ -z ${{ inputs.git-ref }} ];
-          then
-             BRANCH=master
-          else
-             BRANCH=${{ inputs.git-ref }}
-          fi
+          BRANCH="${GIT_REF:-master}"
           sudo -H "$(which python3)" install.py --version "$BRANCH" server
-          if [[ $EXIT_CODE -ne 0 ]]; then
-                break
-          fi
       - name: Actualize 'default' templates for email notifications (server)
         if: matrix.kind == 'server'
         run: |
@@ -156,42 +150,19 @@ jobs:
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db'
           oq --version
           #
-          echo "Add settings for login and logging on webui before to start"
           SITE_PKG="/opt/openquake/venv/lib/python3.11/site-packages/"
-          cd  ${SITE_PKG}
-          cd openquake/server
-          cat > local_settings.py << EOF
-          APPLICATION_MODE = "RESTRICTED"
-          EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-          EMAIL_HOST = 'smtp.gmail.com'
-          EMAIL_PORT = 587
-          EMAIL_USE_TLS = True
-          EMAIL_HOST_USER = 'admin@reply.com'
-          EMAIL_HOST_PASSWORD = 'polhjuih@'
-          EMAIL_SUPPORT = 'noreply@reply.com'
-          WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
-          EOF
-          echo "DISPLAY content of local_settings"
-          cat local_settings.py
+          # the settings of the WebUI and the users of the tests, from the
+          # scripts of this repository (see the scripts for the details)
+          SCRIPTS="${{ github.workspace }}/.github/scripts"
+          "$SCRIPTS/webui_local_settings.sh" "${SITE_PKG}openquake/server"
+          cat "${SITE_PKG}openquake/server/local_settings.py"
+          cd "${SITE_PKG}openquake/server"
           # Perform migration after setup local_settings
           /opt/openquake/venv/bin/python3 manage.py migrate
-          /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email
-          /opt/openquake/venv/bin/python3 manage.py createuser user2 testuser2@test.com --level 1 --password level_1_password --no-email
-          /opt/openquake/venv/bin/python3 manage.py createuser user3 testuser3@test.com --level 1 --password level_1_password --no-email
-          /opt/openquake/venv/bin/python3 manage.py createuser user4 testuser4@test.com --level 1 --password level_1_password --no-email
-          # Install gunicorn in the venv (optional dependency of
-          # openquake.engine[server], pinned as in pyproject.toml).
-          # Do not install the extra itself: it would replace the
-          # engine under test with the one from PyPI
-          /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
-          # Replace the ExecStart of the WebUI unit written by install.py
-          # with gunicorn, as in doc/getting-started/installation-instructions/server.md
-          sed -i \
-            -e "s|^WorkingDirectory=.*|WorkingDirectory=${SITE_PKG}openquake/server|" \
-            -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
-            -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
-            /etc/systemd/system/openquake-webui.service
-          systemctl daemon-reload
+          "$SCRIPTS/create_webui_users.sh" /opt/openquake/venv/bin/python3 \
+            "${SITE_PKG}openquake/server" openquake user2 user3 user4
+          # gunicorn instead of runserver, as in the documentation
+          "$SCRIPTS/webui_unit.sh" "${SITE_PKG}openquake/server"
           # STOP AND START WEBUI
           systemctl stop openquake-webui
           sleep 10
@@ -205,13 +176,13 @@ jobs:
             --repo ${{ github.workspace }} --base http://127.0.0.1:8800 \
             --access-log-dir /var/log/oq-engine --journal
       # ---- devel ----
-      - name: Create openquake user (devel)
+      - name: Create openquake user (devel_server)
         if: matrix.kind == 'devel_server'
         run: |
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
           sudo usermod -aG sudo openquake
           echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
-      - name: Install OQ with 3.11 as user openquake (devel)
+      - name: Install OQ (devel_server)
         if: matrix.kind == 'devel_server'
         env:
           # the code to install: the head of the pull request (also when it
@@ -233,14 +204,14 @@ jobs:
           EOF
           chmod +x /tmp/scripts.sh
           sudo -i -u openquake HOME=/home/openquake SRC_URL="$SRC_URL" SRC_REF="$SRC_REF" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
-      - name: Actualize 'default' templates for email notifications (devel)
+      - name: Actualize 'default' templates for email notifications (devel_server)
         if: matrix.kind == 'devel_server'
         run: |
           sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
           cp -- "$file" "${file%.default.tmpl}"
           done
           '
-      - name: WebUI and calculation with Auth (devel)
+      - name: WebUI and calculation with Auth (devel_server)
         if: matrix.kind == 'devel_server'
         run: |
            set -o pipefail
@@ -253,20 +224,8 @@ jobs:
            oq --version
            #
            echo "Add settings for login and logging on webui before to start"
-           cd /home/openquake/oq-engine/openquake/server
-           cat > local_settings.py << EOF
-           APPLICATION_MODE = "RESTRICTED"
-           EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-           EMAIL_HOST = "smtp.gmail.com"
-           EMAIL_PORT = 587
-           EMAIL_USE_TLS = True
-           EMAIL_HOST_USER = "admin@reply.com"
-           EMAIL_HOST_PASSWORD = "polhjuih@"
-           EMAIL_SUPPORT = "noreply@reply.com"
-           WEBUI_ACCESS_LOG_DIR = "/var/log/oq-engine"
-           EOF
-           echo "DISPLAY content of local_settings"
-           cat local_settings.py
+           /home/openquake/oq-engine/.github/scripts/webui_local_settings.sh /home/openquake/oq-engine/openquake/server
+           cat /home/openquake/oq-engine/openquake/server/local_settings.py
            '
            # Perform migration after setup local_settings
            # the secret file is readable only by the openquake user and
@@ -278,21 +237,15 @@ jobs:
            source /opt/openquake/venv/bin/activate
            cd /home/openquake/oq-engine/openquake/server
            python3 manage.py migrate
-           python3 manage.py createuser level_1_user testuser1@test.com --level 1 --password level_1_password --no-email
+           /home/openquake/oq-engine/.github/scripts/create_webui_users.sh python3 /home/openquake/oq-engine/openquake/server level_1_user
            '
-           # the gunicorn switch, as for the server (see the server step)
-           sudo /opt/openquake/venv/bin/pip install "gunicorn>=26.2"
-           sudo sed -i \
-             -e "s|^WorkingDirectory=.*|WorkingDirectory=/home/openquake/oq-engine/openquake/server|" \
-             -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
-             -e "s|^ExecStart=.*|ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 120 wsgi:application|" \
-             /etc/systemd/system/openquake-webui.service
-           sudo systemctl daemon-reload
+           # gunicorn instead of runserver, as in the documentation
+           sudo /home/openquake/oq-engine/.github/scripts/webui_unit.sh /home/openquake/oq-engine/openquake/server
            # START WEBUI
            sudo systemctl start openquake-webui
            # zip area source demo into job.zip
-           zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
-      - name: WebUI checks (devel)
+           zip job.zip ${{ github.workspace }}/demos/hazard/AreaSourceClassicalPSHA/*
+      - name: WebUI checks (devel_server)
         if: matrix.kind == 'devel_server'
         run: |
           ${{ github.workspace }}/.github/scripts/webui_checks.sh \

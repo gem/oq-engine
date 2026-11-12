@@ -62,12 +62,6 @@ EOF
   "$VENV/bin/python" manage.py migrate || fail "migrate"
 }
 
-# Create a user with level 1 and the given password.
-webui_create_user() {
-  "$VENV/bin/python" manage.py createuser "$1" "$1@test.invalid" \
-    --level 1 --password "$2" --no-email || fail "createuser $1"
-}
-
 # Start gunicorn with the CI settings and wait until the login page
 # answers 200 (at most 240 seconds). Sets GPID; returns 1 if not up.
 webui_start() {

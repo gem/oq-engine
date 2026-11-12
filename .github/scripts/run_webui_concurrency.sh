@@ -4,7 +4,7 @@
 #
 # What it does:
 #   1. sets up a scratch engine database and settings (webui_common.sh);
-#   2. creates four users u1..u4 with password pw_u1..pw_u4;
+#   2. creates four users u1..u4 (level 1, password level_1_password);
 #   3. starts gunicorn with the CI settings (timeout 120, and 2 workers
 #      unless OQ_WEBUI_WORKERS says otherwise);
 #   4. runs webui_concurrent_users.py: the four users log in together,
@@ -43,9 +43,8 @@ CALC_TIMEOUT=${CALC_TIMEOUT:-300}
 trap webui_stop EXIT
 
 webui_setup
-for i in 1 2 3 4; do
-  webui_create_user "u$i" "pw_u$i"
-done
+"$HERE/create_webui_users.sh" "$VENV/bin/python" "$REPO/openquake/server" \
+  u1 u2 u3 u4 || fail "users"
 webui_start || fail "webui not up"
 
 echo "== 4 users at once, $ROUNDS rounds, request timeout ${TIMEOUT}s," \
@@ -54,7 +53,7 @@ echo "== 4 users at once, $ROUNDS rounds, request timeout ${TIMEOUT}s," \
   --base "$BASE" --rounds "$ROUNDS" --timeout "$TIMEOUT" \
   --calc-timeout "$CALC_TIMEOUT" \
   --archive "$REPO/openquake/server/tests/data/archive_ok.zip" \
-  --user u1:pw_u1 --user u2:pw_u2 --user u3:pw_u3 --user u4:pw_u4
+  --user u1:level_1_password --user u2:level_1_password --user u3:level_1_password --user u4:level_1_password
 RC=$?
 
 echo "== gunicorn log: worker problems"
