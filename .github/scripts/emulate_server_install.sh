@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Emulate, without root, the "WebUI and calculation with Auth" step of
+# Emulate, without root, the server installation WebUI of
 # .github/workflows/server_install.yaml
 #
 # What it does: starts gunicorn by hand from the repository (not from
-# /opt/openquake nor from systemd), with a scratch engine database, runs
-# a calculation with the command line, and then runs the WebUI checks of
-# webui_checks.sh (the same ones the workflows run). The setup is shared
-# with run_webui_concurrency.sh via webui_common.sh.
+# /opt/openquake nor from systemd), with a scratch engine database, creates
+# the users of the workflow, and runs the same checks, server_checks.sh.
+# The setup is shared with run_webui_concurrency.sh via webui_common.sh.
 #
 # What it does not do: run install.py, useradd, sudo, write the systemd
 # unit, check the journal, or install gunicorn (it must already be in the
@@ -26,21 +25,17 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 VENV=${OQ_VENV:-$HOME/openquake}
 RUN=${OQ_EMULATE_DIR:-${TMPDIR:-/tmp}/oq-emulate-server-install}
-ARCHIVE=$REPO/openquake/server/tests/data/archive_ok.zip
 # shellcheck source=webui_common.sh
 . "$HERE/webui_common.sh"
 trap webui_stop EXIT
 
 webui_setup
-webui_create_user openquake level_1_password
+for user in openquake user2 user3 user4; do
+  webui_create_user "$user" level_1_password
+done
 webui_start || fail "webui not up"
 
-echo "== run a calculation from the command line"
-"$VENV/bin/oq" engine --run "$ARCHIVE" || fail "oq engine --run"
+"$HERE/server_checks.sh" --repo "$REPO" --base "$BASE" \
+  --access-log-dir "$WEBUI_ACCESS_LOG_DIR" || fail "server checks"
 
-echo "== WebUI checks"
-"$HERE/webui_checks.sh" --base "$BASE" --user openquake \
-  --password level_1_password --archive "$ARCHIVE" \
-  --access-log-dir "$WEBUI_ACCESS_LOG_DIR" || fail "WebUI checks"
-
-echo "PASS: emulation of the server installation WebUI step"
+echo "PASS: emulation of the server installation WebUI"

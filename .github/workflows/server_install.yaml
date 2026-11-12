@@ -206,31 +206,14 @@ jobs:
           systemctl stop openquake-webui
           sleep 10
           systemctl start openquake-webui
-      - name: WebUI checks (server)
-        # as root, for the journal; the checks are in webui_checks.sh
+      - name: Server checks (WebUI as openquake and user2, user3 and user4)
+        # as root, for the journal; the checks are in server_checks.sh
         if: matrix.kind == 'server'
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
         run: |
-          ${{ github.workspace }}/.github/scripts/webui_checks.sh \
-            --base http://127.0.0.1:8800 --user openquake \
-            --password level_1_password \
-            --archive ${{ github.workspace }}/openquake/server/tests/data/archive_ok.zip \
+          ${{ github.workspace }}/.github/scripts/server_checks.sh \
+            --repo ${{ github.workspace }} --base http://127.0.0.1:8800 \
             --access-log-dir /var/log/oq-engine --journal
-          # the same calculation, submitted by a second user
-          ${{ github.workspace }}/.github/scripts/webui_checks.sh \
-            --base http://127.0.0.1:8800 --user user2 \
-            --password level_1_password \
-            --archive ${{ github.workspace }}/openquake/server/tests/data/archive_ok.zip \
-            --access-log-dir /var/log/oq-engine
-      # the extra checks of the devel installation, run here too
-      - name: Calculation of the devel demo, and WebUI checks for it
-        if: matrix.kind == 'server'
-        run: |
-          zip job.zip ${{ github.workspace }}/demos/hazard/AreaSourceClassicalPSHA/*
-          ${{ github.workspace }}/.github/scripts/webui_checks.sh \
-            --base http://127.0.0.1:8800 --user openquake \
-            --password level_1_password --archive "$PWD/job.zip" \
-            --access-log-dir /var/log/oq-engine
       - name: Run calculation with non openquake users from command line
         if: matrix.kind == 'server'
         run: |
@@ -239,13 +222,6 @@ jobs:
            /opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip
            echo "Display the Outputs of the last job"
            /opt/openquake/venv/bin/oq engine --list-outputs 1
-      - name: Concurrent access to the front page by user3 and user4
-        # both users log in together and load the pages a few times
-        if: matrix.kind == 'server'
-        run: |
-          ${{ github.workspace }}/.github/scripts/webui_concurrent_users.py \
-            --base http://127.0.0.1:8800 --rounds 3 --timeout 60 \
-            --user user3:level_1_password --user user4:level_1_password
       # ---- devel ----
       - name: Create openquake user (devel)
         if: matrix.kind == 'devel_server'
