@@ -7,7 +7,7 @@
 # 1. archive_ok.zip is submitted through the WebUI by openquake (with
 #    --journal the start-up lines are checked in the journal: needs root);
 # 2. the same zip is submitted by user2;
-# 3. user3 and user4 load the front page and the calc list together.
+# 3. user3 and user4 submit archive_ok.zip at the same time, and browse.
 #
 # Usage:
 #   server_checks.sh --repo DIR --base URL --access-log-dir DIR [--journal]
@@ -42,9 +42,9 @@ echo "== 2. archive_ok.zip by user2"
   --password level_1_password --archive "$ARCHIVE" \
   --access-log-dir "$LOGDIR" || exit 1
 
-echo "== 3. user3 and user4 load the front page together"
+echo "== 3. user3 and user4 submit archive_ok.zip and browse, together"
 python3 "$HERE/webui_concurrent_users.py" --base "$BASE" --rounds 3 \
-  --timeout 60 --user user3:level_1_password \
+  --timeout 60 --archive "$ARCHIVE" --user user3:level_1_password \
   --user user4:level_1_password || exit 1
 
 echo "PASS: server checks"
