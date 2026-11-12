@@ -35,21 +35,11 @@ https://wheelhouse.openquake.org/unified/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/decorator-5.1.1-py3-none-any.whl
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django-5.2.19-py3-none-any.whl
-django==5.2.19
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django_appconf-1.2.0-py3-none-any.whl
-django-appconf==1.2.0
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django_cookie_consent-1.0.0-py3-none-any.whl
-django-cookie-consent==1.0.0
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django_cors_headers-4.9.0-py3-none-any.whl
-django-cors-headers==4.9.0
-# FIXME: restore the wheelhouse URL below once the wheel is uploaded
-# https://wheelhouse.openquake.org/unified/django_pam-3.0.1-py3-none-any.whl
-django-pam==3.0.1
+https://wheelhouse.openquake.org/unified/django-5.2.19-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/django_appconf-1.2.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/django_cookie_consent-1.0.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/django_cors_headers-4.9.0-py3-none-any.whl
+https://wheelhouse.openquake.org/unified/django_pam-3.0.1-py3-none-any.whl
 https://wheelhouse.openquake.org/unified/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/flatbuffers-25.12.19-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/unified/fonttools-4.60.2-py3-none-any.whl
