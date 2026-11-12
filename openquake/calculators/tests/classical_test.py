@@ -1151,13 +1151,23 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_79(self):
         # ModifiableGMPE with apply_swiss_site_specific_amplification_sa
-        # alongside the unmodified EdwardsFah2013Foreland10Bars branch
-        self.assert_curves_ok(
-            ['hazard_curve-mean-PGA.csv',
-             'hazard_curve-mean-SA(0.2).csv',
-             'hazard_curve-mean-SA(0.4).csv',
-             'hazard_curve-mean-SA(0.6).csv'],
-            case_79.__file__)
+        # alongside the unmodified EdwardsFah2013Foreland10Bars branch.
+        # The modified branch must shift SA(0.2/0.4/0.6) but leave PGA
+        # untouched relative to the unmodified branch.
+        self.run_calc(case_79.__file__, 'job.ini')
+        expected = ['hazard_curve-mean-PGA.csv',
+                    'hazard_curve-mean-SA(0.2).csv',
+                    'hazard_curve-mean-SA(0.4).csv',
+                    'hazard_curve-mean-SA(0.6).csv']
+        got = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        for fname, actual in zip(expected, got):
+            self.assertEqualFiles('expected/%s' % fname, actual)
+        curves = self.calc.datastore['hcurves-rlzs'][:]
+        mdic = self.calc.oqparam.imtls.mdic
+        aac(curves[:, 0, mdic['PGA']], curves[:, 1, mdic['PGA']])
+        for imt in ('SA(0.2)', 'SA(0.4)', 'SA(0.6)'):
+            m = mdic[imt]
+            self.assertFalse(numpy.allclose(curves[:, 0, m], curves[:, 1, m]))
 
     def test_case_80(self):
         # New Madrid cluster with rup_mutex
