@@ -688,7 +688,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
     # the stop after the calibration does not depend on the sampling
-    @mock.patch('openquake.calculators.autogrid.POINT_STEP', 1)
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
     def test_calibration_only(self):
         # oq run --calibrate: the calibration is stored and the
         # preclassical stops before the splitting of the sources
@@ -702,8 +703,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertNotIn('source_info', self.calc.datastore)
 
     @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
-    # the full calibration, i.e. POINT_STEP=1, is checked here
-    @mock.patch('openquake.calculators.autogrid.POINT_STEP', 1)
+    # the full calibration, i.e. without the random sample, is checked here
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical

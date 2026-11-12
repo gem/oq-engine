@@ -37,8 +37,7 @@ import numpy
 import pandas
 from openquake.baselib import parallel
 from openquake.baselib.general import (
-    AccumDict, WeightedSequence, block_splitter)
-from openquake.hazardlib import lt
+    AccumDict, WeightedSequence, block_splitter, random_filter)
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
@@ -66,8 +65,6 @@ PERIODS = [.2, 1.]
 LEVEL_STEP = 2  # use one hazard level every LEVEL_STEP in the calibration
 MAX_PAIRS = 10_000_000  # target pairs per calibration source batch
 NSITES = 300  # size of the sample of sites
-POINT_STEP = 3  # EXPERIMENT: keep one point source in POINT_STEP
-SAMPLE_SEED = 12345  # EXPERIMENT: seed of the random sample of sources
 MAXDIST = 300.  # in km, maximum distance used in the calibration
 # when no candidate is within the tolerance, the candidates with an error
 # up to 10% larger than the smallest one are considered equivalent
@@ -250,14 +247,6 @@ def _calib_cmaker(cmaker, imts):
         maximum_distance=magdepdist(zip(md.x, numpy.minimum(md.y, MAXDIST))))
 
 
-# keep round(len(points) / POINT_STEP) points, the ones with the smallest
-# random numbers from lt.random, with a seed depending only on the group
-def _sample_points(points, grp_id):
-    xs = lt.random(len(points), SAMPLE_SEED + int(grp_id))
-    n = round(len(points) / POINT_STEP)
-    return [points[i] for i in sorted(numpy.argsort(xs)[:n])]
-
-
 def calibrate(csm, cmakers, sitecol, oq, h5=None):
     """
     Determine ps_grid_spacing and pointsource_distance by comparing the
@@ -292,8 +281,8 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
     prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
     groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
-    # keep a random sample of the point sources in the calibration
-    groups = {g: _sample_points(pts, g) for g, pts in groups.items()}
+    # EXPERIMENT: calibrate on a random third of the point sources
+    groups = {g: random_filter(pts, 1 / 3) for g, pts in groups.items()}
     if not groups:
         return None
     return select_candidate(
