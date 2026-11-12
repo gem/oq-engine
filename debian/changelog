@@ -1,3 +1,22 @@
+  [Savas Ceylan]
+  * Added Swiss site-specific SA corrections to ModifiableGMPE.
+    Only site columns for the selected periods are required.
+    PGA keeps mean, phi and tau, and recomputes total sigma.
+
+ [Christopher Brooks]
+ * For Bayless and Abrahamson 2018 GMM:
+    * Fixed high-frequency total sigma values near 10,000 nat log units by
+      replacing placeholder c1a coefficients with zero and corrected the
+      test result labels so sigma comparisons are no longer silently skipped.
+    * Fixed nan mean predictions between 23.988321 and 24 Hz by starting
+      kappa extrapolation at the last valid coefficient frequency.
+    * Added missing span-20 LOWESS smoothing after flattening the non-linear
+      site term on the native frequency grid, matching the MATLAB script.
+    * Fixed off-grid predictions by interpolating completed log EAS and
+      standard deviations against log frequency, matching the MATLAB script.
+      Previously, coefficients were interpolated before evaluation and the
+      non-linear term was interpolated against linear frequency.
+
  [Anirudh Rao]
   * Enabled circulant embedding for the Loth & Baker (2013) spatial-cross-IMT 
     correlation model

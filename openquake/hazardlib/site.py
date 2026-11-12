@@ -277,11 +277,17 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
+    'ch_ampl02': numpy.float64,
     'ch_ampl03': numpy.float64,
+    'ch_ampl04': numpy.float64,
     'ch_ampl06': numpy.float64,
+    'ch_phis2s02': numpy.float64,
     'ch_phis2s03': numpy.float64,
+    'ch_phis2s04': numpy.float64,
     'ch_phis2s06': numpy.float64,
+    'ch_phiss02': numpy.float64,
     'ch_phiss03': numpy.float64,
+    'ch_phiss04': numpy.float64,
     'ch_phiss06': numpy.float64,
     'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
@@ -889,6 +895,10 @@ class SiteCollection(object):
         # sanity check
         for param in self.req_site_params:
             if param in ignore:
+                continue
+            # Zero log amplification means no median shift; zero uncertainty
+            # components are also valid. Keep the sanity check for other data.
+            if param.startswith(('ch_ampl', 'ch_phis2s', 'ch_phiss')):
                 continue
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
