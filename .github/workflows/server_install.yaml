@@ -33,7 +33,7 @@ on:
         default: master
         required: false
       kind:
-        description: "server or devel: the only kind to run"
+        description: "server or devel_server: the only kind to run"
         type: string
         default: ""
         required: false
@@ -55,14 +55,14 @@ jobs:
             kinds="[\"$KIND\"]"
           else
             case "$EVENT" in
-              pull_request) kinds='["devel"]' ;;
+              pull_request) kinds='["devel_server"]' ;;
               schedule)
                 if [ "$SCHEDULE" = "05 11 * * *" ]; then
                   kinds='["server"]'
                 else
-                  kinds='["devel"]'
+                  kinds='["devel_server"]'
                 fi ;;
-              *) kinds='["server","devel"]' ;;
+              *) kinds='["server","devel_server"]' ;;
             esac
           fi
           echo "kinds=$kinds" >> "$GITHUB_OUTPUT"
@@ -217,13 +217,13 @@ jobs:
             --access-log-dir /var/log/oq-engine --journal
       # ---- devel ----
       - name: Create openquake user (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         run: |
           sudo useradd -d /home/openquake -m  -s /bin/bash openquake
           sudo usermod -aG sudo openquake
           echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/openquake
       - name: Install OQ with 3.11 as user openquake (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         env:
           # the code to install: the head of the pull request (also when it
           # comes from a fork), the git-ref of a manual run, or master
@@ -245,14 +245,14 @@ jobs:
           chmod +x /tmp/scripts.sh
           sudo -i -u openquake HOME=/home/openquake SRC_URL="$SRC_URL" SRC_REF="$SRC_REF" PY_TO_USE=$(which python3) bash /tmp/scripts.sh
       - name: Actualize 'default' templates for email notifications (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         run: |
           sudo runuser -l openquake  -c ' cd oq-engine ; for file in openquake/server/templates/registration/*.default.tmpl; do
           cp -- "$file" "${file%.default.tmpl}"
           done
           '
       - name: WebUI and calculation with Auth (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         run: |
            set -o pipefail
            sudo systemctl stop openquake-webui
@@ -303,14 +303,14 @@ jobs:
            # zip area source demo into job.zip
            zip job.zip ~/work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/*
       - name: WebUI checks (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         run: |
           ${{ github.workspace }}/.github/scripts/webui_checks.sh \
             --base http://127.0.0.1:8800 --user level_1_user \
             --password level_1_password --archive "${{ github.workspace }}/job.zip" \
             --access-log-dir /var/log/oq-engine
       - name: Run calculation with non openquake users from command line (devel)
-        if: matrix.kind == 'devel'
+        if: matrix.kind == 'devel_server'
         run: |
            set -o pipefail
            oq --version
