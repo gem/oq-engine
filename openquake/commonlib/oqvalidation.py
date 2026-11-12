@@ -164,6 +164,13 @@ calculation_mode:
   Example: *calculation_mode=classical*
   Default: no default
 
+calibration_only:
+  Used in preclassical calculations: stop after the calibration of
+  ps_grid_spacing and pointsource_distance, which is stored in the
+  datastore; it is set by *oq run --calibrate*.
+  Example: *calibration_only = true*
+  Default: False
+
 collapse_gsim_logic_tree:
   INTERNAL
 
@@ -1204,6 +1211,7 @@ class OqParam(valid.ParamSet):
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
+    calibration_only = valid.Param(valid.boolean, False)
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_precision = valid.Param(valid.positivefloat, 0)
     collect_rlzs = valid.Param(valid.boolean, None)

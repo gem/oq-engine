@@ -279,7 +279,7 @@ def simple_cmaker(gsims, imts, **params):
 # and then in classical with a single distance; in the calibration of the
 # pointsource_distance (see autogrid) the contexts for several distances
 # are built at once, sharing the planars and the contexts
-def _quintets(cmaker, src, sitecol, psdists):
+def _sextets(cmaker, src, sitecol, psdists):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
@@ -549,7 +549,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for ks, magi, mag, magdist, planars, sites in _quintets(
+    for ks, magi, mag, magdist, planars, sites in _sextets(
             cmaker, src, sitecol, psdists):
         if not planars:
             continue

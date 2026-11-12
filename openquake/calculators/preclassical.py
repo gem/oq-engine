@@ -445,6 +445,10 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 self.calibrate_grid(sites)
 
+        if oq.calibration_only:  # stop here, the calibration is stored
+            logging.info('Stopping after the calibration')
+            return
+
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
         # source_reader.store_unc_signatures)
@@ -584,6 +588,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # Melbourne it was wasting ~50 seconds in the reduce
         with general.gc_disabled():
             self.populate_csm()
+        if self.oqparam.calibration_only:
+            return  # nothing else to do, see populate_csm
         return self.csm
 
     def post_execute(self, csm):
