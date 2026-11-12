@@ -332,6 +332,24 @@ def authenticated_page(page, authenticated_session, application_mode):
 
 
 @pytest.fixture
+def essential_cookie_groups(django_db_blocker):
+    """
+    (Re)load the essential cookie groups, since the live_server fixture
+    flushes the database after each test, removing the data loaded by
+    migrate_before_tests
+    """
+    from django.core.management import call_command
+    from cookie_consent.cache import delete_cache
+    serverdir = pathlib.Path(__file__).parent.parent
+    js = (serverdir / 'fixtures/0001_cookie_consent_required_'
+                      'plus_hide_cookie_bar.json')
+    with django_db_blocker.unblock():
+        call_command('loaddata', js, verbosity=0)
+    # the cookie groups are cached by django-cookie-consent
+    delete_cache()
+
+
+@pytest.fixture
 def ui_logged_in_page(
         page, live_server, user, test_credentials, application_mode):
     page.context.clear_cookies()
