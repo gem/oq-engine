@@ -47,10 +47,6 @@ from openquake.hazardlib import (
     InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.correlation_models.base import CorrelationContext
-from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
-    JayaramBaker2009)
-from openquake.hazardlib.correlation_models.spatial_cross_imt import (
-    loth_baker_2013)
 from openquake.hazardlib.gsim.base import check_sites
 from openquake.hazardlib.site_amplification import (
     Amplifier, AmplificationFunction)
@@ -61,7 +57,8 @@ from openquake.hazardlib.source import rupture, multi_fault
 from openquake.hazardlib.source_group import WEIGHT
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, circulant_embedding_feasible, between_event_description)
-from openquake.hazardlib.shakemap.realization import get_metadata
+from openquake.hazardlib.shakemap.realization import (
+    get_metadata, conditioning_stations)
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.commonlib.model_provenance import copy_model_provenance
@@ -1877,24 +1874,6 @@ def store_events(dstore, eids):
     return events
 
 
-def _xml_legacy_model(shakemap, gmf_dict, strategy):
-    # Without the posterior components of a complete shake_result.hdf
-    # product LothBaker2013 is sampled with circulant embedding; the dense
-    # paths only accept a spatial model and a separate cross-IMT model,
-    # so there the legacy JayaramBaker2009 model is used, independently
-    # for each IMT
-    model = gmf_dict.get('spatial_model')
-    if ('CL' not in shakemap.dtype.names and
-            strategy != 'circulant_embedding' and
-            isinstance(model, loth_baker_2013.LothBaker2013)):
-        logging.warning(
-            'LothBaker2013 requires circulant embedding or a complete '
-            'shake_result.hdf product: the ShakeMap is sampled with '
-            'JayaramBaker2009, without cross-IMT correlation')
-        gmf_dict['spatial_model'] = JayaramBaker2009(vs30_clustering=True)
-    return gmf_dict
-
-
 def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
     # record for the outputs page the correlation really used
     calc.datastore['correlation_strategy_used'] = numpy.array(
@@ -1908,7 +1887,7 @@ def _save_correlation_info(calc, shakemap, gmf_dict, strategy):
         # Baker (2013), whatever correlation model was requested
         conditioning = (
             'station-conditioned'
-            if get_metadata(shakemap, 'stations') is not None
+            if conditioning_stations(shakemap) is not None
             else 'marginal approximation, no station conditioning')
         model = (f'LothBaker2013 (shake_result.hdf, {conditioning}; '
                  'approximate cross-IMT dependence, between-event terms '
@@ -1951,7 +1930,6 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
                 'Circulant embedding is not applicable to these sites, '
                 'using cholesky_decomposition instead')
             strategy = 'cholesky_decomposition'
-        gmf_dict = _xml_legacy_model(shakemap, dict(gmf_dict), strategy)
         _save_correlation_info(calc, shakemap, gmf_dict, strategy)
         gmf_dict.update(
             correlation_strategy=strategy,

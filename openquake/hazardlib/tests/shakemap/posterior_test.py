@@ -12,6 +12,10 @@ from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
 from openquake.hazardlib.correlation_models.cross_imt.\
     abrahamson_et_al_2014 import AbrahamsonEtAl2014BetweenEvent
+from openquake.hazardlib.correlation_models.cross_imt.\
+    full_cross_correlation import FullCrossCorrelation
+from openquake.hazardlib.correlation_models.cross_imt.\
+    no_cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.shakemap.gmfs import (
     to_gmfs, _loth_baker_residuals, _between_residuals)
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
@@ -19,7 +23,7 @@ from openquake.hazardlib.shakemap.parsers import (
     get_array, get_array_usgs_id, save_shakemap, ShakeMapProductError)
 from openquake.hazardlib.shakemap import parsers
 from openquake.hazardlib.shakemap.realization import (
-    psd_factor, get_metadata, station_conditioning)
+    psd_factor, get_metadata, station_conditioning, conditioning_stations)
 
 F32 = numpy.float32
 DATA = os.path.join(os.path.dirname(__file__), 'data')
@@ -277,10 +281,14 @@ def test_incomplete_station_arrays_warn(tmp_path, caplog):
     _product(path)
     with h5py.File(path, 'r+') as h5:
         del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/sta_phi']
-    shakemap = get_array(kind='shake_result_hdf', fname=str(path))
-    assert get_metadata(shakemap, 'stations') is None
+    uri = {'kind': 'shake_result_hdf', 'fname': str(path)}
+    shakemap = get_array(**uri)
+    assert conditioning_stations(shakemap) is None
     _gmfs(shakemap, ['PGA'], count=2)
     assert 'approximation without conditioning' in caplog.text
+    # the stations of the other IMTs are kept if PGA is not required
+    _, shakemap, _, _ = get_sitecol_shakemap(uri, ['SA(0.3)'])
+    assert len(conditioning_stations(shakemap)) == 2
 
 
 def test_unused_imt_without_posterior_components(tmp_path, caplog):
@@ -303,22 +311,24 @@ def test_unused_imt_without_posterior_components(tmp_path, caplog):
     assert 'The ShakeMap has no phi for MMI' in caplog.text
 
 
-def test_lothbaker_without_posterior_components(tmp_path):
+@pytest.mark.parametrize('strategy', ['circulant_embedding',
+                                      'cholesky_decomposition'])
+def test_lothbaker_without_posterior_components(tmp_path, strategy):
     # without the stored between-event factors (XML products, incomplete
-    # shake_result.hdf products) LothBaker2013 is sampled with circulant
-    # embedding, keeping the cross-IMT correlation of the residuals
+    # shake_result.hdf products) LothBaker2013 keeps the cross-IMT
+    # correlation of the residuals, also with the dense factorization
     path = tmp_path / 'shake_result.hdf'
     _product(path, conditioned=False)
-    with h5py.File(path, 'r+') as h5:
+    with h5py.File(path, 'r+') as h5:  # only std, as in the XML products
         del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/phi']
+        del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/tau']
     sitecol, shakemap, _, names = get_sitecol_shakemap(
         {'kind': 'shake_result_hdf', 'fname': str(path)}, ['PGA', 'SA(0.3)'])
-    assert not {'phi', 'CL'} & set(shakemap.dtype.names)
+    assert not {'phi', 'tau', 'CL'} & set(shakemap.dtype.names)
     model = loth_baker_2013.LothBaker2013()
     method = {'kind': 'Silva&Horspool', 'spatial_model': model,
               'cross_imt_model': None, 'cholesky_limit': 10000,
-              'correlation_strategy': 'circulant_embedding',
-              'sites': sitecol}
+              'correlation_strategy': strategy, 'sites': sitecol}
     gmfs = to_gmfs(shakemap, method, None, 99, 50_000, 42, names)[1]
     residuals = numpy.log(gmfs)
     corr = [numpy.corrcoef(res[:, 0], res[:, 1])[0, 1] for res in residuals]
@@ -326,6 +336,34 @@ def test_lothbaker_without_posterior_components(tmp_path):
         numpy.zeros((1, 1)), [imt.PGA()], [imt.SA(.3)])[0, 0]
     assert expected > .5
     numpy.testing.assert_allclose(corr, expected, atol=.02)
+
+
+def test_between_event_model_without_phi(tmp_path):
+    # with tau but without phi the between-event terms are still sampled
+    # with the selected model, the within-event sigma being
+    # sqrt(std^2 - tau^2)
+    path = tmp_path / 'shake_result.hdf'
+    _product(path, conditioned=False)  # phi = .6, .7 and tau = .2
+    with h5py.File(path, 'r+') as h5:
+        del h5['arrays/imts/GREATER_OF_TWO_HORIZONTAL/PGA/phi']
+    sitecol, shakemap, _, names = get_sitecol_shakemap(
+        {'kind': 'shake_result_hdf', 'fname': str(path)}, ['PGA', 'SA(0.3)'])
+    assert 'tau' in shakemap.dtype.names
+    assert not {'phi', 'CL'} & set(shakemap.dtype.names)
+    model = loth_baker_2013.LothBaker2013()
+    rho = model.correlation_block(
+        numpy.zeros((1, 1)), [imt.PGA()], [imt.SA(.3)])[0, 0]
+    for between, rho_b in [(NoCrossCorrelation(), 0),
+                           (FullCrossCorrelation(), 1)]:
+        method = {'kind': 'Silva&Horspool', 'spatial_model': model,
+                  'cross_imt_model': None, 'cholesky_limit': 10000,
+                  'correlation_strategy': 'circulant_embedding',
+                  'sites': sitecol, 'between_event_model': between}
+        gmfs = to_gmfs(shakemap, method, None, 99, 50_000, 42, names)[1]
+        cov = [numpy.cov(res[:, 0], res[:, 1])[0, 1]
+               for res in numpy.log(gmfs)]
+        numpy.testing.assert_allclose(
+            cov, rho * .6 * .7 + rho_b * .04, atol=.006)
 
 
 def test_interpolated_periods_preserve_correlation_and_unit_variance():

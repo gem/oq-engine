@@ -25,12 +25,13 @@ from scipy import interpolate
 from openquake.baselib import config
 from openquake.baselib.general import CallableDict, humansize
 from openquake.hazardlib import geo, imt, site
-from openquake.hazardlib.correlation_models.base import ResidualComponent
+from openquake.hazardlib.correlation_models.base import (
+    ResidualComponent, SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.spatial_cross_imt import (
     loth_baker_2013)
 from openquake.hazardlib.shakemap.realization import (
     psd_factor, posterior_within_residuals, station_conditioning,
-    get_metadata)
+    conditioning_stations)
 from openquake.hazardlib.calc.gmf import (
     _site_positions, _correlation_budget, _truncated_normals)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
@@ -318,12 +319,26 @@ def _correlate_legacy(Z, imts, shakemap, spatial_model,
     return cholesky(covariance, cross_corr) @ Z
 
 
+def _is_joint_model(model):
+    # True for the within-event models correlating sites and IMTs jointly,
+    # like LothBaker2013, which have no separate spatial correlation
+    return model is not None and not isinstance(
+        model, SpatialCorrelationModel)
+
+
 def _correlate_dense(Z, imts, spatial_model, cross_imt_model,
                      context, lons, lats):
     # Dense correlation for the residuals of the points (lons, lats).
     N = Z.shape[0] // len(imts)
-    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
     dmatrix = geo.geodetic.distance_matrix(lons, lats)
+    if _is_joint_model(spatial_model):
+        corr = spatial_model.correlation_block(
+            dmatrix, imts, context=context)
+        try:
+            return numpy.linalg.cholesky(corr) @ Z
+        except numpy.linalg.LinAlgError:
+            return psd_factor(corr) @ Z
+    cross_corr = cross_correlation_matrix(imts, cross_imt_model)
     spatial_corr = spatial_correlation_array(
         dmatrix, imts, spatial_model, context)
     eig, _ = numpy.linalg.eigh(spatial_corr[0])
@@ -484,7 +499,7 @@ def _condition_within(shakemap, imts, within, conditional_phi):
     # of the calculation, not for the whole ShakeMap grid
     phi = conditional_phi.reshape(len(imts), -1)
     result = phi[:, :, None] * within
-    stations = get_metadata(shakemap, 'stations')
+    stations = conditioning_stations(shakemap)
     if stations is None or not len(stations):
         return result  # older NPY/HDF products retain a warned approximation
     points, first, inverse = numpy.unique(numpy.column_stack([
@@ -574,7 +589,7 @@ def _loth_baker_gmfs(shakemap, imts, Z, mu, scale, spatial_model,
         logging.warning(
             'The ShakeMap is sampled with LothBaker2013, the requested '
             '%s is not used', spatial_model.__class__.__name__)
-    if get_metadata(shakemap, 'stations') is None:
+    if conditioning_stations(shakemap) is None:
         logging.warning(
             'Incomplete ShakeMap station bookkeeping: the within-event '
             'correlation uses a marginal approximation without conditioning')
@@ -636,8 +651,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
     N = len(shakemap)
     total_std = numpy.array([
         shakemap['std'][str(im)] for im in imts]).reshape(-1, 1)
-    components = (spatial_model is not None and
-                  {'phi', 'tau'} <= set(shakemap.dtype.names))
+    # with tau the within-event sigma is sqrt(std^2 - tau^2), without phi
+    components = spatial_model is not None and 'tau' in shakemap.dtype.names
     scale = _build_imt_scaling_vector(imts, shakemap['std'], PCTG)
     result = mu * numpy.exp(Z * total_std) / scale
     if (truncation_level <= 1E-9 or
@@ -669,7 +684,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         numpy.arange(i * N, (i + 1) * N) for i in active])
     corr_Z = Z[row_indices]
     if (correlation_strategy == 'cholesky_decomposition' and
-            not components):
+            not components and not _is_joint_model(spatial_model)):
         residuals = _correlate_legacy(
             corr_Z, corr_imts, shakemap, spatial_model, cross_imt_model,
             cholesky_limit, context)
@@ -684,7 +699,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatial_model,
         corr_Z, corr_imts, sites, spatial_model, cross_imt_model,
         correlation_strategy, context, cholesky_limit,
         truncation_level, correlation_seed)
-    if components:  # the stored phi is the prior one
+    if components:  # std and tau are conditional on the stations
         corr_stds = numpy.array([_conditional_phi(
             shakemap['std'][str(im)],
             shakemap['tau'][str(im)].astype(numpy.float64) ** 2)

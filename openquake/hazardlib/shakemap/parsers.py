@@ -1733,14 +1733,20 @@ def _station_period_indices(group, periods):
 
 
 def _hdf_stations(h5, conf, groups, imts):
-    # Return the STATION_DT array of the stations conditioning each IMT,
-    # or None if the station bookkeeping is incomplete; the correlation
-    # with the sites is computed only when sampling (see gmfs.py)
+    # Return the STATION_DT array of the stations conditioning each IMT;
+    # an IMT with incomplete station bookkeeping gets a station with NaN
+    # values, so that the conditioning is dropped only if that IMT is
+    # required (see conditioning_stations); the correlation with the
+    # sites is computed only when sampling (see gmfs.py)
     fields = ('sta_lons_rad', 'sta_lats_rad', 'sta_per_ix', 'sta_phi',
               'add_uncertainty')
-    if not all(all(f in groups[im] for f in fields) for im in imts):
-        logging.warning('Incomplete ShakeMap station bookkeeping: using '
-                        'a marginal approximation without conditioning')
+    incomplete = [im for im in imts
+                  if not all(f in groups[im] for f in fields)]
+    if incomplete:
+        logging.warning('Incomplete ShakeMap station bookkeeping for %s',
+                        ', '.join(incomplete))
+    imts = [im for im in imts if im not in incomplete]
+    if not imts:
         return None
     ccf = conf.get('modeling', {}).get('ccf')
     module = conf.get('ccf_modules', {}).get(ccf, [ccf])[0]
@@ -1769,6 +1775,12 @@ def _hdf_stations(h5, conf, groups, imts):
         array['imt'] = im
         for name, vals in zip(STATION_DT.names[1:], values):
             array[name] = vals
+        arrays.append(array)
+    for im in incomplete:
+        array = numpy.zeros(1, STATION_DT)
+        array['imt'] = im
+        for name in STATION_DT.names[1:]:
+            array[name] = numpy.nan
         arrays.append(array)
     return (numpy.concatenate(arrays) if arrays
             else numpy.zeros(0, STATION_DT))

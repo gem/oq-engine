@@ -53,6 +53,18 @@ def get_metadata(array, key):
     return (array.dtype.metadata or {}).get(key)
 
 
+def conditioning_stations(shakemap):
+    """
+    :returns: the stations conditioning a ShakeMap array, or None if the
+              station bookkeeping of one of its IMTs is incomplete, which
+              is marked by a station with NaN coordinates
+    """
+    stations = get_metadata(shakemap, 'stations')
+    if stations is None or numpy.isnan(stations['lon']).any():
+        return None
+    return stations
+
+
 def psd_factor(matrix, overwrite=False):
     # Return F such that F @ F.T is the positive semidefinite matrix.
     # Only numerical negative eigenvalues may be clipped: silently fixing
