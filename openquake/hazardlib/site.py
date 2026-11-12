@@ -900,7 +900,7 @@ class SiteCollection(object):
             if param in ignore:
                 continue
             if param.startswith(PERMIT_ZERO_SITE_PARAMS):
-                continue # Some are permitted e.g. swiss period dep amp params
+                continue # Some are permitted e.g. swiss 2026 site spec amp params
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
                 raise ValueError('The site parameter %s is always zero: please'
