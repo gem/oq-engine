@@ -56,6 +56,9 @@ param = dict(
 #: hazard; lon/lat included because valid.coordinates accepts 'nan'
 CORE_SITE_PARAMS = ('lon', 'lat', 'vs30', 'z1pt0', 'z2pt5', 'z1pt4')
 
+# Site params that should not be rejected if zero
+PERMIT_ZERO_SITE_PARAMS = ('ch_ampl', 'ch_phis2s', 'ch_phiss')
+
 
 def get_countries(lons, lats):
     """
@@ -896,10 +899,8 @@ class SiteCollection(object):
         for param in self.req_site_params:
             if param in ignore:
                 continue
-            # Zero log amplification means no median shift; zero uncertainty
-            # components are also valid. Keep the sanity check for other data.
-            if param.startswith(('ch_ampl', 'ch_phis2s', 'ch_phiss')):
-                continue
+            if param.startswith(PERMIT_ZERO_SITE_PARAMS):
+                continue # Some are permitted e.g. swiss 2026 site spec amp params
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
                 raise ValueError('The site parameter %s is always zero: please'
