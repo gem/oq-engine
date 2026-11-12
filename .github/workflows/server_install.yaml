@@ -192,6 +192,20 @@ jobs:
            echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
            exit 1
           fi
+          # The WebUI logs its configuration and database paths at start-up
+          # (openquake/server/wsgi.py): systemd sends them to the journal,
+          # so print the journal and check that these lines are there.
+          journalctl -u openquake-webui --no-pager > /tmp/webui-journal.log
+          echo "--------------------"
+          echo "journal of openquake-webui"
+          echo "--------------------"
+          cat /tmp/webui-journal.log
+          for expected in "Using .*openquake.cfg" "Using .*db.sqlite3"; do
+           if ! grep -q "WARNING:root:$expected" /tmp/webui-journal.log; then
+            echo "Missing log line in the journal: $expected"
+            exit 1
+           fi
+          done
           echo " Run a calc using https"
           runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://raw.githubusercontent.com/gem/oq-engine/master/openquake/server/tests/data/archive_ok.zip'
           sleep 10
