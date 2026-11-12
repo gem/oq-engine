@@ -30,8 +30,11 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
+from openquake.hazardlib.lt import apply_uncertainty
 from openquake.hazardlib.source_reader import (
-    splitMF, add_bangs, check_mfd_variants, content_hash)
+    splitMF, add_bangs, check_mfd_variants, check_same_sources,
+    content_hash,
+    source_with_ts_sets, reduce_sources)
 
 
 def make_mps():
@@ -125,6 +128,7 @@ class MFDVariantsTestCase(unittest.TestCase):
         self.assertEqual(found, ['mp1'])
         self.assertIn('mp1: 2 MultiMFD variants in a.xml b.xml c.xml',
                       cm.output[0])
+        self.assertIn('oq check_input job.ini --better-smlt', cm.output[0])
 
     # different geometries are not MFD variants
     def test_no_variants(self):
@@ -136,3 +140,82 @@ class MFDVariantsTestCase(unittest.TestCase):
             src.checksum = content_hash(src)
         add_bangs(smdict)
         self.assertEqual(check_mfd_variants(smdict, 'ssmLT.xml'), [])
+
+
+class DifferentIDsTestCase(unittest.TestCase):
+    # the same geometry with different IDs and different MFDs in two
+    # files: the copies cannot be merged, but a warning is logged
+    def test_different_ids_and_mfds(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.2], [0.4], [0.6]])}
+        src = smdict['b.xml'].src_groups[0][0]
+        src.source_id = 'mp2'
+        src.checksum = content_hash(src)
+        with self.assertLogs(level='WARNING') as cm:
+            check_same_sources(smdict, 'ssmLT.xml')
+        self.assertIn('1 sources appear in different source models with '
+                      'different IDs, the same geometry and different MFDs',
+                      cm.output[0])
+        self.assertIn('likely variants of a base source', cm.output[0])
+        self.assertIn('mp1[a.xml]', cm.output[0])
+        self.assertIn('mp2[b.xml]', cm.output[0])
+
+    # with the same MFD it is the check_input error, not this warning
+    def test_different_ids_same_mfd(self):
+        smdict = {'a.xml': make_smodel('b1', [[0.1], [0.2], [0.3]]),
+                  'b.xml': make_smodel('b2', [[0.1], [0.2], [0.3]])}
+        src = smdict['b.xml'].src_groups[0][0]
+        src.source_id = 'mp2'
+        src.checksum = content_hash(src)
+        with self.assertLogs(level='WARNING') as cm:
+            check_same_sources(smdict, 'ssmLT.xml')
+        self.assertEqual(len(cm.output), 1)
+        self.assertNotIn('different MFDs', cm.output[0])
+
+
+class ReduceSourcesTestCase(unittest.TestCase):
+    # identical copies of a source in two files, as produced by moving
+    # the MFD variants in the logic tree: each copy has a single
+    # signature, so its field ts is 0 before the reduction
+    def reduce(self, sig1, sig2):
+        src = make_mps()
+        rows = []
+        copy1 = source_with_ts_sets(src, [(0, 1, sig1), (1, 1, sig1)], rows)
+        copy2 = source_with_ts_sets(src, [(2, 1, sig2), (3, 1, sig2)], rows)
+        [red] = reduce_sources([copy1, copy2])
+        self.bysrc_unc = red.bysrc_unc
+        return red.get_ts_sets()
+
+    def test_different_signatures(self):
+        # the sets of realizations with different uncertainties are kept
+        sets = self.reduce((('bs1', '1'),), (('bs1', '2'),))
+        self.assertEqual(sets, ((0, 1), (2, 3)))
+
+    def test_same_signature(self):
+        # the copies with the same uncertainties share a single set
+        sets = self.reduce((('bs1', '1'),), (('bs1', '1'),))
+        self.assertEqual(sets, ((0, 1, 2, 3),))
+
+    def test_one_copy_without_uncertainties(self):
+        # the copies are merged even if only one of them is modified
+        sets = self.reduce((), (('bs1', '1'),))
+        self.assertEqual(sets, ((0, 1), (2, 3)))
+        self.assertTrue(self.bysrc_unc)
+
+
+class MultiMFDAbsoluteTestCase(unittest.TestCase):
+    # the uncertainty replacing the MFDs of all the points of a
+    # multiPointSource, used to move MultiMFD variants into the logic tree
+    def test_apply(self):
+        src = make_mps()
+        value = ('incrementalMFD', 3, dict(
+            min_mag=[4.5], bin_width=[1.0], occurRates=[[.2], [.3], [.4]]))
+        apply_uncertainty('multiMFDAbsolute', src, value)
+        rates = list(src.mfd.get_annual_occurrence_rates())
+        self.assertEqual(rates, [(4.5, .2), (4.5, .3), (4.5, .4)])
+
+    def test_wrong_size(self):
+        value = ('incrementalMFD', 2, dict(
+            min_mag=[4.5], bin_width=[1.0], occurRates=[[.2], [.3]]))
+        with self.assertRaises(ValueError):
+            apply_uncertainty('multiMFDAbsolute', make_mps(), value)

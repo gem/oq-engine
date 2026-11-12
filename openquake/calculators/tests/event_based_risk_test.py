@@ -404,13 +404,14 @@ agg_id
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
-        # without time_event the injured losses are computed for each
-        # time event of the exposure, like the occupants losses
+        # without time_event the event based losses are computed only
+        # for the average occupants, not for each time event
         oq = self.calc.datastore['oqparam']
-        for lt in ['injured_day', 'injured_night', 'injured_transit',
-                   'injured_avg']:
-            self.assertIn(lt, oq.loss_types)
-        self.assertNotIn('injured', oq.loss_types)
+        self.assertIn('occupants', oq.loss_types)
+        self.assertIn('injured', oq.loss_types)
+        for lt in ['occupants_day', 'occupants_night', 'occupants_transit',
+                   'injured_day', 'injured_night', 'injured_transit']:
+            self.assertNotIn(lt, oq.loss_types)
         df = self.calc.datastore.read_df('aggrisk')
         self.assertTrue({scientific.LOSSID[lt] for lt in oq.loss_types}
                         <= set(df.loss_id))
@@ -420,9 +421,9 @@ agg_id
                                   fname, delta=1E-4)
 
     def check_case_master(self):
-        # check total variance of the occupants_day losses
+        # check total variance of the occupants losses
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
-        lid = scientific.LOSSID['occupants_day']
+        lid = scientific.LOSSID['occupants']
         elt_df = self.calc.datastore.read_df(
             'risk_by_event', 'event_id', dict(agg_id=K, loss_id=lid))
         elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
@@ -506,14 +507,14 @@ agg_id
                                       rtol=1E-5)
 
     def test_minimum_asset_loss_occupants(self):
-        # the occupants_<time_event> losses use the minimum_asset_loss
-        # of occupants, there is no 'default' key
+        # the occupants losses use the minimum_asset_loss of occupants,
+        # there is no 'default' key
         mal = ("{'business_interruption': 0, 'contents': 0,"
                " 'nonstructural': 0, 'occupants': 0, 'structural': 1}")
         self.run_calc(case_master.__file__, 'job.ini',
                       minimum_asset_loss=mal)
         oq = self.calc.datastore['oqparam']
-        self.assertEqual(oq.minimum_asset_loss['occupants_day'], 0)
+        self.assertEqual(oq.minimum_asset_loss['occupants'], 0)
         self.assertEqual(oq.minimum_asset_loss['structural'], 1)
 
     def test_from_ses(self):

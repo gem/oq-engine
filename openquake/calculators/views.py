@@ -41,7 +41,7 @@ from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.rmap_maker import read_cmakers
 from openquake.hazardlib.source_group import read_csm
-from openquake.commonlib import util
+from openquake.commonlib import util, datastore, logs
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
@@ -645,6 +645,55 @@ def view_performance(token, dstore):
     Display performance information
     """
     return performance_view(dstore)
+
+
+@view.add('context_reduction')
+def view_context_reduction(token, dstore):
+    """
+    Display the number of contexts stored in the nctxs dataset (zero
+    when not computed, see preclassical.CTX_EST) and the reduction factor
+    due to the source variants optimization, i.e. the ratio between the
+    contexts without the optimization ('separate') and the contexts
+    actually computed ('collapsed')
+    """
+    est = dstore['nctxs'][0]
+    rows = [[name, '{:_d}'.format(int(est[name]))]
+            for name in est.dtype.names]
+    names = est.dtype.names
+    if 'separate' in names and est['collapsed'] and est['separate']:
+        factor = est['separate'] / est['collapsed']
+        rows.append(['variants factor', '%.2f' % factor])
+    return text_table(rows, ['field', 'contexts'], ext='org')
+
+
+@view.add('workflow_info')
+def view_workflow_info(token, dstore):
+    """
+    Display, for each model of a workflow, the calc_id, the size of the
+    datastore in MB and the runtimes in seconds (total, classical,
+    preclassical and calibration), ordered by decreasing total runtime
+    """
+    wf = dstore.hdf5['workflow']
+    names = [decode(x) for x in wf['name'][()]]
+    dt = [('model', 'U3'), ('calc_id', numpy.int64),
+          ('size_mb', numpy.float64), ('total', numpy.float64),
+          ('classical', numpy.float64), ('preclassical', numpy.float64),
+          ('calibration', numpy.float64)]
+    rows = []
+    for name, calc_id, size in zip(names, wf['calc_id'][()],
+                                   wf['size_mb'][()]):
+        calc_id = int(calc_id)
+        perf = datastore.read(calc_id)['performance_data'][:]
+        times = collections.defaultdict(float)
+        for op, sec in zip(perf['operation'], perf['time_sec']):
+            times[decode(op)] += sec
+        [stats] = logs.dbcmd('get_job_stats', calc_id)
+        rows.append((name, calc_id, size, stats.duration,
+                     times['ClassicalCalculator.run'],
+                     times['PreClassicalCalculator.run'],
+                     times['calibrating ps_grid_spacing']))
+    arr = numpy.array(rows, dt)
+    return arr[numpy.argsort(arr['total'])[::-1]]
 
 
 def stats(name, array, *extras):
@@ -1512,9 +1561,7 @@ def _rlz_rows(full_lt, rlz_id):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
-    if hasattr(xlt, 'branchset_id'):  # ampl_logic_tree
-        tbl.append((xlt.branchset_id, rlz.extra_rlz.value))
-    elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
+    if xlt:  # amplification or PFD logic tree
         for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
             tbl.append((bset.id, path))
     return tbl
@@ -1669,6 +1716,9 @@ def view_usignatures(token, dstore):
     sources with no uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
+    # branchset ID -> uncertainty type, e.g. bs02 -> maxMagGRAbsolute
+    smlt = dstore['full_lt'].source_model_lt
+    utypes = {bs.id: bs.uncertainty_type for bs in smlt.branchsets}
     rows = []
     for source_id, grp in df.groupby('source_id'):
         sigs = [json.loads(sig) for sig in grp['signature']]
@@ -1681,16 +1731,18 @@ def view_usignatures(token, dstore):
             # the sources with no uncertainties have a single signature
             # covering all their realizations
             vals['-'] = ['no uncertainties']
-        cells = [(bset, fmt_sig_values(value_list))
+        cells = [(bset, utypes.get(bset, '-'), fmt_sig_values(value_list))
                  for bset, value_list in vals.items()]
-        for i, (bset, values) in enumerate(cells):
+        for i, (bset, utype, values) in enumerate(cells):
             head = dict(source_id=source_id,
                         num_rlzs=fmt_realizations(grp['count']))
-            rows.append(dict(head, branchset=bset, values=values)
+            rows.append(dict(head, branchset=bset,
+                             uncertainty_type=utype, values=values)
                         if i == 0 else
-                        dict(source_id='', num_rlzs='',
-                             branchset=bset, values=values))
-    header = ['source_id', 'num_rlzs', 'branchset', 'values']
+                        dict(source_id='', num_rlzs='', branchset=bset,
+                             uncertainty_type=utype, values=values))
+    header = ['source_id', 'num_rlzs', 'branchset',
+              'uncertainty_type', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
@@ -1987,7 +2039,7 @@ def view_aggrisk(token, dstore):
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
     full_lt = dstore['full_lt'].init()
-    rlzs = list(full_lt.gsim_lt)
+    rlzs = full_lt.gsim_lt.get_realizations()
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):

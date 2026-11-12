@@ -784,5 +784,7 @@ window.initImpactForm = function() {
     $("#impact_run_form > input").click(function() {
         $(this).css("background-color", "white");
     });
+    // NB: this also enables the approach radios, which are disabled in the
+    // template so that they cannot be changed before the handlers are bound
     set_shakemap_version_selector();
 }

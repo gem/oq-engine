@@ -19,6 +19,7 @@ import zipfile
 import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.writers import write_csv
+from openquake.risklib.scientific import TIME_EVENTS
 
 
 DISPLAY_NAME = {
@@ -129,31 +130,22 @@ AGGRISK_FIELD_DESCRIPTION = {
 }
 
 
-# local times of the day corresponding to the time events
-TIME_WINDOWS = {
-    'day': 'the day (local time from 9:00 to 17:00)',
-    'night': 'the night (local time from 21:00 to 5:00)',
-    'transit': ('the transit hours (local time from 5:00 to 9:00'
-                ' and from 17:00 to 21:00)')}
-AIS = 'according to the Abbreviated Injury Severity (www.aisinjuryscale.org)'
+INJURED = ('Seriously or critically injured people according to the'
+           ' Abbreviated Injury Severity (www.aisinjuryscale.org)')
 
 AGGRISK_FIELD_EXPLANATION = {
     'affectedpop': ('Population living in buildings that sustained at least'
                     ' moderate damage'),
     'area': ('Total floor area (in m²) of buildings that sustained complete'
              ' damage'),
-    'injured': f'Seriously or critically injured people {AIS}',
+    'injured': INJURED,
     # injured_day, injured_night, injured_transit
-    **{f'injured_{te}': ('Seriously or critically injured people if the'
-                         f' event occurs during {when}, {AIS}')
-       for te, when in TIME_WINDOWS.items()},
+    **{f'injured_{te}': INJURED for te in TIME_EVENTS},
     'number': ('Number of buildings that sustained a level of damage beyond'
                ' repair (extensive damage or higher)'),
     'occupants': 'Number of fatalities',
     # occupants_day, occupants_night, occupants_transit
-    **{f'occupants_{te}': ('Number of fatalities if the event occurs'
-                           f' during {when}')
-       for te, when in TIME_WINDOWS.items()},
+    **{f'occupants_{te}': 'Number of fatalities' for te in TIME_EVENTS},
     'residents': ('Population living in buildings that sustained at least'
                   ' extensive damage'),
     'economic': ('Sum of structural and contents economic loss (in USD)'),

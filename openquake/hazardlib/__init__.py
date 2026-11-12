@@ -164,7 +164,8 @@ def get_smlt(hparams, sourceID=''):
                 hparams.get('sampling_method', 'early_weights'),
                 False,
                 hparams.get('smlt_branch', ''),
-                sourceID)
+                sourceID,
+                hparams.get('strict', True))
         smlt = logictree.SourceModelLogicTree(*args)
     elif 'source_model' in hparams['inputs']:
         smlt = logictree.SourceModelLogicTree.trivial(

@@ -247,7 +247,7 @@ def do_build_reports(directory):
 choices = ['calculators', 'cfg', 'config', 'consequences', 'site_params',
            'gsim', 'imt', 'views', 'exports', 'disagg', 'db',
            'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv',
-           'loss_types', 'uncertainty_types']
+           'loss_types', 'uncertainty_types', 'logic_trees']
 
 
 def is_upper(func):
@@ -323,6 +323,8 @@ def main(what, report=False):
         uncs.extend(lt.NOAPPLY_UNCERTAINTIES)
         for i, unc in enumerate(sorted(uncs), 1):
             print('%02d' % i, unc)
+    elif what.startswith('logic_trees'):
+        print_subclass(what, lt.AbstractLogicTree)
     elif what == 'correlation':
         print_correlation()
     elif what.startswith('mfd'):
