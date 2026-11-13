@@ -19,6 +19,7 @@
 import sys
 import gzip
 import unittest
+import pandas as pd
 import numpy
 from unittest import mock
 
@@ -511,7 +512,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # This is for checking purposes. It creates a .txt file that can be
         # read with QGIS
         if check:
-            import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
             fname = general.gettemp(suffix='.csv')
             print('Saving %s' % fname)
