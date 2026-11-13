@@ -142,6 +142,7 @@ def new(calc_id, oqparam, datadir=None, mode=None):
 def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
+
     The datastore can be used in a `with` block, which closes it on exit.
     """
     if ini is not None:
