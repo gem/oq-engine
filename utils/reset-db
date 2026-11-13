@@ -39,7 +39,7 @@ check_dep() {
 getdbpath() {
     local OQ_CFG='/etc/openquake/openquake.cfg'
     if [ -f $OQ_CFG ]; then
-        grep 'dbfile = ' $OQ_CFG | tr -d ' ' | cut -d '=' -f 2
+        grep '^file = ' $OQ_CFG | tr -d ' ' | cut -d '=' -f 2
     else
         echo -e "!! Configuration file not found. Aborting." >&2
         exit 1

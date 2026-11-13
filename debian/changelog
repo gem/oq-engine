@@ -1,3 +1,14 @@
+  [Michele Simionato]
+  * In server installations only the DbServer upgrades the database, when
+    it starts, and the WebUI waits for it; there the calculations left in
+    the executing state are not reset automatically anymore, since that
+    would also hit the running calculations: use `oq db reset_is_running`
+  * Restored the DbServer, as a Django service serving the internal `/v0`
+    API on the port of the `[dbserver]` section of openquake.cfg (1908),
+    which is the same as in engine 3.26: it is used by the regular users
+    of server installations, while the WebUI, run by gunicorn, serves the
+    `/v1` API; a non-empty `[server]` section now raises an error
+
   [Savas Ceylan]
   * Added Swiss site-specific SA corrections to ModifiableGMPE.
     Only site columns for the selected periods are required.

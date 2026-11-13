@@ -28,6 +28,7 @@ from openquake.engine.export import core
 from openquake.baselib.general import confirm
 from openquake.engine.tools.make_report import make_report as makerep
 from openquake.commands.abort import main as abort
+from openquake.server import dbserver
 
 
 DEFAULT_EXPORTS = 'csv,xml,rst'
@@ -145,9 +146,13 @@ def main(
 
     if not use_server():
         # with a remote database server the local dbfile is not used
-        fname = os.path.expanduser(config.server.dbfile)
+        fname = os.path.expanduser(config.dbserver.file)
         if check_dbfile(fname):
             upgrade_db = True  # automatically creates the db
+    elif dbserver.get_status() == 'not-running':
+        sys.exit('The DbServer is not running on %s: please start it with '
+                 '`sudo systemctl start openquake-dbserver`'
+                 % logs.dbserver_url())
 
     if upgrade_db:
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

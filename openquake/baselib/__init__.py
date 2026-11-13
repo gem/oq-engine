@@ -60,6 +60,19 @@ def positiveint(flag):
     return i
 
 
+# the [server] section was used by the development version of engine 3.27,
+# which had no DbServer; raise a clear error telling how to fix the file,
+# unless the section is empty, i.e. harmless
+def _check_no_server_section(found):
+    for path in found:
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read(path, encoding='utf8')
+        if parser.has_section('server') and parser.items('server'):
+            raise InvalidFile(
+                '%s: the [server] section is not supported, please rename '
+                'it [dbserver] and rename its key dbfile to file' % path)
+
+
 config = DotDict()  # global configuration
 d = os.path.dirname
 base = os.path.join(d(d(__file__)), 'engine', 'openquake.cfg')
@@ -100,6 +113,8 @@ def read(*paths, **validators):
         encoding='utf8')
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
+    if parser.has_section('server'):
+        _check_no_server_section(found)
     config.found = found
     config.clear()
     for section in parser.sections():
@@ -145,7 +160,9 @@ def is_server_installation():
 
 def use_server():
     """
-    :returns: True for regular users in a server installation
+    :returns: True if the database must be accessed through the DbServer,
+              i.e. for regular users in a server installation; in user
+              and devel installations the database is accessed directly
     """
     return is_server_installation() and getpass.getuser() != 'openquake'
 

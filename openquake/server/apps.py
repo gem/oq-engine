@@ -21,8 +21,6 @@ import importlib
 from django.apps import AppConfig
 from django.conf import settings
 from openquake.baselib import config
-from openquake.commonlib import dbapi
-from openquake.server.db import actions
 
 # optional dependencies needed in IMPACT mode: (module, package, purpose)
 IMPACT_DEPENDENCIES = [
@@ -54,11 +52,11 @@ class ServerConfig(AppConfig):
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
 
-        # reset any computation left in the 'executing' state;
-        # the database may not exist yet (this happens when building
-        # the docs, since doc/conf.py calls django.setup())
-        if actions.has_job_table(dbapi.db):
-            actions.reset_is_running(dbapi.db)
+        # NB: the database is upgraded by `oq dbserver start` in server
+        # installations and by `oq webui start` otherwise, never here,
+        # since this is called by each gunicorn worker; the computations
+        # left in the 'executing' state are reset by `oq webui start` in
+        # user and devel installations only
 
         if settings.APPLICATION_MODE not in settings.APPLICATION_MODES:
             raise ValueError(

@@ -23,7 +23,7 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 from openquake.server.db.tag_admin import tag_admin_site
-from openquake.server.internal_api import internal_urlpatterns
+from openquake.server.internal_api import ping, v1_urlpatterns
 
 urlpatterns = []
 if settings.WEBUI:
@@ -186,10 +186,14 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     else:
         urlpatterns = urlpatterns
 
-    # the internal API is always served at the root, as before
-    urlpatterns += internal_urlpatterns
+    # the internal v1 API is always served at the root, as before;
+    # the v0 API is served by the DbServer (see dbserver_urls.py)
+    urlpatterns += v1_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines
     # from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     # urlpatterns += staticfiles_urlpatterns()
+
+# the health check used by `oq webui status`, served in all modes
+urlpatterns.append(re_path(r'^v1/ping$', ping))

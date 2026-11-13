@@ -81,10 +81,6 @@ SIMPLE_FAULT_SRC_MODEL = os.path.join(
     NRML_DIR, 'source_model/simple-fault-source.xml')
 
 
-def setup_module():
-    os.environ['OQ_DATABASE'] = '127.0.0.1'
-
-
 class Print(object):
     def __init__(self):
         self.lst = []
@@ -929,4 +925,3 @@ class RunSiteTestCase(unittest.TestCase):
 def teardown_module():
     parallel.Starmap.shutdown()
     sap.runline('openquake.commands purge failed')
-    del os.environ['OQ_DATABASE']

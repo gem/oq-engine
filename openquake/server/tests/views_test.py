@@ -24,14 +24,18 @@ import socket
 import string
 import secrets
 import random
+import contextlib
 import subprocess
+from unittest import mock
 
 import django
 import psutil
 import requests
 from django.contrib.auth import get_user_model
 from django.test import Client
+from openquake.baselib import config
 from openquake.baselib.general import gettemp
+from openquake.commonlib import logs
 from openquake.commonlib.readinput import loadnpz
 
 
@@ -74,35 +78,80 @@ class WebuiClient:
         return self.session.head(self._url(path))
 
 
+# return a free TCP port on 127.0.0.1
+def _free_port():
+    sock = socket.socket()
+    sock.bind(('127.0.0.1', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+# start the Django development server in a process with the given settings
+# and wait until the given path answers
+def _start_server(settings_module, path):
+    port = _free_port()
+    # OQ_TEST makes the server behave as the test process, even if its
+    # command line does not contain 'pytest'
+    proc = subprocess.Popen([
+        sys.executable, '-m', 'openquake.server.manage', 'runserver',
+        '127.0.0.1:%d' % port, '--noreload', '--nothreading'],
+        env=dict(os.environ, OQ_TEST='1',
+                 DJANGO_SETTINGS_MODULE=settings_module))
+    client = WebuiClient('http://127.0.0.1:%d' % port)
+    for _ in range(200):
+        if proc.poll() is not None:
+            raise RuntimeError('Unable to start the %s test server'
+                               % settings_module)
+        try:
+            client.get(path)
+            return proc, None, client
+        except Exception:
+            time.sleep(0.1)
+    proc.terminate()
+    raise RuntimeError('Unable to start the %s test server' % settings_module)
+
+
 def start_webui():
     """
     Start a temporary WebUI server, using the Django development server, in
     a separate process for integration tests. Keeping the server out of the
     test process ensures the engine's ``fork()`` calls do not interact with
     Playwright's greenlet-based event loop, which would otherwise hang the
-    test session. The database is upgraded when the WSGI application loads.
+    test session. The database is upgraded by conftest.py.
     """
-    sock = socket.socket()
-    sock.bind(('127.0.0.1', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    # OQ_TEST makes the server behave as the test process, even if its
-    # command line does not contain 'pytest'
-    proc = subprocess.Popen([
-        sys.executable, '-m', 'openquake.server.manage', 'runserver',
-        '127.0.0.1:%d' % port, '--noreload', '--nothreading'],
-        env=dict(os.environ, OQ_TEST='1'))
-    client = WebuiClient('http://127.0.0.1:%d' % port)
-    for _ in range(200):
-        if proc.poll() is not None:
-            raise RuntimeError('Unable to start the WebUI test server')
-        try:
-            client.get('/v1/calc/list')
-            return proc, None, client
-        except Exception:
-            time.sleep(0.1)
-    proc.terminate()
-    raise RuntimeError('Unable to start the WebUI test server')
+    return _start_server('openquake.server.settings', '/v1/calc/list')
+
+
+def start_dbserver():
+    """
+    Start a temporary DbServer, serving the v0 API with the settings in
+    dbserver_settings.py, in a separate process. Stop it with stop_webui.
+    """
+    return _start_server('openquake.server.dbserver_settings', '/v0/ping')
+
+
+@contextlib.contextmanager
+def use_dbserver(client, *modules):
+    """
+    Emulate a regular user of a server installation in the test process:
+    the database is reached through the DbServer of the given client.
+    The function use_server is patched in logs and in the given modules.
+    """
+    old = dict(config.dbserver)
+    host, port = client.base_url.rsplit('/', 1)[1].split(':')
+    config.dbserver.update(host=host, port=int(port))
+    patches = [mock.patch.object(mod, 'use_server', new=lambda: True)
+               for mod in (logs,) + modules]
+    for patch in patches:
+        patch.start()
+    try:
+        yield
+    finally:
+        for patch in patches:
+            patch.stop()
+        config.dbserver.clear()
+        config.dbserver.update(old)
 
 
 def stop_webui(proc, _thread):

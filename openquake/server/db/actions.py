@@ -58,9 +58,11 @@ def has_job_table(db):
 
 def reset_is_running(db):
     """
-    Reset the flag job.is_running to False. This is called when the
-    The WebUI is restarted: the idea is that it is restarted only when
-    all computations are completed.
+    Reset the flag job.is_running to False and mark as failed the
+    computations in the 'executing' state. It is called by `oq webui start`
+    in user and devel installations, but not in server installations,
+    since it would also mark as failed the computations still running:
+    there use `oq db reset_is_running` when no computation is running.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     """

@@ -334,7 +334,7 @@ def main(what, report=False):
     elif what.startswith('geohash'):
         print_geohash(what)
     elif what == 'db':
-        print(config.server.dbfile)
+        print(config.dbserver.file)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':

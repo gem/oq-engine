@@ -47,6 +47,7 @@ from importlib.metadata import version, PackageNotFoundError
 from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
+import psutil
 from decorator import decorator
 from openquake.baselib import __version__, config
 import openquake
@@ -1587,6 +1588,32 @@ def socket_ready(hostport):
     finally:
         sock.close()
     return False if exc else True
+
+
+def stop_listening_process(port):
+    """
+    Terminate the process listening on the given TCP port, killing it
+    if it does not stop within 10 seconds.
+
+    :param port: a TCP port number
+    :returns: True if a process was found and stopped, False otherwise
+    """
+    pids = [conn.pid for conn in psutil.net_connections(kind='tcp')
+            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port]
+    # the pid is None for the processes of other users
+    if not pids or pids[0] is None:
+        return False
+    try:
+        proc = psutil.Process(pids[0])
+    except psutil.NoSuchProcess:
+        return False
+    proc.terminate()
+    try:
+        proc.wait(timeout=10)
+    except psutil.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+    return True
 
 
 port_candidates = list(range(1920, 2000))

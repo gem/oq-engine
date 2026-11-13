@@ -18,10 +18,11 @@
 import os
 import sys
 import getpass
-from openquake.baselib import config
+from openquake.baselib import config, is_server_installation
 from openquake.commonlib import logs
 from openquake.baselib.general import confirm
 from openquake.commands.purge import purge_one, purge_all
+from openquake.server import dbserver
 
 
 def main(yes=False):
@@ -32,7 +33,7 @@ def main(yes=False):
     if not ok:
         return
 
-    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if not os.path.isfile(dbpath):
         sys.exit('%s does not exist' % dbpath)
     else:
@@ -41,6 +42,9 @@ def main(yes=False):
             purge_one(calc_id, user, force=True)
         if os.access(dbpath, os.W_OK):   # single user mode
             purge_all(user)  # calculations in oqdata not in the db
+            if is_server_installation() and dbserver.stop_server():
+                # NB: if managed by systemd, it will be restarted
+                print('dbserver stopped')
             # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)

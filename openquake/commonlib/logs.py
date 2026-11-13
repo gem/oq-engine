@@ -46,18 +46,39 @@ WORKER_ACTIONS = {
 }
 
 
-def _worker_api(action, *args):
-    """Call a worker-control endpoint on the WebUI API."""
-    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
-    endpoint = '%s/v0/worker_%s' % (server.rstrip('/'), action[8:])
+def dbserver_url():
+    """
+    :returns: the URL of the DbServer, from the [dbserver] section
+    """
+    return 'http://%s:%s' % (config.dbserver.host, config.dbserver.port)
+
+
+# post a JSON payload to the DbServer and return the response
+def _post_dbserver(path, payload):
+    endpoint = dbserver_url() + path
     try:
-        response = requests.post(
-            endpoint, json={'args': args},
-            headers={'X-API-Key': API_KEY}, timeout=600)
-        response.raise_for_status()
+        return requests.post(
+            endpoint, json=payload, headers={'X-API-Key': API_KEY},
+            timeout=600)
+    except requests.ConnectionError as exc:
+        raise RuntimeError(
+            'The DbServer is not running on %s: please start it with '
+            '`sudo systemctl start openquake-dbserver`' % dbserver_url()
+        ) from exc
     except requests.RequestException as exc:
         raise RuntimeError(
-            'Unable to call worker endpoint %s: %s' % (endpoint, exc)) from exc
+            'Unable to call the DbServer endpoint %s: %s' % (endpoint, exc)
+        ) from exc
+
+
+def _worker_api(action, *args):
+    """Call a worker-control endpoint of the DbServer."""
+    response = _post_dbserver('/v0/worker_%s' % action[8:], {'args': args})
+    try:
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError('Worker action %s failed: %s' % (
+            action, response.text)) from exc
     return response.json()
 
 
@@ -94,16 +115,9 @@ def _encode_db_value(value):
 
 
 def _db_api(action, *args):
-    """Call a database action through the internal API endpoint."""
-    server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
-    endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
-    try:
-        response = requests.post(
-            endpoint, json={'args': _encode_db_value(args)},
-            headers={'X-API-Key': API_KEY}, timeout=600)
-    except requests.RequestException as exc:
-        raise RuntimeError(
-            'Unable to call database endpoint %s: %s' % (endpoint, exc)) from exc
+    """Call a database action through the DbServer."""
+    response = _post_dbserver(
+        '/v0/db/%s' % action, {'args': _encode_db_value(args)})
     if response.status_code == 404:
         raise dbapi.NotFound
     try:

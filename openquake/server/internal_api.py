@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Internal API of the WebUI, served by Django under the ``/v0`` and ``/v1``
-paths of the server.
+Internal API of the engine. The ``/v1`` routes are served by the WebUI,
+while the ``/v0`` routes (database and worker actions) are served by the
+DbServer, a separate Django service listening on the port
+``[dbserver] port`` of openquake.cfg.
 
-The functions without the ``v0_``/``v1_`` prefix implement the endpoints:
-they are called in-process by :mod:`openquake.server.views` and they raise
-:class:`ApiError` on failure. The decorated functions are the HTTP views,
-which check the internal API key and turn the outcome into a response.
+The functions without the ``v0_``/``v1_`` prefix are called in-process by
+:mod:`openquake.server.views` and they raise :class:`ApiError` on failure.
+The decorated functions are the HTTP views, which check the internal API
+key and turn the outcome into a response.
 """
 
 import json
@@ -202,11 +204,6 @@ def internal_view(*methods, auth=True):
             return run(func, request, *args)
         return view
     return decorator
-
-
-def _form(request):
-    """Return the form (fields and files) of a POST request."""
-    return make_form(request.POST, request.FILES)
 
 
 def _json_body(request):
@@ -640,12 +637,6 @@ def v1_impact_form_defaults(request):
     return impact_form_defaults()
 
 
-@internal_view('GET')
-def v0_model_provenance(request, calc_id):
-    """Return the model provenance of a calculation."""
-    return model_provenance(int(calc_id))
-
-
 @internal_view('POST')
 def v0_db_action(request, action):
     """Execute an allowlisted database action."""
@@ -658,115 +649,25 @@ def v0_worker(request, action):
     return worker_action(action, _json_body(request))
 
 
-@internal_view('POST')
-def v0_validate_ini(request):
-    """Validate an uploaded INI file."""
-    return validate_upload(_form(request), 'job_ini',
-                           'Missing job_ini file')
-
-
-@internal_view('POST')
-def v0_validate_zip(request):
-    """Validate an uploaded calculation archive."""
-    return validate_upload(_form(request), 'archive',
-                           'Missing archive file')
-
-
-@internal_view('POST')
-def v0_calc_run(request):
-    """Submit a calculation for an authenticated Django caller."""
-    return calc_run(_form(request))
-
-
-@internal_view('POST')
-def v0_calc_abort(request, calc_id):
-    """Abort a running calculation for an authenticated caller."""
-    return calc_abort(int(calc_id))
-
-
-@internal_view('POST')
-def v0_calc_remove(request, calc_id):
-    """Remove a calculation for an authenticated caller."""
-    username = request.POST.get('username')
-    if not username:
-        raise ApiError(422, 'Missing username')
-    return calc_remove(int(calc_id), username)
-
-
-@internal_view('POST')
-def v0_aelo_run(request):
-    """Run an AELO calculation for an authenticated Django caller."""
-    return aelo_run(_form(request))
-
-
-@internal_view('POST')
-def v0_run_scenario(request, rup_id):
-    """Run a papers scenario calculation for an authenticated caller."""
-    return run_scenario_calc_from_ses_rupture(int(rup_id), _form(request))
-
-
-@internal_view('POST')
-def v0_impact_run(request):
-    """Run IMPACT for an authenticated Django caller."""
-    return impact_run(_form(request))
-
-
-@internal_view('POST')
-def v0_impact_get_rupture_data(request):
-    """Build IMPACT rupture data for an authenticated Django caller."""
-    return impact_get_rupture_data(_form(request))
-
-
 @internal_view('GET', 'HEAD', auth=False)
-def v0_calc_log_size(request, calc_id):
-    """Return the number of log lines for a calculation."""
-    return calc_log_size(int(calc_id))
+def ping(request):
+    """Health check of the WebUI (/v1/ping) and of the DbServer (/v0/ping)."""
+    return 'ok'
 
 
-@internal_view('GET')
-def v0_calc_log(request, calc_id, start, stop):
-    """Return a calculation log slice."""
-    return calc_log(int(calc_id), int(start or 0), int(stop or 0))
-
-
-@internal_view('GET')
-def v0_calc_traceback(request, calc_id):
-    """Return the traceback for a calculation."""
-    return calc_traceback(int(calc_id))
-
-
-@internal_view('GET', 'HEAD')
-def v0_calc_result(request, result_id):
-    """Export a calculation result in the requested format."""
-    return calc_result(int(result_id), request.GET.get('export_type'))
-
-
-# the v1 routes are served only with the WebUI enabled (WEBUI = True)
-internal_urlpatterns = []
+# the v1 routes are served by the WebUI
+v1_urlpatterns = []
 if settings.WEBUI:
-    internal_urlpatterns += [
+    v1_urlpatterns += [
         re_path(r'^v1/calc_info/(\d+)$', v1_calc_info),
         re_path(r'^v1/calc_list/count$', v1_calc_list_count),
         re_path(r'^v1/aelo_site_classes$', v1_aelo_site_classes),
         re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
     ]
-internal_urlpatterns += [
-    re_path(r'^v0/calc/model_provenance/(\d+)$', v0_model_provenance),
+
+# the v0 routes are served by the DbServer only (see dbserver_urls.py)
+v0_urlpatterns = [
+    re_path(r'^v0/ping$', ping),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),
     re_path(r'^v0/worker_([^/]+)$', v0_worker),
-    re_path(r'^v0/calc/validate_ini$', v0_validate_ini),
-    re_path(r'^v0/calc/validate_zip$', v0_validate_zip),
-    re_path(r'^v0/calc/run$', v0_calc_run),
-    re_path(r'^v0/calc/(\d+)/abort$', v0_calc_abort),
-    re_path(r'^v0/calc/(\d+)/remove$', v0_calc_remove),
-    re_path(r'^v0/calc/aelo_run$', v0_aelo_run),
-    re_path(r'^v0/calc/run_scenario_calc_from_ses_rupture/(\d+)$',
-            v0_run_scenario),
-    re_path(r'^v0/calc/impact_run$', v0_impact_run),
-    re_path(r'^v0/calc/impact_get_rupture_data$',
-            v0_impact_get_rupture_data),
-    re_path(r'^v0/calc/(\d+)/log/size$', v0_calc_log_size),
-    re_path(r'^v0/calc/(\d+)/log/(\d*):(\d*)$', v0_calc_log),
-    re_path(r'^v0/calc/(\d+)/traceback$', v0_calc_traceback),
-    re_path(r'^v0/calc/result/(\d+)$', v0_calc_result),
 ]

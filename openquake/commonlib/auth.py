@@ -1,8 +1,6 @@
-"""Authentication values shared by the WebUI views and the internal API."""
-
-import os
+"""Authentication values shared by the DbServer and its clients."""
 
 from openquake.baselib import config
 
 
-API_KEY = os.environ.get('OQ_API_KEY') or config.webapi.authkey
+API_KEY = config.dbserver.authkey

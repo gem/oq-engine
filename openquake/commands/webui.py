@@ -21,11 +21,8 @@ import sys
 import subprocess
 import webbrowser
 
-import psutil
-
-from openquake.baselib import config, general
+from openquake.baselib import config, general, is_server_installation
 from openquake.commonlib import dbapi
-from openquake.commonlib.auth import API_KEY
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
@@ -33,24 +30,9 @@ commands = ['start', 'status', 'stop']
 
 
 # the health check uses an internal endpoint that is always served with
-# status 200, even when the WebUI is disabled (WEBUI = False).
-# Calculation 0 does not exist, so the log size returned is always 0:
-# only the status code matters here, not the value
+# status 200, even when the WebUI is disabled (WEBUI = False)
 def _health_url(hostport):
-    return 'http://' + hostport + '/v0/calc/0/log/size'
-
-
-def _find_webui_process(hostport):
-    """Find the process listening on the requested port."""
-    _host, port = hostport.rsplit(':', 1)
-    for connection in psutil.net_connections(kind='tcp'):
-        if (connection.status == psutil.CONN_LISTEN and
-                connection.laddr.port == int(port)):
-            try:
-                return psutil.Process(connection.pid)
-            except psutil.NoSuchProcess:
-                return None
-    return None
+    return 'http://' + hostport + '/v1/ping'
 
 
 def _status(hostport):
@@ -63,17 +45,11 @@ def _status(hostport):
 
 def _stop(hostport):
     """Stop the process serving the requested WebUI port."""
-    process = _find_webui_process(hostport)
-    if process is None:
+    _host, port = hostport.rsplit(':', 1)
+    if general.stop_listening_process(int(port)):
+        print('stopped')
+    else:
         print('WebUI is not running')
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=10)
-    except psutil.TimeoutExpired:
-        process.kill()
-        process.wait()
-    print('stopped')
 
 
 def runserver(hostport=None, skip_browser=False):
@@ -116,17 +92,18 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
-    os.environ.setdefault('OQ_API_KEY', API_KEY)
-    api_host, api_port = hostport.rsplit(':', 1)
-    if api_host == '0.0.0.0':
-        api_host = '127.0.0.1'
-    os.environ.setdefault(
-        'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
-    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
-    actions.upgrade_db(dbapi.db)
+    # in server installations the database is upgraded by the DbServer,
+    # which must be started before the WebUI
+    if not is_server_installation():
+        actions.upgrade_db(dbapi.db)
+        # reset the computations left in the 'executing' state; this is
+        # not done in server installations, where users may be running
+        # calculations while the services are restarted
+        actions.reset_is_running(dbapi.db)
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

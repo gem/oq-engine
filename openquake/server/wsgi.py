@@ -24,16 +24,18 @@ except ImportError:
     def setproctitle(title):
         """Do nothing when setproctitle is unavailable."""
 
-from openquake.baselib import config
+from openquake.baselib import config, is_server_installation
 from openquake.commonlib import dbapi
-from openquake.server.db import actions
+from openquake.server import dbserver
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 setproctitle('oq-webui')
-# Initialize the database before the application starts serving requests
 logging.warning(f'Using {config.found[-1]}')
 logging.warning(f'Using {dbapi.db.path}')
-actions.upgrade_db(dbapi.db)
+if is_server_installation():
+    # the database is upgraded by the DbServer, which must be started
+    # before the WebUI: wait for it before serving requests
+    dbserver.wait_running()
 
 from django.core.wsgi import get_wsgi_application  # noqa: E402
 

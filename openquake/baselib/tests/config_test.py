@@ -18,8 +18,9 @@
 
 import os
 import logging
+import tempfile
 import unittest
-from openquake.baselib import config
+from openquake.baselib import config, InvalidFile, _check_no_server_section
 
 
 class ConfigPathsTestCase(unittest.TestCase):
@@ -37,3 +38,26 @@ class ConfigPathsTestCase(unittest.TestCase):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')
         if cfgfile:
             self.assertEqual(config.paths[0], cfgfile)
+
+
+class ServerSectionTestCase(unittest.TestCase):
+    """The [server] section of the development version is an error"""
+
+    def check(self, text):
+        with tempfile.NamedTemporaryFile(
+                'w', suffix='.cfg', delete=False) as f:
+            f.write(text)
+        self.addCleanup(os.remove, f.name)
+        _check_no_server_section([f.name])
+        return f.name
+
+    def test_server_section(self):
+        with self.assertRaises(InvalidFile) as ctx:
+            self.check('[server]\ndbfile = /tmp/db.sqlite3\n')
+        self.assertIn('rename it [dbserver]', str(ctx.exception))
+
+    def test_empty_server_section(self):
+        self.check('[server]\n#host = localhost\n')  # harmless
+
+    def test_dbserver_section(self):
+        self.check('[dbserver]\nfile = /tmp/db.sqlite3\nport = 1908\n')

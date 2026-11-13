@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Switch the WebUI systemd unit of a server or devel installation to gunicorn,
-# as in doc/getting-started/installation-instructions/server.md, with
-# MPLCONFIGDIR=/tmp for the calculations started by the WebUI. Needs root.
+# Adapt the WebUI systemd unit of a server or devel installation, which
+# install.py writes with gunicorn, to the CI: 2 workers, a timeout of 120
+# seconds, the settings in WORKING_DIRECTORY and MPLCONFIGDIR=/tmp for the
+# calculations started by the WebUI. Needs root.
 #
 # Usage: webui_unit.sh WORKING_DIRECTORY   (the directory of openquake/server)
 set -euo pipefail
 UNIT=/etc/systemd/system/openquake-webui.service
-# gunicorn is an optional dependency: install it in the venv, but not the
-# openquake.engine[server] extra, which would replace the engine under test
-/opt/openquake/venv/bin/pip install "gunicorn>=26.2"
+# gunicorn is installed by install.py in server installations
+[ -x /opt/openquake/venv/bin/gunicorn ] || { echo "no gunicorn"; exit 1; }
 sed -i \
   -e "s|^WorkingDirectory=.*|WorkingDirectory=$1|" \
   -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \

@@ -104,9 +104,10 @@ jobs:
       # Local emulation without root: .github/scripts/emulate_server_install.sh
       # (see its header). What the emulation does NOT check, i.e. what only
       # the server step below and the install step above test:
-      #  - install.py and its systemd unit (/etc/systemd/system/
-      #    openquake-webui.service), including the sed that sets gunicorn
-      #    as ExecStart and the daemon-reload
+      #  - install.py and its systemd units (/etc/systemd/system/
+      #    openquake-webui.service and openquake-dbserver.service),
+      #    including the sed that adapts the gunicorn ExecStart to the CI
+      #    and the daemon-reload
       #  - the openquake user, file ownership, /var/log/oq-engine, and the
       #    secret in /etc/openquake/django_secret.env
       #  - the WebUI imported from /opt/openquake site-packages, not from
@@ -133,9 +134,10 @@ jobs:
       #  Effects to check: with N workers, N such requests make the WebUI
       #  unresponsive for everybody else; a worker that does not answer
       #  within --timeout is killed (log: WORKER TIMEOUT) and the client gets
-      #  a dropped connection; a calc run with oq engine --run by a user
-      #  other than openquake posts each log line to /v0/db/log and waits
-      #  for a free worker, so it can look stalled.
+      #  a dropped connection. A calc run with oq engine --run by a user
+      #  other than openquake posts each log line to /v0/db/log of the
+      #  DbServer (port 1908), a separate service, so it does not compete
+      #  with the WebUI for the gunicorn workers.
       - name: WebUI and calculation with Auth (server)
         if: matrix.kind == 'server'
         shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
@@ -163,9 +165,11 @@ jobs:
             "${SITE_PKG}openquake/server" openquake user2 user3 user4
           # gunicorn instead of runserver, as in the documentation
           "$SCRIPTS/webui_unit.sh" "${SITE_PKG}openquake/server"
-          # STOP AND START WEBUI
+          # STOP AND START WEBUI; restart the DbServer too, so that it reads
+          # the local settings written above
           systemctl stop openquake-webui
           sleep 10
+          systemctl restart openquake-dbserver
           systemctl start openquake-webui
       - name: Server checks (WebUI as openquake and user2, user3 and user4)
         # as root, for the journal; the checks are in server_checks.sh
@@ -175,6 +179,13 @@ jobs:
           ${{ github.workspace }}/.github/scripts/server_checks.sh \
             --repo ${{ github.workspace }} --base http://127.0.0.1:8800 \
             --access-log-dir /var/log/oq-engine --journal
+      - name: DbServer checks (server)
+        # as root, to create the regular user running oq engine --run
+        if: matrix.kind == 'server'
+        shell: sudo su root -c "bash --noprofile --norc -e -o pipefail {0}"
+        run: |
+          ${{ github.workspace }}/.github/scripts/dbserver_checks.sh \
+            ${{ github.workspace }}/openquake/qa_tests_data/classical/case_01
       # ---- devel ----
       - name: Create openquake user (devel_server)
         if: matrix.kind == 'devel_server'
@@ -241,7 +252,9 @@ jobs:
            '
            # gunicorn instead of runserver, as in the documentation
            sudo /home/openquake/oq-engine/.github/scripts/webui_unit.sh /home/openquake/oq-engine/openquake/server
-           # START WEBUI
+           # START WEBUI; restart the DbServer too, so that it reads the
+           # local settings written above
+           sudo systemctl restart openquake-dbserver
            sudo systemctl start openquake-webui
            # zip area source demo into job.zip
            zip job.zip ${{ github.workspace }}/demos/hazard/AreaSourceClassicalPSHA/*
@@ -252,3 +265,8 @@ jobs:
             --base http://127.0.0.1:8800 --user level_1_user \
             --password level_1_password --archive "${{ github.workspace }}/job.zip" \
             --access-log-dir /var/log/oq-engine
+      - name: DbServer checks (devel_server)
+        if: matrix.kind == 'devel_server'
+        run: |
+          sudo ${{ github.workspace }}/.github/scripts/dbserver_checks.sh \
+            ${{ github.workspace }}/openquake/qa_tests_data/classical/case_01
