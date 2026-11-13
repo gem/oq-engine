@@ -33,6 +33,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture)
 from openquake.hazardlib.geo.utils import (
     get_bounding_box, angular_mean, KM_TO_DEGREES, DEGREES_TO_RAD)
+from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 def msr_name(src):
@@ -604,9 +605,8 @@ class CollapsedPointSource(PointSource):
 
     def modify_set_recurrow(self, recurrow):
         """Apply an area-source recurrence row to the underlying points."""
+        # keep local: circular import with source.area
         from openquake.hazardlib.source.area import AreaSource
-        from openquake.hazardlib.mfd.evenly_discretized import (
-            EvenlyDiscretizedMFD)
 
         row = dict(recurrow)
         rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'

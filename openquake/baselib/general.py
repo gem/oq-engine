@@ -49,6 +49,7 @@ import numpy
 import pandas
 from decorator import decorator
 from openquake.baselib import __version__, config
+import openquake
 
 
 @contextmanager
@@ -689,7 +690,6 @@ def check_dependencies():
     Print a warning if we forgot to update the dependencies.
     Works only for development installations.
     """
-    import openquake
     if 'site-packages' in openquake.__path__[0]:
         return  # do nothing for non-devel installations
     pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])

@@ -34,6 +34,7 @@ from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -1350,7 +1351,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_93.__file__, concurrent_tasks='2')
 
-        from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)  # debug
 

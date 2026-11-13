@@ -250,6 +250,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         if len(rupids) < nr:
             # rup_id not unique
+            # keep local: circular import with calculators.views
             from openquake.calculators.views import text_table
             dupl, source_id = get_first_duplicate(
                 rup_array, self.datastore['source_info'][:])

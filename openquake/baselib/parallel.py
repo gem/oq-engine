@@ -236,6 +236,7 @@ def calc_dir(job_id_or_fname):
     if isinstance(job_id_or_fname, str):
         dirname = job_id_or_fname[:-5]  # strip .hdf5
     else:  # in SLURM clusters
+        # keep local: commonlib.logs imports this module (circular import)
         from openquake.commonlib.logs import dbcmd
         dirname = dbcmd('get_job', job_id_or_fname).ds_calc_dir
     try:
@@ -511,6 +512,7 @@ def sendback(res, zsocket):
     try:
         zsocket.send(res)
         if DEBUG:
+            # keep local: commonlib.logs imports this module (circular import)
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
                 msg = 'sent back %s' % humansize(nbytes)

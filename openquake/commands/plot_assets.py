@@ -35,6 +35,7 @@ def main(calc_id: int = -1, site_model=False,
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
+    # keep local: optional plotting dependency
     from openquake.hmtk.plotting.patch import PolygonPatch
 
     dstore = datastore.read(calc_id)

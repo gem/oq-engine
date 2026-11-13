@@ -495,6 +495,7 @@ class BaseSurface(metaclass=abc.ABCMeta):
         """
         Compute area as the sum of the mesh cells area values.
         """
+        # keep local: kite_fault imports this module (circular import)
         from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
         if isinstance(self, KiteSurface):
             _, _, _, area = self.get_cell_dimensions()

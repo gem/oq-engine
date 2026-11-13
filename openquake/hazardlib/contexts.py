@@ -44,6 +44,7 @@ from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
+from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
 I32 = numpy.int32
@@ -1515,7 +1516,6 @@ class ContextMaker(object):
                        slice(slc.start + start, slc.stop + start))
 
     def _gen_chunk_poes(self, ctx):
-        from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
@@ -1747,6 +1747,7 @@ class ContextMaker(object):
             4 attenuation curves mea, sig, tau, phi
             (up to 500 km from the site at steps of 5 km)
         """
+        # keep local: circular import through source and valid
         from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)
