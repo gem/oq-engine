@@ -17,19 +17,22 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-
+import logging
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         """Do nothing when setproctitle is unavailable."""
 
+from openquake.baselib import config
 from openquake.commonlib import dbapi
 from openquake.server.db import actions
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 setproctitle('oq-webui')
 # Initialize the database before the application starts serving requests
+logging.warning(f'Using {config.found[-1]}')
+logging.warning(f'Using {dbapi.db.path}')
 actions.upgrade_db(dbapi.db)
 
 from django.core.wsgi import get_wsgi_application  # noqa: E402
