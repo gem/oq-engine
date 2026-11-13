@@ -735,6 +735,12 @@ def create_services(inst):
         return
     secret_file = os.path.join(inst.ETC, "django_secret.env")
     create_secret_file(secret_file)
+    # openquake is not a system user, so when its last login session ends
+    # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
+    # objects (RemoveIPC=yes), including the semaphores of the running
+    # calculations, which then fail with BrokenProcessPool; with lingering
+    # the user is never considered logged out and its IPC objects are kept
+    subprocess.check_call(["loginctl", "enable-linger", "openquake"])
     for service in ["dbserver", "webui"]:
         service_name = f"openquake-{service}.service"
         service_path = "/etc/systemd/system/" + service_name
