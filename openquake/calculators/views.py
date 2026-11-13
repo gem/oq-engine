@@ -1302,8 +1302,9 @@ def view_calc_risk(token, dstore):
     """
     Compute the risk_by_event table starting from GMFs
     """
-    # avoid a mysterious circular import only on macos
+    # keep local: circular import with post_risk
     from openquake.calculators import event_based_risk as ebr
+    # avoid a mysterious circular import only on macos
     _, event_id = token.split(':')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']

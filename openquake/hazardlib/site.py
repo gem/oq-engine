@@ -64,6 +64,7 @@ def get_countries(lons, lats):
     """
     :returns: array of 3-letter country codes
     """
+    # keep local: readinput imports this module (circular import)
     from openquake.commonlib import readinput
     geom_df = readinput.read_countries_df()
     lonlats = numpy.zeros((len(lons), 2), numpy.float32)

@@ -25,6 +25,7 @@ import openquake.hazardlib.mfd.evenly_discretized as mfdeven
 import openquake.hazardlib.scalerel.base as msr
 import openquake.hazardlib.tom as tom
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
+from openquake.hazardlib.lt import apply_uncertainty
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.sourcewriter import build_hypo_depth_dist
@@ -627,7 +628,6 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
 
     def test_rate_split_partitions_fault_share(self):
         # BCHydro NVA fault source: recurSet + rateSplit + recurRow chain
-        from openquake.hazardlib.lt import apply_uncertainty
         fault = deepcopy(self.fault)
         fault.rate_frac = 0.3439
         apply_uncertainty('recurSet', fault,

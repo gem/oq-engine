@@ -155,6 +155,7 @@ def store_tagcol(dstore, indexer):
 
 
 def save_by_country(dstore):
+    # keep local: commonlib must not depend on calculators
     from openquake.calculators.views import text_table
     logging.info('Computing/storing assets_by_country')
     countries = dstore['tagcol/ID_0'][:]

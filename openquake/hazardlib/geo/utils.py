@@ -83,6 +83,7 @@ class PolygonPlotter(object):
         self.maxys = []
 
     def add(self, poly, **kw):
+        # keep local: hmtk is above hazardlib in the dependency tower
         from openquake.hmtk.plotting.patch import PolygonPatch
         minx, miny, maxx, maxy = poly.bounds
         self.minxs.append(minx)

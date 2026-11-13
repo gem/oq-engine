@@ -43,6 +43,7 @@ from openquake.pfd.primary_surf_rup.mammarella2024 import (
     TAB1,
     TAB2,
 )
+from openquake.hazardlib import valid
 
 
 def _normal_pdf(x: np.ndarray, mu: float, sigma: float) -> np.ndarray:
@@ -228,7 +229,6 @@ def test_width_model_instance_matches_msr(msr, cls_name, style):
     """A hazardlib width scalerel (instance or registered name) reproduces
     the TAB1/MSR width rows exactly (consumers take scalerel instances,
     resolved via mag_scale_rel, instead of integer MSR codes)."""
-    from openquake.hazardlib import valid
 
     model = Mammarella2024PrimarySR()
     params = dict(

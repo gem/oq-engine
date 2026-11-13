@@ -61,6 +61,7 @@ import os
 import numpy as np
 
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
+from openquake.hmtk.seismicity.gcmt_catalogue import GCMTHypocentre
 
 
 class GCMTCatalogueParserTestCase(unittest.TestCase):
@@ -203,7 +204,6 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
 
     def test_read_centroid_from_ndk_string(self):
         import datetime
-        from openquake.hmtk.seismicity.gcmt_catalogue import GCMTHypocentre
 
         tmps = """CENTROID:      1.060.0  10.47 0.03  127.42 0.03  15.0  0.0 BDY  O-00000000000000"""
 

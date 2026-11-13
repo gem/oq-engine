@@ -275,6 +275,7 @@ def parse_header(header):
 if __name__ == '__main__':  # pretty print of NRML files
     import sys
     import shutil
+    # keep local: baselib must not depend on hazardlib
     from openquake.hazardlib import nrml
     nrmlfiles = sys.argv[1:]
     for fname in nrmlfiles:
