@@ -88,7 +88,12 @@ class ImpactParam:
 
         if not self.trt:
             # NOTE: using the first tectonic region type
-            self.trt = next(iter(trts[self.mosaic_model]))
+            mtrts = trts.get(self.mosaic_model, [])
+            if not mtrts:  # the exposure has no TRTs for this model
+                raise SiteAssociationError(
+                    'No tectonic region types for the mosaic model %s '
+                    'in the exposure' % self.mosaic_model)
+            self.trt = next(iter(mtrts))
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
             base_path='',  # no .ini file
