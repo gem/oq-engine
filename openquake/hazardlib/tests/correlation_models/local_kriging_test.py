@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -144,3 +145,19 @@ def test_input_shapes():
         factor.apply(numpy.zeros((2, 15, 1)), numpy.zeros((2, 1)))
     with pytest.raises(ValueError, match='Expected local errors'):
         factor.apply(numpy.zeros((2, 16, 1)), numpy.zeros((1, 1)))
+
+
+@pytest.mark.parametrize('count,budget', [(1, 1024), (1000, 4 * 1024 ** 2)])
+def test_setup_memory_guard(count, budget):
+    grid = grid_sites((10, 10))
+    layout = RegularGridLayout.from_sites(grid, crs=TEST_CRS)
+    stations = geographic_sites(
+        numpy.linspace(504_100., 504_200., count),
+        numpy.full(count, 4_204_100.))
+    with patch('openquake.hazardlib.correlation_models.local_kriging.'
+               '_build_group') as allocate:
+        with pytest.raises(ValueError, match='setup bytes'):
+            LocalKrigingFactor.build(
+                DuNing2021(), [PGA()], layout, stations,
+                memory_budget=budget)
+        allocate.assert_not_called()

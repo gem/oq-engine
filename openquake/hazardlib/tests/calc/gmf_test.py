@@ -30,6 +30,8 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.correlation_models.base import CorrelationContext
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor)
+from openquake.hazardlib.correlation_models.output_sites import (
+    OutputSitesFactor)
 from openquake.hazardlib.correlation_models.cross_imt.baker_jayaram_2008 \
     import BakerJayaram2008
 from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 \
@@ -37,7 +39,7 @@ from openquake.hazardlib.correlation_models.spatial.heresi_miranda_2019 \
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
-    import DuNing2021
+    import DuNing2021, DuNing2021Interpolated
 from openquake.hazardlib.correlation_models.spatial_cross_imt.\
     loth_baker_2013 import LothBaker2013
 from openquake.hazardlib.imt import PGA, SA
@@ -80,10 +82,11 @@ def regular_sites(shape):
     return SiteCollection.from_points(lons, lats)
 
 
-def build_full_computer(num_events=5, truncation_level=99):
+def build_full_computer(num_events=5, truncation_level=99, sites=None,
+                        model=None, imts=None):
     """Return a small, fully operational CE GMF computer."""
     cmaker = simple_cmaker(
-        [data.ZeroMeanGMM()], ['PGA', 'SA(0.3)'],
+        [data.ZeroMeanGMM()], imts or ['PGA', 'SA(0.3)'],
         truncation_level=truncation_level)
     cmaker.oq.calculation_mode = 'scenario'
     cmaker.oq.correlation_strategy = 'circulant_embedding'
@@ -94,7 +97,36 @@ def build_full_computer(num_events=5, truncation_level=99):
         id=0, e0=0)
     ebr.seed = 7
     return GmfComputer(
-        ebr, regular_sites((2, 3)), cmaker, DuNing2021())
+        ebr, sites if sites is not None else regular_sites((2, 3)), cmaker,
+        model or DuNing2021())
+
+
+def test_irregular_scenario_batches():
+    # Exercise actual selection and streaming above the small-dense cutoff,
+    # including the SA(0.6) period used by the scenario collection.
+    rng = numpy.random.default_rng(17)
+    sites = SiteCollection.from_points(
+        data.LON + rng.uniform(-0.1, 0.1, 624),
+        data.LAT + rng.uniform(-0.1, 0.1, 624))
+    before = sites.array.copy()
+    computer = build_full_computer(
+        3, 2, sites, DuNing2021Interpolated(),
+        ['PGA', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)'])
+    batches = list(computer.compute_all_batches())
+    assert isinstance(computer._ce_factor, OutputSitesFactor)
+    actual = pandas.concat([batch[0] for batch in batches])
+    assert len(actual) == 624 * 3
+    assert not actual.duplicated(['sid', 'eid']).any()
+    assert numpy.isfinite(actual[computer.gmv_fields].to_numpy()).all()
+    numpy.testing.assert_array_equal(sites.array, before)
+    other = build_full_computer(
+        3, 2, sites, DuNing2021Interpolated(),
+        ['PGA', 'SA(0.3)', 'SA(0.6)', 'SA(1.0)'])
+    other._ce_factor, other._ce_checked = computer._ce_factor, True
+    with mock.patch.object(GmfComputer, '_ce_batch_size', return_value=1):
+        split = pandas.concat([b[0] for b in other.compute_all_batches()])
+    pandas.testing.assert_frame_equal(actual.reset_index(drop=True),
+                                     split.reset_index(drop=True))
 
 
 def collect_batches(batch_size):
@@ -103,6 +135,18 @@ def collect_batches(batch_size):
             GmfComputer, '_ce_batch_size', return_value=batch_size):
         batches = list(computer.compute_all_batches())
     return pandas.concat([batch[0] for batch in batches]), batches
+
+
+def test_ce_output_memory_guard():
+    computer = build_computer(regular_sites((2, 3)))
+    factor = computer._get_ce_factor()
+    budget = factor.nbytes + factor.workspace_bytes_per_realization
+    limited = mock.patch('openquake.hazardlib.calc.gmf._correlation_budget',
+                         return_value=budget)
+    with limited, mock.patch('numpy.empty') as allocate:
+        with pytest.raises(ValueError, match='workspace'):
+            computer._draw_ce_eps(factor, 3)
+        allocate.assert_not_called()
 
 
 @pytest.mark.parametrize('model_cls', [DuNing2021, LothBaker2013])
@@ -278,3 +322,20 @@ def test_cross_im_memory():
     # of the site count, instead of a dense joint field matrix.
     model = BakerJayaram2008()
     assert _dense_correlation_bytes(model, range(50_000), 4) == 3 * 4 ** 2 * 8
+
+
+def test_pga_only_memory_guard():
+    # A single output IMT still evaluates all seven PCs. A three-matrix
+    # estimate would incorrectly allow dense setup in this small budget.
+    rng = numpy.random.default_rng(19)
+    sites = SiteCollection.from_points(
+        -122 + rng.uniform(-1, 1, 400), 38 + rng.uniform(-1, 1, 400))
+    computer = build_computer(sites)
+    computer.M, computer.imts = 1, [PGA()]
+    computer.within_event_model = DuNing2021Interpolated()
+    with mock.patch('openquake.hazardlib.calc.gmf._correlation_budget',
+                    return_value=8 * 1024 ** 2):
+        with mock.patch.object(computer.within_event_model, 'factor') as dense:
+            with pytest.raises(ValueError, match='dense sampling requires'):
+                computer._draw_within_eps(2)
+            dense.assert_not_called()

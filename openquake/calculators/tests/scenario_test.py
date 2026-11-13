@@ -313,6 +313,17 @@ class ScenarioTestCase(CalculatorTestCase):
             'stationlist_seismic_zero_im_value.csv',
             str(ctx.exception))
 
+    def test_conditioned_projection_metadata(self):
+        self.run_calc(
+            case_24.__file__, 'job.ini',
+            within_event_correlation_model='DuNing2021Interpolated',
+            between_event_correlation_model='AbrahamsonEtAl2014BetweenEvent',
+            correlation_strategy='circulant_embedding')
+        ds = self.calc.datastore
+        assert ds['sitecol'].grid_crs
+        if 'complete' in ds:
+            assert ds['complete'].grid_crs == ds['sitecol'].grid_crs
+
     def test_case_26_stations(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')

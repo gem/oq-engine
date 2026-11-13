@@ -239,8 +239,12 @@ The OpenQuake engine therefore uses one local transverse Mercator projection
 for the whole grid and evaluates covariance lags using Euclidean distances in
 that plane. New grids use a projection centred on their longitude extent.
 The selected projection is reused for station interpolation; geographic sites
-are not moved or resampled. An explicit CRS passed to
-``RegularGridLayout.from_sites`` is always respected.
+are not moved or resampled. ``oq prepare_site_model`` records ``grid_crs`` in
+the CSV comment and the engine retains the projection, spacing and origin
+through site filtering, exposure association and datastore serialization.
+An explicit CRS passed to ``RegularGridLayout.from_sites`` takes precedence.
+Files without projection metadata are checked in a local transverse Mercator
+projection and plausible neighbouring UTM zones using the same fit tolerance.
 
 Other suitable planar projections can also be used for circulant embedding.
 A valid embedding reproduces the covariance model evaluated using distances
@@ -280,8 +284,10 @@ grid; the embedding does not replace the model with a periodic approximation
 there.
 
 The engine uses this path automatically for sufficiently large compatible
-models and regular grids. Grid cells may be unoccupied, provided the enclosing
-rectangle is not excessively larger than the requested site collection. The
+models and regular grids. Grid cells may be unoccupied; occupancy alone does
+not determine whether a grid can be sampled. The affected envelope is cropped
+without changing its original projection or spacing. Setup and realization
+workspaces must fit ``memory.correlated_gmf_gb`` per worker. The
 periodic embedding is enlarged until its spectrum is positive semidefinite;
 the calculation stops with an explanatory error when that cannot be achieved
 within the supported enlargement.
@@ -298,7 +304,11 @@ conditional draw is
 
 This avoids constructing or factorizing the dense target posterior covariance.
 The target-to-station regression weights are built once in memory-bounded site
-chunks and reused for every realization batch.
+chunks and reused for every realization batch when they fit the budget. For
+larger target/station systems, the engine instead solves the station system
+for each realization batch and contracts target covariance blocks directly.
+This gives the same posterior without retaining the complete regression
+matrix or multiplying every target row by the entire station inverse.
 
 Circulant embedding samples directly only on the grid. Observations that
 coincide with grid cells use the same simulated values exactly. Off-grid
@@ -308,6 +318,37 @@ the same grid box are sampled jointly across all IMTs. Conditional errors from
 different grid boxes are assumed independent. The regular-grid field itself
 is exact for the embedded covariance; this conditional-independence assumption
 is the approximation introduced for irregular station locations.
+
+Irregular scenario output locations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Scenarios using ``DuNing2021Interpolated`` may also retain irregular output
+locations. The GMM is evaluated at those locations with their original site
+parameters. Only correlation sampling uses an internal coordinate-only grid;
+the output-site IDs and exposure associations are retained. Small irregular
+subsets of at most 500 sites use dense sampling when it fits the budget.
+Larger subsets also fall back to dense sampling when CE cannot fit but the
+dense calculation can.
+Other correlation models retain their existing output-grid requirements.
+
+The internal grid has 0.25 km spacing and a fourth-order local-kriging
+neighbourhood. Du--Ning's independent same-location nugget is sampled at the
+requested locations, jointly across IMTs, rather than interpolated from grid
+cells. Coincident targets and stations share the same nugget draw. The
+continuous grid covariance is represented by seven independent scalar CE
+fields and the publication's normalized PC loadings; this is equivalent to
+factoring its cross-IMT spectral covariance and reduces retained storage.
+
+The local-kriging extension remains approximate across grid boxes. Its
+deterministic regression checks compare implied prior and posterior
+covariances, including metre-scale pairs across box boundaries, with a maximum
+absolute error of 0.01 in normalized residual covariance. This is an accuracy
+check on those configurations, not a uniform mathematical error bound for
+every possible layout. Projection distortion is a separate approximation.
+The engine does not coarsen the internal grid to make a calculation fit in
+memory; it reports insufficient workspace when no supported sampler fits.
+The new output-location adapter is restricted to scenario calculations;
+rupture-local event-based integration is separate work.
 
 Configuration examples are provided in the User Guide for
 :ref:`scenario hazard <scenario-hazard-params>`,

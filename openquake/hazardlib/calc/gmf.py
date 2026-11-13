@@ -38,6 +38,10 @@ from openquake.hazardlib.correlation_models.base import (
     SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
+from openquake.hazardlib.correlation_models.output_sites import (
+    DENSE_SITE_LIMIT, OutputSitesFactor, _covariance_buffers)
+from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
+    import DuNing2021Interpolated
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -63,7 +67,8 @@ def _dense_correlation_bytes(model, sites, num_imts):
         matrices = num_imts + 2
         return matrices * num_sites ** 2 * 8
     dimension = num_imts * len(sites)
-    return 3 * dimension ** 2 * 8
+    buffers = _covariance_buffers(model, num_imts, num_imts, copies=3)
+    return max(3 * dimension ** 2 * 8, 8 * buffers * len(sites) ** 2)
 
 
 def _site_positions(complete, selected):
@@ -659,39 +664,60 @@ class GmfComputer(object):
             return None
 
         try:
-            complete, layout = _ce_layout(self.sites)
-            positions = _site_positions(complete, self.sites)
-            site_indices = layout.site_indices[positions]
-            self._ce_factor = CirculantEmbeddingFactor.build(
-                model, self.imts, layout.grid_shape, layout.spacing,
-                ResidualComponent.WITHIN_EVENT,
-                self.correlation_context, site_indices,
-                memory_budget=_correlation_budget())
+            self._ce_factor = self._build_ce_factor(model, dense_bytes)
         except ValueError as exc:
             if dense_bytes > _correlation_budget():
                 raise ValueError(
                     f'Cannot sample {model.__class__.__name__} within the '
-                    f'correlation memory budget: {exc}') from exc
+                    f'correlation memory budget: {exc}; dense sampling '
+                    f'requires about {humansize(dense_bytes)}') from exc
             logging.warning(
                 'Falling back to dense %s correlation: %s',
                 model.__class__.__name__, exc)
             return None
 
-        factor = self._ce_factor
-        logging.info(
-            'Using circulant embedding for %s: grid=%sx%s, '
-            'occupancy=%.1f%%, embedding=%sx%s, factor=%s',
-            model.__class__.__name__, *layout.grid_shape,
-            100 * layout.occupancy, *factor.embedded_shape,
-            humansize(factor.spectral_root.nbytes))
+        return self._ce_factor
+
+    def _build_ce_factor(self, model, dense_bytes):
+        # Only the interpolated model's scenario output adapter is enabled.
+        budget = _correlation_budget()
+        try:
+            complete, layout = _ce_layout(self.sites)
+        except ValueError:
+            mode = getattr(self.cmaker.oq, 'calculation_mode', 'scenario')
+            if not (model.__class__ is DuNing2021Interpolated and
+                    mode.startswith('scenario')):
+                raise
+            if len(self.sites) <= DENSE_SITE_LIMIT and dense_bytes <= budget:
+                return None
+            factor = OutputSitesFactor.build(
+                model, self.imts, self.sites, self.correlation_context,
+                memory_budget=budget)
+            logging.info('Using irregular CE output sampling: grid=%s, '
+                         'spacing=%s km, factor=%s',
+                         factor.local.layout.grid_shape,
+                         factor.local.layout.spacing, humansize(factor.nbytes))
+            return factor
+        positions = _site_positions(complete, self.sites)
+        factor = CirculantEmbeddingFactor.build(
+            model, self.imts, layout.grid_shape, layout.spacing,
+            ResidualComponent.WITHIN_EVENT, self.correlation_context,
+            layout.site_indices[positions], memory_budget=budget)
+        logging.info('Using circulant embedding for %s: grid=%sx%s, '
+                     'occupancy=%.1f%%, embedding=%sx%s, factor=%s',
+                     model.__class__.__name__, *layout.grid_shape,
+                     100 * layout.occupancy, *factor.embedded_shape,
+                     humansize(factor.nbytes))
         return factor
 
     def _draw_ce_eps(self, factor, num_events, rng=None):
         """Draw correlated residual fields in bounded FFT batches."""
         if rng is None:
             rng = self.rng
+        output_bytes = 4 * factor.output_size * num_events
         batch_size = min(
-            num_events, factor.batch_size(_correlation_budget()))
+            num_events,
+            factor.batch_size(_correlation_budget() - output_bytes))
         correlated = np.empty(
             (factor.output_size, num_events), dtype=F32)
         for start in range(0, num_events, batch_size):

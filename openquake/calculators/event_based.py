@@ -45,7 +45,10 @@ from openquake.hazardlib.calc.gmf import GmfComputer, TRUNCATION_THRESHOLD
 from openquake.hazardlib.calc.conditioned_gmfs import (
     ConditionedGmfComputer, build_precomputed, conditionable_imts,
     conditioned, conditioned_ce, grid_crs, use_circulant_conditioning,
-    use_joint_conditioning, use_joint_gaussian_sampling)
+    use_joint_conditioning, use_joint_gaussian_sampling,
+    _conditioning_block_cost)
+from openquake.hazardlib.correlation_models.output_sites import (
+    _covariance_buffers)
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
@@ -466,21 +469,25 @@ def _conditioned_memory(
         computer, num_stations, G, N, compute_covs, memory_limit):
     """Estimate peak arrays used by conditioned-GMF worker tasks."""
     joint = use_joint_conditioning(computer)
+    if joint:
+        M, J = len(computer.inp.imts_Y), len(computer.inp.imts_D)
+        Q = J * num_stations
+        model = computer.inp.within_event_model
+        station = (8 * num_stations ** 2 *
+                   _covariance_buffers(model, J, J, copies=4))
+        cost = _conditioning_block_cost(computer.inp)
     if compute_covs and use_circulant_conditioning(computer):
-        M = len(computer.inp.imts_Y)
-        Q = len(computer.inp.imts_D) * num_stations
         T = M * N
-        weights = T * Q * 8
-        station = 4 * Q * Q * 8
-        one_field = 64 * T
         per_worker = memory_limit // G
+        weights = min(T * Q * 8, per_worker // 4)
+        one_field = 64 * T
         available = max(
             0, per_worker - weights - station - one_field)
         elements_per_site = M * Q
-        block = available // (6 * 8)
+        block = min(available, per_worker // 8) // cost
         block = block // elements_per_site * elements_per_site
         block = min(T * Q, max(elements_per_site, block))
-        chunks = 6 * block * 8
+        chunks = cost * block
         size = G * (weights + station + one_field + chunks)
         detail = (f'{G=} * ({humansize(weights)} regression weights + '
                   f'{humansize(station)} stations + '
@@ -488,13 +495,11 @@ def _conditioned_memory(
                   f'{humansize(chunks)} chunks)')
         return (size, detail, 'circulant conditioning workspace', block)
     if compute_covs and joint:
-        M = len(computer.inp.imts_Y)
-        Q = len(computer.inp.imts_D) * num_stations
         T = M * N
         E = computer.E // G
-        dense = 4 * T * T * 8
-        cross = 2 * T * Q * 8
-        station = 4 * Q * Q * 8
+        dense = 8 * N * N * _covariance_buffers(model, M, M, copies=4)
+        cross = (8 * N * num_stations *
+                 _covariance_buffers(model, M, J, copies=2))
         samples = T * E * 20 + T * 4
         size = G * (dense + cross + station + samples)
         detail = (f'{G=} * ({humansize(dense)} dense + '
@@ -507,21 +512,18 @@ def _conditioned_memory(
         detail = f'{G=} * {humansize(N*N*8)} * 2'
         return size, detail, 'tau, phi', None
     if joint:
-        M = len(computer.inp.imts_Y)
-        Q = len(computer.inp.imts_D) * num_stations
         T = M * N
         E = computer.E // G
-        station = 4 * Q * Q * 8
         results = T * (E + 1) * 4
         elements_per_site = M * Q
         if not elements_per_site:
             raise ValueError(
                 'Joint conditioning requires target and observed IMTs')
         available = max(0, memory_limit // G - station - results)
-        block = available // (3 * 8)
+        block = min(available, memory_limit // G // 8) // cost
         block = block // elements_per_site * elements_per_site
         block = min(T * Q, max(elements_per_site, block))
-        chunks = 3 * block * 8
+        chunks = cost * block
         sites_per_chunk = block // elements_per_site
         size = G * (chunks + station + results)
         detail = (f'{G=} * ({humansize(chunks)} chunks for '
@@ -703,6 +705,10 @@ def run(func, oq, rup0, calc):
         if station_sites:
             # the projection of the grid is computed from all the stations
             crs = grid_crs(calc.sitecol.complete, station_df.index)
+            if oq.correlation_strategy == 'circulant_embedding':
+                for name in ('sitecol', 'complete'):
+                    if name in dstore:
+                        dstore.set_attrs(name, grid_crs=crs)
             run_conditioned(oq, proxy, full_lt, calc,
                             station_data, station_sites, crs)
             return

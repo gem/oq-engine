@@ -360,12 +360,17 @@ def _spectral_root(covariance_lags):
     return minimum, spectrum
 
 
-def _embedding_bytes(shape, num_imts, output_sites):
+def _embedding_bytes(shape, num_imts, output_sites, evaluation_buffers=48):
     # Conservative peak setup/sampling bytes, before allocating a grid.
     cells = prod(shape)
     # Covariance lags, FFT storage, model evaluation temporaries and bounded
     # eigensolver strips. Drawing also retains the factor and FFT workspace.
-    setup = 8 * cells * (4 * num_imts ** 2 + 40)
+    # Model evaluation and FFT setup happen sequentially. Three covariance-
+    # sized buffers bound the separable FFT; 48 scalar buffers also cover
+    # the seven-PC Du--Ning evaluator at small IMT counts.
+    setup = 8 * cells * max(num_imts ** 2 + evaluation_buffers,
+                           3 * num_imts ** 2)
+    setup += 6 * min(cells, 65536) * num_imts ** 2 * 16
     sampling = (16 * shape[0] * (shape[1] // 2 + 1) * num_imts ** 2 +
                 32 * cells * num_imts + 8 * output_sites * num_imts)
     return max(setup, sampling)
@@ -406,7 +411,9 @@ class CirculantEmbeddingFactor:
             # Extending the periodic domain reduces artificial interaction
             # across its boundary while preserving the requested covariance.
             embedded_shape = _embedding_shape(grid_shape, multiplier)
-            required = _embedding_bytes(embedded_shape, len(imts), num_sites)
+            required = _embedding_bytes(
+                embedded_shape, len(imts), num_sites,
+                getattr(model, 'CE_EVALUATION_BUFFERS', 48))
             if memory_budget is not None and required > memory_budget:
                 raise ValueError('The circulant embedding requires at least '
                                  f'{required} workspace bytes; configured '
@@ -414,6 +421,7 @@ class CirculantEmbeddingFactor:
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
             minimum, root = _spectral_root(covariance_lags)
+            del covariance_lags
             if root is not None:
                 indices = cls._validate_indices(site_indices, grid_shape)
                 return cls(
