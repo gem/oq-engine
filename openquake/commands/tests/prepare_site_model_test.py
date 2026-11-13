@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy
 import pytest
 
-from openquake.baselib import sap
+from openquake.baselib import sap, hdf5
 from openquake.commands import prepare_site_model as command
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.regular_grid import regular_grid
@@ -66,7 +66,9 @@ def test_csv_grid(tmp_path, source):
         [str(vs30)], z1pt0=True, z2pt5=True, vs30measured=True,
         sentinel_z=True, regular_grid=True, grid_spacing=1,
         output=str(output), **options)
-    data = numpy.genfromtxt(output, names=True, delimiter=',')
+    restored = hdf5.read_csv(str(output))
+    data = restored.array
+    assert restored.grid_crs == sitecol.grid_crs
     # Nearest-Vs30 assignment must retain every cell, including empty ones.
     assert len(sitecol) == len(data) == len(grid.lons)
     numpy.testing.assert_array_equal(data['lon'], grid.lons)
@@ -105,7 +107,7 @@ def test_rupture_grid(tmp_path, filename):
         [str(vs30)], rupture=str(OPENQUAKE / filename),
         grid_spacing=1, maximum_distance=20, output=str(output),
         assoc_distance=20000)
-    data = numpy.genfromtxt(output, names=True, delimiter=',')
+    data = hdf5.read_csv(str(output)).array
     # SiteCollection normalizes longitudes; compare at CSV precision.
     numpy.testing.assert_array_equal(data['lon'], numpy.round(sitecol.lons, 5))
     numpy.testing.assert_array_equal(data['lat'], numpy.round(sitecol.lats, 5))

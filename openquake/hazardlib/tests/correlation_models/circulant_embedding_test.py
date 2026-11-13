@@ -172,6 +172,46 @@ def test_irregular_layout():
         RegularGridLayout.from_sites(sites)
 
 
+def test_lattice_metadata_survives_reduction(tmp_path):
+    from openquake.baselib import hdf5
+    from openquake.hazardlib.site import SiteCollection
+    sites, _ = geographic_grid((32, 34))
+    complete = SiteCollection.from_points(sites.lons, sites.lats)
+    original = RegularGridLayout.from_sites(complete, crs='EPSG:32610')
+    complete.grid_crs = original.crs
+    complete.grid_spacing = original.spacing
+    complete.grid_origin = original.projected_origin
+    selected = complete.filtered([0, 33, 1054, 1087])
+    selected.make_complete()
+    path = str(tmp_path / 'lattice.hdf5')
+    with hdf5.File(path, 'w') as stream:
+        stream['sitecol'] = selected
+    with hdf5.File(path, 'r') as stream:
+        restored = stream['sitecol']
+    fitted = RegularGridLayout.from_sites(restored)
+    assert fitted.grid_shape == original.grid_shape
+    assert fitted.occupancy < 0.01
+    assert fitted.maximum_error < 1
+    numpy.testing.assert_array_equal(restored.sids, selected.sids)
+
+
+def test_crop_reorders_cells():
+    sites, _ = geographic_grid((6, 7))
+    layout = RegularGridLayout.from_sites(sites)
+    cropped = layout.cropped(numpy.array([24, 9, 16]))
+    assert cropped.grid_shape == (3, 2)
+    numpy.testing.assert_array_equal(cropped.site_indices, [5, 0, 2])
+    assert cropped.crs == layout.crs
+    assert cropped.spacing == layout.spacing
+
+
+@pytest.mark.parametrize('crs', ['EPSG:4326', 'EPSG:2263', 'invalid'])
+def test_metric_crs(crs):
+    sites, _ = geographic_grid((3, 4))
+    with pytest.raises(ValueError, match='projection'):
+        RegularGridLayout.from_sites(sites, crs=crs)
+
+
 def test_padding():
     # This physical extent is too short for the model's long-range
     # components at the minimal embedding size.
@@ -201,7 +241,7 @@ def test_input_shape(model_cls):
 def test_batch_size(model_cls):
     factor = CirculantEmbeddingFactor.build(
         model_cls(), IMTS, (2, 3), 1.0)
-    fixed = factor.spectral_root.nbytes
+    fixed = factor.nbytes
     per_realization = factor.workspace_bytes_per_realization
 
     assert factor.batch_size(fixed + 3 * per_realization) == 3

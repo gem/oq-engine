@@ -468,7 +468,15 @@ def grid_crs(complete, station_sids):
     :returns: the projection of the target grid, i.e. of the complete sites
         without the stations, which the grid is regular in
     """
+    if complete.grid_crs:
+        return complete.grid_crs
     grid = complete.filter(~numpy.isin(complete.sids, station_sids))
+    if grid is not None:
+        try:
+            return RegularGridLayout.from_sites(grid).crs
+        except ValueError:
+            pass  # An internal sampling grid will enclose irregular targets.
+    grid = complete if grid is None else grid
     return _local_crs(grid.lons, grid.lats)
 
 

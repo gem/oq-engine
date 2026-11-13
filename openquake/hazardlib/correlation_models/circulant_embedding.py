@@ -32,6 +32,7 @@ multidimensional Gaussian stochastic simulations. Water Resources Research,
 """
 
 from dataclasses import dataclass
+from math import prod
 
 import numpy
 from openquake.baselib.geolibs import pyproj
@@ -39,7 +40,7 @@ from scipy.fft import next_fast_len
 from scipy.spatial import cKDTree
 
 
-MAX_GRID_CELL_RATIO = 4
+MAX_GRID_CELL_RATIO = numpy.inf
 GRID_TOLERANCE = 0.01
 
 
@@ -81,13 +82,26 @@ def _grid_spacing(x, y):
     return float(numpy.median(distances))
 
 
+def _metric_crs(crs):
+    # Covariance distances below assume projected coordinates in metres.
+    try:
+        projection = pyproj.CRS.from_user_input(crs)
+    except pyproj.exceptions.CRSError as exc:
+        raise ValueError('Invalid correlation grid projection') from exc
+    if (not projection.is_projected or any(
+            not numpy.isclose(axis.unit_conversion_factor, 1)
+            for axis in projection.axis_info[:2])):
+        raise ValueError('Correlation grid projection must use metres')
+    return projection
+
+
 @dataclass(frozen=True)
 class RegularGridLayout:
     """Map geographic sites to the regular lattice used by CE.
 
-    ``from_sites`` projects all coordinates with one transverse Mercator
-    projection, centred on the middle of the longitude extent unless ``crs``
-    is given, then fits and validates an axis-aligned lattice.
+    ``from_sites`` uses an explicit or recorded projection when available.
+    Otherwise it tries local transverse Mercator and neighbouring UTM zones,
+    fitting and validating the same axis-aligned lattice in each case.
     ``site_indices`` maps the original site order to flattened grid cells;
     holes remain unused cells in the enclosing rectangle.
 
@@ -120,66 +134,102 @@ class RegularGridLayout:
 
     @classmethod
     def from_sites(cls, sites, max_cell_ratio=MAX_GRID_CELL_RATIO, crs=None):
-        """Infer a square lattice, retaining holes as unused cells."""
+        """Recover the original lattice, including sparse subsets."""
         lons = numpy.asarray(sites.lons, dtype=numpy.float64)
         lats = numpy.asarray(sites.lats, dtype=numpy.float64)
-        if len(lons) < 4 or len(lons) != len(lats):
-            raise ValueError(
-                'Circulant embedding requires at least four grid sites')
+        if not len(lons) or len(lons) != len(lats):
+            raise ValueError('Correlation grid requires matching coordinates')
         if not numpy.isfinite(lons).all() or not numpy.isfinite(lats).all():
             raise ValueError('Correlation grid coordinates must be finite')
+        recorded = getattr(sites, 'grid_crs', None)
+        if crs is not None or recorded:
+            crs = crs if crs is not None else recorded
+            hints = None
+            if recorded and _metric_crs(crs).equals(_metric_crs(recorded)):
+                hints = (getattr(sites, 'grid_spacing', None),
+                         getattr(sites, 'grid_origin', None))
+            return cls._projected(lons, lats, crs, max_cell_ratio, hints)
+        # Existing site files were often prepared in UTM, without metadata.
+        # Try the local projection first, then the median UTM zone and its
+        # neighbours; changing the projection never relaxes the fit tolerance.
+        candidates = [_local_crs(lons, lats)]
+        zone = min(60, int((numpy.median(lons) + 180) // 6) + 1)
+        base = 32600 if numpy.median(lats) >= 0 else 32700
+        candidates.extend(f'EPSG:{base + z}' for z in
+                          (zone, zone - 1, zone + 1) if 1 <= z <= 60)
+        failures = []
+        for candidate in candidates:
+            try:
+                return cls._projected(lons, lats, candidate, max_cell_ratio)
+            except ValueError as exc:
+                failures.append(exc)
+        raise failures[0]
 
-        if crs is None:
-            crs = _local_crs(lons, lats)
+    @classmethod
+    def _projected(cls, lons, lats, crs, max_cell_ratio, hints=None):
+        # Fit in one metric CRS, or use a lattice retained before filtering.
         transformer = pyproj.Transformer.from_crs(
-            4326, crs, always_xy=True)
+            4326, _metric_crs(crs), always_xy=True)
         x, y = transformer.transform(lons, lats)
-        initial_spacing = _grid_spacing(x, y)
-
-        # Fit the lattice origin after assigning preliminary integer cells.
-        ix = numpy.rint(
-            (x - x.min()) / initial_spacing).astype(numpy.int64)
-        iy = numpy.rint(
-            (y - y.min()) / initial_spacing).astype(numpy.int64)
-        spacing_x, x0 = numpy.polyfit(ix, x, 1)
-        spacing_y, y0 = numpy.polyfit(iy, y, 1)
+        if not numpy.isfinite(x).all() or not numpy.isfinite(y).all():
+            raise ValueError('Correlation grid projection is not finite')
+        if hints and hints[0] is not None and hints[1] is not None:
+            spacing_y, spacing_x = numpy.asarray(hints[0]) * 1000
+            y0, x0 = hints[1]
+        else:
+            if len(lons) < 4:
+                raise ValueError('Circulant embedding requires at least '
+                                 'four grid sites')
+            initial = _grid_spacing(x, y)
+            ix = numpy.rint((x - x.min()) / initial).astype(numpy.int64)
+            iy = numpy.rint((y - y.min()) / initial).astype(numpy.int64)
+            if numpy.ptp(ix) == 0 or numpy.ptp(iy) == 0:
+                raise ValueError('Correlation grid requires two rows and '
+                                 'columns')
+            spacing_x, x0 = numpy.polyfit(ix, x, 1)
+            spacing_y, y0 = numpy.polyfit(iy, y, 1)
+            ix = numpy.rint((x - x0) / spacing_x).astype(numpy.int64)
+            iy = numpy.rint((y - y0) / spacing_y).astype(numpy.int64)
+            spacing_x, x0 = numpy.polyfit(ix, x, 1)
+            spacing_y, y0 = numpy.polyfit(iy, y, 1)
+        if min(spacing_x, spacing_y) <= 0:
+            raise ValueError('Correlation grid spacing must be positive')
         ix = numpy.rint((x - x0) / spacing_x).astype(numpy.int64)
         iy = numpy.rint((y - y0) / spacing_y).astype(numpy.int64)
-        spacing_x, x0 = numpy.polyfit(ix, x, 1)
-        spacing_y, y0 = numpy.polyfit(iy, y, 1)
         errors = numpy.hypot(
             x - (x0 + ix * spacing_x), y - (y0 + iy * spacing_y))
-        tolerance = max(
-            2.0, max(spacing_x, spacing_y) * GRID_TOLERANCE)
+        tolerance = max(2.0, max(spacing_x, spacing_y) * GRID_TOLERANCE)
         if errors.max() > tolerance:
             raise ValueError(
                 'Sites do not form an axis-aligned regular grid; '
                 f'maximum coordinate error is {errors.max():g} m')
-
-        minimum_x = ix.min()
-        minimum_y = iy.min()
-        ix -= minimum_x
-        iy -= minimum_y
-        nx = int(ix.max()) + 1
-        ny = int(iy.max()) + 1
-        if nx < 2 or ny < 2:
-            raise ValueError(
-                'Circulant embedding requires at least two grid rows and '
-                'columns')
+        minimum_x, minimum_y = ix.min(), iy.min()
+        ix, iy = ix - minimum_x, iy - minimum_y
+        nx, ny = max(2, int(ix.max()) + 1), max(2, int(iy.max()) + 1)
         indices = iy * nx + ix
         if len(numpy.unique(indices)) != len(indices):
             raise ValueError('Multiple sites occupy one correlation grid cell')
         if nx * ny > max_cell_ratio * len(indices):
             raise ValueError(
-                'The enclosing correlation grid contains more than '
-                f'{max_cell_ratio:g} cells per occupied site')
+                'The enclosing correlation grid contains more '
+                f'than {max_cell_ratio:g} cells per occupied site')
         return cls(
-            (ny, nx),
-            (float(spacing_y / 1000), float(spacing_x / 1000)),
-            indices, crs,
+            (ny, nx), (float(spacing_y / 1000), float(spacing_x / 1000)),
+            indices, str(crs),
             (float(y0 + minimum_y * spacing_y),
-             float(x0 + minimum_x * spacing_x)),
-            float(errors.max()))
+             float(x0 + minimum_x * spacing_x)), float(errors.max()))
+
+    def cropped(self, indices):
+        """Enclose selected cells without changing their projection or step."""
+        rows, columns = numpy.divmod(indices, self.grid_shape[1])
+        low_y, low_x = int(rows.min()), int(columns.min())
+        shape = (max(2, int(rows.max()) - low_y + 1),
+                 max(2, int(columns.max()) - low_x + 1))
+        origin = (self.projected_origin[0] + low_y * self.spacing[0] * 1000,
+                  self.projected_origin[1] + low_x * self.spacing[1] * 1000)
+        return type(self)(
+            shape, self.spacing, (rows - low_y) * shape[1] + columns - low_x,
+            self.crs, origin, self.maximum_error)
 
     def grid_coordinates(self, sites):
         """Return fractional row and column coordinates for ``sites``."""
@@ -276,35 +326,49 @@ def _covariance_lags(model, imts, shape, spacing, component, context):
 
 
 def _spectral_root(covariance_lags):
-    """Return the Hermitian square root at every Fourier mode."""
+    # Factor bounded strips; full-size eigenvector temporaries can otherwise
+    # exceed the retained factor by several times on large scenario grids.
     # A block-circulant covariance is diagonal in space after the FFT. What
     # remains at each frequency is only a small cross-IMT covariance matrix.
     spectrum = numpy.fft.rfft2(covariance_lags, axes=(0, 1))
-    transpose = spectrum.swapaxes(-1, -2).conj()
-    scale = max(1.0, float(numpy.abs(spectrum).max()))
+    step = max(1, 65536 // spectrum.shape[1])
+    scale = max(1.0, max(float(numpy.abs(spectrum[i:i + step]).max())
+                         for i in range(0, len(spectrum), step)))
     tolerance = 100 * numpy.finfo(float).eps * scale
     # Check before averaging so a genuinely asymmetric model is not silently
     # hidden as numerical roundoff.
-    if not numpy.allclose(spectrum, transpose, rtol=EPS,
-                          atol=tolerance):
-        raise ValueError(
-            'The embedded spectral covariance is not Hermitian')
-    spectrum = (spectrum + transpose) / 2
-    eigenvalues, eigenvectors = numpy.linalg.eigh(spectrum)
-    minimum = float(eigenvalues.min())
     # FFT roundoff accumulates with the number of embedded cells. Only values
     # within that scale-aware tolerance may be clipped; a material negative
     # value requires a larger embedding.
-    tolerance *= numpy.prod(covariance_lags.shape[:2])
-    if minimum < -tolerance:
-        return minimum, None
-    eigenvalues = numpy.maximum(eigenvalues, 0)
+    eigen_tolerance = tolerance * prod(covariance_lags.shape[:2])
+    minimum = numpy.inf
     # Form V sqrt(Lambda) V* once so every realization needs only one small
     # matrix-vector multiplication at each frequency.
-    scaled_vectors = (
-        eigenvectors * numpy.sqrt(eigenvalues)[..., numpy.newaxis, :])
-    root = scaled_vectors @ eigenvectors.swapaxes(-1, -2).conj()
-    return minimum, root
+    for start in range(0, len(spectrum), step):
+        block = spectrum[start:start + step]
+        transpose = block.swapaxes(-1, -2).conj()
+        if not numpy.allclose(block, transpose, rtol=EPS, atol=tolerance):
+            raise ValueError('The embedded spectral covariance is not '
+                             'Hermitian')
+        eigenvalues, eigenvectors = numpy.linalg.eigh((block + transpose) / 2)
+        minimum = min(minimum, float(eigenvalues.min()))
+        if minimum < -eigen_tolerance:
+            return minimum, None
+        scaled = eigenvectors * numpy.sqrt(
+            eigenvalues.clip(min=0))[..., numpy.newaxis, :]
+        block[:] = scaled @ eigenvectors.swapaxes(-1, -2).conj()
+    return minimum, spectrum
+
+
+def _embedding_bytes(shape, num_imts, output_sites):
+    # Conservative peak setup/sampling bytes, before allocating a grid.
+    cells = prod(shape)
+    # Covariance lags, FFT storage, model evaluation temporaries and bounded
+    # eigensolver strips. Drawing also retains the factor and FFT workspace.
+    setup = 8 * cells * (4 * num_imts ** 2 + 40)
+    sampling = (16 * shape[0] * (shape[1] // 2 + 1) * num_imts ** 2 +
+                32 * cells * num_imts + 8 * output_sites * num_imts)
+    return max(setup, sampling)
 
 
 @dataclass(frozen=True)
@@ -326,7 +390,8 @@ class CirculantEmbeddingFactor:
 
     @classmethod
     def build(cls, model, imts, grid_shape, spacing, component=None,
-              context=None, site_indices=None, max_multiplier=8):
+              context=None, site_indices=None, max_multiplier=8,
+              memory_budget=None):
         """Build an embedding, enlarging it until its spectrum is PSD."""
         grid_shape = _pair(grid_shape, 'grid_shape', int)
         spacing = _pair(spacing, 'spacing', float)
@@ -334,16 +399,23 @@ class CirculantEmbeddingFactor:
             raise ValueError('At least one IMT is required')
         if max_multiplier < 1:
             raise ValueError('max_multiplier must be positive')
-        indices = cls._validate_indices(site_indices, grid_shape)
+        num_sites = (prod(grid_shape) if site_indices is None
+                     else len(site_indices))
         minimum = numpy.nan
         for multiplier in range(1, max_multiplier + 1):
             # Extending the periodic domain reduces artificial interaction
             # across its boundary while preserving the requested covariance.
             embedded_shape = _embedding_shape(grid_shape, multiplier)
+            required = _embedding_bytes(embedded_shape, len(imts), num_sites)
+            if memory_budget is not None and required > memory_budget:
+                raise ValueError('The circulant embedding requires at least '
+                                 f'{required} workspace bytes; configured '
+                                 f'budget is {int(memory_budget)} bytes')
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
             minimum, root = _spectral_root(covariance_lags)
             if root is not None:
+                indices = cls._validate_indices(site_indices, grid_shape)
                 return cls(
                     root, grid_shape, embedded_shape, len(imts), indices,
                     multiplier, minimum)
@@ -380,6 +452,11 @@ class CirculantEmbeddingFactor:
         return self.num_imts * len(self.site_indices)
 
     @property
+    def nbytes(self):
+        """Bytes retained by the spectral factor and output-cell mapping."""
+        return self.spectral_root.nbytes + self.site_indices.nbytes
+
+    @property
     def workspace_bytes_per_realization(self):
         """Conservative FFT workspace estimate for one realization."""
         return 32 * self.input_size + 8 * self.output_size
@@ -387,12 +464,12 @@ class CirculantEmbeddingFactor:
     def batch_size(self, memory_budget):
         """Return how many realizations fit in the workspace budget."""
         memory_budget = int(memory_budget)
-        available = memory_budget - self.spectral_root.nbytes
+        available = memory_budget - self.nbytes
         required = self.workspace_bytes_per_realization
         if available < required:
             raise ValueError(
                 'The circulant embedding requires at least '
-                f'{self.spectral_root.nbytes + required} workspace bytes')
+                f'{self.nbytes + required} workspace bytes')
         return max(1, available // required)
 
     def apply(self, samples):

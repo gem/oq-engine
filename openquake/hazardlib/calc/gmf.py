@@ -80,10 +80,14 @@ def _site_positions(complete, selected):
 
 
 def _ce_layout(sites):
-    """Fit the complete grid, falling back to the affected sites."""
+    # Retain the original lattice, but sample only the affected envelope.
+    if getattr(sites, 'grid_spacing', None) is not None:
+        return sites, RegularGridLayout.from_sites(sites)
     complete = sites.complete
     try:
-        return complete, RegularGridLayout.from_sites(complete)
+        layout = RegularGridLayout.from_sites(complete)
+        positions = _site_positions(complete, sites)
+        return sites, layout.cropped(layout.site_indices[positions])
     except ValueError as complete_error:
         if sites is complete:
             raise
@@ -661,7 +665,8 @@ class GmfComputer(object):
             self._ce_factor = CirculantEmbeddingFactor.build(
                 model, self.imts, layout.grid_shape, layout.spacing,
                 ResidualComponent.WITHIN_EVENT,
-                self.correlation_context, site_indices)
+                self.correlation_context, site_indices,
+                memory_budget=_correlation_budget())
         except ValueError as exc:
             if dense_bytes > _correlation_budget():
                 raise ValueError(

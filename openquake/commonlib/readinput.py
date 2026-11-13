@@ -68,6 +68,8 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.geo.regular_grid import regular_grid
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    RegularGridLayout)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
@@ -574,6 +576,24 @@ def get_csv_header(fname, sep=','):
     return first, f
 
 
+def _site_grid_crs(filenames):
+    # Read only CSV metadata; site-parameter arrays can be very large.
+    projections = set()
+    for filename in filenames:
+        if not isinstance(filename, str) or not filename.endswith('.csv'):
+            continue
+        with open(filename, encoding='utf-8-sig') as stream:
+            for line in stream:
+                if not line.startswith('#'):
+                    break
+                attrs = dict(hdf5.parse_comment(line.strip('#,\n ')))
+                if attrs.get('grid_crs'):
+                    projections.add(attrs['grid_crs'])
+    if len(projections) > 1:
+        raise InvalidFile('Site models specify different grid projections')
+    return next(iter(projections), None)
+
+
 def get_mesh_exp(oqparam, h5=None):
     """
     Extract the mesh of points from the sites, the sites file, the region,
@@ -632,6 +652,7 @@ def get_mesh_exp(oqparam, h5=None):
         logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
+        mesh.grid_crs = _site_grid_crs(oqparam.inputs['site_model'])
     elif 'exposure' in oqparam.inputs:
         mesh = exposure.mesh
     else:
@@ -902,6 +923,17 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        sitecol.grid_crs = getattr(mesh, 'grid_crs', None)
+        if (getattr(oqparam, 'correlation_strategy', '') ==
+                'circulant_embedding'):
+            try:
+                layout = RegularGridLayout.from_sites(sitecol)
+            except ValueError:
+                pass  # Irregular output locations use an internal grid.
+            else:
+                sitecol.grid_crs = layout.crs
+                sitecol.grid_spacing = layout.spacing
+                sitecol.grid_origin = layout.projected_origin
         return _get_sitecol(sitecol, exp, oqparam, h5)
 
 

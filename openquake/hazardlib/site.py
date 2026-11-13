@@ -382,6 +382,9 @@ class SiteCollection(object):
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
     req_site_params = ()
+    grid_crs = None
+    grid_spacing = None
+    grid_origin = None
 
     @classmethod
     def from_(cls, array):
@@ -553,6 +556,9 @@ class SiteCollection(object):
         new = object.__new__(self.__class__)
         new.array = self.array[indices]
         new.complete = self.complete
+        new.grid_crs = self.grid_crs
+        new.grid_spacing = self.grid_spacing
+        new.grid_origin = self.grid_origin
         return new
 
     # tested in classical/case_38
@@ -732,7 +738,13 @@ class SiteCollection(object):
     def __toh5__(self):
         names = self.array.dtype.names
         cols = ' '.join(names)
-        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
+        attrs = {'__pdcolumns__': cols}
+        if self.grid_crs:
+            attrs['grid_crs'] = self.grid_crs
+        if self.grid_spacing is not None:
+            attrs['grid_spacing'] = self.grid_spacing
+            attrs['grid_origin'] = self.grid_origin
+        return {n: self.array[n] for n in names}, attrs
 
     def __fromh5__(self, dic, attrs):
         params = attrs['__pdcolumns__'].split()
@@ -741,6 +753,9 @@ class SiteCollection(object):
         for p in dic:
             self.array[p] = dic[p][()]
         self.complete = self
+        self.grid_crs = attrs.get('grid_crs')
+        self.grid_spacing = attrs.get('grid_spacing')
+        self.grid_origin = attrs.get('grid_origin')
 
     @property
     def names(self):
@@ -1049,7 +1064,9 @@ class SiteCollection(object):
                 f"in the site model{hint}.")
 
     def __getstate__(self):
-        return dict(array=self.array, complete=self.complete)
+        return dict(array=self.array, complete=self.complete,
+                    grid_crs=self.grid_crs, grid_spacing=self.grid_spacing,
+                    grid_origin=self.grid_origin)
 
     def __getitem__(self, sid):
         """

@@ -96,6 +96,14 @@ def _grid(mesh, spacing, regular):
     return mesh.get_convex_hull().dilate(spacing).discretize(spacing)
 
 
+def _grid_sites(mesh, req_site_params):
+    # Retain the projection chosen before bounds expansion and rounding.
+    sitecol = site.SiteCollection.from_points(
+        mesh.lons, mesh.lats, req_site_params=req_site_params)
+    sitecol.grid_crs = getattr(mesh, 'grid_crs', None)
+    return sitecol
+
+
 def _exposure_sites(exposure_xml, spacing, regular, req_site_params, hdf5):
     exp = Exposure.read_all(exposure_xml, check_dupl=False)
     hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
@@ -103,8 +111,7 @@ def _exposure_sites(exposure_xml, spacing, regular, req_site_params, hdf5):
     if not spacing:
         return assetcol
     grid = _grid(exp.mesh, spacing, regular)
-    haz_sitecol = site.SiteCollection.from_points(
-        grid.lons, grid.lats, req_site_params=req_site_params)
+    haz_sitecol = _grid_sites(grid, req_site_params)
     if regular:
         # CE needs the complete rectangle, including cells without assets.
         return haz_sitecol
@@ -140,16 +147,15 @@ def _csv_sites(sites_csv, spacing, regular, req_site_params, output):
         lons, lats, req_site_params=req_site_params)
     if spacing:
         mesh = _grid(haz_sitecol.mesh, spacing, regular)
-        haz_sitecol = site.SiteCollection.from_points(
-            mesh.lons, mesh.lats, req_site_params=req_site_params)
+        haz_sitecol = _grid_sites(mesh, req_site_params)
     return haz_sitecol
 
 
 def _check_exported_grid(output):
-    """Validate the CSV coordinates that a calculation will actually read."""
-    data = numpy.genfromtxt(output, names=True, delimiter=',',
-                            usecols=('lon', 'lat'))
-    RegularGridLayout.from_sites(Mesh(data['lon'], data['lat']))
+    # Check the serialized coordinates in their recorded projection.
+    data = hdf5.read_csv(output, usecols=('lon', 'lat'))
+    mesh = Mesh(data['lon'], data['lat'])
+    RegularGridLayout.from_sites(mesh, crs=getattr(data, 'grid_crs', None))
 
 
 def _rupture_sites(filename, spacing, maximum_distance, mesh_spacing,
@@ -182,8 +188,7 @@ def _rupture_sites(filename, spacing, maximum_distance, mesh_spacing,
     if not len(lons):
         raise ValueError('Rupture has no finite geometry coordinates')
     grid = regular_grid(Mesh(lons, lats), spacing, padding=maximum_distance)
-    return site.SiteCollection.from_points(
-        grid.lons, grid.lats, req_site_params=req_site_params)
+    return _grid_sites(grid, req_site_params)
 
 
 def _validate_inputs(exposure_xml, sites_csv, rupture, regular,
@@ -280,7 +285,10 @@ def main(
                     haz_sitecol.calculate_z2pt5()
             hdf5['sitecol'] = haz_sitecol
             if output:
-                writers.write_csv(output, haz_sitecol.array[fields])
+                comment = ({'grid_crs': haz_sitecol.grid_crs}
+                           if haz_sitecol.grid_crs else None)
+                writers.write_csv(
+                    output, haz_sitecol.array[fields], comment=comment)
                 if regular_grid:
                     _check_exported_grid(output)
         logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
