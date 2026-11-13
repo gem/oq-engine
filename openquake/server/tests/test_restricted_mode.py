@@ -25,6 +25,7 @@ import random
 import tempfile
 from unittest import mock, skipIf
 import django
+import requests
 from datetime import datetime, timedelta
 from openquake.baselib import config
 from openquake.commands import db as cmd_db
@@ -88,6 +89,14 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         response = self.c.get('/v1/authentication/status')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authentication_required': True})
+
+    def test_health(self):
+        # the health endpoint must answer to anonymous requests
+        url = self.c.base_url + '/v0/health'
+        response = requests.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'ok'})
+        self.assertEqual(requests.head(url).status_code, 200)
 
     def test_share_complete_job(self):
         job_dic = dict(calculation_mode='event_based',

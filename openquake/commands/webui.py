@@ -32,12 +32,11 @@ from openquake.server.utils import check_webserver_running
 commands = ['start', 'status', 'stop']
 
 
-# the health check uses an internal endpoint that is always served with
-# status 200, even when the WebUI is disabled (WEBUI = False).
-# Calculation 0 does not exist, so the log size returned is always 0:
-# only the status code matters here, not the value
+# the health endpoint requires no authentication and is served even when
+# the WebUI is disabled (WEBUI = False); it answers with status 200 only
+# if the server and its database are working
 def _health_url(hostport):
-    return 'http://' + hostport + '/v0/calc/0/log/size'
+    return 'http://' + hostport + '/v0/health'
 
 
 def _find_webui_process(hostport):
@@ -76,16 +75,24 @@ def _stop(hostport):
     print('stopped')
 
 
+# exit with an error if a WebUI is already serving the given address:
+# nothing is started, so a zero exit code would make supervisors and
+# scripts believe that the server ran and terminated cleanly; on a
+# desktop it is still convenient to show the running WebUI
+def _exit_if_running(hostport, skip_browser):
+    url = 'http://' + hostport
+    if check_webserver_running(
+            _health_url(hostport), max_retries=1, warn=False):
+        if not skip_browser:
+            webbrowser.open(url)
+        sys.exit('A WebUI is already running at %s' % url)
+
+
 def runserver(hostport=None, skip_browser=False):
     """Start the Django development server and serve the WebUI application."""
     url = 'http://' + hostport
     health = _health_url(hostport)
-    if check_webserver_running(health, max_retries=1, warn=False):
-        if not skip_browser:
-            webbrowser.open(url)
-        return
-
-    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
+    args =[sys.executable, '-m', 'openquake.server.manage', 'runserver']
     # the reload functionality of the Django development server interferes
     # with SIGCHLD and causes zombies, thus it is disabled
     args.append('--noreload')
@@ -116,6 +123,10 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
+    # this check must come first: the steps below would upgrade the
+    # database while another WebUI is using it and would print a
+    # misleading 'Starting' message before failing
+    _exit_if_running(hostport, skip_browser)
     os.environ.setdefault('OQ_API_KEY', API_KEY)
     api_host, api_port = hostport.rsplit(':', 1)
     if api_host == '0.0.0.0':

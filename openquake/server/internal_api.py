@@ -568,6 +568,19 @@ def calc_log(calc_id, start, stop):
     return logs.dbcmd('get_log_slice', calc_id, start, stop)
 
 
+def health():
+    """
+    Check that the server and its database are working, returning
+    {'status': 'ok'} or raising an ApiError with status 503.
+    """
+    try:
+        dbapi.db('SELECT 1', scalar=True)
+    except Exception as exc:
+        logging.exception('Health check failed')
+        raise ApiError(503, 'Database unavailable') from exc
+    return {'status': 'ok'}
+
+
 def calc_log_size(calc_id):
     """Return the number of log lines of a calculation."""
     return logs.dbcmd('get_log_size', calc_id)
@@ -717,6 +730,14 @@ def v0_impact_get_rupture_data(request):
     return impact_get_rupture_data(_form(request))
 
 
+# unauthenticated endpoint, served also with WEBUI = False, used by
+# `oq webui` and by external monitoring to check that the server is up
+@internal_view('GET', 'HEAD', auth=False)
+def v0_health(request):
+    """Return the health status of the server."""
+    return health()
+
+
 @internal_view('GET', 'HEAD', auth=False)
 def v0_calc_log_size(request, calc_id):
     """Return the number of log lines for a calculation."""
@@ -751,6 +772,7 @@ if settings.WEBUI:
         re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
     ]
 internal_urlpatterns += [
+    re_path(r'^v0/health$', v0_health),
     re_path(r'^v0/calc/model_provenance/(\d+)$', v0_model_provenance),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),
     re_path(r'^v0/worker_([^/]+)$', v0_worker),

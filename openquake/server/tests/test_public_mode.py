@@ -26,6 +26,7 @@ import numpy
 import gzip
 import logging
 import django
+import requests
 from django.test import LiveServerTestCase, override_settings
 from threading import Event
 from openquake.baselib import config
@@ -77,6 +78,14 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         response = self.c.get('/v1/authentication/status')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'authentication_required': False})
+
+    def test_health(self):
+        # the health endpoint must answer to anonymous requests
+        url = self.c.base_url + '/v0/health'
+        response = requests.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'ok'})
+        self.assertEqual(requests.head(url).status_code, 200)
 
     def test_404(self):
         # looking for a missing calc_id

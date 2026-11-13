@@ -160,29 +160,29 @@ def oq_server_context_processor(request):
 
 
 def check_webserver_running(url="http://localhost:8800", max_retries=30,
-                            warn=True):
+                            warn=True, timeout=5):
     """
-    Returns True if a given URL is responding within a given timeout.
+    Returns True if a given URL answers with status 200 within
+    `max_retries` attempts, each one waiting at most `timeout` seconds.
+    Any other status code (e.g. a 404 from an unrelated server
+    listening on the same port) does not count as running.
     """
-
-    retry = 0
-    response = ''
-    success = False
-
-    while response != requests.codes.ok and retry < max_retries:
+    for retry in range(max_retries):
         try:
-            response = requests.head(url, allow_redirects=True).status_code
-            success = True
-        except Exception:
-            if retry + 1 < max_retries:
-                sleep(1)
-
-        retry += 1
-
-    if not success and warn:
-        logging.warning('Unable to connect to %s within %s retries'
-                        % (url, max_retries))
-    return success
+            # without a timeout a process accepting the connection but
+            # never replying would block the caller forever
+            response = requests.head(
+                url, allow_redirects=True, timeout=timeout)
+            if response.status_code == requests.codes.ok:
+                return True
+        except requests.RequestException:
+            pass  # not reachable (yet): retry
+        if retry + 1 < max_retries:
+            sleep(1)
+    if warn:
+        logging.warning('%s did not answer with status 200 within %s '
+                        'retries' % (url, max_retries))
+    return False
 
 
 def get_or_create_django_secret_key():
