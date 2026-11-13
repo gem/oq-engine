@@ -191,7 +191,6 @@ import tempfile
 import traceback
 import warnings
 import collections
-from datetime import datetime, timezone
 from unittest import mock
 import multiprocessing.shared_memory as shmem
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -240,23 +239,6 @@ def _ds_calc_dir(job_id):
     if row is None:
         raise ValueError('No job %s in %s' % (job_id, dbfile))
     return row[0]
-
-
-# write a DEBUG record in the log table of the database, like commonlib.logs
-def _dblog(level, job_id, task_no, msg):
-    conn = sqlite3.connect(os.path.expanduser(config.server.dbfile),
-                           timeout=60)
-    try:
-        with conn:
-            conn.execute(
-                'INSERT INTO log (job_id, timestamp, level, process, '
-                'message) VALUES (?, ?, ?, ?, ?)',
-                (job_id, datetime.now(timezone.utc).isoformat(sep=' '),
-                 level, 'task #%d' % task_no, msg))
-    except Exception as exc:  # not so serious to break the calculation
-        print(exc)
-    finally:
-        conn.close()
 
 
 def calc_dir(job_id_or_fname):
@@ -546,12 +528,12 @@ def sendback(res, zsocket):
         if DEBUG:
             if calc_id:  # None when building the png maps
                 msg = 'sent back %s' % humansize(nbytes)
-                _dblog('DEBUG', calc_id, task_no, msg)
+                logging.debug('task #%d: %s', task_no, msg)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
-            _dblog('ERROR', calc_id, task_no, tb_str)
+            logging.error('task #%d: %s', task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
     return nbytes
