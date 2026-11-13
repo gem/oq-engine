@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * install.py writes a random `authkey` in the `[dbserver]` section of
+    the openquake.cfg of server installations, instead of `changeme`
   * In server installations only the DbServer upgrades the database, when
     it starts, and the WebUI waits for it; there the calculations left in
     the executing state are not reset automatically anymore, since that

@@ -23,6 +23,8 @@ by the DbServer.
   `devel` installations `oq webui start` still resets them.
 - The WebUI service of a server installation runs with gunicorn, which
   is installed by `install.py`.
+- In server installations `install.py` writes a random `authkey` in
+  the `openquake.cfg` file it creates, instead of the default `changeme`.
 - The development version of 3.27 renamed the section `[server]`: such
   configuration files must be changed back to `[dbserver]`, with the key
   `file` instead of `dbfile`, otherwise the engine raises an error.

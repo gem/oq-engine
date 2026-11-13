@@ -115,10 +115,14 @@ class server:
 
     @classmethod
     def config(cls):
+        # the authkey is the key required by the DbServer: it is random,
+        # and readable by the users of the installation, since their
+        # calculations need it to reach the DbServer
         return f"""[dbserver]
     host = localhost
     port = {cls.DBPORT}
     file = {cls.DBPATH}
+    authkey = {secrets.token_urlsafe(32)}
     [directory]
     """
 

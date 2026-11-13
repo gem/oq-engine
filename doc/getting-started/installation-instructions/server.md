@@ -75,13 +75,16 @@ file a section
 host = localhost
 port = 1908
 file = /path/to/db.sqlite3
+authkey = <random key>
 ```
 
 If the database is on a different machine, you have to edit the file and
 specify the correct host name. The DbServer can be controlled by the
 user `openquake` with the command `oq dbserver start|stop|status`; its
 requests are authenticated with the `authkey` of the `[dbserver]`
-section, which should be changed from its default value.
+section, which is generated randomly by the universal installer. The
+file must be readable by the users running calculations, also on the
+machines where they run calculations against a remote DbServer.
 
 #### Upgrade the database to host users and sessions
 
