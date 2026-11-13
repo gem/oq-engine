@@ -294,7 +294,8 @@ hazard_uhs-std.csv
                          ('0.010000', '0.100000', '0.200000'))
 
         # check ordering by rm_rlz.pid
-        r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
+        smlt = self.calc.datastore['full_lt/source_model_lt']
+        r0, r1, r2 = smlt.get_realizations()
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
                          "path=SM1~., weight=0.5>")
@@ -353,7 +354,7 @@ hazard_uhs-std.csv
         self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
 
-        # without the source variants optimization each variant would
+        # without the variant sources optimization each variant would
         # generate its contexts: at the first depth 4 for the 6 variants
         # with magnitudes 5.5, 6.5 and 6 for the 3 variants with maxMag 7.6,
         # i.e. 42, and at the second depth 6 x 6 + 3 x 9 = 63
@@ -439,8 +440,9 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
         # check the realizations contains only literals
+        smlt = self.calc.datastore['full_lt'].source_model_lt
         got = [dict(zip(rlz.lt_path, rlz.value))
-               for rlz in self.calc.datastore['full_lt'].source_model_lt]
+               for rlz in smlt.get_realizations()]
         self._check(got)
 
     def _check(self, got):
@@ -578,6 +580,15 @@ hazard_uhs-std.csv
             self.assertEqual(len(expected), len(got), str(got))
             for fname, actual in zip(expected, got):
                 self.assertEqualFiles('expected/%s' % fname, actual)
+
+        # With more samples than amplification branches, sample ordinals
+        # cannot be used as indices into the amplification functions.
+        self.run_calc(case_26.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        names = self.calc.amplifier.names
+        expected = [names.index(r.extra_rlz.lt_path[0])
+                    for r in self.calc.full_lt.get_realizations()]
+        ae(self.calc.amplifier.rlz_ampl_ord, expected)
 
     def test_case_27(self):
         # 3-branch amp LT, disaggregation, full enum + sampling

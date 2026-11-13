@@ -48,7 +48,10 @@ region types from the first source model and 2 from the second source model
 In the nontrivial case the engine can determine the signatures and the core size without
 running a full calculation; just run the command ``oq check_input job.ini`` and they will
 be printed at the end; they can be also inspected in any calculation with
-the command ``oq show usignatures``.
+the command ``oq show usignatures``. The table has a row for each branchset
+of a source, with a column ``uncertainty_type`` giving the type of the
+branchset in the source model logic tree, for instance ``bGRRelative`` or
+``maxMagGRRelative``; the sources with no uncertainties have ``-``.
 
 An example with applyToSources
 ------------------------------

@@ -652,7 +652,7 @@ def view_context_reduction(token, dstore):
     """
     Display the number of contexts stored in the nctxs dataset (zero
     when not computed, see preclassical.CTX_EST) and the reduction factor
-    due to the source variants optimization, i.e. the ratio between the
+    due to the variant sources optimization, i.e. the ratio between the
     contexts without the optimization ('separate') and the contexts
     actually computed ('collapsed')
     """
@@ -1302,8 +1302,9 @@ def view_calc_risk(token, dstore):
     """
     Compute the risk_by_event table starting from GMFs
     """
-    # avoid a mysterious circular import only on macos
+    # keep local: circular import with post_risk
     from openquake.calculators import event_based_risk as ebr
+    # avoid a mysterious circular import only on macos
     _, event_id = token.split(':')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
@@ -1561,9 +1562,7 @@ def _rlz_rows(full_lt, rlz_id):
             bset = br.bset
     for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
-    if hasattr(xlt, 'branchset_id'):  # ampl_logic_tree
-        tbl.append((xlt.branchset_id, rlz.extra_rlz.value))
-    elif hasattr(xlt, 'branchsets'):  # pfd_logic_tree
+    if xlt:  # amplification or PFD logic tree
         for bset, path in zip(xlt.branchsets, rlz.extra_rlz.lt_path):
             tbl.append((bset.id, path))
     return tbl
@@ -1718,6 +1717,9 @@ def view_usignatures(token, dstore):
     sources with no uncertainties at all have a single `-` row.
     """
     df = dstore.read_df('unc_signatures')
+    # branchset ID -> uncertainty type, e.g. bs02 -> maxMagGRAbsolute
+    smlt = dstore['full_lt'].source_model_lt
+    utypes = {bs.id: bs.uncertainty_type for bs in smlt.branchsets}
     rows = []
     for source_id, grp in df.groupby('source_id'):
         sigs = [json.loads(sig) for sig in grp['signature']]
@@ -1730,16 +1732,18 @@ def view_usignatures(token, dstore):
             # the sources with no uncertainties have a single signature
             # covering all their realizations
             vals['-'] = ['no uncertainties']
-        cells = [(bset, fmt_sig_values(value_list))
+        cells = [(bset, utypes.get(bset, '-'), fmt_sig_values(value_list))
                  for bset, value_list in vals.items()]
-        for i, (bset, values) in enumerate(cells):
+        for i, (bset, utype, values) in enumerate(cells):
             head = dict(source_id=source_id,
                         num_rlzs=fmt_realizations(grp['count']))
-            rows.append(dict(head, branchset=bset, values=values)
+            rows.append(dict(head, branchset=bset,
+                             uncertainty_type=utype, values=values)
                         if i == 0 else
-                        dict(source_id='', num_rlzs='',
-                             branchset=bset, values=values))
-    header = ['source_id', 'num_rlzs', 'branchset', 'values']
+                        dict(source_id='', num_rlzs='', branchset=bset,
+                             uncertainty_type=utype, values=values))
+    header = ['source_id', 'num_rlzs', 'branchset',
+              'uncertainty_type', 'values']
     return text_table(pandas.DataFrame(rows, columns=header), ext='org')
 
 
@@ -2036,7 +2040,7 @@ def view_aggrisk(token, dstore):
     dt = [('gsim', vstr), ('weight', float)] + [
         (lt, float) for lt in LOSSTYPE[df.loss_id.unique()]]
     full_lt = dstore['full_lt'].init()
-    rlzs = list(full_lt.gsim_lt)
+    rlzs = full_lt.gsim_lt.get_realizations()
     AVG = len(rlzs)
     arr = numpy.zeros(AVG + 1, dt)
     for r, rlz in enumerate(rlzs):

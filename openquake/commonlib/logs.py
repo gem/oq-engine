@@ -128,10 +128,12 @@ def dbcmd(action, *args):
             raise TypeError(f'{arg} is not a simple type')
     if action in WORKER_ACTIONS:
         if not use_server():
+            # keep local: needed only when not using the server
             from openquake.baselib.workerpool import WorkerMaster
             return getattr(WorkerMaster(-1), action[8:])()
         return _worker_api(action, *args)
     if not use_server():
+        # keep local: circular import with the server database code
         from openquake.server.db import actions as db_actions
         return getattr(db_actions, action)(dbapi.db, *args)
     return _db_api(action, *args)

@@ -18,7 +18,7 @@
 
 """
 Tests for the fault-displacement scaling relations folded into
-:mod:`openquake.hazardlib.scalerel` (PR-2 of the oq-engine integration plan).
+:mod:`openquake.hazardlib.scalerel`.
 
 The values are pinned to the oq-pfdha library outputs and to the published
 coefficients, and the width relations are cross-checked against the

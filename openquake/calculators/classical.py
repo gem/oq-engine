@@ -43,7 +43,7 @@ from openquake.hazardlib.calc.filters import FilteredAway
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
-    RateMap, MapArray, rates_dt, check_hmaps, gen_chunks)
+    RateMap, MapArray, rates_dt, check_hmaps, to_rates)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -63,14 +63,14 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight;
 # with ps_grid_spacing=50
 
 
-def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
-    # NB: this is faster if num_chunks is not too large
+def _store(rates, num_chunks, h5, mon=None, counts=None, gzip=GZIP):
+    # NB: this is faster if num_chunks is not too large;
+    # if the counts per chunk are given, the rates are already sorted by chunk
     logging.debug(f'Storing {humansize(rates.nbytes)}')
     newh5 = h5 is None
     if newh5:
         calc_dir = parallel.calc_dir(mon.filename)
         h5 = hdf5.File(f'{calc_dir}/{mon.task_no}.hdf5', 'a')
-    data = AccumDict(accum=[])
     try:
         h5.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
@@ -79,28 +79,25 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         offset = len(h5['_rates/sid'])
     else:
         offset = 0
-    idx_start_stop = []
-    if isinstance(mon, U32):  # chunk number
-        pairs = [(mon, slice(None))]  # single chunk
+    order = slice(None)  # no copy
+    if isinstance(mon, U32) or num_chunks == 1:  # single chunk
+        chunk = mon if isinstance(mon, U32) else 0
+        idx_start_stop = [(chunk, offset, offset + len(rates))]
     else:
-        pairs = gen_chunks(rates['sid'], num_chunks)
-    for chunk, mask in pairs:
-        ch_rates = rates[mask]
-        n = len(ch_rates)
-        data['sid'].append(ch_rates['sid'])
-        data['gid'].append(ch_rates['gid'])
-        data['lid'].append(ch_rates['lid'])
-        data['rate'].append(ch_rates['rate'])
-        idx_start_stop.append((chunk, offset, offset + n))
-        offset += n
+        if counts is None:
+            # sort the rows by chunk, keeping the order inside each chunk;
+            # this is a lot more memory-efficient than masking each chunk
+            chunks = rates['sid'] % num_chunks
+            order = numpy.argsort(chunks, kind='stable')
+            counts = numpy.bincount(chunks, minlength=num_chunks)
+            del chunks
+        stops = offset + numpy.cumsum(counts)
+        idx_start_stop = [(c, stop - n, stop) for c, (n, stop)
+                          in enumerate(zip(counts, stops)) if n]
     iss = numpy.array(idx_start_stop, getters.slice_dt)
-    for key in data:
-        dt = data[key][0].dtype
-        data[key] = numpy.concatenate(data[key], dtype=dt)
-    hdf5.extend(h5['_rates/sid'], data['sid'])
-    hdf5.extend(h5['_rates/gid'], data['gid'])
-    hdf5.extend(h5['_rates/lid'], data['lid'])
-    hdf5.extend(h5['_rates/rate'], data['rate'])
+    for field in ('sid', 'gid', 'lid', 'rate'):
+        # copy a single field at the time, to save memory
+        hdf5.extend(h5['_rates/' + field], rates[field][order])
     hdf5.extend(h5['_rates/slice_by_idx'], iss)
     if newh5:
         fname = h5.filename
@@ -145,10 +142,26 @@ def save_rates(rmap, num_chunks, h5, mon=None):
     Store the rates on a file calc_id/task_no.hdf5
     """
     # collecting the arrays is essential for performance, i.e. I measured
-    # a 200x speedup in the NVA calculation of BCHydro
-    arrays = [rmap.to_array(g) for g in rmap.gdic]
-    big = numpy.concatenate(arrays) if len(arrays) > 1 else arrays[0]
-    _store(big, num_chunks, h5, mon)
+    # a 200x speedup in the NVA calculation of BCHydro; the big array is
+    # preallocated and filled chunk by chunk, so that the rows are already
+    # sorted by chunk and _store does not need to copy them;
+    # rmap.gdic maps gid -> column index in rmap.array (shape N, L, G)
+    big = numpy.empty(numpy.count_nonzero(rmap.array), rates_dt)
+    counts = numpy.zeros(num_chunks, int)  # number of rows per chunk
+    chunks = rmap.sids % num_chunks
+    start = 0
+    for c in range(num_chunks):
+        mask = chunks == c
+        array, sids = rmap.array[mask], rmap.sids[mask]
+        for g, j in rmap.gdic.items():
+            arr = to_rates(array, sids, g, j, rmap.level0)
+            big[start:start + len(arr)] = arr
+            start += len(arr)
+            counts[c] += len(arr)
+    assert start == len(big), 'there are negative or NaN rates'
+    # release the dense array, since the task arguments keep rmap alive
+    rmap.array = None
+    _store(big, num_chunks, h5, mon, counts)
 
 
 def read_groups_sitecol(dstore, grp_keys):
@@ -907,7 +920,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the source variants optimization
+        # [3] contexts saved by the variant sources optimization
         self.cfactor = numpy.zeros(4)
         self.dparam_mb = 0
         self.source_mb = 0
@@ -1015,7 +1028,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store in the nctxs dataset the contexts after collapse_precision
         in the 'collapsed' field, the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field and the contexts
-        without the source variants optimization in the 'separate' field,
+        without the variant sources optimization in the 'separate' field,
         see contexts.py. If collapse_precision or ps_grid_spacing is set and
         there is no estimate in the 'exact' field, the 'exact' field is set
         to the contexts before collapse_precision, counted for all source
@@ -1043,7 +1056,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the overall context reduction, including point-source gridding
         and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
-        Log the reduction due to the source variants optimization, if any.
+        Log the reduction due to the variant sources optimization, if any.
         """
         after, removed, gridded, saved = self.cfactor
         before = after + removed
@@ -1083,7 +1096,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 'collapse_precision should be turned off',
                 100 * removed / before)
         if saved:  # see the 'separate' field of the nctxs dataset
-            logging.info('The source variants optimization reduced the '
+            logging.info('The variant sources optimization reduced the '
                          'contexts from {:_d} to {:_d}, a factor {:.2f}'
                          .format(int(after + saved), int(after),
                                  (after + saved) / after))

@@ -3,6 +3,8 @@ import itertools
 import tempfile
 from pathlib import Path
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import h5py
 import numpy as np
@@ -10,6 +12,8 @@ import numpy as np
 from openquake._unc.convolution import HistoGroup
 from openquake._unc.hazard_pmf import mixture
 from openquake._unc.utils import weighted_percentile
+from openquake._unc.analysis import Analysis
+from openquake._unc.processing.sampling import sampling
 
 
 def histogram(values, weights, res=50):
@@ -180,10 +184,6 @@ class BinningConvergenceTest(unittest.TestCase):
 
 class SamplingWeightPrecisionTest(unittest.TestCase):
     def test_float32_stored_weights_are_normalized_in_float64(self):
-        from types import SimpleNamespace
-        from openquake._unc.analysis import Analysis
-        from openquake._unc.processing.sampling import sampling
-        from unittest.mock import Mock
 
         weights = np.array([1. / 3] * 3, dtype=np.float32)
         original = weights.copy()

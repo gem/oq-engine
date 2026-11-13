@@ -424,6 +424,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         Convert the source into an XML string, very useful for debugging
         """
+        # keep local: circular import with sourcewriter
         from openquake.hazardlib import nrml, sourcewriter
         return nrml.to_string(sourcewriter.obj_to_node(self))
 
