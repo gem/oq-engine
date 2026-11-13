@@ -39,7 +39,10 @@ echo "== 2. routes"
 [ "$(code $WEBUI/v0/ping)" != 200 ] || fail "the WebUI serves v0"
 
 echo "== 3. oq engine --run by $TESTER"
-id $TESTER >/dev/null 2>&1 || useradd -m $TESTER
+# in the openquake group, like the ci_user of the ansible cluster playbooks:
+# in devel_server installations the engine code is in the home directory
+# of openquake, which is readable only by its group
+id $TESTER >/dev/null 2>&1 || useradd -m -G openquake $TESTER
 JOB=$(mktemp -d)
 cp -r "$JOB_DIR"/. "$JOB"
 chmod -R a+rX "$JOB"
