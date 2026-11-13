@@ -223,7 +223,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
 
     def test_legacy_unsupported_periods(self):
         for imt in (PGA(), PGV(), SA(0.2), SA(0.4), SA(0.5)):
-            with self.subTest(imt=imt):
+            with self.subTest(imt=str(imt)):
                 with self.assertRaisesRegex(ValueError, 'supported periods'):
                     _apply_swiss_amplification_sa(
                         SimpleNamespace(), imt, *np.zeros((4, 1)))
@@ -239,7 +239,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
                 (_apply_swiss_amplification_sa, SA(0.3)),
                 (_apply_swiss_site_specific_amplification_sa, SA(0.3)),
                 (_apply_swiss_site_specific_amplification_sa, PGA())):
-            with self.subTest(modifier=modifier.__name__, imt=imt):
+            with self.subTest(modifier=modifier.__name__, imt=str(imt)):
                 outputs = np.zeros((4, 2))
                 outputs[2], outputs[3] = 1.2 * scale, 0.5 * scale
                 with np.errstate(over='raise', under='raise', invalid='raise'):
@@ -266,7 +266,7 @@ class SwissSiteSpecificAmplificationTestCase(unittest.TestCase):
         outputs[2] = 0.2
         # Test this modifier's domain, not a base coefficient table's errors.
         for imt in (PGV(), SA(0.3), SA(0.2, 10.)):
-            with self.subTest(imt=imt):
+            with self.subTest(imt=str(imt)):
                 with self.assertRaises(ValueError):
                     _apply_swiss_site_specific_amplification_sa(
                         ctx, imt, *outputs, periods=[0.2])
