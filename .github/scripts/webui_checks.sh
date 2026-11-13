@@ -94,8 +94,13 @@ while [ $SECONDS -lt $deadline ]; do
   case $status in complete|failed) break ;; esac
   sleep 2
 done
-[ "$status" = complete ] ||
-  fail "job $job: status '$status' after ${CALC_TIMEOUT}s"
+if [ "$status" != complete ]; then
+  # print the log and the traceback of the job, to understand the failure
+  curl -s -b "$COOKIES" "$BASE/v1/calc/$job/log/0:" |
+    jq -r '.[] | if type == "array" then .[-1] else .message end' | tail -30
+  curl -s -b "$COOKIES" "$BASE/v1/calc/$job/traceback" | jq -r '.[]?'
+  fail "job $job: status '$status' (timeout ${CALC_TIMEOUT}s)"
+fi
 
 echo "== log of job $job (kept in the engine database)"
 curl -s -b "$COOKIES" "$BASE/v1/calc/$job/log/0:" |
