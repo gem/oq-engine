@@ -99,8 +99,8 @@ def regular_grid(mesh, spacing, padding=None):
     nx, ny = dimensions.astype(int)
     xx, yy = numpy.meshgrid((lower[0] + numpy.arange(nx)) * step,
                            (lower[1] + numpy.arange(ny)) * step)
-    lons, lats = pyproj.Transformer.from_crs(crs, 4326, always_xy=True).transform(
-        xx.ravel(), yy.ravel())
+    lons, lats = pyproj.Transformer.from_crs(
+        crs, 4326, always_xy=True).transform(xx.ravel(), yy.ravel())
     lons, lats = numpy.round(lons, 5), numpy.round(lats, 5)
     _check_coordinates(lons, lats)
     coordinates = numpy.column_stack([lons, lats])

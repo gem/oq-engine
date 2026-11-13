@@ -87,13 +87,7 @@ class ImpactParam:
                 logging.info('Using the "%s" model' % self.mosaic_model)
 
         if not self.trt:
-            # NOTE: using the first tectonic region type
-            mtrts = trts.get(self.mosaic_model, [])
-            if not mtrts:  # the exposure has no TRTs for this model
-                raise SiteAssociationError(
-                    'No tectonic region types for the mosaic model %s '
-                    'in the exposure' % self.mosaic_model)
-            self.trt = next(iter(mtrts))
+            self.trt = _first_trt(trts, self.mosaic_model)
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
             base_path='',  # no .ini file
@@ -439,6 +433,16 @@ def _apply_nodal_plane(inputdic, user, monitor):
     inputdic['aspect_ratio'] = inputdic.get('aspect_ratio') or 2.0
     inputdic['mechanism_product'] = product
     return {}
+
+
+# first tectonic region type of the mosaic model, from the exposure
+def _first_trt(trts, mosaic_model):
+    mtrts = trts.get(mosaic_model, [])
+    if not mtrts:  # the exposure has no TRTs for this model
+        raise SiteAssociationError(
+            'No tectonic region types for the mosaic model %s'
+            % mosaic_model)
+    return next(iter(mtrts))  # NOTE: using the first TRT
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
