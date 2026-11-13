@@ -1,19 +1,13 @@
 from typing import Callable, Union
 
-import os
 import tempfile
 import logging
 import numpy as np
 import pandas as pd
-import pyproj as pj
-from osgeo import gdal
 from numpy.lib.stride_tricks import as_strided
+from openquake.baselib.geolibs import get_gdal, pyproj as pj
 
-# Set PROJ_DATA (proj == 9.0.1) to dir containing proj.db to avoid:
-# 'ERROR 1: PROJ: proj_create_from_name: Cannot find proj.db'
-if "PROJ_DATA" not in os.environ:
-    os.environ["PROJ_DATA"] = pj.datadir.get_data_dir()
-gdal.UseExceptions()
+gdal = get_gdal()
 
 
 def sample_raster_at_points(

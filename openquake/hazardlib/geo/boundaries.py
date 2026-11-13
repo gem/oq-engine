@@ -8,6 +8,7 @@ import functools
 from shapely.geometry import shape
 from shapely.validation import make_valid, explain_validity
 from openquake.baselib import config
+from openquake.baselib.geolibs import fiona, get_geopandas
 
 
 # NOTE: we expect to call this for mosaic or global_risk (adm0-1-2)
@@ -18,10 +19,7 @@ def read_geometries(fname, name):
     :param name: name of the primary key field
     :returns: GeoDataFrame frame with codes and geometries
     """
-    # keep local: geopandas is heavy and not needed by all the users of hazardlib
-    import geopandas as gpd
-    # keep local: packager imports nrml, which imports site (circular import)
-    from openquake.hazardlib.geo.packager import fiona
+    gpd = get_geopandas()
     codes = []
     geoms = []
     with fiona.open(fname, IMMUTABLE="YES") as f:
