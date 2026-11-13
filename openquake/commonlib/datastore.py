@@ -142,6 +142,8 @@ def new(calc_id, oqparam, datadir=None, mode=None):
 def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
     :returns: <DataStore> and <LogContext> associated to the calculation
+
+    The datastore can be used in a `with` block, which closes it on exit.
     """
     if ini is not None:
         dic = ini
@@ -149,6 +151,9 @@ def create_job_dstore(description='custom calculation', parent=(), ini=None):
         dic = dict(description=description, calculation_mode='custom')
     log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False), mode='w')
+    dstore.close_on_exit = True
+    # reopening after a `with` block must not truncate the file
+    dstore.mode = 'r+'
     dstore.parent = parent
     if parent:
         dstore._export_dir = get_oq(parent).export_dir
@@ -213,6 +218,7 @@ class DataStore(collections.abc.MutableMapping):
         self.filename = path
         self.ppath = ppath
         self.parent = ()  # can be set later
+        self.close_on_exit = False  # set by create_job_dstore
         # NB: the _tmp.hdf5 file must not be deleted, not even after the
         # calculation is complete: it holds the sections of the
         # multiFaultSources, read by get_sections (used by oq plot, by
@@ -611,8 +617,10 @@ class DataStore(collections.abc.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
-        self.was_close = self.hdf5 == ()
-        if self.was_close:
+        # close on exit if it was closed on enter or if it was created
+        # by create_job_dstore, which hands it over to the caller
+        self.was_close = self.hdf5 == () or self.close_on_exit
+        if self.hdf5 == ():
             self.open(self.mode)
         return self
 
