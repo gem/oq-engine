@@ -73,6 +73,7 @@
 |case\_77|Tests Modifiable GMPE with Tabular GMM|
 |case\_78|Tests Modifiable GMPE with NegativeBinomialTOM|
 |case\_78\_mfd\_variants|Tests NegativeBinomialTOM sources with MFD variants in a logic tree|
+|case\_79|Tests ModifiableGMPE with apply\_swiss\_site\_specific\_amplification\_sa alongside the unmodified EdwardsFah2013Foreland10Bars|
 |case\_80|Tests New Madrid cluster with rup\_mutex|
 |case\_81|Tests a Tabular GMM and a non-tabular GMM both with extra parameters specified within mixture models|
 |case\_82|tests two mps, only one with reqv that should collapse points|

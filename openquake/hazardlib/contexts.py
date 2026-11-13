@@ -273,9 +273,13 @@ def simple_cmaker(gsims, imts, **params):
     return ContextMaker('*', gsims, dic)
 
 
-# generator of quintets (rup_index, mag, magdist, planars, sites)
-# called first in preclassical with a reduced sitecol and then in classical
-def _quintets(cmaker, src, sitecol):
+# generator of tuples (ks, rup_index, mag, magdist, planars, sites), being
+# ks the indices of the pointsource distances (sorted) for which the
+# planars must be used; called first in preclassical with a reduced sitecol
+# and then in classical with a single distance; in the calibration of the
+# pointsource_distance (see autogrid) the contexts for several distances
+# are built at once, sharing the planars and the contexts
+def _sextets(cmaker, src, sitecol, psdists):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
@@ -302,40 +306,57 @@ def _quintets(cmaker, src, sitecol):
 
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
+    ks = tuple(range(len(psdists)))
     # splitting by magnitude
     if src.count_nphc() == 1:
-        # one rupture per magnitude
+        # one rupture per magnitude, the same for all distances
+        if (getattr(cmaker, 'batch_point_sources', False) and
+                not cmaker.fewsites):
+            items = [(mag, pla[0]) for mag, pla in planardict.items()
+                     if minmag <= mag <= maxmag]
+            if items:
+                mags = numpy.array([mag for mag, _pla in items])
+                mdists = numpy.array([magdist[mag] for mag in mags])
+                planars = numpy.concatenate(
+                    [pla for _mag, pla in items]).view(numpy.recarray)
+                yield ks, 0, mags, mdists, [planars], sites
+            return
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, magdist[mag], pla, sites
-    else:
-        for m, rup in enumerate(src.iruptures()):
-            mag = rup.mag
-            if mag > maxmag or mag < minmag:
-                continue
-            mdist = magdist[mag]
-            # far sites use the mean rupture from src.iruptures(),
-            # close sites use all the nodal planes/hypocenters
-            meanpla = [rup.surface.array.reshape(-1, 3)]
-            allpla = planardict[mag]
-            # NB: having a good psdist is essential for performance!
-            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
-                                    magdist, radii)
-            close = sites.filter(cdist[mask] <= psdist)
-            far = sites.filter(cdist[mask] > psdist)
-            if cmaker.fewsites:
-                if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, meanpla, sites
-                else:  # something is close
-                    yield m, mag, mdist, allpla, sites
-            else:  # many sites
-                if close is None:  # all is far
-                    yield m, mag, mdist, meanpla, far
-                elif far is None:  # all is close
-                    yield m, mag, mdist, allpla, close
-                else:  # some sites are far, some are close
-                    yield m, mag, mdist, meanpla, far
-                    yield m, mag, mdist, allpla, close
+                yield ks, m, mag, magdist[mag], pla, sites
+        return
+    cd = cdist[mask]
+    for m, rup in enumerate(src.iruptures()):
+        mag = rup.mag
+        if mag > maxmag or mag < minmag:
+            continue
+        mdist = magdist[mag]
+        # far sites use the mean rupture from src.iruptures(),
+        # close sites use all the nodal planes/hypocenters
+        meanpla = [rup.surface.array.reshape(-1, 3)]
+        allpla = planardict[mag]
+        # NB: having a good psdist is essential for performance!
+        psdist = numpy.array([src.get_psdist(m, mag, psd, magdist, radii)
+                              for psd in psdists])
+        # a site of band i, i.e. psdist[i-1] < cd <= psdist[i], is far
+        # for the distances before i and close for the others
+        bands = numpy.searchsorted(psdist, cd)
+        if cmaker.fewsites:
+            # all the sites are far for the distances without close sites
+            nfar = bands.min()
+            if nfar:  # common for small mag
+                yield ks[:nfar], m, mag, mdist, meanpla, sites
+            if nfar < len(ks):  # something is close
+                yield ks[nfar:], m, mag, mdist, allpla, sites
+            continue
+        for i in range(1, len(ks) + 1):
+            far = sites.filter(bands == i)
+            if far is not None:
+                yield ks[:i], m, mag, mdist, meanpla, far
+        for i in range(len(ks)):
+            close = sites.filter(bands == i)
+            if close is not None:
+                yield ks[i:], m, mag, mdist, allpla, close
 
 
 def collapse_ctx(ctx, rparams, dparams, prec):
@@ -505,11 +526,15 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     return zeroctx.flatten()  # shape N*U
 
 
-def genctxs_Pp(src, sitecol, cmaker, prec=0):
+def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     """
     Context generator for point sources and collapsed point sources;
-    the contexts are collapsed with precision `prec` if it is nonzero
+    the contexts are collapsed with precision `prec` if it is nonzero.
+    Yields pairs (ks, ctx), being ks the indices of the pointsource
+    distances `psdists` (sorted, by default the one of the cmaker)
+    for which the context array is valid
     """
+    psdists = psdists or [cmaker.pointsource_distance]
     dd = cmaker.defaultdict.copy()
     tom = getattr(src, 'temporal_occurrence_model', None)
 
@@ -524,7 +549,8 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    for ks, magi, mag, magdist, planars, sites in _sextets(
+            cmaker, src, sitecol, psdists):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing, case_43
@@ -533,10 +559,15 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0):
             pla = numpy.concatenate(planars).view(numpy.recarray)
         else:
             pla = planars[0]
+        batched = isinstance(mag, numpy.ndarray)
+        rate = numpy.array([mrate[m] for m in mag]) if batched else mrate[mag]
         # building contexts
         with cmaker.ctx_mon:
-            ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+            ctx = _get_ctx_planar(cmaker, builder, mag, rate, magi,
                                   pla, sites, src.id, src.offset, tom)
+        if batched:
+            magdist = numpy.repeat(magdist, len(sites))
+            cmaker.ctx_mon.counts += len(mag) - 1
         ctxt = ctx[ctx.rrup < magdist]
         if getattr(src, 'count_nogrid', False):
             cmaker.cfactor[2] += len(ctxt)
@@ -548,7 +579,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0):
                                  cmaker.REQUIRES_DISTANCES, prec)
             cmaker.cfactor[1] += nctxt - len(ctxt)  # removed by collapsing
         if len(ctxt):
-            yield ctxt
+            yield ks, ctxt
 
 
 def estimate_nctxs(cmaker, srcs, sitecol):
@@ -568,22 +599,32 @@ def estimate_nctxs(cmaker, srcs, sitecol):
     groups = {}
     for src in srcs:
         mags = tuple(mag for mag, _rate in src.get_annual_occurrence_rates())
-        radii = src._get_rupture_projection_radii()
-        key = (src.count_nphc(), mags, tuple(radii))
+        nphc = src.count_nphc()
+        # With one rupture per magnitude, close and far sites use it alike.
+        radii = (() if nphc == 1 else
+                 tuple(src._get_rupture_projection_radii()))
+        key = (nphc, mags, radii)
         groups.setdefault(key, []).append(src)
     fewsites = len(sitecol.complete) <= cmaker.max_sites_disagg
     nctxs = 0
     for (nphc, mags, radii), group in groups.items():
         mesh = Mesh.from_points_list([src.location for src in group])
         magdist = {mag: cmaker.maximum_distance(mag) for mag in mags}
+        previous_mdist = None
         for m, mag in enumerate(mags):
             mdist = magdist[mag]
             if mdist <= 0:  # also excludes magnitudes outside the range
                 continue
+            # Constant integration distances are common across magnitudes.
+            if mdist != previous_mdist:
+                mcnt = sitecol.count_close(mesh, mdist)
+                previous_mdist = mdist
+            if nphc == 1:
+                nctxs += mcnt.sum()
+                continue
             psdist = group[0].get_psdist(
                 m, mag, cmaker.pointsource_distance, magdist, radii)
             # Count pairs within the magnitude and pointsource distances.
-            mcnt = sitecol.count_close(mesh, mdist)
             pcnt = (mcnt if psdist >= mdist else
                     sitecol.count_close(mesh, psdist))
             if fewsites:  # the close and far sites are not separated
@@ -825,11 +866,17 @@ class ContextMaker(object):
         # once per rupture; the counts tell how many ruptures were
         # considered (the ruptures beyond the integration time included)
         self.ctx_mon = monitor('building contexts', measuremem=False)
+        # the updates of the probability maps of the variants, see
+        # rmap_maker.update_variants
+        self.upd_mon = monitor('updating pnes', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         # [0] contexts after collapsing, [1] removed by collapse_precision,
-        # [2] contexts before collapse_precision for the gridding baseline
-        self.cfactor = numpy.zeros(3)
+        # [2] contexts before collapse_precision for the gridding baseline,
+        # [3] contexts saved by the source variants optimization, i.e. the
+        # extra contexts the variants would generate if computed separately
+        # (see rmap_maker.update_variants)
+        self.cfactor = numpy.zeros(4)
 
     def copy(self, **kw):
         """
@@ -1065,25 +1112,44 @@ class ContextMaker(object):
         ctxs = list(self.genctxs([rup], sitecol, src_id=0))
         return self.recarray(ctxs)
 
-    def from_srcs(self, srcs, sitecol):
-        # used in disagg.disaggregation
+    def from_srcs(self, srcs, sitecol, psdists=()):
+        # used in disagg.disaggregation and in the calibration of the
+        # pointsource_distance (with psdists)
         """
         :param srcs: a list of Source objects with consistent TOM
         :param sitecol: a SiteCollection instance
-        :returns: a context array
+        :param psdists: if given, a sorted list of pointsource distances
+        :returns: a context array or, if psdists is given, a dictionary
+                  pointsource distance -> context array
 
         NB: the number of close sites is stored in the .nsites attribute
         of each source
         """
         ctxs = []
+        bypsd = [[] for _ in psdists]  # contexts for each distance
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
             sites = srcfilter.get_close_sites(src)
             src.nsites = 0 if sites is None else len(sites)
-            if sites is not None:
+            if sites is None:
+                continue
+            elif not psdists:
                 ctxs.extend(self.get_ctxs(src, sites))
+            elif getattr(src, 'location', None):  # point source
+                # the contexts are shared between the distances
+                self._init_sites(sites)
+                for ks, ctx in genctxs_Pp(src, sites, self,
+                                          self.collapse_precision, psdists):
+                    for k in ks:
+                        bypsd[k].append(ctx)
+            else:  # the pointsource distance is irrelevant
+                for ctx in self.get_ctxs(src, sites):
+                    for lst in bypsd:
+                        lst.append(ctx)
+        if psdists:
+            return {psd: concat(lst) for psd, lst in zip(psdists, bypsd)}
         return concat(ctxs)
 
     @staticmethod
@@ -1351,6 +1417,13 @@ class ContextMaker(object):
                 self.dparam[sec.idx, param] = get_dparam(sec, sitecol, param)
         self.source_mb += getsizeof(src) / TWO20
 
+    # called before building the contexts for the given sites
+    def _init_sites(self, sitecol):
+        self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+            self.defaultdict['clon'] = F64(0.)
+            self.defaultdict['clat'] = F64(0.)
+
     def get_ctxs(self, src, sitecol, src_id=0, step=1):
         """
         :param src:
@@ -1364,17 +1437,13 @@ class ContextMaker(object):
         :returns:
             list of recarrays
         """
-        self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
-        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
-            self.defaultdict['clon'] = F64(0.)
-            self.defaultdict['clat'] = F64(0.)
-
+        self._init_sites(sitecol)
         if getattr(src, 'location', None):
             # collapse only in classical, as for the other sources
             prec = 0
             if step == 1 and src_id != -1:
                 prec = self.collapse_precision
-            return genctxs_Pp(src, sitecol, self, prec)
+            return (ctx for _ks, ctx in genctxs_Pp(src, sitecol, self, prec))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
@@ -1716,7 +1785,7 @@ class ContextMaker(object):
         elif src.code in b'pP':  # no subsampling
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites))
         else:
-            step = 20 if src.num_ruptures >= 400 else 4
+            step = 5  # a sparser sampling misses the close ruptures
             C = sum(len(ctx) for ctx in self.get_ctxs(src, sites, step=step))
             # compensate the subsampling of the ruptures with the actual
             # ratio between all the ruptures and the sampled ones

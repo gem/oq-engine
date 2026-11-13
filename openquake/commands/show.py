@@ -86,6 +86,8 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
             print('#%d %s: %s' % row)
         return
 
+    if calc_id == -1 and what == 'workflow_info':  # the last workflow
+        calc_id = datastore.last_workflow_id()
     ds = datastore.read(calc_id)
 
     # this part is experimental

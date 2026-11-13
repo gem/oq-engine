@@ -955,6 +955,21 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     return sitecol
 
 
+# rebuild the GSIMs with a VS30_RANGE (i.e. Allen 2022) with
+# vs30_strict=False; setting the attribute on the instance is not enough,
+# since it is lost when the logic tree is stored (via the TOML repr) and
+# read back, for instance by the risk calculations using a SES file
+def _relax_vs30(gsim_lt):
+    new = {}
+    for gsims in gsim_lt.values.values():
+        for i, gsim in enumerate(gsims):
+            if hasattr(gsim, 'VS30_RANGE') and gsim.vs30_strict:
+                kw = dict(gsim.kwargs, vs30_strict=False)
+                new[id(gsim)] = gsims[i] = gsim.__class__(**kw)
+    for br in gsim_lt.branches:
+        br.gsim = new.get(id(br.gsim), br.gsim)
+
+
 def get_gsim_lt(oqparam, trts=()):
     """
     :param oqparam:
@@ -980,6 +995,8 @@ def get_gsim_lt(oqparam, trts=()):
     if len(oqparam.site_labels) > 1:
         logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts or oqparam._trts)
+    if not oqparam.strict:
+        _relax_vs30(gsim_lt)
     spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
@@ -1022,10 +1039,13 @@ def get_pfd_lt(oqparam):
                           % oqparam.inputs['job_ini'])
     fname = os.path.join(
         oqparam.base_path, oqparam.inputs['pfd_logic_tree'])
-    return pfd_lt.PFDLogicTree(
+    tree = pfd_lt.PFDLogicTree(
         fname, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples,
         sampling_method=oqparam.sampling_method)
+    # r_sigma_km is in vars(oqparam) only if set in the job.ini
+    tree.check_r_sigma_conflict(vars(oqparam).get('r_sigma_km'))
+    return tree
 
 
 def get_rupture(oqparam):
@@ -1090,10 +1110,11 @@ def get_source_model_lt(oqparam):
 AMP_LT_SUPPORTED_MODES = ('classical', 'disaggregation')
 
 
-def _get_amp_lt_parser(oqparam):
+def _read_amp_lt(oqparam):
     """
-    If oqparam.inputs['ampl_logic_tree'] is set, parse the amp-LT XML,
-    cache the tree on oqparam._amp_lt, and return it. Otherwise return None.
+    If oqparam.inputs['ampl_logic_tree'] is set, read the amp-LT XML
+    (without amplifiers), cache the tree on oqparam._amp_lt, and return
+    it. Otherwise return None.
     """
     if getattr(oqparam, '_amp_lt', None) is not None:
         # Guard for if already parsed on a previous call
@@ -1112,7 +1133,7 @@ def _get_amp_lt_parser(oqparam):
             '%s: amplification logic tree is only supported with'
             ' amplification_method="convolution", got %r'
             % (fname, oqparam.amplification_method))
-    tree = amp_lt.AmplificationLogicTreeParser(fname)
+    tree = amp_lt.AmplificationLogicTree.from_xml(fname)
     oqparam._amp_lt = tree
     return tree
 
@@ -1123,14 +1144,14 @@ def get_amp_lt(oqparam):
         built from the ``ampl_logic_tree_file`` branch CSVs, or None if
         the input is not set
     """
-    tree = _get_amp_lt_parser(oqparam)
+    tree = _read_amp_lt(oqparam)
     if tree is None:
         return None
     dframes = [AmplificationFunction.read_df(f) for f in tree.filenames]
     amplifiers = [Amplifier(oqparam.imtls, df, oqparam.soil_intensities)
                   for df in dframes]
     return amp_lt.AmplificationLogicTree(
-        tree.branch_ids, tree.weights, dframes=dframes, amplifiers=amplifiers,
+        tree.names, tree.weights, dframes=dframes, amplifiers=amplifiers,
         filenames=tree.filenames, tree_filename=tree.filename,
         branchset_id=tree.branchset_id)
 
@@ -1159,20 +1180,15 @@ def get_full_lt(oqparam):
         extra_lt = get_pfd_lt(oqparam)
     else:
         extra_lt = get_amp_lt(oqparam)
-    full_lt = logictree.FullLogicTree(
-        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
-    p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
+    p = source_model_lt.num_paths * gsim_lt.get_num_paths()
 
+    # Check the limits before FullLogicTree can enumerate the population.
     if oqparam.number_of_logic_tree_samples:
         if (oqparam.oversampling == 'forbid' and
                 oqparam.number_of_logic_tree_samples >= p
                 and 'event' not in oqparam.calculation_mode):
             raise ValueError('Use full enumeration since there are only '
                              '{:_d} realizations'.format(p))
-        unique = numpy.unique(full_lt.rlzs['branch_path'])
-        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
-                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
-                                     len(unique)))
     elif ('classical' in oqparam.calculation_mode
           and oqparam.calculation_mode != 'displacement'):  # full enum
         if not oqparam.fastmean and p > oqparam.max_potential_paths:
@@ -1188,6 +1204,13 @@ def get_full_lt(oqparam):
                 'There are too many potential logic tree paths (%d): '
                 'raise `max_potential_paths`, use sampling instead of '
                 'full enumeration, %s' % (p, rates))
+    full_lt = logictree.FullLogicTree(
+        source_model_lt, gsim_lt, oversampling, extra_lt=extra_lt)
+    if oqparam.number_of_logic_tree_samples:
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
     return full_lt
@@ -1998,7 +2021,7 @@ def get_input_files(oqparam):
             fnames.add(fname)
         elif key == 'ampl_logic_tree':
             fnames.add(fname)
-            tree = _get_amp_lt_parser(oqparam)
+            tree = _read_amp_lt(oqparam)
             if tree is not None:
                 fnames.update(tree.filenames)
         elif key == 'source_model':

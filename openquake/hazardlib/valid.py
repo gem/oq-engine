@@ -1640,18 +1640,25 @@ def basename(src, splitchars='.:'):
     return src_id
 
 
-def corename(src):
+def corename(src, splitchars='!:;.'):
     """
     :param src: source object or source name
+    :param splitchars: the characters starting a suffix to remove
     :returns: the core name of a source
+
+    >>> corename('SC_10:124!b_1')
+    'SC_10'
+    >>> corename('SC_10:124!b_1', '!')  # the ID as written in the logic tree
+    'SC_10:124'
     """
     src = src if isinstance(src, str) else src.source_id
     # @ section of multifault source
-    # ! source model logic tree branch
+    # ! source model logic tree branch (see source_reader.add_bangs; the
+    #   "!" cannot appear in the original IDs)
     # : component of mutex source
     # ; alternate logictree version of a source
     # . component of split source
-    return re.split('[!:;.]', src)[0]
+    return re.split('[%s]' % re.escape(splitchars), src)[0]
 
 
 def fragmentno(src):

@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
 
     openquake.server.db
-    openquake.server.v1
+    openquake.server.webui
 
 Submodules
 ----------

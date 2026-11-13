@@ -161,6 +161,13 @@ calculation_mode:
   Example: *calculation_mode=classical*
   Default: no default
 
+calibration_only:
+  Used in preclassical calculations: stop after the calibration of
+  ps_grid_spacing and pointsource_distance, which is stored in the
+  datastore; it is set by *oq run --calibrate*.
+  Example: *calibration_only = true*
+  Default: False
+
 collapse_gsim_logic_tree:
   INTERNAL
 
@@ -728,10 +735,10 @@ prefer_global_site_params:
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. If the
-  *pointsource_distance* is not set, it is 25 km when gridding and 100 km
-  otherwise. If set to *auto*, the engine determines ps_grid_spacing (and
-  pointsource_distance, if not set) by comparing the hazard on a sample of
-  sites with a reference calculation.
+  *pointsource_distance* is not set, it is calibrated by comparing the
+  hazard on a sample of sites with a reference calculation. If set to
+  *auto*, the engine determines ps_grid_spacing (and pointsource_distance,
+  if not set) in the same way.
   Example: *ps_grid_spacing = 50*.
   Default: 0, meaning no grid
 
@@ -1200,6 +1207,7 @@ class OqParam(valid.ParamSet):
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*ALL_CALCULATORS))
+    calibration_only = valid.Param(valid.boolean, False)
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_precision = valid.Param(valid.positivefloat, 0)
     collect_rlzs = valid.Param(valid.boolean, None)
@@ -1567,8 +1575,6 @@ class OqParam(valid.ParamSet):
         self.auto_grid = self.ps_grid_spacing == 'auto'
         if self.auto_grid:  # set in preclassical, see autogrid.calibrate
             self.ps_grid_spacing = 0.
-        elif self.ps_grid_spacing and not self.psd_given:
-            self.pointsource_distance = dict(default=25)
 
         # cut maximum_distance with minimum_magnitude
         if hasattr(self, 'maximum_distance'):
