@@ -31,10 +31,10 @@
   * Added a new uncertainty `minMagGRAbsolute` to replace the minimum
     magnitude of a truncated Gutenberg-Richter MFD
   * Added a new uncertainty `multiMFDAbsolute` to replace the MFDs of all the
-    points of a multiPointSource, and fixed the source variants optimization
+    points of a multiPointSource, and fixed the variant sources optimization
     to discard in each variant the sources filtered by the maximum distance
   * The classical calculator now logs the reduction of the contexts due to
-    the source variants optimization, stored in the new `separate` field of
+    the variant sources optimization, stored in the new `separate` field of
     the `nctxs` dataset and displayed by `oq show context_reduction`
   * Internal: fixed `oq --version` in devel_server installations by calling
     automatically `git config --global --add safe.directory`
@@ -45,7 +45,7 @@
    impact on the BCHydro calculations is very small. Unit tests expanded to
    check that intended behaviour is better observed.
  * Modified the linear-piecewise magnitude-dependent aspect ratio
-   to permit more than 2 entries + added a unit test checking an
+   to permit more than 2 entries and added an unit test checking an
    expression can be approximately represented using this approach.
 
  [Christopher Brooks, Michele Simionato]

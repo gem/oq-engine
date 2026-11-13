@@ -920,7 +920,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the source variants optimization
+        # [3] contexts saved by the variant sources optimization
         self.cfactor = numpy.zeros(4)
         self.dparam_mb = 0
         self.source_mb = 0
@@ -1028,7 +1028,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store in the nctxs dataset the contexts after collapse_precision
         in the 'collapsed' field, the contexts of the gridded point sources
         before collapse_precision in the 'gridded' field and the contexts
-        without the source variants optimization in the 'separate' field,
+        without the variant sources optimization in the 'separate' field,
         see contexts.py. If collapse_precision or ps_grid_spacing is set and
         there is no estimate in the 'exact' field, the 'exact' field is set
         to the contexts before collapse_precision, counted for all source
@@ -1056,7 +1056,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the overall context reduction, including point-source gridding
         and the reduction due to the pointsource_distance approximation.
         Warn when collapse_precision removes fewer than 10% of contexts.
-        Log the reduction due to the source variants optimization, if any.
+        Log the reduction due to the variant sources optimization, if any.
         """
         after, removed, gridded, saved = self.cfactor
         before = after + removed
@@ -1096,7 +1096,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 'collapse_precision should be turned off',
                 100 * removed / before)
         if saved:  # see the 'separate' field of the nctxs dataset
-            logging.info('The source variants optimization reduced the '
+            logging.info('The variant sources optimization reduced the '
                          'contexts from {:_d} to {:_d}, a factor {:.2f}'
                          .format(int(after + saved), int(after),
                                  (after + saved) / after))

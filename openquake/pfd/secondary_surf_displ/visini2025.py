@@ -39,7 +39,7 @@ from openquake.hazardlib.scalerel.leonard2010 import Leonard2010
 
 
 # Map of scaling relation names used by this module.  The relations live in
-# hazardlib (PR-2 of the oq-engine integration plan); the canonical oq-pfdha
+# hazardlib; the canonical oq-pfdha
 # name "WC1994" is mapped onto the hazardlib :class:`WC1994` class.
 _SCALERS = {
     "WC1994": WC1994(),

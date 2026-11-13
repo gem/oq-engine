@@ -53,7 +53,7 @@ PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # when not gridding, see count_psdist), 'gridded' is the number of contexts
 # of the gridded point sources before collapse_precision, 'collapsed' the
 # number of contexts after collapse_precision and 'separate' the number of
-# contexts without the source variants optimization, i.e. if the variants
+# contexts without the variant sources optimization, i.e. if the variants
 # of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64),

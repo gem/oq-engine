@@ -5,7 +5,7 @@ Performance Approximations
 
 The engine implements a few approximations to speed up the classical calculations: the point source gridding,
 the ``pointsource_distance`` approximation, the choice of the ``ps_grid_spacing``, the ``collapse_precision``
-approximation, plus the source variants optimization, which does not change the results. This page describes them,
+approximation, plus the variant sources optimization, which does not change the results. This page describes them,
 shows how to measure their effect and gives a worked example.
 
 .. _point-source-gridding:
@@ -190,13 +190,13 @@ following fields, which are useful to understand how much the approximations red
   the reduction logged by the engine;
 - ``gridded``: the number of contexts of the gridded point sources before ``collapse_precision``;
 - ``collapsed``: the number of contexts after ``collapse_precision``, shown only if ``collapse_precision`` is nonzero;
-- ``separate``: the number of contexts without the source variants optimization (see :ref:`source-variants`), i.e. if
+- ``separate``: the number of contexts without the variant sources optimization (see :ref:`variant-sources`), i.e. if
   the variants of the sources were computed separately; it is equal to ``collapsed`` when the optimization is not used.
 
 If ``ps_grid_spacing`` or ``collapse_precision`` is set, the ``exact`` field is the number of contexts before
 ``collapse_precision``, counted for all the source types, when no estimate was computed. The ``exact``, ``psd100`` and
 ``gridded`` fields are zero when they have not been computed. The fields can be displayed with
-``oq show context_reduction <calc_id>``, which also displays the reduction factor of the source variants optimization.
+``oq show context_reduction <calc_id>``, which also displays the reduction factor of the variant sources optimization.
 
 For the ``job_vs30.ini`` file of the ``performance.zip`` archive, run with ``ps_grid_spacing=25``,
 ``pointsource_distance=15`` and ``collapse_precision=.03`` (engine version 3.27), the ``nctxs`` dataset contains::
@@ -379,9 +379,9 @@ much on the version of the engine: the numbers above are valid for the engine ve
 other versions, as well as they will depend on the hardware. They are meant to show how to read the logs, not
 as a benchmark.
 
-.. _source-variants:
+.. _variant-sources:
 
-Source variants optimization
+Variant sources optimization
 ----------------------------
 
 When the source model logic tree contains uncertainties on the sources, every source has several *variants*, one for
@@ -446,7 +446,7 @@ The hazard curves and the hazard maps of the two runs are the same within the to
 factor of 7.6 (the contexts were counted directly in both engines, and the counts match the logged ``cfactor``);
 in master the reduction is logged as::
 
-	The source variants optimization reduced the contexts from 22_422 to 2_935, a factor 7.64
+	The variant sources optimization reduced the contexts from 22_422 to 2_935, a factor 7.64
 
 and ``oq show context_reduction`` displays::
 
