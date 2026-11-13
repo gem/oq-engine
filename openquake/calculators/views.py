@@ -50,7 +50,6 @@ from openquake.calculators.getters import (
     get_ebrupture, map_getters, get_rmap_gb)
 from openquake.calculators.base import get_weights, get_model_lts
 from openquake.calculators.extract import extract
-from openquake.calculators import event_based_risk as ebr
 
 TWO24 = 2**24
 F32 = numpy.float32
@@ -1303,6 +1302,8 @@ def view_calc_risk(token, dstore):
     """
     Compute the risk_by_event table starting from GMFs
     """
+    # keep local: circular import with post_risk
+    from openquake.calculators import event_based_risk as ebr
     # avoid a mysterious circular import only on macos
     _, event_id = token.split(':')
     oq = dstore['oqparam']
