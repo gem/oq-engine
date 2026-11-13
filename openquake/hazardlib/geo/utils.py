@@ -71,6 +71,51 @@ class BBoxError(ValueError):
     """Bounding box too large"""
 
 
+def PolygonPatch(polygon, **kwargs):
+    """
+    Constructs a matplotlib patch from a geometric object
+
+    The `polygon` may be a Shapely or GeoJSON-like object
+    possibly with holes. The `kwargs` are those supported
+    by the matplotlib.patches.Polygon class constructor.
+
+    Returns an instance of matplotlib.patches.PathPatch.
+
+    Example (using Shapely Point and a matplotlib axes):
+
+      >> b = Point(0, 0).buffer(1.0)
+      >> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
+      >> axis.add_patch(patch)
+    """
+    # Costly so specify in-function imports
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path
+
+    # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
+    if not hasattr(polygon, 'geom_type'):
+        polygon = geometry.shape(polygon)
+    if polygon.geom_type == 'Polygon':
+        polygons = [polygon]
+    elif polygon.geom_type == 'MultiPolygon':
+        polygons = polygon.geoms
+    else:
+        raise ValueError(
+            'A polygon or multi-polygon representation is required')
+
+    vertices, codes = [], []
+    for poly in polygons:
+        for ring in [poly.exterior] + list(poly.interiors):
+            coords = numpy.asarray(ring.coords)[:, :2]
+            vertices.append(coords)
+            # The codes will be all "LINETO" commands, except for
+            # "MOVETO"s at the beginning of each subpath
+            vals = numpy.full(len(coords), Path.LINETO, dtype=Path.code_type)
+            vals[0] = Path.MOVETO
+            codes.append(vals)
+    return PathPatch(Path(numpy.concatenate(vertices),
+                          numpy.concatenate(codes)), **kwargs)
+
+
 class PolygonPlotter(object):
     """
     Add polygons to a given axis object
@@ -83,8 +128,6 @@ class PolygonPlotter(object):
         self.maxys = []
 
     def add(self, poly, **kw):
-        # keep local: hmtk is above hazardlib in the dependency tower
-        from openquake.hmtk.plotting.patch import PolygonPatch
         minx, miny, maxx, maxy = poly.bounds
         self.minxs.append(minx)
         self.maxxs.append(maxx)

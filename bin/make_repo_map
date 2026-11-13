@@ -55,7 +55,7 @@ def build_repo_map(basedir, out):
 
 
 pkgs =  '''baselib hazardlib commonlib risklib sep calculators engine
-commands server hmtk _unc'''.split()
+commands server _unc'''.split()
 
 if __name__ == '__main__':
     base = Path('openquake')

@@ -710,7 +710,7 @@ _devtest_innervm_run () {
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-hmtk.xml -v openquake/hmtk
+                 export MPLBACKEND=Agg
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-engine.xml -v openquake/engine
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-server.xml -v openquake/server
                  /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-calculators.xml -v openquake/calculators
