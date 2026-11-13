@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+from collections.abc import Iterable
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
@@ -549,7 +550,6 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     """
 
     # If necessary, make lons and lats iterable
-    from collections.abc import Iterable
     if len(lons) and not isinstance(lons[0], Iterable):
         lons = [lons]
         lats = [lats]

@@ -44,6 +44,7 @@ from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
+from openquake.hazardlib.site_amplification import get_poes_site
 
 U8 = numpy.uint8
 I32 = numpy.int32
@@ -279,7 +280,7 @@ def simple_cmaker(gsims, imts, **params):
 # and then in classical with a single distance; in the calibration of the
 # pointsource_distance (see autogrid) the contexts for several distances
 # are built at once, sharing the planars and the contexts
-def _quintets(cmaker, src, sitecol, psdists):
+def _sextets(cmaker, src, sitecol, psdists):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
@@ -549,7 +550,7 @@ def genctxs_Pp(src, sitecol, cmaker, prec=0, psdists=()):
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     mrate = dict(src.get_annual_occurrence_rates())
-    for ks, magi, mag, magdist, planars, sites in _quintets(
+    for ks, magi, mag, magdist, planars, sites in _sextets(
             cmaker, src, sitecol, psdists):
         if not planars:
             continue
@@ -873,7 +874,7 @@ class ContextMaker(object):
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         # [0] contexts after collapsing, [1] removed by collapse_precision,
         # [2] contexts before collapse_precision for the gridding baseline,
-        # [3] contexts saved by the source variants optimization, i.e. the
+        # [3] contexts saved by the variant sources optimization, i.e. the
         # extra contexts the variants would generate if computed separately
         # (see rmap_maker.update_variants)
         self.cfactor = numpy.zeros(4)
@@ -1515,7 +1516,6 @@ class ContextMaker(object):
                        slice(slc.start + start, slc.stop + start))
 
     def _gen_chunk_poes(self, ctx):
-        from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
@@ -1747,6 +1747,7 @@ class ContextMaker(object):
             4 attenuation curves mea, sig, tau, phi
             (up to 500 km from the site at steps of 5 km)
         """
+        # keep local: circular import through source and valid
         from openquake.hazardlib.source import rupture
         rup = rupture.get_planar(
             site, msr, mag, aratio, strike, dip, rake, self.trt)

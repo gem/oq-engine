@@ -37,6 +37,7 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib import nrml
+from openquake.hazardlib.geo.mesh import Mesh
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -66,7 +67,6 @@ def _create_rupture(distance, magnitude,
         dip=90.0,
         mesh_spacing=1.0)
     # check effective rupture-site distance
-    from openquake.hazardlib.geo.mesh import Mesh
     mesh = Mesh(numpy.array([0.0]), numpy.array([0.0]))
     assert abs(surface.get_joyner_boore_distance(mesh)-distance) < 1e-2
     return BaseRupture(mag, rake, tectonic_region_type, hypocenter,

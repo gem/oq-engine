@@ -64,8 +64,7 @@ class Kuehn2024PrimaryFD(BasePrimarySurfDispl):
     definition, and there is no cross-definition conversion (ibid.). Because
     the prediction already contains the distributed contribution, the hazard
     kernel runs this model as a single bucket (rate * P_sr * P_fd_aggregate
-    * W_p) and any secondary-slot model in the same chain is rejected
-    (FDLT-013; docs/design/rupture_location_uncertainty.md, D8).
+    * W_p) and any secondary-slot model in the same chain is rejected.
     """
 
     DISPLACEMENT_DEFINITION = "aggregate"

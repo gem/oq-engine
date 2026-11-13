@@ -160,6 +160,9 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         [dict(calculation_mode='custom',
               description='Calculation waiting to start')],
         config.distribution.log_level, None, username, hc_id)
+    # same logger as the logins (signals.py): the line goes to webui-access.log
+    logging.getLogger('openquake.server.signals').info(
+        'User "%s" submitted calculation %d', username, job.calc_id)
     try:
         job_ini = (store(request_files, ini, job.calc_id)
                    if request_files else ini)

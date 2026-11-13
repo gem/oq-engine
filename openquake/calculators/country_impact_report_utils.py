@@ -23,8 +23,10 @@ import pathlib
 from dataclasses import dataclass
 from shapely.validation import make_valid, explain_validity
 import pandas as pd
-import geopandas as gpd
 from openquake.baselib import config
+from openquake.baselib.geolibs import get_geopandas
+
+gpd = get_geopandas()
 
 
 def get_configured_path(name, directory=False):

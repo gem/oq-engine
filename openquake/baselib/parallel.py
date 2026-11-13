@@ -175,6 +175,7 @@ fast sources.
 
 """
 import os
+import sqlite3
 import re
 import ast
 import sys
@@ -225,6 +226,21 @@ def parse_hostcore(hostcore, default_port):
     return host, (int(port) if sep else int(default_port)), cores
 
 
+# read the ds_calc_dir of a job from the database of a user installation;
+# this is direct access, so that baselib does not import commonlib
+def _ds_calc_dir(job_id):
+    dbfile = os.path.expanduser(config.server.dbfile)
+    conn = sqlite3.connect(dbfile, timeout=60)
+    try:
+        row = conn.execute('SELECT ds_calc_dir FROM job WHERE id=?',
+                           (job_id,)).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        raise ValueError('No job %s in %s' % (job_id, dbfile))
+    return row[0]
+
+
 def calc_dir(job_id_or_fname):
     """
     :param job_id_or_fname: job ID (integer) or .hdf5 pathname (string)
@@ -235,9 +251,8 @@ def calc_dir(job_id_or_fname):
         return os.path.join(tempfile.gettempdir(), getpass.getuser())
     if isinstance(job_id_or_fname, str):
         dirname = job_id_or_fname[:-5]  # strip .hdf5
-    else:  # in SLURM clusters
-        from openquake.commonlib.logs import dbcmd
-        dirname = dbcmd('get_job', job_id_or_fname).ds_calc_dir
+    else:  # in SLURM clusters the installation is of kind user
+        dirname = _ds_calc_dir(job_id_or_fname)
     try:
         os.makedirs(dirname)
     except FileExistsError:  # already created
@@ -511,15 +526,14 @@ def sendback(res, zsocket):
     try:
         zsocket.send(res)
         if DEBUG:
-            from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
                 msg = 'sent back %s' % humansize(nbytes)
-                dblog('DEBUG', calc_id, task_no, msg)
+                logging.debug('task #%d: %s', task_no, msg)
     except Exception:  # like OverflowError
         _etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         if DEBUG and calc_id:
-            dblog('ERROR', calc_id, task_no, tb_str)
+            logging.error('task #%d: %s', task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
     return nbytes

@@ -652,7 +652,7 @@ def view_context_reduction(token, dstore):
     """
     Display the number of contexts stored in the nctxs dataset (zero
     when not computed, see preclassical.CTX_EST) and the reduction factor
-    due to the source variants optimization, i.e. the ratio between the
+    due to the variant sources optimization, i.e. the ratio between the
     contexts without the optimization ('separate') and the contexts
     actually computed ('collapsed')
     """
@@ -1302,8 +1302,9 @@ def view_calc_risk(token, dstore):
     """
     Compute the risk_by_event table starting from GMFs
     """
-    # avoid a mysterious circular import only on macos
+    # keep local: circular import with post_risk
     from openquake.calculators import event_based_risk as ebr
+    # avoid a mysterious circular import only on macos
     _, event_id = token.split(':')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']

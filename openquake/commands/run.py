@@ -22,9 +22,14 @@ import socket
 import cProfile
 import getpass
 
+import numpy
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, readinput
+from openquake.commonlib import logs, readinput, datastore
+from openquake.hazardlib.calc.mean_rates import (
+    get_rmap, get_gweights, calc_mean_rates)
+from openquake.hazardlib.source_reader import (
+    get_bset_values, modified_groups)
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs
@@ -32,6 +37,38 @@ from openquake.engine.workflow import run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
+
+
+# print the mean hazard rates of the first site, without parallelization,
+# pretty useful when debugging single site calculations
+def _mean_rates(job_ini):
+    _log, dstore = datastore.create_job_dstore(
+        f'mean rates of {job_ini}')
+    with dstore:
+        oq = readinput.get_oqparam(job_ini)
+        csm = readinput.get_composite_source_model(oq, dstore)
+        csm.set_msparams()  # needed by the multifault sources, if any
+        # NB: there are no workers here, so the uncertainties are applied
+        # here, one set of realizations at a time; this way the groups
+        # returned have the trt_smrs of a single set of uncertainties,
+        # as expected by get_rmap
+        src_groups = []
+        for grp in csm.src_groups:
+            bset_values = get_bset_values(csm.full_lt, grp)
+            src_groups.extend(
+                sg for _trt_smrs, sg in modified_groups(grp, bset_values))
+        sitecol = readinput.get_site_collection(oq)
+        assert len(sitecol) <= oq.max_sites_disagg, sitecol
+        rmap, _cmakers = get_rmap(src_groups, csm.full_lt, sitecol, oq)
+        gws = get_gweights(src_groups, csm.full_lt)
+        rates = calc_mean_rates(
+            rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
+        N, _M, L1 = rates.shape
+        mrates = numpy.zeros((N, L1), oq.imt_dt())
+        for m, imt in enumerate(oq.imtls):
+            mrates[imt] = rates[:, m]
+        print('Mean hazard rates for the first site')
+        print(views.text_table(mrates[0], ext='org'))
 
 
 # called when profiling
@@ -73,6 +110,8 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
 
 def main(job_ini,
          pdb=False,
+         calibrate=False,
+         mean_rates=False,
          *,
          slowest: int = None,
          hc: valid.calculation = None,
@@ -108,6 +147,11 @@ def main(job_ini,
         params['hazard_calculation_id'] = str(hc)
     if concurrent_tasks is not None:
         params['concurrent_tasks'] = str(concurrent_tasks)
+    if calibrate:  # only the calibration of the preclassical phase
+        params['calculation_mode'] = 'preclassical'
+        params['calibration_only'] = 'true'
+    if mean_rates:  # print the mean hazard rates of the first site
+        return _mean_rates(job_ini)
     if slowest:
         prof = cProfile.Profile()
         prof.runctx('_run(job_ini, None, pdb, loglevel, '
@@ -144,11 +188,16 @@ def main(job_ini,
 
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
+main.calibrate = dict(help='run only the calibration of ps_grid_spacing '
+                      'and pointsource_distance')
+main.mean_rates = dict(help='print the mean hazard rates of the first site, '
+                       'computed without parallelization')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
 main.param = dict(help='override parameters with TOML syntax', nargs='*',
                   action='extend')
-main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+main.concurrent_tasks = dict(help='hint for the number of tasks to spawn',
+                             abbrev='--ct')
 main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())

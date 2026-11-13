@@ -961,7 +961,7 @@ class SourceConverter(RuptureConverter):
         # whole surface, so its mesh top edge is a resampling that can
         # corner-cut a wiggly trace (it would distort the PFD distances).
         # A MultiSurface has no single trace and is left to the per-section
-        # reference-line routing (PR-8), like oq-pfdha
+        # reference-line routing, like oq-pfdha
         if hasattr(char.surface, 'surfaces'):
             trace = None
         else:

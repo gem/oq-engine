@@ -1,7 +1,4 @@
-Checksum of the inputs: 3683067441 (total size 702.76 MB)
-
-Checksum of the inputs: 1904272793
-
+Cores used: 160
 * v3.24
 
 | calc_7515, maxmem=159.6 GB | time_sec  | memory_mb | counts     |

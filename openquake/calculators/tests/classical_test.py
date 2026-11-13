@@ -19,6 +19,7 @@
 import sys
 import gzip
 import unittest
+import pandas as pd
 import numpy
 from unittest import mock
 
@@ -34,6 +35,7 @@ from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.hazardlib.gsim.gmpe_table import interp_table
 from openquake.calculators.tests import CalculatorTestCase, no_fastmean
 from openquake.qa_tests_data.classical import (
     case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
@@ -510,7 +512,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # This is for checking purposes. It creates a .txt file that can be
         # read with QGIS
         if check:
-            import pandas as pd
             df = pd.DataFrame({'geometry': [poly, expected]})
             fname = general.gettemp(suffix='.csv')
             print('Saving %s' % fname)
@@ -687,7 +688,25 @@ class ClassicalTestCase(CalculatorTestCase):
                                          dict(imt='PGA', stat='mean'))
         self.assertEqual(list(df.columns), ['stat', 'imt', 'poe', 'value'])
 
+    # the stop after the calibration does not depend on the sampling
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
+    def test_calibration_only(self):
+        # oq run --calibrate: the calibration is stored and the
+        # preclassical stops before the splitting of the sources
+        self.run_calc(case_43.__file__, 'job.ini',
+                      calculation_mode='preclassical',
+                      calibration_only='true', concurrent_tasks='4')
+        oq = self.calc.datastore['oqparam']
+        self.assertEqual(oq.ps_grid_spacing, 50.)
+        calib = self.calc.datastore.read_df('calibration')
+        self.assertEqual(len(calib), 4)
+        self.assertNotIn('source_info', self.calc.datastore)
+
     @mock.patch('openquake.calculators.autogrid.MAX_PAIRS', 1)
+    # the full calibration, i.e. without the random sample, is checked here
+    @mock.patch('openquake.calculators.autogrid.random_filter',
+                new=lambda objs, _factor: objs)
     def test_case_43(self):
         # this is a test for pointsource_distance and ps_grid_spacing=auto
         # it also checks running a classical after a preclassical
@@ -1332,7 +1351,6 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_93.__file__, concurrent_tasks='2')
 
-        from openquake.hazardlib.gsim.gmpe_table import interp_table
         info = interp_table.cache_info()
         print(info)  # debug
 
@@ -1362,7 +1380,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_96(self):
         # a source with an uncertainty and magnitudes partially outside
         # the integration distance: the magnitudes with zero integration
-        # distance must be ignored, not raise a KeyError (see _quintets).
+        # distance must be ignored, not raise a KeyError (see _sextets).
         # The source is weighted in the preclassical before the
         # uncertainties are applied, i.e. before the magnitude filtering,
         # which is performed in the classical workers (see filter_mag)
@@ -1544,7 +1562,7 @@ class ContextReductionTestCase(unittest.TestCase):
             self.assertNotIn('estimated', logs.output[0])
 
     def test_variants(self):
-        # 300 contexts computed and 900 saved by the source variants
+        # 300 contexts computed and 900 saved by the variant sources
         # optimization, i.e. 1200 contexts without the optimization
         self.calc.oqparam = mock.Mock(collapse_precision=0,
                                       ps_grid_spacing=0)

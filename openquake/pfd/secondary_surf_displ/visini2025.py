@@ -39,7 +39,7 @@ from openquake.hazardlib.scalerel.leonard2010 import Leonard2010
 
 
 # Map of scaling relation names used by this module.  The relations live in
-# hazardlib (PR-2 of the oq-engine integration plan); the canonical oq-pfdha
+# hazardlib; the canonical oq-pfdha
 # name "WC1994" is mapped onto the hazardlib :class:`WC1994` class.
 _SCALERS = {
     "WC1994": WC1994(),
@@ -391,22 +391,7 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
         else:
             md_m = 2.0 * ad_m
 
-        # Fault length L [km] for computing the along-strike search window
-        if hasattr(sr, "get_length_km"):
-            L_km = sr.get_length_km(mag, style)
-        elif hasattr(sr, "get_median_length"):
-            rake = 90.0 if str(style).lower() == "reverse" else -90.0
-            L_km = sr.get_median_length(mag, rake)
-        elif hasattr(sr, "get_rupture_length"):
-            L_km = sr.get_rupture_length(mag)
-        elif hasattr(sr, "get_surface_rupture_length"):
-            # WC1994 exposes SRL(M) under this name; without this probe the
-            # DEFAULT scaling model would silently never activate the
-            # distance-dependent along-strike smoothing window (L_km = None
-            # forces r = 0 below).
-            L_km = sr.get_surface_rupture_length(mag, str(style).lower())
-        else:
-            L_km = None
+        L_km = _get_L_km(sr, mag, style)
 
         # Half-window r in normalized along-strike coordinate (clip to 0.5)
         if L_km and distance > 0.0:
@@ -458,3 +443,24 @@ class Visini2025SecondaryFD(BaseSecondarySurfDispl):
                 tpfm_loc = float(np.mean(T_mean[mask]))
 
         return tpfm_loc, float(sigma_log10)
+
+
+# fault length L [km] along strike, None if the law has none
+def _get_L_km(sr, mag, style):
+    # Fault length L [km] for computing the along-strike search window
+    if hasattr(sr, "get_length_km"):
+        L_km = sr.get_length_km(mag, style)
+    elif hasattr(sr, "get_median_length"):
+        rake = 90.0 if str(style).lower() == "reverse" else -90.0
+        L_km = sr.get_median_length(mag, rake)
+    elif hasattr(sr, "get_rupture_length"):
+        L_km = sr.get_rupture_length(mag)
+    elif hasattr(sr, "get_surface_rupture_length"):
+        # WC1994 exposes SRL(M) under this name; without this probe the
+        # DEFAULT scaling model would silently never activate the
+        # distance-dependent along-strike smoothing window (L_km = None
+        # forces r = 0 below).
+        L_km = sr.get_surface_rupture_length(mag, str(style).lower())
+    else:
+        L_km = None
+    return L_km

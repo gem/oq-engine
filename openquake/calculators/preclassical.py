@@ -53,7 +53,7 @@ PSD_EXACT = 1000  # km, pointsource_distance considered exact (see autogrid)
 # when not gridding, see count_psdist), 'gridded' is the number of contexts
 # of the gridded point sources before collapse_precision, 'collapsed' the
 # number of contexts after collapse_precision and 'separate' the number of
-# contexts without the source variants optimization, i.e. if the variants
+# contexts without the variant sources optimization, i.e. if the variants
 # of the sources were computed separately
 CTX_EST = numpy.dtype([('exact', numpy.int64), ('psd100', numpy.int64),
                        ('gridded', numpy.int64), ('collapsed', numpy.int64),
@@ -445,6 +445,10 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 self.calibrate_grid(sites)
 
+        if oq.calibration_only:  # stop here, the calibration is stored
+            logging.info('Stopping after the calibration')
+            return
+
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
         # source_reader.store_unc_signatures)
@@ -499,9 +503,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         cmakers = self.cmakers.to_array()
-        with self.monitor('calibrating ps_grid_spacing'):
-            best = autogrid.calibrate(
-                self.csm, cmakers, sites, oq, self.datastore.hdf5)
+        best = autogrid.calibrate(
+            self.csm, cmakers, sites, oq, self.datastore.hdf5)
         if best is None:  # no point sources
             return
         psgs, psd = best
@@ -584,6 +587,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # Melbourne it was wasting ~50 seconds in the reduce
         with general.gc_disabled():
             self.populate_csm()
+        if self.oqparam.calibration_only:
+            return  # nothing else to do, see populate_csm
         return self.csm
 
     def post_execute(self, csm):

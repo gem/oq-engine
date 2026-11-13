@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta
 
 from openquake.calculators.views import text_table
 from openquake.commonlib import logs, datastore
+from openquake.calculators.reportwriter import ReportWriter
 
 
 def make_report(isodate='today'):
@@ -52,7 +53,6 @@ def make_report(isodate='today'):
         (job_id, _user, _start_time, _stop_time, status, _duration) = stats
         try:
             ds = datastore.read(job_id, datadir=os.path.dirname(ds_calc))
-            from openquake.calculators.reportwriter import ReportWriter
             report = ReportWriter(ds, fmt='md').make_report(show_inputs=False)
             title = ds['oqparam'].description
         except Exception as exc:

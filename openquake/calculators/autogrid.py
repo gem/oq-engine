@@ -37,7 +37,7 @@ import numpy
 import pandas
 from openquake.baselib import parallel
 from openquake.baselib.general import (
-    AccumDict, WeightedSequence, block_splitter)
+    AccumDict, WeightedSequence, block_splitter, random_filter)
 from openquake.hazardlib.map_array import compute_hmaps
 from openquake.hazardlib.calc.mean_rates import to_probs
 from openquake.hazardlib.source.point import grid_point_sources
@@ -281,6 +281,10 @@ def calibrate(csm, cmakers, sitecol, oq, h5=None):
     args = [(sg, sites, maxdist[grp_id]) for grp_id, sg in sgs.items()]
     prepared = parallel.Starmap(prepare_points, args, h5=h5).reduce()
     groups = {grp_id: prepared[grp_id] for grp_id in sgs if prepared[grp_id]}
+    # calibrate on a random third of the point sources
+    # an empty sample is replaced by the first source
+    groups = {g: random_filter(pts, 1 / 3) or pts[:1]
+              for g, pts in groups.items()}
     if not groups:
         return None
     return select_candidate(

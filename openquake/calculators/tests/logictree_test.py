@@ -354,7 +354,7 @@ hazard_uhs-std.csv
         self.assertEqual(nctxs, 15)
         self.assertEqual(self.calc.cfactor[0], nctxs)
 
-        # without the source variants optimization each variant would
+        # without the variant sources optimization each variant would
         # generate its contexts: at the first depth 4 for the 6 variants
         # with magnitudes 5.5, 6.5 and 6 for the 3 variants with maxMag 7.6,
         # i.e. 42, and at the second depth 6 x 6 + 3 x 9 = 63

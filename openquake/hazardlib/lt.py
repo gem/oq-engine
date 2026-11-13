@@ -78,6 +78,7 @@ from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
+from openquake.hazardlib.sourcewriter import build_multi_mfd
 
 NOAPPLY_UNCERTAINTIES = [
     'sourceModel', 'extendModel', 'gmpeModel', 'amplificationModel']
@@ -404,7 +405,6 @@ def uncertainty_to_node(utype, value, correlated=False):
                    nodes=[Node('occurRates', text=rates)])
         return Node('uncertaintyModel', nodes=[mfd])
     if utype == 'multiMFDAbsolute':
-        from openquake.hazardlib.sourcewriter import build_multi_mfd
         kind, size, kwargs = value
         mfd = build_multi_mfd(MultiMFD(kind, size, **kwargs))
         # An omitted bin width is inherited from the source, not written NaN.

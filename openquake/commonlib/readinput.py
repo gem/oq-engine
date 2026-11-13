@@ -43,10 +43,7 @@ import itertools
 import numpy
 import pandas
 import requests
-import geopandas as gpd
 from shapely import wkt
-from shapely.geometry import shape
-from shapely.validation import make_valid, explain_validity
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -56,7 +53,8 @@ from openquake.baselib.general import (
 from openquake.baselib.general import decode, gc_disabled
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.geo.boundaries import (
+    read_geometries, read_countries_df)
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
@@ -77,7 +75,7 @@ from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib import logs
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.qa_tests_data import mosaic, global_risk
+from openquake.qa_tests_data import mosaic
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1000,6 +998,9 @@ def get_gsim_lt(oqparam, trts=()):
     spatial_model = oqparam.get_within_event_correlation_model()
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
+            if not oqparam.strict and hasattr(gsim, 'VS30_RANGE'):
+                # remove the vs30 range constraint on Allen 2022
+                gsim.vs30_strict = False
             # NB: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE can be != trt,
             # but it is not an error, it is actually the most common case!
             if spatial_model and (gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES ==
@@ -2101,38 +2102,6 @@ def get_custom_site_id(descr):
     return base64.urlsafe_b64encode(digest[:6]).decode('ascii')
 
 
-# NOTE: we expect to call this for mosaic or global_risk (adm0-1-2)
-@functools.lru_cache(maxsize=4)
-def read_geometries(fname, name):
-    """
-    :param fname: path of the file containing the geometries
-    :param name: name of the primary key field
-    :returns: GeoDataFrame frame with codes and geometries
-    """
-    codes = []
-    geoms = []
-    with fiona.open(fname, IMMUTABLE="YES") as f:
-        crs = f.crs
-        for feature in f:
-            props = feature["properties"]
-            geom = feature["geometry"]
-            code = props[name]
-            if code and geom:
-                g = shape(geom)
-                if not g.is_valid:
-                    logging.warning("Invalid geometry for %s: %s",
-                                    code, explain_validity(g))
-                    g = make_valid(g)
-                codes.append(code)
-                geoms.append(g)
-            else:
-                logging.error(f"{code=}, {geom=} in {fname}")
-    # NOTE: "geometry" instead of "geom" would be the standard in GeoPandas,
-    #       but using "geom" we avoid changing other code using this object
-    return gpd.GeoDataFrame(
-        dict(code=codes, geom=geoms), geometry="geom", crs=crs)
-
-
 @functools.lru_cache()
 def read_cities(fname, lon_name, lat_name, label_name):
     """
@@ -2171,21 +2140,6 @@ def read_mosaic_df(mosaic_dir=''):
     if missing:
         logging.warning(f'{mosaic_boundaries_file} is missing {missing}')
     return df
-
-
-def read_countries_df():
-    """
-    :returns: a DataFrame of geometries for the world countries
-    """
-    country_boundaries_file = None
-    if hasattr(config.directory, 'admin0_boundaries_file'):
-        country_boundaries_file = config.directory.admin0_boundaries_file
-    if not country_boundaries_file:
-        country_boundaries_file = os.path.join(
-            os.path.dirname(global_risk.__file__),
-            'geoBoundariesCGAZ_ADM0.gpkg')
-    logging.info(f'Reading {country_boundaries_file}')
-    return read_geometries(country_boundaries_file, 'shapeGroup')
 
 
 def read_cities_df(lon_field='longitude', lat_field='latitude',
