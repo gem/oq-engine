@@ -69,6 +69,12 @@ class ImpactPage(EnginePage):
             self.page.locator('#submit_impact_calc'), '/v1/calc/impact_run',
             timeout=USGS_REQUEST_TIMEOUT)
 
+    def run_impact_calc_expecting_error(self, error_msg):
+        # the calculation is refused by the server with a 500 error
+        self.submit_calculation_expecting_error(
+            self.page.locator('#submit_impact_calc'), '/v1/calc/impact_run',
+            500, error_msg, timeout=USGS_REQUEST_TIMEOUT)
+
     def set_time_of_the_event(self, value):
         selector = self.page.locator('select#time_event')
         expect(selector).to_be_editable()

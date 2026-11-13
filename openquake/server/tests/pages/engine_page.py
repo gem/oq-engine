@@ -36,6 +36,21 @@ class EnginePage:
             timeout=50_000)
         return self.new_job_id
 
+    def submit_calculation_expecting_error(
+            self, button, endpoint, status, error_msg, timeout=50_000):
+        # the server must refuse the submission with the given status
+        # and an error message containing error_msg; no job is created
+        with self.page.expect_response(
+                lambda response: response.url.endswith(endpoint)
+                and response.request.method == 'POST',
+                timeout=timeout) as response_info:
+            button.click()
+        response = response_info.value
+        assert response.status == status, (
+            f'Expected {status}, got {response.status}: '
+            f'{response.text()}')
+        assert error_msg in response.json()['error_msg'], response.text()
+
     def _submit_calculation(self, button, endpoint, timeout=50_000):
         # Register before clicking: fast responses and short jobs must not
         # be missed. Never infer identity from a transient table status.
