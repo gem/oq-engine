@@ -16,7 +16,7 @@ import sys
 import threading
 import time
 import unittest
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import requests
@@ -24,6 +24,18 @@ import requests
 from openquake.server.utils import check_webserver_running
 
 ROOT = Path(__file__).parents[3]
+
+
+class _NotFoundHandler(BaseHTTPRequestHandler):
+    # emulates an HTTP server unrelated to the WebUI, answering 404
+    # to the health check requests
+
+    def do_HEAD(self):
+        self.send_response(404)
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass  # keep the test output clean
 
 
 class WebuiTestCase(unittest.TestCase):
@@ -65,8 +77,7 @@ class WebuiTestCase(unittest.TestCase):
 
     def test_foreign_http_server_is_not_webui(self):
         # an unrelated server answering 404 must not count as running
-        with HTTPServer(('127.0.0.1', 0), SimpleHTTPRequestHandler) as srv:
-            srv.RequestHandlerClass.log_message = lambda *args: None
+        with HTTPServer(('127.0.0.1', 0), _NotFoundHandler) as srv:
             thread = threading.Thread(target=srv.serve_forever, daemon=True)
             thread.start()
             try:

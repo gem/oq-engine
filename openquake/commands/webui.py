@@ -75,20 +75,24 @@ def _stop(hostport):
     print('stopped')
 
 
-def runserver(hostport=None, skip_browser=False):
-    """Start the Django development server and serve the WebUI application."""
+# exit with an error if a WebUI is already serving the given address:
+# nothing is started, so a zero exit code would make supervisors and
+# scripts believe that the server ran and terminated cleanly; on a
+# desktop it is still convenient to show the running WebUI
+def _exit_if_running(hostport, skip_browser):
     url = 'http://' + hostport
-    health = _health_url(hostport)
-    if check_webserver_running(health, max_retries=1, warn=False):
-        # another WebUI is already serving this address: nothing was
-        # started, so exit with an error code (otherwise supervisors and
-        # scripts would believe the server ran and terminated cleanly);
-        # on a desktop it is still convenient to show the running one
+    if check_webserver_running(
+            _health_url(hostport), max_retries=1, warn=False):
         if not skip_browser:
             webbrowser.open(url)
         sys.exit('A WebUI is already running at %s' % url)
 
-    args = [sys.executable, '-m', 'openquake.server.manage', 'runserver']
+
+def runserver(hostport=None, skip_browser=False):
+    """Start the Django development server and serve the WebUI application."""
+    url = 'http://' + hostport
+    health = _health_url(hostport)
+    args =[sys.executable, '-m', 'openquake.server.manage', 'runserver']
     # the reload functionality of the Django development server interferes
     # with SIGCHLD and causes zombies, thus it is disabled
     args.append('--noreload')
@@ -119,6 +123,10 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
+    # this check must come first: the steps below would upgrade the
+    # database while another WebUI is using it and would print a
+    # misleading 'Starting' message before failing
+    _exit_if_running(hostport, skip_browser)
     os.environ.setdefault('OQ_API_KEY', API_KEY)
     api_host, api_port = hostport.rsplit(':', 1)
     if api_host == '0.0.0.0':

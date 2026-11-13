@@ -169,17 +169,19 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30,
     """
     for retry in range(max_retries):
         try:
+            # without a timeout a process accepting the connection but
+            # never replying would block the caller forever
             response = requests.head(
                 url, allow_redirects=True, timeout=timeout)
             if response.status_code == requests.codes.ok:
                 return True
         except requests.RequestException:
-            pass
+            pass  # not reachable (yet): retry
         if retry + 1 < max_retries:
             sleep(1)
     if warn:
-        logging.warning('Unable to connect to %s within %s retries'
-                        % (url, max_retries))
+        logging.warning('%s did not answer with status 200 within %s '
+                        'retries' % (url, max_retries))
     return False
 
 
