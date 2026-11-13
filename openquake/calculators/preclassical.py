@@ -503,9 +503,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         cmakers = self.cmakers.to_array()
-        with self.monitor('calibrating ps_grid_spacing'):
-            best = autogrid.calibrate(
-                self.csm, cmakers, sites, oq, self.datastore.hdf5)
+        best = autogrid.calibrate(
+            self.csm, cmakers, sites, oq, self.datastore.hdf5)
         if best is None:  # no point sources
             return
         psgs, psd = best
