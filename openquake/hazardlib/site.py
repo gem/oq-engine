@@ -37,6 +37,7 @@ from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, get_middle_point, geolocate)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.boundaries import read_countries_df
 
 TWO32 = 2 ** 32
 U32 = numpy.uint32
@@ -64,9 +65,7 @@ def get_countries(lons, lats):
     """
     :returns: array of 3-letter country codes
     """
-    # keep local: readinput imports this module (circular import)
-    from openquake.commonlib import readinput
-    geom_df = readinput.read_countries_df()
+    geom_df = read_countries_df()
     lonlats = numpy.zeros((len(lons), 2), numpy.float32)
     lonlats[:, 0] = lons
     lonlats[:, 1] = lats

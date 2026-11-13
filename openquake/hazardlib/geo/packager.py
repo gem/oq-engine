@@ -19,13 +19,7 @@ import ast
 import json
 import logging
 import time
-try:
-    import fiona
-    from fiona.crs import CRS
-except ImportError:
-    raise ImportError('The geospatial libraries must be installed using our '
-                      'requirements.txt files (see https://github.com/gem/oq-engine). '
-                      'Only the GEM wheels are tested and guaranteed to work')
+from openquake.baselib.geolibs import fiona, CRS
 from openquake.baselib.node import Node, scientificformat
 from openquake.hazardlib import nrml
 from openquake.hazardlib.aspect_ratio import (
