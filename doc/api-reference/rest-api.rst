@@ -439,24 +439,6 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - 
-   * - ``/v1/aelo_site_classes``
-     - GET
-     - none
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - 
-   * - ``/v1/get_impact_form_defaults``
-     - GET
-     - none
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - 
    * - ``/v1/ping``
      - GET HEAD
      - none
@@ -469,6 +451,15 @@ user level, are described in the section of each route.
    * - ``/v1/calc/aelo_run``
      - POST
      - login
+     - 
+     - 
+     - 
+     - ✓
+     - 
+     - 
+   * - ``/v1/aelo_site_classes``
+     - GET
+     - none
      - 
      - 
      - 
@@ -565,6 +556,15 @@ user level, are described in the section of each route.
      - 
      - ✓
      - 
+   * - ``/v1/get_impact_form_defaults``
+     - GET
+     - none
+     - 
+     - 
+     - 
+     - 
+     - ✓
+     - 
    * - ``/v1/impact_get_stations_from_usgs``
      - POST
      - login
@@ -634,6 +634,12 @@ Routes are registered according to the Django ``APPLICATION_MODE``:
   ``/v1/ini_defaults`` and ``/v1/ping``.
 
 A route omitted for the current mode returns HTTP 404.
+
+WebUI routes
+------------
+
+This section describes each route of the WebUI; see the summary above for
+the modes in which they are available and the authentication they require.
 
 *****************
 GET /v1/calc/list
@@ -1279,8 +1285,8 @@ filtering.
 GET /v1/aelo_site_classes
 *************************
 
-Return the ASCE site-class definitions as a JSON object. The route is
-served in all modes except ``TOOLS_ONLY`` and does not require login.
+AELO mode only. Return the ASCE site-class definitions as a JSON object.
+The route does not require login.
 
 **********************
 GET /v1/engine_version
@@ -1315,8 +1321,8 @@ with an ``error`` field.
 GET /v1/get_impact_form_defaults
 ********************************
 
-Return the IMPACT form field defaults as a JSON object. The route is
-served in all modes except ``TOOLS_ONLY`` and does not require login.
+IMPACT mode only. Return the IMPACT form field defaults as a JSON
+object. The route does not require login.
 
 **************************************
 POST /v1/impact_get_stations_from_usgs

@@ -163,8 +163,14 @@ jobs:
           /opt/openquake/venv/bin/python3 manage.py migrate
           "$SCRIPTS/create_webui_users.sh" /opt/openquake/venv/bin/python3 \
             "${SITE_PKG}openquake/server" openquake user2 user3 user4
-          # gunicorn instead of runserver, as in the documentation
-          "$SCRIPTS/webui_unit.sh" "${SITE_PKG}openquake/server"
+          # the shipped WebUI unit, with 2 gunicorn workers and a timeout of
+          # 120 s, so that blocked workers become visible quickly, and with
+          # MPLCONFIGDIR=/tmp for the calculations started by the WebUI
+          UNIT=/etc/systemd/system/openquake-webui.service
+          sed -i -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
+            -e "s|--workers 4 --timeout 1200|--workers 2 --timeout 120|" "$UNIT"
+          grep -q -- "--workers 2 --timeout 120" "$UNIT"
+          systemctl daemon-reload
           # STOP AND START WEBUI; restart the DbServer too, so that it reads
           # the local settings written above
           systemctl stop openquake-webui
@@ -250,8 +256,14 @@ jobs:
            python3 manage.py migrate
            /home/openquake/oq-engine/.github/scripts/create_webui_users.sh python3 /home/openquake/oq-engine/openquake/server level_1_user
            '
-           # gunicorn instead of runserver, as in the documentation
-           sudo /home/openquake/oq-engine/.github/scripts/webui_unit.sh /home/openquake/oq-engine/openquake/server
+           # the shipped WebUI unit, with 2 gunicorn workers and a timeout of
+           # 120 s, so that blocked workers become visible quickly, and with
+           # MPLCONFIGDIR=/tmp for the calculations started by the WebUI
+           UNIT=/etc/systemd/system/openquake-webui.service
+           sudo sed -i -e "s|^Environment=$|Environment=MPLCONFIGDIR=/tmp|" \
+             -e "s|--workers 4 --timeout 1200|--workers 2 --timeout 120|" "$UNIT"
+           grep -q -- "--workers 2 --timeout 120" "$UNIT"
+           sudo systemctl daemon-reload
            # START WEBUI; restart the DbServer too, so that it reads the
            # local settings written above
            sudo systemctl restart openquake-dbserver

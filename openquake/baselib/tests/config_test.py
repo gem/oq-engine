@@ -17,9 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import logging
 import tempfile
 import unittest
+import subprocess
 from openquake.baselib import config, InvalidFile, _check_no_server_section
 
 
@@ -35,9 +37,18 @@ class ConfigPathsTestCase(unittest.TestCase):
                             'development installation with a virtualenv')
 
     def test_config_file(self):
-        cfgfile = os.environ.get('OQ_CONFIG_FILE')
-        if cfgfile:
-            self.assertEqual(config.paths[0], cfgfile)
+        # OQ_CONFIG_FILE is read last, so that it has the precedence; it is
+        # checked in a new process, since config.paths is computed at import
+        with tempfile.NamedTemporaryFile(
+                'w', suffix='.cfg', delete=False) as f:
+            f.write('[dbserver]\nport = 1999\n')
+        self.addCleanup(os.remove, f.name)
+        code = ('from openquake.baselib import config; '
+                'print(config.paths[-1], config.dbserver.port)')
+        out = subprocess.run(
+            [sys.executable, '-c', code], capture_output=True, text=True,
+            env=dict(os.environ, OQ_CONFIG_FILE=f.name), check=True).stdout
+        self.assertEqual(out.split(), [f.name, '1999'])
 
 
 class ServerSectionTestCase(unittest.TestCase):
