@@ -1444,7 +1444,11 @@ accepts one optional argument: the ``[zworkers]`` configuration as a
 dictionary of strings (``host_cores``, ``ctrl_port``) or a job ID; with
 an empty ``args`` list the job ID -1 is used. The engine calls only
 ``workers_start``, passing the ``[zworkers]`` section of
-``openquake.cfg``.
+``openquake.cfg``. Since the configuration is used to build the ssh
+commands starting the workerpools, it is validated: ``ctrl_port`` must be
+an integer and ``host_cores`` a comma-separated list of entries
+``host cores`` or ``host:port cores`` with integer cores; other keys are
+ignored and an invalid configuration returns HTTP 400.
 
 Extracting data from calculations
 ---------------------------------

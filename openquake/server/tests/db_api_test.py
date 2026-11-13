@@ -66,6 +66,20 @@ def test_webui_does_not_serve_v0(webui_client):
     assert response.status_code == 404
 
 
+def test_worker_api_rejects_invalid_configuration(api_client):
+    # the configuration is used to build the ssh commands starting the
+    # workerpools, so it is validated before doing anything
+    url = api_client.base_url + '/v0/worker_status'
+    headers = {'X-API-Key': API_KEY}
+    for zworkers in [{'host_cores': 'worker1 1;id>/tmp/pwned',
+                      'ctrl_port': '1909'},
+                     {'host_cores': '127.0.0.1 -1', 'ctrl_port': '1909;id'},
+                     {'host_cores': '127.0.0.1 -1'}, ['127.0.0.1 -1']]:
+        response = api_client.session.post(
+            url, json={'args': [zworkers]}, headers=headers)
+        assert response.status_code == 400, zworkers
+
+
 def test_dbcmd_can_use_database_api(api_client):
     with use_dbserver(api_client):
         result = logs.dbcmd('engine_version')

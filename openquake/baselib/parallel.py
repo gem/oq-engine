@@ -212,6 +212,10 @@ submit = CallableDict()
 MB = 1024 ** 2
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
+# an entry "host cores" or "host:port cores" of host_cores; the values are
+# used to build the ssh commands starting the workerpools, so they are
+# validated strictly: a host name or IPv4 address, a port and an integer
+HOSTCORE = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)(?::(\d{1,5}))?\s+(-?\d+)')
 
 
 def parse_hostcore(hostcore, default_port):
@@ -219,11 +223,15 @@ def parse_hostcore(hostcore, default_port):
     :param hostcore: a string "host cores" or "host:port cores"
     :param default_port: the ctrl_port to use if the port is missing
     :returns: a triple (host, port, cores) with port an integer
+    :raises ValueError: if the string is not in the expected format
     """
-    hostport, cores = hostcore.split()
-    host, sep, port = hostport.partition(':')
+    match = HOSTCORE.fullmatch(hostcore.strip())
+    if match is None:
+        raise ValueError('Invalid host_cores entry %r: expected "host cores"'
+                         ' or "host:port cores"' % hostcore)
+    host, port, cores = match.groups()
     # without an explicit port the default ctrl_port is used
-    return host, (int(port) if sep else int(default_port)), cores
+    return host, int(port or default_port), cores
 
 
 # read the ds_calc_dir of a job from the database of a user installation;
