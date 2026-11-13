@@ -53,13 +53,25 @@ def dbserver_url():
     return 'http://%s:%s' % (config.dbserver.host, config.dbserver.port)
 
 
+def dbserver_session():
+    """
+    :returns: a requests.Session ignoring the proxy settings of the
+              environment (http_proxy and similar), since the DbServer
+              is an internal service
+    """
+    session = requests.Session()
+    session.trust_env = False
+    return session
+
+
 # post a JSON payload to the DbServer and return the response
 def _post_dbserver(path, payload):
     endpoint = dbserver_url() + path
     try:
-        return requests.post(
-            endpoint, json=payload, headers={'X-API-Key': API_KEY},
-            timeout=600)
+        with dbserver_session() as session:
+            return session.post(
+                endpoint, json=payload, headers={'X-API-Key': API_KEY},
+                timeout=600)
     except requests.ConnectionError as exc:
         raise RuntimeError(
             'The DbServer is not running on %s: please start it with '

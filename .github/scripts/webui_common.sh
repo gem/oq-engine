@@ -11,7 +11,7 @@
 #
 # The WebUI is started by hand with gunicorn from REPO/openquake/server,
 # with OQ_WEBUI_WORKERS workers (default 2, as in the CI step).
-# The DbServer is started by hand with `oq dbserver start` on the port
+# The DbServer is started by hand with `oq dbserver start -f` on the port
 # OQ_DBPORT (default 1908), from a scratch venv RUN/venv which reuses the
 # packages of VENV but is marked as a devel_server installation, so that
 # `oq engine --run` by the invoking user goes through the DbServer.
@@ -121,7 +121,7 @@ assert s(), 'RUN/venv is not a server installation'" || return 1
 dbserver_start() {
   server_venv || return 1
   env USER=openquake LOGNAME=openquake "$SPY" -m openquake.commands \
-    dbserver start > "$RUN/dbserver.log" 2>&1 &
+    dbserver start -f > "$RUN/dbserver.log" 2>&1 &
   DPID=$!
   for _ in $(seq 1 30); do
     [ "$(curl -s -o /dev/null -w '%{http_code}' $DBBASE/v0/ping)" = 200 ] &&

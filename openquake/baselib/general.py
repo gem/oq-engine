@@ -1590,30 +1590,50 @@ def socket_ready(hostport):
     return False if exc else True
 
 
+# True if the process holds a TCP socket listening on the given port
+def _listens(proc, port):
+    # net_connections was called connections before psutil 6.0
+    conns = getattr(proc, 'net_connections', None) or proc.connections
+    try:
+        return any(conn.status == psutil.CONN_LISTEN and
+                   conn.laddr.port == port for conn in conns('tcp'))
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return False
+
+
 def stop_listening_process(port):
     """
     Terminate the process listening on the given TCP port, killing it
-    if it does not stop within 10 seconds.
+    if it does not stop within 10 seconds. When several processes share
+    the listening socket, as the master and the workers of gunicorn, the
+    topmost one (the master) is terminated.
 
     :param port: a TCP port number
     :returns: True if a process was found and stopped, False otherwise
     """
-    pids = [conn.pid for conn in psutil.net_connections(kind='tcp')
-            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port]
-    # the pid is None for the processes of other users
-    if not pids or pids[0] is None:
-        return False
-    try:
-        proc = psutil.Process(pids[0])
-    except psutil.NoSuchProcess:
-        return False
-    proc.terminate()
-    try:
-        proc.wait(timeout=10)
-    except psutil.TimeoutExpired:
-        proc.kill()
-        proc.wait()
-    return True
+    pids = {conn.pid for conn in psutil.net_connections(kind='tcp')
+            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port}
+    pids.discard(None)  # the pid is None for the processes of other users
+    procs = {}
+    for pid in pids:
+        try:
+            proc = psutil.Process(pid)
+            # psutil reports a shared socket only for one of the processes
+            # holding it: go up to the topmost process holding it
+            parent = proc.parent()
+            while parent is not None and _listens(parent, port):
+                proc, parent = parent, parent.parent()
+            procs[proc.pid] = proc
+        except psutil.NoSuchProcess:
+            pass
+    for proc in procs.values():
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except psutil.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+    return bool(procs)
 
 
 port_candidates = list(range(1920, 2000))

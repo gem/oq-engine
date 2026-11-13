@@ -81,6 +81,15 @@ def test_dbcmd_uses_explicit_write_transaction(api_client):
     assert 'success' in deleted
 
 
+def test_dbcmd_ignores_proxies(api_client, monkeypatch):
+    # the DbServer is internal: the proxy settings must not be used
+    monkeypatch.setenv('http_proxy', 'http://proxy.invalid:3128')
+    monkeypatch.delenv('no_proxy', raising=False)
+    monkeypatch.delenv('NO_PROXY', raising=False)
+    with use_dbserver(api_client):
+        assert logs.dbcmd('engine_version').startswith('3.')
+
+
 def test_dbcmd_without_dbserver(api_client):
     with use_dbserver(api_client):
         logs.config.dbserver['port'] = 1  # nobody is listening there

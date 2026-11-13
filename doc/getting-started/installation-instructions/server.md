@@ -79,12 +79,19 @@ authkey = <random key>
 ```
 
 If the database is on a different machine, you have to edit the file and
-specify the correct host name. The DbServer can be controlled by the
-user `openquake` with the command `oq dbserver start|stop|status`; its
-requests are authenticated with the `authkey` of the `[dbserver]`
-section, which is generated randomly by the universal installer. The
-file must be readable by the users running calculations, also on the
-machines where they run calculations against a remote DbServer.
+specify the correct host name. The requests to the DbServer are
+authenticated with the `authkey` of the `[dbserver]` section, which is
+generated randomly by the universal installer. The file must be readable
+by the users running calculations, also on the machines where they run
+calculations against a remote DbServer.
+
+The DbServer is managed by systemd: use
+`sudo systemctl start|stop|restart openquake-dbserver`, since a DbServer
+stopped by other means is restarted by systemd after 30 seconds. Every
+user can check it with `oq dbserver status`. Without systemd, the user
+`openquake` can start it with `oq dbserver start` (in background, with a
+log file in the oqdata directory) or `oq dbserver start -f` (in
+foreground) and stop it with `oq dbserver stop`.
 
 #### Upgrade the database to host users and sessions
 

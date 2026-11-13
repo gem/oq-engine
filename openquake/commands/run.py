@@ -23,7 +23,7 @@ import cProfile
 import getpass
 
 import numpy
-from openquake.baselib import performance, general, config
+from openquake.baselib import performance, general, config, use_server
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput, datastore
 from openquake.hazardlib.calc.mean_rates import (
@@ -127,8 +127,10 @@ def main(job_ini,
     """
     user_name = getpass.getuser()
 
+    # automatically create the database, unless it is reached through the
+    # DbServer, which upgrades it when it starts
     dbfile = os.path.expanduser(config.dbserver.file)
-    if not os.path.exists(dbfile):
+    if not use_server() and not os.path.exists(dbfile):
         db.actions.upgrade_db(dbapi.db)
     try:
         host = socket.gethostname()

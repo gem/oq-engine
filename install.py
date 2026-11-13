@@ -223,7 +223,7 @@ WantedBy=multi-user.target
 # the commands started by the systemd services: the DbServer is internal
 # and uses the Django development server, the WebUI uses gunicorn
 EXEC_START = {
-    "dbserver": "/opt/openquake/venv/bin/oq dbserver start",
+    "dbserver": "/opt/openquake/venv/bin/oq dbserver start -f",
     "webui": ("/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 "
               "--workers 4 --timeout 1200 openquake.server.wsgi:application"),
 }

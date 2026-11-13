@@ -78,7 +78,7 @@ You can show the logs of the container running:
 $ docker logs <containername> --timestamp --follow
 ```
 
-After the logs show that the DB server started (and, if authentication is enabled, after the necessary migrations have been applied),
+After the logs show that the database has been upgraded and the WebUI started (and, if authentication is enabled, after the necessary migrations have been applied),
 then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 You can stop and start again your container with the following commands:
@@ -113,7 +113,6 @@ INFO:root:Executing /usr/src/oq-engine/openquake/server/db/schema/upgrades/0007-
 INFO:root:Executing /usr/src/oq-engine/openquake/server/db/schema/upgrades/0008-job-tag.sql
 INFO:root:Executing /usr/src/oq-engine/openquake/server/db/schema/upgrades/0009-workflow.sql
 INFO:root:Upgrade completed in 1.2584140300750732 seconds
-WARNING:root:DB server started with /opt/openquake/bin/python3 on tcp://127.0.0.1:1908, pid 7
 openquake@a4e28beda784:~$ oq --version
 3.25.0
 
@@ -237,7 +236,7 @@ You can show the logs of the container running:
 $ docker logs <containername> --timestamp --follow
 ```
 
-After the logs show that the DB server started (and, if authentication is enabled, after the necessary migrations have been applied),
+After the logs show that the database has been upgraded and the WebUI started (and, if authentication is enabled, after the necessary migrations have been applied),
 then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 

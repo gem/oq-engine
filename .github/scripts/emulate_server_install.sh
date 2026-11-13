@@ -5,7 +5,7 @@
 # What it does: starts gunicorn by hand from the repository (not from
 # /opt/openquake nor from systemd), with a scratch engine database, creates
 # the users of the workflow, and runs the same checks, server_checks.sh.
-# Then it starts the DbServer with `oq dbserver start` from a scratch
+# Then it starts the DbServer with `oq dbserver start -f` from a scratch
 # venv marked as devel_server and runs the checks of dbserver_checks.sh,
 # including a calculation with `oq engine --run` through the DbServer.
 # The setup is shared with run_webui_concurrency.sh via webui_common.sh.

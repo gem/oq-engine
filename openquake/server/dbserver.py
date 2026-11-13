@@ -25,11 +25,13 @@ installations access the database directly.
 import os
 import sys
 import time
+import subprocess
 import requests
 
 from openquake.baselib import config, general
 from openquake.commonlib import dbapi, logs
 from openquake.server.db import actions
+from openquake.server.utils import get_or_create_django_secret_key
 
 SETTINGS = 'openquake.server.dbserver_settings'
 
@@ -39,7 +41,8 @@ def get_status():
     :returns: 'running' if the DbServer answers, 'not-running' otherwise
     """
     try:
-        resp = requests.get(logs.dbserver_url() + '/v0/ping', timeout=10)
+        with logs.dbserver_session() as session:
+            resp = session.get(logs.dbserver_url() + '/v0/ping', timeout=10)
     except requests.RequestException:
         return 'not-running'
     return 'running' if resp.ok else 'not-running'
@@ -62,13 +65,21 @@ def wait_running(seconds=30):
         % logs.dbserver_url())
 
 
-def run_server():
+def run_server(foreground=False):
     """
-    Upgrade the database and replace the current process with the DbServer,
-    run by the Django development server. In server installations the
+    Upgrade the database and run the DbServer with the Django development
+    server. In foreground mode (used by the systemd service) the current
+    process is replaced by the server, otherwise the server is started in
+    background with a log file in the datadir. In server installations the
     DbServer is the only process upgrading the database and it must be
     started before the WebUI.
+
+    :returns: the path of the log file, in background mode
     """
+    # get the Django secret key first, so that a missing key is reported
+    # before touching the database
+    env = dict(os.environ, DJANGO_SETTINGS_MODULE=SETTINGS,
+               DJANGO_SECRET_KEY=get_or_create_django_secret_key())
     dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
     os.makedirs(dirname, exist_ok=True)
     actions.upgrade_db(dbapi.db)
@@ -78,8 +89,18 @@ def run_server():
     # interferes with SIGCHLD and causes zombies, thus it is disabled
     args = [sys.executable, '-m', 'openquake.server.manage', 'runserver',
             hostport, '--noreload']
-    env = dict(os.environ, DJANGO_SETTINGS_MODULE=SETTINGS)
-    os.execve(sys.executable, args, env)
+    if foreground:
+        os.execve(sys.executable, args, env)
+    logfile = os.path.join(logs.get_datadir(), 'dbserver.log')
+    with open(logfile, 'a') as log:
+        subprocess.Popen(args, env=env, stdout=log,
+                         stderr=subprocess.STDOUT, start_new_session=True)
+    try:
+        wait_running()
+    except RuntimeError:
+        sys.exit('The DbServer could not start in 30 seconds, see %s'
+                 % logfile)
+    return logfile
 
 
 def stop_server():

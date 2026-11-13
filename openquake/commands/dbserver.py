@@ -22,9 +22,9 @@ from openquake.commonlib import logs
 from openquake.server import dbserver
 
 
-def main(cmd):
+def main(cmd, foreground=False):
     """
-    start (in foreground) or stop the database server, or return its status
+    start/stop the database server, or return its status
     """
     if not is_server_installation():
         print('Doing nothing since the database is accessed directly '
@@ -44,8 +44,11 @@ def main(cmd):
     elif dbserver.get_status() == 'running':
         print('dbserver already running on ' + logs.dbserver_url())
     else:  # start
-        dbserver.run_server()
+        logfile = dbserver.run_server(foreground)
+        print('dbserver started on %s, log in %s' % (
+            logs.dbserver_url(), logfile))
 
 
 main.cmd = dict(help='dbserver command',
                 choices='start stop status'.split())
+main.foreground = 'stay in foreground'
