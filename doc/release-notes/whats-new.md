@@ -9,18 +9,18 @@ The complete set of changes is listed in the changelog:
 
 https://github.com/gem/oq-engine/blob/engine-3.27/debian/changelog
 
-A summary is given below.
 Users who do not need the latest features and models may want to stay with the LTS
 release, currently at version 3.23.5.
+
+A summary is given below.
 
 # IT
 
 This is first release making heavy use of the newest AI tools
 (i.e. Codex, Claude and others) in the engine codebase. As a
 consequence we identified and fixed substantially more bugs than
-usual. We also used AI to implement new features (notably the porting
-of the Probabilistic Fault Displacement code by Yen Shin Chen) and to
-improve our optimizations (notably the ps_grid_spacing approximation).
+usual. We also used AI to implement new features and to
+improve our optimizations.
 We also used it in purely IT work, like the removal the DbServer
 service, which is now included in the WebUI service (that is only
 relevant for server installations, see
@@ -28,37 +28,73 @@ https://docs.openquake.org/oq-engine/manual/engine-3.27/getting-started/installa
 
 # Hazard
 
-## Classical PSHA
+## Classical PSHA: performance improvements
 
-The new `ps_grid_spacing=auto` option compares candidate point-source
-approximations against exact results at a sample of sites and chooses a
-cost-effective combination of `ps_grid_spacing` and `pointsource_distance`.
-The approximation can also be used with `disagg_by_src` for calculations
-with few sites.
+There is a major new optimization for the case of logic trees
+generating variations of a base source with different MFD
+parameters (see https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/performance-approximations.html#variant-sources-optimization). This case is extremely common when performing site
+specific analysis and much less common in continental scale
+calculations, the reason why it has stayed unoptimized until now.
+Thanks to a project with BCHydro this case is now managed properly
+by the engine, resulting in a huge speedup. For instance a model
+generating 100 variations of the a, b and mmax parameters for
+each source will now compute the geometries, mean and stddevs
+and generate the poes only once instead of 100 times. The speedup
+is not 100x, since some time has to be spent multipling the 100
+versions of the occupancy rates with the poes, but still pretty
+large (we measured a 32x). Also, as a consequence of this project,
+the implementation of the logic tree is much cleaner and for the
+first time we are documenting some of the internals here:
 
-The experimental `collapse_precision` approximation reduces the number of
-contexts evaluated for Poissonian sources. Sources with equivalent
-ground-motion requirements can share collapsed contexts. A fixed global
-grid is now used to collapse point sources, so distant padding sources do
-not change the results for nearby sources.
-
-Classical calculations use less memory for nonparametric sources with
-gridded ruptures, which are stored as arrays. Reading large source models,
-building contexts, evaluating PoEs, and distributing tasks have also been
-optimized. The area-source discretization is much faster.
+https://docs.openquake.org/oq-engine/engine-3.27/manual/user-guide/advanced/classical-internals.html#management-of-the-uncertainties
 
 Source uncertainties are now applied in the workers, one set of
 realizations at a time, for classical and event-based calculations. In
 event-based calculations, event samples can differ for the same
 `random_seed`, while remaining statistically consistent. The new
 `oq show usignatures` view summarizes the uncertainty signatures associated
-with realizations.
+with realizations. This is relevant only in the context of variant sources.
 
-Magnitude-dependent aspect-ratio expressions can now contain more than two
-entries.
+Moreover, we revisited the old ``ps_grid_spacing`` optimization, which
+is now much more precise that it used to be (around an order of
+magnitude more precise, i.e. common 10% maximum errors are now less
+than 1%) and often faster. A fixed global grid is now used, thus
+avoiding a bug causing distant sources to change the results for
+nearby sources.
 
-Site amplification logic trees can now be used in disaggregation
-calculations. They were previously supported only in classical PSHA.
+There is a new `oq run job.ini --calibrate -p ps_grid_spacing=auto` command to
+automaticallt determine the best combination of `ps_grid_spacing` and `pointsource_distance`.
+The approximation can now also be used with `disagg_by_src`.
+
+We also introduced an experimental `collapse_precision` approximation to reduce the number of
+contexts evaluated for Poissonian sources and
+there is an entire new section in the docs explaining the various performance approximations:
+https://docs.openquake.org/oq-engine/master/manual/user-guide/advanced/performance-approximations.html
+
+Classical calculations use less memory for nonparametric sources with
+gridded ruptures, which are stored as arrays.
+
+Reading large source models,
+building contexts, evaluating PoEs, and distributing tasks have been
+optimized.
+
+The area-source discretization is much faster.
+
+## Classical PSHA: new features
+
+Two new kinds of logic trees have been introduced:
+site amplification logic trees (by Christopher Brooks) and probabilistic fault displacement
+logic trees (by Yen Shin Chen).
+
+There is also a new probabilistic fault-displacement calculator with
+35 primary and secondary rupture and displacement models, all
+contributed by Yen Shin Chen. An example of usage is in
+demos/hazard/DisplacementPSHA while the documentation is in
+https://docs.openquake.org/oq-engine/manual/engine-3.27/user-guide/advanced/probabilistic-fault-displacement.html
+It should be considered experimental for the moment.
+
+Amplification logic trees are not documented yet, but there are examples
+in qa_tests_data/logictree (case_26 and case_27).
 
 ## Ground-motion models and correlation
 
@@ -84,16 +120,6 @@ measures.
 
 The `oq info correlation` command lists the available correlation models.
 
-## PFD calculator
-
-The engine now includes a probabilistic fault-displacement calculator
-with 35 primary and secondary rupture and displacement models. Its
-logic tree supports uncertainty across the selected models.  An
-example of usage is in demos/hazard/DisplacementPSHA while the
-documentation is in
-https://docs.openquake.org/oq-engine/manual/engine-3.27/user-guide/advanced/probabilistic-fault-displacement.html
-It should be considered experimental for the moment.
-
 # Risk
 
 Connectivity calculations now support infrastructure interdependencies.
@@ -115,6 +141,9 @@ The `horiz_comp_to` job parameter converts horizontal components to targets
 such as geometric mean, RotD50, and RotD100. The former
 `horiz_comp_to_geom_mean` boolean remains supported for backwards
 compatibility.
+
+Magnitude-dependent aspect-ratio expressions can now contain more than two
+entries.
 
 # Bug fixes
 
@@ -200,3 +229,5 @@ the correct site tags.
 
 `oq engine --param` now accepts space-separated `name=value` pairs, matching
 `oq run --param`, while command-separated pairs are not accepted anymore.
+
+`oq info logic_trees` show the available logic tree classes.

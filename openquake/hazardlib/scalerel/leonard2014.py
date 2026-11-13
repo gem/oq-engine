@@ -73,7 +73,7 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
         continental regions, ``log10(W) = (mag - a) / 2.5`` with
         ``a = 4.22`` for strike-slip and ``a = 4.14`` for dip-slip faults.
 
-        Added for PR-2 of the oq-engine integration plan; the width rows
+        The width rows
         ``MSR = 1`` of Mammarella et al. (2024) Table 1.
         """
         if rake is None:
@@ -143,7 +143,7 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
         faults, ``log10(W) = (mag - a) / 2.5`` with ``a = 3.88`` for
         strike-slip and ``a = 3.63`` for dip-slip faults.
 
-        Added for PR-2 of the oq-engine integration plan; the width rows
+        The width rows
         ``MSR = 0`` of Mammarella et al. (2024) Table 1.
         """
         if rake is None:

@@ -16,17 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Probabilistic Fault Displacement (PFD) rate kernel (PR-6 of the oq-engine
-integration plan, Workstream D).
+r"""
+Probabilistic Fault Displacement (PFD) rate kernel.
 
 The kernel is the engine-idiomatic port of oq-pfdha's
 ``calc/hazard.py::_compute_rupture_contribution`` plus its
 ``calc/location_weight.py``. It computes, per surface-rupturing rupture and
 per site, the annual exceedance rates of fault displacement:
 
-    lambda_principal   = rate * P_sr * P_fd_primary       * W_p(r)
-    lambda_distributed = rate * P_sr * P_dist_combined(r) * G(r)
+.. math::
+
+    \lambda_{\mathrm{principal}} = \mathrm{rate} \cdot P_{sr} \cdot P_{fd,\mathrm{primary}} \cdot W_p(r)
+    \lambda_{\mathrm{distributed}} = \mathrm{rate} \cdot P_{sr} \cdot P_{dist,\mathrm{combined}}(r) \cdot G(r)
 
 ``W_p(r)`` is the rupture-location weight (see :func:`location_weight`); the
 distributed weight ``G`` depends on the ``W_p`` path:
@@ -41,8 +42,7 @@ class choice IS the definition) already includes the distributed
 contribution: ``lambda_total = rate * P_sr * P_fd_aggregate * W_p`` flows
 through the principal bucket and the distributed bucket stays zero.
 
-The kernel deliberately does NOT call ``get_mean_stds``/``get_poes``
-(decision D12): the PFD models yield exceedance probabilities directly.
+The kernel deliberately does NOT call ``get_mean_stds``/``get_poes``. The PFD models yield exceedance probabilities directly.
 The calculator wraps the returned rate arrays into the engine's ``MapArray``
 and reuses all downstream stats/export machinery.
 
@@ -51,7 +51,7 @@ The pure functions here take objects exposing the adapter protocol
 ``compute_primary_fd``, ``compute_secondary_sr``, ``compute_secondary_fd``,
 each ``(ctx, ...) -> array``), keyed by the slot names
 ``primary_sr`` / ``primary_fd`` / ``secondary_sr`` / ``secondary_fd``. The
-Visini rank-2 combined pipeline (Workstream H) is not part of this kernel
+Visini rank-2 combined pipeline is not part of this kernel
 yet; a Visini chain is routed through the generic SR x FD path until then.
 """
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
@@ -72,7 +72,7 @@ def location_weight(r, r_threshold_km: float, r_sigma_km: float,
     Principal-contribution rupture-location weight ``W_p(r)``.
 
     Two mutually exclusive paths (Petersen et al. 2011, Tables 2-3 and
-    p. 819; see oq-pfdha ``docs/design/rupture_location_uncertainty.md``):
+    p. 819; see the oq-pfdha design notes on rupture-location uncertainty):
 
     * ``r_sigma_km == 0``: the legacy boxcar ``1{|r| <= r_threshold_km}``;
     * ``r_sigma_km > 0``: Petersen's Gaussian mapping-error weight, pinned to

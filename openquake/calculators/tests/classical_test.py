@@ -1562,7 +1562,7 @@ class ContextReductionTestCase(unittest.TestCase):
             self.assertNotIn('estimated', logs.output[0])
 
     def test_variants(self):
-        # 300 contexts computed and 900 saved by the source variants
+        # 300 contexts computed and 900 saved by the variant sources
         # optimization, i.e. 1200 contexts without the optimization
         self.calc.oqparam = mock.Mock(collapse_precision=0,
                                       ps_grid_spacing=0)

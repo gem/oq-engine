@@ -226,9 +226,8 @@ def test_parity_against_cpsr_like(Mw, MSR, style, HDD):
 ])
 def test_width_model_instance_matches_msr(msr, cls_name, style):
     """A hazardlib width scalerel (instance or registered name) reproduces
-    the TAB1/MSR width rows exactly (PR-2 of the oq-engine integration
-    plan: consumers take scalerel instances, resolved via mag_scale_rel,
-    instead of integer MSR codes)."""
+    the TAB1/MSR width rows exactly (consumers take scalerel instances,
+    resolved via mag_scale_rel, instead of integer MSR codes)."""
     from openquake.hazardlib import valid
 
     model = Mammarella2024PrimarySR()
