@@ -75,10 +75,14 @@ class EngineContextsTestCase(unittest.TestCase):
         sitecol = get_site_collection(oq)
         cmakers = csm.get_cmakers(get_core_trt_smrs(csm.src_groups))
         [src] = list(csm.src_groups[0])
-        [branch] = csm.full_lt.extra_lt.enumerate(
-            [(src.source_id.split(';')[0], style_from_rake(src.rake))])
+        # the selections of the single PFD realization for this source,
+        # as the displacement calculator gets them
+        [rlz] = csm.full_lt.get_realizations()
+        selections = csm.full_lt.extra_lt.selections_for(
+            rlz.extra_rlz.lt_path, src.source_id.split(';')[0],
+            style_from_rake(src.rake))
         adapters = {}
-        for slot, choice in branch.selections.items():
+        for slot, choice in selections.items():
             cls = get_available(slot)[choice.class_name]
             ad = PFDModelAdapter(cls(**choice.params), choice.params)
             adapters[ad.model_type] = ad

@@ -524,6 +524,27 @@ def _sorted_rows(ctx):
 
 
 class FromSrcsPsdistsTestCase(unittest.TestCase):
+    def test_batch_magnitudes(self):
+        # Batching must preserve magnitude-dependent filtering and the
+        # original context rows, including the few-sites rupture IDs.
+        src = PointSource(
+            'ps', 'pointsource', '*',
+            ArbitraryMFD([4., 5., 6., 7.], [.1] * 4), 1., WC1994(), 1.5,
+            tom, 0., 20., Point(0., 0.),
+            PMF([(1., NodalPlane(0., 45., 90.))]), PMF([(1., 5.)]))
+        sites = SiteCollection([Site(Point(lon, 0.))
+                                for lon in [0., .1, .4, 1.]])
+        cmaker = contexts.simple_cmaker(
+            [valid.gsim('ToroEtAl2002')], ['PGA'],
+            maximum_distance={'default': [(5., 25.), (6., 100.)]})
+        for max_sites in [0, 10]:
+            cmaker.max_sites_disagg = max_sites
+            expected = cmaker.from_srcs([src], sites, [15., 100.])
+            batched = cmaker.copy(batch_point_sources=True)
+            actual = batched.from_srcs([src], sites, [15., 100.])
+            for psd in expected:
+                numpy.testing.assert_array_equal(actual[psd], expected[psd])
+
     def test(self):
         # the contexts built at once for several pointsource distances
         # must be the same as the contexts built for each distance

@@ -46,10 +46,6 @@ if settings.WEBUI:
                 views.web_engine_get_outputs, name="outputs"),
         re_path(r'^engine/license$', views.license,
                 name="license"),
-        re_path(r'^v1/valid/', views.validate_nrml),
-        re_path(r'^v1/available_gsims$', views.get_available_gsims),
-        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
-                name="ini_defaults"),
     ]
     if settings.APPLICATION_MODE != 'PUBLIC':
         urlpatterns += [
@@ -62,25 +58,12 @@ if settings.WEBUI:
             re_path(r'^engine/aelo_changelog$',
                     views.aelo_changelog,
                     name="aelo_changelog"),
-            re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
-                    name="aelo_site_classes"),
         ]
     elif settings.APPLICATION_MODE == 'IMPACT':
         urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
                     name="outputs_impact"),
-            re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
-                    name="impact_form_defaults"),
-            re_path(r'^v1/impact_get_stations_from_usgs$',
-                    views.impact_get_stations_from_usgs,
-                    name="impact_get_stations_from_usgs"),
-            re_path(r'^v1/impact_get_shakemap_versions$',
-                    views.impact_get_shakemap_versions,
-                    name="impact_get_shakemap_versions"),
-            re_path(r'^v1/impact_get_nodal_planes_and_info$',
-                    views.impact_get_nodal_planes_and_info,
-                    name="impact_get_nodal_planes_and_info"),
         ]
 
     for app_full in settings.STANDALONE_APPS:
@@ -92,21 +75,10 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE != 'TOOLS_ONLY':
-    urlpatterns += [
-        re_path(r'^v1/engine_version$', views.get_engine_version),
-        re_path(r'^v1/authentication/status$',
-                views.get_authentication_status),
-        re_path(r'^v1/engine_latest_version$',
-                views.get_engine_latest_version),
-        re_path(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
-        re_path(r'^v1/valid/', views.validate_nrml),
-        re_path(r'^v1/available_gsims$', views.get_available_gsims),
-        re_path(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
-        re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
-                name="ini_defaults"),
-    ]
+# the public v1 API lives in the webui app
+urlpatterns += [path('', include('openquake.server.webui.urls'))]
 
+if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     # it is useful to disable the default redirect if the usage is via API only
     # 'collectstatic' and related configurationis on the reverse proxy
     # are also not required anymore for an API-only usage
