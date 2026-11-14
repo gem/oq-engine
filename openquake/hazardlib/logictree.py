@@ -199,8 +199,9 @@ def branch_id(branch, strict=False):
     :param branch: a logicTreeBranch node or a branch ID string
     :param strict: if True, raise an error for invalid IDs
     :returns: the branch ID, validated by valid.branch_id; if it is invalid
-              and strict is False the spaces are replaced by underscores,
-              since applyToBranches is a list of IDs separated by spaces
+              and strict is False every character not allowed in an ID
+              (spaces, commas, ...) is replaced by an underscore, since
+              applyToBranches is a list of IDs separated by spaces
     """
     brid = branch if isinstance(branch, str) else branch['branchID']
     try:
@@ -208,7 +209,7 @@ def branch_id(branch, strict=False):
     except ValueError:
         if strict:
             raise
-        return re.sub(r'\s', '_', brid.strip())
+        return re.sub(r'[^\w\:\#\.\-]', '_', brid.strip())
 
 
 def collect_info(smltpath, branchID=''):
