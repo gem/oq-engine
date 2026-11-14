@@ -30,7 +30,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.source_group import read_src_group
 from openquake.hazardlib.sourcewriter import write_source_model
-from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.classical import ClassicalCalculator, read_gid_dic
 from openquake.calculators.preclassical import CTX_EST
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -200,6 +200,13 @@ class ClassicalTestCase(CalculatorTestCase):
         hcurve2, wei2 = calc.mean_rates.calc_mcurves(
             src_groups, sites2, flt2, oq)
         ae(wei2, [.5, .25, .25, 1.])
+        # Rate sets share gid numbering across labels, but their weights
+        # must come from the selected logic tree, never a stored default.
+        for full_lt, expected in [(flt0, wei0), (flt1, wei1), (flt2, wei2)]:
+            gid_dic = read_gid_dic(self.calc.datastore, full_lt)
+            gids, weights = zip(*gid_dic.values())
+            ae(numpy.concatenate(gids), [0, 1, 2, 3])
+            aac(numpy.concatenate(weights), expected)
         pga0 = self.calc.datastore['hcurves-stats'][0]
         pga1 = self.calc.datastore['hcurves-stats'][1]
         pga2 = self.calc.datastore['hcurves-stats'][2]

@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.rmap_maker import get_unique_inverse
+from openquake.hazardlib.rmap_maker import get_unique_inverse, read_core_trt_smrs
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
@@ -147,18 +147,14 @@ def get_rmap_gb(dstore, full_lt=None):
     N = len(dstore['sitecol/sids'])
     L = dstore['oqparam'].imtls.size
     full_lt = full_lt or dstore['full_lt'].init()
-    if 'core_trt_smrs' in dstore:
-        # for classical calculations the rates are attributed to the sets of
-        # realizations with the same uncertainties, not to the trt_smrs of
-        # the groups, since the groups are not split by the uncertainties,
-        # which are applied in the workers
-        key = 'core_trt_smrs'
-    else:
-        key = 'trt_smrs'
-    if key not in dstore:  # starting from hazard_curves.csv
-        trt_smrs = [[0]]
-    else:
-        trt_smrs, _ = get_unique_inverse(dstore[key][:])
+    # Classical rates belong to sets sharing the same uncertainties,
+    # which are applied in the workers, rather than to whole groups.
+    trt_smrs = read_core_trt_smrs(dstore)
+    if trt_smrs is None:
+        if 'trt_smrs' in dstore:  # event based
+            trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+        else:  # starting from hazard_curves.csv
+            trt_smrs = [[0]]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs, trt_smrs

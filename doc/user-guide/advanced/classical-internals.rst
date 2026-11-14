@@ -209,7 +209,10 @@ codes (``S`` simple fault, ``A`` area source).
        [array([ 0,  3,  6, 27, 30, 33, 54, 57, 60], dtype=uint32)
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
-   Every realization set is contained in exactly one row of
+   Each unique realization set is stored once; its row order
+   determines the gid numbering.
+
+   Every realization set is contained in a row of
    ``trt_smrs``, but the converse does not hold: the ``trt_smrs`` of a group
    can be spread over several realization sets, since the sources of a
    group can be affected by different uncertainties (see the page on
@@ -234,7 +237,7 @@ one set of realizations at a time. The mechanism is the following.
    signature and stored in the field ``ts`` of the ``ts_samples`` attribute
    (the smallest ``trt_smr`` of the set); the sets of realizations sharing
    the same uncertainties are called *ts sets*. They are read back with
-   ``lt.get_ts_sets(src)``.
+   ``src.get_ts_sets()``.
 3. In the preclassical the ts sets are stored in the ``core_trt_smrs``
    dataset, one row per ts set. Concretely, a ts set is turned into a set of
    ``gids``, i.e. the (realization, GMM) pairs of the ts set, and the

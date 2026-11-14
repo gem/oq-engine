@@ -24,14 +24,13 @@ import numpy
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.rmap_maker import get_cmakers
+from openquake.hazardlib.rmap_maker import get_cmakers, read_core_trt_smrs
 from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
 from openquake.hazardlib.source_reader import get_core_trt_smrs
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -420,15 +419,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
-        # NB: core_trt_smrs is stored by source_reader.build_groups, i.e.
-        # before the preclassical; if the groups were read from the parent
-        # calculation, the core list is taken from the parent
-        parent = self.datastore.parent
-        if 'core_trt_smrs' in self.datastore:
-            core = read_core_trt_smrs(self.datastore)
-        elif parent and 'core_trt_smrs' in parent:
-            core = read_core_trt_smrs(parent)
-        else:
+        # NB: core_trt_smrs is stored by source_reader.build_groups, before
+        # preclassical; the reader also looks in the parent calculation.
+        core = read_core_trt_smrs(self.datastore)
+        if core is None:
             core = get_core_trt_smrs(csm.src_groups)
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq, core)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)

@@ -288,9 +288,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             weights = None
         gid_to_rlzs = {}
-        if 'core_trt_smrs' in dstore:
+        core_trt_smrs = read_core_trt_smrs(dstore)
+        if core_trt_smrs is not None:
             full_lt = dstore['full_lt'].init()
-            core_trt_smrs = read_core_trt_smrs(dstore)
             for trt_smrs, gids in zip(
                     core_trt_smrs, full_lt.get_gids(core_trt_smrs)):
                 rlzs = full_lt.get_rlzs_by_gsim(trt_smrs).values()

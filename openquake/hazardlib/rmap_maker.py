@@ -642,8 +642,9 @@ def _core_gids(trt_smrs, core_trt_smrs, core_gids):
     # contained in trt_smrs, i.e. the whole group when it is a core set;
     # the other covering sets are partitions of the same realizations,
     # so using them too would double count the weights, see get_cmakers
+    group = set(trt_smrs)
     covering = [(len(ts), gids) for ts, gids in zip(core_trt_smrs, core_gids)
-                if set(ts) <= set(trt_smrs)]
+                if set(ts) <= group]
     if not covering:
         raise ValueError('No core set in %s' % (trt_smrs,))
     return max(covering, key=lambda pair: pair[0])[1]
@@ -663,8 +664,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
     if not hasattr(full_lt, 'weights'):
         full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
-    numbering = (unique_trt_smrs if core_trt_smrs is None else
-                 [tuple(ts) for ts in core_trt_smrs])
+    numbering = unique_trt_smrs if core_trt_smrs is None else core_trt_smrs
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplificationFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplificationFunction.from_dframe(df)
@@ -673,7 +673,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
     trts = list(full_lt.gsim_lt.values)
     gweights = full_lt.g_weights(numbering)[:, -1]  # shape Gt
     cmakers = []
-    for grp_id, trt_smrs in enumerate(unique_trt_smrs):
+    for trt_smrs in unique_trt_smrs:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
@@ -682,11 +682,9 @@ def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
         cm.trti = trti
         cm.trt_smrs = trt_smrs
         cmakers.append(cm)
-    if core_trt_smrs is None:
-        gids = full_lt.get_gids(unique_trt_smrs)
-    else:
-        core_gids = full_lt.get_gids(numbering)
-        gids = [_core_gids(cm.trt_smrs, numbering, core_gids)
+    gids = full_lt.get_gids(numbering)
+    if core_trt_smrs is not None:
+        gids = [_core_gids(cm.trt_smrs, numbering, gids)
                 for cm in cmakers]
     for cm, gsim_idx in zip(cmakers, gids):
         # NB: the ids of the gsims of a group become the gids of the
@@ -701,11 +699,14 @@ def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
 def read_core_trt_smrs(dstore):
     """
     :param dstore: a DataStore instance, possibly closed
-    :returns: a list of trt_smrs tuples, one per realization set, i.e.
-        len(dstore['core_trt_smrs']) tuples, less than the core size Gt
+    :returns: the ordered list of unique trt_smrs tuples, one per
+        realization set, or None if core_trt_smrs is not stored
+
+    The stored row order determines the gid numbering.
     """
     with dstore:  # NB: the datastore is closed when passed to a task
-        return [tuple(t) for t in dstore['core_trt_smrs'][:]]
+        if 'core_trt_smrs' in dstore:
+            return [tuple(t) for t in dstore['core_trt_smrs'][:]]
 
 
 def read_cmakers(dstore, full_lt=None):
@@ -720,8 +721,7 @@ def read_cmakers(dstore, full_lt=None):
     all_trt_smrs = dstore['trt_smrs'][:]
     if not full_lt:
         full_lt = dstore['full_lt'].init()
-    core = read_core_trt_smrs(dstore) if 'core_trt_smrs' in dstore else None
-    cmakers = get_cmakers(all_trt_smrs, full_lt, oq, core)
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq, read_core_trt_smrs(dstore))
     return cmakers
 
 
