@@ -31,7 +31,6 @@ import multiprocessing as mp
 import os
 import secrets
 import signal
-import sqlite3
 import tempfile
 import traceback
 from datetime import datetime
@@ -219,33 +218,6 @@ def _json_body(request):
         raise ApiError(400, 'Invalid JSON body') from exc
 
 
-def _json_value(value):
-    """Convert database action results to JSON-compatible values."""
-    if isinstance(value, dbapi.Row):
-        return {
-            '__oq_type__': 'row',
-            'fields': list(value._fields),
-            'values': [_json_value(item) for item in value._values],
-        }
-    if isinstance(value, dbapi.Table):
-        return {
-            '__oq_type__': 'table',
-            'fields': list(value._fields),
-            'rows': [_json_value(row) for row in value],
-        }
-    if isinstance(value, datetime):
-        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
-    if isinstance(value, sqlite3.Cursor):
-        return None
-    if isinstance(value, dict):
-        return {key: _json_value(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_value(item) for item in value]
-    if isinstance(value, numpy.generic):
-        return value.item()
-    return value
-
-
 def db_action(action, payload):
     """Execute an allowlisted database action."""
     try:
@@ -253,8 +225,8 @@ def db_action(action, payload):
     except KeyError as exc:
         raise ApiError(404, str(exc)) from exc
     payload = payload or {}
-    args = logs._decode_db_value(payload.get('args', []))
-    kwargs = logs._decode_db_value(payload.get('kwargs', {}))
+    args = dbapi.from_json(payload.get('args', []))
+    kwargs = dbapi.from_json(payload.get('kwargs', {}))
     try:
         result = func(dbapi.db, *args, **kwargs)
     except dbapi.NotFound:
@@ -262,7 +234,7 @@ def db_action(action, payload):
     except Exception as exc:
         logging.exception('Database action failed: %s', action)
         raise ApiError(500, str(exc)) from exc
-    return _json_value(result)
+    return dbapi.to_json(result)
 
 
 def worker_action(action, payload):
