@@ -169,26 +169,7 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
             re_path(r'^v1/calc_info/(\d+)$', views.v1_calc_info),
             re_path(r'^v1/calc_list/count$', views.v1_calc_list_count),
         ]
-    urlpatterns += [
-        re_path(r'^v0/calc/model_provenance/(\d+)$',
-                views.v0_model_provenance),
-    ] + v0_urlpatterns + [
-        re_path(r'^v0/calc/validate_ini$', views.v0_validate_ini),
-        re_path(r'^v0/calc/validate_zip$', views.v0_validate_zip),
-        re_path(r'^v0/calc/run$', views.v0_calc_run),
-        re_path(r'^v0/calc/(\d+)/abort$', views.v0_calc_abort),
-        re_path(r'^v0/calc/(\d+)/remove$', views.v0_calc_remove),
-        re_path(r'^v0/calc/aelo_run$', views.v0_aelo_run),
-        re_path(r'^v0/calc/run_scenario_calc_from_ses_rupture/(\d+)$',
-                views.v0_run_scenario),
-        re_path(r'^v0/calc/impact_run$', views.v0_impact_run),
-        re_path(r'^v0/calc/impact_get_rupture_data$',
-                views.v0_impact_get_rupture_data),
-        re_path(r'^v0/calc/(\d+)/log/size$', views.v0_calc_log_size),
-        re_path(r'^v0/calc/(\d+)/log/(\d*):(\d*)$', views.v0_calc_log),
-        re_path(r'^v0/calc/(\d+)/traceback$', views.v0_calc_traceback),
-        re_path(r'^v0/calc/result/(\d+)$', views.v0_calc_result),
-    ]
+    urlpatterns += v0_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines
