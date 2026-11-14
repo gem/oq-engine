@@ -78,7 +78,7 @@ You can show the logs of the container running:
 $ docker logs <containername> --timestamp --follow
 ```
 
-After the logs show that the database has been upgraded and the WebUI started (and, if authentication is enabled, after the necessary migrations have been applied),
+After the logs show that the WebUI has started (and, if authentication is enabled, after the necessary migrations have been applied),
 then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 You can stop and start again your container with the following commands:
@@ -236,7 +236,7 @@ You can show the logs of the container running:
 $ docker logs <containername> --timestamp --follow
 ```
 
-After the logs show that the database has been upgraded and the WebUI started (and, if authentication is enabled, after the necessary migrations have been applied),
+After the logs show that the WebUI has started (and, if authentication is enabled, after the necessary migrations have been applied),
 then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 

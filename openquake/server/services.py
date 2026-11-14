@@ -2,9 +2,10 @@
 """
 The logic of the WebUI, called in-process by :mod:`openquake.server.views`:
 running, aborting and removing calculations, reading their logs and
-exporting their results. The functions raise
-:class:`openquake.server.internal_api.ApiError` on failure, which
-:func:`openquake.server.internal_api.run` turns into a JSON response.
+exporting their results, the AELO and IMPACT runs and their notifications.
+The functions raise :class:`openquake.server.internal_api.ApiError` on
+failure, which :func:`openquake.server.internal_api.run` turns into a JSON
+response.
 """
 
 import ast
@@ -22,7 +23,6 @@ import traceback
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
-from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -30,7 +30,6 @@ from django.core.mail.backends.filebased import (
     EmailBackend as FileEmailBackend)
 from django.http import FileResponse, JsonResponse
 from django.urls import reverse
-from django.utils.datastructures import MultiValueDict
 
 from openquake.baselib import config, parallel
 from openquake.baselib.general import gettemp, zipfiles
@@ -46,19 +45,11 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.shakemap.validate import (
     IMPACT_APPROACHES, impact_validate)
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
-from openquake.server.internal_api import ApiError, json_response
+from openquake.server.internal_api import (
+    ApiError, _pairs, _split, _uri_builder, json_response)
 from openquake.server.papers import base as papers
 
 UTC = timezone.utc
-AELO_FORM_LABELS = {
-    'lon': 'Longitude',
-    'lat': 'Latitude',
-    'site_class': 'Site class',
-    'vs30': 'Vs30 (m/s)',
-    'site_name': 'Site name',
-    'asce_version': 'ASCE standards',
-}
-AELO_VALID_VS30_RANGE = [150, 1525]
 
 
 def get_impact_rupture_data(post, user, rupture_path):
@@ -387,41 +378,6 @@ class ExportResponse(FileResponse):
         remove_exported(self.fname)
 
 
-def _pairs(source):
-    """Return the (key, value) pairs of a dictionary or a MultiValueDict."""
-    if hasattr(source, 'lists'):
-        return [(key, value) for key, values in source.lists()
-                for value in values]
-    return list(source.items())
-
-
-def make_form(*sources):
-    """
-    Merge plain fields (dictionaries or QueryDicts) and uploaded files into
-    a single MultiValueDict, the form accepted by the internal functions.
-    """
-    form = MultiValueDict()
-    for source in sources:
-        for key, value in _pairs(source):
-            form.appendlist(key, value)
-    return form
-
-
-def _split(form):
-    """Return the plain fields and the uploaded files of a form."""
-    fields, files = MultiValueDict(), MultiValueDict()
-    for key, value in _pairs(form):
-        (files if hasattr(value, 'file') else fields).appendlist(key, value)
-    return fields, files
-
-
-def _uri_builder(base_url):
-    """Return a function building absolute URIs from paths on the server."""
-    def build_absolute_uri(path):
-        return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
-    return build_absolute_uri
-
-
 def calc_info(calc_id):
     """Return the information about a calculation."""
     return logs.dbcmd('calc_info', calc_id)
@@ -743,6 +699,132 @@ def calc_result(result_id, export_type=None):
     return response
 
 
+def aelo_validate(request):
+    validation_errs = {}
+    invalid_inputs = []
+    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
+        invalid_inputs.append('lon')
+    try:
+        lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
+        invalid_inputs.append('lat')
+    try:
+        site_name = request.POST.get('site_name')
+        if not site_name:
+            raise ValueError("can not be empty")
+        if len(site_name) > settings.MAX_AELO_SITE_NAME_LEN:
+            raise ValueError(
+                "site name can not be longer than %s characters" %
+                settings.MAX_AELO_SITE_NAME_LEN)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['site_name']] = str(exc)
+        invalid_inputs.append('site_name')
+    try:
+        asce_version = request.POST.get(
+            'asce_version', oqvalidation.OqParam.asce_version.default)
+        oqvalidation.OqParam.asce_version.validator(asce_version)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
+        invalid_inputs.append('asce_version')
+    try:
+        site_class = request.POST.get('site_class')
+        oqvalidation.OqParam.site_class.validator(site_class)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
+        invalid_inputs.append('site_class')
+    try:
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
+        if not vs30s_in:
+            raise ValueError('can not be empty')
+        vs30s_out = []
+        for vs30 in vs30s_in:
+            vs30s_out.append(validate_vs30(vs30))
+        vs30 = ' '.join(str(val) for val in vs30s_out)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
+        invalid_inputs.append('vs30')
+    if site_class is not None and site_class != 'custom':
+        valid_vs30 = oqvalidation.SITE_CLASSES[
+            asce_version][site_class]['vs30']
+        if isinstance(valid_vs30, list):
+            expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
+        else:
+            expected_vs30 = str(float(valid_vs30))
+        if vs30 != expected_vs30:
+            # NOTE: this should never happen when using the web form, but it
+            # could happen calling the 'aelo_run' API endpoint programmatically
+            err_msg = (f'For site class {site_class} the expected Vs30 is'
+                       f' {expected_vs30} instead of {vs30}')
+            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
+            invalid_inputs.append('vs30')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
+        return JsonResponse(response_data, status=400)
+    return lon, lat, site_name, asce_version, site_class, vs30
+
+
+def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
+              username, job_owner_email, build_absolute_uri,
+              email_file_path):
+    """Create and start an AELO job after Django has authenticated it."""
+    description = f'AELO for {site_name}'
+    try:
+        params = get_params_from(
+            dict(sites='%s %s' % (lon, lat),
+                 asce_version=asce_version, site_class=site_class, vs30=vs30,
+                 description=description),
+            config.directory.mosaic_dir, exclude=['USA'])
+        logging.root.handlers = []  # avoid breaking the logs
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        logging.exception(str(exc))
+        return response_data, 400
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, None, username, None)
+    job_id = jobctx.calc_id
+    outputs_uri_web = build_absolute_uri(
+        reverse('outputs_aelo', args=[job_id]))
+    outputs_uri_api = build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = build_absolute_uri(reverse('log', args=[job_id, '0', '']))
+    traceback_uri = build_absolute_uri(reverse('traceback', args=[job_id]))
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is specified for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+    args = (
+        lon, lat, vs30, params['siteid'], description, asce_version,
+        site_class, jobctx, job_owner_email, outputs_uri_web,
+        config.directory.mosaic_dir, aelo_callback, email_file_path)
+    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
+        aelo.main(*args)
+    else:
+        mp.Process(target=aelo.main, args=args).start()
+    return response_data, 200
+
+
 def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs,
         exc=None, warnings=None, email_file_path=None):
@@ -871,127 +953,14 @@ def impact_callback(
                  connection=connection).send()
 
 
-def aelo_validate(request):
-    validation_errs = {}
-    invalid_inputs = []
-    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    try:
-        site_name = request.POST.get('site_name')
-        if not site_name:
-            raise ValueError("can not be empty")
-        if len(site_name) > settings.MAX_AELO_SITE_NAME_LEN:
-            raise ValueError(
-                "site name can not be longer than %s characters" %
-                settings.MAX_AELO_SITE_NAME_LEN)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_name']] = str(exc)
-        invalid_inputs.append('site_name')
-    try:
-        asce_version = request.POST.get(
-            'asce_version', oqvalidation.OqParam.asce_version.default)
-        oqvalidation.OqParam.asce_version.validator(asce_version)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
-        invalid_inputs.append('asce_version')
-    try:
-        site_class = request.POST.get('site_class')
-        oqvalidation.OqParam.site_class.validator(site_class)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
-        invalid_inputs.append('site_class')
-    try:
-        vs30s_in = sorted(
-            float(val) for val in request.POST.get('vs30').split())
-        if not vs30s_in:
-            raise ValueError('can not be empty')
-        vs30s_out = []
-        for vs30 in vs30s_in:
-            vs30s_out.append(validate_vs30(vs30))
-        vs30 = ' '.join(str(val) for val in vs30s_out)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
-        invalid_inputs.append('vs30')
-    if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[
-            asce_version][site_class]['vs30']
-        if isinstance(valid_vs30, list):
-            expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
-        else:
-            expected_vs30 = str(float(valid_vs30))
-        if vs30 != expected_vs30:
-            # NOTE: this should never happen when using the web form, but it
-            # could happen calling the 'aelo_run' API endpoint programmatically
-            err_msg = (f'For site class {site_class} the expected Vs30 is'
-                       f' {expected_vs30} instead of {vs30}')
-            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
-            invalid_inputs.append('vs30')
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return JsonResponse(response_data, status=400)
-    return lon, lat, site_name, asce_version, site_class, vs30
+AELO_FORM_LABELS = {
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'site_class': 'Site class',
+    'vs30': 'Vs30 (m/s)',
+    'site_name': 'Site name',
+    'asce_version': 'ASCE standards',
+}
 
 
-def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
-              username, job_owner_email, build_absolute_uri,
-              email_file_path):
-    """Create and start an AELO job after Django has authenticated it."""
-    description = f'AELO for {site_name}'
-    try:
-        params = get_params_from(
-            dict(sites='%s %s' % (lon, lat),
-                 asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=description),
-            config.directory.mosaic_dir, exclude=['USA'])
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        logging.exception(str(exc))
-        return response_data, 400
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, None, username, None)
-    job_id = jobctx.calc_id
-    outputs_uri_web = build_absolute_uri(
-        reverse('outputs_aelo', args=[job_id]))
-    outputs_uri_api = build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = build_absolute_uri(reverse('log', args=[job_id, '0', '']))
-    traceback_uri = build_absolute_uri(reverse('traceback', args=[job_id]))
-    response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the following'
-            ' link: %s. If the job fails, the error traceback will be'
-            ' accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-    args = (
-        lon, lat, vs30, params['siteid'], description, asce_version,
-        site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback, email_file_path)
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        aelo.main(*args)
-    else:
-        mp.Process(target=aelo.main, args=args).start()
-    return response_data, 200
+AELO_VALID_VS30_RANGE = [150, 1525]

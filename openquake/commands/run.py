@@ -152,6 +152,8 @@ def main(job_ini,
     if calibrate:  # only the calibration of the preclassical phase
         params['calculation_mode'] = 'preclassical'
         params['calibration_only'] = 'true'
+        # calibrate ps_grid_spacing too, overriding the value in the job
+        params['ps_grid_spacing'] = 'auto'
     if mean_rates:  # print the mean hazard rates of the first site
         return _mean_rates(job_ini)
     if slowest:
@@ -191,7 +193,7 @@ def main(job_ini,
 main.job_ini = dict(help='calculation configuration file')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
 main.calibrate = dict(help='run only the calibration of ps_grid_spacing '
-                      'and pointsource_distance')
+                      '(set to auto) and pointsource_distance')
 main.mean_rates = dict(help='print the mean hazard rates of the first site, '
                        'computed without parallelization')
 main.slowest = dict(help='profile and show the slowest operations')

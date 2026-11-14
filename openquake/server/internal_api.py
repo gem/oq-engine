@@ -18,13 +18,12 @@
 """
 Internal API of the engine, i.e. the API used only by the processes of the
 engine itself and protected by the key in the ``authkey`` of the
-``[dbserver]`` section of openquake.cfg. It contains the machinery to write
-the views checking the key (:func:`internal_view`) and the ``/v0`` routes
-served by the DbServer, a separate Django service listening on the port
-``[dbserver] port``: the database actions, the worker actions and a ping.
+``[webapi]`` section of openquake.cfg. It contains the machinery to write
+the views checking the key (:func:`internal_view`), the database and worker
+actions of the ``/v0`` API and the plumbing of the other views.
 
-This module must not import the views of the WebUI, so that the DbServer
-does not import them.
+This module does not import :mod:`openquake.server.services` nor the views,
+which import it.
 """
 import json
 import logging
@@ -32,16 +31,18 @@ import secrets
 from datetime import datetime
 from functools import wraps
 from http import HTTPStatus
+from urllib.parse import urljoin
 
 import numpy
 from django.http import HttpResponse, HttpResponseBase
 from django.urls import re_path
+from django.utils.datastructures import MultiValueDict
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from openquake.baselib import workerpool as w
-from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import dbapi, logs
+from openquake.commonlib.auth import API_KEY
 from openquake.server.db.registry import get_action
 
 
@@ -62,6 +63,13 @@ class ApiError(Exception):
         return json_response({'detail': detail}, self.status)
 
 
+def json_response(data, status=200):
+    """Return a JSON response, converting dates and numpy scalars."""
+    return HttpResponse(
+        json.dumps(data, default=_json_default), status=status,
+        content_type='application/json')
+
+
 def _json_default(value):
     """Convert the values which the json module cannot serialize."""
     if isinstance(value, datetime):
@@ -72,13 +80,6 @@ def _json_default(value):
         return list(value)
     raise TypeError('Object of type %s is not JSON serializable'
                     % type(value).__name__)
-
-
-def json_response(data, status=200):
-    """Return a JSON response, converting dates and numpy scalars."""
-    return HttpResponse(
-        json.dumps(data, default=_json_default), status=status,
-        content_type='application/json')
 
 
 def run(func, *args, **kwargs):
@@ -96,6 +97,41 @@ def run(func, *args, **kwargs):
     if isinstance(result, HttpResponseBase):
         return result
     return json_response(result)
+
+
+def _pairs(source):
+    """Return the (key, value) pairs of a dictionary or a MultiValueDict."""
+    if hasattr(source, 'lists'):
+        return [(key, value) for key, values in source.lists()
+                for value in values]
+    return list(source.items())
+
+
+def make_form(*sources):
+    """
+    Merge plain fields (dictionaries or QueryDicts) and uploaded files into
+    a single MultiValueDict, the form accepted by the internal functions.
+    """
+    form = MultiValueDict()
+    for source in sources:
+        for key, value in _pairs(source):
+            form.appendlist(key, value)
+    return form
+
+
+def _split(form):
+    """Return the plain fields and the uploaded files of a form."""
+    fields, files = MultiValueDict(), MultiValueDict()
+    for key, value in _pairs(form):
+        (files if hasattr(value, 'file') else fields).appendlist(key, value)
+    return fields, files
+
+
+def _uri_builder(base_url):
+    """Return a function building absolute URIs from paths on the server."""
+    def build_absolute_uri(path):
+        return urljoin(base_url.rstrip('/') + '/', path.lstrip('/'))
+    return build_absolute_uri
 
 
 def has_api_key(request):
@@ -205,11 +241,12 @@ def v0_worker(request, action):
 
 @internal_view('GET', 'HEAD', auth=False)
 def ping(request):
-    """Health check of the WebUI (/v1/ping) and of the DbServer (/v0/ping)."""
+    """Health check of the DbServer (/v0/ping)."""
     return 'ok'
 
 
-# the v0 routes are served by the DbServer only (see dbserver_urls.py)
+# the /v0 routes of the database and of the worker actions, and the health
+# check of the DbServer
 v0_urlpatterns = [
     re_path(r'^v0/ping$', ping),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),

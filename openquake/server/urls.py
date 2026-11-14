@@ -23,12 +23,9 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 from openquake.server.db.tag_admin import tag_admin_site
-from openquake.server.internal_api import ping
+from openquake.server.internal_api import v0_urlpatterns
 
 urlpatterns = []
-# with WEBUI = False the web pages and the default redirect are disabled,
-# which is useful if the usage is via API only: 'collectstatic' and the
-# related configuration on the reverse proxy are not required anymore
 if settings.WEBUI:
     if settings.APPLICATION_MODE == 'TOOLS_ONLY':
         urlpatterns += [
@@ -166,19 +163,15 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
         urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                             include(urlpatterns))]
 
-    # the v1 routes protected by the internal API key are always served
-    # at the root, as before; the v0 API is served by the DbServer (see
-    # dbserver_urls.py)
+    # the internal routes are always served at the root, as before
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^v1/calc_info/(\d+)$', views.v1_calc_info),
             re_path(r'^v1/calc_list/count$', views.v1_calc_list_count),
         ]
+    urlpatterns += v0_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines
     # from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     # urlpatterns += staticfiles_urlpatterns()
-
-# the health check used by `oq webui status`, served in all modes
-urlpatterns.append(re_path(r'^v1/ping$', ping))

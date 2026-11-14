@@ -22,24 +22,23 @@ the session can be created through ``POST /accounts/ajax_login/``.
 Check ``GET /v1/authentication/status`` before attempting to log in.
 
 Some routes use the internal API key independently of Django login. The
-key is the ``authkey`` from the ``[dbserver]`` section of
+key is the ``authkey`` from the ``[webapi]`` section of
 ``openquake.cfg`` and must be sent in the ``X-API-Key`` request header:
 
 .. code-block:: console
 
-    X-API-Key: <dbserver-authkey>
+    X-API-Key: <authkey>
 
 This applies to ``/v1/calc_info/:calc_id``,
-``/v1/calc_list/count``, and ``/v1/on_same_fs``. ``/v1/ping`` does
-not require authentication. The key is also required by every DbServer
-route; see :ref:`dbserver-api`.
+``/v1/calc_list/count``, and ``/v1/on_same_fs``, and to the internal
+``/v0`` routes (see :ref:`internal-api`).
 
 Summary of the routes
 ---------------------
 
-The WebUI serves the following ``/v1`` routes; the check marks show the
-application modes in which each route is registered (see the next
-section). In the ``Auth`` column, ``login`` means that a Django session
+The WebUI serves the following routes: the public ``/v1`` API and the
+internal ``/v0`` routes. The check marks show the application modes in
+which each route is registered (see the next section). In the ``Auth`` column, ``login`` means that a Django session
 is required when authentication is enabled (modes ``RESTRICTED``,
 ``AELO`` and ``IMPACT``) and no authentication otherwise, ``API key``
 means the ``X-API-Key`` header described above, and ``none`` means that
@@ -439,7 +438,7 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - 
-   * - ``/v1/ping``
+   * - ``/v0/ping``
      - GET HEAD
      - none
      - ✓
@@ -447,7 +446,25 @@ user level, are described in the section of each route.
      - ✓
      - ✓
      - ✓
+     - 
+   * - ``/v0/db/:action``
+     - POST
+     - API key
      - ✓
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - 
+   * - ``/v0/worker_:action``
+     - POST
+     - API key
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - ✓
+     - 
    * - ``/v1/calc/aelo_run``
      - POST
      - login
@@ -630,8 +647,8 @@ Routes are registered according to the Django ``APPLICATION_MODE``:
 - ``AELO`` and ``IMPACT`` keep only ``abort`` and ``remove`` among those
   six routes and add their own routes (``/v1/calc/aelo_run`` and the
   IMPACT routes respectively);
-- ``TOOLS_ONLY`` exposes only ``/v1/valid/``, ``/v1/available_gsims``,
-  ``/v1/ini_defaults`` and ``/v1/ping``.
+- ``TOOLS_ONLY`` exposes only ``/v1/valid/``, ``/v1/available_gsims``
+  and ``/v1/ini_defaults``.
 
 A route omitted for the current mode returns HTTP 404.
 
@@ -1359,33 +1376,32 @@ Parameters::
 
 Response fields: ``nodal_planes``, ``nodal_planes_issue``, and ``info``.
 
-************
-GET /v1/ping
-************
-
-Health check for the WebUI. ``GET`` and ``HEAD`` are accepted and the
-response is the JSON string ``"ok"``; no authentication is required.
-
 .. _dbserver-api:
 
-OpenQuake DbServer API
-----------------------
+DbServer
+--------
 
 The DbServer is a separate Django service listening on the host and port
-from the ``[dbserver]`` section of ``openquake.cfg``. It serves only the
-internal ``/v0`` API; the WebUI serves the public ``/v1`` API. In server
-installations, start the DbServer before the WebUI.
+from the ``[dbserver]`` section of ``openquake.cfg``. It serves the internal
+``/v0`` routes ``/v0/ping``, ``/v0/db/:action`` and ``/v0/worker_:action``,
+which are described in the :ref:`internal-api` section and listed in the
+summary above. The WebUI serves the same ``/v0`` routes, but in server
+installations the processes of the regular users reach the database through
+the DbServer, which must be started before the WebUI.
 
 All DbServer routes except ``/v0/ping`` require the ``X-API-Key`` header
-containing ``authkey`` from ``[dbserver]``. A missing or invalid key
-returns HTTP 403.
+containing ``authkey`` from the ``[webapi]`` section. A missing or invalid
+key returns HTTP 403.
 
-************
-GET /v0/ping
-************
+.. _internal-api:
 
-``GET`` and ``HEAD`` health check. Returns the JSON string ``"ok"`` and
-does not require an API key.
+Internal API (/v0)
+------------------
+
+The ``/v0`` routes are internal: they are used by the processes of the
+engine and they are served by the WebUI, next to the public ``/v1`` API.
+All of them require the ``X-API-Key`` header containing ``authkey`` from
+the ``[webapi]`` section. A missing or invalid key returns HTTP 403.
 
 *******************
 POST /v0/db/:action
@@ -1516,7 +1532,7 @@ In both case you need to create a file called ``openquake.cfg`` with the followi
 
 ``username`` and ``password`` can be left empty if Django authentication is not enabled in the server, which is the
 recommended way, if the server is in your own secure LAN. Otherwise you must set the credentials of a Django account.
-The ``[dbserver]`` ``authkey`` is a separate credential used by internal API clients; it is not a substitute for
+The ``[webapi]`` ``authkey`` is a separate credential used by internal API clients; it is not a substitute for
 Django login credentials in ``WebExtractor``. The difference between case 1 and case 2 is in where to put the
 ``openquake.cfg`` file: if you have a production installation, put it in your $HOME, if you have a development
 installation, put it in your virtualenv directory.

@@ -70,8 +70,7 @@ from openquake.engine import engine, impact
 from openquake.engine.aelo import (
     PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.server import internal_api, services, utils
-from openquake.server.services import (
-    AELO_FORM_LABELS, AELO_VALID_VS30_RANGE, DEFAULT_EXPORT_TYPE, store)
+from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 
 from django.conf import settings
 from django.http import FileResponse
@@ -112,10 +111,11 @@ EXPOSED_VALUE_LABELS = [
 # averages over the times of the day (shown for day, night and transit)
 IMPACT_HIDDEN = ['embodied_carbon', 'occupants_avg', 'injured_avg']
 
+
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': f'float {AELO_VALID_VS30_RANGE}',
+    'vs30': f'float {services.AELO_VALID_VS30_RANGE}',
     'site_name': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
@@ -459,7 +459,7 @@ def validate_ini(request):
     """
     return internal_api.run(
         services.validate_upload,
-        services.make_form(request.POST, request.FILES),
+        internal_api.make_form(request.POST, request.FILES),
         'job_ini', 'Missing job_ini file')
 
 
@@ -481,7 +481,7 @@ def validate_zip(request):
     """
     return internal_api.run(
         services.validate_upload,
-        services.make_form(request.POST, request.FILES),
+        internal_api.make_form(request.POST, request.FILES),
         'archive', 'Missing archive file')
 
 
@@ -865,7 +865,7 @@ def calc_run(request):
         'notify_to': request.POST.get('notify_to') or '',
     }
     return internal_api.run(
-        services.calc_run, services.make_form(data, request.FILES))
+        services.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -904,7 +904,7 @@ def calc_run_ini(request):
         'notify_to': request.POST.get('notify_to') or '',
     }
     return internal_api.run(
-        services.calc_run, services.make_form(data, request.FILES))
+        services.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -919,8 +919,7 @@ def calc_run_scenario_from_ses(request, rup_id):
     data['username'] = username
     return internal_api.run(
         services.run_scenario_calc_from_ses_rupture, int(rup_id),
-        services.make_form(data, request.FILES))
-
+        internal_api.make_form(data, request.FILES))
 
 
 def get_impact_rupture_data(post, user, rupture_path):
@@ -965,7 +964,7 @@ def impact_get_rupture_data(request):
     data['user_level'] = str(request.user.level)
     return internal_api.run(
         services.impact_get_rupture_data,
-        services.make_form(data, request.FILES))
+        internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1110,7 +1109,7 @@ def impact_run(request):
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        services.impact_run, services.make_form(data, request.FILES))
+        services.impact_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1156,7 +1155,7 @@ def impact_run_with_shakemap(request):
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        services.impact_run, services.make_form(post, request.FILES))
+        services.impact_run, internal_api.make_form(post, request.FILES))
 
 
 def extract_report_from_datastore(dstore, iso3, file_format, page=1):
@@ -1310,7 +1309,6 @@ def impact_report(request, calc_id):
     return response
 
 
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1328,7 +1326,7 @@ def aelo_run(request):
         email=getattr(getattr(request, 'user', None), 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        services.aelo_run, services.make_form(data, request.FILES))
+        services.aelo_run, internal_api.make_form(data, request.FILES))
 
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):
@@ -1778,7 +1776,7 @@ def web_engine(request, **kwargs):
     # NOTE: application_mode is already added by the context processor
     params = {'calc_list_page_size': settings.CALC_LIST_PAGE_SIZE}
     if application_mode == 'AELO':
-        params['aelo_form_labels'] = AELO_FORM_LABELS
+        params['aelo_form_labels'] = services.AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['site_classes'] = oqvalidation.SITE_CLASSES
@@ -2560,12 +2558,13 @@ def aelo_changelog(request, **kwargs):
                   dict(aelo_changelog=aelo_changelog_html))
 
 
-# the /v1 routes protected by the internal API key, registered at the root
-# by urls.py in every mode
+def _form(request):
+    """Return the form (fields and files) of a POST request."""
+    return internal_api.make_form(request.POST, request.FILES)
 
 
-# return the list of valid users sent in the request headers
 def _valid_users(request):
+    """Return the list of valid users sent in the request headers."""
     try:
         return json.loads(request.headers.get('X-Valid-Users') or '[]')
     except json.JSONDecodeError as exc:
@@ -2584,4 +2583,5 @@ def v1_calc_list_count(request):
     return services.calc_list_count(
         request.GET.dict(), _valid_users(request),
         request.headers.get('X-User-ACL-On'))
+
 

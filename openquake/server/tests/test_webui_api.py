@@ -92,7 +92,7 @@ def test_calc_result_missing(webui_client):
 
 
 def test_calc_result_downloads_the_file(webui_client, classical_result):
-    """Export a result through the WebUI."""
+    """Export a result through the public Django endpoint."""
     path = '/v1/calc/result/%d' % classical_result['id']
     response = webui_client.get(path, dict(export_type='csv'))
     assert response.status_code == 200

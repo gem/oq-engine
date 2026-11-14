@@ -114,15 +114,15 @@ class server:
     USER = "openquake"
 
     @classmethod
-    def config(cls):
-        # the authkey is the key required by the DbServer: it is random,
-        # and readable by the users of the installation, since their
-        # calculations need it to reach the DbServer
+    def config(cls, authkey):
+        # the authkey is the key of the internal API, which the users need
+        # to reach the DbServer from their calculations: it is random
         return f"""[dbserver]
     host = localhost
     port = {cls.DBPORT}
     file = {cls.DBPATH}
-    authkey = {secrets.token_urlsafe(32)}
+    [webapi]
+    authkey = {authkey}
     [directory]
     """
 
@@ -650,10 +650,11 @@ def create_cfg(inst):
         return
     if os.path.exists(inst.CFG):
         print(f"There is an old file {inst.CFG}; it will not be "
-              f"overwritten, but consider updating it with\n{inst.config()}")
+              f"overwritten, but consider updating it with\n"
+              f"{inst.config('<a random key>')}")
     else:
         with open(inst.CFG, "w") as cfg:
-            cfg.write(inst.config())
+            cfg.write(inst.config(secrets.token_urlsafe(32)))
         print(f"Created {inst.CFG}")
 
 

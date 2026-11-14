@@ -218,6 +218,12 @@ host_cores = config.zworkers.host_cores.split(',')
 HOSTCORE = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)(?::(\d{1,5}))?\s+(-?\d+)')
 
 
+# an entry "host cores" or "host:port cores" of host_cores; the values are
+# used to build the ssh commands starting the workerpools, so they are
+# validated strictly: a host name or IPv4 address, a port and an integer
+HOSTCORE = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)(?::(\d{1,5}))?\s+(-?\d+)')
+
+
 def parse_hostcore(hostcore, default_port):
     """
     :param hostcore: a string "host cores" or "host:port cores"
