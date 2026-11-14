@@ -36,9 +36,8 @@ This applies to ``/v1/calc_info/:calc_id``,
 Summary of the routes
 ---------------------
 
-The WebUI serves the following routes: the public ``/v1`` API and the
-internal ``/v0`` routes. The check marks show the application modes in
-which each route is registered (see the next section). In the ``Auth`` column, ``login`` means that a Django session
+The WebUI serves the public ``/v1`` API. The check marks show the
+application modes in which each route is registered (see the next section). In the ``Auth`` column, ``login`` means that a Django session
 is required when authentication is enabled (modes ``RESTRICTED``,
 ``AELO`` and ``IMPACT``) and no authentication otherwise, ``API key``
 means the ``X-API-Key`` header described above, and ``none`` means that
@@ -431,33 +430,6 @@ user level, are described in the section of each route.
      - 
    * - ``/v1/calc_list/count``
      - GET
-     - API key
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - 
-   * - ``/v0/ping``
-     - GET HEAD
-     - none
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - 
-   * - ``/v0/db/:action``
-     - POST
-     - API key
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - ✓
-     - 
-   * - ``/v0/worker_:action``
-     - POST
      - API key
      - ✓
      - ✓
@@ -1385,9 +1357,9 @@ The DbServer is a separate Django service listening on the host and port
 from the ``[dbserver]`` section of ``openquake.cfg``. It serves the internal
 ``/v0`` routes ``/v0/ping``, ``/v0/db/:action`` and ``/v0/worker_:action``,
 which are described in the :ref:`internal-api` section and listed in the
-summary above. The WebUI serves the same ``/v0`` routes, but in server
-installations the processes of the regular users reach the database through
-the DbServer, which must be started before the WebUI.
+summary above. In server installations the processes of the regular users
+reach the database through the DbServer, which must be started before the
+WebUI.
 
 All DbServer routes except ``/v0/ping`` require the ``X-API-Key`` header
 containing ``authkey`` from the ``[webapi]`` section. A missing or invalid
@@ -1399,7 +1371,7 @@ Internal API (/v0)
 ------------------
 
 The ``/v0`` routes are internal: they are used by the processes of the
-engine and they are served by the WebUI, next to the public ``/v1`` API.
+engine and they are served by the DbServer (see :ref:`dbserver-api`).
 All of them require the ``X-API-Key`` header containing ``authkey`` from
 the ``[webapi]`` section. A missing or invalid key returns HTTP 403.
 
