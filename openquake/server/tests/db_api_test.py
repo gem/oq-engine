@@ -57,13 +57,15 @@ def test_dbserver_does_not_serve_v1(api_client):
     assert api_client.get('/v1/calc/list').status_code == 404
 
 
-def test_webui_does_not_serve_v0(webui_client):
-    assert webui_client.get('/v1/ping').status_code == 200
-    assert webui_client.get('/v0/ping').status_code == 404
+def test_webui_health_and_v0_routes(webui_client):
+    # the WebUI answers its health check and serves the same /v0 routes
+    # of the DbServer, with the same API key
+    assert webui_client.get('/v1/engine_version').status_code == 200
+    assert webui_client.get('/v0/ping').status_code == 200
     response = webui_client.session.post(
         webui_client.base_url + '/v0/db/engine_version',
         headers={'X-API-Key': API_KEY})
-    assert response.status_code == 404
+    assert response.status_code == 200
 
 
 def test_worker_api_rejects_invalid_configuration(api_client):
