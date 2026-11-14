@@ -18,6 +18,7 @@
 
 import os
 import sys
+import shutil
 import collections
 import numpy
 import pandas
@@ -512,16 +513,25 @@ def compare_asce(dir1: str, dir2: str, atol: float=1E-3, rtol: float=1E-3):
     """
     compare_asce('asce', 'expected') exits with 0
     if all file are equal within the tolerance, otherwise with 1.
+
+    If the environment variable OQ_OVERWRITE is set, the expected files in
+    dir2 are overwritten with the corresponding files in dir1.
     """
     err = 0
-    for fname in os.listdir(dir2):
+    for fname in sorted(os.listdir(dir2)):
         if fname.endswith('.org'):
+            fname1 = os.path.join(dir1, fname)
             fname2 = os.path.join(dir2, fname)
-            if not os.path.exists(fname2):
-                print(f"{fname2} does not exist, cannot compare")
+            if not os.path.exists(fname1):
+                print(f"{fname1} does not exist, cannot compare")
+                err += 1
+                continue
+            if OVERWRITE:
+                shutil.copyfile(fname1, fname2)
+                print(f"Overwritten {fname2}")
                 continue
             print(f"Comparing {fname}")
-            df1 = read_org_df(os.path.join(dir1, fname))
+            df1 = read_org_df(fname1)
             df2 = read_org_df(fname2)
             equal = []
             for col in df1.columns:
@@ -648,6 +658,11 @@ main = dict(rups=compare_rups,
             asce=compare_asce,
             vfuncs=compare_vfuncs,
             workflow=compare_workflow)
+
+compare_asce.dir1 = 'directory with the ASCE files'
+compare_asce.dir2 = 'directory with the expected ASCE files'
+compare_asce.atol = 'absolute tolerance'
+compare_asce.rtol = 'relative tolerance'
 
 compare_workflow.expected_dir = 'directory with the exported CSV files'
 compare_workflow.calc_id = (
