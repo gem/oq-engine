@@ -27,10 +27,9 @@ overridden by each class::
     │   [abstract] get_num_paths, get_realizations, __toh5__, __fromh5__
     │   sample, to_node, to_nrml
     ├── BranchSetLogicTree
-    │   │   root_branchset, set_num_paths, get_num_paths, get_realizations,
-    │   │   sample, get_all_paths, to_node, h5attrs, __toh5__, __fromh5__
-    │   ├── CompositeLogicTree
-    │   │       sample_paths, apply_all
+    │   │   __init__, root_branchset, set_num_paths, get_num_paths,
+    │   │   get_realizations, sample, get_all_paths, sample_paths,
+    │   │   apply_all, to_node, h5attrs, __toh5__, __fromh5__
     │   ├── SourceModelLogicTree
     │   │       set_num_paths, decompose, reduce, prune, bset_values, h5attrs,
     │   │       __fromh5__
@@ -1636,16 +1635,32 @@ def smlt_path(branches):
 class BranchSetLogicTree(AbstractLogicTree):
     """
     Logic tree made of branchsets, each one attached to branches of the
-    previous ones (see attach_branches). The subclasses must set the
-    attribute `branchsets` and call set_num_paths (or set `num_paths`);
-    they can set `num_samples`, `seed` and `sampling_method`. To be stored
-    in the datastore, the branchsets must have an `id` and the subclasses
-    must set `filename` and the dictionary `bsetdict` branchset ID ->
-    attributes of the branchset (including the filters).
+    previous ones (see attach_branches). It can be built directly from a
+    list of branchsets with ``__init__`` (used by compose and decompose)
+    or subclassed; the subclasses can set the attributes `branchsets`,
+    `num_samples`, `seed` and `sampling_method` and call set_num_paths
+    (or set `num_paths`). To be stored in the datastore, the branchsets
+    must have an `id` and the tree must set `filename` and the dictionary
+    `bsetdict` branchset ID -> attributes of the branchset (including the
+    filters).
     """
     num_samples = 0
     seed = 42
     sampling_method = 'early_weights'
+
+    def __init__(self, branchsets=(), seed=42, num_samples=0,
+                 sampling_method='early_weights'):
+        self.branchsets = list(branchsets)
+        self.seed = seed
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
+        for i, bset in enumerate(self.branchsets):
+            bset.ordinal = i
+            bset.check_duplicates()
+            bset.check_weights()
+        if self.branchsets:
+            attach_branches(self, override=True)
+            self.set_num_paths()
 
     @property
     def root_branchset(self):
@@ -1785,6 +1800,40 @@ class BranchSetLogicTree(AbstractLogicTree):
             out.append(lt_path.ljust(nb, '.'))
         return out
 
+    def sample_paths(self, num_samples, seed=42,
+                     sampling_method='early_weights'):
+        """
+        :returns: a list of sampled paths as strings, one per sample
+        """
+        nbs = len(self.branchsets)
+        probs = random((num_samples, nbs), seed, sampling_method)
+        out = []
+        for branches in self.branchsets[0].sample(probs, sampling_method):
+            out.append(''.join(br.id for br in branches))
+        return out
+
+    def apply_all(self, src):
+        """
+        Apply all uncertainties for each realization.
+
+        :param src: source object
+        :returns: R modified sources
+        """
+        srcs = []
+        bs0 = self.branchsets[0]
+        n = len(self.branchsets)
+        for rlz in self.get_realizations():
+            if len(rlz.lt_path) != n:
+                raise ValueError("The branch IDs must be one-character long")
+            bset_values = bs0.get_bset_values(rlz.lt_path)
+            new = copy.deepcopy(src)
+            for bset, value in bset_values:
+                apply_uncertainty(bset.uncertainty_type, new, value)
+            srcs.append(new)
+        for i, new in enumerate(srcs):
+            new.id = i
+        return srcs
+
     def to_node(self):
         """
         Converts the underlying branchsets, with their filters, into a node
@@ -1836,70 +1885,13 @@ class ExtraLogicTree(BranchSetLogicTree):
                 for rlz in self._full_realizations()}
 
 
-class CompositeLogicTree(BranchSetLogicTree):
-    """
-    Build a logic tree from a set of branches by automatically
-    setting the branch IDs.
-
-    NB: it is not stored in the datastore, since the serialization
-    inherited from BranchSetLogicTree requires branchset IDs, a filename
-    and a bsetdict
-    """
-    def __init__(self, branchsets, seed=42, num_samples=0,
-                 sampling_method='early_weights'):
-        self.branchsets = branchsets
-        self.seed = seed
-        self.num_samples = num_samples
-        self.sampling_method = sampling_method
-        for i, bset in enumerate(branchsets):
-            bset.ordinal = i
-            bset.check_duplicates()
-            bset.check_weights()
-        attach_branches(self, override=True)
-        self.set_num_paths()
-
-    def sample_paths(self, num_samples, seed=42,
-                     sampling_method='early_weights'):
-        nbs = len(self.branchsets)
-        probs = random((num_samples, nbs), seed, sampling_method)
-        out = []
-        for branches in self.branchsets[0].sample(probs, sampling_method):
-            out.append(''.join(br.id for br in branches))
-        return out
-
-    def apply_all(self, src):
-        """
-        Apply all uncertainties for each realization.
-
-        :param src: source object
-        :returns: R modified sources
-        """
-        srcs = []
-        bs0 = self.branchsets[0]
-        n = len(self.branchsets)
-        for rlz in self.get_realizations():
-            if len(rlz.lt_path) != n:
-                raise ValueError("The branch IDs must be one-character long")
-            bset_values = bs0.get_bset_values(rlz.lt_path)
-            new = copy.deepcopy(src)
-            for bset, value in bset_values:
-                apply_uncertainty(bset.uncertainty_type, new, value)
-            srcs.append(new)
-        for i, new in enumerate(srcs):
-            new.id = i
-        return srcs
-
-    def __repr__(self):
-        return '<%s>' % self.branchsets
-
-
 def build(*bslists, applyToSources=''):
     """
     :param bslists:
         a list of lists describing branchsets
     :param applyToSources:
         source ID (used on Absolute uncertainties)
-    :returns: a `CompositeLogicTree` instance
+    :returns: a `BranchSetLogicTree` instance
 
     >>> lt = build(['sourceModel', '',
     ...              ['A', 'common1', 0.6],
@@ -1924,5 +1916,5 @@ def build(*bslists, applyToSources=''):
             bset.filters['applyToSources'] = applyToSources.split()
         bset.branches = branches
         bsets.append(bset)
-    return CompositeLogicTree(bsets)
+    return BranchSetLogicTree(bsets)
 
