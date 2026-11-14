@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.rmap_maker import get_unique_inverse, read_core_trt_smrs
+from openquake.hazardlib.rmap_maker import get_unique_inverse, read_unc_ts_sets
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.rupture import get_ebrupture  # noqa: F401
@@ -149,7 +149,7 @@ def get_rmap_gb(dstore, full_lt=None):
     full_lt = full_lt or dstore['full_lt'].init()
     # Classical rates belong to sets sharing the same uncertainties,
     # which are applied in the workers, rather than to whole groups.
-    trt_smrs = read_core_trt_smrs(dstore)
+    trt_smrs = read_unc_ts_sets(dstore)
     if trt_smrs is None:
         if 'trt_smrs' in dstore:  # event based
             trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])

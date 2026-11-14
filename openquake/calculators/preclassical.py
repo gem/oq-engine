@@ -24,13 +24,13 @@ import numpy
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby
-from openquake.hazardlib.rmap_maker import get_cmakers, read_core_trt_smrs
+from openquake.hazardlib.rmap_maker import get_cmakers, read_unc_ts_sets
 from openquake.hazardlib.contexts import estimate_nctxs
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.source_group import (
     SourceGroup, _grp_id, NUM_RUPTURES)
-from openquake.hazardlib.source_reader import get_core_trt_smrs
+from openquake.hazardlib.source_reader import get_unc_ts_sets
 from openquake.hazardlib.calc.filters import (
     getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
@@ -184,7 +184,7 @@ def filter_weight(srcs, sf, cmaker, secparams, monitor):
     bysrc_unc, see build_groups) are neither split nor filtered here: the
     splitting would destroy the geometry (and the MFD of the fault
     sources) and the filtering depends on the occurrence rates, which are
-    modified in the workers; there they are split (see cmakers_groups_gkeys
+    modified in the workers; there they are split (see groups_gkeys
     in classical.py) and filtered (see filter_mag).
     """
     oq = cmaker.oq
@@ -419,12 +419,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         logging.info('Building cmakers')
         trt_smrs = csm.get_trt_smrs()
-        # NB: core_trt_smrs is stored by source_reader.build_groups, before
+        # NB: unc_ts_sets is stored by source_reader.build_groups, before
         # preclassical; the reader also looks in the parent calculation.
-        core = read_core_trt_smrs(self.datastore)
-        if core is None:
-            core = get_core_trt_smrs(csm.src_groups)
-        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq, core)
+        unc_ts_sets = read_unc_ts_sets(self.datastore)
+        if unc_ts_sets is None:
+            unc_ts_sets = get_unc_ts_sets(csm.src_groups)
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
@@ -446,10 +446,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         # the core size Gt, i.e. the number of columns of the global
         # RateMap, is known already at build time (see
         # source_reader.store_unc_signatures)
-        if 'core_trt_smrs' not in self.datastore:
+        if 'unc_ts_sets' not in self.datastore:
             # this happens if the groups were read from the parent
             # calculation, so the units are taken from the parent
-            self.datastore.hdf5.save_vlen('core_trt_smrs', core)
+            self.datastore.hdf5.save_vlen('unc_ts_sets', unc_ts_sets)
 
         sf = _get_srcfilter(sites, self.few_sites, oq.maximum_distance)
         atomic_sources = []

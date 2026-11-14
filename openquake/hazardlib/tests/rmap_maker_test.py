@@ -19,10 +19,10 @@ import tempfile
 import unittest
 import numpy
 from openquake.commonlib.datastore import DataStore
-from openquake.hazardlib.rmap_maker import read_core_trt_smrs
+from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 
 
-class ReadCoreTrtSmrsTestCase(unittest.TestCase):
+class ReadUncTsSetsTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -33,21 +33,21 @@ class ReadCoreTrtSmrsTestCase(unittest.TestCase):
 
     def test_missing(self):
         # Event-based and imported curves may have no rate-set metadata.
-        self.assertIsNone(read_core_trt_smrs(self.dstore))
+        self.assertIsNone(read_unc_ts_sets(self.dstore))
 
     def test_closed(self):
         # Preserve stored gid numbering, including non-sorted input.
         sets = [numpy.array(ts, numpy.uint32) for ts in [(2,), (0, 1)]]
-        self.dstore.hdf5.save_vlen('core_trt_smrs', sets)
+        self.dstore.hdf5.save_vlen('unc_ts_sets', sets)
         self.dstore.close()
-        self.assertEqual(read_core_trt_smrs(self.dstore), [(2,), (0, 1)])
+        self.assertEqual(read_unc_ts_sets(self.dstore), [(2,), (0, 1)])
         self.assertEqual(self.dstore.hdf5, ())
 
     def test_parent(self):
         # Child calculations inherit attribution from the parent.
         self.dstore.hdf5.save_vlen(
-            'core_trt_smrs', [numpy.array([0, 1], numpy.uint32)])
+            'unc_ts_sets', [numpy.array([0, 1], numpy.uint32)])
         child = DataStore(os.path.join(self.tmp.name, 'child.hdf5'))
         self.addCleanup(child.close)
         child.parent = self.dstore
-        self.assertEqual(read_core_trt_smrs(child), [(0, 1)])
+        self.assertEqual(read_unc_ts_sets(child), [(0, 1)])

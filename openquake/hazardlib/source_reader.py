@@ -35,7 +35,7 @@ from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.base import ts_samples_dt
 from openquake.hazardlib.lt import (
     apply_uncertainties, check_correlated, source_ids, get_bset_value,
-    restrict_ts_samples)
+    restrict_ts_samples, BranchSet, Branch)
 from openquake.hazardlib.rmap_maker import get_unique_inverse
 from openquake.hazardlib.valid import basename
 
@@ -412,6 +412,30 @@ def get_bset_values(full_lt, sources):
             for ordinal in sorted(ordinals)}
 
 
+def compile_bset_values(full_lt, sources):
+    """Compile uncertainty instructions without links to the logic tree."""
+    programs = get_bset_values(full_lt, sources)
+    compiled = {}
+    out = {}
+    for ordinal, values in programs.items():
+        out[ordinal] = []
+        for bset, value in values:
+            key = id(bset)
+            if key not in compiled:
+                new = BranchSet(bset.uncertainty_type, bset.filters,
+                                bset.ordinal, bset.collapsed)
+                # Ordinary instructions already contain their selected
+                # value. Collapsed sets need all alternatives and their
+                # weights, but never the downstream branchsets.
+                if bset.collapsed:
+                    new.branches = [Branch(br.branch_id, br.value,
+                                           br.weight, br.bs_id)
+                                    for br in bset.branches]
+                compiled[key] = new
+            out[ordinal].append((compiled[key], value))
+    return out
+
+
 def _may_apply(bset, value, ids):
     # False if the branchset certainly does not apply to the sources with
     # the given IDs and basenames (see source_ids and get_bset_value)
@@ -456,7 +480,7 @@ def _subsets_by_unc(sources):
     if getattr(sources, 'atomic', False):
         # the sources of an atomic group are mutually exclusive (or belong
         # to a cluster), so they must be kept together, see sample_cluster
-        # and cmakers_groups_gkeys; the sets of realizations are the same for
+        # and groups_gkeys; the sets of realizations are the same for
         # all of them, since they belong to the same source model
         return {trt_smrs: list(sources)
                 for trt_smrs in sources[0].get_ts_sets()}
@@ -656,10 +680,10 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
         # the event based calculators attribute the rates to the
         # realizations of the group, not to the subsets
         return
-    core_trt_smrs = get_core_trt_smrs(groups)
+    unc_ts_sets = get_unc_ts_sets(groups)
     if dstore is not None:
-        dstore.hdf5.save_vlen('core_trt_smrs', core_trt_smrs)
-    Gt = get_core_size(core_trt_smrs, full_lt)
+        dstore.hdf5.save_vlen('unc_ts_sets', unc_ts_sets)
+    Gt = get_unc_ts_set_size(unc_ts_sets, full_lt)
     if Gt >= TWO32:
         # NB: the gids are stored as uint32 in the _rates dataset, so
         # there cannot be more than 2**32 columns in the RateMap
@@ -680,7 +704,7 @@ def store_unc_signatures(groups, sigrows, full_lt, oq, dstore=None):
                         general.humansize(4 * N * L * Gt), N, L)
 
 
-def get_core_trt_smrs(groups):
+def get_unc_ts_sets(groups):
     """
     :param groups: a list of SourceGroups built without applying the
         uncertainties (i.e. the src_groups of a CompositeSourceModel)
@@ -699,18 +723,18 @@ def get_core_trt_smrs(groups):
     return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in unique]
 
 
-def get_core_size(core_trt_smrs, full_lt):
+def get_unc_ts_set_size(unc_ts_sets, full_lt):
     """
-    :param core_trt_smrs: the sets of realizations with the same
-        uncertainties, as returned by get_core_trt_smrs
+    :param unc_ts_sets: the sets of realizations with the same
+        uncertainties, as returned by get_unc_ts_sets
     :param full_lt: a FullLogicTree instance
     :returns: the core size Gt = Σ_i G(trt_i) of the logic tree, i.e. the
         number of distinct rate components, i.e. of gids (see
-        FullLogicTree.get_gids), which is >= len(core_trt_smrs) since
+        FullLogicTree.get_gids), which is >= len(unc_ts_sets) since
         each unit contributes G(trt_i) >= 1 gids
     """
     return sum(len(full_lt.gsim_lt.values[full_lt.trts[t[0] // TWO24]])
-               for t in core_trt_smrs)
+               for t in unc_ts_sets)
 
 
 def build_csm(oq, full_lt, smdict, dstore):

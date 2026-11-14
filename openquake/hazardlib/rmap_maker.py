@@ -188,7 +188,7 @@ class RmapMaker(object):
         dic = {}
         self.rupdata = []
         # NB: the cfactor of the cmaker is shared by the results of the
-        # task (see restrict_trt_smrs) and accumulated in the master, so
+        # task and accumulated in the master, so
         # only the increment of this result must be returned
         cfactor0 = self.cmaker.cfactor.copy()
         self.source_data = AccumDict(accum=[])
@@ -211,7 +211,6 @@ class RmapMaker(object):
             pnemap.array = array
 
         dic['rmap'] = pnemap.to_rates()
-        dic['rmap'].gid = self.cmaker.gid
         dic['cfactor'] = self.cmaker.cfactor - cfactor0
         if self.oq.keep_rupdata:
             dic['rup_data'] = concat(self.rupdata)
@@ -327,7 +326,7 @@ def make_results(groups, cmakers, sites):
     sources = rmaker.sources
     # NB: the variants can have fewer sources than the base, since the
     # sources are filtered by minimum_magnitude after the uncertainties
-    # are applied, see classical.cmakers_groups_gkeys
+    # are applied, see classical.groups_gkeys
     nsrcs = [len(grp) for grp in groups]
     if any(n != len(sources) for n in nsrcs):
         raise FilteredAway(
@@ -539,9 +538,10 @@ class ContextMakerSequence(collections.abc.Sequence):
     """
     Wrapper over a sequence of ContextMakers
     """
-    def __init__(self, cmakers, inverse):
+    def __init__(self, cmakers, inverse, trt_smrs):
         self.cmakers = cmakers
         self.inverse = inverse
+        self.trt_smrs = trt_smrs
 
     @property
     def Gt(self):
@@ -573,7 +573,9 @@ class ContextMakerSequence(collections.abc.Sequence):
         L = cmakers[0].imtls.size
         rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
         for group, cmaker in zip(src_groups, cmakers):
-            rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
+            local = RmapMaker(cmaker, sitecol, group).make()['rmap']
+            local.gid = cmaker.gsim_idx
+            rmap += local
         return rmap
 
     def get_rmaps(self, sources, sitecol):
@@ -637,76 +639,61 @@ def get_unique_inverse(all_trt_smrs):
     return [tuple(map(int, u.split(','))) for u in unique], inverse
 
 
-def _core_gids(trt_smrs, core_trt_smrs, core_gids):
-    # returns the gids of the largest set of realizations in core_trt_smrs
-    # contained in trt_smrs, i.e. the whole group when it is a core set;
-    # the other covering sets are partitions of the same realizations,
-    # so using them too would double count the weights, see get_cmakers
-    group = set(trt_smrs)
-    covering = [(len(ts), gids) for ts, gids in zip(core_trt_smrs, core_gids)
-                if set(ts) <= group]
-    if not covering:
-        raise ValueError('No core set in %s' % (trt_smrs,))
-    return max(covering, key=lambda pair: pair[0])[1]
-
-
-def get_cmakers(all_trt_smrs, full_lt, oq, core_trt_smrs=None):
+def build_cmakers(all_trt_smrs, full_lt, oq):
     """
     :params all_trt_smrs: a list of arrays, one per source group
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
-    :param core_trt_smrs: the sets of realizations with the same
-        uncertainties, see classical.read_gid_dic; if given, the gids
-        and the weights of the cmakers are numbered as in the core list,
-        so that they agree with the gids used by the master
-    :returns: list of ContextMakers associated to the given src_groups
+    :returns: computation-only ContextMakers with local GSIM columns
     """
     if not hasattr(full_lt, 'weights'):
         full_lt.init()
     unique_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
-    numbering = unique_trt_smrs if core_trt_smrs is None else core_trt_smrs
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplificationFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplificationFunction.from_dframe(df)
     else:
         oq.af = None
     trts = list(full_lt.gsim_lt.values)
-    gweights = full_lt.g_weights(numbering)[:, -1]  # shape Gt
-    cmakers = []
+    cmakers, memberships = [], []
     for trt_smrs in unique_trt_smrs:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smrs)
         if not rlzs_by_gsim:  # happens for gsim_lt.reduce() on empty TRTs
             continue
         trti = trt_smrs[0] // TWO24
-        cm = ContextMaker(trts[trti], rlzs_by_gsim, oq)
+        cm = ContextMaker(trts[trti], list(rlzs_by_gsim), oq)
         cm.trti = trti
-        cm.trt_smrs = trt_smrs
         cmakers.append(cm)
-    gids = full_lt.get_gids(numbering)
-    if core_trt_smrs is not None:
-        gids = [_core_gids(cm.trt_smrs, numbering, gids)
-                for cm in cmakers]
-    for cm, gsim_idx in zip(cmakers, gids):
-        # NB: the ids of the gsims of a group become the gids of the
-        # columns of the rates only when the cmaker is restricted to an
-        # index of rate attribution, see restrict_trt_smrs
-        assert len(gsim_idx) == len(cm.gsims), (len(gsim_idx), cm.gsims)
-        cm.gsim_idx = gsim_idx
-        cm.wei = gweights[gsim_idx]
-    return ContextMakerSequence(cmakers, inverse)
+        memberships.append(trt_smrs)
+    return ContextMakerSequence(cmakers, inverse, memberships)
 
 
-def read_core_trt_smrs(dstore):
+def get_cmakers(all_trt_smrs, full_lt, oq):
+    """Bind group realizations and weights for GMFs and postprocessors."""
+    cmakers = build_cmakers(all_trt_smrs, full_lt, oq)
+    numbering = cmakers.trt_smrs
+    gweights = full_lt.g_weights(numbering)[:, -1]
+    for cm, ts, gids in zip(cmakers, numbering, full_lt.get_gids(numbering)):
+        # Computation uses local GSIM columns. These consumers also need
+        # the realization membership and weights of the complete group.
+        rlzs = full_lt.get_rlzs_by_gsim(ts).values()
+        cm.gsims = dict(zip(cm.gsims, rlzs))
+        cm.gsim_idx = gids
+        cm.wei = gweights[gids]
+    return cmakers
+
+
+def read_unc_ts_sets(dstore):
     """
     :param dstore: a DataStore instance, possibly closed
     :returns: the ordered list of unique trt_smrs tuples, one per
-        realization set, or None if core_trt_smrs is not stored
+        realization set, or None if unc_ts_sets is not stored
 
     The stored row order determines the gid numbering.
     """
     with dstore:  # NB: the datastore is closed when passed to a task
-        if 'core_trt_smrs' in dstore:
-            return [tuple(t) for t in dstore['core_trt_smrs'][:]]
+        if 'unc_ts_sets' in dstore:
+            return [tuple(t) for t in dstore['unc_ts_sets'][:]]
 
 
 def read_cmakers(dstore, full_lt=None):
@@ -721,7 +708,7 @@ def read_cmakers(dstore, full_lt=None):
     all_trt_smrs = dstore['trt_smrs'][:]
     if not full_lt:
         full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(all_trt_smrs, full_lt, oq, read_core_trt_smrs(dstore))
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     return cmakers
 
 

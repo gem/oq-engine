@@ -30,11 +30,11 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.base import ts_samples_dt
-from openquake.hazardlib.lt import apply_uncertainty
+from openquake.hazardlib.lt import apply_uncertainty, BranchSet, Branch
 from openquake.hazardlib.source_reader import (
     splitMF, add_bangs, check_mfd_variants, check_same_sources,
     content_hash,
-    source_with_ts_sets, reduce_sources)
+    source_with_ts_sets, reduce_sources, compile_bset_values)
 
 
 def make_mps():
@@ -51,6 +51,29 @@ def make_mps():
         [(0, 1, 0), (1, 1, 0), (2, 1, 2)], ts_samples_dt)
     mps.bysrc_unc = True
     return mps
+
+
+class CompileUncertaintiesTestCase(unittest.TestCase):
+
+    def test_collapsed_program(self):
+        # Collapsed alternatives keep their values and weights, without
+        # serializing the branchsets downstream of each alternative.
+        bset = BranchSet('setLowerSeismDepthAbsolute', collapsed=True)
+        bset.branches = [Branch('a', 15., .3), Branch('b', 20., .7)]
+        downstream = BranchSet('bGRRelative')
+        for branch in bset.branches:
+            branch.bset = downstream
+        full_lt = types.SimpleNamespace(
+            get_bset_values=lambda ordinal: [(bset, None)])
+        programs = compile_bset_values(full_lt, [make_mps()])
+        compiled, value = programs[0][0]
+        self.assertIsNone(value)
+        self.assertTrue(compiled.collapsed)
+        self.assertIs(compiled, programs[2][0][0])
+        self.assertEqual([(br.value, br.weight) for br in compiled.branches],
+                         [(15., .3), (20., .7)])
+        self.assertTrue(all(br.bset is None for br in compiled.branches))
+        self.assertIs(bset.branches[0].bset, downstream)
 
 
 class SplitMFTestCase(unittest.TestCase):

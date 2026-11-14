@@ -26,7 +26,7 @@ from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.rmap_maker import (
-    read_cmakers, read_ctx_by_grp, read_core_trt_smrs)
+    read_cmakers, read_ctx_by_grp, read_unc_ts_sets)
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -78,11 +78,11 @@ def get_blocks(dstore, oq, cmakers, ctx_by_grp):
 
     NB: the contexts of a group contain the sources with different
     uncertainties, so they must be attributed to the sets of realizations
-    with the same uncertainties, see read_gid_dic
+    with the same uncertainties, see ClassicalTaskSpec
     """
     full_lt = dstore['full_lt'].init()
     toms = decode(dstore['toms'][:])
-    units = read_core_trt_smrs(dstore)
+    units = read_unc_ts_sets(dstore)
     gids = full_lt.get_gids(units)  # one array per unit
     unit_of = {g: i for i, gs in enumerate(gids) for g in gs}
     blocks = []

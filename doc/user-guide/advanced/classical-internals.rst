@@ -58,7 +58,7 @@ The preclassical proper, i.e. ``PreClassicalCalculator.populate_csm``,
 then works on the sources, group by group:
 
 - it builds the ``cmakers``, i.e. one ``ContextMaker`` per source group,
-  and saves the ``trt_smrs`` and ``core_trt_smrs`` datasets, which
+  and saves the ``trt_smrs`` and ``unc_ts_sets`` datasets, which
   will be explained below
 - it pre-filters the sources against the sites, using a coarse site
   grid when there are many sites (with ``res = 4``, i.e. 40km), since
@@ -191,10 +191,10 @@ codes (``S`` simple fault, ``A`` area source).
 .. note::
 
    The datastore contains two datasets with the realizations of the
-   groups, ``trt_smrs`` and ``core_trt_smrs``, which look similar but
+   groups, ``trt_smrs`` and ``unc_ts_sets``, which look similar but
    have a different meaning. ``trt_smrs`` has one row per source group,
    with the ``trt_smrs`` of all the realizations of the group, and it is
-   used to build the cmakers and the tasks; ``core_trt_smrs`` has one row
+   used to build the cmakers and the tasks; ``unc_ts_sets`` has one row
    per *realization set*, i.e. per subset of realizations with the same
    uncertainties, so it has more rows and they are
    shorter::
@@ -203,9 +203,9 @@ codes (``S`` simple fault, ``A`` area source).
        >> ds = datastore.read(calc_id)
        >> [len(t) for t in ds['trt_smrs'][:]]
        [81, 81]
-       >> [len(t) for t in ds['core_trt_smrs'][:]]
+       >> [len(t) for t in ds['unc_ts_sets'][:]]
        [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
-       >> ds['core_trt_smrs'][:2]
+       >> ds['unc_ts_sets'][:2]
        [array([ 0,  3,  6, 27, 30, 33, 54, 57, 60], dtype=uint32)
         array([ 1,  4,  7, 28, 31, 34, 55, 58, 61], dtype=uint32)]
 
@@ -238,18 +238,25 @@ one set of realizations at a time. The mechanism is the following.
    (the smallest ``trt_smr`` of the set); the sets of realizations sharing
    the same uncertainties are called *ts sets*. They are read back with
    ``src.get_ts_sets()``.
-3. In the preclassical the ts sets are stored in the ``core_trt_smrs``
+3. In the preclassical the ts sets are stored in the ``unc_ts_sets``
    dataset, one row per ts set. Concretely, a ts set is turned into a set of
    ``gids``, i.e. the (realization, GMM) pairs of the ts set, and the
    rates computed for it are associated to those ``gids``; see the
    section on the ``RateMap`` below.
-4. In the workers, for each ts set the engine restricts the ts_samples of
+4. The master compiles a ``ClassicalTaskSpec`` for each task: a context maker
+   with local GSIM columns, a mapping from ts sets to output gids, and
+   the uncertainty instructions needed by its sources. These instructions
+   contain the selected values and source filters, without links to the
+   rest of the logic tree. Weights remain in the statistics layer.
+5. In the workers, for each ts set the engine restricts the ts_samples of
    the sources to its realizations (``lt.restrict_ts_samples``) and applies
-   the uncertainties of its first realization
+   the compiled uncertainties
    (``lt.apply_uncertainties``, called by ``source_reader.modified_groups``).
    The resulting sources are then
    split (if needed), filtered by magnitude and used to compute the
-   rates, which are attributed to the ``gids`` of the ts set.
+   rates. The plan binds the local GSIM columns to the output gids;
+   the context maker is shared across the sets and is never restricted
+   or assigned representative gids. Workers do not load the logic tree.
 
 For the demo each source has 81 ``trt_smrs`` organized in **9 subsets of
 9 realizations**. In the logic tree the branchset ``bs1`` is the
@@ -293,7 +300,7 @@ do not apply to ``first``: the ordinals of each row are the 3x3
 combinations of the branches of ``bs3`` and ``bs5``. The fault source
 ``second`` has the analogous 9 signatures, built from ``bs3`` and
 ``bs5``, therefore there are 18 RateMap indices, 9 per
-source, stored in the ``core_trt_smrs`` dataset.
+source, stored in the ``unc_ts_sets`` dataset.
 
 The advantage is visible in the size of the CSM and in the number of
 tasks: if the uncertainties were applied when reading the source models,
@@ -340,7 +347,9 @@ mapping the ``gids`` to the columns of the array:
 
 Each task returns the ``RateMap`` of one subset of realizations, i.e. with
 ``G = 2`` columns for the demo (the two GMMs of the tectonic region
-type), and the master accumulates it into the ``RateMap`` of the group.
+type). Computation produces local columns; the task's routing binds
+them to global gids before the master accumulates the result into the
+``RateMap`` of the group.
 The group ``RateMap``\ s are allocated once in the master, with the
 ``gids`` of all the subsets of the group, so that the accumulation is a
 ``(N, L, G)`` array addition.

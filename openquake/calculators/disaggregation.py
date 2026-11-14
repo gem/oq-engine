@@ -31,7 +31,7 @@ from openquake.baselib.general import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.rmap_maker import (
-    read_cmakers, read_ctx_by_grp, read_core_trt_smrs)
+    read_cmakers, read_ctx_by_grp, read_unc_ts_sets)
 from openquake.commonlib import util
 from openquake.calculators import base, getters
 
@@ -288,11 +288,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             weights = None
         gid_to_rlzs = {}
-        core_trt_smrs = read_core_trt_smrs(dstore)
-        if core_trt_smrs is not None:
+        unc_ts_sets = read_unc_ts_sets(dstore)
+        if unc_ts_sets is not None:
             full_lt = dstore['full_lt'].init()
             for trt_smrs, gids in zip(
-                    core_trt_smrs, full_lt.get_gids(core_trt_smrs)):
+                    unc_ts_sets, full_lt.get_gids(unc_ts_sets)):
                 rlzs = full_lt.get_rlzs_by_gsim(trt_smrs).values()
                 gid_to_rlzs[int(gids[0])] = numpy.concatenate(list(rlzs))
 
