@@ -39,9 +39,6 @@ from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden, JsonResponse)
-from django.core.mail import EmailMessage
-from django.core.mail.backends.filebased import (
-    EmailBackend as FileEmailBackend)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
@@ -69,10 +66,10 @@ from openquake.risklib.scientific import TIME_EVENTS, TIME_LOSSES
 from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
-from openquake.engine import engine, aelo, impact
+from openquake.engine import engine, impact
 from openquake.engine.aelo import (
-    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
-from openquake.server import internal_api, utils
+    PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
+from openquake.server import internal_api, services, utils
 from openquake.server.services import DEFAULT_EXPORT_TYPE, store
 
 from django.conf import settings
@@ -114,21 +111,11 @@ EXPOSED_VALUE_LABELS = [
 # averages over the times of the day (shown for day, night and transit)
 IMPACT_HIDDEN = ['embodied_carbon', 'occupants_avg', 'injured_avg']
 
-AELO_FORM_LABELS = {
-    'lon': 'Longitude',
-    'lat': 'Latitude',
-    'site_class': 'Site class',
-    'vs30': 'Vs30 (m/s)',
-    'site_name': 'Site name',
-    'asce_version': 'ASCE standards',
-}
-
-AELO_VALID_VS30_RANGE = [150, 1525]
 
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': f'float {AELO_VALID_VS30_RANGE}',
+    'vs30': f'float {services.AELO_VALID_VS30_RANGE}',
     'site_name': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
@@ -471,7 +458,7 @@ def validate_ini(request):
                        (None otherwise)
     """
     return internal_api.run(
-        internal_api.validate_upload,
+        services.validate_upload,
         internal_api.make_form(request.POST, request.FILES),
         'job_ini', 'Missing job_ini file')
 
@@ -493,7 +480,7 @@ def validate_zip(request):
                        (None otherwise)
     """
     return internal_api.run(
-        internal_api.validate_upload,
+        services.validate_upload,
         internal_api.make_form(request.POST, request.FILES),
         'archive', 'Missing archive file')
 
@@ -538,7 +525,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return internal_api.run(internal_api.calc_info, int(calc_id))
+    return internal_api.run(services.calc_info, int(calc_id))
 
 
 @require_http_methods(['GET'])
@@ -611,7 +598,7 @@ def calc_list(request, id=None):
 def calc_count(request):
     """Return the number of calculations matching the requested filters."""
     return internal_api.run(
-        internal_api.calc_list_count, dict(request.GET.items()),
+        services.calc_list_count, dict(request.GET.items()),
         utils.get_valid_users(request),
         str(not utils.is_superuser(request)))
 
@@ -631,7 +618,7 @@ def calc_abort(request, calc_id):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
         return JsonResponse(message, status=403)
-    return internal_api.run(internal_api.calc_abort, int(calc_id))
+    return internal_api.run(services.calc_abort, int(calc_id))
 
 
 @csrf_exempt
@@ -641,7 +628,7 @@ def calc_remove(request, calc_id):
     """Remove a calculation for its owner."""
     user = utils.get_username(request)
     return internal_api.run(
-        internal_api.calc_remove, int(calc_id), user)
+        services.calc_remove, int(calc_id), user)
 
 
 def share_job(request, calc_id, share):
@@ -805,7 +792,7 @@ def calc_log(request, calc_id, start, stop):
     Get a slice of the calculation log as a JSON list of rows.
     """
     return internal_api.run(
-        internal_api.calc_log, int(calc_id), int(start or 0),
+        services.calc_log, int(calc_id), int(start or 0),
         int(stop or 0))
 
 
@@ -815,7 +802,7 @@ def calc_log_size(request, calc_id):
     """
     Get the current number of lines in the log.
     """
-    return internal_api.run(internal_api.calc_log_size, int(calc_id))
+    return internal_api.run(services.calc_log_size, int(calc_id))
 
 
 job_complete_callback_state = {'event': Event(), 'data': {}}
@@ -878,7 +865,7 @@ def calc_run(request):
         'notify_to': request.POST.get('notify_to') or '',
     }
     return internal_api.run(
-        internal_api.calc_run, internal_api.make_form(data, request.FILES))
+        services.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -917,7 +904,7 @@ def calc_run_ini(request):
         'notify_to': request.POST.get('notify_to') or '',
     }
     return internal_api.run(
-        internal_api.calc_run, internal_api.make_form(data, request.FILES))
+        services.calc_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -931,136 +918,8 @@ def calc_run_scenario_from_ses(request, rup_id):
     data = request.POST.dict()
     data['username'] = username
     return internal_api.run(
-        internal_api.run_scenario_calc_from_ses_rupture, int(rup_id),
+        services.run_scenario_calc_from_ses_rupture, int(rup_id),
         internal_api.make_form(data, request.FILES))
-
-
-def aelo_callback(
-        job_id, job_owner_email, outputs_uri, inputs,
-        exc=None, warnings=None, email_file_path=None):
-    if not job_owner_email:
-        return
-    from_email = settings.EMAIL_HOST_USER
-    to = [job_owner_email]
-    reply_to = settings.EMAIL_SUPPORT
-    # e.g. 'AELO for CCA'->'CCA'
-    site_name = inputs['description'][9:]
-    lon, lat = inputs['sites'].split()
-    site_class = inputs['site_class']
-    vs30s = inputs['vs30'].split()
-    vs30 = vs30s[0] if site_class != 'default' else 'default'
-    asce_version = inputs['asce_version']
-    asce_version_str = oqvalidation.ASCE_VERSIONS[asce_version]
-    if site_class is None or site_class == 'custom':
-        site_class_vs30_str = f'Site Class: Vs30 = {vs30} m/s'
-    else:
-        site_class_display_name = oqvalidation.SITE_CLASSES[
-            asce_version][site_class]['display_name']
-        site_class_vs30_str = f'Site Class: {site_class_display_name}'
-    aelo_version = base.get_aelo_version()
-    body = (f"Site name: {site_name}\n"
-            f"Latitude: {lat}, Longitude: {lon}\n"
-            f"{site_class_vs30_str}\n"
-            f"ASCE standard: {asce_version_str}\n"
-            f"AELO version: {aelo_version}\n\n")
-    if warnings is not None:
-        for warning in warnings:
-            body += warning + '\n'
-    if exc:
-        subject = f'Job {job_id} failed'
-        body += f'There was an error running job {job_id}:\n{exc}'
-    else:
-        subject = f'Job {job_id} finished correctly'
-        body += (f'Please find the results here:\n{outputs_uri}')
-    connection = None
-    if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each
-        # email with a unique name like: file_path/20260319-123456-abcdefg.log
-        connection = FileEmailBackend(file_path=email_file_path)
-    EmailMessage(subject, body, from_email, to,
-                 reply_to=[reply_to],
-                 connection=connection).send()
-
-
-def impact_callback(
-        job_id, params, job_owner_email, outputs_uri,
-        exc=None, warnings=None, email_file_path=None):
-    if not job_owner_email:
-        return
-
-    # Example of body:
-    # Input parameters:
-    # {'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0, 'mag': 7.8, 'rake': 0.0,
-    #  'usgs_id': 'us6000jllz', 'rupture_file': None}
-    # maximum_distance: 20.0
-    # tectonic_region_type: Active Shallow Crust
-    # truncation_level: 3.0
-    # number_of_ground_motion_fields: 100
-    # asset_hazard_distance: 15.0
-    # ses_seed: 42
-    # station_data_file: None
-    # maximum_distance_stations: None
-    # countries: TUR
-    # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
-
-    params_to_print = ''
-    exclude_from_print = ['rupture_from_usgs', 'postrisk_func', 'export_dir']
-    if 'shakemap_uri' in params:
-        exclude_from_print.extend([
-            'station_data_file', 'station_data_issue',
-            'station_data_file_from_usgs',
-            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
-            'gsim', 'shakemap_uri', 'rupture_file', 'title', 'mmi_file',
-            'rake'])
-    for key, val in params.items():
-        if key not in ['calculation_mode', 'inputs', 'job_ini',
-                       'hazard_calculation_id']:
-            if key == 'rupture_dict':
-                # NOTE: params['rupture_dict'] is a string representation of a
-                # dictionary, not a JSON string, so we can't use json.loads
-                rupdic = ast.literal_eval(params['rupture_dict'])
-                for rupkey, rupval in rupdic.items():
-                    if rupkey not in exclude_from_print:
-                        if rupkey == 'approach':
-                            rupval = IMPACT_APPROACHES[rupval]
-                        if rupval is not None and str(rupval).strip() != '':
-                            if rupkey not in params:
-                                # e.g. avoid writing the description twice
-                                params_to_print += f'{rupkey}: {rupval}\n'
-            elif key not in exclude_from_print:
-                if val is not None and str(val).strip() != '':
-                    params_to_print += f'{key}: {val}\n'
-    if 'station_data' in params['inputs']:
-        with open(params['inputs']['station_data'], 'r',
-                  encoding='utf-8') as file:
-            n_stations = sum(1 for line in file) - 1  # excluding the header
-        params_to_print += (
-            f'{n_stations} seismic stations were loaded (please see'
-            f'in the calculation log if any of them were discarded)\n')
-    elif 'shakemap_uri' not in params:
-        params_to_print += 'No seismic stations were considered\n'
-
-    from_email = settings.EMAIL_HOST_USER
-    to = [job_owner_email]
-    reply_to = settings.EMAIL_SUPPORT
-    body = (f"Input parameters:\n{params_to_print}\n\n")
-    if warnings is not None:
-        for warning in warnings:
-            body += warning + '\n'
-    if exc:
-        subject = f'Job {job_id} failed'
-        body += f'There was an error running job {job_id}:\n{exc}'
-    else:
-        subject = f'Job {job_id} finished correctly'
-        body += (f'Please find the results here:\n{outputs_uri}')
-    connection = None
-    if email_file_path:
-        # NOTE: file_path is actually a directory where Django stores each
-        # email with a unique name like: file_path/20260319-123456-abcdefg.log
-        connection = FileEmailBackend(file_path=email_file_path)
-    EmailMessage(subject, body, from_email, to,
-                 reply_to=[reply_to],
-                 connection=connection).send()
 
 
 def get_impact_rupture_data(post, user, rupture_path):
@@ -1104,7 +963,7 @@ def impact_get_rupture_data(request):
     data = request.POST.dict()
     data['user_level'] = str(request.user.level)
     return internal_api.run(
-        internal_api.impact_get_rupture_data,
+        services.impact_get_rupture_data,
         internal_api.make_form(data, request.FILES))
 
 
@@ -1214,7 +1073,7 @@ def create_impact_job(request, params, email_file_path):
             % (outputs_uri_api, traceback_uri))
 
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
-            impact_callback, email_file_path)
+            services.impact_callback, email_file_path)
 
     if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
         impact.main_web(*args)
@@ -1250,7 +1109,7 @@ def impact_run(request):
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        internal_api.impact_run, internal_api.make_form(data, request.FILES))
+        services.impact_run, internal_api.make_form(data, request.FILES))
 
 
 @csrf_exempt
@@ -1296,7 +1155,7 @@ def impact_run_with_shakemap(request):
         email=getattr(request.user, 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        internal_api.impact_run, internal_api.make_form(post, request.FILES))
+        services.impact_run, internal_api.make_form(post, request.FILES))
 
 
 def extract_report_from_datastore(dstore, iso3, file_format, page=1):
@@ -1324,7 +1183,7 @@ def _impact_output_url(request, route_name, calc_id, args=(), query=None):
 
 def build_impact_resources(request, calc_id, dstore):
     """Describe impact resources and their presentation URLs."""
-    available = internal_api.get_impact_resource_data(dstore)
+    available = services.get_impact_resource_data(dstore)
     outputs = {
         'avg_gmf_plots': {
             imt: _impact_output_url(
@@ -1450,132 +1309,6 @@ def impact_report(request, calc_id):
     return response
 
 
-def aelo_validate(request):
-    validation_errs = {}
-    invalid_inputs = []
-    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
-    try:
-        lon = valid.longitude(request.POST.get('lon'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lon']] = str(exc)
-        invalid_inputs.append('lon')
-    try:
-        lat = valid.latitude(request.POST.get('lat'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
-        invalid_inputs.append('lat')
-    try:
-        site_name = request.POST.get('site_name')
-        if not site_name:
-            raise ValueError("can not be empty")
-        if len(site_name) > settings.MAX_AELO_SITE_NAME_LEN:
-            raise ValueError(
-                "site name can not be longer than %s characters" %
-                settings.MAX_AELO_SITE_NAME_LEN)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_name']] = str(exc)
-        invalid_inputs.append('site_name')
-    try:
-        asce_version = request.POST.get(
-            'asce_version', oqvalidation.OqParam.asce_version.default)
-        oqvalidation.OqParam.asce_version.validator(asce_version)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
-        invalid_inputs.append('asce_version')
-    try:
-        site_class = request.POST.get('site_class')
-        oqvalidation.OqParam.site_class.validator(site_class)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
-        invalid_inputs.append('site_class')
-    try:
-        vs30s_in = sorted(
-            float(val) for val in request.POST.get('vs30').split())
-        if not vs30s_in:
-            raise ValueError('can not be empty')
-        vs30s_out = []
-        for vs30 in vs30s_in:
-            vs30s_out.append(validate_vs30(vs30))
-        vs30 = ' '.join(str(val) for val in vs30s_out)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
-        invalid_inputs.append('vs30')
-    if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[
-            asce_version][site_class]['vs30']
-        if isinstance(valid_vs30, list):
-            expected_vs30 = ' '.join(str(float(value)) for value in valid_vs30)
-        else:
-            expected_vs30 = str(float(valid_vs30))
-        if vs30 != expected_vs30:
-            # NOTE: this should never happen when using the web form, but it
-            # could happen calling the 'aelo_run' API endpoint programmatically
-            err_msg = (f'For site class {site_class} the expected Vs30 is'
-                       f' {expected_vs30} instead of {vs30}')
-            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
-            invalid_inputs.append('vs30')
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return JsonResponse(response_data, status=400)
-    return lon, lat, site_name, asce_version, site_class, vs30
-
-
-def _run_aelo(lon, lat, site_name, asce_version, site_class, vs30,
-              username, job_owner_email, build_absolute_uri,
-              email_file_path):
-    """Create and start an AELO job after Django has authenticated it."""
-    description = f'AELO for {site_name}'
-    try:
-        params = get_params_from(
-            dict(sites='%s %s' % (lon, lat),
-                 asce_version=asce_version, site_class=site_class, vs30=vs30,
-                 description=description),
-            config.directory.mosaic_dir, exclude=['USA'])
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': str(exc)}
-        logging.exception(str(exc))
-        return response_data, 400
-    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, None, username, None)
-    job_id = jobctx.calc_id
-    outputs_uri_web = build_absolute_uri(
-        reverse('outputs_aelo', args=[job_id]))
-    outputs_uri_api = build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = build_absolute_uri(reverse('log', args=[job_id, '0', '']))
-    traceback_uri = build_absolute_uri(reverse('traceback', args=[job_id]))
-    response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data['WARNING'] = (
-            'No email address is specified for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the following'
-            ' link: %s. If the job fails, the error traceback will be'
-            ' accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
-    args = (
-        lon, lat, vs30, params['siteid'], description, asce_version,
-        site_class, jobctx, job_owner_email, outputs_uri_web,
-        config.directory.mosaic_dir, aelo_callback, email_file_path)
-    if 'pytest' in sys.argv[0] and os.getenv('OQ_DISTRIBUTE') == 'no':
-        aelo.main(*args)
-    else:
-        mp.Process(target=aelo.main, args=args).start()
-    return response_data, 200
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -1593,7 +1326,7 @@ def aelo_run(request):
         email=getattr(getattr(request, 'user', None), 'email', ''),
         base_url=_get_base_url(request))
     return internal_api.run(
-        internal_api.aelo_run, internal_api.make_form(data, request.FILES))
+        services.aelo_run, internal_api.make_form(data, request.FILES))
 
 
 def submit_job(request_files, ini, username, hc_id, notify_to=None):
@@ -1740,7 +1473,7 @@ def calc_traceback(request, calc_id):
     """
     Get the traceback as a list of lines for a given ``calc_id``.
     """
-    return internal_api.run(internal_api.calc_traceback, int(calc_id))
+    return internal_api.run(services.calc_traceback, int(calc_id))
 
 
 @cross_domain_ajax
@@ -1787,7 +1520,7 @@ def calc_result(request, result_id):
 
     export_type = request.GET.get('export_type') or DEFAULT_EXPORT_TYPE
     return internal_api.run(
-        internal_api.calc_result, int(result_id), export_type)
+        services.calc_result, int(result_id), export_type)
 
 
 @cross_domain_ajax
@@ -1952,7 +1685,7 @@ def model_provenance(request, calc_id):
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     return internal_api.run(
-        internal_api.model_provenance, int(calc_id))
+        services.model_provenance, int(calc_id))
 
 
 @cross_domain_ajax
@@ -2043,7 +1776,7 @@ def web_engine(request, **kwargs):
     # NOTE: application_mode is already added by the context processor
     params = {'calc_list_page_size': settings.CALC_LIST_PAGE_SIZE}
     if application_mode == 'AELO':
-        params['aelo_form_labels'] = AELO_FORM_LABELS
+        params['aelo_form_labels'] = services.AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['site_classes'] = oqvalidation.SITE_CLASSES
@@ -2823,3 +2556,32 @@ def aelo_changelog(request, **kwargs):
         index=False, escape=False, classes='changelog', border=0)
     return render(request, "engine/aelo_changelog.html",
                   dict(aelo_changelog=aelo_changelog_html))
+
+
+def _form(request):
+    """Return the form (fields and files) of a POST request."""
+    return internal_api.make_form(request.POST, request.FILES)
+
+
+def _valid_users(request):
+    """Return the list of valid users sent in the request headers."""
+    try:
+        return json.loads(request.headers.get('X-Valid-Users') or '[]')
+    except json.JSONDecodeError as exc:
+        raise internal_api.ApiError(400, 'Invalid user context') from exc
+
+
+@internal_api.internal_view('GET')
+def v1_calc_info(request, calc_id):
+    """Return the information about a calculation."""
+    return services.calc_info(int(calc_id))
+
+
+@internal_api.internal_view('GET')
+def v1_calc_list_count(request):
+    """Count the calculations matching the filters of the list view."""
+    return services.calc_list_count(
+        request.GET.dict(), _valid_users(request),
+        request.headers.get('X-User-ACL-On'))
+
+

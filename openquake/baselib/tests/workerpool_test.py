@@ -37,6 +37,19 @@ class ParseHostcoreTestCase(unittest.TestCase):
         self.assertEqual(parse_hostcore('127.0.0.1:1910 -1', '1909'),
                          ('127.0.0.1', 1910, '-1'))
 
+    def test_spaces_and_hostname(self):
+        self.assertEqual(parse_hostcore(' node-01.cluster  16 ', 1909),
+                         ('node-01.cluster', 1909, '16'))
+
+    def test_invalid(self):
+        # the values are used to build ssh commands: anything which is not
+        # "host cores" or "host:port cores" must be rejected
+        for hostcore in ['worker1 1;id>/tmp/pwned', 'worker1 $(id)',
+                         '-oProxyCommand=id 1', 'worker1 1 2', 'worker1',
+                         'worker1 all', 'worker1:123456 1', 'a;b 1']:
+            with self.assertRaises(ValueError, msg=hostcore):
+                parse_hostcore(hostcore, 1909)
+
     def test_ssh_args(self):
         host_cores = [('127.0.0.1', 1910, '2'), ('127.0.0.1', 1909, '3')]
         got = [(host, port, cores)

@@ -252,3 +252,11 @@ jobs:
             --base http://127.0.0.1:8800 --user level_1_user \
             --password level_1_password --archive "${{ github.workspace }}/job.zip" \
             --access-log-dir /var/log/oq-engine
+      - name: Journal of the services (on failure)
+        # the errors of the calculations started by the WebUI, including
+        # the ones of their pool workers, are only in the journal
+        if: failure()
+        run: |
+          sudo journalctl -u openquake-webui --no-pager | tail -300
+          sudo journalctl -k --no-pager |
+            grep -i -E "segfault|out of memory|killed process" | tail -20 || true

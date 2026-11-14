@@ -193,6 +193,7 @@ import warnings
 import threading
 import collections
 import datetime
+import numpy
 from openquake.baselib import config
 
 
@@ -447,6 +448,59 @@ class Row(collections.abc.Sequence):
     def __repr__(self):
         items = ['%s=%s' % (f, getattr(self, f)) for f in self._fields]
         return '<Row(%s)>' % ', '.join(items)
+
+
+def to_json(value):
+    """
+    Encode a value into JSON-compatible values, in the format exchanged
+    with the DbServer: rows, tables and datetimes become dictionaries with
+    a key ``__oq_type__``, numpy scalars become Python scalars and cursors
+    become None, while lists, tuples and dictionaries are encoded
+    recursively.
+
+    >>> to_json(Row(['id', 'value'], (1, 2)))
+    {'__oq_type__': 'row', 'fields': ['id', 'value'], 'values': [1, 2]}
+    """
+    if isinstance(value, Row):
+        return {'__oq_type__': 'row', 'fields': list(value._fields),
+                'values': [to_json(item) for item in value._values]}
+    if isinstance(value, Table):  # before list, since Table is a list
+        return {'__oq_type__': 'table', 'fields': list(value._fields),
+                'rows': [to_json(row) for row in value]}
+    if isinstance(value, datetime.datetime):
+        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
+    if isinstance(value, sqlite3.Cursor):
+        return None
+    if isinstance(value, dict):
+        return {key: to_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_json(item) for item in value]
+    if isinstance(value, numpy.generic):
+        return value.item()
+    return value
+
+
+def from_json(value):
+    """
+    Decode the values encoded by :func:`to_json`
+
+    >>> from_json(to_json(Row(['id', 'value'], (1, 2))))
+    <Row(id=1, value=2)>
+    """
+    if isinstance(value, dict):
+        kind = value.get('__oq_type__')
+        if kind == 'datetime':
+            return datetime.datetime.fromisoformat(value['value'])
+        if kind == 'row':
+            return Row(value['fields'],
+                       [from_json(item) for item in value['values']])
+        if kind == 'table':
+            return Table(value['fields'],
+                         [from_json(item) for item in value['rows']])
+        return {key: from_json(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [from_json(item) for item in value]
+    return value
 
 
 # sqlite3.register_adapter(
