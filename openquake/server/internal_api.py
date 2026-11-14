@@ -52,15 +52,14 @@ from openquake.baselib import config, workerpool as w
 from openquake.baselib.general import gettemp
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import (
-    dbapi, datastore, logs, oqvalidation, readinput)
+    dbapi, datastore, logs, readinput)
 from openquake.hazardlib import valid
 from openquake.commonlib.model_provenance import read_model_provenance
 from openquake.calculators import base
 from openquake.calculators.extract import extract as extract_output
 from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.validate import (
-    IMPACT_FORM_DEFAULTS, impact_validate)
+from openquake.hazardlib.shakemap.validate import impact_validate
 from openquake.server import views
 from openquake.server.db.registry import get_action
 from openquake.server.papers import base as papers
@@ -568,16 +567,6 @@ def calc_result(result_id, export_type=None):
     return response
 
 
-def aelo_site_classes():
-    """Return the AELO site-class definitions."""
-    return oqvalidation.SITE_CLASSES
-
-
-def impact_form_defaults():
-    """Return the default values for the IMPACT form."""
-    return IMPACT_FORM_DEFAULTS
-
-
 def _valid_users(request):
     """Return the list of valid users sent in the request headers."""
     try:
@@ -598,18 +587,6 @@ def v1_calc_list_count(request):
     return calc_list_count(
         request.GET.dict(), _valid_users(request),
         request.headers.get('X-User-ACL-On'))
-
-
-@internal_view('GET', auth=False)
-def v1_aelo_site_classes(request):
-    """Return the AELO site-class definitions."""
-    return aelo_site_classes()
-
-
-@internal_view('GET', auth=False)
-def v1_impact_form_defaults(request):
-    """Return the default values for the IMPACT form."""
-    return impact_form_defaults()
 
 
 @internal_view('GET')
@@ -719,8 +696,6 @@ if settings.WEBUI:
     internal_urlpatterns += [
         re_path(r'^v1/calc_info/(\d+)$', v1_calc_info),
         re_path(r'^v1/calc_list/count$', v1_calc_list_count),
-        re_path(r'^v1/aelo_site_classes$', v1_aelo_site_classes),
-        re_path(r'^v1/get_impact_form_defaults$', v1_impact_form_defaults),
     ]
 internal_urlpatterns += [
     re_path(r'^v0/calc/model_provenance/(\d+)$', v0_model_provenance),
