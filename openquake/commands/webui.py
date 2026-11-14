@@ -40,14 +40,33 @@ def _health_url(hostport):
     return 'http://' + hostport + '/v0/calc/0/log/size'
 
 
+def _listens(proc, port):
+    """True if the process holds a TCP socket listening on the port."""
+    try:
+        return any(conn.status == psutil.CONN_LISTEN and
+                   conn.laddr.port == port
+                   for conn in proc.net_connections(kind='tcp'))
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return False
+
+
 def _find_webui_process(hostport):
-    """Find the process listening on the requested port."""
+    """
+    Find the topmost process listening on the requested port. With gunicorn
+    the master and the workers share the socket, and psutil reports it only
+    for a worker: going up to the master, we stop the whole server.
+    """
     _host, port = hostport.rsplit(':', 1)
+    port = int(port)
     for connection in psutil.net_connections(kind='tcp'):
         if (connection.status == psutil.CONN_LISTEN and
-                connection.laddr.port == int(port)):
+                connection.laddr.port == port):
             try:
-                return psutil.Process(connection.pid)
+                proc = psutil.Process(connection.pid)
+                parent = proc.parent()
+                while parent is not None and _listens(parent, port):
+                    proc, parent = parent, parent.parent()
+                return proc
             except psutil.NoSuchProcess:
                 return None
     return None
