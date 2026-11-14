@@ -749,6 +749,12 @@ Routes are registered according to the Django ``APPLICATION_MODE``:
 
 A route omitted for the current mode returns HTTP 404.
 
+WebUI routes
+------------
+
+This section describes each route of the WebUI; see the summary above for
+the modes in which they are available and the authentication they require.
+
 *****************
 GET /v1/calc/list
 *****************
@@ -1393,8 +1399,8 @@ filtering.
 GET /v1/aelo_site_classes
 *************************
 
-Return the ASCE site-class definitions as a JSON object. The route is
-served in all modes except ``TOOLS_ONLY`` and does not require login.
+AELO mode only. Return the ASCE site-class definitions as a JSON object.
+The route does not require login.
 
 **********************
 GET /v1/engine_version
@@ -1429,8 +1435,8 @@ with an ``error`` field.
 GET /v1/get_impact_form_defaults
 ********************************
 
-Return the IMPACT form field defaults as a JSON object. The route is
-served in all modes except ``TOOLS_ONLY`` and does not require login.
+IMPACT mode only. Return the IMPACT form field defaults as a JSON
+object. The route does not require login.
 
 **************************************
 POST /v1/impact_get_stations_from_usgs
@@ -1540,7 +1546,11 @@ accepts one optional argument: the ``[zworkers]`` configuration as a
 dictionary of strings (``host_cores``, ``ctrl_port``) or a job ID; with
 an empty ``args`` list the job ID -1 is used. The engine calls only
 ``workers_start``, passing the ``[zworkers]`` section of
-``openquake.cfg``.
+``openquake.cfg``. Since the configuration is used to build the ssh
+commands starting the workerpools, it is validated: ``ctrl_port`` must be
+an integer and ``host_cores`` a comma-separated list of entries
+``host cores`` or ``host:port cores`` with integer cores; other keys are
+ignored and an invalid configuration returns HTTP 400.
 
 Extracting data from calculations
 ---------------------------------
