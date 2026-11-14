@@ -236,13 +236,33 @@ def db_action(action, payload):
     return dbapi.to_json(result)
 
 
+# sanitize the argument of a worker action, i.e. a job ID or a [zworkers]
+# dictionary; its values are used to build the ssh commands starting the
+# workerpools, so only the known keys are kept and their values must be in
+# the known format (host_cores is validated by parallel.parse_hostcore)
+def _worker_arg(args):
+    if not args:
+        return -1  # the current job
+    arg = args[0]
+    if isinstance(arg, int) and not isinstance(arg, bool):
+        return arg
+    keys = ('host_cores', 'ctrl_port')
+    if not (isinstance(arg, dict) and all(
+            isinstance(arg.get(key), str) for key in keys)
+            and arg['ctrl_port'].isdigit()):
+        raise ApiError(400, 'Invalid worker configuration')
+    return {key: arg[key] for key in keys}
+
+
 def worker_action(action, payload):
     """Run an authenticated worker-control action."""
     if 'workers_' + action not in logs.WORKER_ACTIONS:
         raise ApiError(404)
     payload = payload or {}
-    args = payload.get('args', [])
-    master = w.WorkerMaster(args[0] if args else -1)
+    try:
+        master = w.WorkerMaster(_worker_arg(payload.get('args', [])))
+    except ValueError as exc:  # raised by parallel.parse_hostcore
+        raise ApiError(400, str(exc)) from exc
     return getattr(master, action)()
 
 
