@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Check that the summary table of the routes in doc/api-reference/rest-api.rst
-matches the URL configuration of the WebUI in every application mode. When
-the routes change, regenerate the table with
+Check that the summary tables of the routes in doc/api-reference/rest-api.rst
+match the URL configurations of the WebUI (in every application mode) and of
+the DbServer. When the routes change, regenerate the tables with
 
     python -m openquake.server.tests.routes_doc_test --update
 """
@@ -54,6 +54,9 @@ PLACEHOLDERS = [
     (r'<str:tag_name>', ':tag_name'),
     (r'(\d+)', ':calc_id'),
 ]
+DBSERVER_INTRO = '''\
+The DbServer serves only the following routes, independently from the
+application mode (see :ref:`dbserver-api`):'''
 
 
 # walk the decorators of a view and return (name, methods, auth), where
@@ -169,10 +172,11 @@ def _list_table(header, rows, widths):
 
 def routes_tables():
     """
-    :returns: the RST table of the routes of the WebUI in every mode
+    :returns: the RST tables of the routes of the WebUI and of the DbServer
     """
-    by_mode = _collect([('openquake.server.settings', mode)
-                        for mode in MODES])
+    pairs = [('openquake.server.settings', mode) for mode in MODES]
+    pairs.append(('openquake.server.dbserver_settings', 'PUBLIC'))
+    *by_mode, dbserver_rows = _collect(pairs)
     entries = {}  # route -> row, in the order of the URL configuration
     for mode, rows in zip(MODES, by_mode):
         for row in rows:
@@ -183,8 +187,13 @@ def routes_tables():
     webui = [['``%s``' % route, ' '.join(entry['methods']), _auth(entry)] +
              ['✓' if mode in entry['modes'] else '' for mode in MODES]
              for route, entry in entries.items()]
-    return _list_table(['Route', 'Methods', 'Auth'] + MODES, webui,
-                       [34, 10, 8] + [8] * len(MODES))
+    dbserver = [['``%s``' % row['route'], ' '.join(row['methods']),
+                 _auth(row)] for row in dbserver_rows]
+    return '\n\n'.join([
+        _list_table(['Route', 'Methods', 'Auth'] + MODES, webui,
+                    [34, 10, 8] + [8] * len(MODES)),
+        DBSERVER_INTRO,
+        _list_table(['Route', 'Methods', 'Auth'], dbserver, [40, 15, 15])])
 
 
 # return the text of the documentation and the position of the tables

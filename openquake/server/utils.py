@@ -31,6 +31,9 @@ from openquake.baselib import is_server_installation
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
 
+# the file with the Django secret key written by install.py
+DJANGO_SECRET_FILE = '/etc/openquake/django_secret.env'
+
 
 def is_superuser(request):
     """
@@ -185,12 +188,28 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30,
     return success
 
 
+# read the line DJANGO_SECRET_KEY='...' of the file written by install.py
+def _read_secret_file(path):
+    with open(path) as f:
+        for line in f:
+            name, _, value = line.strip().partition('=')
+            if name == 'DJANGO_SECRET_KEY':
+                return value.strip('\'"')
+    return ''
+
+
 def get_or_create_django_secret_key():
     SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', '')
     if is_server_installation() and not SECRET_KEY:
-        raise ImproperlyConfigured(
-            'In a server installation DJANGO_SECRET_KEY environment variable'
-            ' must be set sourcing /etc/openquake/django_secret.env')
+        # the systemd services set the variable from DJANGO_SECRET_FILE,
+        # while the commands run by the user openquake read the file
+        if os.access(DJANGO_SECRET_FILE, os.R_OK):
+            SECRET_KEY = _read_secret_file(DJANGO_SECRET_FILE)
+        if not SECRET_KEY:
+            raise ImproperlyConfigured(
+                'In a server installation the DJANGO_SECRET_KEY environment'
+                ' variable must be set or %s must be readable'
+                % DJANGO_SECRET_FILE)
     if SECRET_KEY:
         logging.info(
             'Using Django SECRET_KEY from DJANGO_SECRET_KEY env variable')

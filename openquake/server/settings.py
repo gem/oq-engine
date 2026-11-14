@@ -92,9 +92,9 @@ STATICFILES_DIRS = [
 
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': os.path.expanduser(config.server.dbfile),
+    'NAME': os.path.expanduser(config.dbserver.file),
     'USER': getpass.getuser(),
-    'HOST': config.server.host,
+    'HOST': config.dbserver.host,
 }
 DATABASES = {'default': DATABASE}
 
@@ -461,7 +461,7 @@ if LOCKDOWN:
         f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
         f'{WEBUI_PATHPREFIX}/v1/authentication/status',
         'reset_password', 'reset/', 'cookies/',
-        'v0/', 'v1/calc_info/', 'v1/calc_list/count', 'v1/on_same_fs',
+        'v1/ping', 'v1/calc_info/', 'v1/calc_list/count', 'v1/on_same_fs',
         'v1/aelo_site_classes', 'v1/get_impact_form_defaults',
     )
     LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'

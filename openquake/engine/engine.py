@@ -68,7 +68,7 @@ def get_zmq_ports():
     """
     :returns: an array with the receiver ports
     """
-    start, stop = config.server.receiver_ports.split('-')
+    start, stop = config.dbserver.receiver_ports.split('-')
     return numpy.arange(int(start), int(stop))
 
 

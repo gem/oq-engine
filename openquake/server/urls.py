@@ -23,7 +23,6 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 from openquake.server.db.tag_admin import tag_admin_site
-from openquake.server.internal_api import v0_urlpatterns
 
 urlpatterns = []
 if settings.WEBUI:
@@ -163,13 +162,13 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
         urlpatterns = [path(r'%s/' % settings.WEBUI_PATHPREFIX.strip('/'),
                             include(urlpatterns))]
 
-    # the internal routes are always served at the root, as before
+    # the internal v1 routes are always served at the root, as before; the
+    # /v0 routes are served only by the DbServer (see dbserver_urls.py)
     if settings.WEBUI:
         urlpatterns += [
             re_path(r'^v1/calc_info/(\d+)$', views.v1_calc_info),
             re_path(r'^v1/calc_list/count$', views.v1_calc_list_count),
         ]
-    urlpatterns += v0_urlpatterns
 
     # To enable gunicorn debug without Nginx (to serve static files)
     # uncomment the following lines

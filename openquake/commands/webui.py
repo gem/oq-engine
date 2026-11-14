@@ -21,11 +21,8 @@ import sys
 import subprocess
 import webbrowser
 
-import psutil
-
-from openquake.baselib import config, general
+from openquake.baselib import config, general, is_server_installation
 from openquake.commonlib import dbapi
-from openquake.commonlib.auth import API_KEY
 from openquake.server.db import actions
 from openquake.server.utils import check_webserver_running
 
@@ -38,38 +35,6 @@ def _health_url(hostport):
     return 'http://' + hostport + '/v1/engine_version'
 
 
-def _listens(proc, port):
-    """True if the process holds a TCP socket listening on the port."""
-    try:
-        return any(conn.status == psutil.CONN_LISTEN and
-                   conn.laddr.port == port
-                   for conn in proc.net_connections(kind='tcp'))
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return False
-
-
-def _find_webui_process(hostport):
-    """
-    Find the topmost process listening on the requested port. With gunicorn
-    the master and the workers share the socket, and psutil reports it only
-    for a worker: going up to the master, we stop the whole server.
-    """
-    _host, port = hostport.rsplit(':', 1)
-    port = int(port)
-    for connection in psutil.net_connections(kind='tcp'):
-        if (connection.status == psutil.CONN_LISTEN and
-                connection.laddr.port == port):
-            try:
-                proc = psutil.Process(connection.pid)
-                parent = proc.parent()
-                while parent is not None and _listens(parent, port):
-                    proc, parent = parent, parent.parent()
-                return proc
-            except psutil.NoSuchProcess:
-                return None
-    return None
-
-
 def _status(hostport):
     """Print whether the WebUI responds on the requested address."""
     running = check_webserver_running(
@@ -80,17 +45,11 @@ def _status(hostport):
 
 def _stop(hostport):
     """Stop the process serving the requested WebUI port."""
-    process = _find_webui_process(hostport)
-    if process is None:
+    _host, port = hostport.rsplit(':', 1)
+    if general.stop_listening_process(int(port)):
+        print('stopped')
+    else:
         print('WebUI is not running')
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=10)
-    except psutil.TimeoutExpired:
-        process.kill()
-        process.wait()
-    print('stopped')
 
 
 def runserver(hostport=None, skip_browser=False):
@@ -133,17 +92,18 @@ def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         _stop(hostport)
         return
 
-    os.environ.setdefault('OQ_API_KEY', API_KEY)
-    api_host, api_port = hostport.rsplit(':', 1)
-    if api_host == '0.0.0.0':
-        api_host = '127.0.0.1'
-    os.environ.setdefault(
-        'OQ_WEBAPI_SERVER', 'http://%s:%s' % (api_host, api_port))
-    dbpath = os.path.realpath(os.path.expanduser(config.server.dbfile))
+    dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
     if os.path.isfile(dbpath) and not os.access(dbpath, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
-    actions.upgrade_db(dbapi.db)
+    # in server installations the database is upgraded by the DbServer,
+    # which must be started before the WebUI
+    if not is_server_installation():
+        actions.upgrade_db(dbapi.db)
+        # reset the computations left in the 'executing' state; this is
+        # not done in server installations, where users may be running
+        # calculations while the services are restarted
+        actions.reset_is_running(dbapi.db)
     print('Starting, using version %s' % general.engine_version())
     runserver(hostport, skip_browser)
 

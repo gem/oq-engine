@@ -507,7 +507,7 @@ def from_json(value):
 #     datetime.datetime, lambda val: val.isoformat())
 # sqlite3.register_converter(
 #     "datetime", lambda val: datetime.datetime.fromisoformat(val.decode()))
-db = Db(sqlite3.connect, os.path.expanduser(config.server.dbfile),
+db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
         isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
         timeout=20)
 # NB: I am increasing the timeout from 5 to 20 seconds and the random

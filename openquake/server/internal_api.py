@@ -239,8 +239,16 @@ def v0_worker(request, action):
     return worker_action(action, _json_body(request))
 
 
-# the /v0 routes of the database and of the worker actions
+@internal_view('GET', 'HEAD', auth=False)
+def ping(request):
+    """Health check of the DbServer (/v0/ping)."""
+    return 'ok'
+
+
+# the /v0 routes of the database and of the worker actions, and the health
+# check of the DbServer
 v0_urlpatterns = [
+    re_path(r'^v0/ping$', ping),
     re_path(r'^v0/db/([^/]+)$', v0_db_action),
     re_path(r'^v0/worker_([^/]+)$', v0_worker),
 ]

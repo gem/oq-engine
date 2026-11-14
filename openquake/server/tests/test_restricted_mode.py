@@ -23,10 +23,10 @@ import json
 import string
 import random
 import tempfile
-from unittest import mock, skipIf
+import contextlib
+from unittest import skipIf
 import django
 from datetime import datetime, timedelta
-from openquake.baselib import config
 from openquake.commands import db as cmd_db
 from openquake.commands import engine as cmd_engine
 from openquake.commands import workers as cmd_workers
@@ -36,7 +36,8 @@ from openquake.commonlib.dbapi import db
 from openquake.engine import engine as engine_mod
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import (
-    get_or_create_user, random_string, start_webui, stop_webui)
+    get_or_create_user, random_string, start_dbserver, start_webui,
+    stop_webui, use_dbserver)
 
 
 class RestrictedModeTestCase(django.test.TransactionTestCase):
@@ -56,14 +57,11 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
         (cls.webserver, cls.webserver_thread,
          cls.c) = start_webui()
         # emulate a multi-user installation in this process: the database
-        # is reached through the WebUI server, as in db_api_test.py
-        cls.old_server = config.webapi.server
-        config.webapi.server = cls.c.base_url
-        cls.patches = [
-            mock.patch.object(mod, 'use_server', new=lambda: True)
-            for mod in (logs, engine_mod, cmd_db, cmd_engine, cmd_workers)]
-        for patch in cls.patches:
-            patch.start()
+        # is reached through the DbServer, as in db_api_test.py
+        cls.dbserver, _, dbclient = start_dbserver()
+        cls.stack = contextlib.ExitStack()
+        cls.stack.enter_context(use_dbserver(
+            dbclient, engine_mod, cmd_db, cmd_engine, cmd_workers))
 
     def setUp(self):
         self.user0, self.password0 = get_or_create_user(0)
@@ -72,9 +70,8 @@ class RestrictedModeTestCase(django.test.TransactionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        for patch in cls.patches:
-            patch.stop()
-        config.webapi.server = cls.old_server
+        cls.stack.close()
+        stop_webui(cls.dbserver, None)
         stop_webui(cls.webserver, cls.webserver_thread)
         super().tearDownClass()
 

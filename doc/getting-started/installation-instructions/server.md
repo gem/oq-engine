@@ -56,34 +56,42 @@ sudo mkdir /var/log/oq-engine
 sudo chown -R openquake /var/log/oq-engine
 ```
 
-```{warning}
-The `[dbserver]` section of `openquake.cfg` does not exist anymore.
-Starting from version 3.27 its keys live in the `[server]` section:
+#### Configuring the DbServer host
 
-- `host`, `receiver_host` and `receiver_ports` keep their names;
-- `file` has been renamed `dbfile`;
-- the `port` key has been removed;
-- the `oq dbserver` command and the DbServer daemon have been removed.
-
-Versions up to 3.26, including the LTS release 3.23, still use the
-`[dbserver]` section with the `file` key, so the configuration files
-must be updated when upgrading.
-```
-
-#### Configuring the database host
+The regular users of a server installation cannot write on the
+database, so their calculations (`oq engine --run`) reach it through
+the DbServer, a Django service started by the systemd service
+`openquake-dbserver` on the port 1908. The user `openquake`, i.e. the
+WebUI and the calculations started by it, accesses the database
+directly. When it starts, the DbServer upgrades the database: for this
+reason it must be started before the WebUI, which waits for it.
 
 If the database file is on the local machine, there is nothing to do
 since the universal installer already writes in the `openquake.cfg`
 file a section
 
 ```
-[server]
+[dbserver]
 host = localhost
-dbfile = /path/to/db.sqlite3
+port = 1908
+file = /path/to/db.sqlite3
+authkey = <random key>
 ```
 
 If the database is on a different machine, you have to edit the file and
-specify the correct host name.
+specify the correct host name. The requests to the DbServer are
+authenticated with the `authkey` of the `[dbserver]` section, which is
+generated randomly by the universal installer. The file must be readable
+by the users running calculations, also on the machines where they run
+calculations against a remote DbServer.
+
+The DbServer is managed by systemd: use
+`sudo systemctl start|stop|restart openquake-dbserver`, since a DbServer
+stopped by other means is restarted by systemd after 30 seconds. Every
+user can check it with `oq dbserver status`. Without systemd, the user
+`openquake` can start it with `oq dbserver start` (in background, with a
+log file in the oqdata directory) or `oq dbserver start -f` (in
+foreground) and stop it with `oq dbserver stop`.
 
 #### Upgrade the database to host users and sessions
 
@@ -162,14 +170,18 @@ On a production system, [nginx](http://nginx.org/en/) + [gunicorn](http://gunico
 
 ### gunicorn
 
-*gunicorn* is an optional dependency: install it with `pip install "openquake.engine[server]"` (it is not installed by default).
-Please replace the value of ExecStart in the file `/etc/systemd/system/openquake-webui.service` with:
+*gunicorn* is installed by the universal installer in server installations
+(elsewhere it is an optional dependency: install it with
+`pip install "openquake.engine[server]"`) and the service
+`openquake-webui` runs it with the line
 ```console
-WorkingDirectory=/opt/openquake/src/oq-engine/openquake/server
-ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers N --timeout 1200 wsgi:application
+ExecStart=/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 openquake.server.wsgi:application
 ```
-where `N` is the number of workers. 
-Refer to the official Gunicorn documentation for the optimal choice of this value based on your system's hardware specifications.
+in the file `/etc/systemd/system/openquake-webui.service`.
+You may change the number of workers: refer to the official Gunicorn
+documentation for the optimal choice of this value based on your system's
+hardware specifications. The DbServer is an internal service and runs
+with the Django development server.
 
 ### Using Environment Variables in systemd Units
 

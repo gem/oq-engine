@@ -38,6 +38,7 @@ import json
 import glob
 import stat
 import shutil
+import socket
 import secrets
 import getpass
 import tempfile
@@ -109,15 +110,17 @@ class server:
     OQDATA = "/opt/openquake/oqdata"
     ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
+    DBPORT = 1908
     USER = "openquake"
 
     @classmethod
     def config(cls, authkey):
         # the authkey is the key of the internal API, which the users need
-        # to reach the engine from their calculations: it is random
-        return f"""[server]
+        # to reach the DbServer from their calculations: it is random
+        return f"""[dbserver]
     host = localhost
-    dbfile = {cls.DBPATH}
+    port = {cls.DBPORT}
+    file = {cls.DBPATH}
     [webapi]
     authkey = {authkey}
     [directory]
@@ -165,7 +168,6 @@ class user:
         OQDATA = os.path.expanduser("~/oqdata")
 
     CFG = os.path.join(VENV, "openquake.cfg")
-    CONFIG = ""
     USER = None
 
     @classmethod
@@ -200,7 +202,7 @@ SERVICE = """\
 [Unit]
 Description=The OpenQuake Engine {service}
 Documentation=https://github.com/gem/oq-engine/
-After={afterservice}
+{dependencies}
 
 [Service]
 User=openquake
@@ -208,7 +210,7 @@ Group=openquake
 Environment=
 EnvironmentFile={django_secret_file}
 WorkingDirectory={OQDATA}
-ExecStart=/opt/openquake/venv/bin/oq {command}
+ExecStart={exec_start}
 Type=exec
 Restart=always
 RestartSec=30
@@ -218,6 +220,15 @@ TimeoutStopSec=10
 [Install]
 WantedBy=multi-user.target
 """
+# the commands started by the systemd services: the DbServer is internal
+# and uses the Django development server, the WebUI uses gunicorn
+EXEC_START = {
+    "dbserver": "/opt/openquake/venv/bin/oq dbserver start -f",
+    "webui": ("/opt/openquake/venv/bin/gunicorn --bind 127.0.0.1:8800 "
+              "--workers 4 --timeout 1200 openquake.server.wsgi:application"),
+}
+# installed in server installations, as the server extra in pyproject.toml
+GUNICORN = "gunicorn>=26.2"
 PLATFORM = {
     "linux": ("linux64",),  # from sys.platform to requirements.txt
     "darwin": ("macos",),
@@ -441,12 +452,31 @@ def check_packages(inst):
                  f"{os.readlink(inst.OQ)}; please remove it")
 
 
+def check_dbport(inst, args):
+    """
+    Check that the DbServer port is free, i.e. that there is no DbServer
+    running from a previous installation.
+    """
+    if inst not in (server, devel_server) or args.remove:
+        return
+    if args.dbport:
+        inst.DBPORT = int(args.dbport)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        busy = sock.connect_ex(("localhost", inst.DBPORT)) == 0
+    if busy:
+        sys.exit(f"There is a process listening on port {inst.DBPORT}, "
+                 "probably a DbServer from a previous installation. Please "
+                 "stop it with `sudo systemctl stop openquake-dbserver` "
+                 "or choose a different port with the --dbport option")
+
+
 def before_checks(inst, args, usage):
     """
     Checks to perform before the installation
     """
     check_venv(inst, args, usage)
     check_packages(inst)
+    check_dbport(inst, args)
 
 
 # this is only called for user or server installations
@@ -607,6 +637,9 @@ def install_engine(inst, pycmd, version, noupgrade):
                 [pycmd, "-m", "pip", "install"] + upgrade
                 + [git_zip_url(commit), "--no-clean"], env=custom_env)
         fix_version(commit, inst.VENV)
+    if inst in (server, devel_server):  # the WebUI service uses gunicorn
+        subprocess.check_call(
+            [pycmd, "-m", "pip", "install"] + upgrade + [GUNICORN])
 
 
 def create_cfg(inst):
@@ -671,55 +704,65 @@ def activation_message(inst):
               "/bin/activate")
 
 
+def create_secret_file(secret_file):
+    """
+    Create the file with the Django secret key, readable only by the
+    openquake user, unless it already exists.
+    """
+    openquake_user = pwd.getpwnam("openquake")
+    secret_dir = os.path.dirname(secret_file)
+    if not os.path.isdir(secret_dir):
+        os.mkdir(secret_dir)
+    os.chmod(secret_dir, stat.S_IRWXU)
+    os.chown(secret_dir, openquake_user.pw_uid, openquake_user.pw_gid)
+    if not os.path.exists(secret_file):
+        with open(secret_file, "w") as f:
+            key = "".join(
+                secrets.choice(
+                    "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
+                for i in range(50))
+            f.write(f"DJANGO_SECRET_KEY='{key}'\n")
+    os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+    os.chown(secret_file, openquake_user.pw_uid, openquake_user.pw_gid)
+
+
 def create_services(inst):
     """
-    Create and start the systemd services for server installations.
+    Create and start the systemd services for server installations:
+    the DbServer and the WebUI.
     """
     if not (inst in (server, devel_server)
             and os.path.exists("/run/systemd/system")):
         return
-    for service in ["webui"]:
+    secret_file = os.path.join(inst.ETC, "django_secret.env")
+    create_secret_file(secret_file)
+    # openquake is not a system user, so when its last login session ends
+    # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
+    # objects (RemoveIPC=yes), including the semaphores of the running
+    # calculations, which then fail with BrokenProcessPool; with lingering
+    # the user is never considered logged out and its IPC objects are kept
+    subprocess.check_call(["loginctl", "enable-linger", "openquake"])
+    for service in ["dbserver", "webui"]:
         service_name = f"openquake-{service}.service"
         service_path = "/etc/systemd/system/" + service_name
-        secret_dir = "/etc/openquake"
-        secret_name = "django_secret.env"
-        secret_file = os.path.join(secret_dir, secret_name)
-        afterservice = "network.target"
-        command = service + " -s start"
+        dependencies = "After=network.target"
+        if service == "webui":
+            # the DbServer upgrades the database, so it must be started
+            # before the WebUI, which waits for it; Wants and not Requires,
+            # since restarting the DbServer must not restart the WebUI and
+            # kill the calculations started by it
+            dependencies = ("After=network.target openquake-dbserver.service"
+                            "\nWants=openquake-dbserver.service")
         if not os.path.exists(service_path):
             with open(service_path, "w") as f:
                 srv = SERVICE.format(
                     service=service,
-                    afterservice=afterservice,
+                    dependencies=dependencies,
                     django_secret_file=secret_file,
                     OQDATA=inst.OQDATA,
-                    command=command,
+                    exec_start=EXEC_START[service],
                 )
                 f.write(srv)
-        openquake_user = pwd.getpwnam("openquake")
-        if not os.path.isdir(secret_dir):
-            os.mkdir(secret_dir)
-        os.chmod(secret_dir, stat.S_IRWXU)
-        os.chown(secret_dir,
-                 openquake_user.pw_uid,
-                 openquake_user.pw_gid)
-        if not os.path.exists(secret_file):
-            with open(secret_file, "w") as f:
-                key = "".join(
-                    secrets.choice(
-                        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)")
-                    for i in range(50))
-                f.write(f"DJANGO_SECRET_KEY='{key}'\n")
-        os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
-        # openquake is not a system user, so when its last login session ends
-        # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
-        # objects (RemoveIPC=yes), including the semaphores of the running
-        # calculations, which then fail with BrokenProcessPool; with lingering
-        # the user is never considered logged out and its IPC objects are kept
-        subprocess.check_call(["loginctl", "enable-linger", "openquake"])
-        os.chown(secret_file,
-                 openquake_user.pw_uid,
-                 openquake_user.pw_gid)
         subprocess.check_call(["systemctl", "enable", "--now", service_name])
         subprocess.check_call(["systemctl", "start", service_name])
 
@@ -789,7 +832,7 @@ def remove(inst):
     remove the systemd services.
     """
     if inst in (server, devel_server):
-        for service in ["webui"]:
+        for service in ["webui", "dbserver"]:
             service_name = f"openquake-{service}.service"
             service_path = "/etc/systemd/system/" + service_name
             if os.path.exists(service_path):
@@ -830,6 +873,8 @@ if __name__ == "__main__":
                         help="disinstall the engine")
     parser.add_argument("--version",
                         help="version to install (default stable)")
+    parser.add_argument("--dbport",
+                        help="DbServer port (server installations only)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(

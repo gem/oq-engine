@@ -117,7 +117,7 @@ def _configure_server_data(data_dir, dbfile, basemap_path=None):
         cfg.write('[directory]\n')
         for name, path in paths.items():
             cfg.write(f'{name} = {path}\n')
-        cfg.write(f'[server]\ndbfile = {dbfile}\n')
+        cfg.write(f'[dbserver]\nfile = {dbfile}\n')
     for name, path in paths.items():
         config.directory[name] = str(path)
     return cfg_path
@@ -135,7 +135,7 @@ def _isolate_database():
     # and server processes get its path from OQ_CONFIG_FILE.
     global _test_dbfile
     # Keep these imports local: dbapi creates a global Db using the current
-    # config.server.dbfile, then this function redirects it to the scratch DB.
+    # config.dbserver.file, then this function redirects it to the scratch DB.
     from django.db import connections
     from openquake.commonlib import dbapi
     from openquake.server.db import actions
@@ -144,7 +144,7 @@ def _isolate_database():
     _test_dbfile = dbfile
     if hasattr(dbapi.db.local, 'conn'):
         dbapi.db.close()
-    config.server['dbfile'] = dbfile
+    config.dbserver['file'] = dbfile
     dbapi.db.args = (dbfile,) + dbapi.db.args[1:]
     connections.settings['default']['NAME'] = dbfile
     connections.close_all()
