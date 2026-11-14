@@ -36,7 +36,13 @@ done
 
 # run the other demos
 for ini in $(find $1 -name job.tmp.ini | sort); do
-    oq engine --run $ini --exports csv,hdf5
+    if [[ $ini == *MedianSpectrum* ]]; then
+        # the median_spectrum_disagg CSV export is very slow and is
+        # covered by the calculator tests; the HDF5 is enough for the demo
+        oq engine --run $ini --exports hdf5
+    else
+        oq engine --run $ini --exports csv,hdf5
+    fi
 done
 
 # test the --eos option

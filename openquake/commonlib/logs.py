@@ -61,45 +61,13 @@ def _worker_api(action, *args):
     return response.json()
 
 
-def _decode_db_value(value):
-    """Restore values encoded by the internal database API."""
-    if isinstance(value, dict):
-        kind = value.get('__oq_type__')
-        if kind == 'datetime':
-            return datetime.fromisoformat(value['value'])
-        if kind == 'row':
-            return dbapi.Row(
-                value['fields'],
-                [_decode_db_value(item) for item in value['values']])
-        if kind == 'table':
-            return dbapi.Table(
-                value['fields'],
-                [_decode_db_value(item) for item in value['rows']])
-        return {key: _decode_db_value(item)
-                for key, item in value.items()}
-    if isinstance(value, list):
-        return [_decode_db_value(item) for item in value]
-    return value
-
-
-def _encode_db_value(value):
-    """Encode database action arguments as JSON values."""
-    if isinstance(value, datetime):
-        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
-    if isinstance(value, dict):
-        return {key: _encode_db_value(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_encode_db_value(item) for item in value]
-    return value
-
-
 def _db_api(action, *args):
     """Call a database action through the internal API endpoint."""
     server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
     endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
     try:
         response = requests.post(
-            endpoint, json={'args': _encode_db_value(args)},
+            endpoint, json={'args': dbapi.to_json(args)},
             headers={'X-API-Key': API_KEY}, timeout=600)
     except requests.RequestException as exc:
         raise RuntimeError(
@@ -111,7 +79,7 @@ def _db_api(action, *args):
     except requests.RequestException as exc:
         raise RuntimeError(
             'Database action %s failed: %s' % (action, response.text)) from exc
-    return _decode_db_value(response.json())
+    return dbapi.from_json(response.json())
 
 
 def dbcmd(action, *args):

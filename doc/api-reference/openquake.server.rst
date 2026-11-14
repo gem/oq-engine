@@ -68,6 +68,14 @@ openquake.server.internal_api module
     :undoc-members:
     :show-inheritance:
 
+openquake.server.services module
+--------------------------------
+
+.. automodule:: openquake.server.services
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------
