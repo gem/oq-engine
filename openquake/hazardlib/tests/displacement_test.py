@@ -110,8 +110,8 @@ def test_contribution_boxcar_complementary_split():
         distributed, [[0.0, 0.0], [0.0, 0.0], [0.6, 0.6]], rtol=1e-15)
 
 
-def test_contribution_gaussian_additive_split():
-    ctx = FakeCtx([0.0, 0.5, 0.9])
+def test_contribution_gaussian_complementary_split():
+    ctx = FakeCtx([0.0, 0.5, 0.9, 2.5])
     adapters = {
         'primary_sr': FakeAdapter(sr=1.0),
         'primary_fd': FakeAdapter(fd=0.5),
@@ -121,11 +121,54 @@ def test_contribution_gaussian_additive_split():
     principal, distributed = calc_rupture_contribution(
         ctx, adapters, IMLS, r_threshold_km=0.1, r_sigma_km=1.0)
     wp = np.exp(-ctx.rtor ** 2 / 2.0)
-    # principal = rate * P_fd * W_p ; distributed = rate * 0.8*0.3 * 1
+    wp[3] = 0.0  # truncated beyond 2 sigma
+    # principal = rate * P_fd * W_p ; distributed = rate * 0.8*0.3 * (1 - W_p)
     np.testing.assert_allclose(
-        principal, 2 * 0.5 * wp[:, None] * np.ones((3, 2)), rtol=1e-15)
+        principal, 2 * 0.5 * wp[:, None] * np.ones((4, 2)), rtol=1e-15)
     np.testing.assert_allclose(
-        distributed, 2 * 0.8 * 0.3 * np.ones((3, 2)), rtol=1e-15)
+        distributed, 2 * 0.8 * 0.3 * (1 - wp)[:, None] * np.ones((4, 2)),
+        rtol=1e-15)
+    assert np.all(distributed[0] == 0.0)  # on the trace G = 0
+
+
+def _excluding_adapter(r_min_km):
+    adapter = FakeAdapter(fd=0.3)
+    adapter.model.APPLICABILITY_RANGE = {'r_min_km': r_min_km}
+    return adapter
+
+
+def test_declared_near_trace_exclusion_zeroes_distributed():
+    """Visini-style r_min_km: the distributed regression is undefined
+    inside it, so those sites keep the principal term only."""
+    ctx = FakeCtx([0.0, 0.004, 0.006, 0.5])
+    adapters = {
+        'primary_fd': FakeAdapter(fd=0.5),
+        'secondary_sr': FakeAdapter(sr=0.8),
+        'secondary_fd': _excluding_adapter(0.005),
+    }
+    principal, distributed = calc_rupture_contribution(
+        ctx, adapters, IMLS, r_threshold_km=0.1, r_sigma_km=1.0)
+    wp = np.exp(-ctx.rtor ** 2 / 2.0)
+    expected = 2 * 0.8 * 0.3 * (1 - wp)[:, None] * np.ones((4, 2))
+    expected[:2] = 0.0  # |r| < 5 m
+    np.testing.assert_allclose(distributed, expected, rtol=1e-15)
+    np.testing.assert_allclose(
+        principal, 2 * 0.5 * wp[:, None] * np.ones((4, 2)), rtol=1e-15)
+
+
+def test_no_declared_exclusion_leaves_distributed_unchanged():
+    ctx = FakeCtx([0.004, 0.5])
+    adapters = {
+        'primary_fd': FakeAdapter(fd=0.5),
+        'secondary_sr': FakeAdapter(sr=0.8),
+        'secondary_fd': FakeAdapter(fd=0.3),
+    }
+    _, distributed = calc_rupture_contribution(
+        ctx, adapters, IMLS, r_threshold_km=0.1, r_sigma_km=1.0)
+    wp = np.exp(-ctx.rtor ** 2 / 2.0)
+    np.testing.assert_allclose(
+        distributed, 2 * 0.8 * 0.3 * (1 - wp)[:, None] * np.ones((2, 2)),
+        rtol=1e-15)
 
 
 def test_missing_primary_sr_defaults_to_one():
