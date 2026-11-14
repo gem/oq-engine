@@ -703,6 +703,12 @@ def create_services(inst):
                     for i in range(50))
                 f.write(f"DJANGO_SECRET_KEY='{key}'\n")
         os.chmod(secret_file, stat.S_IRUSR | stat.S_IWUSR)
+        # openquake is not a system user, so when its last login session ends
+        # (e.g. after `sudo -i -u openquake`) systemd-logind removes its IPC
+        # objects (RemoveIPC=yes), including the semaphores of the running
+        # calculations, which then fail with BrokenProcessPool; with lingering
+        # the user is never considered logged out and its IPC objects are kept
+        subprocess.check_call(["loginctl", "enable-linger", "openquake"])
         os.chown(secret_file,
                  openquake_user.pw_uid,
                  openquake_user.pw_gid)
