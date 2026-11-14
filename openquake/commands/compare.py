@@ -21,6 +21,7 @@ import sys
 import collections
 import numpy
 import pandas
+from openquake.baselib import writers
 from openquake.hazardlib import nrml
 from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
@@ -29,6 +30,7 @@ from openquake.calculators.export.hazard import workflow_hmaps_array
 
 aac = numpy.testing.assert_allclose
 F64 = numpy.float64
+OVERWRITE = os.environ.get('OQ_OVERWRITE')
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -551,7 +553,7 @@ def compare_vfuncs(file1: str, file2: str, atol: float=1E-3, rtol: float=1E-3):
         aac(dic1[key].mean_loss_ratios, dic2[key].mean_loss_ratios, rtol, atol)
 
 
-def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
+def compare_workflow(expected_dir: str = '.', calc_id=-1, *,
                      atol: float = 1E-3, rtol: float = 0):
     """
     Compare the mean hazard maps of a workflow with the CSV files in
@@ -567,11 +569,18 @@ def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
     in the workflow counts as a difference.
 
     If the workflow ID is omitted (-1, the default) the last workflow run is
-    used, as recorded in ~/.last-workflow.
+    used, as recorded in ~/.last-workflow. A path to a datastore can be used
+    instead of the workflow ID.
+
+    If the environment variable OQ_OVERWRITE is set, the expected files are
+    overwritten with the workflow results instead of being compared.
 
     Examples: `oq compare workflow expected_hmaps 19714`
               `oq compare workflow expected_hmaps`
+              `oq compare workflow expected_hmaps ~/oqdata/calc_19714.hdf5`
     """
+    if isinstance(calc_id, str) and calc_id.isdigit():
+        calc_id = int(calc_id)
     if calc_id == -1:
         calc_id = datastore.last_workflow_id()
     dstore = datastore.read(calc_id)
@@ -588,6 +597,11 @@ def compare_workflow(expected_dir: str = '.', calc_id: int = -1, *,
             continue
         print(f"Comparing {fname}")
         arr = workflow_hmaps_array(dstore, key)
+        if OVERWRITE:
+            writers.write_csv(os.path.join(expected_dir, fname), arr,
+                              comment=dstore.metadata)
+            print(f"Overwritten {fname}")
+            continue
         exp = pandas.read_csv(os.path.join(expected_dir, fname), skiprows=1)
         if len(exp) != len(arr):
             print(f"{len(exp)} rows in {fname}, {len(arr)} in the workflow")
@@ -636,7 +650,9 @@ main = dict(rups=compare_rups,
             workflow=compare_workflow)
 
 compare_workflow.expected_dir = 'directory with the exported CSV files'
-compare_workflow.calc_id = 'workflow calculation ID (default: the last one)'
+compare_workflow.calc_id = (
+    'workflow calculation ID or path to the datastore '
+    '(default: the last one)')
 compare_workflow.atol = 'absolute tolerance'
 compare_workflow.rtol = 'relative tolerance'
 
