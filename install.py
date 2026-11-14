@@ -109,12 +109,19 @@ class server:
     OQDATA = "/opt/openquake/oqdata"
     ETC = "/etc/openquake"
     DBPATH = os.path.join(OQDATA, "db.sqlite3")
-    CONFIG = f"""[server]
+    USER = "openquake"
+
+    @classmethod
+    def config(cls, authkey):
+        # the authkey is the key of the internal API, which the users need
+        # to reach the engine from their calculations: it is random
+        return f"""[server]
     host = localhost
-    dbfile = {DBPATH}
+    dbfile = {cls.DBPATH}
+    [webapi]
+    authkey = {authkey}
     [directory]
     """
-    USER = "openquake"
 
     @classmethod
     def manage_py(cls):
@@ -610,10 +617,11 @@ def create_cfg(inst):
         return
     if os.path.exists(inst.CFG):
         print(f"There is an old file {inst.CFG}; it will not be "
-              f"overwritten, but consider updating it with\n{inst.CONFIG}")
+              f"overwritten, but consider updating it with\n"
+              f"{inst.config('<a random key>')}")
     else:
         with open(inst.CFG, "w") as cfg:
-            cfg.write(inst.CONFIG)
+            cfg.write(inst.config(secrets.token_urlsafe(32)))
         print(f"Created {inst.CFG}")
 
 

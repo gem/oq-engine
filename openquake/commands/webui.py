@@ -32,12 +32,10 @@ from openquake.server.utils import check_webserver_running
 commands = ['start', 'status', 'stop']
 
 
-# the health check uses an internal endpoint that is always served with
-# status 200, even when the WebUI is disabled (WEBUI = False).
-# Calculation 0 does not exist, so the log size returned is always 0:
-# only the status code matters here, not the value
+# the health check uses a public route of the WebUI: any answer means that
+# the WebUI is running, whatever its status code
 def _health_url(hostport):
-    return 'http://' + hostport + '/v0/calc/0/log/size'
+    return 'http://' + hostport + '/v1/engine_version'
 
 
 def _listens(proc, port):
