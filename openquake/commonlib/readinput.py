@@ -68,6 +68,8 @@ from openquake.hazardlib.source.rupture import (
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.geo.regular_grid import regular_grid
+from openquake.hazardlib.correlation_models.circulant_embedding import (
+    RegularGridLayout)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.hazardlib.countries import country2code, MODELS, ALIASES
 from openquake.pfd.gsim import get_pfd_gsim_lt
@@ -923,6 +925,17 @@ def get_site_collection(oqparam, h5=None):
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
         sitecol.grid_crs = getattr(mesh, 'grid_crs', None)
+        if oqparam.correlation_strategy == 'circulant_embedding':
+            # Capture the full lattice before exposure association or site
+            # filtering removes the neighbours needed to infer its spacing.
+            try:
+                layout = RegularGridLayout.from_sites(sitecol)
+            except ValueError:
+                pass  # These sites have no usable regular-grid geometry.
+            else:
+                sitecol.grid_crs = layout.crs
+                sitecol.grid_spacing = layout.spacing
+                sitecol.grid_origin = layout.projected_origin
         return _get_sitecol(sitecol, exp, oqparam, h5)
 
 

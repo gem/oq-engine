@@ -79,6 +79,42 @@ def test_conflicting_site_grid_projections(tmp_path):
         readinput._site_grid_crs(filenames)
 
 
+def test_grid_geometry_available_before_site_reduction(tmp_path):
+    from pyproj import Transformer
+    from openquake.hazardlib.correlation_models.circulant_embedding import (
+        RegularGridLayout)
+    rows, columns = numpy.indices((11, 13))
+    lons, lats = Transformer.from_crs(32616, 4326, always_xy=True).transform(
+        650_000 + columns.ravel() * 1000, 1_200_000 + rows.ravel() * 1000)
+    filename = tmp_path / 'sites.csv'
+    data = numpy.column_stack((lons, lats, numpy.full(143, 760.)))
+    numpy.savetxt(filename, data, delimiter=',', header='lon,lat,vs30',
+                  comments='', fmt='%.5f')
+    oq = readinput.get_oqparam(dict(
+        calculation_mode='scenario', gsim='BooreAtkinson2008',
+        intensity_measure_types='PGA', maximum_distance='200',
+        correlation_strategy='circulant_embedding', truncation_level='3',
+        number_of_ground_motion_fields='1',
+        inputs={'site_model': [str(filename)]}), validate=False)
+
+    def reduce_sites(sitecol, exposure, params, h5):
+        # Stand in for the downstream association/filtering step. The
+        # complete lattice must already be recorded when it receives sites.
+        assert sitecol.grid_crs == 'EPSG:32616'
+        aac(sitecol.grid_spacing, [1., 1.], atol=0.001)
+        aac(sitecol.grid_origin, [1_200_000., 650_000.], atol=1)
+        return sitecol.filtered([142, 0, 12, 130])
+
+    with mock.patch.object(readinput, '_get_sitecol',
+                           side_effect=reduce_sites):
+        selected = readinput.get_site_collection(oq)
+    layout = RegularGridLayout.from_sites(selected, max_cell_ratio=numpy.inf)
+    assert layout.grid_shape == (11, 13)
+    assert layout.crs == 'EPSG:32616'
+    numpy.testing.assert_array_equal(selected.sids, [142, 0, 12, 130])
+    aac(selected.vs30, [760] * 4)
+
+
 # inputs for test_duplicated_id_uncertainty and test_same_source_two_models
 SOURCE_MODEL = '''\
 <?xml version="1.0" encoding="utf-8"?>
