@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from openquake.baselib import config, parallel, use_server
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import get_datadir as get_datadir
 from openquake.server.db import actions as db_actions
 
 UTC = timezone.utc
@@ -131,25 +132,6 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.now(UTC), level, task, msg)
-
-
-def get_datadir():
-    """
-    Extracts the path of the directory where the openquake data are stored
-    from the environment ($OQ_DATADIR) or from the shared_dir in the
-    configuration file.
-    """
-    datadir = os.environ.get('OQ_DATADIR')
-    if not datadir:
-        shared_dir = config.directory.shared_dir
-        if shared_dir:
-            user = getpass.getuser()
-            # special case for /opt/openquake/openquake -> /opt/openquake
-            datadir = os.path.join(shared_dir, user, 'oqdata').replace(
-                'openquake/openquake', 'openquake')
-        else:  # use the home of the user
-            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
-    return datadir
 
 
 def get_calc_ids(datadir=None):
