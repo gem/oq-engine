@@ -252,9 +252,7 @@ one set of realizations at a time. The mechanism is the following.
    (``lt.apply_uncertainties``, called by ``source_reader.modified_groups``).
    The resulting sources are then
    split (if needed), filtered by magnitude and used to compute the
-   rates. ``ts2gids`` binds the local GSIM columns to the output gids;
-   the context maker is shared across the sets and is never restricted
-   or assigned representative gids. Workers do not load the logic tree.
+   rates. ``ts2gids`` binds the local GSIM columns to the output gids.
 
 For the demo each source has 81 ``trt_smrs`` organized in **9 subsets of
 9 realizations**. In the logic tree the branchset ``bs1`` is the

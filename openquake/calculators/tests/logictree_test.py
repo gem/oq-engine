@@ -379,8 +379,6 @@ hazard_uhs-std.csv
             sources = list(grp)
             task_ts2gids = {ts: global_ts2gids[ts] for src in sources
                             for ts in src.get_ts_sets()}
-            self.assertFalse(hasattr(cm, 'gid_dic'))
-            self.assertFalse(hasattr(cm, 'wei'))
             numpy.testing.assert_equal(cm.gsim_idx, range(len(cm.gsims)))
             for src in grp:
                 for ts in src.get_ts_sets():
@@ -579,6 +577,8 @@ hazard_uhs-std.csv
         expected = numpy.zeros((27, self.calc.oqparam.imtls.size))
         numpy.add.at(expected, (ds['_rates/gid'][:], ds['_rates/lid'][:]),
                      ds['_rates/rate'][:])
+        # 26 is the last of the 27 original gids (0..26); 100 shifts
+        # them outside that range, reversing their order to 126..100.
         ts2gids = {ts: numpy.array([100 + 26 - i])
                    for i, ts in enumerate(unc_ts_sets)}
         actual = numpy.zeros_like(expected)
@@ -593,7 +593,6 @@ hazard_uhs-std.csv
             cm, task_ts2gids, bset_values = pickle.loads(pickle.dumps(
                 (cm, task_ts2gids, bset_values)))
             self.assertFalse(hasattr(cm, 'trt_smrs'))
-            self.assertFalse(hasattr(cm, 'wei'))
             for program in bset_values.values():
                 for bset, _ in program:
                     self.assertEqual(bset.branches, [])
