@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from openquake.baselib import config, parallel, use_server
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
+from openquake.server.db import actions as db_actions
 
 UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
@@ -101,8 +102,6 @@ def dbcmd(action, *args):
             return getattr(WorkerMaster(-1), action[8:])()
         return _worker_api(action, *args)
     if not use_server():
-        # keep local: circular import with the server database code
-        from openquake.server.db import actions as db_actions
         return getattr(db_actions, action)(dbapi.db, *args)
     return _db_api(action, *args)
 

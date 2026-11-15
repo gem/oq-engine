@@ -32,7 +32,7 @@ from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3, sum_records)
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.performance import performance_view, Monitor
+from openquake.baselib.performance import performance_view
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
@@ -40,7 +40,6 @@ from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.rmap_maker import read_cmakers
 from openquake.hazardlib.source_group import read_csm
 from openquake.commonlib import util, datastore, logs
-from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import (
@@ -451,16 +450,6 @@ def view_ruptures_events(token, dstore):
            ('Rupture multiplicity', mult),
            ('Events by rlz', events_by_rlz.values())]
     return text_table(lst)
-
-
-@view.add('fullreport')
-def view_fullreport(token, dstore):
-    """
-    Display an .rst report about the computation
-    """
-    # avoid circular imports
-    from openquake.calculators.reportwriter import ReportWriter
-    return ReportWriter(dstore).make_report(show_inputs=False)
 
 
 @view.add('performance')
@@ -1119,54 +1108,6 @@ def view_gsim_for_event(token, dstore):
     trti = trt_smr[rup_id] // 2**24
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
-
-
-@view.add('calc_risk')
-def view_calc_risk(token, dstore):
-    """
-    Compute the risk_by_event table starting from GMFs
-    """
-    # keep local: circular import with post_risk
-    from openquake.calculators import event_based_risk as ebr
-    # avoid a mysterious circular import only on macos
-    _, event_id = token.split(':')
-    oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
-    ebr.set_oqparam(oq, assetcol, dstore)
-    crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
-    gmf_df = dstore.read_df('gmf_data')
-    gmf_df = gmf_df[gmf_df.eid == int(event_id)]
-    ws = dstore['weights']
-    rlz_id = dstore['events']['rlz_id']
-    aggids, _ = assetcol.build_aggids(oq.aggregate_by)
-    agg_keys = numpy.concatenate(
-        [dstore['agg_keys'][:], numpy.array([b'total'])])
-    ARK = (oq.A, len(ws), oq.K)
-    if oq.ignore_master_seed or oq.ignore_covs:
-        rng = None
-    else:
-        rng = ebr.MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
-                                int(oq.asset_correlation))
-
-    mon = Monitor()
-    outs = []  # ebr.gen_outputs(gmf_df, crmodel, rng, mon)
-    sids = gmf_df.sid.to_numpy()
-    assets = assetcol.to_dframe()
-    for taxo in assets.taxonomy.unique():
-        adf = assets[assets.taxonomy == taxo]
-        df = gmf_df[numpy.isin(sids, adf.site_id.unique())]
-        if len(df) == 0:  # common enough
-            continue
-        out = crmodel.get_output(adf, df, oq._sec_losses, rng)
-        outs.append(out)
-    _avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
-    del alt['event_id']
-    del alt['variance']
-    alt['type'] = LOSSTYPE[alt.loss_id]
-    del alt['loss_id']
-    alt['agg_keys'] = decode(agg_keys[alt.agg_id])
-    del alt['agg_id']
-    return alt
 
 
 @view.add('event_loss_table')

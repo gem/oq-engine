@@ -426,14 +426,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
 
-    def to_xml(self):
-        """
-        Convert the source into an XML string, very useful for debugging
-        """
-        # keep local: circular import with sourcewriter
-        from openquake.hazardlib import nrml, sourcewriter
-        return nrml.to_string(sourcewriter.obj_to_node(self))
-
     def __repr__(self):
         """
         String representation of a source, displaying the source class name

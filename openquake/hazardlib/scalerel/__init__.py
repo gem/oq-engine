@@ -21,6 +21,7 @@ Package :mod:`openquake.hazardlib.scalerel` contains base classes and
 implementations of magnitude-area and area-magnitude scaling relationships.
 """
 import os
+import toml
 import inspect
 import importlib
 from openquake.hazardlib.scalerel.base import (
@@ -98,3 +99,29 @@ def get_available_scalerel():
     ret.update(_get_available_class(BaseMSR))
 
     return ret
+
+
+def mag_scale_rel(value):
+    """
+    :param value:
+        a Magnitude-Scale relationship in hazardlib
+    :returns:
+        the corresponding hazardlib object
+
+    Parametric MSR classes are supported with TOML syntax; for instance
+
+    >>> mag_scale_rel("CScalingMSR.C=4.7")
+    <CScalingMSR>
+    """
+    value = value.strip()
+    if '.' in value or '[' in value:
+        [(value, kwargs)] = toml.loads(value).items()
+    else:
+        kwargs = {}
+    if value not in SCALEREL:
+        raise ValueError(
+            "'%s' is not a recognized magnitude-scale relationship" % value)
+    return SCALEREL[value](**kwargs)
+
+
+SCALEREL = _get_available_class(BaseMSR)
