@@ -243,18 +243,16 @@ one set of realizations at a time. The mechanism is the following.
    ``gids``, i.e. the (realization, GMM) pairs of the ts set, and the
    rates computed for it are associated to those ``gids``; see the
    section on the ``RateMap`` below.
-4. The master compiles a ``ClassicalTaskSpec`` for each task: a context maker
-   with local GSIM columns, a mapping from ts sets to output gids, and
-   the uncertainty instructions needed by its sources. These instructions
-   contain the selected values and source filters, without links to the
-   rest of the logic tree. Weights remain in the statistics layer.
+4. The master sends the task's context maker with local GSIM columns,
+   a ``ts2gids`` mapping from ts sets to output gids, and ``bset_values``
+   (i.e. ``[(<maxMagGRAbsolute(0)>, 7.1)]``).
 5. In the workers, for each ts set the engine restricts the ts_samples of
    the sources to its realizations (``lt.restrict_ts_samples``) and applies
    the compiled uncertainties
    (``lt.apply_uncertainties``, called by ``source_reader.modified_groups``).
    The resulting sources are then
    split (if needed), filtered by magnitude and used to compute the
-   rates. The plan binds the local GSIM columns to the output gids;
+   rates. ``ts2gids`` binds the local GSIM columns to the output gids;
    the context maker is shared across the sets and is never restricted
    or assigned representative gids. Workers do not load the logic tree.
 

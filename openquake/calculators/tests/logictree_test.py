@@ -31,7 +31,7 @@ from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.classical import ClassicalTaskSpec, bysrc_results
+from openquake.calculators.classical import bysrc_results
 from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
@@ -372,16 +372,20 @@ hazard_uhs-std.csv
         ds = self.calc.datastore
         unc_ts_sets = read_unc_ts_sets(ds)
         full_lt = ds['full_lt'].init()
-        routes = dict(zip(unc_ts_sets, full_lt.get_gids(unc_ts_sets)))
+        global_ts2gids = dict(zip(unc_ts_sets,
+                                  full_lt.get_gids(unc_ts_sets)))
         cmakers = self.calc.cmdict['Default'].to_array()
         for grp, cm in zip(self.calc.csm.src_groups, cmakers):
-            plan = ClassicalTaskSpec(cm, [grp], routes, full_lt)
+            sources = list(grp)
+            task_ts2gids = {ts: global_ts2gids[ts] for src in sources
+                            for ts in src.get_ts_sets()}
             self.assertFalse(hasattr(cm, 'gid_dic'))
             self.assertFalse(hasattr(cm, 'wei'))
             numpy.testing.assert_equal(cm.gsim_idx, range(len(cm.gsims)))
             for src in grp:
                 for ts in src.get_ts_sets():
-                    numpy.testing.assert_equal(plan.routes[ts], routes[ts])
+                    numpy.testing.assert_equal(task_ts2gids[ts],
+                                               global_ts2gids[ts])
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -575,20 +579,26 @@ hazard_uhs-std.csv
         expected = numpy.zeros((27, self.calc.oqparam.imtls.size))
         numpy.add.at(expected, (ds['_rates/gid'][:], ds['_rates/lid'][:]),
                      ds['_rates/rate'][:])
-        routes = {ts: numpy.array([100 + 26 - i])
-                  for i, ts in enumerate(unc_ts_sets)}
+        ts2gids = {ts: numpy.array([100 + 26 - i])
+                   for i, ts in enumerate(unc_ts_sets)}
         actual = numpy.zeros_like(expected)
         cmakers = self.calc.cmdict['Default'].to_array()
         for grp, cm in zip(self.calc.csm.src_groups, cmakers):
             # Exercise the same serialization used by distributed tasks.
-            plan = pickle.loads(pickle.dumps(ClassicalTaskSpec(
-                cm, [grp], routes, self.calc.full_lt)))
-            self.assertFalse(hasattr(plan.cmaker, 'trt_smrs'))
-            self.assertFalse(hasattr(plan.cmaker, 'wei'))
-            for program in plan.bset_values.values():
+            sources = list(grp)
+            task_ts2gids = {ts: ts2gids[ts] for src in sources
+                            for ts in src.get_ts_sets()}
+            bset_values = source_reader.prepare_bset_values(
+                self.calc.full_lt, sources)
+            cm, task_ts2gids, bset_values = pickle.loads(pickle.dumps(
+                (cm, task_ts2gids, bset_values)))
+            self.assertFalse(hasattr(cm, 'trt_smrs'))
+            self.assertFalse(hasattr(cm, 'wei'))
+            for program in bset_values.values():
                 for bset, _ in program:
                     self.assertEqual(bset.branches, [])
-            for dic in bysrc_results([grp], self.calc.sitecol, plan, False):
+            for dic in bysrc_results([grp], self.calc.sitecol, cm,
+                                     task_ts2gids, bset_values, False):
                 rmap = dic['rmap']
                 original = 126 - rmap.gid
                 actual[original] += rmap.array[0].T

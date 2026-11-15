@@ -412,8 +412,8 @@ def get_bset_values(full_lt, sources):
             for ordinal in sorted(ordinals)}
 
 
-def compile_bset_values(full_lt, sources):
-    """Compile uncertainty instructions without links to the logic tree."""
+def prepare_bset_values(full_lt, sources):
+    """Build bset_values without links to the logic tree."""
     programs = get_bset_values(full_lt, sources)
     compiled = {}
     out = {}

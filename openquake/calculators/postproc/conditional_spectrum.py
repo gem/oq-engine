@@ -78,7 +78,7 @@ def get_blocks(dstore, oq, cmakers, ctx_by_grp):
 
     NB: the contexts of a group contain the sources with different
     uncertainties, so they must be attributed to the sets of realizations
-    with the same uncertainties, see ClassicalTaskSpec
+    with the same uncertainties, as mapped by ts2gids in classical tasks
     """
     full_lt = dstore['full_lt'].init()
     toms = decode(dstore['toms'][:])

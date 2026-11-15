@@ -34,7 +34,7 @@ from openquake.hazardlib.lt import apply_uncertainty, BranchSet, Branch
 from openquake.hazardlib.source_reader import (
     splitMF, add_bangs, check_mfd_variants, check_same_sources,
     content_hash,
-    source_with_ts_sets, reduce_sources, compile_bset_values)
+    source_with_ts_sets, reduce_sources, prepare_bset_values)
 
 
 def make_mps():
@@ -65,7 +65,7 @@ class CompileUncertaintiesTestCase(unittest.TestCase):
             branch.bset = downstream
         full_lt = types.SimpleNamespace(
             get_bset_values=lambda ordinal: [(bset, None)])
-        programs = compile_bset_values(full_lt, [make_mps()])
+        programs = prepare_bset_values(full_lt, [make_mps()])
         compiled, value = programs[0][0]
         self.assertIsNone(value)
         self.assertTrue(compiled.collapsed)

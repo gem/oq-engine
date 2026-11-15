@@ -33,7 +33,7 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.source_group import (
     read_csm, read_src_group, get_allargs)
 from openquake.hazardlib.source_reader import (
-    compile_bset_values, modified_groups)
+    prepare_bset_values, modified_groups)
 from openquake.hazardlib.rmap_maker import read_unc_ts_sets
 from openquake.hazardlib.lt import (
     get_bset_value, GEOMETRY_PRESERVING)
@@ -200,24 +200,11 @@ def baseclassical(grp, tgetter, cmaker, remove_zeros, gids, dstore=None,
     return result
 
 
-class ClassicalTaskSpec:
-    """Computation settings, output routes and lazy uncertainty programs."""
-
-    def __init__(self, cmaker, groups, routes, full_lt):
-        self.cmaker = cmaker
-        sources = [src for grp in groups for src in grp]
-        # Bind only the memberships used by this task. No realization
-        # weights or full logic tree need to be sent to the workers.
-        self.routes = {ts: routes[ts] for src in sources
-                       for ts in src.get_ts_sets()}
-        self.bset_values = compile_bset_values(full_lt, sources)
-
-
-def group_gids(src_groups, routes):
+def group_gids(src_groups, ts2gids):
     """
     :param src_groups: the groups of a CSM built without applying the
         uncertainties
-    :param routes: a dictionary trt_smrs -> output gids
+    :param ts2gids: a mapping from ts sets to output gids
     :returns: a dictionary grp_id -> gids, with the gids of all the rates
         each group can produce, i.e. one per set of realizations with the
         same uncertainties
@@ -227,17 +214,29 @@ def group_gids(src_groups, routes):
         gids = set()
         for src in grp:
             for trt_smrs in src.get_ts_sets():
-                gids.update(routes[trt_smrs])
+                gids.update(ts2gids[trt_smrs])
         out[grp.grp_id] = U32(sorted(gids))
     return out
 
 
-def groups_gkeys(srcs, grp, plan):
+def _task_data(src_groups, grp_ids, ts2gids, full_lt):
+    # Build the task-scoped arguments sent to the classical worker.
+    groups = [src_groups[i] for i in sorted(grp_ids)]
+    sources = [src for grp in groups for src in grp]
+    task_ts2gids = {ts: ts2gids[ts] for src in sources
+                    for ts in src.get_ts_sets()}
+    return task_ts2gids, prepare_bset_values(full_lt, sources)
+
+
+def groups_gkeys(srcs, grp, cmaker, ts2gids, bset_values):
     """
     :param srcs: the sources of the group grp with the same sets of
         realizations, i.e. grouped either by basename or by subset
     :param grp: the SourceGroup the sources belong to
-    :param plan: the compiled ClassicalTaskSpec of the task
+    :param cmaker: the ContextMaker associated to the group
+    :param ts2gids: a mapping from ts sets to output gids
+    :param bset_values: uncertainty values for the sources, grouped by
+        realization ordinal
     :returns: a generator of (group, gids, gkey) triples, one per set
         of realizations, with the uncertainties applied to the sources;
         gkey is the geometry key of the set (see geometry_key)
@@ -247,8 +246,6 @@ def groups_gkeys(srcs, grp, plan):
     # the base source
     subgrp = copy.copy(grp)
     subgrp.sources = list(srcs)
-    cmaker = plan.cmaker
-    bset_values = plan.bset_values
     for trt_smrs, sg in modified_groups(subgrp, bset_values):
         sources = []
         for src in sg:
@@ -267,7 +264,7 @@ def groups_gkeys(srcs, grp, plan):
             sg, cmaker.oq.minimum_magnitude, cmaker.oq.strict)
         if not sg.sources:
             continue
-        gids = plan.routes[trt_smrs]
+        gids = ts2gids[trt_smrs]
         bvals = bset_values.get(trt_smrs[0] % TWO24, [])
         gkey = geometry_key(srcs, bvals)
         yield sg, gids, gkey
@@ -396,26 +393,31 @@ def _atomic_results(grps, sites, cmaker, gids, remove_zeros, as_rmap,
                                 as_rmap=as_rmap)
 
 
-def bysrc_results(grps, sites, plan, remove_zeros,
+def bysrc_results(grps, sites, cmaker, ts2gids, bset_values, remove_zeros,
                   as_rmap=True, merge_atomic=True):
     """
     Yield the results of a classical task as RateMaps: the CSM is built without
     applying the uncertainties, so groups_gkeys applies them one
     set of realizations at a time. The context maker computes local GSIM
-    columns; the plan routes these columns to their output gids.
+    columns; ts2gids maps these columns to their output gids.
 
     :param grps: the source groups of the task
     :param sites: the sites of the task
-    :param plan: the compiled ClassicalTaskSpec of the task
+    :param cmaker: the ContextMaker associated to the groups
+    :param ts2gids: a mapping from ts sets to output gids
+    :param bset_values: uncertainty values for the sources, grouped by
+        realization ordinal
     :param remove_zeros: if True the sites with zero rates are removed
     :param as_rmap: if False the rates are returned as arrays of rates,
         stored right away by the master, see baseclassical
     :param merge_atomic: if True the atomic groups of the task are
         returned in a single result, otherwise in a result per group
     """
-    cmaker = plan.cmaker
     if len(grps) > 1:
-        gids = plan.routes[grps[0][0].get_ts_sets()[0]]
+        # get_allargs batches only atomic groups without uncertainties,
+        # all sharing the same single ts set.
+        [ts] = grps[0][0].get_ts_sets()
+        gids = ts2gids[ts]
         yield from _atomic_results(grps, sites, cmaker, gids, remove_zeros,
                                    as_rmap, merge_atomic)
         return
@@ -439,7 +441,8 @@ def bysrc_results(grps, sites, plan, remove_zeros,
     for srcs in srcblocks:
         # for the demo LogicTreeCase2ClassicalPSHA srcs is
         # [<AreaSource first>] and then [<SimpleFaultSource second>]
-        triples = list(groups_gkeys(srcs, grp, plan))
+        triples = list(groups_gkeys(srcs, grp, cmaker, ts2gids,
+                                    bset_values))
         # the sets with the same geometry key have the same geometry, so
         # their MFD variants are computed together by make_results (see
         # geometry_key); the other sets are computed one at a time
@@ -488,9 +491,8 @@ def _split_src(srcs, n):
             yield blk
 
 
-def read_task_input(grp_keys, tilegetter, plan, dstore, monitor):
-    """Read source groups and sites; routing and uncertainties are compiled."""
-    cmaker = plan.cmaker
+def read_task_input(grp_keys, tilegetter, cmaker, dstore, monitor):
+    """Read source groups and sites for a classical task."""
     cmaker.init_monitoring(monitor)
     # grp_keys is multiple only for JPN and New Madrid groups.
     grps, sitecol = read_groups_sitecol(dstore, grp_keys)
@@ -500,7 +502,8 @@ def read_task_input(grp_keys, tilegetter, plan, dstore, monitor):
     return grps, tilegetter(sitecol, cmaker.ilabel)
 
 
-def classical_bysrc(grp_keys, tilegetter, plan, dstore, monitor):
+def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
+                    dstore, monitor):
     """
     Call the classical calculator in hazardlib with few sites, i.e. with
     disagg_by_src or with at most max_sites_disagg sites. `grp_keys`
@@ -512,17 +515,18 @@ def classical_bysrc(grp_keys, tilegetter, plan, dstore, monitor):
     otherwise AELO for JPN will break.
     """
     grps, sites = read_task_input(
-        grp_keys, tilegetter, plan, dstore, monitor)
+        grp_keys, tilegetter, cmaker, dstore, monitor)
     # the RateMap in the master is the one of the first group (see
     # get_rmap), also for the results of the other atomic groups
     rmap_id = int(grp_keys[0].split('-')[0])
-    for dic in bysrc_results(grps, sites, plan,
+    for dic in bysrc_results(grps, sites, cmaker, ts2gids, bset_values,
                              remove_zeros=False, merge_atomic=False):
         dic['rmap_id'] = rmap_id
         yield dic
 
 
-def classical(grp_keys, tilegetter, plan, dstore, monitor):
+def classical(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
+              dstore, monitor):
     """
     Call the classical calculator in hazardlib with many sites.
     `grp_keys` contains always a single element except in the case of
@@ -534,8 +538,7 @@ def classical(grp_keys, tilegetter, plan, dstore, monitor):
     sites with zero rates are removed.
     """
     grps, sites = read_task_input(
-        grp_keys, tilegetter, plan, dstore, monitor)
-    cmaker = plan.cmaker
+        grp_keys, tilegetter, cmaker, dstore, monitor)
     oq = cmaker.oq
     remove_zeros = True  # reduce the size of the arrays of rates
     as_rmap = any('-' in grp_key for grp_key in grp_keys)
@@ -545,11 +548,13 @@ def classical(grp_keys, tilegetter, plan, dstore, monitor):
     # accumulated in a RateMap in the master, i.e. if the groups are
     # already split in blocks
     if unsplit or bysrc or not as_rmap:
-        yield from bysrc_results(grps, sites, plan,
+        yield from bysrc_results(grps, sites, cmaker, ts2gids, bset_values,
                                  remove_zeros, as_rmap)
         return
     # NB: multifaults are not split to avoid transferring the dparam cache
-    gids = plan.routes[grps[0][0].get_ts_sets()[0]]
+    # bysrc is false here: the sources have no uncertainties and one ts set.
+    [ts] = grps[0][0].get_ts_sets()
+    gids = ts2gids[ts]
     b0, *blks = _split_src(list(grps[0]), 5)
     t0 = time.time()
     yield baseclassical(b0, sites, cmaker, remove_zeros, gids, as_rmap=as_rmap)
@@ -831,7 +836,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
         trt_smrs = self.datastore['trt_smrs'][:]
-        # Output numbering belongs to the task routes, not the cmakers.
+        # Output numbering belongs to ts2gids, not to the cmakers.
         ds = self.datastore.parent or self.datastore
         unc_ts_sets = read_unc_ts_sets(ds)
         self.cmdict = {label: build_cmakers(trt_smrs, full_lt, oq)
@@ -1077,8 +1082,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.rmap = {}
         # Compile routing once, independently of site labels and weights.
         unc_ts_sets = read_unc_ts_sets(ds)
-        routes = dict(zip(unc_ts_sets,
-                          self.full_lt.get_gids(unc_ts_sets)))
+        ts2gids = dict(zip(unc_ts_sets,
+                           self.full_lt.get_gids(unc_ts_sets)))
         # in the case of many sites produce half the tasks
         data = get_allargs(self.csm, self.cmdict, self.sitecol,
                            self.max_weight, self.num_chunks)
@@ -1088,7 +1093,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the multiplier 60 is chosen so that SAM runs well on engine192
         if oq.split_time is None:
             oq.split_time = max(max_gb * 100, 10)
-        gids = group_gids(self.csm.src_groups, routes)
+        gids = group_gids(self.csm.src_groups, ts2gids)
         for cmaker, tilegetters, grp_keys, atomic, grp_weights in data:
             num_blocks += sum('-' in key for key in grp_keys)
             # the rates are accumulated in a RateMap in the master, unless
@@ -1105,8 +1110,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     'disagg_by_src has %d tiles for group %s'
                     % (len(tilegetters), grp_keys))
             grp_ids = {int(key.split('-')[0]) for key in grp_keys}
-            groups = [self.csm.src_groups[i] for i in sorted(grp_ids)]
-            plan = ClassicalTaskSpec(cmaker, groups, routes, self.full_lt)
+            task_ts2gids, bset_values = _task_data(
+                self.csm.src_groups, grp_ids, ts2gids, self.full_lt)
             for tgetter in tilegetters:
                 if len(tgetter(self.sitecol, cmaker.ilabel)) == 0:
                     # can happen for some ilabel
@@ -1114,12 +1119,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 elif atomic:
                     # JPN, send the grp_keys together, they will all send
                     # rates to the RateMap associated to the first grp_id
-                    allargs.append((grp_keys, tgetter, plan, ds))
+                    allargs.append((grp_keys, tgetter, cmaker,
+                                    task_ts2gids, bset_values, ds))
                     weights.append(sum(grp_weights) / len(tilegetters))
                 else:
                     # send a grp_key at the time
                     for grp_key, w in zip(grp_keys, grp_weights):
-                        allargs.append(([grp_key], tgetter, plan, ds))
+                        allargs.append(([grp_key], tgetter, cmaker,
+                                        task_ts2gids, bset_values, ds))
                         weights.append(w / len(tilegetters))
             maxtiles = max(maxtiles, len(tilegetters))
         allargs = parallel.heaviest_first(allargs, weights)

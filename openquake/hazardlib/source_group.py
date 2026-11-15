@@ -650,7 +650,9 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     for cmaker, tilegetters, blocks, extra in allargs:
         n = len(blocks)
         grp_id = _grp_id(blocks[0])
-        if extra['atomic']:
+        # Atomic groups with uncertainties must process every ts set.
+        if extra['atomic'] and not any(
+                src.bysrc_unc for src in csm.src_groups[grp_id]):
             atomic.append((cmaker, tilegetters, blocks, extra))
         else:
             if n > 1:
@@ -659,7 +661,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
             else:
                 grp_keys = [str(grp_id)]
                 weights = [extra['weight']]
-            out.append((cmaker, tilegetters, grp_keys, False, weights))
+            out.append((cmaker, tilegetters, grp_keys,
+                        extra['atomic'], weights))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     weights_ = AccumDict(accum={})
