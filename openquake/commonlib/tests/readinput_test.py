@@ -52,6 +52,33 @@ def getparams(oq):
     return {k: v for k, v in vars(oq).items() if not k.startswith('_')}
 
 
+def test_site_model_grid_projection(tmp_path):
+    filename = tmp_path / 'sites.csv'
+    for crs in (None, 'EPSG:32610'):
+        comment = '' if crs is None else '# grid_crs="%s"\n' % crs
+        filename.write_text(comment + 'lon,lat,vs30\n-123,38,760\n')
+        oq = readinput.get_oqparam(dict(
+            calculation_mode='scenario', gsim='BooreAtkinson2008',
+            intensity_measure_types='PGA', maximum_distance='200',
+            truncation_level='3', number_of_ground_motion_fields='1',
+            inputs={'site_model': [str(filename)]}), validate=False)
+        sitecol = readinput.get_site_collection(oq)
+        assert sitecol.grid_crs == crs
+        aac(sitecol.lons, [-123])
+        aac(sitecol.lats, [38])
+        aac(sitecol.vs30, [760])
+
+
+def test_conflicting_site_grid_projections(tmp_path):
+    filenames = []
+    for zone in (10, 11):
+        filename = tmp_path / ('sites%d.csv' % zone)
+        filename.write_text('# grid_crs="EPSG:326%d"\nlon,lat\n' % zone)
+        filenames.append(str(filename))
+    with numpy.testing.assert_raises_regex(InvalidFile, 'different grid'):
+        readinput._site_grid_crs(filenames)
+
+
 # inputs for test_duplicated_id_uncertainty and test_same_source_two_models
 SOURCE_MODEL = '''\
 <?xml version="1.0" encoding="utf-8"?>

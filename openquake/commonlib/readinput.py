@@ -574,6 +574,24 @@ def get_csv_header(fname, sep=','):
     return first, f
 
 
+def _site_grid_crs(filenames):
+    # Read just the leading comments; the site arrays can be very large.
+    projections = set()
+    for filename in filenames:
+        if not isinstance(filename, str) or not filename.endswith('.csv'):
+            continue
+        with open(filename, encoding='utf-8-sig') as stream:
+            for line in stream:
+                if not line.startswith('#'):
+                    break
+                attrs = dict(hdf5.parse_comment(line.strip('#,\n ')))
+                if attrs.get('grid_crs'):
+                    projections.add(attrs['grid_crs'])
+    if len(projections) > 1:
+        raise InvalidFile('Site models specify different grid projections')
+    return next(iter(projections), None)
+
+
 def get_mesh_exp(oqparam, h5=None):
     """
     Extract the mesh of points from the sites, the sites file, the region,
@@ -632,6 +650,7 @@ def get_mesh_exp(oqparam, h5=None):
         logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
+        mesh.grid_crs = _site_grid_crs(oqparam.inputs['site_model'])
     elif 'exposure' in oqparam.inputs:
         mesh = exposure.mesh
     else:
@@ -666,7 +685,8 @@ def get_site_model_around(site_model_hdf5, rup, dist):
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
     # check if the file is a list of lon,lat without header
     with open(fname, encoding='utf-8-sig') as f:
-        lon, _rest = next(f).split(',', 1)
+        # A leading metadata comment need not contain a comma.
+        lon = next(f).split(',', 1)[0]
         try:
             valid.longitude(lon)
         except ValueError:  # has a header
@@ -902,6 +922,7 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        sitecol.grid_crs = getattr(mesh, 'grid_crs', None)
         return _get_sitecol(sitecol, exp, oqparam, h5)
 
 
