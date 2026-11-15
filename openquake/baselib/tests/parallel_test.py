@@ -22,10 +22,12 @@ import shutil
 import unittest
 import itertools
 import tempfile
+import logging
+from unittest import mock
 import numpy
 import pandas
 
-from openquake.baselib import parallel, general, hdf5, performance
+from openquake.baselib import parallel, general, hdf5, performance, zeromq
 
 
 def process_df(df, monitor):
@@ -65,6 +67,56 @@ def supertask(text, monitor):
 def countletters(text1, text2, monitor):
     for block in general.block_splitter(text1 + text2, 5):
         yield get_length, ''.join(block)
+
+
+class StallDiagnosticsTestCase(unittest.TestCase):
+
+    def test_socket_recovery(self):
+        sock = zeromq.Socket('tcp://127.0.0.1:1909', zeromq.zmq.REP, 'bind')
+        sock.port = 1909
+        sock.zsocket = mock.Mock(closed=True)
+        sock.zsocket.poll.side_effect = [
+            False, True, False, zeromq.zmq.ZMQError()]
+        sock.zsocket.recv_pyobj.return_value = 'recovered'
+        with mock.patch.object(zeromq.time, 'monotonic',
+                               side_effect=[0, 200, 201, 401]), \
+                mock.patch.object(zeromq.logging, 'debug') as log:
+            self.assertEqual(list(sock), ['recovered'])
+        self.assertEqual(log.call_count, 2)
+        for call in log.call_args_list:
+            self.assertTrue(call.args[0].startswith('No message received'))
+
+    def test_poll_timeout(self):
+        modes = ('processpool', 'zmq', 'slurm', 'threadpool')
+        for mode, waited, debug in itertools.product(
+                modes, (30, 199, 200), (False, True)):
+            with self.subTest(mode=mode, waited=waited, debug=debug):
+                smap = mock.Mock(distribute=mode)
+                with mock.patch.object(logging.getLogger(), 'isEnabledFor',
+                                       return_value=debug):
+                    parallel.Starmap.poll_timeout(smap, 'socket', waited)
+                self.assertEqual(smap.check_tasks_alive.call_count,
+                                 int(mode == 'processpool'))
+                expected = mode in ('zmq', 'slurm') and waited >= 200 and debug
+                self.assertEqual(smap._zmq_stall_report.call_count,
+                                 int(expected))
+
+    def test_worker_failure_and_throttling(self):
+        smap = parallel.Starmap.__new__(parallel.Starmap)
+        smap.tasks = {1: None}
+        smap.calc_id = 42
+        with mock.patch.object(parallel, 'host_cores', ['127.0.0.1 1']), \
+                mock.patch.object(parallel, 'Socket',
+                                  side_effect=RuntimeError('offline')) as sock, \
+                mock.patch.object(parallel.time, 'monotonic',
+                                  side_effect=[0, 199, 200]), \
+                self.assertLogs(level=logging.DEBUG) as log:
+            for _ in range(3):
+                smap._zmq_stall_report('socket')
+        self.assertEqual(sock.call_count, 2)
+        self.assertEqual(len(log.records), 4)
+        self.assertTrue(all(r.levelno == logging.DEBUG for r in log.records))
+        self.assertIn('Could not query worker', log.records[-1].message)
 
 
 class StarmapTestCase(unittest.TestCase):

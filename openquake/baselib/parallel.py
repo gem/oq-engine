@@ -1038,7 +1038,7 @@ class Starmap(object):
                 task.result(timeout=0)
 
     # called by the zmq Socket on a poll timeout (no message received)
-    def poll_timeout(self, sock):
+    def poll_timeout(self, sock, waited):
         """
         On a poll timeout (no message on the socket) either check that the
         local process pool is not broken (processpool mode) or, in zmq/slurm
@@ -1047,7 +1047,8 @@ class Starmap(object):
         """
         if self.distribute == 'processpool':
             self.check_tasks_alive()  # raise BrokenProcessPool if a worker died
-        else:
+        elif (self.distribute in ('zmq', 'slurm') and waited >= STALL_WARN
+              and logging.getLogger().isEnabledFor(logging.DEBUG)):
             self._zmq_stall_report(sock)
 
     # Instrument the zmq/slurm stalls: on a long silence log (at debug level)
@@ -1057,9 +1058,9 @@ class Starmap(object):
     def _zmq_stall_report(self, sock):
         if not self.tasks or not host_cores:
             return
-        now = time.time()
+        now = time.monotonic()
         # throttle: report at most once every STALL_WARN seconds
-        if now - getattr(self, '_last_stall_report', 0) < STALL_WARN:
+        if now - getattr(self, '_last_stall_report', -STALL_WARN) < STALL_WARN:
             return
         self._last_stall_report = now
         outstanding = set(self.tasks)  # task_no not ended yet
@@ -1085,7 +1086,7 @@ class Starmap(object):
                     '%d/%d outstanding still executing',
                     addr, nworkers, len(busy), mem_gb, still, len(outstanding))
             except Exception as exc:
-                logging.warning('Could not query worker %s: %r', line, exc)
+                logging.debug('Could not query worker %s: %r', line, exc)
 
     def _inproc_results(self):
         # a task submitted while consuming (a subtask) appends more

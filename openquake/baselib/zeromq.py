@@ -38,7 +38,7 @@ context = zmq.Context()
 
 # a PULL/REP socket that stays silent for this many seconds is considered
 # stalled and a debug message is logged (used to diagnose lost results)
-STALL_WARN = 120
+STALL_WARN = 200
 
 # from integer socket_type to string
 SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
@@ -173,6 +173,7 @@ class Socket(object):
                 if got_something:
                     res = self.zsocket.recv_pyobj()
                     t_last = time.monotonic()
+                    warned = 0.
                     nrecv += 1
                     yield res
                 else:
@@ -189,7 +190,7 @@ class Socket(object):
                     if self.starmap is not None:
                         # processpool: possibly raise BrokenProcessPool;
                         # zmq/slurm: report which tasks are stuck (if any)
-                        self.starmap.poll_timeout(self)
+                        self.starmap.poll_timeout(self, waited)
                 if self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
