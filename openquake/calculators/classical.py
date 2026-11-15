@@ -590,13 +590,14 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
                              remove_zeros=False, merge_atomic=False):
         dic['rmap_id'] = rmap_id
         if cmaker.oq.disagg_by_src:
-            # Reduce the size of each data transfer to avoid hanging ZMQ
-            # due to lost packets.
+            # Reduce packet sizes to avoid hanging ZMQ due to lost packets.
             rup_data = dic.pop('rup_data')
             if len(rup_data):
-                yield dict(rup_data=rup_data,
-                           grp_id=dic['source_data']['grp_id'][0],
-                           gid=dic['rmap'].gid.min())
+                max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
+                grp_id = dic['source_data']['grp_id'][0]
+                gid = dic['rmap'].gid.min()
+                for slc in general.gen_slices(0, len(rup_data), max_rows):
+                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)
         yield dic
 
 
