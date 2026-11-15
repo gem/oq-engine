@@ -18,12 +18,10 @@
 
 import io
 import ast
-import html
 import json
 import os.path
 import numbers
 import operator
-import functools
 import itertools
 import collections
 import logging
@@ -33,7 +31,7 @@ import pandas
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3, sum_records)
-from openquake.baselib.hdf5 import FLOAT, INT, vstr
+from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.general import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
@@ -45,7 +43,9 @@ from openquake.commonlib import util, datastore, logs
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
-from openquake.baselib.writers import build_header, scientificformat
+from openquake.baselib.writers import (
+    scientificformat, text_table, form as form,
+    HtmlTable as HtmlTable, fix_newlines as fix_newlines)
 from openquake.calculators.getters import (
     get_ebrupture, map_getters, get_rmap_gb)
 from openquake.calculators.base import get_weights, get_model_lts
@@ -65,49 +65,6 @@ code2cls = source.rupture.code2cls
 # ########################## utility functions ############################## #
 
 
-def form(value):
-    """
-    Format numbers in a nice way.
-
-    >>> form(0)
-    '0'
-    >>> form(0.0)
-    '0.0'
-    >>> form(0.0001)
-    '1.000E-04'
-    >>> form(1003.4)
-    '1_003'
-    >>> form(103.41)
-    '103.4100'
-    >>> form(9.3)
-    '9.3000'
-    >>> form(-1.2)
-    '-1.2'
-    """
-    if isinstance(value, FLOAT + INT):
-        if not numpy.isfinite(value):
-            return str(value)
-        elif value <= 0:
-            return str(value)
-        elif value < .001:
-            return '%.3E' % value
-        elif value <= 180 and isinstance(value, FLOAT):
-            return '%.4f' % value
-        elif value > 1000:
-            return '{:_d}'.format(int(round(value)))
-        else:  # in the range 10-1000
-            return str(round(value, 1))
-    elif isinstance(value, bytes):
-        return decode(value)
-    elif isinstance(value, str):
-        return value
-    elif isinstance(value, numpy.object_):
-        return str(value)
-    elif hasattr(value, '__len__') and len(value) > 1:
-        return ' '.join(map(form, value))
-    return str(value)
-
-
 def dt(names):
     """
     :param names: list or a string with space-separated names
@@ -116,139 +73,6 @@ def dt(names):
     if isinstance(names, str):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
-
-
-class HtmlTable(object):
-    """
-    Convert a sequence header+body into a HTML table.
-    """
-    css = """\
-    tr.evenRow { background-color: lightgreen }
-    tr.oddRow { }
-    th { background-color: lightblue }
-    """
-    maxrows = 5000
-    border = "1"
-    summary = ""
-
-    def __init__(self, header_plus_body, name='noname',
-                 empty_table='Empty table'):
-        header, body = header_plus_body[0], header_plus_body[1:]
-        self.name = name
-        self.empty_table = empty_table
-        rows = []  # rows is a finite sequence of tuples
-        for i, row in enumerate(body):
-            if i == self.maxrows:
-                rows.append(
-                    ["Table truncated because too big: more than %s rows" % i])
-                break
-            rows.append(row)
-        self.rows = rows
-        self.header = tuple(header)  # horizontal header
-
-    def render(self, dummy_ctxt=None):
-        out = "\n%s\n" % "".join(list(self._gen_table()))
-        if not self.rows:
-            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
-        return out
-
-    def _gen_table(self):
-        yield '<table id="%s" border="%s" summary="%s" class="tablesorter">\n'\
-              % (self.name, self.border, self.summary)
-        yield '<thead>\n'
-        yield '<tr>%s</tr>\n' % ''.join(
-            '<th>%s</th>\n' % h for h in self.header)
-        yield '</thead>\n'
-        yield '<tbody\n>'
-        for r, row in enumerate(self.rows):
-            yield '<tr class="%s">\n' % ["even", "odd"][r % 2]
-            for col in row:
-                yield '<td>%s</td>\n' % col
-            yield '</tr>\n'
-        yield '</tbody>\n'
-        yield '</table>\n'
-
-
-def fix_newlines(row):
-    return tuple(col.replace('\n', '\\n') for col in row)
-
-
-def text_table(data, header=None, fmt=None, ext='rst'):
-    """
-    Build a .rst (or .org) table from a matrix or a DataFrame
-
-    >>> tbl = [['a', 1], ['b', 2]]
-    >>> print(text_table(tbl, header=['Name', 'Value']))
-    +------+-------+
-    | Name | Value |
-    +------+-------+
-    | a    | 1     |
-    +------+-------+
-    | b    | 2     |
-    +------+-------+
-    """
-    assert ext in 'csv rst org md', ext
-    if isinstance(data, pandas.DataFrame):
-        if data.index.name:
-            data = data.reset_index()
-        header = header or list(data.columns)
-        data = zip(*[data[col].to_numpy() for col in data.columns])
-    if header is None and hasattr(data, '_fields'):
-        header = data._fields
-    try:
-        # see if data is a composite numpy array
-        data.dtype.fields
-    except AttributeError:
-        # not a composite array
-        header = header or ()
-    else:
-        if not header:
-            header = [col.split(':')[0] for col in build_header(data.dtype)]
-    if header:
-        col_sizes = [len(col) for col in header]
-    else:
-        col_sizes = [len(str(col)) for col in data[0]]
-    body = []
-    fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
-    for row in data:
-        tup = tuple(fmt(c) for c in row)
-        if ext in 'rst org md':
-            tup = fix_newlines(tup)
-        for (i, col) in enumerate(tup):
-            col_sizes[i] = max(col_sizes[i], len(col))
-        if len(tup) != len(col_sizes):
-            raise ValueError('The header has %d fields but the row %d fields!'
-                             % (len(col_sizes), len(tup)))
-        body.append(tup)
-    if ext == 'html':
-        return HtmlTable([header] + body).render()
-
-    if ext == 'md':
-        wrap = '|-%s-|'
-        sepline = wrap % '-|-'.join('-' * size for size in col_sizes)
-    else:
-        wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
-        sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
-
-    sep = ',' if ext == 'csv' else ' | '
-    templ = sep.join('%-{}s'.format(size) for size in col_sizes)
-    if ext != 'csv':
-        templ = '| %s |' % templ
-    if header and ext == 'rst':
-        lines = [sepline, templ % tuple(header), sepline]
-    elif header and ext == 'org':
-        lines = [templ % tuple(header), sepline]
-    elif header and ext == 'md':
-        lines = [templ % tuple(header), sepline]
-    elif header and ext == 'csv':
-        lines = [','.join(header)]
-    else:
-        lines = [sepline]
-    for tup in body:
-        lines.append(templ % tup)
-        if ext == 'rst':
-            lines.append(sepline)
-    return '\n'.join(lines)
 
 
 @view.add('high_hazard')
