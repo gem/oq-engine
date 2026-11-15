@@ -1066,7 +1066,7 @@ class Starmap(object):
         outstanding = set(self.tasks)  # task_no not ended yet
         cid = str(self.calc_id)
         logging.debug(
-            'Stall on %s: %d tasks outstanding %s', sock, len(outstanding),
+            'Waiting on %s: %d tasks outstanding %s', sock, len(outstanding),
             shortlist(sorted(outstanding)))
         for line in host_cores:
             try:
