@@ -199,7 +199,7 @@ import numpy
 
 from openquake.baselib import config, hdf5
 from openquake.baselib.general import decode, gc_disabled
-from openquake.baselib.zeromq import zmq, Socket
+from openquake.baselib.zeromq import zmq, Socket, STALL_WARN
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
 from openquake.baselib.general import (
@@ -946,8 +946,7 @@ class Starmap(object):
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.socket = Socket(
-                self.receiver, zmq.PULL, 'bind',
-                starmap=self if self.distribute == 'processpool' else None
+                self.receiver, zmq.PULL, 'bind', starmap=self
             ).__enter__()
             self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -1037,6 +1036,56 @@ class Starmap(object):
         for task in self.tasks.values():
             if task.done():
                 task.result(timeout=0)
+
+    # called by the zmq Socket on a poll timeout (no message received)
+    def poll_timeout(self, sock):
+        """
+        On a poll timeout (no message on the socket) either check that the
+        local process pool is not broken (processpool mode) or, in zmq/slurm
+        mode, collect diagnostic info about a possible stall, i.e. a result
+        that was expected but never arrived.
+        """
+        if self.distribute == 'processpool':
+            self.check_tasks_alive()  # raise BrokenProcessPool if a worker died
+        else:
+            self._zmq_stall_report(sock)
+
+    # Instrument the zmq/slurm stalls: on a long silence log (at debug level)
+    # which tasks are outstanding and whether the workers are still executing
+    # them (stuck) or went idle (lost result). Keep the log concise: do not
+    # dump the full list of executing tasks, just counts.
+    def _zmq_stall_report(self, sock):
+        if not self.tasks or not host_cores:
+            return
+        now = time.time()
+        # throttle: report at most once every STALL_WARN seconds
+        if now - getattr(self, '_last_stall_report', 0) < STALL_WARN:
+            return
+        self._last_stall_report = now
+        outstanding = set(self.tasks)  # task_no not ended yet
+        cid = str(self.calc_id)
+        logging.warning(
+            'Stall on %s: %d tasks outstanding %s', sock, len(outstanding),
+            shortlist(sorted(outstanding)))
+        for line in host_cores:
+            try:
+                host, port, _cores = parse_hostcore(
+                    line, config.zworkers.ctrl_port)
+                addr = 'tcp://%s:%s' % (host, port)
+                with Socket(addr, zmq.REQ, 'connect', timeout=5) as wsock:
+                    nworkers = wsock.send('get_num_workers')
+                    busy = wsock.send('get_executing').split()
+                    mem_gb = wsock.send('memory_gb')
+                # how many of the outstanding tasks are still executing here?
+                still = sum(1 for t in busy
+                            if t.rsplit('-', 1)[0] == cid
+                            and int(t.rsplit('-', 1)[1]) in outstanding)
+                logging.debug(
+                    'Worker %s: %d workers, %d busy, mem=%.0fGB, '
+                    '%d/%d outstanding still executing',
+                    addr, nworkers, len(busy), mem_gb, still, len(outstanding))
+            except Exception as exc:
+                logging.warning('Could not query worker %s: %r', line, exc)
 
     def _inproc_results(self):
         # a task submitted while consuming (a subtask) appends more

@@ -36,6 +36,10 @@ import logging
 
 context = zmq.Context()
 
+# a PULL/REP socket that stays silent for this many seconds is considered
+# stalled and a debug message is logged (used to diagnose lost results)
+STALL_WARN = 120
+
 # from integer socket_type to string
 SOCKTYPE = {zmq.REQ: 'REQ', zmq.REP: 'REP',
             zmq.PUSH: 'PUSH', zmq.PULL: 'PULL',
@@ -160,14 +164,32 @@ class Socket(object):
         """
         # works with zmq.REP and zmq.PULL sockets
         self.running = True
+        t_last = time.monotonic()  # last time a message was received
+        nrecv = 0                  # number of messages received so far
+        warned = 0.                # last stall time we warned about
         while self.running:
             try:
                 got_something = self.zsocket.poll(self.timeout)
                 if got_something:
-                    yield self.zsocket.recv_pyobj()
-                elif self.starmap:
-                    # possibly raise BrokenProcessPool
-                    self.starmap.check_tasks_alive()
+                    res = self.zsocket.recv_pyobj()
+                    t_last = time.monotonic()
+                    nrecv += 1
+                    yield res
+                else:
+                    waited = time.monotonic() - t_last
+                    # instrument: log (at debug level) when the socket stays
+                    # silent for long, so a stall (e.g. a lost result) is
+                    # visible in the logs
+                    if waited >= STALL_WARN and waited >= warned+STALL_WARN:
+                        warned = waited
+                        logging.debug(
+                            'No message received on %s (port %s) for %d s; '
+                            'messages received so far: %d',
+                            self, self.port, waited, nrecv)
+                    if self.starmap is not None:
+                        # processpool: possibly raise BrokenProcessPool;
+                        # zmq/slurm: report which tasks are stuck (if any)
+                        self.starmap.poll_timeout(self)
                 if self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
