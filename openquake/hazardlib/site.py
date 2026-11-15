@@ -376,12 +376,22 @@ class SiteCollection(object):
         Otherwise, it is possible to model the sites on a realistic
         topographic surface by specifying the `depth` of each site.
 
+    Regular grids can also carry ``grid_crs``, ``grid_spacing`` and
+    ``grid_origin``. These describe the lattice before sites are filtered.
+    Spacing is in kilometres and the origin is in metres, both in
+    row/column (northing/easting) order. They are collection metadata,
+    separate from the site parameters used by GMMs.
+
     :param sites:
         A list of instances of :class:`Site` class.
     """ % '\n'.join('    - %s: %s' % item
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
     req_site_params = ()
+    # Defaults also let older pickles load without grid metadata.
+    grid_crs = None
+    grid_spacing = None
+    grid_origin = None
 
     @classmethod
     def from_(cls, array):
@@ -553,6 +563,10 @@ class SiteCollection(object):
         new = object.__new__(self.__class__)
         new.array = self.array[indices]
         new.complete = self.complete
+        # A sparse subset cannot reliably infer the original grid spacing.
+        new.grid_crs = self.grid_crs
+        new.grid_spacing = self.grid_spacing
+        new.grid_origin = self.grid_origin
         return new
 
     # tested in classical/case_38
@@ -732,7 +746,12 @@ class SiteCollection(object):
     def __toh5__(self):
         names = self.array.dtype.names
         cols = ' '.join(names)
-        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
+        attrs = {'__pdcolumns__': cols}
+        for name in ('grid_crs', 'grid_spacing', 'grid_origin'):
+            value = getattr(self, name)
+            if value is not None:
+                attrs[name] = value
+        return {n: self.array[n] for n in names}, attrs
 
     def __fromh5__(self, dic, attrs):
         params = attrs['__pdcolumns__'].split()
@@ -741,6 +760,8 @@ class SiteCollection(object):
         for p in dic:
             self.array[p] = dic[p][()]
         self.complete = self
+        for name in ('grid_crs', 'grid_spacing', 'grid_origin'):
+            setattr(self, name, attrs.get(name))
 
     @property
     def names(self):
@@ -1049,7 +1070,9 @@ class SiteCollection(object):
                 f"in the site model{hint}.")
 
     def __getstate__(self):
-        return dict(array=self.array, complete=self.complete)
+        return dict(array=self.array, complete=self.complete,
+                    grid_crs=self.grid_crs, grid_spacing=self.grid_spacing,
+                    grid_origin=self.grid_origin)
 
     def __getitem__(self, sid):
         """
