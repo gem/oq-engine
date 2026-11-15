@@ -589,6 +589,14 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
     for dic in bysrc_results(grps, sites, cmaker, gid_dic, full_lt,
                              remove_zeros=False, merge_atomic=False):
         dic['rmap_id'] = rmap_id
+        if cmaker.oq.disagg_by_src:
+            # Reduce the size of each data transfer to avoid hanging ZMQ
+            # due to lost packets.
+            rup_data = dic.pop('rup_data')
+            if len(rup_data):
+                yield dict(rup_data=rup_data,
+                           grp_id=dic['source_data']['grp_id'][0],
+                           gid=dic['rmap'].gid.min())
         yield dic
 
 
@@ -813,12 +821,18 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys rmap, source_data, rup_data
+        :param dic: rates and source statistics, or rupture data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif 'rmap' not in dic:
+            if self.few_sites:
+                with self.monitor('saving rup_data'):
+                    store_ctxs(self.datastore, dic['rup_data'], dic['grp_id'],
+                               dic['gid'])
+            return acc
         elif not dic['source_data']:
             # all the sources were filtered out
             return acc
@@ -832,7 +846,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']):
+        if self.few_sites and len(dic.get('rup_data', ())):
             with self.monitor('saving rup_data'):
                 # NB: each result has its own gid, see bysrc_results
                 store_ctxs(self.datastore, dic['rup_data'], grp_id,
