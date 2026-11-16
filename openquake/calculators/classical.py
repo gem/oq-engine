@@ -595,6 +595,8 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, dstore, monitor):
             if len(rup_data):
                 max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
                 grp_id = dic['source_data']['grp_id'][0]
+                # The first gid labels the contexts shared by all GSIMs
+                # of this realization set; the rmap retains all gids.
                 gid = dic['rmap'].gid.min()
                 for slc in general.gen_slices(0, len(rup_data), max_rows):
                     yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)

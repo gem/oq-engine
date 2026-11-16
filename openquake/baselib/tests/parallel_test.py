@@ -79,7 +79,9 @@ class StallDiagnosticsTestCase(unittest.TestCase):
         self.result_socket.zsocket.poll.return_value = 0
 
     def test_socket_recovery(self):
-        sock = zeromq.Socket('tcp://127.0.0.1:1909', zeromq.zmq.REP, 'bind')
+        smap = mock.Mock()
+        sock = zeromq.Socket('tcp://127.0.0.1:1909', zeromq.zmq.PULL, 'bind',
+                             starmap=smap)
         sock.port = 1909
         sock.zsocket = mock.Mock(closed=True)
         sock.zsocket.poll.side_effect = [
@@ -89,9 +91,11 @@ class StallDiagnosticsTestCase(unittest.TestCase):
                                side_effect=[0, 200, 201, 401]), \
                 mock.patch.object(zeromq.logging, 'debug') as log:
             self.assertEqual(list(sock), ['recovered'])
-        self.assertEqual(log.call_count, 2)
+        self.assertEqual(smap.poll_timeout.call_args_list,
+                         [mock.call(sock, 200)] * 2)
+        self.assertEqual(log.call_count, 3)
         for call in log.call_args_list:
-            self.assertTrue(call.args[0].startswith('No message received'))
+            self.assertTrue(call.args[0].startswith('Waiting on'))
 
     def test_poll_timeout(self):
         modes = ('processpool', 'zmq', 'slurm', 'threadpool')
