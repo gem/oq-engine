@@ -51,3 +51,16 @@ class ReadUncTsSetsTestCase(unittest.TestCase):
         self.addCleanup(child.close)
         child.parent = self.dstore
         self.assertEqual(read_unc_ts_sets(child), [(0, 1)])
+
+    def test_hdf5_handle(self):
+        # Reading metadata must leave the caller's open HDF5 file usable.
+        handle = self.dstore.hdf5
+        for present in (False, True):
+            with self.subTest(present=present):
+                expected = None
+                if present:
+                    handle.save_vlen('unc_ts_sets',
+                                     [numpy.array([0, 1], numpy.uint32)])
+                    expected = [(0, 1)]
+                self.assertEqual(read_unc_ts_sets(handle), expected)
+                self.assertTrue(handle.id.valid)
