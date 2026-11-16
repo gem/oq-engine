@@ -142,6 +142,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                 if ds_name.startswith('adj_'):
                     freq = float(ds_name[len('adj_'):].rstrip('hz'))
                     self.dat[freq] = f[ds_name][:]
+        
         # The spatial lookup is performed assuming same grid over all frequencies
         # which is much more efficient than if we had IMT-depednent grids. Might
         # need to relax later but for initial implementation it holds true.
@@ -154,6 +155,31 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                     '%s: grid coords differ between adj_%ghz and adj_%ghz'
                     % (os.path.basename(self.adjustment_h5),
                        freqs[0], freq))
+            
+        # Confirm the grid is a regular dense lattice (lon_i, lat_j for every
+        # i,j). The off-grid tolerance and any future lattice-based lookup
+        # optimisation depend on this; raise now rather than silently work on
+        # an irregular point cloud.
+        lons_sorted = np.sort(np.unique(ref['lon']))
+        lats_sorted = np.sort(np.unique(ref['lat']))
+        lon_steps = np.diff(lons_sorted)
+        lat_steps = np.diff(lats_sorted)
+        if not (np.allclose(lon_steps, lon_steps[0], atol=1e-4)
+                and np.allclose(lat_steps, lat_steps[0], atol=1e-4)
+                and len(lons_sorted) * len(lats_sorted) == len(ref)):
+            raise ValueError(
+                '%s: grid is not a regular dense lattice '
+                '(n_lon=%d, n_lat=%d, n_nodes=%d; step uniform? %s/%s)'
+                % (os.path.basename(self.adjustment_h5),
+                   len(lons_sorted), len(lats_sorted), len(ref),
+                   np.allclose(lon_steps, lon_steps[0], atol=1e-4),
+                   np.allclose(lat_steps, lat_steps[0], atol=1e-4)))
+        
+        # Off-grid tolerance = half the grid step + epsilon. Derived from
+        # the data so this GSIM also works if the user provides an h5 whose
+        # grid uses a different spacing (e.g. 0.1 or 0.5 deg).
+        self.off_grid_tol = max(float(lon_steps[0]),
+                                float(lat_steps[0])) / 2. + 1e-6
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -170,14 +196,14 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
               (grid['lat'] - ctx.clat[:, None]) ** 2)
         idx_all = d2.argmin(axis=1)
 
-        # Off-grid check (0.2 degree grid, so > 0.22 is outside nearest cell)
+        # Off-grid check
         dlon = np.abs(grid['lon'][idx_all] - ctx.clon)
         dlat = np.abs(grid['lat'][idx_all] - ctx.clat)
-        off = (dlon > 0.22) | (dlat > 0.22)
+        off = (dlon > self.off_grid_tol) | (dlat > self.off_grid_tol)
         if off.any():
             i = int(np.where(off)[0][0])
             raise ValueError(
-                'Rupture (%.4f, %.4f) is outside the France adjustment '
+                'Rupture (%.4f, %.4f) is outside the provided adjustment '
                 'grid: nearest node (%.4f, %.4f), delta=(%.4f, %.4f) deg'
                 % (ctx.clon[i], ctx.clat[i],
                    grid['lon'][idx_all[i]], grid['lat'][idx_all[i]],
