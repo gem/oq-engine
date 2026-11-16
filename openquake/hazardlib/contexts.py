@@ -31,7 +31,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import Monitor, split_array, compile
 from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import IMC, StdDev, KNOWN_DISTANCES
-from openquake.hazardlib.gsim.mgmpe import grid_adjusted_gmpe as gag
 from openquake.hazardlib import imc_conversion
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, get_tmax, _truncnorm_sf
