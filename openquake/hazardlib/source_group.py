@@ -359,14 +359,11 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
-    def get_cmakers(self, core_trt_smrs):
+    def get_cmakers(self):
         """
-        :param core_trt_smrs: the sets of realizations with the same
-            uncertainties, see source_reader.get_core_trt_smrs
         :returns: a ContextMakerSequence instance
         """
-        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq,
-                           core_trt_smrs)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, self.oq)
 
     def get_basenames(self):
         """
@@ -653,7 +650,9 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     for cmaker, tilegetters, blocks, extra in allargs:
         n = len(blocks)
         grp_id = _grp_id(blocks[0])
-        if extra['atomic']:
+        # Atomic groups with uncertainties must process every ts set.
+        if extra['atomic'] and not any(
+                src.bysrc_unc for src in csm.src_groups[grp_id]):
             atomic.append((cmaker, tilegetters, blocks, extra))
         else:
             if n > 1:
@@ -662,7 +661,8 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
             else:
                 grp_keys = [str(grp_id)]
                 weights = [extra['weight']]
-            out.append((cmaker, tilegetters, grp_keys, False, weights))
+            out.append((cmaker, tilegetters, grp_keys,
+                        extra['atomic'], weights))
     # collect the atomic groups
     blocks_ = AccumDict(accum=[])
     weights_ = AccumDict(accum={})
@@ -671,9 +671,10 @@ def get_allargs(csm, cmdict, sitecol, max_weight, num_chunks):
     for cmaker, tilegetters, blocks, extra in atomic:
         # NB: the key includes the site label, since the cmaker (with its
         # gsims and ilabel) and the tiles are different for each label,
-        # while the gids are the same, see read_full_lt_by_label;
+        # while the realization memberships are the same;
         # tested in classical/case_27_labels
-        gid = (cmaker.ilabel, tuple(cmaker.gid))
+        membership = csm.src_groups[blocks[0]][0].trt_smrs
+        gid = (cmaker.ilabel, membership)
         if tilegetters or gid not in tilegetters_:
             # a group far from all the sites has no tiles, but it must
             # not remove the tiles of the other groups with the same gid

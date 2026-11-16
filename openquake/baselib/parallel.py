@@ -199,7 +199,7 @@ import numpy
 
 from openquake.baselib import config, hdf5
 from openquake.baselib.general import decode, gc_disabled
-from openquake.baselib.zeromq import zmq, Socket
+from openquake.baselib.zeromq import zmq, Socket, STALL_WARN
 from openquake.baselib.performance import (
     Monitor, PerfBuffer, memory_gb, init_performance)
 from openquake.baselib.general import (
@@ -214,16 +214,26 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
+# an entry "host cores" or "host:port cores" of host_cores; the values are
+# used to build the ssh commands starting the workerpools, so they are
+# validated strictly: a host name or IPv4 address, a port and an integer
+HOSTCORE = re.compile(r'([A-Za-z0-9][A-Za-z0-9._-]*)(?::(\d{1,5}))?\s+(-?\d+)')
+
+
 def parse_hostcore(hostcore, default_port):
     """
     :param hostcore: a string "host cores" or "host:port cores"
     :param default_port: the ctrl_port to use if the port is missing
     :returns: a triple (host, port, cores) with port an integer
+    :raises ValueError: if the string is not in the expected format
     """
-    hostport, cores = hostcore.split()
-    host, sep, port = hostport.partition(':')
+    match = HOSTCORE.fullmatch(hostcore.strip())
+    if match is None:
+        raise ValueError('Invalid host_cores entry %r: expected "host cores"'
+                         ' or "host:port cores"' % hostcore)
+    host, port, cores = match.groups()
     # without an explicit port the default ctrl_port is used
-    return host, (int(port) if sep else int(default_port)), cores
+    return host, int(port or default_port), cores
 
 
 # read the ds_calc_dir of a job from the database of a user installation;
@@ -936,8 +946,7 @@ class Starmap(object):
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.socket = Socket(
-                self.receiver, zmq.PULL, 'bind',
-                starmap=self if self.distribute == 'processpool' else None
+                self.receiver, zmq.PULL, 'bind', starmap=self
             ).__enter__()
             self.monitor.shared = self._shared
             self.monitor.backurl = 'tcp://%s:%s' % (
@@ -1027,6 +1036,82 @@ class Starmap(object):
         for task in self.tasks.values():
             if task.done():
                 task.result(timeout=0)
+
+    # called by the zmq Socket on a poll timeout (no message received)
+    def poll_timeout(self, sock, waited):
+        """
+        On a poll timeout (no message on the socket) either check that the
+        local process pool is not broken (processpool mode) or, in zmq/slurm
+        mode, collect diagnostic info about a possible stall, i.e. a result
+        that was expected but never arrived.
+        """
+        if self.distribute == 'processpool':
+            self.check_tasks_alive()  # raise BrokenProcessPool if a worker died
+        elif (self.distribute in ('zmq', 'slurm') and waited >= STALL_WARN):
+            self._zmq_stall_report(sock)
+
+    # Instrument the zmq/slurm stalls: on a long silence log (at debug level)
+    # which tasks are outstanding and whether the workers are still executing
+    # them (stuck) or went idle (lost result). Keep the log concise: do not
+    # dump the full list of executing tasks, just counts.
+    def _zmq_stall_report(self, sock):
+        if not self.tasks or not host_cores:
+            return
+        now = time.monotonic()
+        # throttle: report at most once every STALL_WARN seconds
+        if now - getattr(self, '_last_stall_report', -STALL_WARN) < STALL_WARN:
+            return
+        self._last_stall_report = now
+        outstanding = set(self.tasks)  # task_no not ended yet
+        cid = str(self.calc_id)
+        logging.debug(
+            'Waiting on %s: %d tasks outstanding %s', sock, len(outstanding),
+            shortlist(sorted(outstanding)))
+        rows = []
+        still_tot = 0
+        all_known = True
+        for line in host_cores:
+            try:
+                host, port, _cores = parse_hostcore(
+                    line, config.zworkers.ctrl_port)
+                addr = 'tcp://%s:%s' % (host, port)
+                with Socket(addr, zmq.REQ, 'connect', timeout=5) as wsock:
+                    nworkers = wsock.send('get_num_workers')
+                    busy = wsock.send('get_executing').split()
+                    # Keep execution status even if the memory query fails.
+                    still = sum(1 for t in busy
+                                if t.rsplit('-', 1)[0] == cid
+                                and int(t.rsplit('-', 1)[1]) in outstanding)
+                    still_tot += still
+                    try:
+                        mem_gb = wsock.send('memory_gb')
+                    except Exception as exc:
+                        mem_gb = numpy.nan
+                        logging.warning(
+                            'Could not query workerpool memory %s: %r',
+                            line, exc)
+                rows.append((addr, nworkers, len(busy), mem_gb, still))
+            except Exception as exc:
+                all_known = False
+                logging.warning('Could not query workerpool %s: %r', line, exc)
+        # if none of the outstanding tasks is executing on any worker, the
+        # results were computed but never delivered (lost packets): report at
+        # ERROR level and abort instead of hanging. Failed status queries
+        # leave worker execution unknown, so they cannot establish a loss.
+        # A task may have completed during the queries: let the receiver
+        # consume any messages that arrived before deciding they were lost.
+        lost = (bool(outstanding) and all_known and still_tot == 0
+                and not sock.zsocket.poll(0))
+        for addr, nworkers, nbusy, mem_gb, still in rows:
+            msg = ('WorkerPool %s: %d workers, %d busy, mem=%.0fGB, '
+                   '%d/%d executing')
+            args = (addr, nworkers, nbusy, mem_gb, still, len(outstanding))
+            (logging.error if lost else logging.debug)(msg, *args)
+        if lost:
+            raise RuntimeError(
+                'Lost %d result(s) for %s: tasks %s are not executing on any '
+                'worker (likely dropped zmq messages)' % (
+                    len(outstanding), sock, shortlist(sorted(outstanding))))
 
     def _inproc_results(self):
         # a task submitted while consuming (a subtask) appends more

@@ -605,14 +605,11 @@ class CollapsedPointSource(PointSource):
 
     def modify_set_recurrow(self, recurrow):
         """Apply an area-source recurrence row to the underlying points."""
-        # keep local: circular import with source.area
-        from openquake.hazardlib.source.area import AreaSource
-
         row = dict(recurrow)
         rate_key = 'bg_rate' if 'bg_rate' in row else 'rate'
         fraction = getattr(self, 'source_fraction', 1.)
         row[rate_key] = float(row[rate_key]) * fraction
-        AreaSource.modify_set_recurrow(self, row)
+        super().modify_set_recurrow(row)
         rates = self.mfd.get_annual_occurrence_rates()
         share = 1. / len(self.pdata['array'])
         pointsources = self.pointsources

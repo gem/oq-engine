@@ -34,8 +34,8 @@ scratch database, never the engine database in ~/oqdata.
 After a refactoring run `ruff check` and openquake/baselib/tests/flake8_test.py;
 make sure they do not fail.
 
-The installation tests (.github/workflows/server_install.yaml) can be run
-without root only for the `server` kind, with
+The installation tests (.github/workflows/server_install.yaml) can be emulated
+without root for the `server` kind, with
 .github/scripts/emulate_server_install.sh (needs gunicorn in the venv); there
 is no local run of `devel_server`. run_webui_concurrency.sh runs several
 users at once. Read the script headers for details; do not use sudo.

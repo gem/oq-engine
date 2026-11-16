@@ -23,8 +23,8 @@ import operator
 import faulthandler
 
 from openquake.baselib import sap, general
+from openquake.commonlib.outputs import DISPLAY_NAME
 from openquake.calculators import export
-from openquake.calculators.export import DISPLAY_NAME
 from openquake import commands
 
 # check for Python version

@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from openquake.baselib import config, parallel, use_server
 from openquake.commonlib.auth import API_KEY
 from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import get_datadir
 
 UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
@@ -61,45 +62,13 @@ def _worker_api(action, *args):
     return response.json()
 
 
-def _decode_db_value(value):
-    """Restore values encoded by the internal database API."""
-    if isinstance(value, dict):
-        kind = value.get('__oq_type__')
-        if kind == 'datetime':
-            return datetime.fromisoformat(value['value'])
-        if kind == 'row':
-            return dbapi.Row(
-                value['fields'],
-                [_decode_db_value(item) for item in value['values']])
-        if kind == 'table':
-            return dbapi.Table(
-                value['fields'],
-                [_decode_db_value(item) for item in value['rows']])
-        return {key: _decode_db_value(item)
-                for key, item in value.items()}
-    if isinstance(value, list):
-        return [_decode_db_value(item) for item in value]
-    return value
-
-
-def _encode_db_value(value):
-    """Encode database action arguments as JSON values."""
-    if isinstance(value, datetime):
-        return {'__oq_type__': 'datetime', 'value': value.isoformat()}
-    if isinstance(value, dict):
-        return {key: _encode_db_value(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_encode_db_value(item) for item in value]
-    return value
-
-
 def _db_api(action, *args):
     """Call a database action through the internal API endpoint."""
     server = os.environ.get('OQ_WEBAPI_SERVER', config.webapi.server)
     endpoint = '%s/v0/db/%s' % (server.rstrip('/'), action)
     try:
         response = requests.post(
-            endpoint, json={'args': _encode_db_value(args)},
+            endpoint, json={'args': dbapi.to_json(args)},
             headers={'X-API-Key': API_KEY}, timeout=600)
     except requests.RequestException as exc:
         raise RuntimeError(
@@ -111,7 +80,7 @@ def _db_api(action, *args):
     except requests.RequestException as exc:
         raise RuntimeError(
             'Database action %s failed: %s' % (action, response.text)) from exc
-    return _decode_db_value(response.json())
+    return dbapi.from_json(response.json())
 
 
 def dbcmd(action, *args):
@@ -133,7 +102,8 @@ def dbcmd(action, *args):
             return getattr(WorkerMaster(-1), action[8:])()
         return _worker_api(action, *args)
     if not use_server():
-        # keep local: circular import with the server database code
+        # keep local: importing server DB actions at module load breaks
+        # the dependency boundary between the engine and the server.
         from openquake.server.db import actions as db_actions
         return getattr(db_actions, action)(dbapi.db, *args)
     return _db_api(action, *args)
@@ -164,25 +134,6 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.now(UTC), level, task, msg)
-
-
-def get_datadir():
-    """
-    Extracts the path of the directory where the openquake data are stored
-    from the environment ($OQ_DATADIR) or from the shared_dir in the
-    configuration file.
-    """
-    datadir = os.environ.get('OQ_DATADIR')
-    if not datadir:
-        shared_dir = config.directory.shared_dir
-        if shared_dir:
-            user = getpass.getuser()
-            # special case for /opt/openquake/openquake -> /opt/openquake
-            datadir = os.path.join(shared_dir, user, 'oqdata').replace(
-                'openquake/openquake', 'openquake')
-        else:  # use the home of the user
-            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
-    return datadir
 
 
 def get_calc_ids(datadir=None):

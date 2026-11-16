@@ -10,6 +10,14 @@ Cores used: 160
 | 3.26.2               | 1_848 s     | 153.1 GB   |
 | 3.27.0-gitb11bcc1eb4 | 3_342 s     | 131.3 GB   |
 
+NB: version 3.27 is nearly twice as slow because earlier versions had
+a precision issue and we now favor precision over performance.  An
+estimate of the maximum error on the uniform hazard spectra before was
+of 7.7% while now is 0.43%. If you relax the constraint on the precision
+you can get faster than before: for instance with ps_grid_spacing=50 and
+pointsource_distance=50 the total runtime is 986s, nearly half of before
+with half the error.
+
 ** v3.23.5
 
 Not run: the job could not run with v3.23.5. It fails at

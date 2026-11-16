@@ -46,12 +46,12 @@ from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
+from openquake.commonlib.outputs import DISPLAY_NAME
 from openquake.risklib import asset, scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
-from openquake.calculators.export import DISPLAY_NAME
 
 F32 = numpy.float32
 U8 = numpy.uint8
