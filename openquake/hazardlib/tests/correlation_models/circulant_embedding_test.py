@@ -16,6 +16,7 @@
 
 from types import SimpleNamespace
 from unittest.mock import patch
+import weakref
 
 import numpy
 import pytest
@@ -42,6 +43,7 @@ MODELS = [DuNing2021, MonteiroEtAl2026, LothBaker2013]
 
 EPS = 1E-10
 
+
 def test_spectral_chunks():
     lags = numpy.zeros((4, 9, 2, 2))
     lags[0, 0] = [[1., 0.4], [0.4, 1.3]]
@@ -56,6 +58,26 @@ def test_spectral_chunks():
                for call in factorize.call_args_list)
     numpy.testing.assert_allclose(
         root @ root.swapaxes(-1, -2).conj(), expected, atol=EPS)
+
+
+def test_release_failed_embedding(monkeypatch):
+    previous = []
+
+    def covariance(model, imts, shape, spacing, component, context):
+        # Check before allocating the next attempt, not after assigning it.
+        assert not previous or previous[0]() is None
+        return numpy.zeros((*shape, 1, 1))
+
+    def root(lags):
+        if not previous:
+            previous.append(weakref.ref(lags))
+            return -1., None
+        return 0., numpy.zeros((lags.shape[0], lags.shape[1] // 2 + 1, 1, 1))
+
+    monkeypatch.setattr(ce, '_covariance_lags', covariance)
+    monkeypatch.setattr(ce, '_spectral_root', root)
+    factor = CirculantEmbeddingFactor.build(None, [PGA()], (2, 3), 1.)
+    assert factor.embedding_multiplier == 2
 
 
 def geographic_grid(shape, missing=(), perturb=None):

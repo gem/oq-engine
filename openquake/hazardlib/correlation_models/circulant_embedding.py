@@ -419,6 +419,7 @@ class CirculantEmbeddingFactor:
             covariance_lags = _covariance_lags(
                 model, imts, embedded_shape, spacing, component, context)
             minimum, root = _spectral_root(covariance_lags)
+            del covariance_lags
             if root is not None:
                 return cls(
                     root, grid_shape, embedded_shape, len(imts), indices,
