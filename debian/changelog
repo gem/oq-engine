@@ -1,6 +1,6 @@
   [Christopher Brooks]
-  * Remove the HMTK from the Engine in anticipation of moving the
-    related code into the associated parts of the OQ-MBTK.
+  * Remove the HMTK from the OpenQuake Engine in anticipation of
+    moving the related code into the associated parts of the OQ-MBTK.
 
   [Michele Simionato]
   * Reduced the size of the yielded packets in classical_bysrc and
