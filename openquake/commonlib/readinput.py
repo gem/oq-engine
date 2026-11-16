@@ -1216,7 +1216,7 @@ def get_full_lt(oqparam):
 
 def get_logic_tree(oqparam):
     """
-    :returns: a CompositeLogicTree instance
+    :returns: a BranchSetLogicTree instance
     """
     flt = get_full_lt(oqparam)
     return logictree.compose(flt.source_model_lt, flt.gsim_lt)
