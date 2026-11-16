@@ -58,20 +58,14 @@ class SungEtAl2022(GMPE):
     Implements the Sung et al. (2022) ergodic model for France based on the
     Bayless and Abrahamson (2018) GMM.
     """
-
-    # France is stable continental crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
-    # Model is for Fourier amplitude spectra, not PSA
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {EAS}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
-
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT,
     }
-
-    # Linear Vs30 only (paper omits nonlinear site and basin terms)
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
     REQUIRES_DISTANCES = {'rrup'}
