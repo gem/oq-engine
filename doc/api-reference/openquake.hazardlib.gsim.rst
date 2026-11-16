@@ -1333,6 +1333,14 @@ stewart_2016_vh
     :undoc-members:
     :show-inheritance:
 
+sung_2022
+-----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sung_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 swiss_amplification
 -----------------------------------------------
 
