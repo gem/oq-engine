@@ -28,11 +28,14 @@ Reference:
 import os
 import h5py
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.bayless_abrahamson_2018 import (
     _path_scaling, _ztor_scaling, _linear_site_response)
+
+ADJ_DIR = os.path.join(os.path.dirname(__file__), 'sung_2022')
 
 
 def _magnitude_scaling(C, ctx):
@@ -57,20 +60,14 @@ class SungEtAl2022(GMPE):
     Implements the Sung et al. (2022) ergodic model for France based on the
     Bayless and Abrahamson (2018) GMM.
     """
-
-    # France is stable continental crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
-    # Model is for Fourier amplitude spectra, not PSA
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {EAS}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
-
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT,
     }
-
-    # Linear Vs30 only (paper omits nonlinear site and basin terms)
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
     REQUIRES_DISTANCES = {'rrup'}
@@ -102,23 +99,51 @@ EAS(5.0) -4.042505531 1.27 -0.041712502 -2.165 7.487714222 0.476000074 -0.007202
 
 class SungEtAl2022NonErgodic(SungEtAl2022):
     """
-    Modification of Sung et al. (2022) with non-ergodic adjustments.
+    Non-ergodic variant of Sung et al. (2022).
+
+    At compute time the posterior-mean prediction of the ergodic model is
+    shifted by a pre-computed Delta-mu drawn from a per-site adjustment table.
+    Delta-mu depends on rupture location (closest point to the site) and
+    frequency, and encodes the combined non-ergodic source, site and path
+    terms from the varying-coefficient model + cell-specific anelastic
+    attenuation in the paper.
+
+    :param adjustment_h5:
+        Bare filename (e.g. "adj_RE_Site1.h5") inside the gsim/sung_2022/
+        data folder, or an absolute path. The file holds one dataset per
+        frequency named `adj_Nhz` (e.g. `adj_1hz`, `adj_5hz`). Each provided
+        dataset in sung_2022/ is a structured array of 5551 grid nodes with
+        fields (lon, lat, mean, std, rlz[N]) covering the France 0.2x0.2 degree
+        grid. N is the number of posterior realizations stored in the file
+        (100 for the files in sung_2022). Each file is specific to one target
+        site (the site location and Vs30 are baked in at generation time).
+    :param rlz_id:
+        Selects which posterior draw of the adjustment field to use.
+        "mean" (default) uses the posterior mean field `mean`; an integer
+        0..N-1 selects one of the sampled realization maps in `rlz[rlz_id]`.
+        Each branch of SungEtAl2020 in a GMM logic tree XML specifies a single
+        realization (rlz_id=0..N-1) to sample the full epistemic uncertainty of
+        the VCM model. The LT size can be anything up to N.
     """
 
     # clon/clat are the closest point of the rupture to the site
     REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
 
     def __init__(self, adjustment_h5, rlz_id="mean"):
-        # Pre-computed per-site adjustment table (one h5 per site + frequency)
-        # Bare filenames are resolved against the module data folder
-        if os.sep not in adjustment_h5 and '/' not in adjustment_h5:
-            adjustment_h5 = os.path.join(
-                os.path.dirname(__file__), 'sung_2022', adjustment_h5)
-        self.adjustment_h5 = adjustment_h5
+        # Get the filepath
+        self.adjustment_h5 = os.path.join(ADJ_DIR, adjustment_h5)
         # Selects which posterior draw: "mean" or integer 0..99
         self.rlz_id = rlz_id
         assert os.path.exists(self.adjustment_h5), \
-            'Adjustment file not found: %s' % self.adjustment_h5
+            'Adjustment h5 not found: %s' % self.adjustment_h5
+        # Load one adjustment grid per frequency the h5 provides;
+        # keyed by float Hz (e.g. 1.0, 5.0)
+        self.dat = {}
+        with h5py.File(self.adjustment_h5, 'r') as f:
+            for ds_name in f:
+                if ds_name.startswith('adj_'):
+                    freq = float(ds_name[len('adj_'):].rstrip('hz'))
+                    self.dat[freq] = f[ds_name][:]
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -126,39 +151,43 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        # Load the full adjustment grid for this site + frequency
-        with h5py.File(self.adjustment_h5, 'r') as fcoeff:
-            dat = fcoeff['init'][:]
-
-        # One Delta-mu per ctx row (per rupture)
         n = len(ctx)
-        adj = np.zeros(n)
-        for i in range(n):
-            # Rupture coordinates = closest point of rupture mesh to site
-            lon_r = ctx.clon[i]
-            lat_r = ctx.clat[i]
-            # Snap to nearest grid node (0.2 degree cells)
-            idx = np.argmin(
-                ((dat['lon'] - lon_r) ** 2 + (dat['lat'] - lat_r) ** 2) ** 0.5)
-
-            # Fail loudly if the rupture is off the grid envelope
-            if (abs(dat['lon'][idx] - lon_r) > 0.22 or
-                    abs(dat['lat'][idx] - lat_r) > 0.22):
-                print('   Point mesh:', dat['lon'][idx], dat['lat'][idx])
-                print('Point rupture:', lon_r, lat_r)
-                print('      Diff lo:', abs(dat['lon'][idx] - lon_r))
-                print('      Diff la:', abs(dat['lat'][idx] - lat_r))
-                raise ValueError('')
-
-            # Pick either the posterior mean or one of the 100 realizations
-            if self.rlz_id == 'mean':
-                adj[i] = dat['mea'][idx]
-            else:
-                adj[i] = dat['rlz'][idx][int(self.rlz_id)]
-
-        # Ergodic mean (same as baseline) plus the non-ergodic shift
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
+            # Pick the adjustment grid for this frequency
+            dat = self.dat[imt.frequency]
+
+            # Per-rupture Delta-mu lookup against the per-frequency grid
+            adj = np.zeros(n)
+            for i in range(n):
+                # Rupture coordinates = closest point of rupture mesh to site
+                lon_r = ctx.clon[i]
+                lat_r = ctx.clat[i]
+                # Snap to nearest grid node (0.2 degree cells)
+                idx = np.argmin(
+                    ((dat['lon'] - lon_r) ** 2 +
+                     (dat['lat'] - lat_r) ** 2) ** 0.5)
+
+                # Fail if the rupture is off the grid envelope (0.2 degree
+                # grid, so anything > 0.22 degrees is outside the nearest cell)
+                dlon = abs(dat['lon'][idx] - lon_r)
+                dlat = abs(dat['lat'][idx] - lat_r)
+                if dlon > 0.22 or dlat > 0.22:
+                    raise ValueError(
+                        'Rupture (%.4f, %.4f) is outside the France '
+                        'adjustment grid: nearest node (%.4f, %.4f), '
+                        'delta=(%.4f, %.4f) deg' % (
+                            lon_r, lat_r,
+                            dat['lon'][idx], dat['lat'][idx],
+                            dlon, dlat))
+
+                # Pick either the posterior mean or one of the 100 realizations
+                if self.rlz_id == 'mean':
+                    adj[i] = dat['mean'][idx]
+                else:
+                    adj[i] = dat['rlz'][idx][int(self.rlz_id)]
+
+            # Ergodic mean (same as baseline) plus the non-ergodic shift
             mean[m] = (_magnitude_scaling(C, ctx) +
                        _path_scaling(C, ctx) +
                        _ztor_scaling(C, ctx) +
