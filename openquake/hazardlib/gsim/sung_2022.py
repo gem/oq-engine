@@ -249,6 +249,14 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
         GSIM has no use for - accepted for interface compatibility only.
         """
+        missing = sorted({imt.frequency for imt in imts} - set(self.dat))
+        if missing:
+            raise ValueError(
+                '%s: no adjustment dataset for frequency %s Hz '
+                '(available: %s Hz)' % (
+                    os.path.basename(self.adjustment_h5),
+                    ', '.join('%g' % f for f in missing),
+                    ', '.join('%g' % f for f in sorted(self.dat))))
         grid = self.dat[next(iter(self.dat))]
         # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
         i_lon = np.round(
