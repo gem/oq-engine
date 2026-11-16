@@ -469,11 +469,17 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
     # get the closest points on the surface
-    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
+    if (cmaker.fewsites
+            or 'clon' in cmaker.REQUIRES_DISTANCES
+            or 'clon_clat' in cmaker.REQUIRES_DISTANCES):
         closest = project_back(planar, xx, yy)  # (3, U, N)
     # set distances
     zeroctx['rrup'] = rrup
-    for par in cmaker.REQUIRES_DISTANCES - {'rrup'}:
+    # clon/clat/clon_clat are populated from the pre-computed `closest`
+    # below, not via get_distances_planar (planar.py has no dispatch for
+    # closest-point coords)
+    for par in cmaker.REQUIRES_DISTANCES - {
+            'rrup', 'clon', 'clat', 'clon_clat'}:
         zeroctx[par] = get_distances_planar(planar, sites, par)
     for par in cmaker.REQUIRES_DISTANCES:
         dst = zeroctx[par]
@@ -509,7 +515,9 @@ def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
         elif par == 'hypo_depth':
             ctxt[par] = planar.hypo[:, 2]
 
-    if cmaker.fewsites:
+    if (cmaker.fewsites
+            or 'clon' in cmaker.REQUIRES_DISTANCES
+            or 'clon_clat' in cmaker.REQUIRES_DISTANCES):
         zeroctx['clon'] = closest[0]
         zeroctx['clat'] = closest[1]
 
