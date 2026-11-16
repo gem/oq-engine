@@ -55,6 +55,86 @@ def _magnitude_scaling(C, ctx):
     return t1 + t2 + t3
 
 
+def _load_adjustments(path):
+    """
+    Read every `adj_Nhz` dataset out of the h5 at `path` and return a dict
+    keyed by frequency in Hz (float).
+    """
+    dat = {}
+    with h5py.File(path, 'r') as f:
+        for ds_name in f:
+            if ds_name.startswith('adj_'):
+                freq = float(ds_name[len('adj_'):].rstrip('hz'))
+                dat[freq] = f[ds_name][:]
+    return dat
+
+
+def _verify_grids_match(dat, path):
+    """
+    Raise if any two frequency grids disagree on lon/lat columns. Return
+    the first frequency's dataset to use as the reference grid.
+    """
+    freqs = list(dat)
+    ref = dat[freqs[0]]
+    for freq in freqs[1:]:
+        if not (np.array_equal(dat[freq]['lon'], ref['lon'])
+                and np.array_equal(dat[freq]['lat'], ref['lat'])):
+            raise ValueError(
+                '%s: grid coords differ between adj_%ghz and adj_%ghz'
+                % (os.path.basename(path), freqs[0], freq))
+    return ref
+
+
+def _lattice_params(ref, path):
+    """
+    Verify ref's (lon, lat) is a regular dense lattice and derive the
+    indexing parameters for O(1) nearest-node lookup. Returns a dict with
+    keys: lon0, lat0, lon_step, lat_step, n_lon, n_lat, lon_fast,
+    off_grid_tol.
+
+    Raises ValueError if the grid isn't a lattice or the row ordering is
+    neither lon-fast nor lat-fast.
+    """
+    lons_sorted = np.sort(np.unique(ref['lon']))
+    lats_sorted = np.sort(np.unique(ref['lat']))
+    lon_steps = np.diff(lons_sorted)
+    lat_steps = np.diff(lats_sorted)
+    # atol = 1e-4 deg absorbs float32 precision jitter but catches any
+    # real irregularity (grid step is 0.1-0.5 deg in realistic cases)
+    lon_uniform = np.allclose(lon_steps, lon_steps[0], atol=1e-4)
+    lat_uniform = np.allclose(lat_steps, lat_steps[0], atol=1e-4)
+    dense = len(lons_sorted) * len(lats_sorted) == len(ref)
+    if not (lon_uniform and lat_uniform and dense):
+        raise ValueError(
+            '%s: grid is not a regular dense lattice '
+            '(n_lon=%d, n_lat=%d, n_nodes=%d; step uniform? %s/%s)'
+            % (os.path.basename(path),
+               len(lons_sorted), len(lats_sorted), len(ref),
+               lon_uniform, lat_uniform))
+
+    lon0 = float(lons_sorted[0])
+    lat0 = float(lats_sorted[0])
+    n_lon = len(lons_sorted)
+    n_lat = len(lats_sorted)
+    # Detect row ordering: lon-fast means nodes are stored as
+    # (lat0, lon0), (lat0, lon1), ...; flat index is i_lat*n_lon + i_lon.
+    # lat-fast means the opposite; index is i_lon*n_lat + i_lat.
+    lon_fast = bool(np.all(ref['lat'][:n_lon] == lat0))
+    if not lon_fast and not bool(np.all(ref['lon'][:n_lat] == lon0)):
+        raise ValueError(
+            '%s: row ordering is neither lon-fast nor lat-fast'
+            % os.path.basename(path))
+    # Off-grid tolerance = half the grid step + epsilon. The epsilon
+    # absorbs float32 jitter in the stored grid coords.
+    off_grid_tol = max(float(lon_steps[0]),
+                       float(lat_steps[0])) / 2. + 1e-4
+    return dict(lon0=lon0, lat0=lat0,
+                lon_step=float(lon_steps[0]),
+                lat_step=float(lat_steps[0]),
+                n_lon=n_lon, n_lat=n_lat,
+                lon_fast=lon_fast, off_grid_tol=off_grid_tol)
+
+
 class SungEtAl2022(GMPE):
     """
     Implements the Sung et al. (2022) ergodic model for France based on the
@@ -128,58 +208,27 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     REQUIRES_DISTANCES = {'rrup', 'clon_clat'}
 
     def __init__(self, adjustment_h5, rlz_id="mean"):
-        # Get the filepath
+        # Resolve the per-site adjustment table path (bare filenames are
+        # looked up under gsim/sung_2022/; absolute paths pass through)
         self.adjustment_h5 = os.path.join(ADJ_DIR, adjustment_h5)
-        # Selects which posterior draw: "mean" or integer 0..99
         self.rlz_id = rlz_id
         assert os.path.exists(self.adjustment_h5), \
             'Adjustment h5 not found: %s' % self.adjustment_h5
-        # Load one adjustment grid per frequency the h5 provides;
-        # keyed by float Hz (e.g. 1.0, 5.0)
-        self.dat = {}
-        with h5py.File(self.adjustment_h5, 'r') as f:
-            for ds_name in f:
-                if ds_name.startswith('adj_'):
-                    freq = float(ds_name[len('adj_'):].rstrip('hz'))
-                    self.dat[freq] = f[ds_name][:]
-        
-        # The spatial lookup is performed assuming same grid over all frequencies
-        # which is much more efficient than if we had IMT-depednent grids. Might
-        # need to relax later but for initial implementation it holds true.
-        freqs = list(self.dat)
-        ref = self.dat[freqs[0]]
-        for freq in freqs[1:]:
-            if not (np.array_equal(self.dat[freq]['lon'], ref['lon'])
-                    and np.array_equal(self.dat[freq]['lat'], ref['lat'])):
-                raise ValueError(
-                    '%s: grid coords differ between adj_%ghz and adj_%ghz'
-                    % (os.path.basename(self.adjustment_h5),
-                       freqs[0], freq))
-            
-        # Confirm the grid is a regular dense lattice (lon_i, lat_j for every
-        # i,j). The off-grid tolerance and any future lattice-based lookup
-        # optimisation depend on this; raise now rather than silently work on
-        # an irregular point cloud.
-        lons_sorted = np.sort(np.unique(ref['lon']))
-        lats_sorted = np.sort(np.unique(ref['lat']))
-        lon_steps = np.diff(lons_sorted)
-        lat_steps = np.diff(lats_sorted)
-        if not (np.allclose(lon_steps, lon_steps[0], atol=1e-4)
-                and np.allclose(lat_steps, lat_steps[0], atol=1e-4)
-                and len(lons_sorted) * len(lats_sorted) == len(ref)):
-            raise ValueError(
-                '%s: grid is not a regular dense lattice '
-                '(n_lon=%d, n_lat=%d, n_nodes=%d; step uniform? %s/%s)'
-                % (os.path.basename(self.adjustment_h5),
-                   len(lons_sorted), len(lats_sorted), len(ref),
-                   np.allclose(lon_steps, lon_steps[0], atol=1e-4),
-                   np.allclose(lat_steps, lat_steps[0], atol=1e-4)))
-        
-        # Off-grid tolerance = half the grid step + epsilon. Derived from
-        # the data so this GSIM also works if the user provides an h5 whose
-        # grid uses a different spacing (e.g. 0.1 or 0.5 deg).
-        self.off_grid_tol = max(float(lon_steps[0]),
-                                float(lat_steps[0])) / 2. + 1e-6
+
+        # Load every frequency dataset (keyed by float Hz), verify they
+        # share the same grid, and cache the lattice parameters used by
+        # compute() for O(1) nearest-node indexing
+        self.dat = _load_adjustments(self.adjustment_h5)
+        ref = _verify_grids_match(self.dat, self.adjustment_h5)
+        p = _lattice_params(ref, self.adjustment_h5)
+        self._lon0 = p['lon0']
+        self._lat0 = p['lat0']
+        self._lon_step = p['lon_step']
+        self._lat_step = p['lat_step']
+        self._n_lon = p['n_lon']
+        self._n_lat = p['n_lat']
+        self._lon_fast = p['lon_fast']
+        self.off_grid_tol = p['off_grid_tol']
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -189,14 +238,24 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         """
         # Grid coordinates should be identical across all frequency
         # datasets in the h5 (checked at instantiation), so the nearest
-        # node lookup is IMT-independent. Avoids repeating costly lookup
+        # node lookup is IMT-independent and uses lattice arithmetic.
         grid = self.dat[next(iter(self.dat))]
-        # Vectorized nearest-neighbor: distance^2 matrix (n_ctx, n_grid)
-        d2 = ((grid['lon'] - ctx.clon[:, None]) ** 2 +
-              (grid['lat'] - ctx.clat[:, None]) ** 2)
-        idx_all = d2.argmin(axis=1)
+        # Nearest-node index from lattice arithmetic; O(n_ctx) ops total
+        i_lon = np.round(
+            (ctx.clon - self._lon0) / self._lon_step).astype(np.int64)
+        i_lat = np.round(
+            (ctx.clat - self._lat0) / self._lat_step).astype(np.int64)
+        # Clip indices before the flat-index computation; off-grid ctx
+        # points will be caught below by the tolerance check
+        i_lon = np.clip(i_lon, 0, self._n_lon - 1)
+        i_lat = np.clip(i_lat, 0, self._n_lat - 1)
+        if self._lon_fast:
+            idx_all = i_lat * self._n_lon + i_lon
+        else:
+            idx_all = i_lon * self._n_lat + i_lat
 
-        # Off-grid check
+        # Off-grid check: compare the selected node's coords to the query;
+        # catches both out-of-envelope ruptures and any lattice-index bug
         dlon = np.abs(grid['lon'][idx_all] - ctx.clon)
         dlat = np.abs(grid['lat'][idx_all] - ctx.clat)
         off = (dlon > self.off_grid_tol) | (dlat > self.off_grid_tol)
@@ -233,7 +292,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations which are based on information Karen sent on
-    # Sept 4th (consistent with the later published paper)
+    # Sept 4th 2020 (consistent with the later published paper)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot      tau
 EAS(1.0) -3.831335618 1.27 -0.339593397 -2.165 7.581303952 0.451924112 -0.003743823 -1.220089093 -0.002488724 3.714155909 6           3.811150377 0.705 0.476
