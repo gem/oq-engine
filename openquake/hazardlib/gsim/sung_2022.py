@@ -192,10 +192,12 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                        _path_scaling(C, ctx) +
                        _ztor_scaling(C, ctx) +
                        _linear_site_response(C, ctx)) + adj
+
+            # Sigma
             sigma[m] = np.ones_like(ctx.vs30) * C['tot']
             tau[m] = np.ones_like(ctx.vs30) * C['tau']
-            # phi not stored in non-ergodic table; derive from tot and tau
-            phi_val = float(np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.)))
+            phi_val = float(
+                np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))) # Phi not stored
             phi[m] = np.ones_like(ctx.vs30) * phi_val
 
     # The Coefficients used here are the same of the ergodic model BUT the
