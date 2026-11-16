@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2014-2026 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -144,6 +144,18 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                 if ds_name.startswith('adj_'):
                     freq = float(ds_name[len('adj_'):].rstrip('hz'))
                     self.dat[freq] = f[ds_name][:]
+        # The spatial lookup is performed assuming same grid over all frequencies
+        # which is much more efficient than if we had IMT-depednent grids. Might
+        # need to relax later but for initial implementation it holds true.
+        freqs = list(self.dat)
+        ref = self.dat[freqs[0]]
+        for freq in freqs[1:]:
+            if not (np.array_equal(self.dat[freq]['lon'], ref['lon'])
+                    and np.array_equal(self.dat[freq]['lat'], ref['lat'])):
+                raise ValueError(
+                    '%s: grid coords differ between adj_%ghz and adj_%ghz'
+                    % (os.path.basename(self.adjustment_h5),
+                       freqs[0], freq))
 
     def compute(self, ctx: np.recarray, imts, mean, sigma, tau, phi):
         """
@@ -151,41 +163,36 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        n = len(ctx)
+        # Grid coordinates should be identical across all frequency
+        # datasets in the h5 (checked at instantiation), so the nearest
+        # node lookup is IMT-independent. Avoids repeating costly lookup
+        grid = self.dat[next(iter(self.dat))]
+        # Vectorized nearest-neighbor: distance^2 matrix (n_ctx, n_grid)
+        d2 = ((grid['lon'] - ctx.clon[:, None]) ** 2 +
+              (grid['lat'] - ctx.clat[:, None]) ** 2)
+        idx_all = d2.argmin(axis=1)
+
+        # Off-grid check (0.2 degree grid, so > 0.22 is outside nearest cell)
+        dlon = np.abs(grid['lon'][idx_all] - ctx.clon)
+        dlat = np.abs(grid['lat'][idx_all] - ctx.clat)
+        off = (dlon > 0.22) | (dlat > 0.22)
+        if off.any():
+            i = int(np.where(off)[0][0])
+            raise ValueError(
+                'Rupture (%.4f, %.4f) is outside the France adjustment '
+                'grid: nearest node (%.4f, %.4f), delta=(%.4f, %.4f) deg'
+                % (ctx.clon[i], ctx.clat[i],
+                   grid['lon'][idx_all[i]], grid['lat'][idx_all[i]],
+                   dlon[i], dlat[i]))
+
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            # Pick the adjustment grid for this frequency
+            # Pull Delta-mu for every ctx row from the per-frequency grid
             dat = self.dat[imt.frequency]
-
-            # Per-rupture Delta-mu lookup against the per-frequency grid
-            adj = np.zeros(n)
-            for i in range(n):
-                # Rupture coordinates = closest point of rupture mesh to site
-                lon_r = ctx.clon[i]
-                lat_r = ctx.clat[i]
-                # Snap to nearest grid node (0.2 degree cells)
-                idx = np.argmin(
-                    ((dat['lon'] - lon_r) ** 2 +
-                     (dat['lat'] - lat_r) ** 2) ** 0.5)
-
-                # Fail if the rupture is off the grid envelope (0.2 degree
-                # grid, so anything > 0.22 degrees is outside the nearest cell)
-                dlon = abs(dat['lon'][idx] - lon_r)
-                dlat = abs(dat['lat'][idx] - lat_r)
-                if dlon > 0.22 or dlat > 0.22:
-                    raise ValueError(
-                        'Rupture (%.4f, %.4f) is outside the France '
-                        'adjustment grid: nearest node (%.4f, %.4f), '
-                        'delta=(%.4f, %.4f) deg' % (
-                            lon_r, lat_r,
-                            dat['lon'][idx], dat['lat'][idx],
-                            dlon, dlat))
-
-                # Pick either the posterior mean or one of the 100 realizations
-                if self.rlz_id == 'mean':
-                    adj[i] = dat['mean'][idx]
-                else:
-                    adj[i] = dat['rlz'][idx][int(self.rlz_id)]
+            if self.rlz_id == 'mean':
+                adj = dat['mean'][idx_all]
+            else:
+                adj = dat['rlz'][idx_all, int(self.rlz_id)]
 
             # Ergodic mean (same as baseline) plus the non-ergodic shift
             mean[m] = (_magnitude_scaling(C, ctx) +
