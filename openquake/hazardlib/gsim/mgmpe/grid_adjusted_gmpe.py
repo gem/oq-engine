@@ -759,7 +759,7 @@ class GridAdjustedGMPE(GMPE):
         for spec of input and result values.
         """
         resolved = self.compute_central(ctx, imts, mean, sig, tau, phi)
-        self.apply_epsilons(resolved, imts, mean)
+        self.apply_branch_shift(resolved, imts, mean)
 
     def compute_central(self, ctx, imts, mean, sig, tau, phi,
                         gra_mon=nullcontext()):
@@ -769,7 +769,7 @@ class GridAdjustedGMPE(GMPE):
 
         Fill the output arrays in place, applying central mean and configured
         sigma adjustments. Branch-specific epsilon * mean_se shifts and path
-        caps are applied later by apply_epsilons. Dispatched by ContextMaker
+        caps are applied later by apply_branch_shift. Dispatched by ContextMaker
         so branches sharing the same central_key reuse this result (see
         contexts.py:_get_central).
 
@@ -825,7 +825,7 @@ class GridAdjustedGMPE(GMPE):
                                  sig[m], tau[m], phi[m])
         return resolved
 
-    def apply_epsilons(self, resolved, imts, mean):
+    def apply_branch_shift(self, resolved, imts, mean):
         """
         Add this branch's eps * mean_se shift to the central mean.
 

@@ -1658,7 +1658,7 @@ class ContextMaker(object):
                 continue
             if key not in central:
                 central[key] = self._get_central(recarrays, gsim)
-            out[:, g] = self._add_epsilons(central[key], gsim)
+            out[:, g] = self._add_branch_shift(central[key], gsim)
         return out
 
     # Compute the part of a GSIM that's shared across LT branches with the
@@ -1679,13 +1679,13 @@ class ContextMaker(object):
         return out, resolved
 
     # Add the branch-specific shift (epsilons, rlz pick, etc.) to the shared
-    # central part. Dispatched via the GSIM's own apply_epsilons().
-    def _add_epsilons(self, central, gsim):
+    # central part. Dispatched via the GSIM's own apply_branch_shift().
+    def _add_branch_shift(self, central, gsim):
         out, resolved = central
         out = out.copy()
         gsim.adj = []
         for slc, res in resolved:
-            gsim.apply_epsilons(res, self.imts, out[0, :, slc])
+            gsim.apply_branch_shift(res, self.imts, out[0, :, slc])
         self._check_conv(out, gsim)
         return out
 

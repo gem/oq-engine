@@ -243,7 +243,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
     def compute_central(self, ctx, imts, mean, sigma, tau, phi, **_kw):
         """
         Branch-independent work: ergodic backbone + nearest-node index.
-        Returns `idx_all` so apply_epsilons() can pull the per-rlz column
+        Returns `idx_all` so apply_branch_shift() can pull the per-rlz column
         without redoing the lookup.
 
         ``**_kw`` absorbs ContextMaker kwargs (e.g. ``gra_mon``) that this
@@ -290,7 +290,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
             phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
         return idx_all
 
-    def apply_epsilons(self, idx_all, imts, mean):
+    def apply_branch_shift(self, idx_all, imts, mean):
         """
         Branch-specific shift: add Delta-mu for this `rlz_id` into the
         central mean. `idx_all` is the per-rupture nearest-node index
@@ -310,12 +310,12 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         for spec of input and result values.
 
         Standalone path (ignores ContextMaker caching). The ContextMaker's
-        classical path calls compute_central()/apply_epsilons() directly;
+        classical path calls compute_central()/apply_branch_shift() directly;
         this entry point exists for direct use outside that loop (tests,
         ad-hoc scripts).
         """
         idx_all = self.compute_central(ctx, imts, mean, sigma, tau, phi)
-        self.apply_epsilons(idx_all, imts, mean)
+        self.apply_branch_shift(idx_all, imts, mean)
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations which are based on information Karen sent on
