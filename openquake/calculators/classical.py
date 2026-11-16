@@ -522,6 +522,17 @@ def classical_bysrc(grp_keys, tilegetter, cmaker, ts2gids, bset_values,
     for dic in bysrc_results(grps, sites, cmaker, ts2gids, bset_values,
                              remove_zeros=False, merge_atomic=False):
         dic['rmap_id'] = rmap_id
+        if cmaker.oq.disagg_by_src:
+            # Reduce packet sizes to avoid hanging ZMQ due to lost packets.
+            rup_data = dic.pop('rup_data')
+            if len(rup_data):
+                max_rows = max(1, 32 * 1024**2 // rup_data.dtype.itemsize)
+                grp_id = dic['source_data']['grp_id'][0]
+                # The first gid labels the contexts shared by all GSIMs
+                # of this realization set; the rmap retains all gids.
+                gid = dic['rmap'].gid.min()
+                for slc in general.gen_slices(0, len(rup_data), max_rows):
+                    yield dict(rup_data=rup_data[slc], grp_id=grp_id, gid=gid)
         yield dic
 
 
@@ -751,12 +762,18 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param dic: dict with keys rmap, source_data, rup_data
+        :param dic: rates and source statistics, or rupture data
         """
         # NB: dic should be a dictionary, but when the calculation dies
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
+        elif 'rmap' not in dic:
+            if self.few_sites:
+                with self.monitor('saving rup_data'):
+                    store_ctxs(self.datastore, dic['rup_data'], dic['grp_id'],
+                               dic['gid'])
+            return acc
         elif not dic['source_data']:
             # all the sources were filtered out
             return acc
@@ -770,7 +787,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
-        if self.few_sites and len(dic['rup_data']):
+        if self.few_sites and len(dic.get('rup_data', ())):
             with self.monitor('saving rup_data'):
                 # NB: each result has its own gid, see bysrc_results
                 store_ctxs(self.datastore, dic['rup_data'], grp_id,
