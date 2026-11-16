@@ -166,9 +166,9 @@ class SungEtAl2022(GMPE):
                        _ztor_scaling(C, ctx) +
                        _linear_site_response(C, ctx))
             # Sigma components are constants per frequency, broadcast over sites
-            sigma[m] = np.ones_like(ctx.vs30) * C['tot']
-            tau[m] = np.ones_like(ctx.vs30) * C['tau']
-            phi[m] = np.ones_like(ctx.vs30) * C['phi']
+            sigma[m] = C['tot']
+            tau[m] = C['tau']
+            phi[m] = C['phi']
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT c1             c2   c3           c4     c5          c6          c7           c8           c9           cn          cM          chm         tot   tau   phi   site_sd record_sd
@@ -283,12 +283,10 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
                        _ztor_scaling(C, ctx) +
                        _linear_site_response(C, ctx)) + adj
 
-            # Sigma
-            sigma[m] = np.ones_like(ctx.vs30) * C['tot']
-            tau[m] = np.ones_like(ctx.vs30) * C['tau']
-            phi_val = float( # phi not stored and this is consistent with eq 9.
-                np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.)))
-            phi[m] = np.ones_like(ctx.vs30) * phi_val
+            # Sigma (phi not stored, derive from tot and tau)
+            sigma[m] = C['tot']
+            tau[m] = C['tau']
+            phi[m] = np.sqrt(max(C['tot'] ** 2 - C['tau'] ** 2, 0.))
 
     # The Coefficients used here are the same of the ergodic model BUT the
     # standard deviations which are based on information Karen sent on
