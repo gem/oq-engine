@@ -125,9 +125,7 @@ class SungEtAl2022NonErgodic(SungEtAl2022):
         realization (rlz_id=0..N-1) to sample the full epistemic uncertainty of
         the VCM model. The LT size can be anything up to N.
     """
-
-    # clon/clat are the closest point of the rupture to the site
-    REQUIRES_DISTANCES = {'rrup', 'clon', 'clat'}
+    REQUIRES_DISTANCES = {'rrup', 'clon_clat'}
 
     def __init__(self, adjustment_h5, rlz_id="mean"):
         # Get the filepath
