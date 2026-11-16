@@ -91,7 +91,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${GIT_REF:-master}"
-          sudo -H "$(which python3)" install.py --version "$BRANCH" server
+          sudo -H env GITHUB_TOKEN="$GITHUB_TOKEN" \
+            "$(which python3)" install.py --version "$BRANCH" server
       - name: Actualize 'default' templates for email notifications (server)
         if: matrix.kind == 'server'
         run: |
