@@ -105,6 +105,16 @@ def collect_batches(batch_size):
     return pandas.concat([batch[0] for batch in batches]), batches
 
 
+def test_scalar_pca_memory_guard():
+    computer = build_computer(regular_sites((20, 25)))
+    computer.M, computer.imts = 1, [PGA()]
+    computer.cmaker.oq.correlation_strategy = 'cholesky'
+    with mock.patch('openquake.hazardlib.calc.gmf._correlation_budget',
+                    return_value=10 * 1024 ** 2):
+        with pytest.raises(ValueError, match='dense factorization'):
+            computer._get_ce_factor()
+
+
 @pytest.mark.parametrize('model_cls', [DuNing2021, LothBaker2013])
 def test_ce_selection(model_cls):
     complete = regular_sites((2, 3))

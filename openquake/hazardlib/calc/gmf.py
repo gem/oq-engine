@@ -37,7 +37,7 @@ from openquake.hazardlib.correlation_models.base import (
     CorrelationContext, CrossIMTCorrelationModel, ResidualComponent,
     SpatialCorrelationModel)
 from openquake.hazardlib.correlation_models.circulant_embedding import (
-    CirculantEmbeddingFactor, RegularGridLayout)
+    CirculantEmbeddingFactor, RegularGridLayout, covariance_bytes_per_pair)
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
@@ -62,8 +62,8 @@ def _dense_correlation_bytes(model, sites, num_imts):
         num_sites = len(sites.complete)
         matrices = num_imts + 2
         return matrices * num_sites ** 2 * 8
-    dimension = num_imts * len(sites)
-    return 3 * dimension ** 2 * 8
+    return len(sites) ** 2 * covariance_bytes_per_pair(
+        num_imts, copies=3, model=model)
 
 
 def _site_positions(complete, selected):
