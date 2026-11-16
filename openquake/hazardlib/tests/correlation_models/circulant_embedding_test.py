@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy
 import pytest
@@ -23,6 +24,7 @@ from pyproj import Transformer
 from openquake.hazardlib.correlation_models.base import ResidualComponent
 from openquake.hazardlib.correlation_models.circulant_embedding import (
     CirculantEmbeddingFactor, RegularGridLayout)
+from openquake.hazardlib.correlation_models import circulant_embedding as ce
 from openquake.hazardlib.correlation_models.spatial.jayaram_baker_2009 import (
     JayaramBaker2009)
 from openquake.hazardlib.correlation_models.spatial_cross_imt.du_ning_2021 \
@@ -39,6 +41,22 @@ MODELS = [DuNing2021, MonteiroEtAl2026, LothBaker2013]
 
 
 EPS = 1E-10
+
+def test_spectral_chunks():
+    lags = numpy.zeros((4, 9, 2, 2))
+    lags[0, 0] = [[1., 0.4], [0.4, 1.3]]
+    expected = numpy.fft.rfft2(lags, axes=(0, 1))
+    with patch.object(ce, '_SPECTRAL_CHUNK_CELLS', 3):
+        with patch.object(numpy.linalg, 'eigh',
+                          wraps=numpy.linalg.eigh) as factorize:
+            minimum, root = ce._spectral_root(lags)
+    assert minimum > 0
+    assert factorize.call_count > 1
+    assert all(numpy.prod(call.args[0].shape[:2]) <= 3
+               for call in factorize.call_args_list)
+    numpy.testing.assert_allclose(
+        root @ root.swapaxes(-1, -2).conj(), expected, atol=EPS)
+
 
 def geographic_grid(shape, missing=(), perturb=None):
     """Return rounded geographic coordinates for a UTM grid."""
