@@ -41,7 +41,7 @@ from scipy.spatial import cKDTree
 
 
 # Limit on enclosing grid cells per occupied site; inf disables the limit.
-MAX_GRID_CELL_RATIO = 4
+MAX_GRID_CELL_RATIO = numpy.inf
 # Grid-fit and cell-snapping tolerance, as a fraction of grid spacing.
 GRID_TOLERANCE = 0.01
 # Maximum Fourier modes factored in one eigensolver chunk.

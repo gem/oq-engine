@@ -80,10 +80,16 @@ def _site_positions(complete, selected):
 
 
 def _ce_layout(sites):
-    """Fit the complete grid, falling back to the affected sites."""
+    # Keep the original lattice, but sample only the affected rectangle.
+    # Saved geometry avoids fitting the whole collection again per rupture.
+    if (sites.grid_crs and sites.grid_spacing is not None and
+            sites.grid_origin is not None):
+        return sites, RegularGridLayout.from_sites(sites)
     complete = sites.complete
     try:
-        return complete, RegularGridLayout.from_sites(complete)
+        layout = RegularGridLayout.from_sites(complete)
+        positions = _site_positions(complete, sites)
+        return sites, layout.cropped(layout.site_indices[positions])
     except ValueError as complete_error:
         if sites is complete:
             raise
