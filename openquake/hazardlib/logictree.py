@@ -42,7 +42,7 @@ from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, keyno, abs_paths, IMTWeigher)
 from openquake.hazardlib.lt import (
-    Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
+    Branch, BranchSet, count_paths, Realization,
     AbstractLogicTree, BranchSetLogicTree, LogicTreeError, parse_uncertainty,
     attach_branches, get_bset_values, parse_filters, branch_dt)
 
@@ -927,7 +927,7 @@ class SourceModelLogicTree(BranchSetLogicTree):
     def decompose(self):
         """
         If the logic tree is source specific, returns a dictionary
-        source ID -> CompositeLogicTree instance with the branchsets
+        source ID -> BranchSetLogicTree instance with the branchsets
         applied to the source; the key None (if present) corresponds to the
         root branchset, i.e. the source models, applied to all the sources
         """
@@ -940,9 +940,9 @@ class SourceModelLogicTree(BranchSetLogicTree):
         root = self.branchsets[0]
         out = {}
         if len(root) > 1:
-            out[None] = CompositeLogicTree(copy_chain([root]))
+            out[None] = BranchSetLogicTree(copy_chain([root]))
         for src_id in bsets:
-            out[src_id] = CompositeLogicTree(copy_chain(bsets[src_id]))
+            out[src_id] = BranchSetLogicTree(copy_chain(bsets[src_id]))
         return out
 
     # SourceModelLogicTree
@@ -1432,7 +1432,7 @@ def copy_chain(branchsets):
 
 def compose(source_model_lt, gsim_lt):
     """
-    :returns: a CompositeLogicTree instance
+    :returns: a BranchSetLogicTree instance
     """
     bsets = []
     dic = groupby(gsim_lt.branches, operator.attrgetter('trt'))
@@ -1444,5 +1444,5 @@ def compose(source_model_lt, gsim_lt):
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
         bsno += 1
-    clt = CompositeLogicTree(source_model_lt.branchsets + bsets)
+    clt = BranchSetLogicTree(source_model_lt.branchsets + bsets)
     return clt
